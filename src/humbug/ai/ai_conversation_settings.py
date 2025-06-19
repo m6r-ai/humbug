@@ -329,7 +329,7 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "grok-3-fast-beta": AIModel(
             name="grok-3-beta",
@@ -338,7 +338,7 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "grok-3-mini-beta": AIModel(
             name="grok-3-mini-beta",
@@ -347,7 +347,7 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "grok-3-mini-fast-beta": AIModel(
             name="grok-3-mini-beta",
@@ -356,7 +356,7 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         )
     }
 

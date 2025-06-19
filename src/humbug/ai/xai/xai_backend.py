@@ -20,7 +20,7 @@ class XAIBackend(AIBackend):
         return "https://api.x.ai/v1/chat/completions"
 
     def _format_messages_for_provider(self, conversation_history: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Format conversation history for xAI's API format (OpenAI-compatible)."""
+        """Format conversation history for xAI's API format."""
         result = []
 
         for message in conversation_history:
@@ -34,7 +34,6 @@ class XAIBackend(AIBackend):
 
             # Handle assistant messages with tool calls
             if role == "assistant" and "tool_calls" in message:
-                # For xAI, tool calls are added as a separate field (OpenAI-compatible)
                 msg_dict["tool_calls"] = [
                     {
                         "id": tool_call["id"],
@@ -49,13 +48,13 @@ class XAIBackend(AIBackend):
 
             # Handle user messages with tool results
             elif role == "user" and "tool_results" in message:
-                # For xAI, tool results come as separate tool messages (OpenAI-compatible)
                 if content:
                     result.append(msg_dict)
 
                 for tool_result in message["tool_results"]:
                     result.append({
                         "role": "tool",
+                        "name": tool_result["name"],
                         "tool_call_id": tool_result["tool_call_id"],
                         "content": tool_result["content"]
                     })
@@ -86,6 +85,14 @@ class XAIBackend(AIBackend):
         # Only include temperature if supported by model
         if AIConversationSettings.supports_temperature(settings.model):
             data["temperature"] = settings.temperature
+
+        # Add tools if supported
+        if self._supports_tools(settings) and self._tool_manager.has_tools():
+            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("deepseek")
+            if tool_definitions:
+                data["tools"] = tool_definitions
+                data["tool_choice"] = "auto"
+                self._logger.debug("Added %d tool definitions for deepseek", len(tool_definitions))
 
         self._logger.debug("stream message %r", data)
 

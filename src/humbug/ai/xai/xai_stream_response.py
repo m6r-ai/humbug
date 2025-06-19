@@ -3,10 +3,96 @@
 from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
+from humbug.ai.ai_tool_manager import ToolCall
 
 
 class XAIStreamResponse(AIStreamResponse):
     """Handles streaming response from xAI API."""
+
+    def __init__(self) -> None:
+        """Initialize stream response handler."""
+        super().__init__()
+
+        # Track streaming tool calls
+        self._current_tool_calls: Dict[str, Dict] = {}
+
+    def _handle_choices(self, choices: Dict) -> None:
+        """
+        Handle choices from the xAI API response.
+
+        Args:
+            choices: Choices from xAI API response
+        """
+        if not choices:
+            return
+
+        delta = choices[0].get("delta", {})
+        if "reasoning_content" in delta:
+            new_reasoning = delta["reasoning_content"]
+            if new_reasoning:
+                self.reasoning += new_reasoning
+
+        if "content" in delta:
+            new_content = delta["content"]
+            if new_content:
+                self.content += new_content
+
+        if "tool_calls" in delta:
+            tool_calls = delta["tool_calls"]
+            for tool_call_delta in tool_calls:
+                tool_call_index = tool_call_delta.get("index", -1)
+                if tool_call_index == -1:
+                    continue
+
+                tool_call_id = tool_call_delta.get("id", "")
+
+                # Initialize tool call if we haven't seen it before
+                if tool_call_index not in self._current_tool_calls:
+                    self._current_tool_calls[tool_call_index] = {
+                        "index": tool_call_index,
+                        "id": tool_call_id,
+                        "name": "",
+                        "arguments": ""
+                    }
+
+                current_call = self._current_tool_calls[tool_call_index]
+
+                # Update function name if provided
+                function = tool_call_delta.get("function", {})
+                if "name" in function:
+                    current_call["name"] = function["name"]
+
+                # Accumulate arguments if provided
+                if "arguments" in function:
+                    current_call["arguments"] += function["arguments"]
+
+    def _handle_usage(self, usage: Dict) -> None:
+        """
+        Handle usage data from the xAI API response.
+
+        Args:
+            usage: Usage data from xAI API response
+        """
+        if not usage:
+            return
+
+        self._update_usage(
+            prompt_tokens=usage.get("prompt_tokens", 0),
+            completion_tokens=usage.get("completion_tokens", 0),
+            total_tokens=usage.get("total_tokens", 0)
+        )
+
+        # Process all accumulated tool calls
+        for call_data in self._current_tool_calls.values():
+            # Create the tool call
+            tool_call = ToolCall(
+                id=call_data["id"],
+                name=call_data["name"],
+                arguments=call_data["arguments"]
+            )
+
+            # Add to our tool calls list
+            self._add_tool_call(tool_call)
 
     def update_from_chunk(self, chunk: Dict) -> None:
         """
@@ -19,30 +105,8 @@ class XAIStreamResponse(AIStreamResponse):
             self._handle_error(chunk["error"])
             return
 
+        if "choices" in chunk:
+            self._handle_choices(chunk["choices"])
+
         if "usage" in chunk:
-            usage = chunk["usage"]
-            if usage:
-                self._update_usage(
-                    prompt_tokens=usage.get("prompt_tokens", 0),
-                    completion_tokens=usage.get("completion_tokens", 0),
-                    total_tokens=usage.get("total_tokens", 0)
-                )
-
-        if "choices" not in chunk:
-            return
-
-        choices = chunk["choices"]
-        if not choices:
-            return
-
-        delta = choices[0].get("delta", {})
-
-        if "reasoning_content" in delta:
-            new_reasoning = delta["reasoning_content"]
-            if new_reasoning:
-                self.reasoning += new_reasoning
-
-        if "content" in delta:
-            new_content = delta["content"]
-            if new_content:
-                self.content += new_content
+            self._handle_usage(chunk["usage"])
