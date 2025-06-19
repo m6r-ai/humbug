@@ -246,7 +246,7 @@ class AIConversationSettings:
             max_output_tokens=16384,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gpt-4.1-mini": AIModel(
             name="gpt-4.1-mini",
@@ -255,7 +255,7 @@ class AIConversationSettings:
             max_output_tokens=16384,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gpt-4.1-nano": AIModel(
             name="gpt-4.1-nano",
@@ -264,7 +264,7 @@ class AIConversationSettings:
             max_output_tokens=16384,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gpt-4.5-preview": AIModel(
             name="gpt-4.5-preview",
@@ -273,7 +273,7 @@ class AIConversationSettings:
             max_output_tokens=16384,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "o1": AIModel(
             name="o1",
@@ -282,7 +282,7 @@ class AIConversationSettings:
             max_output_tokens=100000,
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "o1-mini": AIModel(
             name="o1-mini",
@@ -291,7 +291,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "o3": AIModel(
             name="o3-mini",
@@ -300,7 +300,7 @@ class AIConversationSettings:
             max_output_tokens=100000,
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "o3-mini": AIModel(
             name="o3-mini",
@@ -309,7 +309,7 @@ class AIConversationSettings:
             max_output_tokens=100000,
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "o4-mini": AIModel(
             name="o3-mini",
@@ -318,7 +318,7 @@ class AIConversationSettings:
             max_output_tokens=100000,
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
         # xAI models
