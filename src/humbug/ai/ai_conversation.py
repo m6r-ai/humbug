@@ -447,7 +447,6 @@ class AIConversation:
                 completed=(usage is not None)
             )
             if message:
-                # TODO: do we need this if?
                 await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
 
             return
