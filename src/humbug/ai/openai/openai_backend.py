@@ -92,6 +92,7 @@ class OpenAIBackend(AIBackend):
             tool_definitions = self._tool_manager.get_tool_definitions_for_provider("openai")
             if tool_definitions:
                 data["tools"] = tool_definitions
+                data["tool_choice"] = "auto"
                 self._logger.debug("Added %d tool definitions for openai", len(tool_definitions))
 
         self._logger.debug("stream message %r", data)

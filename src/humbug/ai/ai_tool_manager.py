@@ -1,8 +1,9 @@
 """AI tool calling framework."""
 
-import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import json
+import logging
 from typing import Any, Dict, List
 
 
@@ -93,7 +94,7 @@ class ToolCall:
     """Represents a tool call request from the AI."""
     id: str  # Unique identifier for this tool call
     name: str
-    arguments: Dict[str, Any]
+    arguments: str
 
 
 @dataclass
@@ -247,7 +248,15 @@ class AIToolManager:
 
         try:
             tool = self._tools[tool_call.name]
-            result = await tool.execute(tool_call.arguments)
+
+            try:
+                json_args = json.loads(tool_call.arguments)
+
+            except json.JSONDecodeError as e:
+                self._logger.warning("Failed to parse tool arguments: %s (%s)", tool_call.arguments, str(e))
+                raise
+
+            result = await tool.execute(json_args)
 
             self._logger.debug(
                 "Tool '%s' executed successfully with args %s",

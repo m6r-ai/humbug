@@ -228,7 +228,7 @@ class AIConversationSettings:
             max_output_tokens=16384,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gpt-4o": AIModel(
             name="gpt-4o",
@@ -237,7 +237,7 @@ class AIConversationSettings:
             max_output_tokens=16384,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gpt-4.1": AIModel(
             name="gpt-4.1",

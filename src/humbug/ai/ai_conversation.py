@@ -529,6 +529,7 @@ class AIConversation:
                 await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
 
         if tool_calls and usage:
+            self._is_streaming = False
             settings = self.conversation_settings()
             message = AIMessage.create(
                 AIMessageSource.AI,

@@ -122,8 +122,6 @@ class AIBackend(ABC):
                 url = config.url.replace("localhost", "127.0.0.1")
 
                 async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(ssl=self._ssl_context)) as session:
-                    print("************************************************")
-                    print(f"Sending request to {url} with headers: {config.headers} and data: {json.dumps(config.data, indent=2)}")
                     async with session.post(
                         url,
                         headers=config.headers,
