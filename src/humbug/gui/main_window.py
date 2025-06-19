@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
-from humbug.ai.ai_tool_manager import AIToolManager, ToolDefinition, ToolParameter, AITool, ToolExecutionError
+from humbug.ai.ai_tool_manager import AIToolManager, AIToolDefinition, AIToolParameter, AITool, ToolExecutionError
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
@@ -51,20 +51,20 @@ from humbug.user.user_settings import UserSettings
 class GetCurrentTimeTool(AITool):
     """Tool that returns the current time."""
 
-    def get_definition(self) -> ToolDefinition:
+    def get_definition(self) -> AIToolDefinition:
         """Get the tool definition."""
-        return ToolDefinition(
+        return AIToolDefinition(
             name="get_current_time",
             description="Get the current date and time",
             parameters=[
-                ToolParameter(
+                AIToolParameter(
                     name="format",
                     type="string",
                     description="Time format ('iso', 'human', or 'timestamp')",
                     required=False,
                     enum=["iso", "human", "timestamp"]
                 ),
-                ToolParameter(
+                AIToolParameter(
                     name="timezone",
                     type="string",
                     description="Timezone (e.g., 'UTC', 'America/New_York')",
@@ -103,13 +103,13 @@ class GetCurrentTimeTool(AITool):
 class CalculatorTool(AITool):
     """Tool that performs basic mathematical calculations."""
 
-    def get_definition(self) -> ToolDefinition:
+    def get_definition(self) -> AIToolDefinition:
         """Get the tool definition."""
-        return ToolDefinition(
+        return AIToolDefinition(
             name="calculate",
             description="Perform basic mathematical calculations (addition, subtraction, multiplication, division)",
             parameters=[
-                ToolParameter(
+                AIToolParameter(
                     name="expression",
                     type="string",
                     description="Mathematical expression to evaluate (e.g., '2 + 3 * 4')",

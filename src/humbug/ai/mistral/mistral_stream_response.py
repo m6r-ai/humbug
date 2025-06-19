@@ -3,7 +3,7 @@
 from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
-from humbug.ai.ai_tool_manager import ToolCall
+from humbug.ai.ai_tool_manager import AIToolCall
 
 
 class MistralStreamResponse(AIStreamResponse):
@@ -79,7 +79,7 @@ class MistralStreamResponse(AIStreamResponse):
         # Process all accumulated tool calls
         for call_data in self._current_tool_calls.values():
             # Create the tool call
-            tool_call = ToolCall(
+            tool_call = AIToolCall(
                 id=call_data["id"],
                 name=call_data["name"],
                 arguments=call_data["arguments"]

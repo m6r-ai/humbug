@@ -10,7 +10,7 @@ from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_response import AIError
-from humbug.ai.ai_tool_manager import AIToolManager, ToolCall
+from humbug.ai.ai_tool_manager import AIToolManager, AIToolCall
 from humbug.ai.ai_usage import AIUsage
 from humbug.user.user_manager import UserManager
 
@@ -282,7 +282,7 @@ class AIConversation:
                     # Log but don't propagate generator cleanup errors
                     self._logger.debug("Error during generator cleanup: %s", e)
 
-    async def _process_pending_tool_calls(self, tool_calls: List[ToolCall]) -> None:
+    async def _process_pending_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
         """Process any tool calls from the current AI message."""
         # Create and add tool call message (hidden from user, for audit trail)
         tool_call_message = AIMessage.create_tool_call_message(tool_calls=tool_calls)
@@ -422,7 +422,7 @@ class AIConversation:
         reasoning: str,
         content: str,
         usage: AIUsage | None,
-        tool_calls: List[ToolCall] | None
+        tool_calls: List[AIToolCall] | None
     ) -> None:
         """
         Handle content updates from the AI response.
@@ -511,7 +511,7 @@ class AIConversation:
         await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, new_message)
         self._current_reasoning_message = new_message
 
-    async def _handle_usage(self, reasoning: str, content: str, tool_calls: List[ToolCall] | None) -> None:
+    async def _handle_usage(self, reasoning: str, content: str, tool_calls: List[AIToolCall] | None) -> None:
         self._is_streaming = False
 
         if not content and not reasoning:
@@ -544,7 +544,7 @@ class AIConversation:
         content: str,
         usage: AIUsage | None = None,
         error: AIError | None = None,
-        tool_calls: List[ToolCall] | None = None
+        tool_calls: List[AIToolCall] | None = None
     ) -> None:
         """
         Update the current AI response in the conversation.

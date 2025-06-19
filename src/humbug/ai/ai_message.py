@@ -6,7 +6,7 @@ from typing import Dict, List
 import uuid
 
 from humbug.ai.ai_message_source import AIMessageSource
-from humbug.ai.ai_tool_manager import ToolCall, ToolResult
+from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult
 from humbug.ai.ai_usage import AIUsage
 
 
@@ -22,8 +22,8 @@ class AIMessage:
     model: str | None = None
     temperature: float | None = None
     completed: bool = True
-    tool_calls: List[ToolCall] | None = None
-    tool_results: List[ToolResult] | None = None
+    tool_calls: List[AIToolCall] | None = None
+    tool_results: List[AIToolResult] | None = None
 
     # Map between AIMessageSource enum and transcript type strings
     _SOURCE_TYPE_MAP = {
@@ -47,8 +47,8 @@ class AIMessage:
         temperature: float | None = None,
         completed: bool = True,
         timestamp: datetime | None = None,
-        tool_calls: List[ToolCall] | None = None,
-        tool_results: List[ToolResult] | None = None
+        tool_calls: List[AIToolCall] | None = None,
+        tool_results: List[AIToolResult] | None = None
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
@@ -71,7 +71,7 @@ class AIMessage:
     @classmethod
     def create_tool_call_message(
         cls,
-        tool_calls: List[ToolCall],
+        tool_calls: List[AIToolCall],
         model: str | None = None,
         temperature: float | None = None,
         timestamp: datetime | None = None
@@ -94,7 +94,7 @@ class AIMessage:
     @classmethod
     def create_tool_result_message(
         cls,
-        tool_results: List[ToolResult],
+        tool_results: List[AIToolResult],
         timestamp: datetime | None = None
     ) -> 'AIMessage':
         """Create a tool result message."""
@@ -218,7 +218,7 @@ class AIMessage:
         if data.get("tool_calls"):
             try:
                 tool_calls = [
-                    ToolCall(
+                    AIToolCall(
                         id=call_data["id"],
                         name=call_data["name"],
                         arguments=call_data["arguments"]
@@ -234,7 +234,7 @@ class AIMessage:
         if data.get("tool_results"):
             try:
                 tool_results = [
-                    ToolResult(
+                    AIToolResult(
                         tool_call_id=result_data["tool_call_id"],
                         name=result_data["name"],
                         content=result_data["content"],

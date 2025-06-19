@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, List
 
 from humbug.ai.ai_response import AIError
-from humbug.ai.ai_tool_manager import ToolCall
+from humbug.ai.ai_tool_manager import AIToolCall
 from humbug.ai.ai_usage import AIUsage
 
 
@@ -23,7 +23,7 @@ class AIStreamResponse(ABC):
         self.content = ""
         self.usage: AIUsage | None = None
         self.error: AIError | None = None
-        self.tool_calls: List[ToolCall] = []
+        self.tool_calls: List[AIToolCall] = []
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod
@@ -82,7 +82,7 @@ class AIStreamResponse(ABC):
             total_tokens=total_tokens
         )
 
-    def _add_tool_call(self, tool_call: ToolCall) -> None:
+    def _add_tool_call(self, tool_call: AIToolCall) -> None:
         """
         Add a tool call to the response.
 

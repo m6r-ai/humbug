@@ -8,22 +8,22 @@ from typing import Any, Dict, List
 
 
 @dataclass
-class ToolParameter:
+class AIToolParameter:
     """Definition of a tool parameter."""
     name: str
     type: str  # "string", "number", "boolean", "array", "object"
     description: str
     required: bool = True
     enum: List[str] | None = None
-    properties: Dict[str, 'ToolParameter'] | None = None  # For object types
+    properties: Dict[str, 'AIToolParameter'] | None = None  # For object types
 
 
 @dataclass
-class ToolDefinition:
+class AIToolDefinition:
     """Definition of an available tool."""
     name: str
     description: str
-    parameters: List[ToolParameter]
+    parameters: List[AIToolParameter]
 
     def to_openai_format(self) -> Dict[str, Any]:
         """Convert to OpenAI function calling format."""
@@ -90,7 +90,7 @@ class ToolDefinition:
 
 
 @dataclass
-class ToolCall:
+class AIToolCall:
     """Represents a tool call request from the AI."""
     id: str  # Unique identifier for this tool call
     name: str
@@ -98,7 +98,7 @@ class ToolCall:
 
 
 @dataclass
-class ToolResult:
+class AIToolResult:
     """Result of a tool execution."""
     tool_call_id: str
     name: str
@@ -110,12 +110,12 @@ class AITool(ABC):
     """Abstract base class for AI tools."""
 
     @abstractmethod
-    def get_definition(self) -> ToolDefinition:
+    def get_definition(self) -> AIToolDefinition:
         """
         Get the tool definition for registration.
 
         Returns:
-            ToolDefinition describing this tool's interface
+            AIToolDefinition describing this tool's interface
         """
 
     @abstractmethod
@@ -197,7 +197,7 @@ class AIToolManager:
             del self._tools[name]
             self._logger.info("Unregistered tool: %s", name)
 
-    def get_tool_definitions(self) -> List[ToolDefinition]:
+    def get_tool_definitions(self) -> List[AIToolDefinition]:
         """
         Get definitions for all registered tools.
 
@@ -226,7 +226,7 @@ class AIToolManager:
 
         return [def_.to_openai_format() for def_ in definitions]
 
-    async def execute_tool(self, tool_call: ToolCall) -> ToolResult:
+    async def execute_tool(self, tool_call: AIToolCall) -> AIToolResult:
         """
         Execute a tool call.
 
@@ -234,12 +234,12 @@ class AIToolManager:
             tool_call: The tool call to execute
 
         Returns:
-            ToolResult containing the execution result
+            AIToolResult containing the execution result
         """
         if tool_call.name not in self._tools:
             error_msg = f"Unknown tool: {tool_call.name}"
             self._logger.error(error_msg)
-            return ToolResult(
+            return AIToolResult(
                 tool_call_id=tool_call.id,
                 name=tool_call.name,
                 content="",
@@ -264,7 +264,7 @@ class AIToolManager:
                 tool_call.arguments
             )
 
-            return ToolResult(
+            return AIToolResult(
                 tool_call_id=tool_call.id,
                 name=tool_call.name,
                 content=result
@@ -279,7 +279,7 @@ class AIToolManager:
                 str(e)
             )
 
-            return ToolResult(
+            return AIToolResult(
                 tool_call_id=tool_call.id,
                 name=tool_call.name,
                 content="",

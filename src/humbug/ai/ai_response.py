@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Dict, List
 
-from humbug.ai.ai_tool_manager import ToolCall
+from humbug.ai.ai_tool_manager import AIToolCall
 from humbug.ai.ai_usage import AIUsage
 
 
@@ -25,4 +25,4 @@ class AIResponse:
     error: AIError | None = None
     model: str | None = None
     temperature: float | None = None
-    tool_calls: List[ToolCall] | None = None
+    tool_calls: List[AIToolCall] | None = None

@@ -3,7 +3,7 @@
 from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
-from humbug.ai.ai_tool_manager import ToolCall
+from humbug.ai.ai_tool_manager import AIToolCall
 
 
 class AnthropicStreamResponse(AIStreamResponse):
@@ -85,7 +85,7 @@ class AnthropicStreamResponse(AIStreamResponse):
             # End of a content block
             if self._current_tool_call is not None:
                 # Complete the tool call
-                tool_call = ToolCall(
+                tool_call = AIToolCall(
                     id=self._current_tool_call["id"],
                     name=self._current_tool_call["name"],
                     arguments=self._current_tool_arguments
