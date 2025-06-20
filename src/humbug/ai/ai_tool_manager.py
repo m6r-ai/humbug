@@ -27,7 +27,7 @@ class AIToolDefinition:
 
     def to_openai_format(self) -> Dict[str, Any]:
         """Convert to OpenAI function calling format."""
-        properties = {}
+        properties: Dict[str, Any] = {}
         required = []
 
         for param in self.parameters:
@@ -37,6 +37,7 @@ class AIToolDefinition:
             }
             if param.enum:
                 properties[param.name]["enum"] = param.enum
+
             if param.properties:
                 properties[param.name]["properties"] = {
                     prop_name: {
@@ -64,7 +65,7 @@ class AIToolDefinition:
 
     def to_anthropic_format(self) -> Dict[str, Any]:
         """Convert to Anthropic tool format."""
-        properties = {}
+        properties: Dict[str, Any] = {}
         required = []
 
         for param in self.parameters:
