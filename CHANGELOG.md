@@ -8,7 +8,10 @@ New features:
 
 Bug fixes:
 
-- TBD
+- When invoking new conversations or `m6rc` from the system shell, Humbug was not correctly setting reasoning capabilities
+  for thinking/reasoning AI models.
+- When recording conversation transcripts, Humbug was not recording the reasoning capabilities that were used in coming up
+  with an answer.  This meant it was also not restoring these correctly after reloading a conversation.
 
 ## v0.16 (2025-06-16)
 
