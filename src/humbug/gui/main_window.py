@@ -84,14 +84,13 @@ class GetCurrentTimeTool(AITool):
             if format_type == "iso":
                 return now.isoformat() + "Z"
 
-            elif format_type == "human":
+            if format_type == "human":
                 return now.strftime("%Y-%m-%d %H:%M:%S UTC")
 
-            elif format_type == "timestamp":
+            if format_type == "timestamp":
                 return str(int(now.timestamp()))
 
-            else:
-                return now.isoformat() + "Z"
+            return now.isoformat() + "Z"
 
         except Exception as e:
             raise ToolExecutionError(
