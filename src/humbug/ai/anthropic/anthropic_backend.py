@@ -5,6 +5,7 @@ from typing import Dict, List, Any
 from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.ai.ai_message import AIMessage, AIMessageSource
+from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult
 from humbug.ai.anthropic.anthropic_stream_response import AnthropicStreamResponse
 
 
@@ -21,162 +22,144 @@ class AnthropicBackend(AIBackend):
         """
         return "https://api.anthropic.com/v1/messages"
 
-    def _get_messages_for_context(self, messages: List[AIMessage]) -> List[Dict[str, Any]]:
+    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> Dict[str, Any]:
         """
-        Get messages formatted for AI context - raw format for backend processing.
+        Build user message for Anthropic format.
+
+        Args:
+            content: User message content
+            tool_results: Optional tool results to include
 
         Returns:
-            Raw message format that backends can transform as needed.
-            Tool calls and results are preserved as separate fields for backend processing.
+            User message dictionary with structured content
+        """
+        # For Anthropic, tool results are structured content within the user message
+        if tool_results:
+            content_parts = []
+
+            # Add text content if present
+            if content:
+                content_parts.append({"type": "text", "text": content})
+
+            # Add tool results as structured content
+            for tool_result in tool_results:
+                content_parts.append({
+                    "type": "tool_result",
+                    "tool_use_id": tool_result.tool_call_id,
+                    "content": tool_result.content
+                })
+
+            return {
+                "role": "user",
+                "content": content_parts
+            }
+
+        # Simple text message
+        return {
+            "role": "user",
+            "content": content
+        }
+
+    def _build_assistant_message(self, content: str, tool_calls: List[AIToolCall] | None = None) -> Dict[str, Any]:
+        """
+        Build assistant message for Anthropic format.
+
+        Args:
+            content: Assistant message content
+            tool_calls: Optional tool calls made by the assistant
+
+        Returns:
+            Assistant message dictionary with structured content
+        """
+        # For Anthropic, tool calls are structured content within the assistant message
+        if tool_calls:
+            content_parts = []
+
+            # Add text content if present
+            if content:
+                content_parts.append({"type": "text", "text": content})
+
+            # Add tool calls as structured content
+            for tool_call in tool_calls:
+                try:
+                    json_args = json.loads(tool_call.arguments)
+                except json.JSONDecodeError as e:
+                    self._logger.warning("Failed to parse tool arguments: %s", e)
+                    raise
+
+                content_parts.append({
+                    "type": "tool_use",
+                    "id": tool_call.id,
+                    "name": tool_call.name,
+                    "input": json_args
+                })
+
+            return {
+                "role": "assistant",
+                "content": content_parts
+            }
+
+        # Simple text message
+        return {
+            "role": "assistant",
+            "content": content
+        }
+
+    def _format_messages_for_provider(self, conversation_history: List[AIMessage]) -> List[Dict[str, Any]]:
+        """
+        Format conversation history for Anthropic's API format in a single pass.
+
+        Args:
+            conversation_history: List of AIMessage objects
+
+        Returns:
+            List of messages formatted for Anthropic API
         """
         result = []
         last_reasoning_message: AIMessage | None = None
 
-        for message in messages:
-            # Skip hidden audit trail messages (TOOL_CALL and TOOL_RESULT)
+        for message in conversation_history:
             if message.source == AIMessageSource.TOOL_CALL:
-                if last_reasoning_message is not None:
-                    # If we had a reasoning message, we can include it
-                    msg_dict = {
-                        "role": "assistant",
-                        "reasoning_content": message.content
-                    }
+                # If we don't have a pending reasoning message, we don't need to do anything
+                if last_reasoning_message is None:
+                    continue
 
-                    if last_reasoning_message.tool_calls:
-                        msg_dict["tool_calls"] = [
-                            {
-                                "id": call.id,
-                                "name": call.name,
-                                "arguments": call.arguments
-                            }
-                            for call in last_reasoning_message.tool_calls
-                        ]
-
-                    result.append(msg_dict)
-                    last_reasoning_message = None
-
+                # Create assistant message with reasoning content and tool calls
+                # TODO: reasoning messages should be handled differently!
+                assistant_msg = self._build_assistant_message(
+                    content=last_reasoning_message.content,
+                    tool_calls=last_reasoning_message.tool_calls
+                )
+                result.append(assistant_msg)
+                last_reasoning_message = None
                 continue
 
-            # We're only interested in the last reasoning message for tool calls
+            # Clear any pending reasoning message when we encounter other message types
             last_reasoning_message = None
 
-            if message.source == AIMessageSource.TOOL_RESULT:
+            if message.source == AIMessageSource.USER:
+                user_msg = self._build_user_message(
+                    content=message.content,
+                    tool_results=message.tool_results
+                )
+                result.append(user_msg)
                 continue
 
-            # Handle user messages
-            if message.source == AIMessageSource.USER:
-                msg_dict: Dict[str, Any] = {
-                    "role": "user",
-                    "content": message.content
-                }
-
-                # Add tool results if this user message contains them (raw format)
-                if message.tool_results:
-                    msg_dict["tool_results"] = [
-                        {
-                            "tool_call_id": result.tool_call_id,
-                            "name": result.name,
-                            "content": result.content,
-                            "error": result.error
-                        }
-                        for result in message.tool_results
-                    ]
-
-                result.append(msg_dict)
-
-            # Handle AI messages
-            elif message.source == AIMessageSource.AI:
-                # Only include completed AI messages in context
+            if message.source == AIMessageSource.AI:
+                # Only include completed AI messages without errors
                 if not message.completed or message.error:
                     continue
 
-                msg_dict = {
-                    "role": "assistant",
-                    "content": message.content
-                }
+                assistant_msg = self._build_assistant_message(
+                    content=message.content,
+                    tool_calls=message.tool_calls
+                )
+                result.append(assistant_msg)
+                continue
 
-                # Add tool calls if this AI message made them (raw format)
-                if message.tool_calls:
-                    msg_dict["tool_calls"] = [
-                        {
-                            "id": call.id,
-                            "name": call.name,
-                            "arguments": call.arguments
-                        }
-                        for call in message.tool_calls
-                    ]
-
-                result.append(msg_dict)
-
-            elif message.source == AIMessageSource.REASONING:
+            if message.source == AIMessageSource.REASONING:
                 last_reasoning_message = message
-
-            # Skip system messages (they're handled separately)
-
-        return result
-
-    def _format_messages_for_provider(self, conversation_history: List[AIMessage]) -> List[Dict[str, Any]]:
-        """Format conversation history for xAI's API format."""
-        messages = self._get_messages_for_context(conversation_history)
-
-        result = []
-        for message in messages:
-            role = message["role"]
-            content = message["content"]
-
-            # Handle user messages with tool results
-            if role == "user" and "tool_results" in message:
-                # For Anthropic, tool results are structured content
-                tool_result_content = []
-                if content:
-                    tool_result_content.append({"type": "text", "text": content})
-
-                for tool_result in message["tool_results"]:
-                    tool_result_content.append({
-                        "type": "tool_result",
-                        "tool_use_id": tool_result["tool_call_id"],
-                        "content": tool_result["content"]
-                    })
-
-                result.append({
-                    "role": role,
-                    "content": tool_result_content
-                })
-
-            # Handle assistant messages with tool calls
-            elif role == "assistant" and "tool_calls" in message:
-                # For Anthropic, tool calls are structured content
-                tool_call_content = []
-                if content:
-                    tool_call_content.append({"type": "text", "text": content})
-
-                tool_call: Dict[str, Any]
-                for tool_call in message["tool_calls"]:
-                    try:
-                        json_args = json.loads(tool_call["arguments"])
-
-                    except json.JSONDecodeError as e:
-                        self._logger.warning("Failed to parse tool arguments: %s", e)
-                        raise
-
-                    tool_call_content.append({
-                        "type": "tool_use",
-                        "id": tool_call["id"],
-                        "name": tool_call["name"],
-                        "input": json_args
-                    })
-
-                result.append({
-                    "role": role,
-                    "content": tool_call_content
-                })
-
-            # Handle regular messages
-            else:
-                result.append({
-                    "role": role,
-                    "content": content
-                })
+                continue
 
         return result
 
@@ -186,7 +169,6 @@ class AnthropicBackend(AIBackend):
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for Anthropic."""
-        # Use the pre-formatted messages directly
         messages = self._format_messages_for_provider(conversation_history)
 
         # Build request data

@@ -4,6 +4,7 @@ from typing import Dict, List, Any
 from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message import AIMessage, AIMessageSource
+from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult
 from humbug.ai.mistral.mistral_stream_response import MistralStreamResponse
 
 
@@ -20,144 +21,101 @@ class MistralBackend(AIBackend):
         """
         return "https://api.mistral.ai/v1/chat/completions"
 
-    def _get_messages_for_context(self, messages: List[AIMessage]) -> List[Dict[str, Any]]:
+    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> List[Dict[str, Any]]:
         """
-        Get messages formatted for AI context - raw format for backend processing.
+        Build user message(s) for Mistral format.
+
+        Args:
+            content: User message content
+            tool_results: Optional tool results to include
 
         Returns:
-            Raw message format that backends can transform as needed.
-            Tool calls and results are preserved as separate fields for backend processing.
+            List of message dictionaries (may include separate tool result messages)
+        """
+        messages = []
+
+        # Add user message if there's content
+        if content:
+            messages.append({
+                "role": "user",
+                "content": content
+            })
+
+        # Add separate tool result messages
+        if tool_results:
+            for tool_result in tool_results:
+                messages.append({
+                    "role": "tool",
+                    "name": tool_result.name,
+                    "tool_call_id": tool_result.tool_call_id,
+                    "content": tool_result.content
+                })
+
+        return messages
+
+    def _build_assistant_message(self, content: str, tool_calls: List[AIToolCall] | None = None) -> Dict[str, Any]:
+        """
+        Build assistant message for Mistral format.
+
+        Args:
+            content: Assistant message content
+            tool_calls: Optional tool calls made by the assistant
+
+        Returns:
+            Assistant message dictionary
+        """
+        message: Dict[str, Any] = {
+            "role": "assistant",
+            "content": content
+        }
+
+        if tool_calls:
+            message["tool_calls"] = [
+                {
+                    "id": call.id,
+                    "type": "function",
+                    "function": {
+                        "name": call.name,
+                        "arguments": call.arguments
+                    }
+                }
+                for call in tool_calls
+            ]
+
+        return message
+
+    def _format_messages_for_provider(self, conversation_history: List[AIMessage]) -> List[Dict[str, Any]]:
+        """
+        Format conversation history for Mistral's API format in a single pass.
+
+        Args:
+            conversation_history: List of AIMessage objects
+
+        Returns:
+            List of messages formatted for Mistral API
         """
         result = []
-        last_reasoning_message: AIMessage | None = None
 
-        for message in messages:
-            # Skip hidden audit trail messages (TOOL_CALL and TOOL_RESULT)
-            if message.source == AIMessageSource.TOOL_CALL:
-                if last_reasoning_message is not None:
-                    # If we had a reasoning message, we can include it
-                    msg_dict = {
-                        "role": "assistant",
-                        "reasoning_content": message.content
-                    }
-
-                    if last_reasoning_message.tool_calls:
-                        msg_dict["tool_calls"] = [
-                            {
-                                "id": call.id,
-                                "name": call.name,
-                                "arguments": call.arguments
-                            }
-                            for call in last_reasoning_message.tool_calls
-                        ]
-
-                    result.append(msg_dict)
-                    last_reasoning_message = None
-
-                continue
-
-            # We're only interested in the last reasoning message for tool calls
-            last_reasoning_message = None
-
-            if message.source == AIMessageSource.TOOL_RESULT:
-                continue
-
-            # Handle user messages
+        for message in conversation_history:
             if message.source == AIMessageSource.USER:
-                msg_dict: Dict[str, Any] = {
-                    "role": "user",
-                    "content": message.content
-                }
+                user_messages = self._build_user_message(
+                    content=message.content,
+                    tool_results=message.tool_results
+                )
+                result.extend(user_messages)
+                continue
 
-                # Add tool results if this user message contains them (raw format)
-                if message.tool_results:
-                    msg_dict["tool_results"] = [
-                        {
-                            "tool_call_id": result.tool_call_id,
-                            "name": result.name,
-                            "content": result.content,
-                            "error": result.error
-                        }
-                        for result in message.tool_results
-                    ]
-
-                result.append(msg_dict)
-
-            # Handle AI messages
-            elif message.source == AIMessageSource.AI:
-                # Only include completed AI messages in context
+            if message.source == AIMessageSource.AI:
+                # Only include completed AI messages without errors
                 if not message.completed or message.error:
                     continue
 
-                msg_dict = {
-                    "role": "assistant",
-                    "content": message.content
-                }
-
-                # Add tool calls if this AI message made them (raw format)
-                if message.tool_calls:
-                    msg_dict["tool_calls"] = [
-                        {
-                            "id": call.id,
-                            "name": call.name,
-                            "arguments": call.arguments
-                        }
-                        for call in message.tool_calls
-                    ]
-
-                result.append(msg_dict)
-
-            elif message.source == AIMessageSource.REASONING:
-                last_reasoning_message = message
-
-            # Skip system messages (they're handled separately)
-
-        return result
-
-    def _format_messages_for_provider(self, conversation_history: List[AIMessage]) -> List[Dict[str, Any]]:
-        """Format conversation history for xAI's API format."""
-        messages = self._get_messages_for_context(conversation_history)
-
-        result = []
-        for message in messages:
-            role = message["role"]
-            content = message["content"]
-
-            msg_dict = {
-                "role": role,
-                "content": content
-            }
-
-            # Handle assistant messages with tool calls
-            if role == "assistant" and "tool_calls" in message:
-                msg_dict["tool_calls"] = [
-                    {
-                        "id": tool_call["id"],
-                        "type": "function",
-                        "function": {
-                            "name": tool_call["name"],
-                            "arguments": tool_call["arguments"]
-                        }
-                    }
-                    for tool_call in message["tool_calls"]
-                ]
-
-            # Handle user messages with tool results
-            elif role == "user" and "tool_results" in message:
-                if content:
-                    result.append(msg_dict)
-
-                for tool_result in message["tool_results"]:
-                    result.append({
-                        "role": "tool",
-                        "name": tool_result["name"],
-                        "tool_call_id": tool_result["tool_call_id"],
-                        "content": tool_result["content"]
-                    })
-
+                assistant_msg = self._build_assistant_message(
+                    content=message.content,
+                    tool_calls=message.tool_calls
+                )
+                result.append(assistant_msg)
                 continue
-
-            result.append(msg_dict)
 
         return result
 
@@ -167,7 +125,7 @@ class MistralBackend(AIBackend):
         settings: AIConversationSettings
     ) -> RequestConfig:
         """Build complete request configuration for Mistral."""
-        # Use the pre-formatted messages directly
+        # Use the unified message formatting
         messages = self._format_messages_for_provider(conversation_history)
 
         # Build request data
