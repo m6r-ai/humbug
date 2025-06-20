@@ -12,7 +12,12 @@ from humbug.ai.ai_usage import AIUsage
 
 @dataclass
 class AIMessage:
-    """Represents a single message in the conversation."""
+    """
+    Represents a single message in the conversation.
+
+    These messsages represent an abstraction of the actual messages we send and receive.  We want them
+    to be independent of the actual backend, so we can swap backends mid-conversation without losing context.
+    """
     id: str
     source: AIMessageSource
     content: str

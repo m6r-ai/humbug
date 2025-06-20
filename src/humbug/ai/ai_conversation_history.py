@@ -1,9 +1,8 @@
 """AI conversation state management."""
 
-from typing import Dict, List, Any
+from typing import Dict, List
 
 from humbug.ai.ai_message import AIMessage
-from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_usage import AIUsage
 
 
@@ -63,71 +62,6 @@ class AIConversationHistory:
     def get_visible_messages(self) -> List[AIMessage]:
         """Get messages that should be visible to the user (excludes tool calls/results)."""
         return [msg for msg in self._messages if not msg.is_hidden_from_user()]
-
-    def get_messages_for_context(self) -> List[Dict[str, Any]]:
-        """
-        Get messages formatted for AI context - raw format for backend processing.
-
-        Returns:
-            Raw message format that backends can transform as needed.
-            Tool calls and results are preserved as separate fields for backend processing.
-        """
-        result = []
-
-        for message in self._messages:
-            # Skip hidden audit trail messages (TOOL_CALL and TOOL_RESULT)
-            if message.source in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT):
-                continue
-
-            # Handle user messages
-            if message.source == AIMessageSource.USER:
-                msg_dict: Dict[str, Any] = {
-                    "role": "user",
-                    "content": message.content
-                }
-
-                # Add tool results if this user message contains them (raw format)
-                if message.tool_results:
-                    msg_dict["tool_results"] = [
-                        {
-                            "tool_call_id": result.tool_call_id,
-                            "name": result.name,
-                            "content": result.content,
-                            "error": result.error
-                        }
-                        for result in message.tool_results
-                    ]
-
-                result.append(msg_dict)
-
-            # Handle AI messages
-            elif message.source == AIMessageSource.AI:
-                # Only include completed AI messages in context
-                if not message.completed or message.error:
-                    continue
-
-                msg_dict = {
-                    "role": "assistant",
-                    "content": message.content
-                }
-
-                # Add tool calls if this AI message made them (raw format)
-                if message.tool_calls:
-                    msg_dict["tool_calls"] = [
-                        {
-                            "id": call.id,
-                            "name": call.name,
-                            "arguments": call.arguments
-                        }
-                        for call in message.tool_calls
-                    ]
-
-                result.append(msg_dict)
-
-            # Skip reasoning messages for now (they're not part of the conversation context)
-            # Skip system messages (they're handled separately)
-
-        return result
 
     def get_token_counts(self) -> Dict[str, int]:
         """Get token counts from last response."""

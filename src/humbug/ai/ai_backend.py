@@ -15,6 +15,7 @@ from aiohttp import ClientConnectorError, ClientError
 import certifi
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_rate_limiter import AIRateLimiter
 from humbug.ai.ai_response import AIResponse, AIError
 from humbug.ai.ai_stream_response import AIStreamResponse
@@ -64,7 +65,7 @@ class AIBackend(ABC):
     @abstractmethod
     def _build_request_config(
         self,
-        conversation_history: List[Dict[str, Any]],
+        conversation_history: List[AIMessage],
         settings: AIConversationSettings
     ) -> RequestConfig:
         """
@@ -100,7 +101,7 @@ class AIBackend(ABC):
 
     async def stream_message(
         self,
-        conversation_history: List[Dict[str, Any]],
+        conversation_history: List[AIMessage],
         conversation_settings: AIConversationSettings
     ) -> AsyncGenerator[AIResponse, None]:
         """Send a message to the AI backend and stream the response."""

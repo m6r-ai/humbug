@@ -183,11 +183,12 @@ class AIConversation:
     async def _start_ai(self) -> None:
         """Start an AI response based on the conversation history."""
         stream = None
+        settings = self.conversation_settings()
+
         try:
             self._logger.debug("=== Starting new AI response ===")
 
             # Get appropriate backend for conversation
-            settings = self.conversation_settings()
             provider = AIConversationSettings.get_provider(settings.model)
             backend = self._user_manager.get_ai_backends().get(provider)
 
@@ -205,7 +206,7 @@ class AIConversation:
                 return
 
             stream = backend.stream_message(
-                self._conversation.get_messages_for_context(),
+                self._conversation.get_messages(),
                 self._settings
             )
 
@@ -338,7 +339,7 @@ class AIConversation:
 
             # Continue streaming with the updated conversation history (including tool results)
             stream = backend.stream_message(
-                self._conversation.get_messages_for_context(),
+                self._conversation.get_messages(),
                 self._settings
             )
 
@@ -447,7 +448,10 @@ class AIConversation:
                 completed=(usage is not None)
             )
             if message:
-                await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
+                await self._trigger_event(
+                    AIConversationEvent.MESSAGE_UPDATED if usage is None else AIConversationEvent.MESSAGE_COMPLETED,
+                    message
+                )
 
             return
 
@@ -473,10 +477,18 @@ class AIConversation:
             tool_calls=tool_calls
         )
         self._conversation.add_message(new_message)
-        await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, new_message)
+        await self._trigger_event(
+            AIConversationEvent.MESSAGE_ADDED if usage is None else AIConversationEvent.TOOL_USED,
+            new_message
+        )
         self._current_ai_message = new_message
 
-    async def _handle_reasoning(self, reasoning: str, usage: AIUsage | None = None) -> None:
+    async def _handle_reasoning(
+        self,
+        reasoning: str,
+        usage: AIUsage | None,
+        tool_calls: List[AIToolCall] | None
+    ) -> None:
         """
         Handle reasoning updates from the AI response.
 
@@ -494,7 +506,10 @@ class AIConversation:
                 completed=False
             )
             if message:
-                await self._trigger_event(AIConversationEvent.MESSAGE_UPDATED, message)
+                await self._trigger_event(
+                    AIConversationEvent.MESSAGE_UPDATED if usage is None else AIConversationEvent.MESSAGE_COMPLETED,
+                    message
+                )
 
             return
 
@@ -505,10 +520,14 @@ class AIConversation:
             reasoning,
             model=settings.model,
             temperature=settings.temperature,
-            completed=False
+            completed=(usage is not None),
+            tool_calls=tool_calls
         )
         self._conversation.add_message(new_message)
-        await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, new_message)
+        await self._trigger_event(
+            AIConversationEvent.MESSAGE_ADDED if usage is None else AIConversationEvent.TOOL_USED,
+            new_message
+        )
         self._current_reasoning_message = new_message
 
     async def _handle_usage(self, reasoning: str, content: str, tool_calls: List[AIToolCall] | None) -> None:
@@ -569,7 +588,7 @@ class AIConversation:
 
         # If we have no content but have reasoning, handle that separately
         elif reasoning:
-            await self._handle_reasoning(reasoning, usage)
+            await self._handle_reasoning(reasoning, usage, tool_calls)
 
         if usage:
             await self._handle_usage(reasoning, content, tool_calls)
