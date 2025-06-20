@@ -189,7 +189,7 @@ class AIConversation:
         settings = self.conversation_settings()
 
         try:
-            self._logger.debug("=== Starting new AI response ===")
+            self._logger.debug("=== Starting AI response streaming ===")
 
             # Get appropriate backend for conversation
             provider = AIConversationSettings.get_provider(settings.model)
@@ -274,7 +274,7 @@ class AIConversation:
             return
 
         finally:
-            self._logger.debug("=== Finished AI response ===")
+            self._logger.debug("=== Finished AI response streaming ===")
 
             # Properly close the async generator if it exists
             if stream is not None:
@@ -327,62 +327,7 @@ class AIConversation:
         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
 
         # Automatically continue the conversation with tool results
-        await self._continue_after_tool_execution()
-
-    async def _continue_after_tool_execution(self) -> None:
-        """Continue the AI conversation after tool execution with results."""
-        settings = self.conversation_settings()
-        try:
-            self._logger.debug("Continuing conversation after tool execution")
-
-            # Get appropriate backend for conversation
-            provider = AIConversationSettings.get_provider(settings.model)
-            backend = self._user_manager.get_ai_backends().get(provider)
-
-            if not backend:
-                error_msg = f"No backend available for provider: {provider}"
-                self._logger.error(error_msg)
-                error_message = AIMessage.create(
-                    AIMessageSource.SYSTEM,
-                    error_msg,
-                    error={"code": "backend_error", "message": error_msg}
-                )
-                self._conversation.add_message(error_message)
-                await self._trigger_event(AIConversationEvent.ERROR, True, error_message)
-                self._is_streaming = False
-                return
-
-            stream = backend.stream_message(
-                self._conversation.get_messages(),
-                self._settings
-            )
-
-            async for response in stream:
-                await self._update_streaming_response(
-                    reasoning=response.reasoning,
-                    content=response.content,
-                    usage=response.usage,
-                    error=response.error,
-                    tool_calls=response.tool_calls,
-                    signature=response.signature,
-                    readacted_reasoning=response.readacted_reasoning
-                )
-
-                if response.error and response.error.retries_exhausted:
-                    return
-
-        except Exception as e:
-            self._logger.exception("Error continuing conversation after tool execution")
-            await self._update_streaming_response(
-                reasoning="",
-                content="",
-                error=AIError(
-                    code="tool_continuation_error",
-                    message=f"Failed to continue after tool execution: {str(e)}",
-                    retries_exhausted=True,
-                    details={"type": type(e).__name__}
-                )
-            )
+        await self._start_ai()
 
     async def _handle_error(self, error: AIError) -> None:
         """
