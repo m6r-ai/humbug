@@ -27,7 +27,7 @@ class AIMessage:
     error: Dict | None = None
     model: str | None = None
     temperature: float | None = None
-    reasoning: ReasoningCapability | None = None
+    reasoning_capability: ReasoningCapability | None = None
     completed: bool = True
     tool_calls: List[AIToolCall] | None = None
     tool_results: List[AIToolResult] | None = None
@@ -54,7 +54,7 @@ class AIMessage:
         error: Dict | None = None,
         model: str | None = None,
         temperature: float | None = None,
-        reasoning: ReasoningCapability | None = None,
+        reasoning_capability: ReasoningCapability | None = None,
         completed: bool = True,
         timestamp: datetime | None = None,
         tool_calls: List[AIToolCall] | None = None,
@@ -75,7 +75,7 @@ class AIMessage:
             error=error,
             model=model,
             temperature=temperature,
-            reasoning=reasoning,
+            reasoning_capability=reasoning_capability,
             completed=completed,
             tool_calls=tool_calls,
             tool_results=tool_results,
@@ -94,7 +94,7 @@ class AIMessage:
             error=self.error.copy() if self.error else None,
             model=self.model,
             temperature=self.temperature,
-            reasoning=self.reasoning,
+            reasoning_capability=self.reasoning_capability,
             completed=self.completed,
             tool_calls=self.tool_calls.copy() if self.tool_calls else None,
             tool_results=self.tool_results.copy() if self.tool_results else None,
@@ -125,8 +125,8 @@ class AIMessage:
         if self.model:
             message["model"] = self.model
 
-        if self.reasoning:
-            message["reasoning"] = self.reasoning.value
+        if self.reasoning_capability:
+            message["reasoning_capability"] = self.reasoning_capability.value
 
         if self.temperature is not None:
             message["temperature"] = self.temperature
@@ -195,14 +195,14 @@ class AIMessage:
             raise ValueError(f"Invalid timestamp format: {data['timestamp']}") from e
 
         # Parse reasoning capability if present
-        reasoning = None
-        if data.get("reasoning"):
+        reasoning_capability = None
+        if data.get("reasoning_capability"):
             try:
-                reasoning_value = data["reasoning"]
-                reasoning = ReasoningCapability(reasoning_value)
+                reasoning_value = data["reasoning_capability"]
+                reasoning_capability = ReasoningCapability(reasoning_value)
 
             except ValueError as e:
-                raise ValueError(f"Invalid reasoning capability: {data['reasoning']}") from e
+                raise ValueError(f"Invalid reasoning capability: {data['reasoning_capability']}") from e
 
         # Parse usage data if present
         usage = None
@@ -260,7 +260,7 @@ class AIMessage:
             error=data.get("error", None),
             model=data.get("model", None),
             temperature=data.get("temperature", None),
-            reasoning=reasoning,
+            reasoning_capability=reasoning_capability,
             completed=data.get("completed", True),
             tool_calls=tool_calls,
             tool_results=tool_results,

@@ -152,11 +152,12 @@ class AIConversation:
                         message.usage.completion_tokens
                     )
 
+                reasoning = message.reasoning_capability if message.reasoning_capability else ReasoningCapability.NO_REASONING
                 if message.model:
                     self.update_conversation_settings(AIConversationSettings(
                         model=message.model,
                         temperature=message.temperature,
-                        reasoning=message.reasoning if message.reasoning else ReasoningCapability.NO_REASONING
+                        reasoning=reasoning
                     ))
 
     async def submit_message(self, message: AIMessage) -> None:
@@ -496,7 +497,7 @@ class AIConversation:
             content,
             model=settings.model,
             temperature=settings.temperature,
-            reasoning=settings.reasoning,
+            reasoning_capability=settings.reasoning,
             completed=(usage is not None),
             tool_calls=tool_calls
         )
@@ -551,7 +552,7 @@ class AIConversation:
             reasoning,
             model=settings.model,
             temperature=settings.temperature,
-            reasoning=settings.reasoning,
+            reasoning_capability=settings.reasoning,
             completed=(usage is not None),
             tool_calls=tool_calls,
             signature=signature,
@@ -574,7 +575,7 @@ class AIConversation:
                 content="",
                 model=settings.model,
                 temperature=settings.temperature,
-                reasoning=settings.reasoning,
+                reasoning_capability=settings.reasoning,
                 completed=True,
                 tool_calls=tool_calls
             )
