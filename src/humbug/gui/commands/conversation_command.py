@@ -4,6 +4,7 @@ import logging
 from typing import List, Callable, Dict
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.ai_model import ReasoningCapability
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -14,7 +15,10 @@ from humbug.user.user_manager import UserManager
 class ConversationCommand(SystemCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(self, create_conversation_callback: Callable[[str | None, float | None], bool]) -> None:
+    def __init__(
+        self,
+        create_conversation_callback: Callable[[str | None, float | None, ReasoningCapability | None], bool]
+    ) -> None:
         """
         Initialize conversation command.
 
@@ -102,9 +106,15 @@ class ConversationCommand(SystemCommand):
                 )
                 return False
 
+        reasoning: ReasoningCapability | None = None
+        if model:
+            model_config = AIConversationSettings.MODELS.get(model)
+            if model_config:
+                reasoning = model_config.reasoning_capabilities
+
         try:
             # Create new conversation with model if specified
-            if not self._create_conversation(model, temperature_val):
+            if not self._create_conversation(model, temperature_val, reasoning):
                 return False
 
             # Success message would include model info if specified

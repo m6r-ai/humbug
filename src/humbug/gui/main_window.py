@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
+from humbug.ai.ai_model import ReasoningCapability
 from humbug.ai.ai_tool_manager import AIToolManager, AIToolDefinition, AIToolParameter, AITool, ToolExecutionError
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
@@ -1367,12 +1368,17 @@ class MainWindow(QMainWindow):
         self._mindspace_manager.clear_system_interactions()
         return True
 
-    def _process_conversation_command(self, model: str | None, temperature: float | None) -> bool:
+    def _process_conversation_command(
+        self,
+        model: str | None,
+        temperature: float | None,
+        reasoning: ReasoningCapability | None
+    ) -> bool:
         """Process the conversation command."""
         self._column_manager.protect_current_tab(True)
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            self._column_manager.new_conversation(model, temperature)
+            self._column_manager.new_conversation(model, temperature, reasoning)
 
         except MindspaceError as e:
             self._mindspace_manager.add_system_interaction(
@@ -1404,6 +1410,7 @@ class MainWindow(QMainWindow):
         args: List[str],
         model: str | None,
         temperature: float | None,
+        reasoning: ReasoningCapability | None,
         should_submit: bool
     ) -> bool:
         """Process the m6rc command."""
@@ -1435,7 +1442,7 @@ class MainWindow(QMainWindow):
         conversation_id: str | None = None
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            conversation_id = self._column_manager.new_conversation(model, temperature)
+            conversation_id = self._column_manager.new_conversation(model, temperature, reasoning)
 
         except MindspaceError as e:
             self._mindspace_manager.add_system_interaction(

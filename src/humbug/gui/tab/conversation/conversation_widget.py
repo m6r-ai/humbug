@@ -877,7 +877,8 @@ class ConversationWidget(QWidget):
 
             default_settings = AIConversationSettings(
                 model=settings.model,
-                temperature=settings.temperature
+                temperature=settings.temperature,
+                reasoning=settings.reasoning
             )
 
             ai_conversation = cast(AIConversation, self._ai_conversation)

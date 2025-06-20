@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget
 from PySide6.QtCore import Signal, QTimer
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.ai_model import ReasoningCapability
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_splitter import ColumnSplitter
 from humbug.gui.column_widget import ColumnWidget
@@ -1117,7 +1118,8 @@ class ColumnManager(QWidget):
     def new_conversation(
         self,
         model: str | None = None,
-        temperature: float | None = None
+        temperature: float | None = None,
+        reasoning: ReasoningCapability | None = None
     ) -> str:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
@@ -1138,10 +1140,13 @@ class ColumnManager(QWidget):
         if temperature is None:
             temperature = settings.temperature
 
+        if reasoning is None:
+            reasoning = settings.reasoning
+
         conversation_settings = AIConversationSettings(
             model=model,
             temperature=temperature if AIConversationSettings.supports_temperature(model) else None,
-            reasoning=settings.reasoning
+            reasoning=reasoning
         )
         conversation_tab.update_conversation_settings(conversation_settings)
         self._add_tab(conversation_tab, conversation_title)

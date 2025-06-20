@@ -6,6 +6,7 @@ from typing import Dict, List
 import uuid
 
 from humbug.ai.ai_message_source import AIMessageSource
+from humbug.ai.ai_model import ReasoningCapability
 from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult
 from humbug.ai.ai_usage import AIUsage
 
@@ -26,6 +27,7 @@ class AIMessage:
     error: Dict | None = None
     model: str | None = None
     temperature: float | None = None
+    reasoning: ReasoningCapability | None = None
     completed: bool = True
     tool_calls: List[AIToolCall] | None = None
     tool_results: List[AIToolResult] | None = None
@@ -50,6 +52,7 @@ class AIMessage:
         error: Dict | None = None,
         model: str | None = None,
         temperature: float | None = None,
+        reasoning: ReasoningCapability | None = None,
         completed: bool = True,
         timestamp: datetime | None = None,
         tool_calls: List[AIToolCall] | None = None,
@@ -68,50 +71,10 @@ class AIMessage:
             error=error,
             model=model,
             temperature=temperature,
+            reasoning=reasoning,
             completed=completed,
             tool_calls=tool_calls,
             tool_results=tool_results
-        )
-
-    @classmethod
-    def create_tool_call_message(
-        cls,
-        tool_calls: List[AIToolCall],
-        model: str | None = None,
-        temperature: float | None = None,
-        timestamp: datetime | None = None
-    ) -> 'AIMessage':
-        """Create a tool call message."""
-        # Generate content summary for logging/debugging
-        tool_names = [call.name for call in tool_calls]
-        content = f"Tool calls: {', '.join(tool_names)}"
-
-        return cls.create(
-            source=AIMessageSource.TOOL_CALL,
-            content=content,
-            model=model,
-            temperature=temperature,
-            timestamp=timestamp,
-            tool_calls=tool_calls,
-            completed=True
-        )
-
-    @classmethod
-    def create_tool_result_message(
-        cls,
-        tool_results: List[AIToolResult],
-        timestamp: datetime | None = None
-    ) -> 'AIMessage':
-        """Create a tool result message."""
-        # Generate content summary for logging/debugging
-        content = f"Tool results: {len(tool_results)} tool(s) executed"
-
-        return cls.create(
-            source=AIMessageSource.TOOL_RESULT,
-            content=content,
-            timestamp=timestamp,
-            tool_results=tool_results,
-            completed=True
         )
 
     def copy(self) -> 'AIMessage':
@@ -125,6 +88,7 @@ class AIMessage:
             error=self.error.copy() if self.error else None,
             model=self.model,
             temperature=self.temperature,
+            reasoning=self.reasoning,
             completed=self.completed,
             tool_calls=self.tool_calls.copy() if self.tool_calls else None,
             tool_results=self.tool_results.copy() if self.tool_results else None
@@ -144,11 +108,20 @@ class AIMessage:
             "completed": self.completed
         }
 
-        # Always include these fields, even if None
-        message["usage"] = self.usage.to_dict() if self.usage else None
-        message["error"] = self.error
-        message["model"] = self.model
-        message["temperature"] = self.temperature
+        if self.usage:
+            message["usage"] = self.usage.to_dict()
+
+        if self.error:
+            message["error"] = self.error
+
+        if self.model:
+            message["model"] = self.model
+
+        if self.reasoning:
+            message["reasoning"] = self.reasoning.value
+
+        if self.temperature is not None:
+            message["temperature"] = self.temperature
 
         # Add tool-specific fields
         if self.tool_calls:
@@ -197,13 +170,25 @@ class AIMessage:
         msg_type = data["type"]
         if msg_type not in cls._TYPE_SOURCE_MAP:
             raise ValueError(f"Invalid message type: {msg_type}")
+
         source = cls._TYPE_SOURCE_MAP[msg_type]
 
         # Parse timestamp
         try:
             timestamp = datetime.fromisoformat(data["timestamp"])
+
         except ValueError as e:
             raise ValueError(f"Invalid timestamp format: {data['timestamp']}") from e
+
+        # Parse reasoning capability if present
+        reasoning = None
+        if data.get("reasoning"):
+            try:
+                reasoning_value = data["reasoning"]
+                reasoning = ReasoningCapability(reasoning_value)
+
+            except ValueError as e:
+                raise ValueError(f"Invalid reasoning capability: {data['reasoning']}") from e
 
         # Parse usage data if present
         usage = None
@@ -215,6 +200,7 @@ class AIMessage:
                     completion_tokens=usage_data["completion_tokens"],
                     total_tokens=usage_data["total_tokens"]
                 )
+
             except (KeyError, TypeError) as e:
                 raise ValueError(f"Invalid usage data format: {data['usage']}") from e
 
@@ -257,9 +243,10 @@ class AIMessage:
             content=data["content"],
             timestamp=timestamp,
             usage=usage,
-            error=data.get("error"),
-            model=data.get("model"),
-            temperature=data.get("temperature"),
+            error=data.get("error", None),
+            model=data.get("model", None),
+            temperature=data.get("temperature", None),
+            reasoning=reasoning,
             completed=data.get("completed", True),
             tool_calls=tool_calls,
             tool_results=tool_results

@@ -4,6 +4,7 @@ import os
 from typing import Callable, Dict, List
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
+from humbug.ai.ai_model import ReasoningCapability
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.system.system_command import SystemCommand
 from humbug.mindspace.system.system_message_source import SystemMessageSource
@@ -16,7 +17,7 @@ class M6rcCommand(SystemCommand):
 
     def __init__(
         self,
-        create_m6rc_conversation_callback: Callable[[str, List[str], str | None, float | None, bool], bool]
+        create_m6rc_conversation_callback: Callable[[str, List[str], str | None, float | None, ReasoningCapability | None, bool], bool]
     ) -> None:
         """
         Initialize the command.
@@ -114,6 +115,12 @@ class M6rcCommand(SystemCommand):
         # Check if should auto-submit
         should_submit = "--submit" in options or "-j" in options
 
+        reasoning: ReasoningCapability | None = None
+        if model:
+            model_config = AIConversationSettings.MODELS.get(model)
+            if model_config:
+                reasoning = model_config.reasoning_capabilities
+
         try:
             # Check if the path exists.  Convert to absolute path if it's relative
             file_path = self._mindspace_manager.get_absolute_path(args[0])
@@ -124,7 +131,7 @@ class M6rcCommand(SystemCommand):
                 )
                 return False
 
-            if not self._create_m6rc_conversation(file_path, args, model, temperature_val, should_submit):
+            if not self._create_m6rc_conversation(file_path, args, model, temperature_val, reasoning, should_submit):
                 return False
 
             self._mindspace_manager.add_system_interaction(
