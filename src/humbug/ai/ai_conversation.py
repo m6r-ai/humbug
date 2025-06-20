@@ -224,11 +224,8 @@ class AIConversation:
                     readacted_reasoning=response.readacted_reasoning
                 )
 
-                if response.error:
-                    if response.error.retries_exhausted:
-                        return
-
-                    continue
+                if response.error and response.error.retries_exhausted:
+                    return
 
             # If we get here and are still marked as streaming then we failed to get a
             # complete response before giving up.  This is a failure and should be handled as such.
@@ -334,11 +331,11 @@ class AIConversation:
 
     async def _continue_after_tool_execution(self) -> None:
         """Continue the AI conversation after tool execution with results."""
+        settings = self.conversation_settings()
         try:
             self._logger.debug("Continuing conversation after tool execution")
 
             # Get appropriate backend for conversation
-            settings = self.conversation_settings()
             provider = AIConversationSettings.get_provider(settings.model)
             backend = self._user_manager.get_ai_backends().get(provider)
 
@@ -355,7 +352,6 @@ class AIConversation:
                 self._is_streaming = False
                 return
 
-            # Continue streaming with the updated conversation history (including tool results)
             stream = backend.stream_message(
                 self._conversation.get_messages(),
                 self._settings
@@ -367,7 +363,9 @@ class AIConversation:
                     content=response.content,
                     usage=response.usage,
                     error=response.error,
-                    tool_calls=response.tool_calls
+                    tool_calls=response.tool_calls,
+                    signature=response.signature,
+                    readacted_reasoning=response.readacted_reasoning
                 )
 
                 if response.error and response.error.retries_exhausted:
