@@ -60,6 +60,7 @@ class AnthropicBackend(AIBackend):
             "content": content
         }
 
+    # TODO: handle redacted reasoning
     def _build_assistant_message(
             self,
             reasoning: str,
@@ -141,8 +142,6 @@ class AnthropicBackend(AIBackend):
                 if last_reasoning_message and last_reasoning_message.signature:
                     signature = last_reasoning_message.signature
 
-                print(f"tool call: {message.content}, reasoning: {last_reasoning_message.content}, signature: {signature}")
-
                 assistant_msg = self._build_assistant_message(
                     reasoning=last_reasoning_message.content,
                     signature=signature,
@@ -162,8 +161,6 @@ class AnthropicBackend(AIBackend):
                 signature = ""
                 if last_reasoning_message and last_reasoning_message.signature:
                     signature = last_reasoning_message.signature
-
-                print(f"tool call: {message.content}, signature: {signature}")
 
                 assistant_msg = self._build_assistant_message(
                     reasoning=last_reasoning_message.content if last_reasoning_message else "",
