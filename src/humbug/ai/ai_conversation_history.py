@@ -64,10 +64,6 @@ class AIConversationHistory:
         """
         return self._messages.copy()
 
-    def get_visible_messages(self) -> List[AIMessage]:
-        """Get messages that should be visible to the user (excludes tool calls/results)."""
-        return [msg for msg in self._messages if not msg.is_hidden_from_user()]
-
     def get_token_counts(self) -> Dict[str, int]:
         """Get token counts from last response."""
         return self._last_response_tokens
