@@ -126,8 +126,8 @@ class UserManager(QObject):
             "xai": os.environ.get("XAI_API_KEY")
         }
 
+        settings = cast(UserSettings, self._settings)
         for backend_id, api_key in env_keys.items():
-            settings = cast(UserSettings, self._settings)
             if api_key is not None and not settings.ai_backends[backend_id].enabled:
                 settings.ai_backends[backend_id] = AIBackendSettings(
                     enabled=True,
