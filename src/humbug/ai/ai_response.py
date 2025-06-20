@@ -26,3 +26,5 @@ class AIResponse:
     model: str | None = None
     temperature: float | None = None
     tool_calls: List[AIToolCall] | None = None
+    signature: str | None = None
+    readacted_reasoning: str | None = None

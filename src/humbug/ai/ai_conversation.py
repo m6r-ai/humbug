@@ -218,7 +218,9 @@ class AIConversation:
                     content=response.content,
                     usage=response.usage,
                     error=response.error,
-                    tool_calls=response.tool_calls
+                    tool_calls=response.tool_calls,
+                    signature=response.signature,
+                    readacted_reasoning=response.readacted_reasoning
                 )
 
                 if response.error:
@@ -438,7 +440,9 @@ class AIConversation:
         reasoning: str,
         content: str,
         usage: AIUsage | None,
-        tool_calls: List[AIToolCall] | None
+        tool_calls: List[AIToolCall] | None,
+        signature: str | None = None,
+        readacted_reasoning: str | None = None
     ) -> None:
         """
         Handle content updates from the AI response.
@@ -448,6 +452,8 @@ class AIConversation:
             content: Main content of the AI response
             usage: Optional token usage information
             tool_calls: Optional list of tool calls made by the AI
+            signature: Optional signature for the response
+            readacted_reasoning: Optional readacted reasoning text
         """
         # We're handling a response.  Have we already seen part of this already?
         if self._current_ai_message:
@@ -476,7 +482,9 @@ class AIConversation:
                 self._current_reasoning_message.id,
                 reasoning,
                 usage=usage,
-                completed=True
+                completed=True,
+                signature=signature,
+                readacted_reasoning=readacted_reasoning
             )
             await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, reasoning_message)
             self._current_reasoning_message = None
@@ -503,7 +511,9 @@ class AIConversation:
         self,
         reasoning: str,
         usage: AIUsage | None,
-        tool_calls: List[AIToolCall] | None
+        tool_calls: List[AIToolCall] | None,
+        signature: str | None = None,
+        readacted_reasoning: str | None = None
     ) -> None:
         """
         Handle reasoning updates from the AI response.
@@ -511,6 +521,9 @@ class AIConversation:
         Args:
             reasoning: Reasoning text from the AI response
             usage: Optional token usage information
+            tool_calls: Optional list of tool calls made by the AI
+            signature: Optional signature for the response
+            readacted_reasoning: Optional readacted reasoning text
         """
         # We're handling reasoning from our AI.  Have we already seen part of this reasoning?
         if self._current_reasoning_message:
@@ -519,7 +532,9 @@ class AIConversation:
                 self._current_reasoning_message.id,
                 reasoning,
                 usage=usage,
-                completed=False
+                completed=False,
+                signature=signature,
+                readacted_reasoning=readacted_reasoning
             )
             if message:
                 await self._trigger_event(
@@ -538,7 +553,9 @@ class AIConversation:
             temperature=settings.temperature,
             reasoning=settings.reasoning,
             completed=(usage is not None),
-            tool_calls=tool_calls
+            tool_calls=tool_calls,
+            signature=signature,
+            readacted_reasoning=readacted_reasoning
         )
         self._conversation.add_message(new_message)
         await self._trigger_event(
@@ -581,7 +598,9 @@ class AIConversation:
         content: str,
         usage: AIUsage | None = None,
         error: AIError | None = None,
-        tool_calls: List[AIToolCall] | None = None
+        tool_calls: List[AIToolCall] | None = None,
+        signature: str | None = None,
+        readacted_reasoning: str | None = None
     ) -> None:
         """
         Update the current AI response in the conversation.
@@ -602,11 +621,11 @@ class AIConversation:
 
         # Handle main content first
         if content:
-            await self._handle_content(reasoning, content, usage, tool_calls)
+            await self._handle_content(reasoning, content, usage, tool_calls, signature, readacted_reasoning)
 
         # If we have no content but have reasoning, handle that separately
         elif reasoning:
-            await self._handle_reasoning(reasoning, usage, tool_calls)
+            await self._handle_reasoning(reasoning, usage, tool_calls, signature, readacted_reasoning)
 
         if usage:
             await self._handle_usage(reasoning, content, tool_calls)

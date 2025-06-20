@@ -57,7 +57,7 @@ class AnthropicStreamResponse(AIStreamResponse):
                 self._current_tool_arguments = ""
 
             elif block_type == "redacted_thinking":
-                self.reasoning += "\n\nRedacted: " + content_block.get("data", "") + "\n"
+                self.readacted_reasoning = content_block.get("data", "")
 
         elif event_type == "content_block_delta":
             delta = chunk.get("delta", {})
@@ -73,7 +73,7 @@ class AnthropicStreamResponse(AIStreamResponse):
 
             elif delta_type == "signature_delta":
                 # Signature content (part of reasoning)
-                self.reasoning += "\n\nSignature: " + delta.get("signature", "") + "\n"
+                self.signature = delta.get("signature", "")
 
             elif delta_type == "input_json_delta":
                 # Tool arguments being streamed

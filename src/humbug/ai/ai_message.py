@@ -31,6 +31,8 @@ class AIMessage:
     completed: bool = True
     tool_calls: List[AIToolCall] | None = None
     tool_results: List[AIToolResult] | None = None
+    signature: str | None = None
+    readacted_reasoning: str | None = None
 
     # Map between AIMessageSource enum and transcript type strings
     _SOURCE_TYPE_MAP = {
@@ -56,7 +58,9 @@ class AIMessage:
         completed: bool = True,
         timestamp: datetime | None = None,
         tool_calls: List[AIToolCall] | None = None,
-        tool_results: List[AIToolResult] | None = None
+        tool_results: List[AIToolResult] | None = None,
+        signature: str | None = None,
+        readacted_reasoning: str | None = None
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
@@ -74,7 +78,9 @@ class AIMessage:
             reasoning=reasoning,
             completed=completed,
             tool_calls=tool_calls,
-            tool_results=tool_results
+            tool_results=tool_results,
+            signature=signature,
+            readacted_reasoning=readacted_reasoning
         )
 
     def copy(self) -> 'AIMessage':
@@ -91,7 +97,9 @@ class AIMessage:
             reasoning=self.reasoning,
             completed=self.completed,
             tool_calls=self.tool_calls.copy() if self.tool_calls else None,
-            tool_results=self.tool_results.copy() if self.tool_results else None
+            tool_results=self.tool_results.copy() if self.tool_results else None,
+            signature=self.signature,
+            readacted_reasoning=self.readacted_reasoning
         )
 
     def is_hidden_from_user(self) -> bool:
@@ -122,6 +130,12 @@ class AIMessage:
 
         if self.temperature is not None:
             message["temperature"] = self.temperature
+
+        if self.signature:
+            message["signature"] = self.signature
+
+        if self.readacted_reasoning:
+            message["readacted_reasoning"] = self.readacted_reasoning
 
         # Add tool-specific fields
         if self.tool_calls:
@@ -249,5 +263,7 @@ class AIMessage:
             reasoning=reasoning,
             completed=data.get("completed", True),
             tool_calls=tool_calls,
-            tool_results=tool_results
+            tool_results=tool_results,
+            signature=data.get("signature", None),
+            readacted_reasoning=data.get("readacted_reasoning", None)
         )

@@ -60,11 +60,19 @@ class AnthropicBackend(AIBackend):
             "content": content
         }
 
-    def _build_assistant_message(self, content: str, tool_calls: List[AIToolCall] | None = None) -> Dict[str, Any]:
+    def _build_assistant_message(
+            self,
+            reasoning: str,
+            signature: str,
+            content: str,
+            tool_calls: List[AIToolCall] | None = None
+        ) -> Dict[str, Any]:
         """
         Build assistant message for Anthropic format.
 
         Args:
+            reasoning: Reasoning content if applicable
+            signature: Signature of the assistant on any reasoning content
             content: Assistant message content
             tool_calls: Optional tool calls made by the assistant
 
@@ -74,6 +82,10 @@ class AnthropicBackend(AIBackend):
         # For Anthropic, tool calls are structured content within the assistant message
         if tool_calls:
             content_parts = []
+
+            # Add reasoning content if present
+            if reasoning:
+                content_parts.append({"type": "thinking", "thinking": reasoning, "signature": signature})
 
             # Add text content if present
             if content:
@@ -125,10 +137,39 @@ class AnthropicBackend(AIBackend):
                     continue
 
                 # Create assistant message with reasoning content and tool calls
-                # TODO: reasoning messages should be handled differently!
+                signature = ""
+                if last_reasoning_message and last_reasoning_message.signature:
+                    signature = last_reasoning_message.signature
+
+                print(f"tool call: {message.content}, reasoning: {last_reasoning_message.content}, signature: {signature}")
+
                 assistant_msg = self._build_assistant_message(
-                    content=last_reasoning_message.content,
+                    reasoning=last_reasoning_message.content,
+                    signature=signature,
+                    content="",
                     tool_calls=last_reasoning_message.tool_calls
+                )
+                result.append(assistant_msg)
+                last_reasoning_message = None
+                continue
+
+            if message.source == AIMessageSource.AI:
+                # Only include completed AI messages without errors
+                if not message.completed or message.error:
+                    last_reasoning_message = None
+                    continue
+
+                signature = ""
+                if last_reasoning_message and last_reasoning_message.signature:
+                    signature = last_reasoning_message.signature
+
+                print(f"tool call: {message.content}, signature: {signature}")
+
+                assistant_msg = self._build_assistant_message(
+                    reasoning=last_reasoning_message.content if last_reasoning_message else "",
+                    signature=signature,
+                    content=message.content,
+                    tool_calls=message.tool_calls
                 )
                 result.append(assistant_msg)
                 last_reasoning_message = None
@@ -143,18 +184,6 @@ class AnthropicBackend(AIBackend):
                     tool_results=message.tool_results
                 )
                 result.append(user_msg)
-                continue
-
-            if message.source == AIMessageSource.AI:
-                # Only include completed AI messages without errors
-                if not message.completed or message.error:
-                    continue
-
-                assistant_msg = self._build_assistant_message(
-                    content=message.content,
-                    tool_calls=message.tool_calls
-                )
-                result.append(assistant_msg)
                 continue
 
             if message.source == AIMessageSource.REASONING:

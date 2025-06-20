@@ -227,7 +227,9 @@ class AIBackend(ABC):
                                     reasoning=response_handler.reasoning,
                                     content=response_handler.content,
                                     usage=response_handler.usage,
-                                    tool_calls=response_handler.tool_calls
+                                    tool_calls=response_handler.tool_calls,
+                                    signature=response_handler.signature,
+                                    readacted_reasoning=response_handler.readacted_reasoning
                                 )
 
                             except json.JSONDecodeError as e:
