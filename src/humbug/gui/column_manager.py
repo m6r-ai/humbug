@@ -806,7 +806,6 @@ class ColumnManager(QWidget):
 
     def _make_tab_permanent(self, tab: TabBase) -> None:
         """Convert an ephemeral tab to permanent."""
-        print("Making tab permanent:", tab.tab_id())
         tab.set_ephemeral(False)
         label = self._tab_labels.get(tab.tab_id())
         if label:

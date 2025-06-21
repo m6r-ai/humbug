@@ -51,7 +51,6 @@ class OllamaStreamResponse(AIStreamResponse):
                     current_call["name"] = function["name"]
 
                 if "arguments" in function:
-                    print(f"Updating tool call {current_call['id']} with arguments: {function['arguments']}")
                     current_call["arguments"] = function["arguments"]
 
     def _handle_done(self, chunk: Dict) -> None:
@@ -65,7 +64,6 @@ class OllamaStreamResponse(AIStreamResponse):
         if not done:
             return
 
-        print("Handling done")
         self._update_usage(
             prompt_tokens=chunk.get("prompt_eval_count", 0),
             completion_tokens=chunk.get("eval_count", 0),
@@ -91,8 +89,6 @@ class OllamaStreamResponse(AIStreamResponse):
         Args:
             chunk: Response chunk from Ollama API
         """
-        print("---------------------------------")
-        print(f"Received chunk: {chunk}")  # Debugging output
         if "error" in chunk:
             self._handle_error(chunk["error"])
             return
