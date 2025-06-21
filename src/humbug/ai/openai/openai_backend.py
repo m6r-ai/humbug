@@ -5,7 +5,7 @@ from typing import Dict, List, Any
 from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message import AIMessage, AIMessageSource
-from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult
+from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult, AIToolDefinition
 from humbug.ai.openai.openai_stream_response import OpenAIStreamResponse
 
 
@@ -21,6 +21,52 @@ class OpenAIBackend(AIBackend):
             The default URL
         """
         return "https://api.openai.com/v1/chat/completions"
+
+    def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
+        """
+        Convert tool definition to OpenAI format.
+
+        Args:
+            tool_def: Generic tool definition
+
+        Returns:
+            Tool definition in OpenAI format
+        """
+        properties: Dict[str, Any] = {}
+        required = []
+
+        for param in tool_def.parameters:
+            properties[param.name] = {
+                "type": param.type,
+                "description": param.description
+            }
+            if param.enum:
+                properties[param.name]["enum"] = param.enum
+
+            if param.properties:
+                properties[param.name]["properties"] = {
+                    prop_name: {
+                        "type": prop.type,
+                        "description": prop.description
+                    }
+                    for prop_name, prop in param.properties.items()
+                }
+
+            if param.required:
+                required.append(param.name)
+
+        return {
+            "type": "function",
+            "function": {
+                "name": tool_def.name,
+                "description": tool_def.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": properties,
+                    "required": required
+                }
+            }
+        }
 
     def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> List[Dict[str, Any]]:
         """
@@ -142,9 +188,9 @@ class OpenAIBackend(AIBackend):
 
         # Add tools if supported
         if self._supports_tools(settings) and self._tool_manager.has_tools():
-            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("openai")
+            tool_definitions = self._tool_manager.get_tool_definitions()
             if tool_definitions:
-                data["tools"] = tool_definitions
+                data["tools"] = [self._format_tool_definition(tool_def) for tool_def in tool_definitions]
                 data["tool_choice"] = "auto"
                 self._logger.debug("Added %d tool definitions for openai", len(tool_definitions))
 

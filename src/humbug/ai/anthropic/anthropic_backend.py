@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.ai.ai_message import AIMessage, AIMessageSource
-from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult
+from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult, AIToolDefinition
 from humbug.ai.anthropic.anthropic_stream_response import AnthropicStreamResponse
 
 
@@ -20,6 +20,40 @@ class AnthropicBackend(AIBackend):
             The default URL
         """
         return "https://api.anthropic.com/v1/messages"
+
+    def _format_tool_definition(self, tool_def: AIToolDefinition) -> Dict[str, Any]:
+        """
+        Convert tool definition to Anthropic format.
+
+        Args:
+            tool_def: Generic tool definition
+
+        Returns:
+            Tool definition in Anthropic format
+        """
+        properties: Dict[str, Any] = {}
+        required = []
+
+        for param in tool_def.parameters:
+            properties[param.name] = {
+                "type": param.type,
+                "description": param.description
+            }
+            if param.enum:
+                properties[param.name]["enum"] = param.enum
+
+            if param.required:
+                required.append(param.name)
+
+        return {
+            "name": tool_def.name,
+            "description": tool_def.description,
+            "input_schema": {
+                "type": "object",
+                "properties": properties,
+                "required": required
+            }
+        }
 
     def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> Dict[str, Any]:
         """
@@ -213,9 +247,9 @@ class AnthropicBackend(AIBackend):
 
         # Add tools if supported
         if self._supports_tools(settings) and self._tool_manager.has_tools():
-            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("anthropic")
+            tool_definitions = self._tool_manager.get_tool_definitions()
             if tool_definitions:
-                data["tools"] = tool_definitions
+                data["tools"] = [self._format_tool_definition(tool_def) for tool_def in tool_definitions]
                 self._logger.debug("Added %d tool definitions for anthropic", len(tool_definitions))
 
         # Build headers

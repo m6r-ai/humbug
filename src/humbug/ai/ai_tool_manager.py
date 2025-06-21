@@ -24,98 +24,6 @@ class AIToolDefinition:
     description: str
     parameters: List[AIToolParameter]
 
-    def to_openai_format(self) -> Dict[str, Any]:
-        """Convert to OpenAI function calling format."""
-        properties: Dict[str, Any] = {}
-        required = []
-
-        for param in self.parameters:
-            properties[param.name] = {
-                "type": param.type,
-                "description": param.description
-            }
-            if param.enum:
-                properties[param.name]["enum"] = param.enum
-
-            if param.properties:
-                properties[param.name]["properties"] = {
-                    prop_name: {
-                        "type": prop.type,
-                        "description": prop.description
-                    }
-                    for prop_name, prop in param.properties.items()
-                }
-
-            if param.required:
-                required.append(param.name)
-
-        return {
-            "type": "function",
-            "function": {
-                "name": self.name,
-                "description": self.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": properties,
-                    "required": required
-                }
-            }
-        }
-
-    def to_anthropic_format(self) -> Dict[str, Any]:
-        """Convert to Anthropic tool format."""
-        properties: Dict[str, Any] = {}
-        required = []
-
-        for param in self.parameters:
-            properties[param.name] = {
-                "type": param.type,
-                "description": param.description
-            }
-            if param.enum:
-                properties[param.name]["enum"] = param.enum
-
-            if param.required:
-                required.append(param.name)
-
-        return {
-            "name": self.name,
-            "description": self.description,
-            "input_schema": {
-                "type": "object",
-                "properties": properties,
-                "required": required
-            }
-        }
-
-    def to_ollama_format(self) -> Dict[str, Any]:
-        """Convert to Ollama tool format."""
-        properties: Dict[str, Any] = {}
-        required = []
-
-        for param in self.parameters:
-            properties[param.name] = {
-                "type": param.type,
-                "description": param.description
-            }
-            if param.enum:
-                properties[param.name]["enum"] = param.enum
-
-            if param.required:
-                required.append(param.name)
-
-        return {
-            "type": "function",
-            "function": {
-                "name": self.name,
-                "description": self.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": properties,
-                    "required": required
-                }
-            }
-        }
 
 @dataclass
 class AIToolCall:
@@ -233,29 +141,6 @@ class AIToolManager:
             List of tool definitions
         """
         return [tool.get_definition() for tool in self._tools.values()]
-
-    def get_tool_definitions_for_provider(self, provider: str) -> List[Dict[str, Any]]:
-        """
-        Get tool definitions formatted for a specific provider.
-
-        Args:
-            provider: The AI provider ('openai', 'anthropic', etc.)
-
-        Returns:
-            List of tool definitions in provider-specific format
-        """
-        definitions = self.get_tool_definitions()
-
-        if provider in ("openai", "xai", "deepseek"):
-            return [def_.to_openai_format() for def_ in definitions]
-
-        if provider == "anthropic":
-            return [def_.to_anthropic_format() for def_ in definitions]
-
-        if provider == "ollama":
-            return [def_.to_ollama_format() for def_ in definitions]
-
-        return [def_.to_openai_format() for def_ in definitions]
 
     async def execute_tool(self, tool_call: AIToolCall) -> AIToolResult:
         """
