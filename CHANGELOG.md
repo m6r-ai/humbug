@@ -4,7 +4,7 @@
 
 New features:
 
-- TBD
+- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.
 
 Bug fixes:
 

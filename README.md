@@ -71,7 +71,7 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.17
 
-- TBD
+- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.
 
 ## Humbug in action
 

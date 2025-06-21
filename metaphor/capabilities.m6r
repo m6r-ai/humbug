@@ -1303,7 +1303,7 @@ Context: Capabilities
               "gemini-2.5-flash-preview-05-20", "gemini-2.5-pro-preview-05-06"
             - M6R models: "tessa"
             - Mistral models: "codestral-latest", "devstral-small-2505", "mistral-large-latest", "mistral-small-latest"
-            - Ollama models: "llama3.2", "phi4"
+            - Ollama models: "gemma3:4b-it-qat", "llama3.2", "qwen3:4b", "phi4"
             - OpenAI models: "gpt-4o-mini", "gpt-4o", "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4.5-preview",
               "o1-mini", "o1", "o3-mini", "o3", "o4-mini"
             - xAI models: "grok-3-beta", "grok-3-fast-beta", "grok-3-mini-beta", "grok-3-mini-fast-beta"
@@ -1332,7 +1332,9 @@ Context: Capabilities
         - devstral-small-2505: Supports temperature 0.0-1.0
         - mistral-large-latest: Supports temperature 0.0-1.0
         - mistral-small-latest: Supports temperature 0.0-1.0
+        - gemma3:4b-it-qat: Supports temperature 0.0-1.0
         - llama3.2: Supports temperature 0.0-1.0
+        - qwen3:4b: Supports temperature 0.0-1.0
         - phi4: Supports temperature 0.0-1.0
         - gpt-4o-mini: Supports temperature 0.0-1.0
         - gpt-4o: Supports temperature 0.0-1.0

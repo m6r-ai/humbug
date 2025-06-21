@@ -201,6 +201,15 @@ class AIConversationSettings:
         ),
 
         # Ollama models
+        "gemma3:4b-it-qat": AIModel(
+            name="gemma3:4b-it-qat",
+            provider="ollama",
+            context_window=2048,
+            max_output_tokens=2048,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.NO_TOOLS
+        ),
         "llama3.2": AIModel(
             name="llama3.2",
             provider="ollama",
@@ -208,7 +217,7 @@ class AIConversationSettings:
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
+            tool_capabilities=ToolCapability.NO_TOOLS
         ),
         "phi4": AIModel(
             name="phi4",
@@ -218,6 +227,15 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.NO_TOOLS
+        ),
+        "qwen3:4b": AIModel(
+            name="qwen3:4b",
+            provider="ollama",
+            context_window=2048,
+            max_output_tokens=2048,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
         # OpenAI models
