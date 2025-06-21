@@ -51,6 +51,9 @@ class ConversationMessage(QFrame):
 
         self._style_manager = StyleManager()
 
+        if not is_input:
+            self.setVisible(False)
+
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
@@ -323,6 +326,10 @@ class ConversationMessage(QFrame):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
+
+        # Show the message if it has text and is one of the valid styles
+        if text and style in (AIMessageSource.AI, AIMessageSource.REASONING, AIMessageSource.SYSTEM, AIMessageSource.USER):
+            self.setVisible(True)
 
     def _copy_message(self) -> None:
         """Copy the entire message content to clipboard."""
