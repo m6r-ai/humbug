@@ -1,5 +1,4 @@
 """Anthropic backend implementation."""
-import json
 from typing import Dict, List, Any
 
 from humbug.ai.ai_backend import AIBackend, RequestConfig
@@ -94,17 +93,11 @@ class AnthropicBackend(AIBackend):
 
             # Add tool calls as structured content
             for tool_call in tool_calls:
-                try:
-                    json_args = json.loads(tool_call.arguments)
-                except json.JSONDecodeError as e:
-                    self._logger.warning("Failed to parse tool arguments: %s", e)
-                    raise
-
                 content_parts.append({
                     "type": "tool_use",
                     "id": tool_call.id,
                     "name": tool_call.name,
-                    "input": json_args
+                    "input": tool_call.arguments,
                 })
 
             return {

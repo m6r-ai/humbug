@@ -1,5 +1,6 @@
 """Handles streaming response from Mistral API."""
 
+import json
 from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
@@ -79,10 +80,17 @@ class MistralStreamResponse(AIStreamResponse):
         # Process all accumulated tool calls
         for call_data in self._current_tool_calls.values():
             # Create the tool call
+            try:
+                json_args = json.loads(call_data["arguments"])
+
+            except json.JSONDecodeError as e:
+                self._logger.warning("Failed to parse tool arguments: %s (%s)", call_data["arguments"], str(e))
+                raise
+
             tool_call = AIToolCall(
                 id=call_data["id"],
                 name=call_data["name"],
-                arguments=call_data["arguments"]
+                arguments=json_args
             )
 
             # Add to our tool calls list

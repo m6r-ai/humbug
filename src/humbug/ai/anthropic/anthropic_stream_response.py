@@ -1,5 +1,6 @@
 """Enhanced Anthropic streaming response handler with tool support."""
 
+import json
 from typing import Dict
 
 from humbug.ai.ai_stream_response import AIStreamResponse
@@ -85,10 +86,17 @@ class AnthropicStreamResponse(AIStreamResponse):
             # End of a content block
             if self._current_tool_call is not None:
                 # Complete the tool call
+                try:
+                    json_args = json.loads(self._current_tool_arguments)
+
+                except json.JSONDecodeError as e:
+                    self._logger.warning("Failed to parse tool arguments: %s (%s)", self._current_tool_arguments, str(e))
+                    raise
+
                 tool_call = AIToolCall(
                     id=self._current_tool_call["id"],
                     name=self._current_tool_call["name"],
-                    arguments=self._current_tool_arguments
+                    arguments=json_args
                 )
 
                 # Add to our tool calls list

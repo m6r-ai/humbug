@@ -2,7 +2,6 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import json
 import logging
 from typing import Any, Dict, List
 
@@ -89,13 +88,41 @@ class AIToolDefinition:
             }
         }
 
+    def to_ollama_format(self) -> Dict[str, Any]:
+        """Convert to Ollama tool format."""
+        properties: Dict[str, Any] = {}
+        required = []
+
+        for param in self.parameters:
+            properties[param.name] = {
+                "type": param.type,
+                "description": param.description
+            }
+            if param.enum:
+                properties[param.name]["enum"] = param.enum
+
+            if param.required:
+                required.append(param.name)
+
+        return {
+            "type": "function",
+            "function": {
+                "name": self.name,
+                "description": self.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": properties,
+                    "required": required
+                }
+            }
+        }
 
 @dataclass
 class AIToolCall:
     """Represents a tool call request from the AI."""
     id: str  # Unique identifier for this tool call
     name: str
-    arguments: str
+    arguments: Dict[str, Any]
 
 
 @dataclass
@@ -225,6 +252,9 @@ class AIToolManager:
         if provider == "anthropic":
             return [def_.to_anthropic_format() for def_ in definitions]
 
+        if provider == "ollama":
+            return [def_.to_ollama_format() for def_ in definitions]
+
         return [def_.to_openai_format() for def_ in definitions]
 
     async def execute_tool(self, tool_call: AIToolCall) -> AIToolResult:
@@ -249,15 +279,7 @@ class AIToolManager:
 
         try:
             tool = self._tools[tool_call.name]
-
-            try:
-                json_args = json.loads(tool_call.arguments)
-
-            except json.JSONDecodeError as e:
-                self._logger.warning("Failed to parse tool arguments: %s (%s)", tool_call.arguments, str(e))
-                raise
-
-            result = await tool.execute(json_args)
+            result = await tool.execute(tool_call.arguments)
 
             self._logger.debug(
                 "Tool '%s' executed successfully with args %s",

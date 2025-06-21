@@ -208,7 +208,7 @@ class AIConversationSettings:
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "phi4": AIModel(
             name="phi4",

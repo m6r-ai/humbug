@@ -179,10 +179,17 @@ class ConversationMessage(QFrame):
             case AIMessageSource.SYSTEM:
                 role_text = strings.role_system
 
+            case AIMessageSource.TOOL_CALL:
+                role_text = "Tool Call"
+
+            case AIMessageSource.TOOL_RESULT:
+                role_text = "Tool Result"
+
         # Format with timestamp
         if self._message_timestamp is not None:
             timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             self._role_label.setText(f"{role_text} @ {timestamp_str}")
+
         else:
             self._role_label.setText(role_text)
 

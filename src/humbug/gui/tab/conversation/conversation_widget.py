@@ -346,6 +346,8 @@ class ConversationWidget(QWidget):
         Args:
             message: The tool call message
         """
+        await self.add_message(message)
+
         # Write the tool call to the transcript
         await self.write_transcript(message)
 
@@ -890,8 +892,7 @@ class ConversationWidget(QWidget):
         # Add messages to this widget.
         loop = asyncio.get_event_loop()
         for message in messages:
-            if message.source not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT):
-                loop.create_task(self.add_message(message))
+            loop.create_task(self.add_message(message))
 
         # Ensure we're scrolled to the end
         self._auto_scroll = True

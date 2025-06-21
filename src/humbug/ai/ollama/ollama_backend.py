@@ -4,6 +4,7 @@ from typing import Dict, List, Any
 from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message import AIMessage, AIMessageSource
+from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult
 from humbug.ai.ollama.ollama_stream_response import OllamaStreamResponse
 
 
@@ -31,6 +32,65 @@ class OllamaBackend(AIBackend):
 
         # Llama doesn't use normal SSE encoding!
         self._uses_data = False
+
+    def _build_user_message(self, content: str, tool_results: List[AIToolResult] | None = None) -> List[Dict[str, Any]]:
+        """
+        Build user message(s) for Ollama format.
+
+        Args:
+            content: User message content
+            tool_results: Optional tool results to include
+
+        Returns:
+            List of message dictionaries (may include separate tool result messages)
+        """
+        messages = []
+
+        # Add user message if there's content
+        if content:
+            messages.append({
+                "role": "user",
+                "content": content
+            })
+
+        # Add separate tool result messages
+        if tool_results:
+            for tool_result in tool_results:
+                messages.append({
+                    "role": "tool",
+                    "content": tool_result.content
+                })
+
+        return messages
+
+    def _build_assistant_message(self, content: str, tool_calls: List[AIToolCall] | None = None) -> Dict[str, Any]:
+        """
+        Build assistant message for Ollama format.
+
+        Args:
+            content: Assistant message content
+            tool_calls: Optional tool calls made by the assistant
+
+        Returns:
+            Assistant message dictionary
+        """
+        message: Dict[str, Any] = {
+            "role": "assistant",
+            "content": content
+        }
+
+        if tool_calls:
+            message["tool_calls"] = [
+                {
+                    "function": {
+                        "name": call.name,
+                        "arguments": call.arguments
+                    }
+                }
+                for call in tool_calls
+            ]
+
+        return message
 
     def _build_message(self, content: str, role: str) -> Dict[str, Any]:
         """
@@ -62,8 +122,11 @@ class OllamaBackend(AIBackend):
 
         for message in conversation_history:
             if message.source == AIMessageSource.USER:
-                user_msg = self._build_message(message.content, "user")
-                result.append(user_msg)
+                user_messages = self._build_user_message(
+                    content=message.content,
+                    tool_results=message.tool_results
+                )
+                result.extend(user_messages)
                 continue
 
             # Handle AI assistant messages
@@ -72,7 +135,10 @@ class OllamaBackend(AIBackend):
                 if not message.completed or message.error:
                     continue
 
-                assistant_msg = self._build_message(message.content, "assistant")
+                assistant_msg = self._build_assistant_message(
+                    content=message.content,
+                    tool_calls=message.tool_calls
+                )
                 result.append(assistant_msg)
                 continue
 
@@ -97,6 +163,15 @@ class OllamaBackend(AIBackend):
                 "server_sent_events": True
             }
         }
+
+        # Add tools if supported
+        if self._supports_tools(settings) and self._tool_manager.has_tools():
+            tool_definitions = self._tool_manager.get_tool_definitions_for_provider("ollama")
+            if tool_definitions:
+                data["tools"] = tool_definitions
+                self._logger.debug("Added %d tool definitions for ollama", len(tool_definitions))
+
+        self._logger.debug("stream message %r", data)
 
         # Build headers
         headers = {

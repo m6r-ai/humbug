@@ -1,4 +1,5 @@
 """Mistral backend implementation."""
+import json
 from typing import Dict, List, Any
 
 from humbug.ai.ai_backend import AIBackend, RequestConfig
@@ -76,7 +77,7 @@ class MistralBackend(AIBackend):
                     "type": "function",
                     "function": {
                         "name": call.name,
-                        "arguments": call.arguments
+                        "arguments": json.dumps(call.arguments)
                     }
                 }
                 for call in tool_calls
