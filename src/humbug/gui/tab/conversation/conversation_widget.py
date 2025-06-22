@@ -454,6 +454,10 @@ class ConversationWidget(QWidget):
         self.message_finished.emit()
         self.status_updated.emit()
 
+    def setFocus(self, _reason: Qt.FocusReason | None = None) -> None:  # type: ignore
+        """Set focus to the current message widget."""
+        self._focus_message()
+
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update input widget streaming state text
@@ -1171,6 +1175,7 @@ class ConversationWidget(QWidget):
         """Copy selected text to clipboard."""
         if self._input.hasFocus():
             self._input.copy()
+
         elif self._message_with_selection:
             self._message_with_selection.copy_selection()
 

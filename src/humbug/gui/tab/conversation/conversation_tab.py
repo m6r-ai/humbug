@@ -9,7 +9,7 @@ from typing import List, cast
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QWidget
 )
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message_source import AIMessageSource
@@ -106,6 +106,14 @@ class ConversationTab(TabBase):
 
         # Update status bar
         self.update_status()
+
+    def setFocus(self, reason: Qt.FocusReason | None = None) -> None:
+        """Set focus to the conversation widget."""
+        if reason is None:
+            self._conversation_widget.setFocus()
+            return
+
+        self._conversation_widget.setFocus(reason)
 
     # pylint: disable=protected-access
     async def fork_conversation_from_index(self, message_index: int) -> 'ConversationTab':
