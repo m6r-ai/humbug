@@ -142,14 +142,29 @@ class MistralBackend(AIBackend):
             List of messages formatted for Mistral API
         """
         result = []
+        last_user_message_index = -1
 
         for message in conversation_history:
             if message.source == AIMessageSource.USER:
+                last_user_message_index = len(result)
                 user_messages = self._build_user_message(
                     content=message.content,
                     tool_results=message.tool_results
                 )
                 result.extend(user_messages)
+                continue
+
+            # Check for problematic messages that should trigger cleanup
+            is_problematic = (
+                message.source == AIMessageSource.SYSTEM or
+                (message.source == AIMessageSource.AI and (not message.completed or message.error)) or
+                (message.source == AIMessageSource.REASONING and (not message.completed or message.error))
+            )
+
+            if is_problematic and last_user_message_index >= 0:
+                self._logger.debug("Removing user message and subsequent messages due to %s", message.source)
+                result = result[:last_user_message_index]
+                last_user_message_index = -1
                 continue
 
             if message.source == AIMessageSource.AI:

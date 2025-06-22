@@ -153,9 +153,24 @@ class XAIBackend(AIBackend):
             List of messages formatted for xAI API
         """
         result = []
+        last_user_message_index = -1
         last_reasoning_message: AIMessage | None = None
 
         for message in conversation_history:
+            # Check for problematic messages that should trigger cleanup
+            is_problematic = (
+                message.source == AIMessageSource.SYSTEM or
+                (message.source == AIMessageSource.AI and (not message.completed or message.error)) or
+                (message.source == AIMessageSource.REASONING and (not message.completed or message.error))
+            )
+
+            if is_problematic and last_user_message_index >= 0:
+                self._logger.debug("Removing user message and subsequent messages due to %s", message.source)
+                result = result[:last_user_message_index]
+                last_user_message_index = -1
+                last_reasoning_message = None
+                continue
+
             if message.source == AIMessageSource.TOOL_CALL:
                 # If we had a reasoning message, combine it with the tool call
                 if last_reasoning_message is None:
@@ -175,6 +190,7 @@ class XAIBackend(AIBackend):
             last_reasoning_message = None
 
             if message.source == AIMessageSource.USER:
+                last_user_message_index = len(result)
                 user_messages = self._build_user_message(
                     content=message.content,
                     tool_results=message.tool_results
@@ -195,6 +211,9 @@ class XAIBackend(AIBackend):
                 continue
 
             if message.source == AIMessageSource.REASONING:
+                if not message.completed or message.error:
+                    continue
+
                 last_reasoning_message = message
                 continue
 
