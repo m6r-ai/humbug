@@ -4,6 +4,7 @@
 
 New features:
 
+- All models that support tool/function calling now implement tool/function calling.
 - Added support for Gemma3 and Qwen3 models through the Ollama AI backend.
 
 Bug fixes:
@@ -12,6 +13,7 @@ Bug fixes:
   for thinking/reasoning AI models.
 - When recording conversation transcripts, Humbug was not recording the reasoning capabilities that were used in coming up
   with an answer.  This meant it was also not restoring these correctly after reloading a conversation.
+- The conversation input box could lose focus when an AI message finished streaming.
 
 ## v0.16 (2025-06-16)
 

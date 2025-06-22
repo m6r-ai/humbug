@@ -71,6 +71,7 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.17
 
+- All models that support tool/function calling now implement tool/function calling.
 - Added support for Gemma3 and Qwen3 models through the Ollama AI backend.
 
 ## Humbug in action
