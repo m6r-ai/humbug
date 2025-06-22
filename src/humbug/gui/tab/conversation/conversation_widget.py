@@ -992,12 +992,46 @@ class ConversationWidget(QWidget):
         # Show menu at click position
         menu.exec_(self.mapToGlobal(pos))
 
+    def _find_fork_end_index(self, start_index: int) -> int:
+        """
+        Find the last message index to include when forking from start_index.
+
+        This scans forward from start_index to include any hidden messages
+        that follow, stopping at the next visible message.
+
+        Args:
+            start_index: Index of the message to fork from
+
+        Returns:
+            Index of the last message to include in the fork
+        """
+        if start_index < 0 or start_index >= len(self._messages):
+            return start_index
+
+        # Start from the message after the fork point
+        current_index = start_index + 1
+
+        # Scan forward while we have hidden messages
+        while current_index < len(self._messages):
+            message_widget = self._messages[current_index]
+
+            # If we hit a visible message, stop (don't include it)
+            if message_widget.isVisible():
+                break
+
+            # This is a hidden message, include it and continue
+            current_index += 1
+
+        # Return the index of the last message to include
+        # (current_index - 1 because we stopped at the first visible message)
+        return current_index - 1
+
     def _fork_from_message(self) -> None:
         """
         Fork the conversation from the specified message.
-        
-        Args:
-            message: The message where the fork should occur
+
+        This will include the specified message and any hidden messages
+        that immediately follow it until the next visible message.
         """
         # Find the index of the message in our list
         message = self.sender()
@@ -1011,8 +1045,11 @@ class ConversationWidget(QWidget):
 
         message_index = self._messages.index(message)
 
-        # Emit signal with the message index
-        self.forkFromIndexRequested.emit(message_index)
+        # Find the actual end index including hidden messages
+        fork_end_index = self._find_fork_end_index(message_index)
+
+        # Emit signal with the end index (inclusive)
+        self.forkFromIndexRequested.emit(fork_end_index)
 
     def _delete_from_message(self) -> None:
         """Handle request to delete conversation from a message onwards."""
