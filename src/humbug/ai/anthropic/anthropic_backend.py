@@ -246,7 +246,7 @@ class AnthropicBackend(AIBackend):
             data["temperature"] = settings.temperature
 
         # Add tools if supported
-        if self._supports_tools(settings) and self._tool_manager.has_tools():
+        if self._supports_tools(settings):
             tool_definitions = self._tool_manager.get_tool_definitions()
             if tool_definitions:
                 data["tools"] = [self._format_tool_definition(tool_def) for tool_def in tool_definitions]

@@ -1,5 +1,4 @@
 """Google Google backend implementation."""
-import json
 from typing import Dict, List, Any
 
 from humbug.ai.ai_backend import AIBackend, RequestConfig
@@ -219,7 +218,7 @@ class GoogleBackend(AIBackend):
         }
 
         # Add tools if supported
-        if self._supports_tools(settings) and self._tool_manager.has_tools():
+        if self._supports_tools(settings):
             tool_definitions = self._tool_manager.get_tool_definitions()
             if tool_definitions:
                 data["tools"] = [{

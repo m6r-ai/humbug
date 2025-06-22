@@ -194,10 +194,6 @@ class AIToolManager:
                 error=error_msg
             )
 
-    def has_tools(self) -> bool:
-        """Check if any tools are registered."""
-        return len(self._tools) > 0
-
     def get_tool_names(self) -> List[str]:
         """Get names of all registered tools."""
         return list(self._tools.keys())
