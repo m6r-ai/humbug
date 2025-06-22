@@ -192,7 +192,7 @@ class AnthropicBackend(AIBackend):
                 assistant_msg = self._build_assistant_message(
                     reasoning=last_reasoning_message.content if last_reasoning_message else "",
                     signature=signature,
-                    content=message.content,
+                    content=message.content if message.content else "...",  # Never send empty content
                     tool_calls=message.tool_calls
                 )
                 result.append(assistant_msg)

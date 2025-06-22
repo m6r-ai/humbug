@@ -113,7 +113,7 @@ class MistralBackend(AIBackend):
         """
         message: Dict[str, Any] = {
             "role": "assistant",
-            "content": content
+            "content": content if content else "...",  # Never send empty content
         }
 
         if tool_calls:
