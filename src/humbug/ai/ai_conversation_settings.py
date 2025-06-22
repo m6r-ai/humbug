@@ -112,7 +112,7 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gemini-1.5-pro": AIModel(
             name="gemini-1.5-pro",
@@ -121,7 +121,7 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gemini-2.0-flash": AIModel(
             name="gemini-2.0-flash",
@@ -130,7 +130,7 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gemini-2.5-flash-preview-05-20": AIModel(
             name="gemini-2.5-flash-preview-05-20",
@@ -139,7 +139,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gemini-2.5-pro-preview-05-06": AIModel(
             name="gemini-2.5-pro-preview-05-06",
@@ -148,7 +148,7 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
         # M6R models
