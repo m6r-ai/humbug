@@ -476,7 +476,7 @@ class AIConversation:
                 self._current_reasoning_message.id,
                 reasoning,
                 usage=usage,
-                completed=False,
+                completed=(usage is not None),
                 signature=signature,
                 readacted_reasoning=readacted_reasoning
             )
