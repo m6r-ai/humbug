@@ -83,6 +83,57 @@ def test_heading(ast_builder):
     assert doc.children[0].children[0].content == "Heading 1"
 
 
+def test_heading_with_leading_spaces(ast_builder):
+    """Test headings with 0-3 leading spaces."""
+    test_cases = [
+        ("# No spaces", 1, "No spaces"),
+        (" # One space", 1, "One space"),
+        ("  ## Two spaces", 2, "Two spaces"),
+        ("   ### Three spaces", 3, "Three spaces"),
+    ]
+
+    for markdown, expected_level, expected_content in test_cases:
+        doc = ast_builder.build_ast(markdown)
+        assert len(doc.children) == 1
+        heading = doc.children[0]
+        assert heading.__class__.__name__ == "MarkdownHeadingNode"
+        assert heading.level == expected_level
+        assert heading.children[0].content == expected_content
+
+
+def test_heading_with_too_many_spaces(ast_builder):
+    """Test that 4+ spaces prevent heading recognition."""
+    markdown = "    # Four spaces should not be a heading"
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    # Should be treated as a paragraph, not a heading
+    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+
+
+def test_mixed_heading_indentation(ast_builder):
+    """Test document with mixed heading indentation."""
+    markdown = """# Level 1 no spaces
+ ## Level 2 one space
+  ### Level 3 two spaces
+   #### Level 4 three spaces"""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 4
+
+    levels_and_content = [
+        (1, "Level 1 no spaces"),
+        (2, "Level 2 one space"),
+        (3, "Level 3 two spaces"),
+        (4, "Level 4 three spaces")
+    ]
+
+    for i, (expected_level, expected_content) in enumerate(levels_and_content):
+        heading = doc.children[i]
+        assert heading.__class__.__name__ == "MarkdownHeadingNode"
+        assert heading.level == expected_level
+        assert heading.children[0].content == expected_content
+
+
 def test_bold_text(ast_builder):
     """Test parsing bold text."""
     doc = ast_builder.build_ast("This is **bold** text.")

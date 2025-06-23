@@ -98,7 +98,7 @@ class MarkdownASTBuilder:
         self._source_path: str | None = None
 
         # Regular expressions for markdown elements
-        self._heading_pattern = re.compile(r'^(#{1,10})\s+(.*?)(?:\s+#{1,10})?$', re.MULTILINE)
+        self._heading_pattern = re.compile(r'^(\s{0,3})(#{1,10})\s+(.*?)(?:\s+#{1,10})?$', re.MULTILINE)
         self._unordered_list_pattern = re.compile(r'^(\s*)([*+-])\s+(.*?)$', re.MULTILINE)
         self._ordered_list_pattern = re.compile(r'^(\s*)(\d+)\.[ \t]+(.*?)$', re.MULTILINE)
         self._code_block_pattern = re.compile(r'^```(?:([\w\-#+./*():\s]+))?$')
@@ -245,8 +245,9 @@ class MarkdownASTBuilder:
         # Check for heading
         heading_match = self._heading_pattern.match(line)
         if heading_match:
-            level = len(heading_match.group(1))
-            content = heading_match.group(2).strip()
+            leading_spaces = heading_match.group(1)
+            level = len(heading_match.group(2))
+            content = heading_match.group(3).strip()
             return 'heading', (level, content)
 
         # Check for table separator row
