@@ -24,6 +24,11 @@ class OllamaStreamResponse(AIStreamResponse):
             message: Message from Ollama API response
         """
         # Handle regular content
+        if "thinking" in message:
+            new_reasoning = message["thinking"]
+            if new_reasoning:
+                self.reasoning += new_reasoning
+
         if "content" in message:
             content = message["content"]
             if content:

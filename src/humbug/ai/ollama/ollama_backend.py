@@ -4,6 +4,7 @@ from typing import Dict, List, Any
 from humbug.ai.ai_backend import AIBackend, RequestConfig
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message import AIMessage, AIMessageSource
+from humbug.ai.ai_model import ReasoningCapability
 from humbug.ai.ai_tool_manager import AIToolCall, AIToolResult, AIToolDefinition
 from humbug.ai.ollama.ollama_stream_response import OllamaStreamResponse
 
@@ -100,13 +101,19 @@ class OllamaBackend(AIBackend):
 
         return messages
 
-    def _build_assistant_message(self, content: str, tool_calls: List[AIToolCall] | None = None) -> Dict[str, Any]:
+    def _build_assistant_message(
+        self,
+        content: str,
+        tool_calls: List[AIToolCall] | None = None,
+        reasoning_content: str = ""
+    ) -> Dict[str, Any]:
         """
         Build assistant message for Ollama format.
 
         Args:
             content: Assistant message content
             tool_calls: Optional tool calls made by the assistant
+            reasoning_content: Optional reasoning content
 
         Returns:
             Assistant message dictionary
@@ -115,6 +122,10 @@ class OllamaBackend(AIBackend):
             "role": "assistant",
             "content": content
         }
+
+        # Add reasoning content if present
+        if reasoning_content:
+            message["thinking"] = reasoning_content
 
         if tool_calls:
             message["tool_calls"] = [
@@ -129,22 +140,6 @@ class OllamaBackend(AIBackend):
 
         return message
 
-    def _build_message(self, content: str, role: str) -> Dict[str, Any]:
-        """
-        Build message for Ollama format.
-
-        Args:
-            content: Message content
-            role: Message role ("user" or "assistant")
-
-        Returns:
-            Message dictionary formatted for Ollama API
-        """
-        return {
-            "role": role,
-            "content": content
-        }
-
     def _format_messages_for_provider(self, conversation_history: List[AIMessage]) -> List[Dict[str, Any]]:
         """
         Format conversation history for Ollama's API format in a single pass.
@@ -157,17 +152,9 @@ class OllamaBackend(AIBackend):
         """
         result = []
         last_user_message_index = -1
+        last_reasoning_message: AIMessage | None = None
 
         for message in conversation_history:
-            if message.source == AIMessageSource.USER:
-                last_user_message_index = len(result)
-                user_messages = self._build_user_message(
-                    content=message.content,
-                    tool_results=message.tool_results
-                )
-                result.extend(user_messages)
-                continue
-
             # Check for problematic messages that should trigger cleanup
             is_problematic = (
                 message.source == AIMessageSource.SYSTEM or
@@ -179,12 +166,29 @@ class OllamaBackend(AIBackend):
                 self._logger.debug("Removing user message and subsequent messages due to %s", message.source)
                 result = result[:last_user_message_index]
                 last_user_message_index = -1
+                last_reasoning_message = None
+                continue
+
+            if message.source == AIMessageSource.TOOL_CALL:
+                # If we don't have a pending reasoning message, we don't need to do anything
+                if last_reasoning_message is None:
+                    continue
+
+                # Create assistant message with reasoning content and tool calls
+                assistant_msg = self._build_assistant_message(
+                    content="",
+                    tool_calls=last_reasoning_message.tool_calls,
+                    reasoning_content=last_reasoning_message.content
+                )
+                result.append(assistant_msg)
+                last_reasoning_message = None
                 continue
 
             # Handle AI assistant messages
             if message.source == AIMessageSource.AI:
                 # Only include completed AI messages without errors
                 if not message.completed or message.error:
+                    last_reasoning_message = None
                     continue
 
                 assistant_msg = self._build_assistant_message(
@@ -192,6 +196,26 @@ class OllamaBackend(AIBackend):
                     tool_calls=message.tool_calls
                 )
                 result.append(assistant_msg)
+                last_reasoning_message = None
+                continue
+
+            # Clear any pending reasoning message when we encounter other message types
+            last_reasoning_message = None
+
+            if message.source == AIMessageSource.USER:
+                last_user_message_index = len(result)
+                user_messages = self._build_user_message(
+                    content=message.content,
+                    tool_results=message.tool_results
+                )
+                result.extend(user_messages)
+                continue
+
+            if message.source == AIMessageSource.REASONING:
+                if not message.completed or message.error:
+                    continue
+
+                last_reasoning_message = message
                 continue
 
         return result
@@ -215,6 +239,9 @@ class OllamaBackend(AIBackend):
                 "server_sent_events": True
             }
         }
+
+        thinking = (settings.reasoning & ReasoningCapability.VISIBLE_REASONING) == ReasoningCapability.VISIBLE_REASONING
+        data["think"] = True if thinking else False
 
         # Add tools if supported
         if self._supports_tools(settings):

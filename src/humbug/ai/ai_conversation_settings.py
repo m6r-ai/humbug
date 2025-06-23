@@ -237,6 +237,15 @@ class AIConversationSettings:
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "qwen3:4b (thinking)": AIModel(
+            name="qwen3:4b",
+            provider="ollama",
+            context_window=2048,
+            max_output_tokens=2048,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
 
         # OpenAI models
         "gpt-4o-mini": AIModel(
