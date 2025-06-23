@@ -227,7 +227,7 @@ class ColumnManager(QWidget):
         if label:
             label.set_updated(is_updated)
 
-        self._update_tabs()
+        self._update_tabs(change_focus=False)
 
     def _remove_tab_from_column(self, tab: TabBase, column: ColumnWidget) -> None:
         """
@@ -555,7 +555,7 @@ class ColumnManager(QWidget):
             # Note: We add 1 to column count because deletion hasn't processed yet
             self._column_splitter.setSizes([column_width] * (len(self._tab_columns) + 1))
 
-    def _update_tabs(self) -> None:
+    def _update_tabs(self, change_focus: bool=True) -> None:
         """ Update the state of all tabs and their labels. """
         for tab_id, label in self._tab_labels.items():
             tab = self._tabs[tab_id]
@@ -601,7 +601,10 @@ class ColumnManager(QWidget):
         current_tab.status_message.connect(self.status_message)
         self._current_status_tab = current_tab
         current_tab.update_status()
-        current_tab.setFocus()
+
+        if change_focus:
+            current_tab.setFocus()
+
         self.tab_changed.emit()
 
     def _handle_tab_changed(self, _index: int) -> None:
@@ -757,7 +760,6 @@ class ColumnManager(QWidget):
                     self._active_column = self._tab_columns[new_active_column]
 
                 self._remove_column_and_resize(column_number, column)
-
                 self._update_tabs()
 
         # If no tabs remain clean up the display

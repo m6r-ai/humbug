@@ -107,14 +107,6 @@ class ConversationTab(TabBase):
         # Update status bar
         self.update_status()
 
-    def setFocus(self, reason: Qt.FocusReason | None = None) -> None:
-        """Set focus to the conversation widget."""
-        if reason is None:
-            self._conversation_widget.setFocus()
-            return
-
-        self._conversation_widget.setFocus(reason)
-
     # pylint: disable=protected-access
     async def fork_conversation_from_index(self, message_index: int) -> 'ConversationTab':
         """
