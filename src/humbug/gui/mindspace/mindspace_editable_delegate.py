@@ -126,38 +126,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
             tree_view: The tree view widget
             select_extension: Whether to select the file extension in addition to the name
         """
-        if not index.isValid() or self._current_editor is not None:
-            return
-
-        # Verify the item is visible in the viewport before starting edit
-        item_rect = tree_view.visualRect(index)
-        viewport_rect = tree_view.viewport().rect()
-
-        if not viewport_rect.intersects(item_rect):
-            # Item is not visible, try to make it visible first
-            success = tree_view.scroll_to_and_ensure_visible(
-                index,
-                lambda: self._start_edit_after_scroll(index, tree_view, select_extension)
-            )
-            if not success:
-                # If we couldn't scroll to it, proceed anyway
-                self._start_edit_after_scroll(index, tree_view, select_extension)
-
-            return
-
-        # Item is already visible, start editing immediately
-        self._start_edit_after_scroll(index, tree_view, select_extension)
-
-    def _start_edit_after_scroll(self, index: QModelIndex, tree_view: MindspaceFileTreeView, select_extension: bool) -> None:
-        """
-        Start editing after ensuring the item is visible.
-
-        Args:
-            index: Model index to edit
-            tree_view: The tree view widget
-            select_extension: Whether to select the file extension in addition to the name
-        """
-        if not index.isValid() or self._current_editor is not None:
+        if self._current_editor is not None:
             return
 
         # Get current text (full filename including extension)

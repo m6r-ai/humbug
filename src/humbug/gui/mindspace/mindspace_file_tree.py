@@ -3,7 +3,6 @@
 import logging
 import os
 import shutil
-from typing import Callable
 
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
@@ -122,16 +121,6 @@ class MindspaceFileTree(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
-
-        # Timer for ensuring new items are visible after model updates
-        self._visibility_timer = QTimer()
-        self._visibility_timer.setSingleShot(True)
-        self._visibility_timer.timeout.connect(self._handle_visibility_timeout)
-        self._visibility_timer.setInterval(150)  # Wait for model to update
-
-        # Track items that need to be made visible
-        self._pending_visibility_path: str | None = None
-        self._pending_visibility_callback: Callable | None = None
 
     def _handle_drop_target_changed(self) -> None:
         """
@@ -543,34 +532,8 @@ class MindspaceFileTree(QWidget):
             item_path: Path to the item to make visible and edit
             select_extension: Whether to select the file extension in addition to the name
         """
-        # Store the callback parameters for the visibility timer
-        self._pending_visibility_path = item_path
-        self._pending_visibility_callback = lambda: self._start_edit_for_path(item_path, select_extension)
-
-        # Start the visibility timer to allow the model to update
-        self._visibility_timer.start()
-
-    def _handle_visibility_timeout(self) -> None:
-        """
-        Handle the visibility timer timeout by ensuring the item is visible and starting edit.
-        """
-        if not self._pending_visibility_path or not self._pending_visibility_callback:
-            return
-
-        item_path = self._pending_visibility_path
-        callback = self._pending_visibility_callback
-
-        # Clear the pending state
-        self._pending_visibility_path = None
-        self._pending_visibility_callback = None
-
-        # Mmake the item visible and start editing
-        success = self._tree_view.ensure_path_visible_for_editing(item_path, callback)
-        if not success:
-            self._logger.warning("Failed to make item visible for editing: '%s'", item_path)
-
-            # If we couldn't make it visible through the tree view, try direct approach
-            callback()
+        # Make the item visible and start editing
+        self._tree_view.ensure_path_visible_for_editing(item_path, lambda: self._start_edit_for_path(item_path, select_extension))
 
     def _start_edit_for_path(self, item_path: str, select_extension: bool = True) -> None:
         """
@@ -581,15 +544,25 @@ class MindspaceFileTree(QWidget):
             select_extension: Whether to select the file extension in addition to the name
         """
         # Find the item in the model
+        print("Starting edit for item:", item_path)
         source_index = self._fs_model.index(item_path)
-        if source_index.isValid():
-            filter_index = self._filter_model.mapFromSource(source_index)
-            if filter_index.isValid():
-                self._start_inline_edit(filter_index, select_extension)
-            else:
-                self._logger.warning("Filter index not valid for path: '%s'", item_path)
-        else:
+        print("Source index for item:", source_index, source_index.row())
+        if not source_index.isValid():
             self._logger.warning("Source index not valid for path: '%s'", item_path)
+            return
+
+        filter_index = self._filter_model.mapFromSource(source_index)
+        if not filter_index.isValid():
+            self._logger.warning("Filter index not valid for path: '%s'", item_path)
+
+        # Get the delegate and start custom editing
+        delegate = self._tree_view.itemDelegate(filter_index)
+        if not isinstance(delegate, MindspaceEditableDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceEditableDelegate")
+            return
+
+        print("Starting custom edit for index:", filter_index)
+        delegate.start_custom_edit(filter_index, self._tree_view, select_extension)
 
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
@@ -750,6 +723,7 @@ class MindspaceFileTree(QWidget):
                 f.write("")  # Create empty file
 
             self._logger.info("Created temporary file: '%s'", temp_file_path)
+            print("Created temporary file: '%s'", temp_file_path)
 
             # Set up pending creation state with the temporary path
             self._pending_new_item = (parent_path, False, temp_file_path)
@@ -766,25 +740,6 @@ class MindspaceFileTree(QWidget):
                 strings.file_creation_error_title,
                 strings.file_creation_error.format(str(e))
             )
-
-    def _start_inline_edit(self, index: QModelIndex, select_extension: bool = True) -> None:
-        """
-        Start inline editing for the given index using a custom approach.
-
-        Args:
-            index: Model index to start editing
-            select_extension: Whether to select the file extension in addition to the name
-        """
-        if not index.isValid():
-            return
-
-        # Get the delegate and start custom editing
-        delegate = self._tree_view.itemDelegate(index)
-        if not isinstance(delegate, MindspaceEditableDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceEditableDelegate")
-            return
-
-        delegate.start_custom_edit(index, self._tree_view, select_extension)
 
     def _get_default_folder_name(self, parent_path: str) -> str:
         """
@@ -840,11 +795,17 @@ class MindspaceFileTree(QWidget):
         Args:
             index: Model index of the item to rename
         """
-        if index.isValid():
-            # Get the delegate and start rename editing (excludes extension from selection)
-            delegate = self._tree_view.itemDelegate(index)
-            if isinstance(delegate, MindspaceEditableDelegate):
-                delegate.start_custom_edit(index, self._tree_view, select_extension=False)
+        if not index.isValid():
+            return
+
+        # Get the delegate and start rename editing (excludes extension from selection)
+        delegate = self._tree_view.itemDelegate(index)
+        if not isinstance(delegate, MindspaceEditableDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceEditableDelegate")
+            return
+
+        print("Starting rename for index:", index)
+        delegate.start_custom_edit(index, self._tree_view, select_extension=False)
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""

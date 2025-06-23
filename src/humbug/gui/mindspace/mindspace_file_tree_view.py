@@ -1,7 +1,7 @@
 """File tree view implementation for mindspace files with drag and drop support and inline editing."""
 
 import os
-from typing import cast, Callable
+from typing import cast, Callable, List
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer
@@ -101,23 +101,14 @@ class MindspaceFileTreeView(QTreeView):
 
         return file_model.filePath(source_index)
 
-    def scroll_to_and_ensure_visible(self, index: QModelIndex, callback: Callable) -> bool:
+    def scroll_to_and_ensure_visible(self, index: QModelIndex, callback: Callable) -> None:
         """
         Scroll to the specified index and ensure it's optimally positioned for editing.
 
         Args:
             index: The model index to scroll to
             callback: Callback to execute after scrolling is complete
-
-        Returns:
-            True if the index is valid and scrolling was initiated, False otherwise
-
-        Raises:
-            ValueError: If the index is invalid
         """
-        if not index.isValid():
-            raise ValueError("Cannot scroll to invalid index")
-
         # Get the current viewport rect to determine optimal positioning
         viewport_rect = self.viewport().rect()
         item_rect = self.visualRect(index)
@@ -132,19 +123,19 @@ class MindspaceFileTreeView(QTreeView):
             item_rect.right() <= viewport_rect.width()
         )
         if is_optimally_visible:
+            print(f"Item at index {index} is already optimally visible, executing callback immediately.")
             callback()
-            return True
+            return
 
         # Scroll to position the item optimally in the viewport
         # Use PositionAtCenter to ensure good visibility for editing
         self.scrollTo(index, QTreeView.ScrollHint.PositionAtCenter)
 
-        # If we have a callback, execute it after a short delay to allow scrolling to complete
-        QTimer.singleShot(50, callback)
+        # For scrolling, we need a small delay since scrollTo() is also asynchronous
+        # But this is the only place we need it, and it's unavoidable
+        QTimer.singleShot(100, callback)  # Minimal delay just for scroll completion
 
-        return True
-
-    def ensure_path_visible_for_editing(self, file_path: str, callback: Callable) -> bool:
+    def ensure_path_visible_for_editing(self, file_path: str, callback: Callable) -> None:
         """
         Ensure the specified file path is visible and optimally positioned for editing.
 
@@ -158,50 +149,45 @@ class MindspaceFileTreeView(QTreeView):
         # Find the index for this path
         source_model = cast(QSortFilterProxyModel, self.model())
         if not source_model:
-            return False
+            return
 
         # Get the source file system model
         file_model = cast(QFileSystemModel, source_model.sourceModel())
         if not file_model:
-            return False
+            return
 
         # Get the source index for the file path
         source_index = file_model.index(file_path)
         if not source_index.isValid():
-            return False
+            return
 
         # Map to the filter model
         filter_index = source_model.mapFromSource(source_index)
         if not filter_index.isValid():
-            return False
-
-        # Ensure parent directories are expanded
-        self._ensure_parents_expanded(filter_index)
-
-        # Scroll to make the item visible
-        return self.scroll_to_and_ensure_visible(filter_index, callback)
-
-    def _ensure_parents_expanded(self, index: QModelIndex) -> None:
-        """
-        Ensure all parent directories of the given index are expanded.
-
-        Args:
-            index: The model index whose parents should be expanded
-        """
-        if not index.isValid():
             return
+
+        print(f"ensure_path_visible_for_editing called with file_path: {file_path}, filter_index: {filter_index}, source_index: {source_index}")
 
         # Collect all parent indexes
         parents = []
-        current = index.parent()
+        current = filter_index.parent()
         while current.isValid():
             parents.append(current)
             current = current.parent()
 
         # Expand parents from root to leaf
+        expanded = False
         for parent in reversed(parents):
             if not self.isExpanded(parent):
+                expanded = True
                 self.expand(parent)
+
+        # If we didn't need to expand any parents, we can scroll directly
+        if not expanded:
+            self.scroll_to_and_ensure_visible(filter_index, callback)
+            return
+
+        QTimer.singleShot(300, lambda: self.scroll_to_and_ensure_visible(filter_index, callback))
 
     def _is_ancestor_path(self, potential_ancestor: str, path: str) -> bool:
         """
