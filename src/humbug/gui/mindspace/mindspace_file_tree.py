@@ -544,9 +544,7 @@ class MindspaceFileTree(QWidget):
             select_extension: Whether to select the file extension in addition to the name
         """
         # Find the item in the model
-        print("Starting edit for item:", item_path)
         source_index = self._fs_model.index(item_path)
-        print("Source index for item:", source_index, source_index.row())
         if not source_index.isValid():
             self._logger.warning("Source index not valid for path: '%s'", item_path)
             return
@@ -561,7 +559,6 @@ class MindspaceFileTree(QWidget):
             self._logger.error("Delegate is not an instance of MindspaceEditableDelegate")
             return
 
-        print("Starting custom edit for index:", filter_index)
         delegate.start_custom_edit(filter_index, self._tree_view, select_extension)
 
     def _show_context_menu(self, position: QPoint) -> None:
@@ -723,7 +720,6 @@ class MindspaceFileTree(QWidget):
                 f.write("")  # Create empty file
 
             self._logger.info("Created temporary file: '%s'", temp_file_path)
-            print("Created temporary file: '%s'", temp_file_path)
 
             # Set up pending creation state with the temporary path
             self._pending_new_item = (parent_path, False, temp_file_path)
@@ -804,7 +800,6 @@ class MindspaceFileTree(QWidget):
             self._logger.error("Delegate is not an instance of MindspaceEditableDelegate")
             return
 
-        print("Starting rename for index:", index)
         delegate.start_custom_edit(index, self._tree_view, select_extension=False)
 
     def _handle_edit_file(self, path: str) -> None:

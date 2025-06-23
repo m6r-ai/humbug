@@ -1,7 +1,7 @@
 """File tree view implementation for mindspace files with drag and drop support and inline editing."""
 
 import os
-from typing import cast, Callable, List
+from typing import cast, Callable
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer
@@ -101,17 +101,37 @@ class MindspaceFileTreeView(QTreeView):
 
         return file_model.filePath(source_index)
 
-    def scroll_to_and_ensure_visible(self, index: QModelIndex, callback: Callable) -> None:
+    def scroll_to_and_ensure_visible(self, file_path: str, callback: Callable) -> None:
         """
         Scroll to the specified index and ensure it's optimally positioned for editing.
 
         Args:
-            index: The model index to scroll to
+            file_path: The path to scroll to
             callback: Callback to execute after scrolling is complete
         """
+        # Find the index for this path
+        source_model = cast(QSortFilterProxyModel, self.model())
+        if not source_model:
+            return
+
+        # Get the source file system model
+        file_model = cast(QFileSystemModel, source_model.sourceModel())
+        if not file_model:
+            return
+
+        # Get the source index for the file path
+        source_index = file_model.index(file_path)
+        if not source_index.isValid():
+            return
+
+        # Map to the filter model
+        filter_index = source_model.mapFromSource(source_index)
+        if not filter_index.isValid():
+            return
+
         # Get the current viewport rect to determine optimal positioning
         viewport_rect = self.viewport().rect()
-        item_rect = self.visualRect(index)
+        item_rect = self.visualRect(filter_index)
 
         # Check if item is already optimally visible (not at edges and fully visible).  If it is, we can
         # execute the callback immediately without scrolling.
@@ -123,17 +143,15 @@ class MindspaceFileTreeView(QTreeView):
             item_rect.right() <= viewport_rect.width()
         )
         if is_optimally_visible:
-            print(f"Item at index {index} is already optimally visible, executing callback immediately.")
             callback()
             return
 
         # Scroll to position the item optimally in the viewport
         # Use PositionAtCenter to ensure good visibility for editing
-        self.scrollTo(index, QTreeView.ScrollHint.PositionAtCenter)
+        self.scrollTo(filter_index, QTreeView.ScrollHint.PositionAtCenter)
 
-        # For scrolling, we need a small delay since scrollTo() is also asynchronous
-        # But this is the only place we need it, and it's unavoidable
-        QTimer.singleShot(100, callback)  # Minimal delay just for scroll completion
+        # Scrolling is asynchronous so add a small delay to ensure the UI has time to update
+        QTimer.singleShot(100, callback)
 
     def ensure_path_visible_for_editing(self, file_path: str, callback: Callable) -> None:
         """
@@ -166,8 +184,6 @@ class MindspaceFileTreeView(QTreeView):
         if not filter_index.isValid():
             return
 
-        print(f"ensure_path_visible_for_editing called with file_path: {file_path}, filter_index: {filter_index}, source_index: {source_index}")
-
         # Collect all parent indexes
         parents = []
         current = filter_index.parent()
@@ -176,18 +192,12 @@ class MindspaceFileTreeView(QTreeView):
             current = current.parent()
 
         # Expand parents from root to leaf
-        expanded = False
         for parent in reversed(parents):
             if not self.isExpanded(parent):
-                expanded = True
                 self.expand(parent)
 
-        # If we didn't need to expand any parents, we can scroll directly
-        if not expanded:
-            self.scroll_to_and_ensure_visible(filter_index, callback)
-            return
-
-        QTimer.singleShot(300, lambda: self.scroll_to_and_ensure_visible(filter_index, callback))
+        # Allow time for the UI to update before scrolling.  We may not need it, but it won't hurt.
+        QTimer.singleShot(200, lambda: self.scroll_to_and_ensure_visible(file_path, callback))
 
     def _is_ancestor_path(self, potential_ancestor: str, path: str) -> bool:
         """
