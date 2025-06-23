@@ -5,7 +5,8 @@
 New features:
 
 - All models that support tool/function calling now implement tool/function calling.
-- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.
+- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking
+  modes.
 
 Bug fixes:
 
