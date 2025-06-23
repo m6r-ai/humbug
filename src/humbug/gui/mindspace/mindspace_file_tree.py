@@ -322,11 +322,9 @@ class MindspaceFileTree(QWidget):
         new_path = os.path.join(directory, new_name)
 
         try:
-            # Emit signal first so tabs can be updated
-            self.file_renamed.emit(current_path, new_path)
-
             # Perform the rename
             os.rename(current_path, new_path)
+            self.file_renamed.emit(current_path, new_path)
 
             self._logger.info("Successfully renamed '%s' to '%s'", current_path, new_path)
 
