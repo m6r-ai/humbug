@@ -15,6 +15,7 @@ Bug fixes:
   with an answer.  This meant it was also not restoring these correctly after reloading a conversation.
 - The conversation input box could lose focus when an AI message finished streaming.
 - Markdown headings may now be preceeded by 0, 1, 2, or 3 spaces.
+- File renames did not reliably update wiki tabs that were based on the old filename.
 
 ## v0.16 (2025-06-16)
 
