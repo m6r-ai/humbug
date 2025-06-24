@@ -1,6 +1,7 @@
 """Enhanced AI conversation class with tool calling support."""
 
 import asyncio
+import json
 import logging
 from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Set
@@ -288,8 +289,12 @@ class AIConversation:
     async def _process_pending_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
         """Process any tool calls from the current AI message."""
         # Create and add tool call message (hidden from user, for audit trail)
-        tool_names = [call.name for call in tool_calls]
-        content = f"Tool calls: {', '.join(tool_names)}"
+        tool_calls_dict = [tool_call.to_dict() for tool_call in tool_calls]
+        content = f"""Tool calls:
+```json
+{json.dumps(tool_calls_dict, indent=4)}
+```
+"""
         tool_call_message = AIMessage.create(
             source=AIMessageSource.TOOL_CALL,
             content=content,
@@ -307,7 +312,12 @@ class AIConversation:
             tool_results.append(tool_result)
 
         # Create and add tool result message (hidden from user, for audit trail)
-        content = f"Tool results: {len(tool_results)} tool(s) executed"
+        tool_results_dict = [tool_result.to_dict() for tool_result in tool_results]
+        content = f"""Tool results:
+```json
+{json.dumps(tool_results_dict, indent=4)}
+```
+"""
         tool_result_message = AIMessage.create(
             source=AIMessageSource.TOOL_RESULT,
             content=content,

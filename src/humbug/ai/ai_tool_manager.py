@@ -32,6 +32,19 @@ class AIToolCall:
     name: str
     arguments: Dict[str, Any]
 
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the tool call to a dictionary.
+
+        Returns:
+            Dictionary representation of the tool call
+        """
+        return {
+            'id': self.id,
+            'name': self.name,
+            'arguments': self.arguments
+        }
+
 
 @dataclass
 class AIToolResult:
@@ -41,6 +54,19 @@ class AIToolResult:
     content: str
     error: str | None = None
 
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        Convert the tool result to a dictionary.
+
+        Returns:
+            Dictionary representation of the tool result
+        """
+        return {
+            'tool_call_id': self.tool_call_id,
+            'name': self.name,
+            'content': self.content,
+            'error': self.error
+        }
 
 class AITool(ABC):
     """Abstract base class for AI tools."""

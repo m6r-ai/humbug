@@ -80,6 +80,8 @@ class ColorRole(Enum):
     MESSAGE_USER = auto()               # User message
     MESSAGE_AI = auto()                 # AI response
     MESSAGE_REASONING = auto()          # AI reasoning
+    MESSAGE_TOOL_CALL = auto()          # AI tool call
+    MESSAGE_TOOL_RESULT = auto()        # AI tool result
     MESSAGE_SYSTEM_ERROR = auto()       # System error message
     MESSAGE_SYSTEM_SUCCESS = auto()     # System success message
     MESSAGE_LANGUAGE = auto()           # Language heading

@@ -328,7 +328,8 @@ class ConversationMessage(QFrame):
             section.deleteLater()
 
         # Show the message if it has text and is one of the valid styles
-        if text and style in (AIMessageSource.AI, AIMessageSource.REASONING, AIMessageSource.SYSTEM, AIMessageSource.USER):
+        if text and style in (AIMessageSource.AI, AIMessageSource.REASONING, AIMessageSource.SYSTEM,
+                                AIMessageSource.USER, AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT):
             self.setVisible(True)
 
     def _copy_message(self) -> None:
@@ -435,6 +436,8 @@ class ConversationMessage(QFrame):
             AIMessageSource.USER: ColorRole.MESSAGE_USER,
             AIMessageSource.AI: ColorRole.MESSAGE_AI,
             AIMessageSource.REASONING: ColorRole.MESSAGE_REASONING,
+            AIMessageSource.TOOL_CALL: ColorRole.MESSAGE_TOOL_CALL,
+            AIMessageSource.TOOL_RESULT: ColorRole.MESSAGE_TOOL_RESULT,
             AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM_ERROR
         }
 
