@@ -384,16 +384,33 @@ class MindspaceFileTree(QWidget):
         # Split filename and extension
         name, ext = os.path.splitext(original_filename)
 
-        # Start with "filename - copy.ext"
-        base_name = f"{name} - copy"
-        counter = 1
+        # Check if the name already ends with " - copy" or " - copy (n)"
+        copy_suffix = " - copy"
+        if name.endswith(copy_suffix):
+            # Remove the existing " - copy" suffix to get the base name
+            base_name = name[:-len(copy_suffix)]
 
-        while True:
-            if counter == 1:
-                candidate_name = f"{base_name}{ext}"
+        elif " - copy (" in name and name.endswith(")"):
+            # Handle case like "filename - copy (2)" - extract base name
+            copy_index = name.rfind(" - copy (")
+            if copy_index != -1:
+                base_name = name[:copy_index]
 
             else:
-                candidate_name = f"{base_name} ({counter}){ext}"
+                base_name = name
+
+        else:
+            # No existing copy suffix
+            base_name = name
+
+        # Generate unique copy name
+        counter = 1
+        while True:
+            if counter == 1:
+                candidate_name = f"{base_name}{copy_suffix}{ext}"
+
+            else:
+                candidate_name = f"{base_name}{copy_suffix} ({counter}){ext}"
 
             full_path = os.path.join(parent_path, candidate_name)
             if not os.path.exists(full_path):

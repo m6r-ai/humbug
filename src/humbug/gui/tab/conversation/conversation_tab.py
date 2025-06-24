@@ -1,7 +1,6 @@
 """Unified conversation tab implementation."""
 
 import asyncio
-from datetime import datetime
 import logging
 import os
 from typing import List, cast
@@ -9,7 +8,7 @@ from typing import List, cast
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QWidget
 )
-from PySide6.QtCore import Signal, Qt
+from PySide6.QtCore import Signal
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_message_source import AIMessageSource
@@ -107,31 +106,84 @@ class ConversationTab(TabBase):
         # Update status bar
         self.update_status()
 
-    # pylint: disable=protected-access
-    async def fork_conversation_from_index(self, message_index: int) -> 'ConversationTab':
+    def _get_fork_file_name(self, original_path: str) -> str:
         """
-        Create a copy of this conversation with history up to the specified message.
+        Generate a unique fork name based on the original conversation file.
 
         Args:
-            message_index: Index of the message to fork at
+            original_path: Path to the original conversation file
+
+        Returns:
+            New filename with " - fork" suffix that doesn't conflict
+        """
+        parent_path = os.path.dirname(original_path)
+        original_filename = os.path.basename(original_path)
+
+        # Split filename and extension (.conv)
+        name, ext = os.path.splitext(original_filename)
+
+        # Check if the name already ends with " - fork" or " - fork (n)"
+        fork_suffix = " - fork"
+        if name.endswith(fork_suffix):
+            # Remove the existing " - fork" suffix to get the base name
+            base_name = name[:-len(fork_suffix)]
+
+        elif " - fork (" in name and name.endswith(")"):
+            # Handle case like "filename - fork (2)" - extract base name
+            fork_index = name.rfind(" - fork (")
+            if fork_index != -1:
+                base_name = name[:fork_index]
+
+            else:
+                base_name = name
+
+        else:
+            # No existing fork suffix
+            base_name = name
+
+        # Generate unique fork name
+        counter = 1
+        while True:
+            if counter == 1:
+                candidate_name = f"{base_name}{fork_suffix}{ext}"
+
+            else:
+                candidate_name = f"{base_name}{fork_suffix} ({counter}){ext}"
+
+            full_path = os.path.join(parent_path, candidate_name)
+            if not os.path.exists(full_path):
+                return full_path
+
+            counter += 1
+
+    # pylint: disable=protected-access
+    async def fork_conversation_from_index(self, message_index: int | None = None) -> 'ConversationTab':
+        """
+        Create a copy of this conversation with an option to only include selected history.
+
+        Args:
+            message_index: Index to fork at (None for full conversation)
 
         Returns:
             New ConversationTab with forked history
+
+        Raises:
+            ConversationError: If the fork operation fails
         """
-        # Generate new conversation ID using current time
-        timestamp = datetime.utcnow()
-        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-
-        # Create new file in same directory as current conversation
-        base_dir = os.path.dirname(self._path)
-        new_path = os.path.join(base_dir, f"{conversation_id}.conv")
-
-        # Create new tab using same history
+        # Generate new file path using fork naming convention
+        new_path = self._get_fork_file_name(self._path)
         forked_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
 
-        # Get messages up to the specified index (inclusive)
+        # Get messages to include in the fork
         all_messages = self._conversation_widget.get_conversation_history().get_messages()
-        forked_messages = all_messages[:message_index + 1]
+        if message_index is None:
+            # Full conversation fork
+            forked_messages = all_messages
+
+        else:
+            # Fork up to specified index (inclusive)
+            forked_messages = all_messages[:message_index + 1]
+
         transcript_messages = [msg.to_transcript_dict() for msg in forked_messages]
 
         try:
@@ -146,37 +198,6 @@ class ConversationTab(TabBase):
 
         except Exception as e:
             raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
-
-    # pylint: disable=protected-access
-    async def fork_conversation(self) -> 'ConversationTab':
-        """Create a copy of this conversation with the same history."""
-        # Generate new conversation ID using current time
-        timestamp = datetime.utcnow()
-        conversation_id = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-
-        # Create new file in same directory as current conversation
-        base_dir = os.path.dirname(cast(str, self._path))
-        new_path = os.path.join(base_dir, f"{conversation_id}.conv")
-
-        # Create new tab using same history
-        forked_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
-
-        # Get all messages and write to new transcript
-        messages = self._conversation_widget.get_conversation_history().get_messages()
-        transcript_messages = [msg.to_transcript_dict() for msg in messages]
-
-        try:
-            # Write history to new transcript file
-            handler = ConversationTranscriptHandler(new_path)
-            await handler.write(transcript_messages)
-
-        except Exception as e:
-            raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
-
-        # Load messages into the new tab
-        forked_tab._conversation_widget.load_message_history(messages, False)
-
-        return forked_tab
 
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""

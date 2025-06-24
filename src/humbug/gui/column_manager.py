@@ -185,11 +185,16 @@ class ColumnManager(QWidget):
 
         return None
 
-    def _close_ephemeral_tab_in_column(self, column: ColumnWidget) -> None:
-        """Close any ephemeral tab in the specified column."""
+    def _close_ephemeral_tab_in_column(self, column: ColumnWidget, new_tab: TabBase) -> None:
+        """Close any ephemeral tab in the specified column, except for the new one."""
+        print(f"Checking for ephemeral tabs in column {self._tab_columns.index(column)}")
         for i in range(column.count()):
             tab = cast(TabBase, column.widget(i))
+            if tab.tab_id() == new_tab.tab_id():
+                continue
+
             if tab.is_ephemeral():
+                print(f"Closing ephemeral tab {tab.tab_id()} in column {self._tab_columns.index(column)}")
                 self._close_tab_by_id(tab.tab_id(), force_close=True)
                 break  # Only one ephemeral tab per column
 
@@ -237,6 +242,7 @@ class ColumnManager(QWidget):
             tab: Tab to remove
             column: Column containing the tab
         """
+        print(f"Removing tab {tab.tab_id()} from column {self._tab_columns.index(column)}")
         tab_id = tab.tab_id()
 
         # Remove from MRU order
@@ -259,6 +265,7 @@ class ColumnManager(QWidget):
             tab_data: TabData instance
             column: Target column
         """
+        print(f"Adding tab {tab_data.tab_id}, {tab_data.label} to column {self._tab_columns.index(column)}")
         self._tabs[tab_data.tab_id] = tab_data.tab
         self._tab_labels[tab_data.tab_id] = tab_data.label
 
@@ -298,6 +305,7 @@ class ColumnManager(QWidget):
             source_mru.remove(tab_id)
 
         # Remove from source
+        print("move_tab_between_columns: removing tab from source column")
         self._remove_tab_from_column(tab, source_column)
 
         # Create and add new tab
@@ -541,6 +549,7 @@ class ColumnManager(QWidget):
             column_number: Index of the column to remove
             column: Column widget to remove
         """
+        print(f"Removing column {column_number} with {column.count()} tabs")
         if column in self._column_mru_order:
             del self._column_mru_order[column]
 
@@ -706,11 +715,11 @@ class ColumnManager(QWidget):
         # Determine target column
         target_column = self._get_target_column_for_new_tab()
 
-        # Close ephemeral tab in target column before adding new tab
-        self._close_ephemeral_tab_in_column(target_column)
-
         tab_data = self._create_tab_data(tab, title)
         self._add_tab_to_column(tab_data, target_column)
+
+        # Close any ephemeral tab in target column because we've just added a new one
+        self._close_ephemeral_tab_in_column(target_column, tab)
 
         # Set initial state
         if len(self._tabs) == 1:  # If this is the first tab
@@ -749,6 +758,7 @@ class ColumnManager(QWidget):
             if next_tab:
                 column.setCurrentWidget(next_tab)
 
+        print(f"Closing tab {tab_id} in column {self._tab_columns.index(column)}")
         self._remove_tab_from_column(tab, column)
 
         # If we closed the last tab in the column, close the column unless it's the last column
@@ -1193,7 +1203,7 @@ class ColumnManager(QWidget):
 
         try:
             # Fork the conversation
-            new_tab = await conversation_tab.fork_conversation()
+            new_tab = await conversation_tab.fork_conversation_from_index()
             new_tab.forkRequested.connect(self._fork_conversation)
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])

@@ -744,6 +744,9 @@ Context: Capabilities
                 This will create a new transcript file based on the current date/time, but will retain all previous
                 message dates and times.
 
+                This will create a new transcript file based on the original, but using the suffix "- fork" and an
+                option numeric suffix if a fork already exists.
+
                 This will be matched with a keyboard shortcut "Ctrl+Shift+F".
 
             Context: Separator

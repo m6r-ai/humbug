@@ -7,6 +7,8 @@ New features:
 - All models that support tool/function calling now implement tool/function calling.
 - Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking
   modes.
+- Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating
+  the conversation that was forked.
 
 Bug fixes:
 
@@ -17,6 +19,7 @@ Bug fixes:
 - The conversation input box could lose focus when an AI message finished streaming.
 - Markdown headings may now be preceeded by 0, 1, 2, or 3 spaces.
 - File renames did not reliably update wiki tabs that were based on the old filename.
+- Under some circumstances, the column manager could crash when removing an ephemeral tab.
 
 ## v0.16 (2025-06-16)
 

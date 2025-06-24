@@ -74,6 +74,8 @@ can be used to refine the Metaphor context.
 - All models that support tool/function calling now implement tool/function calling.
 - Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking
   modes.
+- Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating
+  the conversation that was forked.
 
 ## Humbug in action
 
