@@ -245,7 +245,6 @@ class MarkdownASTBuilder:
         # Check for heading
         heading_match = self._heading_pattern.match(line)
         if heading_match:
-            leading_spaces = heading_match.group(1)
             level = len(heading_match.group(2))
             content = heading_match.group(3).strip()
             return 'heading', (level, content)

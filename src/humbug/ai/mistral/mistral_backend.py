@@ -141,7 +141,7 @@ class MistralBackend(AIBackend):
         Returns:
             List of messages formatted for Mistral API
         """
-        result = []
+        result: List[Dict[str, Any]] = []
         last_user_message_index = -1
 
         for message in conversation_history:

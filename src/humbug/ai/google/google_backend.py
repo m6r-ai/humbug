@@ -75,7 +75,7 @@ class GoogleBackend(AIBackend):
         Returns:
             User message dictionary with structured content
         """
-        parts = []
+        parts: List[Dict[str, Any]] = []
 
         # Add text content if present
         if content:
@@ -111,7 +111,7 @@ class GoogleBackend(AIBackend):
         Returns:
             Assistant message dictionary with structured content
         """
-        parts = []
+        parts: List[Dict[str, Any]] = []
 
         # Add text content if present
         if content:
@@ -162,7 +162,7 @@ class GoogleBackend(AIBackend):
         Returns:
             List of messages formatted for Google API
         """
-        result = []
+        result: List[Dict[str, Any]] = []
         last_user_message_index = -1
 
         for message in conversation_history:

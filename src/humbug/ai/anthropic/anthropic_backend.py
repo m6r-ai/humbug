@@ -115,7 +115,7 @@ class AnthropicBackend(AIBackend):
         """
         # For Anthropic, tool calls are structured content within the assistant message
         if tool_calls:
-            content_parts = []
+            content_parts: List[Dict[str, Any]] = []
 
             # Add reasoning content if present
             if reasoning:
@@ -155,7 +155,7 @@ class AnthropicBackend(AIBackend):
         Returns:
             List of messages formatted for Anthropic API
         """
-        result = []
+        result: List[Dict[str, Any]] = []
         last_user_message_index = -1
         last_reasoning_message: AIMessage | None = None
 

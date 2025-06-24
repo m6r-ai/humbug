@@ -150,7 +150,7 @@ class OllamaBackend(AIBackend):
         Returns:
             List of messages formatted for Ollama API
         """
-        result = []
+        result: List[Dict[str, Any]] = []
         last_user_message_index = -1
         last_reasoning_message: AIMessage | None = None
 
@@ -240,8 +240,8 @@ class OllamaBackend(AIBackend):
             }
         }
 
-        thinking = (settings.reasoning & ReasoningCapability.VISIBLE_REASONING) == ReasoningCapability.VISIBLE_REASONING
-        data["think"] = True if thinking else False
+        thinking: bool = (settings.reasoning & ReasoningCapability.VISIBLE_REASONING) == ReasoningCapability.VISIBLE_REASONING
+        data["think"] = thinking
 
         # Add tools if supported
         if self._supports_tools(settings):

@@ -152,7 +152,7 @@ class XAIBackend(AIBackend):
         Returns:
             List of messages formatted for xAI API
         """
-        result = []
+        result: List[Dict[str, Any]] = []
         last_user_message_index = -1
         last_reasoning_message: AIMessage | None = None
 

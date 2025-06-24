@@ -46,7 +46,7 @@ class M6RBackend(AIBackend):
         Returns:
             List of messages formatted for M6R API
         """
-        result = []
+        result: List[Dict[str, Any]] = []
         last_user_message_index = -1
 
         for message in conversation_history:
