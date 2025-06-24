@@ -1338,10 +1338,7 @@ class ColumnManager(QWidget):
         Returns:
             The opened editor tab
         """
-        self.protect_current_tab(True)
-        tab = self.open_file(path)
-        self.protect_current_tab(False)
-        return tab
+        return self.open_file(path)
 
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""
