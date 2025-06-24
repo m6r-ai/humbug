@@ -52,10 +52,9 @@ class MindspaceFileTree(QWidget):
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
 
-        # Create mindspace label with context menu and drop support
+        # Create mindspace label
         self._mindspace_label = QLabel()
         self._mindspace_label.setContentsMargins(0, 0, 0, 0)
-        self._mindspace_label.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 
         header_layout.addWidget(self._mindspace_label)
         header_layout.addStretch()

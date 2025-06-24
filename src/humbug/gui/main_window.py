@@ -1068,14 +1068,16 @@ class MainWindow(QMainWindow):
             QMenu {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
+                border-color: {style_manager.get_color_str(ColorRole.MENU_BORDER)};
                 border-width: 1px;
                 border-style: solid;
-                border-radius: 4px;
+                border-radius: 8px;
+                margin: 0px;
             }}
             QMenu::item {{
-                margin: 3px 5px;
-                padding: 4px 4px 4px 4px;
+                margin: 2px;
+                padding: 4px 8px 4px 8px;
+                border-radius: 4px;
             }}
             QMenu::item:disabled {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};

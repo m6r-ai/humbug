@@ -229,8 +229,12 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.MENU_HOVER: {
-                ColorMode.DARK: "#3d3d3d",
-                ColorMode.LIGHT: "#e0e0e0"
+                ColorMode.DARK: "#3060d0",
+                ColorMode.LIGHT: "#2050c0"
+            },
+            ColorRole.MENU_BORDER: {
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#c0c0c0"
             },
 
             # Splitter bars
