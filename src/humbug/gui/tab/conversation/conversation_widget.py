@@ -377,7 +377,7 @@ class ConversationWidget(QWidget):
         for msg_widget in self._messages:
             if hasattr(msg_widget, '_message_id') and msg_widget._message_id == message.id:
                 # Add approval UI to this message
-                print("show approval UI")
+                msg_widget.show_tool_approval_ui(tool_calls)
                 break
 
     def _handle_tool_call_approved(self, tool_calls: List[AIToolCall]) -> None:
