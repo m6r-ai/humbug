@@ -71,8 +71,8 @@ def get_english_strings() -> LanguageStrings:
         role_assistant="{model} response",
         role_reasoning="{model} reasoning",
         role_system="Humbug",
-        role_tool_call="Tool Call",
-        role_tool_result="Tool Result",
+        role_tool_call="Tool call",
+        role_tool_result="Tool result",
 
         # Message labels
         highlighting="Highlighting: {language}",
