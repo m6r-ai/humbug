@@ -1,11 +1,10 @@
 """Main window implementation for Humbug application."""
 
 import asyncio
-from datetime import datetime
 import json
 import logging
 import os
-from typing import cast, Dict, List, Any
+from typing import cast, Dict, List
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
@@ -15,7 +14,7 @@ from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
 from humbug.ai.ai_model import ReasoningCapability
-from humbug.ai.ai_tool_manager import AIToolManager, AIToolDefinition, AIToolParameter, AITool, ToolExecutionError
+from humbug.ai.ai_tool_manager import AIToolManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
@@ -34,6 +33,8 @@ from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
+from humbug.gui.tools.tool_calculator import ToolCalculator
+from humbug.gui.tools.tool_clock import ToolClock
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
@@ -47,113 +48,6 @@ from humbug.mindspace.system.system_command_registry import SystemCommandRegistr
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
-
-
-class GetCurrentTimeTool(AITool):
-    """Tool that returns the current time."""
-
-    def get_definition(self) -> AIToolDefinition:
-        """Get the tool definition."""
-        return AIToolDefinition(
-            name="get_current_time",
-            description="Get the current date and time",
-            parameters=[
-                AIToolParameter(
-                    name="format",
-                    type="string",
-                    description="Time format ('iso', 'human', or 'timestamp')",
-                    required=False,
-                    enum=["iso", "human", "timestamp"]
-                ),
-                AIToolParameter(
-                    name="timezone",
-                    type="string",
-                    description="Timezone (e.g., 'UTC', 'America/New_York')",
-                    required=False
-                )
-            ]
-        )
-
-    async def execute(self, arguments: Dict[str, Any]) -> str:
-        """Execute the get current time tool."""
-        try:
-            format_type = arguments.get("format", "iso")
-
-            now = datetime.utcnow()
-
-            if format_type == "iso":
-                return now.isoformat() + "Z"
-
-            if format_type == "human":
-                return now.strftime("%Y-%m-%d %H:%M:%S UTC")
-
-            if format_type == "timestamp":
-                return str(int(now.timestamp()))
-
-            return now.isoformat() + "Z"
-
-        except Exception as e:
-            raise ToolExecutionError(
-                f"Failed to get current time: {str(e)}",
-                "get_current_time",
-                arguments
-            ) from e
-
-
-class CalculatorTool(AITool):
-    """Tool that performs basic mathematical calculations."""
-
-    def get_definition(self) -> AIToolDefinition:
-        """Get the tool definition."""
-        return AIToolDefinition(
-            name="calculate",
-            description="Perform basic mathematical calculations (addition, subtraction, multiplication, division)",
-            parameters=[
-                AIToolParameter(
-                    name="expression",
-                    type="string",
-                    description="Mathematical expression to evaluate (e.g., '2 + 3 * 4')",
-                    required=True
-                )
-            ]
-        )
-
-    async def execute(self, arguments: Dict[str, Any]) -> str:
-        """Execute the calculator tool."""
-        try:
-            expression = arguments.get("expression", "")
-            if not expression:
-                raise ToolExecutionError(
-                    "Expression is required",
-                    "calculate", 
-                    arguments
-                )
-
-            # Basic safety: only allow numbers, operators, parentheses, and whitespace
-            allowed_chars = set("0123456789+-*/().% ")
-            if not all(c in allowed_chars for c in expression):
-                raise ToolExecutionError(
-                    "Expression contains invalid characters",
-                    "calculate",
-                    arguments
-                )
-
-            # Evaluate the expression safely
-            result = eval(expression)
-            return str(result)
-
-        except ZeroDivisionError:
-            raise ToolExecutionError(
-                "Division by zero",
-                "calculate",
-                arguments
-            )
-        except Exception as e:
-            raise ToolExecutionError(
-                f"Failed to calculate expression: {str(e)}",
-                "calculate",
-                arguments
-            ) from e
 
 
 class MainWindow(QMainWindow):
@@ -170,8 +64,8 @@ class MainWindow(QMainWindow):
         strings = self._language_manager.strings()
 
         self._ai_tool_manager = AIToolManager()
-        self._ai_tool_manager.register_tool(GetCurrentTimeTool())
-        self._ai_tool_manager.register_tool(CalculatorTool())
+        self._ai_tool_manager.register_tool(ToolCalculator())
+        self._ai_tool_manager.register_tool(ToolClock())
 
         # Humbug menu actions
         self._about_action = QAction(strings.about_humbug, self)
