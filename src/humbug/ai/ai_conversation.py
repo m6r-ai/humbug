@@ -299,11 +299,9 @@ class AIConversation:
 
         # Create and add tool call message
         tool_calls_dict = [tool_call.to_dict() for tool_call in tool_calls]
-        content = f"""Tool calls pending approval:
-```json
+        content = f"""```json
 {json.dumps(tool_calls_dict, indent=4)}
-```
-"""
+```"""
         tool_call_message = AIMessage.create(
             source=AIMessageSource.TOOL_CALL,
             content=content,
@@ -325,7 +323,7 @@ class AIConversation:
         # Update the tool call message to show approval
         approved_message = self._conversation.update_message(
             self._pending_tool_call_message.id,
-            content=self._pending_tool_call_message.content.replace("pending approval", "approved"),
+            content=self._pending_tool_call_message.content,
             completed=True
         )
         if approved_message:
@@ -340,11 +338,9 @@ class AIConversation:
 
         # Create and add tool result message (hidden from user, for audit trail)
         tool_results_dict = [tool_result.to_dict() for tool_result in tool_results]
-        content = f"""Tool results:
-```json
+        content = f"""```json
 {json.dumps(tool_results_dict, indent=4)}
-```
-"""
+```"""
         tool_result_message = AIMessage.create(
             source=AIMessageSource.TOOL_RESULT,
             content=content,

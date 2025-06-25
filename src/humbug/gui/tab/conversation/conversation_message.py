@@ -262,6 +262,7 @@ class ConversationMessage(QFrame):
 
         self._approval_widget = self._create_tool_approval_widget(tool_calls)
         self._layout.addWidget(self._approval_widget)
+        self._handle_style_changed()
 
     def _create_tool_approval_widget(self, tool_calls: List[AIToolCall]) -> QWidget:
         """Create widget for tool call approval."""
@@ -516,9 +517,11 @@ class ConversationMessage(QFrame):
 
     def _handle_style_changed(self) -> None:
         """Handle the style changing."""
-        factor = self._style_manager.zoom_factor()
+        style_manager = self._style_manager
+
+        factor = style_manager.zoom_factor()
         font = self.font()
-        base_font_size = self._style_manager.base_font_size()
+        base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
@@ -534,11 +537,11 @@ class ConversationMessage(QFrame):
 
         current_style = self._message_source or AIMessageSource.USER
         role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
-        label_color = self._style_manager.get_color_str(role)
-        background_color = self._style_manager.get_color_str(
+        label_color = style_manager.get_color_str(role)
+        background_color = style_manager.get_color_str(
             ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
         )
-        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        text_color = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
 
         # Role label styling (bold)
         self._role_label.setFont(font)
@@ -555,47 +558,47 @@ class ConversationMessage(QFrame):
         button_style = f"""
             QToolButton {{
                 background-color: {background_color};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 padding: 0px;
             }}
             QToolButton:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
             QToolButton:pressed {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
         """
 
         # Apply icon and styling to copy and save buttons
         icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
+        icon_scaled_size = int(icon_base_size * style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         if self._copy_message_button:
-            self._copy_message_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("copy"), icon_base_size
+            self._copy_message_button.setIcon(QIcon(style_manager.scale_icon(
+                style_manager.get_icon_path("copy"), icon_base_size
             )))
             self._copy_message_button.setIconSize(icon_size)
             self._copy_message_button.setStyleSheet(button_style)
 
         if self._save_message_button:
-            self._save_message_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("save"), icon_base_size
+            self._save_message_button.setIcon(QIcon(style_manager.scale_icon(
+                style_manager.get_icon_path("save"), icon_base_size
             )))
             self._save_message_button.setIconSize(icon_size)
             self._save_message_button.setStyleSheet(button_style)
 
         if self._fork_message_button:
-            self._fork_message_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("fork"), icon_base_size
+            self._fork_message_button.setIcon(QIcon(style_manager.scale_icon(
+                style_manager.get_icon_path("fork"), icon_base_size
             )))
             self._fork_message_button.setIconSize(icon_size)
             self._fork_message_button.setStyleSheet(button_style)
 
         if self._delete_message_button:
-            self._delete_message_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("delete"), icon_base_size
+            self._delete_message_button.setIcon(QIcon(style_manager.scale_icon(
+                style_manager.get_icon_path("delete"), icon_base_size
             )))
             self._delete_message_button.setIconSize(icon_size)
             self._delete_message_button.setStyleSheet(button_style)
@@ -614,43 +617,49 @@ class ConversationMessage(QFrame):
         # Apply styling to all sections
         for section in self._sections:
             language = section.language()
-            color = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY) if language is not None else background_color
+            color = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY) if language is not None else background_color
             section.apply_style(text_color, color, font)
 
         # Style approval buttons if present
         if self._approve_button:
             self._approve_button.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
                     padding: 8px 16px;
                     border-radius: 4px;
                 }}
                 QPushButton:hover {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
                 }}
                 QPushButton:pressed {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
                 }}
                 QPushButton[recommended="true"] {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                }}
+                QPushButton[recommended="true"]:hover {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+                }}
+                QPushButton[recommended="true"]:pressed {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
                 }}
             """)
 
         if self._reject_button:
             self._reject_button.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                     padding: 8px 16px;
                     border-radius: 4px;
                 }}
                 QPushButton:hover {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
                 }}
                 QPushButton:pressed {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
                 }}
             """)
 
@@ -666,8 +675,8 @@ class ConversationMessage(QFrame):
             QFrame {{
                 background-color: {background_color};
                 margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
-                border: 2px solid {self._style_manager.get_color_str(border)}
+                border-radius: {int(style_manager.message_bubble_spacing())}px;
+                border: 2px solid {style_manager.get_color_str(border)}
             }}
         """)
 
