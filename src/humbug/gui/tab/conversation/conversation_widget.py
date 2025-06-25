@@ -17,6 +17,7 @@ from humbug.ai.ai_conversation_history import AIConversationHistory
 from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
+from humbug.ai.ai_tool_manager import AIToolCall
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.style_manager import StyleManager
@@ -262,7 +263,12 @@ class ConversationWidget(QWidget):
         msg_widget.mouseReleased.connect(self._stop_scroll)
         msg_widget.forkRequested.connect(self._fork_from_message)
         msg_widget.deleteRequested.connect(self._delete_from_message)
-        msg_widget.set_content(message.content, message.source, message.timestamp, message.model or "")
+
+        # Connect tool approval signals
+        msg_widget.toolCallApproved.connect(self._handle_tool_call_approved)
+        msg_widget.toolCallRejected.connect(self._handle_tool_call_rejected)
+
+        msg_widget.set_content(message.content, message.source, message.timestamp, message.model or "", message.id)
 
         # Add widget before input
         self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
@@ -291,6 +297,9 @@ class ConversationWidget(QWidget):
         ai_conversation.unregister_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
         )
+        ai_conversation.unregister_callback(
+            AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
+        )
 
     def _register_ai_conversation_callbacks(self) -> None:
         """Register callbacks for AIConversation events."""
@@ -312,6 +321,9 @@ class ConversationWidget(QWidget):
         )
         ai_conversation.register_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
+        )
+        ai_conversation.register_callback(
+            AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
         )
 
     async def _on_request_error(self, retries_exhausted: bool, message: AIMessage) -> None:
@@ -351,6 +363,35 @@ class ConversationWidget(QWidget):
         # Write the tool call to the transcript
         await self.write_transcript(message)
 
+    async def _on_tool_approval_required(self, message: AIMessage, tool_calls: List[AIToolCall]) -> None:
+        """
+        Handle tool approval requirement.
+
+        Args:
+            message: The tool call message
+            tool_calls: List of tool calls requiring approval
+        """
+        await self.add_message(message)
+
+        # Find the message widget that corresponds to this tool call message
+        for msg_widget in self._messages:
+            if hasattr(msg_widget, '_message_id') and msg_widget._message_id == message.id:
+                # Add approval UI to this message
+                print("show approval UI")
+                break
+
+    def _handle_tool_call_approved(self, tool_calls: List[AIToolCall]) -> None:
+        """Handle user approval of tool calls."""
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        loop = asyncio.get_event_loop()
+        loop.create_task(ai_conversation.approve_pending_tool_calls())
+
+    def _handle_tool_call_rejected(self, reason: str) -> None:
+        """Handle user rejection of tool calls."""
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        loop = asyncio.get_event_loop()
+        loop.create_task(ai_conversation.reject_pending_tool_calls(reason))
+
     async def _on_message_added(self, message: AIMessage) -> None:
         """
         Handle a new message being added to the conversation.
@@ -370,7 +411,7 @@ class ConversationWidget(QWidget):
         for i, widget in enumerate(self._messages):
             if (i == len(self._messages) - 1 and
                     message.source in (AIMessageSource.AI, AIMessageSource.REASONING)):
-                widget.set_content(message.content, message.source, message.timestamp, message.model or "")
+                widget.set_content(message.content, message.source, message.timestamp, message.model or "", message.id)
                 break
 
         # Scroll to bottom if auto-scrolling is enabled

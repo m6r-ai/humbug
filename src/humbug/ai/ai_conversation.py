@@ -12,7 +12,7 @@ from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_model import ReasoningCapability
 from humbug.ai.ai_response import AIError
-from humbug.ai.ai_tool_manager import AIToolManager, AIToolCall
+from humbug.ai.ai_tool_manager import AIToolManager, AIToolCall, AIToolResult
 from humbug.ai.ai_usage import AIUsage
 from humbug.user.user_manager import UserManager
 
@@ -25,6 +25,8 @@ class AIConversationEvent(Enum):
     MESSAGE_UPDATED = auto()    # When an existing message is updated
     MESSAGE_COMPLETED = auto()  # When an existing message has been completed
     TOOL_USED = auto()          # When a tool use message is added to history
+    TOOL_APPROVAL_REQUIRED = auto()
+                                # When tool calls need user approval
 
 
 class AIConversation:
@@ -46,6 +48,10 @@ class AIConversation:
         self._current_ai_message: AIMessage | None = None
         self._current_reasoning_message: AIMessage | None = None
         self._is_streaming = False
+
+        # Tool approval state
+        self._pending_tool_calls: List[AIToolCall] = []
+        self._pending_tool_call_message: AIMessage | None = None
 
         # Callbacks for events
         self._callbacks: Dict[AIConversationEvent, Set[Callable]] = {
@@ -287,10 +293,13 @@ class AIConversation:
                     self._logger.debug("Error during generator cleanup: %s", e)
 
     async def _process_pending_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
-        """Process any tool calls from the current AI message."""
-        # Create and add tool call message (hidden from user, for audit trail)
+        """Process tool calls with user approval requirement."""
+        # Store pending tool calls for approval
+        self._pending_tool_calls = tool_calls
+
+        # Create and add tool call message
         tool_calls_dict = [tool_call.to_dict() for tool_call in tool_calls]
-        content = f"""Tool calls:
+        content = f"""Tool calls pending approval:
 ```json
 {json.dumps(tool_calls_dict, indent=4)}
 ```
@@ -299,15 +308,36 @@ class AIConversation:
             source=AIMessageSource.TOOL_CALL,
             content=content,
             tool_calls=tool_calls,
-            completed=True
+            completed=False,  # Not completed until approved/rejected
+            tool_call_approved=None  # Pending approval
         )
         self._conversation.add_message(tool_call_message)
-        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_call_message)
+        self._pending_tool_call_message = tool_call_message
+
+        # Request user approval - don't emit TOOL_USED since it's pending
+        await self._trigger_event(AIConversationEvent.TOOL_APPROVAL_REQUIRED, tool_call_message, tool_calls)
+
+    async def approve_pending_tool_calls(self) -> None:
+        """Execute approved tool calls."""
+        if not self._pending_tool_calls or not self._pending_tool_call_message:
+            return
+
+        self._logger.debug("User approved tool calls, executing...")
+
+        # Update the tool call message to show approval
+        approved_message = self._conversation.update_message(
+            self._pending_tool_call_message.id,
+            content=self._pending_tool_call_message.content.replace("pending approval", "approved"),
+            completed=True
+        )
+        if approved_message:
+            approved_message.tool_call_approved = True
+            await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, approved_message)
 
         # Execute all tool calls
         tool_results = []
-        for tool_call in tool_calls:
-            self._logger.debug("Executing tool call: %s", tool_call.name)
+        for tool_call in self._pending_tool_calls:
+            self._logger.debug("Executing approved tool call: %s", tool_call.name)
             tool_result = await self._tool_manager.execute_tool(tool_call)
             tool_results.append(tool_result)
 
@@ -336,7 +366,71 @@ class AIConversation:
         self._conversation.add_message(tool_response_message)
         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
 
+        # Clear pending state
+        self._pending_tool_calls = []
+        self._pending_tool_call_message = None
+
         # Automatically continue the conversation with tool results
+        await self._start_ai()
+
+    async def reject_pending_tool_calls(self, reason: str = "User rejected tool call") -> None:
+        """Reject pending tool calls and return error to AI."""
+        if not self._pending_tool_calls or not self._pending_tool_call_message:
+            return
+
+        self._logger.debug("User rejected tool calls: %s", reason)
+
+        # Update the tool call message to show rejection
+        rejected_message = self._conversation.update_message(
+            self._pending_tool_call_message.id,
+            content=self._pending_tool_call_message.content.replace("pending approval", f"rejected: {reason}"),
+            completed=True
+        )
+        if rejected_message:
+            rejected_message.tool_call_approved = False
+            await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, rejected_message)
+
+        # Create error results for each tool call
+        tool_results = []
+        for tool_call in self._pending_tool_calls:
+            tool_result = AIToolResult(
+                tool_call_id=tool_call.id,
+                name=tool_call.name,
+                content="",
+                error=reason
+            )
+            tool_results.append(tool_result)
+
+        # Create tool result message with errors
+        tool_results_dict = [tool_result.to_dict() for tool_result in tool_results]
+        content = f"""Tool results (rejected):
+```json
+{json.dumps(tool_results_dict, indent=4)}
+```
+"""
+        tool_result_message = AIMessage.create(
+            source=AIMessageSource.TOOL_RESULT,
+            content=content,
+            tool_results=tool_results,
+            completed=True
+        )
+        self._conversation.add_message(tool_result_message)
+        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
+
+        # Create an explicit user message with error results
+        tool_response_message = AIMessage.create(
+            AIMessageSource.USER,
+            content="",
+            tool_results=tool_results
+        )
+        self._conversation.add_message(tool_response_message)
+        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
+
+        # Clear pending state
+        self._pending_tool_calls = []
+        self._pending_tool_call_message = None
+
+        # Continue the conversation with error results
         await self._start_ai()
 
     async def _handle_error(self, error: AIError) -> None:
@@ -540,7 +634,7 @@ class AIConversation:
 
         # Check for tool calls BEFORE marking conversation as completed
         if tool_calls:
-            # Don't emit COMPLETED event yet - we need to process tools first
+            # Don't emit COMPLETED event yet - we need user approval first
             await self._process_pending_tool_calls(tool_calls)
             return
 

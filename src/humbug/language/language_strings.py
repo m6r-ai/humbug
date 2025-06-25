@@ -261,3 +261,13 @@ class LanguageStrings:
 
     # File duplication errors
     error_duplicating_file: str
+
+    # Tool use
+    approve_tool_calls: str
+    reject_tool_calls: str
+    tool_approval_header: str
+    tool_name: str
+    tool_arguments: str
+    default_rejection_reason: str
+    role_tool_call: str
+    role_tool_result: str

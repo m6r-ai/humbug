@@ -9,6 +9,7 @@ from PySide6.QtCore import Signal, QPoint, QSize
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
 from humbug.ai.ai_message_source import AIMessageSource
+from humbug.ai.ai_tool_manager import AIToolCall
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
@@ -27,6 +28,8 @@ class ConversationMessage(QFrame):
     mouseReleased = Signal()
     forkRequested = Signal()
     deleteRequested = Signal()
+    toolCallApproved = Signal(list)  # List[AIToolCall]
+    toolCallRejected = Signal(str)   # rejection reason
 
     def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
         """
@@ -48,6 +51,7 @@ class ConversationMessage(QFrame):
         self._message_timestamp: datetime | None = None
         self._message_content = ""
         self._message_model = ""
+        self._message_id: str | None = None
 
         self._style_manager = StyleManager()
 
@@ -183,10 +187,10 @@ class ConversationMessage(QFrame):
                 role_text = strings.role_system
 
             case AIMessageSource.TOOL_CALL:
-                role_text = "Tool Call"
+                role_text = strings.role_tool_call
 
             case AIMessageSource.TOOL_RESULT:
-                role_text = "Tool Result"
+                role_text = strings.role_tool_result
 
         # Format with timestamp
         if self._message_timestamp is not None:
@@ -212,6 +216,11 @@ class ConversationMessage(QFrame):
         )
         section.scrollRequested.connect(self.scrollRequested)
         section.mouseReleased.connect(self.mouseReleased)
+
+        # Connect tool approval signals
+        section.toolCallApproved.connect(self.toolCallApproved)
+        section.toolCallRejected.connect(self.toolCallRejected)
+
         return section
 
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
@@ -225,6 +234,7 @@ class ConversationMessage(QFrame):
         if not has_selection:
             if self._section_with_selection == section:
                 self._section_with_selection = None
+
             return
 
         # Clear selection in other sections
@@ -234,7 +244,24 @@ class ConversationMessage(QFrame):
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, style: AIMessageSource, timestamp: datetime, model: str) -> None:
+    def show_tool_approval_ui(self, tool_calls: List[AIToolCall]) -> None:
+        """
+        Show tool approval UI in the first section.
+
+        Args:
+            tool_calls: List of tool calls that need approval
+        """
+        if self._sections:
+            self._sections[0].show_tool_approval_ui(tool_calls)
+
+    def set_content(
+        self,
+        text: str,
+        style: AIMessageSource,
+        timestamp: datetime,
+        model: str,
+        message_id: str | None = None
+    ) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
 
@@ -242,11 +269,14 @@ class ConversationMessage(QFrame):
             text: The message text content
             style: The style type ('user', 'ai', 'system', or 'error')
             timestamp: datetime object for the message timestamp
+            model: Model name for the message
+            message_id: Optional message ID for tracking
         """
         self._message_source = style
         self._message_timestamp = timestamp
         self._message_content = text
         self._message_model = model
+        self._message_id = message_id
 
         # Check if style changed - if so, we need to recreate all sections
         if style != self._current_style:
