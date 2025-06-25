@@ -308,13 +308,11 @@ class AIConversation:
             source=AIMessageSource.TOOL_CALL,
             content=content,
             tool_calls=tool_calls,
-            completed=False,  # Not completed until approved/rejected
-            tool_call_approved=None  # Pending approval
+            completed=False
         )
         self._conversation.add_message(tool_call_message)
         self._pending_tool_call_message = tool_call_message
 
-        # Request user approval - don't emit TOOL_USED since it's pending
         await self._trigger_event(AIConversationEvent.TOOL_APPROVAL_REQUIRED, tool_call_message, tool_calls)
 
     async def approve_pending_tool_calls(self) -> None:
@@ -331,7 +329,6 @@ class AIConversation:
             completed=True
         )
         if approved_message:
-            approved_message.tool_call_approved = True
             await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, approved_message)
 
         # Execute all tool calls
@@ -387,7 +384,6 @@ class AIConversation:
             completed=True
         )
         if rejected_message:
-            rejected_message.tool_call_approved = False
             await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, rejected_message)
 
         # Create error results for each tool call

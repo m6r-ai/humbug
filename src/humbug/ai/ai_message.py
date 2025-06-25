@@ -33,7 +33,6 @@ class AIMessage:
     tool_results: List[AIToolResult] | None = None
     signature: str | None = None
     readacted_reasoning: str | None = None
-    tool_call_approved: bool | None = None  # None=pending, True=approved, False=rejected
 
     # Map between AIMessageSource enum and transcript type strings
     _SOURCE_TYPE_MAP = {
@@ -61,8 +60,7 @@ class AIMessage:
         tool_calls: List[AIToolCall] | None = None,
         tool_results: List[AIToolResult] | None = None,
         signature: str | None = None,
-        readacted_reasoning: str | None = None,
-        tool_call_approved: bool | None = None
+        readacted_reasoning: str | None = None
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
@@ -82,8 +80,7 @@ class AIMessage:
             tool_calls=tool_calls,
             tool_results=tool_results,
             signature=signature,
-            readacted_reasoning=readacted_reasoning,
-            tool_call_approved=tool_call_approved
+            readacted_reasoning=readacted_reasoning
         )
 
     def copy(self) -> 'AIMessage':
@@ -102,8 +99,7 @@ class AIMessage:
             tool_calls=self.tool_calls.copy() if self.tool_calls else None,
             tool_results=self.tool_results.copy() if self.tool_results else None,
             signature=self.signature,
-            readacted_reasoning=self.readacted_reasoning,
-            tool_call_approved=self.tool_call_approved
+            readacted_reasoning=self.readacted_reasoning
         )
 
     def to_transcript_dict(self) -> Dict:
@@ -136,9 +132,6 @@ class AIMessage:
 
         if self.readacted_reasoning:
             message["readacted_reasoning"] = self.readacted_reasoning
-
-        if self.tool_call_approved is not None:
-            message["tool_call_approved"] = self.tool_call_approved
 
         # Add tool-specific fields
         if self.tool_calls:
@@ -268,6 +261,5 @@ class AIMessage:
             tool_calls=tool_calls,
             tool_results=tool_results,
             signature=data.get("signature", None),
-            readacted_reasoning=data.get("readacted_reasoning", None),
-            tool_call_approved=data.get("tool_call_approved", None)
+            readacted_reasoning=data.get("readacted_reasoning", None)
         )
