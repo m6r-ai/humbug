@@ -1,5 +1,6 @@
 """AI tool calling framework."""
 
+import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import logging
@@ -68,6 +69,7 @@ class AIToolResult:
             'error': self.error
         }
 
+
 class AITool(ABC):
     """Abstract base class for AI tools."""
 
@@ -95,6 +97,15 @@ class AITool(ABC):
             ToolExecutionError: If tool execution fails
         """
 
+    def get_timeout(self) -> float | None:
+        """
+        Get the preferred timeout for this tool in seconds.
+
+        Returns:
+            Preferred timeout in seconds, or None to use the default timeout
+        """
+        return None
+
 
 class ToolExecutionError(Exception):
     """Exception raised when tool execution fails."""
@@ -118,15 +129,16 @@ class AIToolManager:
 
     _instance: 'AIToolManager | None' = None
 
-    def __new__(cls) -> 'AIToolManager':
+    def __new__(cls, default_timeout: float = 30.0) -> 'AIToolManager':
         if cls._instance is None:
             cls._instance = super().__new__(cls)
 
         return cls._instance
 
-    def __init__(self) -> None:
+    def __init__(self, default_timeout: float = 30.0) -> None:
         if not hasattr(self, '_initialized'):
             self._tools: Dict[str, AITool] = {}
+            self._default_timeout = default_timeout
             self._logger = logging.getLogger("AIToolManager")
             self._initialized = True
 
@@ -168,12 +180,13 @@ class AIToolManager:
         """
         return [tool.get_definition() for tool in self._tools.values()]
 
-    async def execute_tool(self, tool_call: AIToolCall) -> AIToolResult:
+    async def execute_tool(self, tool_call: AIToolCall, timeout: float | None = None) -> AIToolResult:
         """
         Execute a tool call.
 
         Args:
             tool_call: The tool call to execute
+            timeout: Optional timeout in seconds. If None, uses tool's preferred timeout or default
 
         Returns:
             AIToolResult containing the execution result
@@ -188,9 +201,28 @@ class AIToolManager:
                 error=error_msg
             )
 
+        tool = self._tools[tool_call.name]
+
+        # Determine timeout to use
+        if timeout is not None:
+            actual_timeout = timeout
+    
+        else:
+            tool_timeout = tool.get_timeout()
+            actual_timeout = tool_timeout if tool_timeout is not None else self._default_timeout
+
         try:
-            tool = self._tools[tool_call.name]
-            result = await tool.execute(tool_call.arguments)
+            self._logger.debug(
+                "Executing tool '%s' with timeout %.1fs and args %s",
+                tool_call.name,
+                actual_timeout,
+                tool_call.arguments
+            )
+
+            result = await asyncio.wait_for(
+                tool.execute(tool_call.arguments),
+                timeout=actual_timeout
+            )
 
             self._logger.debug(
                 "Tool '%s' executed successfully with args %s",
@@ -202,6 +234,22 @@ class AIToolManager:
                 tool_call_id=tool_call.id,
                 name=tool_call.name,
                 content=result
+            )
+
+        except asyncio.TimeoutError:
+            error_msg = f"Tool execution timed out after {actual_timeout:.1f} seconds"
+            self._logger.warning(
+                "Tool '%s' timed out after %.1fs with args %s",
+                tool_call.name,
+                actual_timeout,
+                tool_call.arguments
+            )
+
+            return AIToolResult(
+                tool_call_id=tool_call.id,
+                name=tool_call.name,
+                content="",
+                error=error_msg
             )
 
         except Exception as e:
