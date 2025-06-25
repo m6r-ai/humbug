@@ -138,7 +138,6 @@ class MessageBox(QDialog):
             btn = QPushButton(self._get_button_text(button))
             btn.setMinimumWidth(min_button_width)
             btn.setMinimumHeight(min_button_height)
-            btn.setContentsMargins(8, 8, 8, 8)
             self._button_results[btn] = button
             btn.clicked.connect(self._handle_button)
 

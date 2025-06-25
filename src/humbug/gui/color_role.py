@@ -43,6 +43,12 @@ class ColorRole(Enum):
     BUTTON_BACKGROUND = auto()          # Push button background
     BUTTON_BACKGROUND_PRESSED = auto()  # Pressed push button background
     BUTTON_BACKGROUND_HOVER = auto()    # Hover state push button background
+    BUTTON_SECONDARY_BACKGROUND = auto()
+                                        # Push button background
+    BUTTON_SECONDARY_BACKGROUND_PRESSED = auto()
+                                        # Pressed push button background
+    BUTTON_SECONDARY_BACKGROUND_HOVER = auto()
+                                        # Hover state push button background
     BUTTON_BACKGROUND_RECOMMENDED = auto()
                                         # Recommended primary action button
     BUTTON_BACKGROUND_RECOMMENDED_PRESSED = auto()

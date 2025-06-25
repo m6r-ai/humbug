@@ -173,10 +173,10 @@ class ConversationMessage(QFrame):
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
 
         if self._approve_button:
-            self._approve_button.setText(strings.approve_tool_calls)
+            self._approve_button.setText(strings.approve_tool_call)
 
         if self._reject_button:
-            self._reject_button.setText(strings.reject_tool_calls)
+            self._reject_button.setText(strings.reject_tool_call)
 
     def _update_role_text(self) -> None:
         """Update the role text based on current language."""
@@ -270,29 +270,34 @@ class ConversationMessage(QFrame):
         layout = QVBoxLayout(approval_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
-
         strings = self._language_manager.strings()
-
-        # Add a separator line
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(separator)
 
         # Approval buttons
         button_layout = QHBoxLayout()
+        button_layout.setSpacing(8)
         button_layout.addStretch()
 
-        self._approve_button = QPushButton(strings.approve_tool_calls)
+        min_button_height = 40
+        zoom_factor = self._style_manager.zoom_factor()
+        min_button_width = int(180 * zoom_factor)
+
+        self._approve_button = QPushButton(strings.approve_tool_call)
         self._approve_button.clicked.connect(lambda: self._approve_tool_calls(tool_calls))
+        self._approve_button.setMinimumWidth(min_button_width)
+        self._approve_button.setMinimumHeight(min_button_height)
         self._approve_button.setProperty("recommended", True)
 
-        self._reject_button = QPushButton(strings.reject_tool_calls)
+        self._reject_button = QPushButton(strings.reject_tool_call)
         self._reject_button.clicked.connect(self._reject_tool_calls)
+        self._reject_button.setMinimumWidth(min_button_width)
+        self._reject_button.setMinimumHeight(min_button_height)
+        self._reject_button.setContentsMargins(8, 8, 8, 8)
 
         button_layout.addWidget(self._approve_button)
         button_layout.addWidget(self._reject_button)
         button_layout.addStretch()
+
+        layout.addSpacing(2)
         layout.addLayout(button_layout)
 
         return approval_widget
@@ -624,20 +629,19 @@ class ConversationMessage(QFrame):
         if self._approve_button:
             self._approve_button.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
                     color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-                    padding: 8px 16px;
                     border-radius: 4px;
                 }}
                 QPushButton:hover {{
-                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
                 }}
                 QPushButton:pressed {{
-                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
                 }}
                 QPushButton[recommended="true"] {{
                     background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                    color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
                 }}
                 QPushButton[recommended="true"]:hover {{
                     background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
@@ -645,21 +649,30 @@ class ConversationMessage(QFrame):
                 QPushButton[recommended="true"]:pressed {{
                     background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
                 }}
+                QPushButton[recommended="false"] {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                }}
+                QPushButton[recommended="false"]:hover {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+                }}
+                QPushButton[recommended="false"]:pressed {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+                }}
             """)
 
         if self._reject_button:
             self._reject_button.setStyleSheet(f"""
                 QPushButton {{
-                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
                     color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                    padding: 8px 16px;
                     border-radius: 4px;
                 }}
                 QPushButton:hover {{
-                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
                 }}
                 QPushButton:pressed {{
-                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
                 }}
             """)
 

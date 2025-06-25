@@ -275,6 +275,6 @@ def get_french_strings() -> LanguageStrings:
         error_duplicating_file="Impossible de dupliquer le fichier : {0}",
 
         # Tool use
-        approve_tool_calls="Approve Tool Calls",
-        reject_tool_calls="Reject Tool Calls"
+        approve_tool_call="Approuver les appels d'outils",
+        reject_tool_call="Rejeter les appels d'outils"
     )

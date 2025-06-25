@@ -66,6 +66,8 @@ class LanguageStrings:
     role_assistant: str
     role_reasoning: str
     role_system: str
+    role_tool_call: str
+    role_tool_result: str
 
     # Conversation labels
     highlighting: str
@@ -263,7 +265,5 @@ class LanguageStrings:
     error_duplicating_file: str
 
     # Tool use
-    approve_tool_calls: str
-    reject_tool_calls: str
-    role_tool_call: str
-    role_tool_result: str
+    approve_tool_call: str
+    reject_tool_call: str

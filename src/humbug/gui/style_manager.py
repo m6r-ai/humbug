@@ -76,11 +76,11 @@ class StyleManager(QObject):
             },
             ColorRole.BACKGROUND_SECONDARY: {
                 ColorMode.DARK: "#141414",
-                ColorMode.LIGHT: "#f0f0f0"
+                ColorMode.LIGHT: "#ececec"
             },
             ColorRole.BACKGROUND_TERTIARY: {
                 ColorMode.DARK: "#242424",
-                ColorMode.LIGHT: "#f8f8f8"
+                ColorMode.LIGHT: "#fcfcfc"
             },
             ColorRole.BACKGROUND_DIALOG: {
                 ColorMode.DARK: "#282828",
@@ -194,6 +194,18 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#404040",
                 ColorMode.LIGHT: "#c0c0c0"
             },
+            ColorRole.BUTTON_SECONDARY_BACKGROUND: {
+                ColorMode.DARK: "#2c2c2c",
+                ColorMode.LIGHT: "#d8d8d8"
+            },
+            ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED: {
+                ColorMode.DARK: "#505050",
+                ColorMode.LIGHT: "#b0b0b0"
+            },
+            ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER: {
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#c0c0c0"
+            },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED: {
                 ColorMode.DARK: "#2050c0",
                 ColorMode.LIGHT: "#3060d0"
@@ -266,7 +278,7 @@ class StyleManager(QObject):
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
                 ColorMode.DARK: "#020202",
-                ColorMode.LIGHT: "#f4f4f4"
+                ColorMode.LIGHT: "#f2f2f2"
             },
             ColorRole.MESSAGE_USER_BACKGROUND: {
                 ColorMode.DARK: "#121212",
@@ -366,7 +378,7 @@ class StyleManager(QObject):
             },
             ColorRole.SYNTAX_07: {
                 ColorMode.DARK: "#e0e080",
-                ColorMode.LIGHT: "#808000"
+                ColorMode.LIGHT: "#a0a000"
             },
             ColorRole.SYNTAX_08: {
                 ColorMode.DARK: "#b090f0",

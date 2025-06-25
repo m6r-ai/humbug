@@ -275,6 +275,6 @@ def get_english_strings() -> LanguageStrings:
         error_duplicating_file="Could not duplicate file: {0}",
 
         # Tool use
-        approve_tool_calls="Approve Tool Calls",
-        reject_tool_calls="Reject Tool Calls"
+        approve_tool_call="Approve Tool Call",
+        reject_tool_call="Reject Tool Call"
     )
