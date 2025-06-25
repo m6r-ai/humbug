@@ -29,6 +29,8 @@ class AnthropicStreamResponse(AIStreamResponse):
         Args:
             chunk: Response chunk from Anthropic API
         """
+        print(f"Processing chunk: {chunk}")
+        print("--------------------")
         if "error" in chunk:
             error_data = chunk["error"]
             self._handle_error(
@@ -86,12 +88,13 @@ class AnthropicStreamResponse(AIStreamResponse):
             # End of a content block
             if self._current_tool_call is not None:
                 # Complete the tool call
+                json_args = {}
                 try:
-                    json_args = json.loads(self._current_tool_arguments)
+                    if self._current_tool_arguments:
+                        json_args = json.loads(self._current_tool_arguments)
 
                 except json.JSONDecodeError as e:
                     self._logger.warning("Failed to parse tool arguments: %s (%s)", self._current_tool_arguments, str(e))
-                    raise
 
                 tool_call = AIToolCall(
                     id=self._current_tool_call["id"],
