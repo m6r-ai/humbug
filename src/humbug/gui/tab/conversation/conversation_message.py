@@ -1,10 +1,9 @@
 from datetime import datetime
-import json
 import logging
 from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QTextEdit
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
 )
 from PySide6.QtCore import Signal, QPoint, QSize
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
@@ -279,35 +278,6 @@ class ConversationMessage(QFrame):
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(separator)
 
-        # Add header
-        header_label = QLabel(strings.tool_approval_header)
-        header_label.setStyleSheet("font-weight: bold;")
-        layout.addWidget(header_label)
-
-        # Show tool call details
-        for tool_call in tool_calls:
-            tool_frame = QFrame()
-            tool_frame.setFrameStyle(QFrame.Shape.Box)
-            tool_layout = QVBoxLayout(tool_frame)
-
-            # Tool name
-            tool_name_label = QLabel(f"{strings.tool_name}: {tool_call.name}")
-            tool_name_label.setStyleSheet("font-weight: bold;")
-            tool_layout.addWidget(tool_name_label)
-
-            # Tool arguments in a readable format
-            if tool_call.arguments:
-                args_label = QLabel(strings.tool_arguments)
-                tool_layout.addWidget(args_label)
-
-                args_text = QTextEdit()
-                args_text.setReadOnly(True)
-                args_text.setMaximumHeight(100)
-                args_text.setPlainText(json.dumps(tool_call.arguments, indent=2))
-                tool_layout.addWidget(args_text)
-
-            layout.addWidget(tool_frame)
-
         # Approval buttons
         button_layout = QHBoxLayout()
         button_layout.addStretch()
@@ -333,8 +303,7 @@ class ConversationMessage(QFrame):
 
     def _reject_tool_calls(self) -> None:
         """Handle tool call rejection."""
-        strings = self._language_manager.strings()
-        self.toolCallRejected.emit(strings.default_rejection_reason)
+        self.toolCallRejected.emit("Tool calls were rejected by the user")
         self._remove_approval_widget()
 
     def _remove_approval_widget(self) -> None:

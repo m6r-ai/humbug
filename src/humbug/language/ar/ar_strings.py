@@ -71,6 +71,8 @@ def get_arabic_strings() -> LanguageStrings:
         role_assistant="رد {model}",
         role_reasoning="تفكير {model}",
         role_system="هامبج",
+        role_tool_call="Tool Call",
+        role_tool_result="Tool Result",
 
         # Message labels
         highlighting="تمييز: {language}",
@@ -272,11 +274,5 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Tool use
         approve_tool_calls="Approve Tool Calls",
-        reject_tool_calls="Reject Tool Calls",
-        tool_approval_header="Tool Call Approval",
-        tool_name="Tool Name",
-        tool_arguments="Tool Arguments",
-        default_rejection_reason="No reason provided for rejection.",
-        role_tool_call="Tool Call",
-        role_tool_result="Tool Result"
+        reject_tool_calls="Reject Tool Calls"
     )

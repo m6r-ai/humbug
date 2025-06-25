@@ -71,6 +71,8 @@ def get_english_strings() -> LanguageStrings:
         role_assistant="{model} response",
         role_reasoning="{model} reasoning",
         role_system="Humbug",
+        role_tool_call="Tool Call",
+        role_tool_result="Tool Result",
 
         # Message labels
         highlighting="Highlighting: {language}",
@@ -274,11 +276,5 @@ def get_english_strings() -> LanguageStrings:
 
         # Tool use
         approve_tool_calls="Approve Tool Calls",
-        reject_tool_calls="Reject Tool Calls",
-        tool_approval_header="Tool Call Approval",
-        tool_name="Tool Name",
-        tool_arguments="Tool Arguments",
-        default_rejection_reason="No reason provided for rejection.",
-        role_tool_call="Tool Call",
-        role_tool_result="Tool Result"
+        reject_tool_calls="Reject Tool Calls"
     )
