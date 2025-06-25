@@ -29,8 +29,6 @@ class AnthropicStreamResponse(AIStreamResponse):
         Args:
             chunk: Response chunk from Anthropic API
         """
-        print(f"Processing chunk: {chunk}")
-        print("--------------------")
         if "error" in chunk:
             error_data = chunk["error"]
             self._handle_error(
