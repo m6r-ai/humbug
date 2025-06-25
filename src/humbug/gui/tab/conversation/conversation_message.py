@@ -1,9 +1,10 @@
 from datetime import datetime
+import json
 import logging
 from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QTextEdit
 )
 from PySide6.QtCore import Signal, QPoint, QSize
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
@@ -100,6 +101,11 @@ class ConversationMessage(QFrame):
         self._sections_layout.setSpacing(15)
         self._layout.addWidget(self._sections_container)
 
+        # Tool approval widgets
+        self._approval_widget: QWidget | None = None
+        self._approve_button: QPushButton | None = None
+        self._reject_button: QPushButton | None = None
+
         # Track sections
         self._sections: List[ConversationMessageSection] = []
         self._section_with_selection: ConversationMessageSection | None = None
@@ -167,6 +173,12 @@ class ConversationMessage(QFrame):
         if self._delete_message_button:
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
 
+        if self._approve_button:
+            self._approve_button.setText(strings.approve_tool_calls)
+
+        if self._reject_button:
+            self._reject_button.setText(strings.reject_tool_calls)
+
     def _update_role_text(self) -> None:
         """Update the role text based on current language."""
         if not self._message_source:
@@ -217,10 +229,6 @@ class ConversationMessage(QFrame):
         section.scrollRequested.connect(self.scrollRequested)
         section.mouseReleased.connect(self.mouseReleased)
 
-        # Connect tool approval signals
-        section.toolCallApproved.connect(self.toolCallApproved)
-        section.toolCallRejected.connect(self.toolCallRejected)
-
         return section
 
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
@@ -246,13 +254,97 @@ class ConversationMessage(QFrame):
 
     def show_tool_approval_ui(self, tool_calls: List[AIToolCall]) -> None:
         """
-        Show tool approval UI in the first section.
+        Show tool approval UI for the given tool calls.
 
         Args:
             tool_calls: List of tool calls that need approval
         """
-        if self._sections:
-            self._sections[0].show_tool_approval_ui(tool_calls)
+        assert self._approval_widget is None, "Approval widget already exists"
+
+        self._approval_widget = self._create_tool_approval_widget(tool_calls)
+        self._layout.addWidget(self._approval_widget)
+
+    def _create_tool_approval_widget(self, tool_calls: List[AIToolCall]) -> QWidget:
+        """Create widget for tool call approval."""
+        approval_widget = QWidget()
+        layout = QVBoxLayout(approval_widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(8)
+
+        strings = self._language_manager.strings()
+
+        # Add a separator line
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        layout.addWidget(separator)
+
+        # Add header
+        header_label = QLabel(strings.tool_approval_header)
+        header_label.setStyleSheet("font-weight: bold;")
+        layout.addWidget(header_label)
+
+        # Show tool call details
+        for tool_call in tool_calls:
+            tool_frame = QFrame()
+            tool_frame.setFrameStyle(QFrame.Shape.Box)
+            tool_layout = QVBoxLayout(tool_frame)
+
+            # Tool name
+            tool_name_label = QLabel(f"{strings.tool_name}: {tool_call.name}")
+            tool_name_label.setStyleSheet("font-weight: bold;")
+            tool_layout.addWidget(tool_name_label)
+
+            # Tool arguments in a readable format
+            if tool_call.arguments:
+                args_label = QLabel(strings.tool_arguments)
+                tool_layout.addWidget(args_label)
+
+                args_text = QTextEdit()
+                args_text.setReadOnly(True)
+                args_text.setMaximumHeight(100)
+                args_text.setPlainText(json.dumps(tool_call.arguments, indent=2))
+                tool_layout.addWidget(args_text)
+
+            layout.addWidget(tool_frame)
+
+        # Approval buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        self._approve_button = QPushButton(strings.approve_tool_calls)
+        self._approve_button.clicked.connect(lambda: self._approve_tool_calls(tool_calls))
+        self._approve_button.setProperty("recommended", True)
+
+        self._reject_button = QPushButton(strings.reject_tool_calls)
+        self._reject_button.clicked.connect(self._reject_tool_calls)
+
+        button_layout.addWidget(self._approve_button)
+        button_layout.addWidget(self._reject_button)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
+        return approval_widget
+
+    def _approve_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
+        """Handle tool call approval."""
+        self.toolCallApproved.emit(tool_calls)
+        self._remove_approval_widget()
+
+    def _reject_tool_calls(self) -> None:
+        """Handle tool call rejection."""
+        strings = self._language_manager.strings()
+        self.toolCallRejected.emit(strings.default_rejection_reason)
+        self._remove_approval_widget()
+
+    def _remove_approval_widget(self) -> None:
+        """Remove the approval widget."""
+        if self._approval_widget:
+            self._layout.removeWidget(self._approval_widget)
+            self._approval_widget.deleteLater()
+            self._approval_widget = None
+            self._approve_button = None
+            self._reject_button = None
 
     def set_content(
         self,
@@ -555,6 +647,43 @@ class ConversationMessage(QFrame):
             language = section.language()
             color = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY) if language is not None else background_color
             section.apply_style(text_color, color, font)
+
+        # Style approval buttons if present
+        if self._approve_button:
+            self._approve_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                }}
+                QPushButton:pressed {{
+                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                }}
+                QPushButton[recommended="true"] {{
+                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                }}
+            """)
+
+        if self._reject_button:
+            self._reject_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    padding: 8px 16px;
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                }}
+                QPushButton:pressed {{
+                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                }}
+            """)
 
         # Determine border color based on state (focused takes precedence over bookmarked)
         border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \

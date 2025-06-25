@@ -1,19 +1,17 @@
 """Widget for displaying a section of a message."""
 
-import json
 import logging
 from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
-    QToolButton, QFileDialog, QWidget, QPushButton
+    QToolButton, QFileDialog, QWidget
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QSize
 from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor, QFont
 )
 
-from humbug.ai.ai_tool_manager import AIToolCall
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.markdown_renderer import MarkdownRenderer
@@ -33,8 +31,6 @@ class ConversationMessageSection(QFrame):
     selectionChanged = Signal(bool)
     scrollRequested = Signal(QPoint)
     mouseReleased = Signal()
-    toolCallApproved = Signal(list)  # List[AIToolCall]
-    toolCallRejected = Signal(str)   # rejection reason
 
     def __init__(
         self,
@@ -71,11 +67,6 @@ class ConversationMessageSection(QFrame):
         self._header_container = None
         self._copy_button = None
         self._save_as_button = None
-
-        # Tool approval widgets
-        self._approval_widget: QWidget | None = None
-        self._approve_button: QPushButton | None = None
-        self._reject_button: QPushButton | None = None
 
         if language is not None:
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
@@ -196,12 +187,6 @@ class ConversationMessageSection(QFrame):
         if self._save_as_button:
             self._save_as_button.setToolTip(strings.tooltip_save_contents)
 
-        if self._approve_button:
-            self._approve_button.setText(strings.approve_tool_calls)
-
-        if self._reject_button:
-            self._reject_button.setText(strings.reject_tool_calls)
-
     def _on_mouse_pressed(self, event: QMouseEvent) -> None:
         """Handle mouse press from text area."""
         if event.buttons() == Qt.MouseButton.LeftButton:
@@ -282,100 +267,6 @@ class ConversationMessageSection(QFrame):
                 strings.could_not_save.format(filename, str(e))
             )
             return False
-
-    def show_tool_approval_ui(self, tool_calls: List[AIToolCall]) -> None:
-        """
-        Show tool approval UI for the given tool calls.
-
-        Args:
-            tool_calls: List of tool calls that need approval
-        """
-        assert self._approval_widget is None, "Approval widget already exists"
-
-        self._approval_widget = self._create_tool_approval_widget(tool_calls)
-        self._layout.addWidget(self._approval_widget)
-
-    def _create_tool_approval_widget(self, tool_calls: List[AIToolCall]) -> QWidget:
-        """Create widget for tool call approval."""
-        approval_widget = QWidget()
-        layout = QVBoxLayout(approval_widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
-
-        strings = self._language_manager.strings()
-
-        # Add a separator line
-        separator = QFrame()
-        separator.setFrameShape(QFrame.Shape.HLine)
-        separator.setFrameShadow(QFrame.Shadow.Sunken)
-        layout.addWidget(separator)
-
-        # Add header
-        header_label = QLabel(strings.tool_approval_header)
-        header_label.setStyleSheet("font-weight: bold;")
-        layout.addWidget(header_label)
-
-        # Show tool call details
-        for tool_call in tool_calls:
-            tool_frame = QFrame()
-            tool_frame.setFrameStyle(QFrame.Shape.Box)
-            tool_layout = QVBoxLayout(tool_frame)
-
-            # Tool name
-            tool_name_label = QLabel(f"{strings.tool_name}: {tool_call.name}")
-            tool_name_label.setStyleSheet("font-weight: bold;")
-            tool_layout.addWidget(tool_name_label)
-
-            # Tool arguments in a readable format
-            if tool_call.arguments:
-                args_label = QLabel(strings.tool_arguments)
-                tool_layout.addWidget(args_label)
-
-                args_text = QTextEdit()
-                args_text.setReadOnly(True)
-                args_text.setMaximumHeight(100)
-                args_text.setPlainText(json.dumps(tool_call.arguments, indent=2))
-                tool_layout.addWidget(args_text)
-
-            layout.addWidget(tool_frame)
-
-        # Approval buttons
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-
-        self._approve_button = QPushButton(strings.approve_tool_calls)
-        self._approve_button.clicked.connect(lambda: self._approve_tool_calls(tool_calls))
-        self._approve_button.setProperty("recommended", True)
-
-        self._reject_button = QPushButton(strings.reject_tool_calls)
-        self._reject_button.clicked.connect(self._reject_tool_calls)
-
-        button_layout.addWidget(self._approve_button)
-        button_layout.addWidget(self._reject_button)
-        button_layout.addStretch()
-        layout.addLayout(button_layout)
-
-        return approval_widget
-
-    def _approve_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
-        """Handle tool call approval."""
-        self.toolCallApproved.emit(tool_calls)
-        self._remove_approval_widget()
-
-    def _reject_tool_calls(self) -> None:
-        """Handle tool call rejection."""
-        strings = self._language_manager.strings()
-        self.toolCallRejected.emit(strings.default_rejection_reason)
-        self._remove_approval_widget()
-
-    def _remove_approval_widget(self) -> None:
-        """Remove the approval widget."""
-        if self._approval_widget:
-            self._layout.removeWidget(self._approval_widget)
-            self._approval_widget.deleteLater()
-            self._approval_widget = None
-            self._approve_button = None
-            self._reject_button = None
 
     def set_content(self, content: MarkdownASTNode) -> None:
         """
@@ -626,43 +517,6 @@ class ConversationMessageSection(QFrame):
             )))
             self._save_as_button.setIconSize(icon_size)
             self._save_as_button.setStyleSheet(button_style)
-
-        # Style approval buttons if present
-        if self._approve_button:
-            self._approve_button.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                }}
-                QPushButton:hover {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-                }}
-                QPushButton:pressed {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-                }}
-                QPushButton[recommended="true"] {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                }}
-            """)
-
-        if self._reject_button:
-            self._reject_button.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                    padding: 8px 16px;
-                    border-radius: 4px;
-                }}
-                QPushButton:hover {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-                }}
-                QPushButton:pressed {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-                }}
-            """)
 
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode() != self._init_colour_mode:

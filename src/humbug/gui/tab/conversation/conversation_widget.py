@@ -805,6 +805,7 @@ class ConversationWidget(QWidget):
             # Remove bookmark
             del self._bookmarked_messages[message_widget]
             message_widget.set_bookmarked(False)
+
         else:
             # Add bookmark with current scroll position
             scroll_position = self._scroll_area.verticalScrollBar().value()
@@ -833,6 +834,7 @@ class ConversationWidget(QWidget):
         # Calculate next bookmark index
         if forward:
             self._current_bookmark_index = (self._current_bookmark_index + 1) % len(bookmarked_items)
+
         else:
             self._current_bookmark_index = (self._current_bookmark_index - 1) % len(bookmarked_items)
 
