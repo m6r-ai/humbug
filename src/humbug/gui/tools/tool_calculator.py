@@ -1,4 +1,5 @@
 import ast
+import cmath
 import logging
 import math
 import operator
@@ -30,33 +31,36 @@ class SafeMathEvaluator:
         ast.USub: operator.neg,
     }
 
-    # Allowed mathematical functions
+    # Allowed mathematical functions (updated to use cmath where appropriate)
     ALLOWED_FUNCTIONS = {
         'abs': abs,
-        'round': round,
+        'round': round,  # Used for real numbers only
         'min': min,
         'max': max,
         'sum': sum,
         'pow': pow,
-        'sqrt': math.sqrt,
-        'sin': math.sin,
-        'cos': math.cos,
-        'tan': math.tan,
-        'log': math.log,
-        'log10': math.log10,
-        'exp': math.exp,
-        'floor': math.floor,
-        'ceil': math.ceil,
+        'sqrt': cmath.sqrt,
+        'sin': cmath.sin,
+        'cos': cmath.cos,
+        'tan': cmath.tan,
+        'log': cmath.log,
+        'log10': cmath.log10,
+        'exp': cmath.exp,
+        'floor': math.floor,  # Used for real numbers only
+        'ceil': math.ceil,    # Used for real numbers only
     }
 
     # Maximum recursion depth to prevent stack overflow
     MAX_DEPTH = 100
 
+    # Tolerance for considering imaginary part as zero
+    IMAGINARY_TOLERANCE = 1e-10
+
     def __init__(self):
         """Initialize the safe math evaluator."""
         self._depth = 0
 
-    def evaluate(self, expression: str) -> Union[int, float]:
+    def evaluate(self, expression: str) -> Union[int, float, complex]:
         """
         Safely evaluate a mathematical expression.
 
@@ -64,7 +68,7 @@ class SafeMathEvaluator:
             expression: Mathematical expression to evaluate
 
         Returns:
-            Result of the mathematical expression
+            Result of the mathematical expression (simplified to real if imaginary part is negligible)
 
         Raises:
             ValueError: If expression is invalid or contains unsafe operations
@@ -84,15 +88,21 @@ class SafeMathEvaluator:
             # Evaluate the AST safely
             result = self._eval_node(tree.body)
 
-            # Ensure result is a number
-            if not isinstance(result, (int, float)):
+            # Ensure result is a number (int, float, or complex)
+            if not isinstance(result, (int, float, complex)):
                 raise ValueError(f"Expression must evaluate to a number, got {type(result).__name__}")
 
-            # Check for overflow
-            if isinstance(result, float) and (math.isinf(result) or math.isnan(result)):
+            # Check for overflow/invalid values
+            if isinstance(result, complex):
+                if (math.isinf(result.real) or math.isnan(result.real) or
+                    math.isinf(result.imag) or math.isnan(result.imag)):
+                    raise OverflowError("Result is too large or undefined")
+
+            elif isinstance(result, float) and (math.isinf(result) or math.isnan(result)):
                 raise OverflowError("Result is too large or undefined")
 
-            return result
+            # Simplify the result
+            return self._simplify_result(result)
 
         except SyntaxError as e:
             raise ValueError(f"Invalid mathematical expression: {e}") from e
@@ -100,7 +110,33 @@ class SafeMathEvaluator:
         except RecursionError as e:
             raise ValueError("Expression is too complex (too deeply nested)") from e
 
-    def _eval_node(self, node: ast.AST) -> Union[int, float | complex]:
+    def _simplify_result(self, result: Union[int, float, complex]) -> Union[int, float, complex]:
+        """
+        Simplify complex results to real numbers when imaginary part is negligible.
+
+        Args:
+            result: The calculation result
+
+        Returns:
+            Simplified result (real number if imaginary part is effectively zero)
+        """
+        if isinstance(result, complex):
+            # If imaginary part is effectively zero, return just the real part
+            if abs(result.imag) < self.IMAGINARY_TOLERANCE:
+                real_part = result.real
+                # Convert to int if it's a whole number
+                if isinstance(real_part, float) and real_part.is_integer():
+                    return int(real_part)
+
+                return real_part
+
+        # For real numbers, convert float to int if it's a whole number
+        if isinstance(result, float) and result.is_integer():
+            return int(result)
+
+        return result
+
+    def _eval_node(self, node: ast.AST) -> Union[int, float, complex]:
         """
         Recursively evaluate an AST node.
 
@@ -125,9 +161,6 @@ class SafeMathEvaluator:
             if isinstance(node, ast.Constant):
                 return self._eval_constant(node)
 
-            if isinstance(node, ast.Constant):
-                return node.n
-
             if isinstance(node, ast.BinOp):
                 return self._eval_binop(node)
 
@@ -146,13 +179,13 @@ class SafeMathEvaluator:
         finally:
             self._depth -= 1
 
-    def _eval_constant(self, node: ast.Constant) -> Union[int, float]:
+    def _eval_constant(self, node: ast.Constant) -> Union[int, float, complex]:
         """Evaluate a constant node."""
-        if isinstance(node.value, (int, float)):
+        if isinstance(node.value, (int, float, complex)):
             return node.value
         raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
 
-    def _eval_binop(self, node: ast.BinOp) -> Union[int, float]:
+    def _eval_binop(self, node: ast.BinOp) -> Union[int, float, complex]:
         """Evaluate a binary operation node."""
         if type(node.op) not in self.BINARY_OPERATORS:
             raise ValueError(f"Unsupported binary operator: {type(node.op).__name__}")
@@ -164,8 +197,13 @@ class SafeMathEvaluator:
         try:
             result = op_func(left, right)
 
-            # Check for overflow
-            if isinstance(result, float) and (math.isinf(result) or math.isnan(result)):
+            # Check for overflow in complex numbers
+            if isinstance(result, complex):
+                if (math.isinf(result.real) or math.isnan(result.real) or
+                    math.isinf(result.imag) or math.isnan(result.imag)):
+                    raise OverflowError("Calculation result is too large or undefined")
+
+            elif isinstance(result, float) and (math.isinf(result) or math.isnan(result)):
                 raise OverflowError("Calculation result is too large or undefined")
 
             return result
@@ -176,7 +214,7 @@ class SafeMathEvaluator:
         except OverflowError as e:
             raise OverflowError(f"Calculation overflow: {e}") from e
 
-    def _eval_unaryop(self, node: ast.UnaryOp) -> Union[int, float]:
+    def _eval_unaryop(self, node: ast.UnaryOp) -> Union[int, float, complex]:
         """Evaluate a unary operation node."""
         if type(node.op) not in self.UNARY_OPERATORS:
             raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
@@ -186,7 +224,7 @@ class SafeMathEvaluator:
 
         return op_func(operand)
 
-    def _eval_call(self, node: ast.Call) -> Union[int, float]:
+    def _eval_call(self, node: ast.Call) -> Union[int, float, complex]:
         """Evaluate a function call node."""
         if not isinstance(node.func, ast.Name):
             raise ValueError("Only simple function calls are allowed")
@@ -205,10 +243,20 @@ class SafeMathEvaluator:
         func = self.ALLOWED_FUNCTIONS[func_name]
 
         try:
+            # Special handling for functions that don't support complex numbers
+            if func_name in ('floor', 'ceil', 'round'):
+                # These functions only work with real numbers
+                for arg in args:
+                    if isinstance(arg, complex) and abs(arg.imag) >= self.IMAGINARY_TOLERANCE:
+                        raise ValueError(f"Function '{func_name}' does not support complex numbers")
+
+                # Convert complex numbers with zero imaginary part to real
+                args = [arg.real if isinstance(arg, complex) else arg for arg in args]
+
             result = func(*args)
 
             # Ensure result is numeric
-            if not isinstance(result, (int, float)):
+            if not isinstance(result, (int, float, complex)):
                 raise ValueError(f"Function '{func_name}' must return a number")
 
             return result
@@ -219,14 +267,18 @@ class SafeMathEvaluator:
         except OverflowError as e:
             raise OverflowError(f"Function '{func_name}' caused overflow: {e}") from e
 
-    def _eval_name(self, node: ast.Name) -> Union[int, float]:
+    def _eval_name(self, node: ast.Name) -> Union[int, float, complex]:
         """Evaluate a name node (variables/constants)."""
-        # Only allow mathematical constants
+        # Mathematical constants
         if node.id == 'pi':
             return math.pi
 
         if node.id == 'e':
             return math.e
+
+        # Complex number unit
+        if node.id == 'j':
+            return 1j
 
         raise ValueError(f"Undefined variable or constant: '{node.id}'")
 
@@ -253,8 +305,9 @@ class ToolCalculator(AITool):
                 "Trigonometry: sin cos tan. "
                 "Logarithms: log log10 exp. "
                 "Other functions: sqrt abs round min max sum pow floor ceil. "
-                "Constants: pi e. "
-                "Supports parentheses and nested expressions."
+                "Constants: pi e j (imaginary unit). "
+                "Supports parentheses, nested expressions, and complex numbers. "
+                "Results are simplified to real numbers when imaginary part is negligible."
             ),
             parameters=[
                 AIToolParameter(
