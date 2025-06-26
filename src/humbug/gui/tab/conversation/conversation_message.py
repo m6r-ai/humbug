@@ -274,7 +274,7 @@ class ConversationMessage(QFrame):
 
         # Approval buttons
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(8)
+        button_layout.setSpacing(10)
         button_layout.addStretch()
 
         min_button_height = 40
