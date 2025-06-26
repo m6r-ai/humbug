@@ -33,8 +33,6 @@ from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
-from humbug.gui.tools.tool_calculator import ToolCalculator
-from humbug.gui.tools.tool_clock import ToolClock
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
@@ -46,6 +44,8 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
 from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.tools.tool_calculator import ToolCalculator
+from humbug.tools.tool_clock import ToolClock
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
