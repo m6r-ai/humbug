@@ -55,7 +55,7 @@ class AIBackend(ABC):
         self._tool_manager = AIToolManager()
 
         if getattr(sys, "frozen", False) and hasattr(sys, '_MEIPASS'):
-            cert_path = os.path.join(sys._MEIPASS, "certifi", "cacert.pem")
+            cert_path = os.path.join(sys._MEIPASS, "certifi", "cacert.pem")  # type: ignore
 
         else:
             cert_path = certifi.where()
