@@ -108,6 +108,8 @@ class AIBackend(ABC):
         # Format messages for this specific provider
         config = self._build_request_config(conversation_history, conversation_settings)
 
+        self._logger.debug(config.data)
+
         attempt = 0
         while attempt < self._max_retries:
             try:

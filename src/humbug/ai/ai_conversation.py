@@ -215,11 +215,7 @@ class AIConversation:
                 self._is_streaming = False
                 return
 
-            stream = backend.stream_message(
-                self._conversation.get_messages(),
-                self._settings
-            )
-
+            stream = backend.stream_message(self._conversation.get_messages(), self._settings)
             async for response in stream:
                 await self._update_streaming_response(
                     reasoning=response.reasoning,
