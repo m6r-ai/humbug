@@ -206,7 +206,7 @@ class AIToolManager:
         # Determine timeout to use
         if timeout is not None:
             actual_timeout = timeout
-    
+
         else:
             tool_timeout = tool.get_timeout()
             actual_timeout = tool_timeout if tool_timeout is not None else self._default_timeout
