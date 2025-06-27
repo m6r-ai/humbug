@@ -3,7 +3,7 @@ import cmath
 import logging
 import math
 import operator
-from typing import Dict, Any, Union
+from typing import Dict, Any
 
 from humbug.ai.ai_tool_manager import AIToolDefinition, AIToolParameter, AITool, ToolExecutionError
 
@@ -56,11 +56,11 @@ class SafeMathEvaluator:
     # Tolerance for considering imaginary part as zero
     IMAGINARY_TOLERANCE = 1e-10
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the safe math evaluator."""
         self._depth = 0
 
-    def evaluate(self, expression: str) -> Union[int, float, complex]:
+    def evaluate(self, expression: str) -> int | float | complex:
         """
         Safely evaluate a mathematical expression.
 
@@ -110,7 +110,7 @@ class SafeMathEvaluator:
         except RecursionError as e:
             raise ValueError("Expression is too complex (too deeply nested)") from e
 
-    def _simplify_result(self, result: Union[int, float, complex]) -> Union[int, float, complex]:
+    def _simplify_result(self, result: int | float | complex) -> int | float | complex:
         """
         Simplify complex results to real numbers when imaginary part is negligible.
 
@@ -136,7 +136,7 @@ class SafeMathEvaluator:
 
         return result
 
-    def _eval_node(self, node: ast.AST) -> Union[int, float, complex]:
+    def _eval_node(self, node: ast.AST) -> int | float | complex:
         """
         Recursively evaluate an AST node.
 
@@ -179,13 +179,13 @@ class SafeMathEvaluator:
         finally:
             self._depth -= 1
 
-    def _eval_constant(self, node: ast.Constant) -> Union[int, float, complex]:
+    def _eval_constant(self, node: ast.Constant) -> int | float | complex:
         """Evaluate a constant node."""
         if isinstance(node.value, (int, float, complex)):
             return node.value
         raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
 
-    def _eval_binop(self, node: ast.BinOp) -> Union[int, float, complex]:
+    def _eval_binop(self, node: ast.BinOp) -> int | float | complex:
         """Evaluate a binary operation node."""
         if type(node.op) not in self.BINARY_OPERATORS:
             raise ValueError(f"Unsupported binary operator: {type(node.op).__name__}")
@@ -214,7 +214,7 @@ class SafeMathEvaluator:
         except OverflowError as e:
             raise OverflowError(f"Calculation overflow: {e}") from e
 
-    def _eval_unaryop(self, node: ast.UnaryOp) -> Union[int, float, complex]:
+    def _eval_unaryop(self, node: ast.UnaryOp) -> int | float | complex:
         """Evaluate a unary operation node."""
         if type(node.op) not in self.UNARY_OPERATORS:
             raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
@@ -224,7 +224,7 @@ class SafeMathEvaluator:
 
         return op_func(operand)
 
-    def _eval_call(self, node: ast.Call) -> Union[int, float, complex]:
+    def _eval_call(self, node: ast.Call) -> int | float | complex:
         """Evaluate a function call node."""
         if not isinstance(node.func, ast.Name):
             raise ValueError("Only simple function calls are allowed")
@@ -267,7 +267,7 @@ class SafeMathEvaluator:
         except OverflowError as e:
             raise OverflowError(f"Function '{func_name}' caused overflow: {e}") from e
 
-    def _eval_name(self, node: ast.Name) -> Union[int, float, complex]:
+    def _eval_name(self, node: ast.Name) -> int | float | complex:
         """Evaluate a name node (variables/constants)."""
         # Mathematical constants
         if node.id == 'pi':
@@ -286,7 +286,7 @@ class SafeMathEvaluator:
 class ToolCalculator(AITool):
     """Tool that performs mathematical calculations using safe AST evaluation."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the calculator tool."""
         self._evaluator = SafeMathEvaluator()
 

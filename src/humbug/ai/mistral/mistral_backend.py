@@ -87,7 +87,7 @@ class MistralBackend(AIBackend):
                 messages.append({
                     "role": "tool",
                     "name": tool_result.name,
-                    "tool_call_id": tool_result.tool_call_id,
+                    "tool_call_id": tool_result.id,
                     "content": tool_result.content
                 })
 

@@ -86,7 +86,7 @@ class OpenAIBackend(AIBackend):
             for tool_result in tool_results:
                 messages.append({
                     "role": "tool",
-                    "tool_call_id": tool_result.tool_call_id,
+                    "tool_call_id": tool_result.id,
                     "content": tool_result.content
                 })
 

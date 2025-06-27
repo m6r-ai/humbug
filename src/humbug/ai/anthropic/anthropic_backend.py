@@ -84,7 +84,7 @@ class AnthropicBackend(AIBackend):
         for tool_result in tool_results:
             content_parts.append({
                 "type": "tool_result",
-                "tool_use_id": tool_result.tool_call_id,
+                "tool_use_id": tool_result.id,
                 "content": tool_result.content
             })
 

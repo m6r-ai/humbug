@@ -147,7 +147,7 @@ class AIMessage:
         if self.tool_results:
             message["tool_results"] = [
                 {
-                    "tool_call_id": result.tool_call_id,
+                    "id": result.id,
                     "name": result.name,
                     "content": result.content,
                     "error": result.error
@@ -236,7 +236,7 @@ class AIMessage:
             try:
                 tool_results = [
                     AIToolResult(
-                        tool_call_id=result_data["tool_call_id"],
+                        id=result_data["id"],
                         name=result_data["name"],
                         content=result_data["content"],
                         error=result_data.get("error")

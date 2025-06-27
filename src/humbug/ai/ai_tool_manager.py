@@ -50,7 +50,7 @@ class AIToolCall:
 @dataclass
 class AIToolResult:
     """Result of a tool execution."""
-    tool_call_id: str
+    id: str
     name: str
     content: str
     error: str | None = None
@@ -63,7 +63,7 @@ class AIToolResult:
             Dictionary representation of the tool result
         """
         return {
-            'tool_call_id': self.tool_call_id,
+            'id': self.id,
             'name': self.name,
             'content': self.content,
             'error': self.error
@@ -195,7 +195,7 @@ class AIToolManager:
             error_msg = f"Unknown tool: {tool_call.name}"
             self._logger.error(error_msg)
             return AIToolResult(
-                tool_call_id=tool_call.id,
+                id=tool_call.id,
                 name=tool_call.name,
                 content="",
                 error=error_msg
@@ -231,7 +231,7 @@ class AIToolManager:
             )
 
             return AIToolResult(
-                tool_call_id=tool_call.id,
+                id=tool_call.id,
                 name=tool_call.name,
                 content=result
             )
@@ -246,7 +246,7 @@ class AIToolManager:
             )
 
             return AIToolResult(
-                tool_call_id=tool_call.id,
+                id=tool_call.id,
                 name=tool_call.name,
                 content="",
                 error=error_msg
@@ -262,7 +262,7 @@ class AIToolManager:
             )
 
             return AIToolResult(
-                tool_call_id=tool_call.id,
+                id=tool_call.id,
                 name=tool_call.name,
                 content="",
                 error=error_msg

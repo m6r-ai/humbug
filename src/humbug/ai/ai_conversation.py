@@ -384,7 +384,7 @@ class AIConversation:
         tool_results = []
         for tool_call in self._pending_tool_calls:
             tool_result = AIToolResult(
-                tool_call_id=tool_call.id,
+                id=tool_call.id,
                 name=tool_call.name,
                 content="",
                 error=reason
