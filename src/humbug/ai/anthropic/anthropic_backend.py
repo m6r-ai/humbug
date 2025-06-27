@@ -93,7 +93,6 @@ class AnthropicBackend(AIBackend):
             "content": content_parts
         }
 
-    # TODO: handle redacted reasoning
     def _build_assistant_message(
             self,
             reasoning: str,
