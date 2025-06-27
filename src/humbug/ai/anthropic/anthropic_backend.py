@@ -67,30 +67,30 @@ class AnthropicBackend(AIBackend):
             User message dictionary with structured content
         """
         # For Anthropic, tool results are structured content within the user message
-        if tool_results:
-            content_parts = []
-
-            # Add text content if present
-            if content:
-                content_parts.append({"type": "text", "text": content})
-
-            # Add tool results as structured content
-            for tool_result in tool_results:
-                content_parts.append({
-                    "type": "tool_result",
-                    "tool_use_id": tool_result.tool_call_id,
-                    "content": tool_result.content
-                })
-
+        if not tool_results:
             return {
                 "role": "user",
-                "content": content_parts
+                "content": content
             }
 
-        # Simple text message
+        # Process tool results
+        content_parts = []
+
+        # Add text content if present
+        if content:
+            content_parts.append({"type": "text", "text": content})
+
+        # Add tool results as structured content
+        for tool_result in tool_results:
+            content_parts.append({
+                "type": "tool_result",
+                "tool_use_id": tool_result.tool_call_id,
+                "content": tool_result.content
+            })
+
         return {
             "role": "user",
-            "content": content
+            "content": content_parts
         }
 
     # TODO: handle redacted reasoning

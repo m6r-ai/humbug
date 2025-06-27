@@ -84,20 +84,20 @@ class OllamaBackend(AIBackend):
         """
         messages = []
 
-        # Add user message if there's content
-        if content:
-            messages.append({
-                "role": "user",
-                "content": content
-            })
-
-        # Add separate tool result messages
+        # Add tool result messages
         if tool_results:
             for tool_result in tool_results:
                 messages.append({
                     "role": "tool",
                     "content": tool_result.content
                 })
+
+        # Add user message if there's content
+        if content:
+            messages.append({
+                "role": "user",
+                "content": content
+            })
 
         return messages
 

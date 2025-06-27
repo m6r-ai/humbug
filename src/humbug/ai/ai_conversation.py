@@ -320,7 +320,6 @@ class AIConversation:
 
         self._logger.debug("User approved tool calls, executing...")
 
-        # Update the tool call message to show approval
         approved_message = self._conversation.update_message(
             self._pending_tool_call_message.id,
             content=self._pending_tool_call_message.content,
@@ -373,10 +372,9 @@ class AIConversation:
 
         self._logger.debug("User rejected tool calls: %s", reason)
 
-        # Update the tool call message to show rejection
         rejected_message = self._conversation.update_message(
             self._pending_tool_call_message.id,
-            content=self._pending_tool_call_message.content.replace("pending approval", f"rejected: {reason}"),
+            content=self._pending_tool_call_message.content,
             completed=True
         )
         if rejected_message:

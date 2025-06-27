@@ -81,14 +81,7 @@ class OpenAIBackend(AIBackend):
         """
         messages = []
 
-        # Add user message if there's content
-        if content:
-            messages.append({
-                "role": "user",
-                "content": content
-            })
-
-        # Add separate tool result messages
+        # Add tool result messages
         if tool_results:
             for tool_result in tool_results:
                 messages.append({
@@ -96,6 +89,13 @@ class OpenAIBackend(AIBackend):
                     "tool_call_id": tool_result.tool_call_id,
                     "content": tool_result.content
                 })
+
+        # Add user message if there's content
+        if content:
+            messages.append({
+                "role": "user",
+                "content": content
+            })
 
         return messages
 

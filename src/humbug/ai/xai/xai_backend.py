@@ -82,22 +82,21 @@ class XAIBackend(AIBackend):
         """
         messages = []
 
+        # Add tool result messages
+        if tool_results:
+            for tool_result in tool_results:
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_result.tool_call_id,
+                    "content": tool_result.content
+                })
+
         # Add user message if there's content
         if content:
             messages.append({
                 "role": "user",
                 "content": content
             })
-
-        # Add separate tool result messages
-        if tool_results:
-            for tool_result in tool_results:
-                messages.append({
-                    "role": "tool",
-                    "name": tool_result.name,
-                    "tool_call_id": tool_result.tool_call_id,
-                    "content": tool_result.content
-                })
 
         return messages
 
@@ -178,7 +177,7 @@ class XAIBackend(AIBackend):
 
                 # Create assistant message with reasoning content and tool calls
                 assistant_msg = self._build_assistant_message(
-                    content=message.content,
+                    content="",
                     tool_calls=last_reasoning_message.tool_calls,
                     reasoning_content=last_reasoning_message.content
                 )
