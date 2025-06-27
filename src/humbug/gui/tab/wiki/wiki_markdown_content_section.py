@@ -1,7 +1,7 @@
 """Widget for displaying a section of wiki content."""
 
 import logging
-from typing import List, Tuple, cast, Optional
+from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QLabel, QHBoxLayout, QWidget
@@ -299,7 +299,7 @@ class WikiMarkdownContentSection(QFrame):
 
         return matches
 
-    def find_element_by_id(self, element_id: str) -> Optional[Tuple[int, int]]:
+    def find_element_by_id(self, element_id: str) -> Tuple[int, int] | None:
         """
         Find an element with the given ID.
 
