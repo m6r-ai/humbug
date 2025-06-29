@@ -275,7 +275,7 @@ class TestSafeMathEvaluatorErrorHandling:
 
     def test_division_by_zero(self, safe_evaluator):
         """Test division by zero error."""
-        with pytest.raises(ZeroDivisionError, match="Division by zero"):
+        with pytest.raises(ZeroDivisionError, match="division by zero"):
             safe_evaluator.evaluate("5 / 0")
 
         with pytest.raises(ZeroDivisionError):
@@ -341,6 +341,105 @@ class TestSafeMathEvaluatorErrorHandling:
         """Test function argument errors."""
         with pytest.raises(ValueError, match="Error calling function"):
             safe_evaluator.evaluate("sqrt()")  # Missing argument
+
+    def test_unsupported_comparison_operations(self, safe_evaluator):
+        """Test that comparison operations raise unsupported operation errors."""
+        with pytest.raises(ValueError, match="Unsupported operation: Compare"):
+            safe_evaluator.evaluate("1 < 2")
+
+        with pytest.raises(ValueError, match="Unsupported operation: Compare"):
+            safe_evaluator.evaluate("1 > 2")
+
+        with pytest.raises(ValueError, match="Unsupported operation: Compare"):
+            safe_evaluator.evaluate("1 == 2")
+
+        with pytest.raises(ValueError, match="Unsupported operation: Compare"):
+            safe_evaluator.evaluate("1 <= 2")
+
+        with pytest.raises(ValueError, match="Unsupported operation: Compare"):
+            safe_evaluator.evaluate("1 >= 2")
+
+        with pytest.raises(ValueError, match="Unsupported operation: Compare"):
+            safe_evaluator.evaluate("1 != 2")
+
+    def test_unsupported_boolean_operations(self, safe_evaluator):
+        """Test that boolean operations raise unsupported operation errors."""
+        with pytest.raises(ValueError, match="Unsupported operation: BoolOp"):
+            safe_evaluator.evaluate("True and False")
+
+        with pytest.raises(ValueError, match="Unsupported operation: BoolOp"):
+            safe_evaluator.evaluate("True or False")
+
+        with pytest.raises(ValueError, match="Unsupported operation: BoolOp"):
+            safe_evaluator.evaluate("1 and 0")
+
+        with pytest.raises(ValueError, match="Unsupported operation: BoolOp"):
+            safe_evaluator.evaluate("5 or 3")
+
+    def test_unsupported_container_literals(self, safe_evaluator):
+        """Test that container literals raise unsupported operation errors."""
+        with pytest.raises(ValueError, match="Unsupported operation: List"):
+            safe_evaluator.evaluate("[1, 2, 3]")
+
+        with pytest.raises(ValueError, match="Unsupported operation: Tuple"):
+            safe_evaluator.evaluate("(1, 2, 3)")
+
+        with pytest.raises(ValueError, match="Unsupported operation: Set"):
+            safe_evaluator.evaluate("{1, 2, 3}")
+
+        with pytest.raises(ValueError, match="Unsupported operation: Dict"):
+            safe_evaluator.evaluate("{1: 2, 3: 4}")
+
+        with pytest.raises(ValueError, match="Unsupported operation: List"):
+            safe_evaluator.evaluate("[]")  # Empty list
+
+        with pytest.raises(ValueError, match="Unsupported operation: Dict"):
+            safe_evaluator.evaluate("{}")  # Empty dict
+
+    def test_function_keyword_arguments_not_allowed(self, safe_evaluator):
+        """Test that function calls with keyword arguments are rejected."""
+        with pytest.raises(ValueError, match="Keyword arguments are not allowed in function calls"):
+            safe_evaluator.evaluate("pow(base=2, exp=3)")
+
+        with pytest.raises(ValueError, match="Keyword arguments are not allowed in function calls"):
+            safe_evaluator.evaluate("round(number=3.7, ndigits=1)")
+
+        with pytest.raises(ValueError, match="Keyword arguments are not allowed in function calls"):
+            safe_evaluator.evaluate("abs(x=-5)")
+
+    def test_function_overflow_errors(self, safe_evaluator):
+        """Test that function overflow errors are properly wrapped."""
+        with pytest.raises(OverflowError, match="Function 'exp' caused overflow"):
+            safe_evaluator.evaluate("exp(1000)")
+
+    def test_unsupported_constant_types(self, safe_evaluator):
+        """Test that non-numeric constant types raise errors."""
+        with pytest.raises(ValueError, match="Unsupported constant type: str"):
+            safe_evaluator.evaluate("'hello'")
+
+        with pytest.raises(ValueError, match="Unsupported constant type: bool"):
+            safe_evaluator.evaluate("True")
+
+        with pytest.raises(ValueError, match="Unsupported constant type: bool"):
+            safe_evaluator.evaluate("False")
+
+        with pytest.raises(ValueError, match="Unsupported constant type: NoneType"):
+            safe_evaluator.evaluate("None")
+
+    def test_binop_overflow_errors(self, safe_evaluator):
+        """Test that binary operation overflow errors are properly detected."""
+        # Test float overflow (results in inf)
+        with pytest.raises(OverflowError, match="Result is too large or undefined"):
+            safe_evaluator.evaluate("1e308 * 1e308")
+
+        # Test complex number overflow
+        with pytest.raises(OverflowError, match="Result is too large or undefined"):
+            safe_evaluator.evaluate("(1e200 + 1e200j) * (1e200 + 1e200j)")
+
+    def test_unsupported_unary_operators(self, safe_evaluator):
+        """Test that unsupported unary operators raise errors."""
+        with pytest.raises(ValueError, match="Unsupported unary operator: Not"):
+            safe_evaluator.evaluate("not True")
 
 
 class TestToolCalculatorExecution:

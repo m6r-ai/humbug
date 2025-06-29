@@ -87,10 +87,6 @@ class SafeMathEvaluator:
             # Evaluate the AST safely
             result = self._eval_node(tree.body)
 
-            # Ensure result is a number (int, float, or complex)
-            if not isinstance(result, (int, float, complex)):
-                raise ValueError(f"Expression must evaluate to a number, got {type(result).__name__}")
-
             # Check for overflow/invalid values
             if isinstance(result, complex):
                 if (math.isinf(result.real) or math.isnan(result.real) or
@@ -105,9 +101,6 @@ class SafeMathEvaluator:
 
         except SyntaxError as e:
             raise ValueError(f"Invalid mathematical expression: {e}") from e
-
-        except RecursionError as e:
-            raise ValueError("Expression is too complex (too deeply nested)") from e
 
     def _simplify_result(self, result: int | float | complex) -> int | float | complex:
         """
@@ -147,8 +140,6 @@ class SafeMathEvaluator:
 
         Raises:
             ValueError: If node type is not allowed
-            ZeroDivisionError: If division by zero occurs
-            OverflowError: If computation exceeds limits
         """
         # Prevent stack overflow from deeply nested expressions
         self._depth += 1
@@ -180,9 +171,15 @@ class SafeMathEvaluator:
 
     def _eval_constant(self, node: ast.Constant) -> int | float | complex:
         """Evaluate a constant node."""
-        if isinstance(node.value, (int, float, complex)):
-            return node.value
-        raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
+        # Bools are implemented as integers in Python, but we don't support them here
+        if isinstance(node.value, bool):
+            raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
+
+        if not isinstance(node.value, (int, float, complex)):
+            raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
+
+        return node.value
+
 
     def _eval_binop(self, node: ast.BinOp) -> int | float | complex:
         """Evaluate a binary operation node."""
@@ -192,26 +189,7 @@ class SafeMathEvaluator:
         left = self._eval_node(node.left)
         right = self._eval_node(node.right)
         op_func = self.BINARY_OPERATORS[type(node.op)]
-
-        try:
-            result = op_func(left, right)
-
-            # Check for overflow in complex numbers
-            if isinstance(result, complex):
-                if (math.isinf(result.real) or math.isnan(result.real) or
-                    math.isinf(result.imag) or math.isnan(result.imag)):
-                    raise OverflowError("Calculation result is too large or undefined")
-
-            elif isinstance(result, float) and (math.isinf(result) or math.isnan(result)):
-                raise OverflowError("Calculation result is too large or undefined")
-
-            return result
-
-        except ZeroDivisionError:
-            raise ZeroDivisionError("Division by zero") from None
-
-        except OverflowError as e:
-            raise OverflowError(f"Calculation overflow: {e}") from e
+        return op_func(left, right)
 
     def _eval_unaryop(self, node: ast.UnaryOp) -> int | float | complex:
         """Evaluate a unary operation node."""
@@ -220,7 +198,6 @@ class SafeMathEvaluator:
 
         operand = self._eval_node(node.operand)
         op_func = self.UNARY_OPERATORS[type(node.op)]
-
         return op_func(operand)
 
     def _eval_call(self, node: ast.Call) -> int | float | complex:
@@ -253,11 +230,7 @@ class SafeMathEvaluator:
                 args = [arg.real if isinstance(arg, complex) else arg for arg in args]
 
             result = func(*args)
-
-            # Ensure result is numeric
-            if not isinstance(result, (int, float, complex)):
-                raise ValueError(f"Function '{func_name}' must return a number")
-
+            assert isinstance(result, (int, float, complex)), f"Function '{func_name}' must return a number"
             return result
 
         except (TypeError, ValueError) as e:
