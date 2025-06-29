@@ -2,9 +2,10 @@
 Tests for the clock tool
 """
 import asyncio
-import pytest
 from datetime import datetime
 from unittest.mock import patch, MagicMock
+
+import pytest
 
 from humbug.tools.tool_clock import ToolClock
 from humbug.ai.ai_tool_manager import AIToolDefinition, AIToolParameter, ToolExecutionError

@@ -37,7 +37,6 @@ class SafeMathEvaluator:
         'round': round,  # Used for real numbers only
         'min': min,
         'max': max,
-        'sum': sum,
         'pow': pow,
         'sqrt': cmath.sqrt,
         'sin': cmath.sin,
@@ -304,7 +303,7 @@ class ToolCalculator(AITool):
                 "Arithmetic: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power). "
                 "Trigonometry: sin cos tan. "
                 "Logarithms: log log10 exp. "
-                "Other functions: sqrt abs round min max sum pow floor ceil. "
+                "Other functions: sqrt abs round min max pow floor ceil. "
                 "Constants: pi e j (imaginary unit). "
                 "Supports parentheses, nested expressions, and complex numbers. "
                 "Results are simplified to real numbers when imaginary part is negligible."
