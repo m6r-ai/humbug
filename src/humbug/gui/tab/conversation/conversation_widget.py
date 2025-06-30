@@ -363,19 +363,20 @@ class ConversationWidget(QWidget):
         # Write the tool call to the transcript
         await self.write_transcript(message)
 
-    async def _on_tool_approval_required(self, message: AIMessage, tool_calls: List[AIToolCall]) -> None:
+    async def _on_tool_approval_required(self, message: AIMessage, tool_calls: List[AIToolCall], destructive: bool) -> None:
         """
         Handle tool approval requirement.
 
         Args:
             message: The tool call message
             tool_calls: List of tool calls requiring approval
+            destructive: Whether the tool calls are considered destructive
         """
         # Find the message widget that corresponds to this tool call message
         for msg_widget in self._messages:
             if hasattr(msg_widget, '_message_id') and msg_widget._message_id == message.id:
                 # Add approval UI to this message
-                msg_widget.show_tool_approval_ui(tool_calls)
+                msg_widget.show_tool_approval_ui(tool_calls, destructive)
                 break
 
     def _handle_tool_call_approved(self, tool_calls: List[AIToolCall]) -> None:

@@ -283,7 +283,7 @@ class AIConversation:
                     # Log but don't propagate generator cleanup errors
                     self._logger.debug("Error during generator cleanup: %s", e)
 
-    async def _request_tool_authorization(self, tool_name: str, arguments: Dict[str, Any], reason: str) -> bool:
+    async def _request_tool_authorization(self, tool_name: str, arguments: Dict[str, Any], reason: str, destructive: bool) -> bool:
         """
         Request authorization for a specific tool call during execution.
 
@@ -293,6 +293,7 @@ class AIConversation:
             tool_name: Name of the tool requesting authorization
             arguments: Arguments being passed to the tool
             reason: Human-readable reason why authorization is needed
+            destructive: Whether the tool call is considered destructive
 
         Returns:
             True if authorized, False if denied
@@ -311,7 +312,9 @@ class AIConversation:
 
         try:
             # Trigger the approval UI
-            await self._trigger_event(AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._pending_tool_call_message, [tool_call])
+            await self._trigger_event(
+                AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._pending_tool_call_message, [tool_call], destructive
+            )
 
             # Wait for the user's response
             result = await self._pending_authorization_future

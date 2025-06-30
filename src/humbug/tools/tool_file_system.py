@@ -327,7 +327,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context("read_file", path, encoding=encoding)
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, False)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to read file: {arguments['path']}",
@@ -424,7 +424,7 @@ class ToolFileSystem(AITool):
             encoding=encoding,
             create_parents=create_parents
         )
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to write file: {arguments['path']}",
@@ -536,7 +536,7 @@ class ToolFileSystem(AITool):
             "append_to_file", path, 
             content=content, encoding=encoding
         )
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to append to file: {arguments['path']}",
@@ -606,7 +606,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context("list_directory", path)
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, False)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to list directory: {arguments['path']}",
@@ -719,7 +719,7 @@ class ToolFileSystem(AITool):
             "create_directory", path, 
             create_parents=create_parents
         )
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, False)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to create directory: {arguments['path']}",
@@ -812,7 +812,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context("remove_directory", path)
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to remove directory: {arguments['path']}",
@@ -878,7 +878,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context("delete_file", path)
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to delete file: {arguments['path']}",
@@ -975,7 +975,7 @@ class ToolFileSystem(AITool):
             "copy_file", source_path, 
             destination=str(destination_path)
         )
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to copy file: {arguments['path']} -> {destination_str}",
@@ -1055,7 +1055,7 @@ class ToolFileSystem(AITool):
             "move", source_path, 
             destination=str(destination_path)
         )
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to move: {arguments['path']} -> {destination_str}",
@@ -1122,7 +1122,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context("get_info", path)
-        authorized = await request_authorization("filesystem", arguments, context)
+        authorized = await request_authorization("filesystem", arguments, context, False)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to get info: {arguments['path']}",

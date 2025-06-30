@@ -70,7 +70,7 @@ class AIToolResult:
 
 
 # Type alias for the authorization callback
-AIToolAuthorizationCallback = Callable[[str, Dict[str, Any], str], Awaitable[bool]]
+AIToolAuthorizationCallback = Callable[[str, Dict[str, Any], str, bool], Awaitable[bool]]
 
 
 class AIToolAuthorizationDenied(Exception):
