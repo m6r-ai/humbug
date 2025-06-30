@@ -235,10 +235,8 @@ class AIConversation:
             # complete response before giving up.  This is a failure and should be handled as such.
             if self._is_streaming:
                 self._logger.debug("AI response failed (likely timeout)")
-                await self._update_streaming_response(
-                    reasoning="",
-                    content="",
-                    error=AIError(
+                await self._handle_error(
+                    AIError(
                         code="cancelled",
                         message="Server failed to complete response",
                         retries_exhausted=True,
@@ -249,10 +247,8 @@ class AIConversation:
 
         except asyncio.CancelledError:
             self._logger.debug("AI response cancelled")
-            await self._update_streaming_response(
-                reasoning="",
-                content="",
-                error=AIError(
+            await self._handle_error(
+                AIError(
                     code="cancelled",
                     message="Request cancelled by user",
                     retries_exhausted=True,
@@ -265,10 +261,8 @@ class AIConversation:
             self._logger.exception(
                 "Error processing AI response with model %s", settings.model
             )
-            await self._update_streaming_response(
-                reasoning="",
-                content="",
-                error=AIError(
+            await self._handle_error(
+                AIError(
                     code="process_error",
                     message=str(e),
                     retries_exhausted=True,
