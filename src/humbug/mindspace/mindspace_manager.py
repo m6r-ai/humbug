@@ -374,6 +374,40 @@ class MindspaceManager(QObject):
             )
             raise
 
+    def get_mindspace_relative_path(self, path: str) -> str | None:
+        """
+        Convert an absolute path to a mindspace-relative path if within mindspace.
+
+        Args:
+            path: Absolute path to convert.
+
+        Returns:
+            Path relative to mindspace root if within mindspace, None if outside mindspace.
+
+        Raises:
+            MindspaceNotFoundError: If no mindspace is currently open.
+        """
+        if not self.has_mindspace():
+            raise MindspaceNotFoundError("No mindspace is currently open")
+
+        abs_path = os.path.abspath(os.path.expanduser(path))
+
+        try:
+            # Normalize both paths for comparison
+            mindspace_path = os.path.abspath(self._mindspace_path)
+
+            # Check if the path is actually within the mindspace
+            common_path = os.path.commonpath([abs_path, mindspace_path])
+            if common_path != mindspace_path:
+                return None
+
+            # Path is within mindspace, return relative path
+            return os.path.relpath(abs_path, mindspace_path)
+
+        except ValueError:
+            # This can happen on Windows with different drive letters
+            return None
+
     def ensure_mindspace_dir(self, dir_path: str) -> str:
         """
         Ensure a directory exists within the mindspace.
