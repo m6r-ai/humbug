@@ -28,7 +28,7 @@ class ConversationMessage(QFrame):
     mouseReleased = Signal()
     forkRequested = Signal()
     deleteRequested = Signal()
-    toolCallApproved = Signal(list)  # List[AIToolCall]
+    toolCallApproved = Signal(AIToolCall)
     toolCallRejected = Signal(str)   # rejection reason
 
     def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
@@ -251,21 +251,21 @@ class ConversationMessage(QFrame):
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
 
-    def show_tool_approval_ui(self, tool_calls: List[AIToolCall], destructive: bool) -> None:
+    def show_tool_approval_ui(self, tool_call: AIToolCall, destructive: bool) -> None:
         """
         Show tool approval UI for the given tool calls.
 
         Args:
-            tool_calls: List of tool calls that need approval
+            tool_call: Tool call that needs approval
             destructive: Whether the tool calls are destructive
         """
         assert self._approval_widget is None, "Approval widget already exists"
 
-        self._approval_widget = self._create_tool_approval_widget(tool_calls, destructive)
+        self._approval_widget = self._create_tool_approval_widget(tool_call, destructive)
         self._layout.addWidget(self._approval_widget)
         self._handle_style_changed()
 
-    def _create_tool_approval_widget(self, tool_calls: List[AIToolCall], destructive: bool) -> QWidget:
+    def _create_tool_approval_widget(self, tool_call: AIToolCall, destructive: bool) -> QWidget:
         """Create widget for tool call approval."""
         approval_widget = QWidget()
         layout = QVBoxLayout(approval_widget)
@@ -283,13 +283,13 @@ class ConversationMessage(QFrame):
         min_button_width = int(180 * zoom_factor)
 
         self._approve_button = QPushButton(strings.approve_tool_call)
-        self._approve_button.clicked.connect(lambda: self._approve_tool_calls(tool_calls))
+        self._approve_button.clicked.connect(lambda: self._approve_tool_call(tool_call))
         self._approve_button.setMinimumWidth(min_button_width)
         self._approve_button.setMinimumHeight(min_button_height)
         self._approve_button.setProperty("recommended", not destructive)
 
         self._reject_button = QPushButton(strings.reject_tool_call)
-        self._reject_button.clicked.connect(self._reject_tool_calls)
+        self._reject_button.clicked.connect(self._reject_tool_call)
         self._reject_button.setMinimumWidth(min_button_width)
         self._reject_button.setMinimumHeight(min_button_height)
         self._reject_button.setContentsMargins(8, 8, 8, 8)
@@ -303,14 +303,14 @@ class ConversationMessage(QFrame):
 
         return approval_widget
 
-    def _approve_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
+    def _approve_tool_call(self, tool_call: AIToolCall) -> None:
         """Handle tool call approval."""
-        self.toolCallApproved.emit(tool_calls)
+        self.toolCallApproved.emit(tool_call)
         self._remove_approval_widget()
 
-    def _reject_tool_calls(self) -> None:
+    def _reject_tool_call(self) -> None:
         """Handle tool call rejection."""
-        self.toolCallRejected.emit("Tool calls were rejected by the user")
+        self.toolCallRejected.emit("Tool call was rejected by the user")
         self._remove_approval_widget()
 
     def _remove_approval_widget(self) -> None:

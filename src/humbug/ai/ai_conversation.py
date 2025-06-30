@@ -313,7 +313,7 @@ class AIConversation:
         try:
             # Trigger the approval UI
             await self._trigger_event(
-                AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._pending_tool_call_message, [tool_call], destructive
+                AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._pending_tool_call_message, tool_call, destructive
             )
 
             # Wait for the user's response
