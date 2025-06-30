@@ -4,7 +4,7 @@ import cmath
 import logging
 import math
 import operator
-from typing import Dict, Any
+from typing import Dict, Any, Callable, cast
 
 from humbug.ai.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 class SafeMathEvaluator:
     """Safe mathematical expression evaluator using AST parsing."""
 
+    # Allowed unary operators
+    UNARY_OPERATORS = {
+        ast.UAdd: operator.pos,
+        ast.USub: operator.neg,
+    }
+
     # Allowed binary operators
     BINARY_OPERATORS = {
         ast.Add: operator.add,
@@ -27,12 +33,6 @@ class SafeMathEvaluator:
         ast.FloorDiv: operator.floordiv,
         ast.Mod: operator.mod,
         ast.Pow: operator.pow,
-    }
-
-    # Allowed unary operators
-    UNARY_OPERATORS = {
-        ast.UAdd: operator.pos,
-        ast.USub: operator.neg,
     }
 
     # Allowed mathematical functions (updated to use cmath where appropriate)
@@ -201,7 +201,7 @@ class SafeMathEvaluator:
             raise ValueError(f"Unsupported unary operator: {type(node.op).__name__}")
 
         operand = self._eval_node(node.operand)
-        op_func = self.UNARY_OPERATORS[type(node.op)]
+        op_func = cast(Callable[[Any], int | float | complex], self.UNARY_OPERATORS[type(node.op)])
         return op_func(operand)
 
     def _eval_call(self, node: ast.Call) -> int | float | complex:
@@ -220,7 +220,7 @@ class SafeMathEvaluator:
         if node.keywords:
             raise ValueError("Keyword arguments are not allowed in function calls")
 
-        func = self.ALLOWED_FUNCTIONS[func_name]
+        func = cast(Callable[[Any, Any], int | float | complex], self.ALLOWED_FUNCTIONS[func_name])
 
         try:
             # Special handling for functions that don't support complex numbers
