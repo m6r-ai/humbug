@@ -348,13 +348,25 @@ class AIConversation:
             # Store the message for later completion
             self._pending_tool_call_message = tool_call_message
 
-            await self._trigger_event(AIConversationEvent.TOOL_USED, tool_call_message)
+            await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, tool_call_message)
 
             tool_result = await self._tool_manager.execute_tool(
                 tool_call,
                 request_authorization=self._request_tool_authorization
             )
             tool_results.append(tool_result)
+
+            # If our tool didn't require authorization we need to close out the tool call message
+            if self._pending_tool_call_message:
+                approved_message = self._conversation.update_message(
+                    self._pending_tool_call_message.id,
+                    content=self._pending_tool_call_message.content,
+                    completed=True
+                )
+                if approved_message:
+                    await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, approved_message)
+
+                self._pending_tool_call_message = None
 
             tool_result_dict = tool_result.to_dict()
             content = f"""```json
