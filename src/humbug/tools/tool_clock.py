@@ -1,7 +1,9 @@
 from datetime import datetime
 from typing import Dict, Any
 
-from humbug.ai.ai_tool_manager import AIToolDefinition, AIToolParameter, AITool, ToolExecutionError
+from humbug.ai.ai_tool_manager import (
+    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError, AIToolAuthorizationCallback
+)
 
 
 class ToolClock(AITool):
@@ -29,7 +31,7 @@ class ToolClock(AITool):
             ]
         )
 
-    async def execute(self, arguments: Dict[str, Any]) -> str:
+    async def execute(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback | None = None) -> str:
         """Execute the get current time tool."""
         try:
             format_type = arguments.get("format", "iso")
@@ -48,7 +50,7 @@ class ToolClock(AITool):
             return now.isoformat() + "Z"
 
         except Exception as e:
-            raise ToolExecutionError(
+            raise AIToolExecutionError(
                 f"Failed to get current time: {str(e)}",
                 "get_current_time",
                 arguments

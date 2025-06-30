@@ -4,7 +4,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable, Awaitable
 
 
 @dataclass
@@ -70,44 +70,28 @@ class AIToolResult:
         }
 
 
-class AITool(ABC):
-    """Abstract base class for AI tools."""
+# Type alias for the authorization callback
+AIToolAuthorizationCallback = Callable[[str, Dict[str, Any], str], Awaitable[bool]]
 
-    @abstractmethod
-    def get_definition(self) -> AIToolDefinition:
-        """
-        Get the tool definition for registration.
 
-        Returns:
-            AIToolDefinition describing this tool's interface
-        """
+class AIToolAuthorizationDenied(Exception):
+    """Exception raised when tool authorization is denied."""
 
-    @abstractmethod
-    async def execute(self, arguments: Dict[str, Any]) -> str:
+    def __init__(self, message: str, tool_name: str, arguments: Dict[str, Any]):
         """
-        Execute the tool with given arguments.
+        Initialize tool authorization denied error.
 
         Args:
-            arguments: Dictionary of tool arguments
-
-        Returns:
-            String result of tool execution
-
-        Raises:
-            ToolExecutionError: If tool execution fails
+            message: Error message
+            tool_name: Name of the tool that was denied
+            arguments: Arguments that were passed to the tool
         """
-
-    def get_timeout(self) -> float | None:
-        """
-        Get the preferred timeout for this tool in seconds.
-
-        Returns:
-            Preferred timeout in seconds, or None to use the default timeout
-        """
-        return None
+        super().__init__(message)
+        self.tool_name = tool_name
+        self.arguments = arguments
 
 
-class ToolExecutionError(Exception):
+class AIToolExecutionError(Exception):
     """Exception raised when tool execution fails."""
 
     def __init__(self, message: str, tool_name: str, arguments: Dict[str, Any]):
@@ -122,6 +106,49 @@ class ToolExecutionError(Exception):
         super().__init__(message)
         self.tool_name = tool_name
         self.arguments = arguments
+
+
+class AITool(ABC):
+    """Abstract base class for AI tools."""
+
+    @abstractmethod
+    def get_definition(self) -> AIToolDefinition:
+        """
+        Get the tool definition for registration.
+
+        Returns:
+            AIToolDefinition describing this tool's interface
+        """
+
+    @abstractmethod
+    async def execute(
+        self,
+        arguments: Dict[str, Any],
+        request_authorization: AIToolAuthorizationCallback | None = None
+    ) -> str:
+        """
+        Execute the tool with given arguments.
+
+        Args:
+            arguments: Dictionary of tool arguments
+            request_authorization: Optional callback for requesting authorization.
+
+        Returns:
+            String result of tool execution
+
+        Raises:
+            ToolExecutionError: If tool execution fails
+            ToolAuthorizationDenied: If authorization is required but denied
+        """
+
+    def get_timeout(self) -> float | None:
+        """
+        Get the preferred timeout for this tool in seconds.
+
+        Returns:
+            Preferred timeout in seconds, or None to use the default timeout
+        """
+        return None
 
 
 class AIToolManager:
@@ -180,13 +207,19 @@ class AIToolManager:
         """
         return [tool.get_definition() for tool in self._tools.values()]
 
-    async def execute_tool(self, tool_call: AIToolCall, timeout: float | None = None) -> AIToolResult:
+    async def execute_tool(
+        self,
+        tool_call: AIToolCall,
+        timeout: float | None = None,
+        request_authorization: AIToolAuthorizationCallback | None = None
+    ) -> AIToolResult:
         """
         Execute a tool call.
 
         Args:
             tool_call: The tool call to execute
             timeout: Optional timeout in seconds. If None, uses tool's preferred timeout or default
+            request_authorization: Optional callback for requesting authorization
 
         Returns:
             AIToolResult containing the execution result
@@ -220,7 +253,7 @@ class AIToolManager:
             )
 
             result = await asyncio.wait_for(
-                tool.execute(tool_call.arguments),
+                tool.execute(tool_call.arguments, request_authorization),
                 timeout=actual_timeout
             )
 
@@ -234,6 +267,21 @@ class AIToolManager:
                 id=tool_call.id,
                 name=tool_call.name,
                 content=result
+            )
+
+        except AIToolAuthorizationDenied as e:
+            error_msg = f"Tool authorization denied: {str(e)}"
+            self._logger.warning(
+                "Tool '%s' authorization denied with args %s: %s",
+                tool_call.name,
+                tool_call.arguments,
+                str(e)
+            )
+            return AIToolResult(
+                id=tool_call.id,
+                name=tool_call.name,
+                content="",
+                error=error_msg
             )
 
         except asyncio.TimeoutError:

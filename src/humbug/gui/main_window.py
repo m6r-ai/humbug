@@ -46,6 +46,7 @@ from humbug.mindspace.system.system_command_registry import SystemCommandRegistr
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.tools.tool_calculator import ToolCalculator
 from humbug.tools.tool_clock import ToolClock
+from humbug.tools.tool_file_reader import ToolFileReader
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
@@ -66,6 +67,7 @@ class MainWindow(QMainWindow):
         self._ai_tool_manager = AIToolManager()
         self._ai_tool_manager.register_tool(ToolCalculator())
         self._ai_tool_manager.register_tool(ToolClock())
+        self._ai_tool_manager.register_tool(ToolFileReader())
 
         # Humbug menu actions
         self._about_action = QAction(strings.about_humbug, self)

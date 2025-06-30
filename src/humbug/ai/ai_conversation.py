@@ -49,9 +49,13 @@ class AIConversation:
         self._current_reasoning_message: AIMessage | None = None
         self._is_streaming = False
 
-        # Tool approval state
+        # Tool approval state (for bulk initial approval)
         self._pending_tool_calls: List[AIToolCall] = []
         self._pending_tool_call_message: AIMessage | None = None
+
+        # Tool authorization state (for individual tool authorization during execution)
+        self._pending_authorization_future: asyncio.Future[bool] | None = None
+        self._current_authorization_tool_call: AIToolCall | None = None
 
         # Callbacks for events
         self._callbacks: Dict[AIConversationEvent, Set[Callable]] = {
@@ -288,12 +292,69 @@ class AIConversation:
                     # Log but don't propagate generator cleanup errors
                     self._logger.debug("Error during generator cleanup: %s", e)
 
-    async def _process_pending_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
-        """Process tool calls with user approval requirement."""
-        # Store pending tool calls for approval
-        self._pending_tool_calls = tool_calls
+    async def _request_tool_authorization(self, tool_name: str, arguments: Dict[str, Any], reason: str) -> bool:
+        """
+        Request authorization for a specific tool call during execution.
 
-        # Create and add tool call message
+        This creates a single tool call and triggers the approval UI.
+
+        Args:
+            tool_name: Name of the tool requesting authorization
+            arguments: Arguments being passed to the tool
+            reason: Human-readable reason why authorization is needed
+
+        Returns:
+            True if authorized, False if denied
+        """
+        self._logger.debug("Tool '%s' requesting authorization: %s", tool_name, reason)
+
+        # Create a tool call for authorization
+        tool_call = AIToolCall(
+            id=f"auth_{tool_name}_{hash(str(arguments))}",
+            name=tool_name,
+            arguments=arguments
+        )
+
+        # Store the current authorization request
+        self._current_authorization_tool_call = tool_call
+
+        # Create a future to wait for the authorization result
+        self._pending_authorization_future = asyncio.Future()
+
+        try:
+            # Create and add tool call message
+            tool_calls_dict = [tool_call.to_dict()]
+            content = f"""```json
+{json.dumps(tool_calls_dict, indent=4)}
+```"""
+            tool_call_message = AIMessage.create(
+                source=AIMessageSource.TOOL_CALL,
+                content=content,
+                tool_calls=[tool_call],
+                completed=False
+            )
+            self._conversation.add_message(tool_call_message)
+
+            # Store the message for later completion
+            self._pending_tool_call_message = tool_call_message
+
+            # Trigger the approval UI
+            await self._trigger_event(AIConversationEvent.TOOL_APPROVAL_REQUIRED, tool_call_message, [tool_call])
+
+            # Wait for the user's response
+            result = await self._pending_authorization_future
+            self._logger.debug("Tool '%s' authorization result: %s", tool_name, result)
+            return result
+
+        finally:
+            self._pending_authorization_future = None
+            self._current_authorization_tool_call = None
+
+    async def _execute_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
+        """Execute tool calls directly without requiring upfront approval."""
+        self._logger.debug("Executing tool calls...")
+
+        # Log the tool calls
         tool_calls_dict = [tool_call.to_dict() for tool_call in tool_calls]
         content = f"""```json
 {json.dumps(tool_calls_dict, indent=4)}
@@ -302,36 +363,22 @@ class AIConversation:
             source=AIMessageSource.TOOL_CALL,
             content=content,
             tool_calls=tool_calls,
-            completed=False
-        )
-        self._conversation.add_message(tool_call_message)
-        self._pending_tool_call_message = tool_call_message
-
-        await self._trigger_event(AIConversationEvent.TOOL_APPROVAL_REQUIRED, tool_call_message, tool_calls)
-
-    async def approve_pending_tool_calls(self) -> None:
-        """Execute approved tool calls."""
-        if not self._pending_tool_calls or not self._pending_tool_call_message:
-            return
-
-        self._logger.debug("User approved tool calls, executing...")
-
-        approved_message = self._conversation.update_message(
-            self._pending_tool_call_message.id,
-            content=self._pending_tool_call_message.content,
             completed=True
         )
-        if approved_message:
-            await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, approved_message)
+        self._conversation.add_message(tool_call_message)
+        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_call_message)
 
         # Execute all tool calls
         tool_results = []
-        for tool_call in self._pending_tool_calls:
-            self._logger.debug("Executing approved tool call: %s", tool_call.name)
-            tool_result = await self._tool_manager.execute_tool(tool_call)
+        for tool_call in tool_calls:
+            self._logger.debug("Executing tool call: %s", tool_call.name)
+            tool_result = await self._tool_manager.execute_tool(
+                tool_call,
+                request_authorization=self._request_tool_authorization
+            )
             tool_results.append(tool_result)
 
-        # Create and add tool result message (hidden from user, for audit trail)
+        # Create and add tool result message (visible to user, shows execution results)
         tool_results_dict = [tool_result.to_dict() for tool_result in tool_results]
         content = f"""```json
 {json.dumps(tool_results_dict, indent=4)}
@@ -345,7 +392,7 @@ class AIConversation:
         self._conversation.add_message(tool_result_message)
         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
 
-        # Create an explicit user message with tool results
+        # Create an explicit user message with tool results (for the AI to see the results)
         tool_response_message = AIMessage.create(
             AIMessageSource.USER,
             content="",
@@ -353,71 +400,53 @@ class AIConversation:
         )
         self._conversation.add_message(tool_response_message)
         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
-
-        # Clear pending state
-        self._pending_tool_calls = []
-        self._pending_tool_call_message = None
 
         # Automatically continue the conversation with tool results
         await self._start_ai()
 
-    async def reject_pending_tool_calls(self, reason: str = "User rejected tool call") -> None:
-        """Reject pending tool calls and return error to AI."""
-        if not self._pending_tool_calls or not self._pending_tool_call_message:
+    async def approve_pending_tool_calls(self) -> None:
+        """Approve the current pending tool authorization."""
+        if not self._pending_authorization_future or self._pending_authorization_future.done():
             return
 
-        self._logger.debug("User rejected tool calls: %s", reason)
+        self._logger.debug("User approved tool authorization")
 
-        rejected_message = self._conversation.update_message(
-            self._pending_tool_call_message.id,
-            content=self._pending_tool_call_message.content,
-            completed=True
-        )
-        if rejected_message:
-            await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, rejected_message)
-
-        # Create error results for each tool call
-        tool_results = []
-        for tool_call in self._pending_tool_calls:
-            tool_result = AIToolResult(
-                id=tool_call.id,
-                name=tool_call.name,
-                content="",
-                error=reason
+        # Complete the authorization message
+        if self._pending_tool_call_message:
+            approved_message = self._conversation.update_message(
+                self._pending_tool_call_message.id,
+                content=self._pending_tool_call_message.content,
+                completed=True
             )
-            tool_results.append(tool_result)
+            if approved_message:
+                await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, approved_message)
 
-        # Create tool result message with errors
-        tool_results_dict = [tool_result.to_dict() for tool_result in tool_results]
-        content = f"""Tool results (rejected):
-```json
-{json.dumps(tool_results_dict, indent=4)}
-```
-"""
-        tool_result_message = AIMessage.create(
-            source=AIMessageSource.TOOL_RESULT,
-            content=content,
-            tool_results=tool_results,
-            completed=True
-        )
-        self._conversation.add_message(tool_result_message)
-        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
+            self._pending_tool_call_message = None
 
-        # Create an explicit user message with error results
-        tool_response_message = AIMessage.create(
-            AIMessageSource.USER,
-            content="",
-            tool_results=tool_results
-        )
-        self._conversation.add_message(tool_response_message)
-        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
+        # Signal approval
+        self._pending_authorization_future.set_result(True)
 
-        # Clear pending state
-        self._pending_tool_calls = []
-        self._pending_tool_call_message = None
+    async def reject_pending_tool_calls(self, reason: str = "User rejected tool call") -> None:
+        """Reject the current pending tool authorization."""
+        if not self._pending_authorization_future or self._pending_authorization_future.done():
+            return
 
-        # Continue the conversation with error results
-        await self._start_ai()
+        self._logger.debug("User rejected tool authorization: %s", reason)
+
+        # Complete the authorization message
+        if self._pending_tool_call_message:
+            rejected_message = self._conversation.update_message(
+                self._pending_tool_call_message.id,
+                content=self._pending_tool_call_message.content,
+                completed=True
+            )
+            if rejected_message:
+                await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, rejected_message)
+
+            self._pending_tool_call_message = None
+
+        # Signal denial
+        self._pending_authorization_future.set_result(False)
 
     async def _handle_error(self, error: AIError) -> None:
         """
@@ -618,10 +647,10 @@ class AIConversation:
         self._current_reasoning_message = None
         self._current_ai_message = None
 
-        # Check for tool calls BEFORE marking conversation as completed
+        # Check for tool calls - execute them directly, authorization happens during execution if needed
         if tool_calls:
-            # Don't emit COMPLETED event yet - we need user approval first
-            await self._process_pending_tool_calls(tool_calls)
+            # Execute tools directly - no upfront approval required
+            await self._execute_tool_calls(tool_calls)
             return
 
         await self._trigger_event(AIConversationEvent.COMPLETED)

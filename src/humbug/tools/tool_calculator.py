@@ -5,7 +5,9 @@ import math
 import operator
 from typing import Dict, Any
 
-from humbug.ai.ai_tool_manager import AIToolDefinition, AIToolParameter, AITool, ToolExecutionError
+from humbug.ai.ai_tool_manager import (
+    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError, AIToolAuthorizationCallback
+)
 
 
 logger = logging.getLogger(__name__)
@@ -291,12 +293,13 @@ class ToolCalculator(AITool):
             ]
         )
 
-    async def execute(self, arguments: Dict[str, Any]) -> str:
+    async def execute(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback | None = None) -> str:
         """
         Execute the calculator tool.
 
         Args:
             arguments: Dictionary containing the expression to evaluate
+            authorization_callback: Function to call if we need to request authorization
 
         Returns:
             String representation of the calculation result
@@ -309,7 +312,7 @@ class ToolCalculator(AITool):
         # Validate expression is provided
         if not expression:
             logger.error("Calculator tool called without expression argument")
-            raise ToolExecutionError(
+            raise AIToolExecutionError(
                 "Expression is required",
                 "calculate",
                 arguments
@@ -318,7 +321,7 @@ class ToolCalculator(AITool):
         # Validate expression is a string
         if not isinstance(expression, str):
             logger.error("Calculator tool called with non-string expression: %s", type(expression).__name__)
-            raise ToolExecutionError(
+            raise AIToolExecutionError(
                 "Expression must be a string",
                 "calculate",
                 arguments
@@ -332,7 +335,7 @@ class ToolCalculator(AITool):
 
         except ZeroDivisionError as e:
             logger.warning("Division by zero in expression '%s'", expression, exc_info=True)
-            raise ToolExecutionError(
+            raise AIToolExecutionError(
                 "Division by zero",
                 "calculate",
                 arguments
@@ -340,7 +343,7 @@ class ToolCalculator(AITool):
 
         except ValueError as e:
             logger.warning("Invalid expression '%s': %s", expression, str(e), exc_info=True)
-            raise ToolExecutionError(
+            raise AIToolExecutionError(
                 f"Invalid mathematical expression: {str(e)}",
                 "calculate",
                 arguments
@@ -348,7 +351,7 @@ class ToolCalculator(AITool):
 
         except OverflowError as e:
             logger.warning("Calculation overflow in expression '%s': %s", expression, str(e), exc_info=True)
-            raise ToolExecutionError(
+            raise AIToolExecutionError(
                 f"Calculation result is too large: {str(e)}",
                 "calculate",
                 arguments
@@ -356,7 +359,7 @@ class ToolCalculator(AITool):
 
         except Exception as e:
             logger.error("Unexpected error evaluating expression '%s': %s", expression, str(e), exc_info=True)
-            raise ToolExecutionError(
+            raise AIToolExecutionError(
                 f"Failed to calculate expression: {str(e)}",
                 "calculate",
                 arguments
