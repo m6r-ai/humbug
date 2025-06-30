@@ -348,7 +348,7 @@ class MindspaceManager(QObject):
             path: Absolute path to convert.
 
         Returns:
-            Path relative to mindspace root, or the abosolute path if outside mindspace,
+            Path relative to mindspace root, or the absolute path if outside mindspace,
         """
         abs_path = os.path.abspath(os.path.expanduser(path))
         if not self.has_mindspace():
