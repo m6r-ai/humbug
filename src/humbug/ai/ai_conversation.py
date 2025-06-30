@@ -49,13 +49,10 @@ class AIConversation:
         self._current_reasoning_message: AIMessage | None = None
         self._is_streaming = False
 
-        # Tool approval state (for bulk initial approval)
+        # Tool approval state
         self._pending_tool_calls: List[AIToolCall] = []
         self._pending_tool_call_message: AIMessage | None = None
-
-        # Tool authorization state (for individual tool authorization during execution)
         self._pending_authorization_future: asyncio.Future[bool] | None = None
-        self._current_authorization_tool_call: AIToolCall | None = None
 
         # Callbacks for events
         self._callbacks: Dict[AIConversationEvent, Set[Callable]] = {
@@ -315,31 +312,12 @@ class AIConversation:
             arguments=arguments
         )
 
-        # Store the current authorization request
-        self._current_authorization_tool_call = tool_call
-
         # Create a future to wait for the authorization result
         self._pending_authorization_future = asyncio.Future()
 
         try:
-            # Create and add tool call message
-            tool_calls_dict = [tool_call.to_dict()]
-            content = f"""```json
-{json.dumps(tool_calls_dict, indent=4)}
-```"""
-            tool_call_message = AIMessage.create(
-                source=AIMessageSource.TOOL_CALL,
-                content=content,
-                tool_calls=[tool_call],
-                completed=False
-            )
-            self._conversation.add_message(tool_call_message)
-
-            # Store the message for later completion
-            self._pending_tool_call_message = tool_call_message
-
             # Trigger the approval UI
-            await self._trigger_event(AIConversationEvent.TOOL_APPROVAL_REQUIRED, tool_call_message, [tool_call])
+            await self._trigger_event(AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._pending_tool_call_message, [tool_call])
 
             # Wait for the user's response
             result = await self._pending_authorization_future
@@ -348,49 +326,51 @@ class AIConversation:
 
         finally:
             self._pending_authorization_future = None
-            self._current_authorization_tool_call = None
 
     async def _execute_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
         """Execute tool calls directly without requiring upfront approval."""
         self._logger.debug("Executing tool calls...")
 
-        # Log the tool calls
-        tool_calls_dict = [tool_call.to_dict() for tool_call in tool_calls]
-        content = f"""```json
-{json.dumps(tool_calls_dict, indent=4)}
-```"""
-        tool_call_message = AIMessage.create(
-            source=AIMessageSource.TOOL_CALL,
-            content=content,
-            tool_calls=tool_calls,
-            completed=True
-        )
-        self._conversation.add_message(tool_call_message)
-        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_call_message)
-
         # Execute all tool calls
         tool_results = []
         for tool_call in tool_calls:
             self._logger.debug("Executing tool call: %s", tool_call.name)
+
+            tool_call_dict = tool_call.to_dict()
+            content = f"""```json
+{json.dumps(tool_call_dict, indent=4)}
+```"""
+            tool_call_message = AIMessage.create(
+                source=AIMessageSource.TOOL_CALL,
+                content=content,
+                tool_calls=[tool_call],
+                completed=True
+            )
+            self._conversation.add_message(tool_call_message)
+
+            # Store the message for later completion
+            self._pending_tool_call_message = tool_call_message
+
+            await self._trigger_event(AIConversationEvent.TOOL_USED, tool_call_message)
+
             tool_result = await self._tool_manager.execute_tool(
                 tool_call,
                 request_authorization=self._request_tool_authorization
             )
             tool_results.append(tool_result)
 
-        # Create and add tool result message (visible to user, shows execution results)
-        tool_results_dict = [tool_result.to_dict() for tool_result in tool_results]
-        content = f"""```json
-{json.dumps(tool_results_dict, indent=4)}
+            tool_result_dict = tool_result.to_dict()
+            content = f"""```json
+{json.dumps(tool_result_dict, indent=4)}
 ```"""
-        tool_result_message = AIMessage.create(
-            source=AIMessageSource.TOOL_RESULT,
-            content=content,
-            tool_results=tool_results,
-            completed=True
-        )
-        self._conversation.add_message(tool_result_message)
-        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
+            tool_result_message = AIMessage.create(
+                source=AIMessageSource.TOOL_RESULT,
+                content=content,
+                tool_results=[tool_result],
+                completed=True
+            )
+            self._conversation.add_message(tool_result_message)
+            await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
 
         # Create an explicit user message with tool results (for the AI to see the results)
         tool_response_message = AIMessage.create(

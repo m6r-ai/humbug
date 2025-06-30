@@ -371,8 +371,6 @@ class ConversationWidget(QWidget):
             message: The tool call message
             tool_calls: List of tool calls requiring approval
         """
-        await self.add_message(message)
-
         # Find the message widget that corresponds to this tool call message
         for msg_widget in self._messages:
             if hasattr(msg_widget, '_message_id') and msg_widget._message_id == message.id:
