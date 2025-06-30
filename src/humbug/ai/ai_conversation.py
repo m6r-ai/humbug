@@ -12,7 +12,7 @@ from humbug.ai.ai_message import AIMessage
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_model import ReasoningCapability
 from humbug.ai.ai_response import AIError
-from humbug.ai.ai_tool_manager import AIToolManager, AIToolCall, AIToolResult
+from humbug.ai.ai_tool_manager import AIToolManager, AIToolCall
 from humbug.ai.ai_usage import AIUsage
 from humbug.user.user_manager import UserManager
 

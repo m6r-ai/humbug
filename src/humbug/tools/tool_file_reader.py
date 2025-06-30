@@ -1,10 +1,10 @@
-import os
+import asyncio
 from pathlib import Path
 from typing import Dict, Any
 
 from humbug.ai.ai_tool_manager import (
-    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError, 
-    AIToolAuthorizationDenied, AIToolAuthorizationCallback
+    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
+    AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolTimeoutError
 )
 
 
@@ -46,20 +46,88 @@ class ToolFileReader(AITool):
             ]
         )
 
-    def get_timeout(self) -> float | None:
-        """Get the preferred timeout for this tool."""
-        return 60.0  # 60 seconds should be enough for file reading + user authorization
+    def _resolve_and_validate_path(self, file_path_str: str) -> Path:
+        """
+        Synchronous helper for path resolution and validation.
+
+        Args:
+            file_path_str: String path to resolve and validate
+
+        Returns:
+            Resolved Path object
+
+        Raises:
+            AIToolExecutionError: If path is invalid or file doesn't meet requirements
+        """
+        # Resolve and validate the file path
+        file_path = Path(file_path_str).resolve()
+
+        # Security checks
+        if not file_path.exists():
+            raise AIToolExecutionError(
+                f"File does not exist: {file_path}",
+                "read_file",
+                {"file_path": file_path_str}
+            )
+
+        if not file_path.is_file():
+            raise AIToolExecutionError(
+                f"Path is not a file: {file_path}",
+                "read_file",
+                {"file_path": file_path_str}
+            )
+
+        # Check file size
+        file_size = file_path.stat().st_size
+        if file_size > self.max_file_size_bytes:
+            size_mb = file_size / (1024 * 1024)
+            max_mb = self.max_file_size_bytes / (1024 * 1024)
+            raise AIToolExecutionError(
+                f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)",
+                "read_file",
+                {"file_path": file_path_str}
+            )
+
+        return file_path
+
+    def _read_file_content(self, file_path: Path, encoding: str) -> tuple[str, int]:
+        """
+        Synchronous helper for file reading.
+
+        Args:
+            file_path: Path object to read from
+            encoding: Text encoding to use
+
+        Returns:
+            Tuple of (file_content, file_size)
+
+        Raises:
+            AIToolExecutionError: If file reading fails
+        """
+        try:
+            with open(file_path, 'r', encoding=encoding) as f:
+                content = f.read()
+            file_size = file_path.stat().st_size
+            return content, file_size
+
+        except UnicodeDecodeError as e:
+            raise AIToolExecutionError(
+                f"Failed to decode file with encoding '{encoding}': {str(e)}. "
+                f"Try a different encoding.",
+                "read_file",
+                {"file_path": str(file_path), "encoding": encoding}
+            ) from e
 
     async def execute(
-        self, 
-        arguments: Dict[str, Any], 
+        self,
+        arguments: Dict[str, Any],
         request_authorization: AIToolAuthorizationCallback | None = None
     ) -> str:
-        """Execute the file reading tool."""
+        """Execute the file reading tool with proper timeout handling."""
         file_path_str = arguments.get("file_path", "")
         encoding = arguments.get("encoding", "utf-8")
 
-        # Validate inputs
+        # Validate inputs (no timeout needed)
         if not file_path_str:
             raise AIToolExecutionError(
                 "file_path parameter is required",
@@ -70,56 +138,38 @@ class ToolFileReader(AITool):
         if not isinstance(file_path_str, str):
             raise AIToolExecutionError(
                 "file_path must be a string",
-                "read_file", 
+                "read_file",
                 arguments
             )
 
         try:
-            # Resolve and validate the file path
-            file_path = Path(file_path_str).resolve()
-            
-            # Security checks
-            if not file_path.exists():
-                raise AIToolExecutionError(
-                    f"File does not exist: {file_path}",
-                    "read_file",
-                    arguments
+            # File system operations with timeout
+            try:
+                file_path = await asyncio.wait_for(
+                    asyncio.to_thread(self._resolve_and_validate_path, file_path_str),
+                    timeout=10.0  # 10 seconds for file system operations
                 )
-
-            if not file_path.is_file():
-                raise AIToolExecutionError(
-                    f"Path is not a file: {file_path}",
+            except asyncio.TimeoutError as e:
+                raise AIToolTimeoutError(
+                    "File path resolution timed out",
                     "read_file",
-                    arguments
-                )
+                    arguments,
+                    10.0
+                ) from e
 
-            # Check file size
-            file_size = file_path.stat().st_size
-            if file_size > self.max_file_size_bytes:
-                size_mb = file_size / (1024 * 1024)
-                max_mb = self.max_file_size_bytes / (1024 * 1024)
-                raise AIToolExecutionError(
-                    f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)",
-                    "read_file",
-                    arguments
-                )
-
-            # Request authorization from user
+            # Request authorization (NO timeout - user can take as long as needed)
             if request_authorization:
+                file_size = file_path.stat().st_size
                 file_info = (
                     f"Size: {file_size:,} bytes\n"
                     f"Extension: {file_path.suffix}\n"
                     f"Encoding: {encoding}"
                 )
-                
+
                 reason = f"Read file '{file_path}'. {file_info}"
-                
-                authorized = await request_authorization(
-                    tool_name="read_file",
-                    arguments=arguments,
-                    reason=reason
-                )
-                
+
+                authorized = await request_authorization("read_file", arguments, reason)
+
                 if not authorized:
                     raise AIToolAuthorizationDenied(
                         f"User denied permission to read file: {file_path}",
@@ -127,28 +177,24 @@ class ToolFileReader(AITool):
                         arguments
                     )
 
-            # Read the file
+            # File reading with timeout
             try:
-                with open(file_path, 'r', encoding=encoding) as f:
-                    content = f.read()
-
-                # Return file content with metadata
-                return f"File: {file_path}\nSize: {file_size:,} bytes\nEncoding: {encoding}\n\n{content}"
-
-            except UnicodeDecodeError as e:
-                raise AIToolExecutionError(
-                    f"Failed to decode file with encoding '{encoding}': {str(e)}. "
-                    f"Try a different encoding.",
+                content, file_size = await asyncio.wait_for(
+                    asyncio.to_thread(self._read_file_content, file_path, encoding),
+                    timeout=30.0  # 30 seconds for reading
+                )
+            except asyncio.TimeoutError as e:
+                raise AIToolTimeoutError(
+                    "File reading timed out",
                     "read_file",
-                    arguments
+                    arguments,
+                    30.0
                 ) from e
 
-        except AIToolExecutionError:
-            # Re-raise our own errors
-            raise
+            return f"File: {file_path}\nSize: {file_size:,} bytes\nEncoding: {encoding}\n\n{content}"
 
-        except AIToolAuthorizationDenied:
-            # Re-raise authorization errors
+        except (AIToolExecutionError, AIToolAuthorizationDenied, AIToolTimeoutError):
+            # Re-raise our own errors
             raise
 
         except Exception as e:

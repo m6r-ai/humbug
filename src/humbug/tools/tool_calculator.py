@@ -1,4 +1,5 @@
 import ast
+import asyncio
 import cmath
 import logging
 import math
@@ -6,7 +7,8 @@ import operator
 from typing import Dict, Any
 
 from humbug.ai.ai_tool_manager import (
-    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError, AIToolAuthorizationCallback
+    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
+    AIToolAuthorizationCallback, AIToolTimeoutError
 )
 
 
@@ -293,19 +295,36 @@ class ToolCalculator(AITool):
             ]
         )
 
+    def _evaluate_expression(self, expression: str) -> str:
+        """
+        Synchronous helper for expression evaluation.
+
+        Args:
+            expression: Mathematical expression to evaluate
+
+        Returns:
+            String representation of the result
+
+        Raises:
+            Various math-related exceptions
+        """
+        result = self._evaluator.evaluate(expression)
+        return str(result)
+
     async def execute(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback | None = None) -> str:
         """
-        Execute the calculator tool.
+        Execute the calculator tool with timeout protection.
 
         Args:
             arguments: Dictionary containing the expression to evaluate
-            authorization_callback: Function to call if we need to request authorization
+            request_authorization: Function to call if we need to request authorization
 
         Returns:
             String representation of the calculation result
 
         Raises:
-            ToolExecutionError: If calculation fails or expression is invalid
+            AIToolExecutionError: If calculation fails or expression is invalid
+            AIToolTimeoutError: If calculation takes too long
         """
         expression = arguments.get("expression", "")
 
@@ -329,9 +348,28 @@ class ToolCalculator(AITool):
 
         try:
             logger.debug("Evaluating mathematical expression: %s", expression)
-            result = self._evaluator.evaluate(expression)
+
+            # Run calculation with timeout protection
+            try:
+                result = await asyncio.wait_for(
+                    asyncio.to_thread(self._evaluate_expression, expression),
+                    timeout=5.0  # 5 seconds should be plenty for mathematical calculations
+                )
+            except asyncio.TimeoutError as e:
+                logger.warning("Mathematical expression evaluation timed out: %s", expression)
+                raise AIToolTimeoutError(
+                    "Mathematical calculation timed out",
+                    "calculate",
+                    arguments,
+                    5.0
+                ) from e
+
             logger.debug("Expression evaluation successful: %s = %s", expression, result)
-            return str(result)
+            return result
+
+        except AIToolTimeoutError:
+            # Re-raise timeout errors
+            raise
 
         except ZeroDivisionError as e:
             logger.warning("Division by zero in expression '%s'", expression, exc_info=True)
