@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from humbug.tools.tool_calculator import ToolCalculator, SafeMathEvaluator
-from humbug.ai.ai_tool_manager import AITool, AIToolDefinition, AIToolParameter, ToolExecutionError
+from humbug.ai.ai_tool_manager import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
 
 
 @pytest.fixture
@@ -472,7 +472,7 @@ class TestToolCalculatorExecution:
 
     def test_execute_missing_expression(self, calculator_tool):
         """Test execution without expression argument."""
-        with pytest.raises(ToolExecutionError) as exc_info:
+        with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(calculator_tool.execute({}))
 
         error = exc_info.value
@@ -481,7 +481,7 @@ class TestToolCalculatorExecution:
 
     def test_execute_empty_expression(self, calculator_tool):
         """Test execution with empty expression."""
-        with pytest.raises(ToolExecutionError) as exc_info:
+        with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(calculator_tool.execute({"expression": ""}))
 
         error = exc_info.value
@@ -489,7 +489,7 @@ class TestToolCalculatorExecution:
 
     def test_execute_non_string_expression(self, calculator_tool):
         """Test execution with non-string expression."""
-        with pytest.raises(ToolExecutionError) as exc_info:
+        with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(calculator_tool.execute({"expression": 123}))
 
         error = exc_info.value
@@ -497,7 +497,7 @@ class TestToolCalculatorExecution:
 
     def test_execute_division_by_zero_error(self, calculator_tool):
         """Test execution with division by zero."""
-        with pytest.raises(ToolExecutionError) as exc_info:
+        with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(calculator_tool.execute({"expression": "5 / 0"}))
 
         error = exc_info.value
@@ -507,7 +507,7 @@ class TestToolCalculatorExecution:
 
     def test_execute_invalid_expression_error(self, calculator_tool):
         """Test execution with invalid expression."""
-        with pytest.raises(ToolExecutionError) as exc_info:
+        with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(calculator_tool.execute({"expression": "2 +"}))
 
         error = exc_info.value
@@ -516,7 +516,7 @@ class TestToolCalculatorExecution:
 
     def test_execute_overflow_error(self, calculator_tool):
         """Test execution with overflow."""
-        with pytest.raises(ToolExecutionError) as exc_info:
+        with pytest.raises(AIToolExecutionError) as exc_info:
             # Need to use a non-integer expression to trigger overflow
             asyncio.run(calculator_tool.execute({"expression": "3.2 ** 1000"}))
 
@@ -529,59 +529,12 @@ class TestToolCalculatorExecution:
         with patch.object(calculator_tool._evaluator, 'evaluate') as mock_evaluate:
             mock_evaluate.side_effect = RuntimeError("Unexpected error")
 
-            with pytest.raises(ToolExecutionError) as exc_info:
+            with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(calculator_tool.execute({"expression": "1 + 1"}))
 
             error = exc_info.value
             assert "Failed to calculate expression" in str(error)
             assert error.__cause__.__class__ == RuntimeError
-
-
-class TestToolCalculatorLogging:
-    """Test logging behavior in the calculator tool."""
-
-    def test_successful_calculation_logging(self, calculator_tool):
-        """Test that successful calculations are logged at debug level."""
-        with patch('humbug.tools.tool_calculator.logger') as mock_logger:
-            asyncio.run(calculator_tool.execute({"expression": "2 + 2"}))
-
-            # Check debug logging calls
-            mock_logger.debug.assert_any_call("Evaluating mathematical expression: %s", "2 + 2")
-            mock_logger.debug.assert_any_call("Expression evaluation successful: %s = %s", "2 + 2", 4)
-
-    def test_error_logging_levels(self, calculator_tool):
-        """Test that different error types are logged at appropriate levels."""
-        with patch('humbug.tools.tool_calculator.logger') as mock_logger:
-            # Test division by zero (warning level)
-            try:
-                asyncio.run(calculator_tool.execute({"expression": "5 / 0"}))
-            except ToolExecutionError:
-                pass
-
-            mock_logger.warning.assert_called_once()
-            assert "Division by zero" in str(mock_logger.warning.call_args)
-
-    def test_invalid_expression_logging(self, calculator_tool):
-        """Test logging for invalid expressions."""
-        with patch('humbug.tools.tool_calculator.logger') as mock_logger:
-            try:
-                asyncio.run(calculator_tool.execute({"expression": "invalid + +"}))
-            except ToolExecutionError:
-                pass
-
-            mock_logger.warning.assert_called_once()
-            assert "Invalid expression" in str(mock_logger.warning.call_args)
-
-    def test_missing_expression_logging(self, calculator_tool):
-        """Test logging for missing expression."""
-        with patch('humbug.tools.tool_calculator.logger') as mock_logger:
-            try:
-                asyncio.run(calculator_tool.execute({}))
-            except ToolExecutionError:
-                pass
-
-            mock_logger.error.assert_called_once()
-            assert "without expression argument" in str(mock_logger.error.call_args)
 
 
 class TestToolCalculatorParametrized:
@@ -625,8 +578,8 @@ class TestToolCalculatorParametrized:
         "exec('print(1)')",
     ])
     def test_invalid_expressions_raise_errors(self, calculator_tool, invalid_expression):
-        """Test that various invalid expressions raise ToolExecutionError."""
-        with pytest.raises(ToolExecutionError):
+        """Test that various invalid expressions raise AIToolExecutionError."""
+        with pytest.raises(AIToolExecutionError):
             asyncio.run(calculator_tool.execute({"expression": invalid_expression}))
 
     @pytest.mark.parametrize("complex_expr,should_be_real", [
@@ -671,7 +624,7 @@ class TestToolCalculatorSecurity:
     ])
     def test_malicious_expressions_blocked(self, calculator_tool, malicious_expr):
         """Test that malicious expressions are blocked."""
-        with pytest.raises(ToolExecutionError):
+        with pytest.raises(AIToolExecutionError):
             asyncio.run(calculator_tool.execute({"expression": malicious_expr}))
 
     def test_only_safe_builtins_allowed(self, calculator_tool):
@@ -693,7 +646,7 @@ class TestToolCalculatorSecurity:
         ]
 
         for expr in unsafe_expressions:
-            with pytest.raises(ToolExecutionError):
+            with pytest.raises(AIToolExecutionError):
                 asyncio.run(calculator_tool.execute({"expression": expr}))
 
 

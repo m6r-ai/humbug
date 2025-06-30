@@ -8,7 +8,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from humbug.tools.tool_clock import ToolClock
-from humbug.ai.ai_tool_manager import AIToolDefinition, AIToolParameter, ToolExecutionError
+from humbug.ai.ai_tool_manager import AIToolDefinition, AIToolParameter, AIToolExecutionError
 
 
 @pytest.fixture
@@ -129,7 +129,7 @@ class TestToolClockErrorHandling:
         with patch('humbug.tools.tool_clock.datetime') as mock_datetime:
             mock_datetime.utcnow.side_effect = OSError("System clock error")
 
-            with pytest.raises(ToolExecutionError) as exc_info:
+            with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(clock_tool.execute({"format": "iso"}))
 
             error = exc_info.value
@@ -147,7 +147,7 @@ class TestToolClockErrorHandling:
             mock_dt.isoformat.return_value = "2023-12-25T14:30:45.123456"
             mock_datetime.utcnow.return_value = mock_dt
 
-            with pytest.raises(ToolExecutionError) as exc_info:
+            with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(clock_tool.execute({"format": "timestamp"}))
 
             error = exc_info.value
@@ -161,7 +161,7 @@ class TestToolClockErrorHandling:
             mock_dt.isoformat.side_effect = AttributeError("No isoformat method")
             mock_datetime.utcnow.return_value = mock_dt
 
-            with pytest.raises(ToolExecutionError) as exc_info:
+            with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(clock_tool.execute({"format": "iso"}))
 
             error = exc_info.value
@@ -175,7 +175,7 @@ class TestToolClockErrorHandling:
             mock_dt.strftime.side_effect = ValueError("Invalid format string")
             mock_datetime.utcnow.return_value = mock_dt
 
-            with pytest.raises(ToolExecutionError) as exc_info:
+            with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(clock_tool.execute({"format": "human"}))
 
             error = exc_info.value
