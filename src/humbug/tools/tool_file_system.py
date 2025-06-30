@@ -217,7 +217,7 @@ class ToolFileSystem(AITool):
     async def execute(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None = None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """
         Execute the filesystem operation with proper validation and authorization.
@@ -293,7 +293,7 @@ class ToolFileSystem(AITool):
     async def _read_file(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Read file contents."""
         path = self._validate_and_resolve_path(arguments["path"], "read_file")
@@ -326,15 +326,14 @@ class ToolFileSystem(AITool):
             )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context("read_file", path, encoding=encoding)
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to read file: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
+        context = self._build_authorization_context("read_file", path, encoding=encoding)
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to read file: {arguments['path']}",
+                "filesystem",
+                arguments
+            )
 
         # Read file with timeout
         try:
@@ -380,7 +379,7 @@ class ToolFileSystem(AITool):
     async def _write_file(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Write content to file (create or overwrite)."""
         path = self._validate_and_resolve_path(arguments["path"], "write_file")
@@ -418,21 +417,20 @@ class ToolFileSystem(AITool):
                 )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context(
-                "write_file",
-                path,
-                content=content,
-                encoding=encoding,
-                create_parents=create_parents
+        context = self._build_authorization_context(
+            "write_file",
+            path,
+            content=content,
+            encoding=encoding,
+            create_parents=create_parents
+        )
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to write file: {arguments['path']}",
+                "filesystem",
+                arguments
             )
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to write file: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
 
         # Write file with timeout
         try:
@@ -490,7 +488,7 @@ class ToolFileSystem(AITool):
     async def _append_to_file(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Append content to existing file."""
         path = self._validate_and_resolve_path(arguments["path"], "append_to_file")
@@ -534,18 +532,17 @@ class ToolFileSystem(AITool):
             )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context(
-                "append_to_file", path, 
-                content=content, encoding=encoding
+        context = self._build_authorization_context(
+            "append_to_file", path, 
+            content=content, encoding=encoding
+        )
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to append to file: {arguments['path']}",
+                "filesystem",
+                arguments
             )
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to append to file: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
 
         # Append to file with timeout
         try:
@@ -588,7 +585,7 @@ class ToolFileSystem(AITool):
     async def _list_directory(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """List directory contents."""
         path = self._validate_and_resolve_path(arguments["path"], "list_directory")
@@ -608,15 +605,14 @@ class ToolFileSystem(AITool):
             )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context("list_directory", path)
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to list directory: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
+        context = self._build_authorization_context("list_directory", path)
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to list directory: {arguments['path']}",
+                "filesystem",
+                arguments
+            )
 
         # List directory with timeout
         try:
@@ -701,7 +697,7 @@ class ToolFileSystem(AITool):
     async def _create_directory(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Create directory (with parents if needed)."""
         path = self._validate_and_resolve_path(arguments["path"], "create_directory")
@@ -719,18 +715,17 @@ class ToolFileSystem(AITool):
             )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context(
-                "create_directory", path, 
-                create_parents=create_parents
+        context = self._build_authorization_context(
+            "create_directory", path, 
+            create_parents=create_parents
+        )
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to create directory: {arguments['path']}",
+                "filesystem",
+                arguments
             )
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to create directory: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
 
         # Create directory with timeout
         try:
@@ -779,7 +774,7 @@ class ToolFileSystem(AITool):
     async def _remove_directory(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Remove empty directory."""
         path = self._validate_and_resolve_path(arguments["path"], "remove_directory")
@@ -816,15 +811,14 @@ class ToolFileSystem(AITool):
             ) from e
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context("remove_directory", path)
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to remove directory: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
+        context = self._build_authorization_context("remove_directory", path)
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to remove directory: {arguments['path']}",
+                "filesystem",
+                arguments
+            )
 
         # Remove directory with timeout
         try:
@@ -863,7 +857,7 @@ class ToolFileSystem(AITool):
     async def _delete_file(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Delete file."""
         path = self._validate_and_resolve_path(arguments["path"], "delete_file")
@@ -883,15 +877,14 @@ class ToolFileSystem(AITool):
             )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context("delete_file", path)
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to delete file: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
+        context = self._build_authorization_context("delete_file", path)
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to delete file: {arguments['path']}",
+                "filesystem",
+                arguments
+            )
 
         # Delete file with timeout
         try:
@@ -937,7 +930,7 @@ class ToolFileSystem(AITool):
     async def _copy_file(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Copy file to destination."""
         source_path = self._validate_and_resolve_path(arguments["path"], "copy_file")
@@ -978,18 +971,17 @@ class ToolFileSystem(AITool):
             )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context(
-                "copy_file", source_path, 
-                destination=str(destination_path)
+        context = self._build_authorization_context(
+            "copy_file", source_path, 
+            destination=str(destination_path)
+        )
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to copy file: {arguments['path']} -> {destination_str}",
+                "filesystem",
+                arguments
             )
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to copy file: {arguments['path']} -> {destination_str}",
-                    "filesystem",
-                    arguments
-                )
 
         # Copy file with timeout
         try:
@@ -1036,7 +1028,7 @@ class ToolFileSystem(AITool):
     async def _move(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Move/rename file or directory."""
         source_path = self._validate_and_resolve_path(arguments["path"], "move")
@@ -1059,18 +1051,17 @@ class ToolFileSystem(AITool):
             )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context(
-                "move", source_path, 
-                destination=str(destination_path)
+        context = self._build_authorization_context(
+            "move", source_path, 
+            destination=str(destination_path)
+        )
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to move: {arguments['path']} -> {destination_str}",
+                "filesystem",
+                arguments
             )
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to move: {arguments['path']} -> {destination_str}",
-                    "filesystem",
-                    arguments
-                )
 
         # Move with timeout
         try:
@@ -1117,7 +1108,7 @@ class ToolFileSystem(AITool):
     async def _get_info(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Get detailed information about file or directory."""
         path = self._validate_and_resolve_path(arguments["path"], "get_info")
@@ -1130,15 +1121,14 @@ class ToolFileSystem(AITool):
             )
 
         # Request authorization
-        if request_authorization:
-            context = self._build_authorization_context("get_info", path)
-            authorized = await request_authorization("filesystem", arguments, context)
-            if not authorized:
-                raise AIToolAuthorizationDenied(
-                    f"User denied permission to get info: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
+        context = self._build_authorization_context("get_info", path)
+        authorized = await request_authorization("filesystem", arguments, context)
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to get info: {arguments['path']}",
+                "filesystem",
+                arguments
+            )
 
         # Get info with timeout
         try:

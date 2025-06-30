@@ -309,7 +309,7 @@ class ToolCalculator(AITool):
         result = self._evaluator.evaluate(expression)
         return str(result)
 
-    async def execute(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback | None = None) -> str:
+    async def execute(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback) -> str:
         """
         Execute the calculator tool with timeout protection.
 

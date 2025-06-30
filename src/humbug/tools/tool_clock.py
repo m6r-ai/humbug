@@ -31,7 +31,7 @@ class ToolClock(AITool):
             ]
         )
 
-    async def execute(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback | None = None) -> str:
+    async def execute(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback) -> str:
         """Execute the get current time tool."""
         try:
             format_type = arguments.get("format", "iso")

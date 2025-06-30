@@ -142,14 +142,14 @@ class AITool(ABC):
     async def execute(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback | None = None
+        request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """
         Execute the tool with given arguments.
 
         Args:
             arguments: Dictionary of tool arguments
-            request_authorization: Optional callback for requesting authorization.
+            request_authorization: Callback for requesting authorization
 
         Returns:
             String result of tool execution
@@ -219,14 +219,14 @@ class AIToolManager:
     async def execute_tool(
         self,
         tool_call: AIToolCall,
-        request_authorization: AIToolAuthorizationCallback | None = None
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
         Execute a tool call.
 
         Args:
             tool_call: The tool call to execute
-            request_authorization: Optional callback for requesting authorization
+            request_authorization: Callback for requesting authorization
 
         Returns:
             AIToolResult containing the execution result
