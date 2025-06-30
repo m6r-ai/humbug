@@ -12,9 +12,6 @@ from humbug.ai.ai_tool_manager import (
 )
 
 
-logger = logging.getLogger(__name__)
-
-
 class SafeMathEvaluator:
     """Safe mathematical expression evaluator using AST parsing."""
 
@@ -265,6 +262,7 @@ class ToolCalculator(AITool):
     def __init__(self) -> None:
         """Initialize the calculator tool."""
         self._evaluator = SafeMathEvaluator()
+        self._logger = logging.getLogger("ToolCalculator")
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -330,7 +328,7 @@ class ToolCalculator(AITool):
 
         # Validate expression is provided
         if not expression:
-            logger.error("Calculator tool called without expression argument")
+            self._logger.error("Calculator tool called without expression argument")
             raise AIToolExecutionError(
                 "Expression is required",
                 "calculate",
@@ -339,7 +337,7 @@ class ToolCalculator(AITool):
 
         # Validate expression is a string
         if not isinstance(expression, str):
-            logger.error("Calculator tool called with non-string expression: %s", type(expression).__name__)
+            self._logger.error("Calculator tool called with non-string expression: %s", type(expression).__name__)
             raise AIToolExecutionError(
                 "Expression must be a string",
                 "calculate",
@@ -347,7 +345,7 @@ class ToolCalculator(AITool):
             )
 
         try:
-            logger.debug("Evaluating mathematical expression: %s", expression)
+            self._logger.debug("Evaluating mathematical expression: %s", expression)
 
             # Run calculation with timeout protection
             try:
@@ -356,7 +354,7 @@ class ToolCalculator(AITool):
                     timeout=5.0  # 5 seconds should be plenty for mathematical calculations
                 )
             except asyncio.TimeoutError as e:
-                logger.warning("Mathematical expression evaluation timed out: %s", expression)
+                self._logger.warning("Mathematical expression evaluation timed out: %s", expression)
                 raise AIToolTimeoutError(
                     "Mathematical calculation timed out",
                     "calculate",
@@ -364,7 +362,7 @@ class ToolCalculator(AITool):
                     5.0
                 ) from e
 
-            logger.debug("Expression evaluation successful: %s = %s", expression, result)
+            self._logger.debug("Expression evaluation successful: %s = %s", expression, result)
             return result
 
         except AIToolTimeoutError:
@@ -372,7 +370,7 @@ class ToolCalculator(AITool):
             raise
 
         except ZeroDivisionError as e:
-            logger.warning("Division by zero in expression '%s'", expression, exc_info=True)
+            self._logger.warning("Division by zero in expression '%s'", expression, exc_info=True)
             raise AIToolExecutionError(
                 "Division by zero",
                 "calculate",
@@ -380,7 +378,7 @@ class ToolCalculator(AITool):
             ) from e
 
         except ValueError as e:
-            logger.warning("Invalid expression '%s': %s", expression, str(e), exc_info=True)
+            self._logger.warning("Invalid expression '%s': %s", expression, str(e), exc_info=True)
             raise AIToolExecutionError(
                 f"Invalid mathematical expression: {str(e)}",
                 "calculate",
@@ -388,7 +386,7 @@ class ToolCalculator(AITool):
             ) from e
 
         except OverflowError as e:
-            logger.warning("Calculation overflow in expression '%s': %s", expression, str(e), exc_info=True)
+            self._logger.warning("Calculation overflow in expression '%s': %s", expression, str(e), exc_info=True)
             raise AIToolExecutionError(
                 f"Calculation result is too large: {str(e)}",
                 "calculate",
@@ -396,7 +394,7 @@ class ToolCalculator(AITool):
             ) from e
 
         except Exception as e:
-            logger.error("Unexpected error evaluating expression '%s': %s", expression, str(e), exc_info=True)
+            self._logger.error("Unexpected error evaluating expression '%s': %s", expression, str(e), exc_info=True)
             raise AIToolExecutionError(
                 f"Failed to calculate expression: {str(e)}",
                 "calculate",
