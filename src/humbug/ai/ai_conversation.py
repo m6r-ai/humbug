@@ -673,7 +673,7 @@ class AIConversation:
             self._is_streaming = True
 
         # Trigger streaming update event for visual feedback
-        await self._trigger_event(AIConversationEvent.STREAMING_UPDATE)
+#        await self._trigger_event(AIConversationEvent.STREAMING_UPDATE)
 
         # Handle main content first
         if content:
