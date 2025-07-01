@@ -10,6 +10,7 @@ from humbug.metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
 )
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class MetaphorASTBuilderFileAlreadyUsedError(Exception):
@@ -58,6 +59,7 @@ class MetaphorASTBuilder:
         self._embed_path: str = ""
         self._current_token: MetaphorToken | None = None
         self._arguments: List[str] = []
+        self._mindspace_manager = MindspaceManager()
 
     def _has_role_node(self, node: MetaphorASTNode) -> bool:
         """
@@ -533,4 +535,5 @@ class MetaphorASTBuilder:
 
         for file in files:
             input_text = self._read_file(file)
-            self._lexers.append(MetaphorEmbedLexer(input_text, file))
+            mindspace_relative_path = self._mindspace_manager.get_relative_path(file)
+            self._lexers.append(MetaphorEmbedLexer(input_text, mindspace_relative_path))
