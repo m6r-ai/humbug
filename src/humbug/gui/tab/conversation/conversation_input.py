@@ -3,7 +3,7 @@
 import sys
 from typing import cast, Dict
 
-from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize
+from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize, QTimer
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
 from PySide6.QtWidgets import QWidget, QToolButton
 
@@ -26,6 +26,22 @@ class ConversationInput(ConversationMessage):
         self._is_streaming = False
         self._current_model = ""
         self._submit_button: QToolButton | None = None
+
+        # Animation state for streaming border
+        self._animation_timer = QTimer()
+        self._animation_timer.timeout.connect(self._update_border_animation)
+        self._animation_frame = 0
+        self._border_colors = [
+            ColorRole.SYNTAX_01,  # Cyan
+            ColorRole.SYNTAX_03,  # Light green
+            ColorRole.SYNTAX_06,  # Light blue
+            ColorRole.SYNTAX_07,  # Light yellow
+            ColorRole.SYNTAX_08,  # Lilac
+            ColorRole.SYNTAX_09,  # Light cyan
+            ColorRole.SYNTAX_13,  # Light purple
+            ColorRole.SYNTAX_14,  # Gold
+        ]
+
         super().__init__(parent, is_input=True)
 
         # Connect text cursor signals
@@ -69,9 +85,64 @@ class ConversationInput(ConversationMessage):
 
     def set_streaming(self, streaming: bool) -> None:
         """Update the streaming state and header text."""
+        was_streaming = self._is_streaming
         self._is_streaming = streaming
         self._update_header_text()
         self._update_submit_button_state()
+
+        # Start or stop border animation based on streaming state
+        if streaming and not was_streaming:
+            self._start_border_animation()
+
+        elif not streaming and was_streaming:
+            self._stop_border_animation()
+
+    def trigger_streaming_animation(self) -> None:
+        """Trigger a frame update in the streaming animation."""
+        if self._is_streaming and self._animation_timer.isActive():
+            self._animation_frame = (self._animation_frame + 1) % len(self._border_colors)
+            self._update_border_style()
+
+    def _start_border_animation(self) -> None:
+        """Start the border color cycling animation."""
+        self._animation_frame = 0
+        self._animation_timer.start(150)  # Update every 150ms for smooth cycling
+        self._update_border_style()
+
+    def _stop_border_animation(self) -> None:
+        """Stop the border animation and restore normal styling."""
+        self._animation_timer.stop()
+        self._animation_frame = 0
+        self._handle_style_changed()  # Restore normal styling
+
+    def _update_border_animation(self) -> None:
+        """Update the border animation frame."""
+        if self._is_streaming:
+            self._animation_frame = (self._animation_frame + 1) % len(self._border_colors)
+            self._update_border_style()
+
+    def _update_border_style(self) -> None:
+        """Update the border style with the current animation color."""
+        if not self._is_streaming:
+            return
+
+        # Get the current border color from the animation sequence
+        current_color_role = self._border_colors[self._animation_frame]
+        border_color = self._style_manager.get_color_str(current_color_role)
+        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
+
+        # Apply animated border styling
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {background_color};
+            }}
+            QFrame {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
+                border: 2px solid {border_color};
+            }}
+        """)
 
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
@@ -85,6 +156,10 @@ class ConversationInput(ConversationMessage):
         super()._handle_style_changed()
         self._set_role_style()
         self._update_submit_button_styling()
+
+        # If we're streaming, apply the animated border instead of normal styling
+        if self._is_streaming:
+            self._update_border_style()
 
     def _update_submit_button_styling(self) -> None:
         """Update submit button styling and icon."""

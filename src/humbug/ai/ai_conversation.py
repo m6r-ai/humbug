@@ -27,6 +27,7 @@ class AIConversationEvent(Enum):
     TOOL_USED = auto()          # When a tool use message is added to history
     TOOL_APPROVAL_REQUIRED = auto()
                                 # When tool calls need user approval
+    STREAMING_UPDATE = auto()   # When a streaming response is updated
 
 
 class AIConversation:
@@ -670,6 +671,9 @@ class AIConversation:
 
         if not self._is_streaming:
             self._is_streaming = True
+
+        # Trigger streaming update event for visual feedback
+        await self._trigger_event(AIConversationEvent.STREAMING_UPDATE)
 
         # Handle main content first
         if content:

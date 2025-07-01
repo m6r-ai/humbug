@@ -300,6 +300,9 @@ class ConversationWidget(QWidget):
         ai_conversation.unregister_callback(
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
         )
+        ai_conversation.unregister_callback(
+            AIConversationEvent.STREAMING_UPDATE, self._on_streaming_update
+        )
 
     def _register_ai_conversation_callbacks(self) -> None:
         """Register callbacks for AIConversation events."""
@@ -325,6 +328,17 @@ class ConversationWidget(QWidget):
         ai_conversation.register_callback(
             AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._on_tool_approval_required
         )
+        ai_conversation.register_callback(
+            AIConversationEvent.STREAMING_UPDATE, self._on_streaming_update
+        )
+
+    async def _on_streaming_update(self) -> None:
+        """
+        Handle streaming update events from AI conversation.
+
+        This triggers the visual feedback animation in the input widget.
+        """
+        self._input.trigger_streaming_animation()
 
     async def _on_request_error(self, retries_exhausted: bool, message: AIMessage) -> None:
         """
