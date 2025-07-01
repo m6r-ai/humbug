@@ -1,0 +1,175 @@
+Context: Clock Tool
+    The clock tool provides current date and time information to AI assistants. This tool allows retrieval of temporal information in multiple formats to support various use cases.
+
+    Context: Tool Definition
+        The clock tool is identified as "get_current_time" and provides access to current date and time information.
+
+        Context: Purpose
+            The tool enables AI assistants to:
+
+            - Obtain current date and time for timestamping
+            - Provide time-based responses to user queries
+            - Support scheduling and temporal reasoning tasks
+            - Generate time-sensitive content and responses
+
+        Context: Security Model
+            The clock tool is considered safe and requires no user authorization:
+
+            - Provides read-only access to system time
+            - No sensitive information exposure
+            - No modification of system state
+            - No access to user data or files
+
+    Context: Parameters
+        The clock tool accepts optional parameters to customize the output format.
+
+        Context: Format Parameter
+            The format parameter controls how the date and time are presented:
+
+            - Type: String (optional)
+            - Valid values: "iso", "human", "timestamp"
+            - Default: "iso" if not specified
+
+            Context: ISO Format
+                When format is "iso" or not specified:
+
+                - Returns ISO 8601 formatted datetime string
+                - Includes timezone indicator "Z" for UTC
+                - Example output: "2024-01-15T14:30:45.123Z"
+                - Suitable for machine processing and logging
+
+            Context: Human Format
+                When format is "human":
+
+                - Returns human-readable datetime string
+                - Uses standard date/time format with timezone
+                - Example output: "2024-01-15 14:30:45 UTC"
+                - Suitable for user-facing displays
+
+            Context: Timestamp Format
+                When format is "timestamp":
+
+                - Returns Unix timestamp as string
+                - Represents seconds since epoch (1970-01-01 00:00:00 UTC)
+                - Example output: "1705327845"
+                - Suitable for numerical calculations and comparisons
+
+        Context: Timezone Parameter
+            The timezone parameter allows specification of the desired timezone:
+
+            - Type: String (optional)
+            - Format: Standard timezone identifiers
+            - Examples: "UTC", "America/New_York", "Europe/London"
+            - Default: UTC if not specified
+
+            Context: Timezone Behavior
+                Currently the implementation uses UTC regardless of the timezone parameter:
+
+                - All times are returned in UTC
+                - Timezone parameter is accepted but not applied
+                - Future versions may support timezone conversion
+                - Applications should not rely on timezone conversion
+
+    Context: Tool Execution
+        Context: Execution Process
+            The tool execution follows this process:
+
+            1. Extract format parameter (default to "iso")
+            2. Get current UTC time using `datetime.utcnow()`
+            3. Format according to requested format type
+            4. Return formatted time string
+
+        Context: Error Handling
+            The tool implements comprehensive error handling:
+
+            - Wraps all operations in try-catch blocks
+            - Raises `AIToolExecutionError` for any failures
+            - Includes original exception context using "from e" syntax
+            - Provides clear error messages for debugging
+
+            Context: Error Scenarios
+                Potential error conditions include:
+
+                - System clock unavailable or incorrect
+                - Memory allocation failures during formatting
+                - Unexpected exceptions in datetime operations
+
+        Context: Performance Characteristics
+            The clock tool is designed for high performance:
+
+            - Minimal computational overhead
+            - No I/O operations required
+            - Fast execution suitable for frequent calls
+            - No caching needed due to time-sensitive nature
+
+    Context: Usage Examples
+        Context: Basic Time Retrieval
+            ```json
+            {
+                "tool": "get_current_time"
+            }
+            ```
+
+            Returns current time in ISO format.
+
+        Context: Human-Readable Format
+            ```json
+            {
+                "tool": "get_current_time",
+                "arguments": {
+                    "format": "human"
+                }
+            }
+            ```
+
+            Returns time in human-readable format.
+
+        Context: Unix Timestamp
+            ```json
+            {
+                "tool": "get_current_time",
+                "arguments": {
+                    "format": "timestamp"
+                }
+            }
+            ```
+
+            Returns Unix timestamp for numerical processing.
+
+        Context: Timezone Specification
+            ```json
+            {
+                "tool": "get_current_time",
+                "arguments": {
+                    "format": "iso",
+                    "timezone": "America/New_York"
+                }
+            }
+            ```
+
+            Currently returns UTC time regardless of timezone parameter.
+
+    Context: Integration Considerations
+        Context: Response Processing
+            Applications using the clock tool should:
+
+            - Parse returned time strings according to specified format
+            - Handle potential time zone differences appropriately
+            - Account for clock skew in distributed systems
+            - Cache results only for very short durations
+
+        Context: Frequency of Use
+            The clock tool can be called frequently without performance concerns:
+
+            - No rate limiting required
+            - Suitable for real-time applications
+            - Can be used in loops or repeated operations
+            - No resource cleanup needed
+
+        Context: Reliability
+            The clock tool provides reliable time information:
+
+            - Uses system clock as authoritative source
+            - Consistent formatting across calls
+            - Minimal failure modes
+            - Suitable for production use

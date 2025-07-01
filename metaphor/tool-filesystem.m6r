@@ -1,0 +1,382 @@
+Context: Filesystem Tool
+    The filesystem tool provides comprehensive file and directory operations within the current mindspace. All operations are restricted to mindspace boundaries and require user authorization for security.
+
+    Context: Tool Definition
+        The filesystem tool is identified as "filesystem" and provides secure file and directory manipulation capabilities.
+
+        Context: Purpose
+            The tool enables AI assistants to:
+
+            - Read and write files within the mindspace
+            - Create and manage directory structures
+            - Copy, move, and delete files and directories
+            - Retrieve file and directory information
+            - Support content creation and modification workflows
+
+        Context: Security Model
+            The filesystem tool implements strict security controls:
+
+            - Mindspace Restriction: All operations limited to current mindspace boundaries
+            - User Authorization: Every operation requires explicit user approval
+            - Path Validation: All paths validated and resolved to prevent directory traversal
+            - File Size Limits: Maximum 10MB file size for read/write operations
+            - Operation Timeouts: All operations have timeout protection
+
+            Context: Authorization Requirements
+                Different operations have different authorization levels:
+
+                - Read Operations: Require user approval but are considered lower risk
+                - Write Operations: Require user approval and are considered higher risk
+                - Delete Operations: Require user approval and are considered destructive
+
+    Context: Supported Operations
+        Context: File Operations
+            Context: Read File
+                Reads the contents of an existing file:
+
+                - Operation: "read_file"
+                - Required Parameters: path
+                - Optional Parameters: encoding
+                - Authorization: Required (read-only)
+                - File Size Limit: 10MB maximum
+
+            Context: Write File
+                Creates a new file or overwrites an existing file:
+
+                - Operation: "write_file"
+                - Required Parameters: path, content
+                - Optional Parameters: encoding, create_parents
+                - Authorization: Required (destructive)
+                - File Size Limit: 10MB maximum
+                - Atomic Operation: Uses temporary file and rename for safety
+
+            Context: Append to File
+                Appends content to an existing file:
+
+                - Operation: "append_to_file"
+                - Required Parameters: path, content
+                - Optional Parameters: encoding
+                - Authorization: Required (destructive)
+                - File Size Limit: 10MB maximum after append
+                - Prerequisite: File must already exist
+
+            Context: Delete File
+                Removes an existing file:
+
+                - Operation: "delete_file"
+                - Required Parameters: path
+                - Authorization: Required (destructive)
+                - Prerequisite: Path must be a file, not a directory
+
+            Context: Copy File
+                Creates a copy of an existing file:
+
+                - Operation: "copy_file"
+                - Required Parameters: path, destination
+                - Authorization: Required (destructive)
+                - File Size Limit: 10MB maximum
+                - Directory Creation: Creates parent directories as needed
+
+            Context: Get File Info
+                Retrieves detailed information about a file or directory:
+
+                - Operation: "get_info"
+                - Required Parameters: path
+                - Authorization: Required (read-only)
+                - Information Provided: Size, modification time, permissions, type
+
+        Context: Directory Operations
+            Context: List Directory
+                Lists the contents of a directory:
+
+                - Operation: "list_directory"
+                - Required Parameters: path
+                - Authorization: Required (read-only)
+                - Output: Sorted list with file/directory indicators and sizes
+
+            Context: Create Directory
+                Creates a new directory:
+
+                - Operation: "create_directory"
+                - Required Parameters: path
+                - Optional Parameters: create_parents
+                - Authorization: Required (destructive)
+                - Parent Creation: Optional automatic parent directory creation
+
+            Context: Remove Directory
+                Removes an empty directory:
+
+                - Operation: "remove_directory"
+                - Required Parameters: path
+                - Authorization: Required (destructive)
+                - Prerequisite: Directory must be empty
+
+            Context: Move Operation
+                Moves or renames files and directories:
+
+                - Operation: "move"
+                - Required Parameters: path, destination
+                - Authorization: Required (destructive)
+                - Directory Creation: Creates parent directories as needed
+                - Atomic Operation: Uses rename for safety
+
+    Context: Parameters
+        Context: Required Parameters
+            Context: Operation Parameter
+                Specifies which filesystem operation to perform:
+
+                - Type: String
+                - Required: Yes
+                - Valid Values: "read_file", "write_file", "append_to_file", "list_directory", "create_directory", "remove_directory", "delete_file", "copy_file", "move", "get_info"
+
+            Context: Path Parameter
+                Specifies the target file or directory path:
+
+                - Type: String
+                - Required: Yes
+                - Format: Relative to mindspace root or absolute
+                - Validation: Must be within mindspace boundaries
+                - Resolution: Automatically resolved to absolute path
+
+        Context: Optional Parameters
+            Context: Content Parameter
+                Content to write for file operations:
+
+                - Type: String
+                - Required: For write_file and append_to_file operations
+                - Size Limit: 10MB when encoded
+                - Encoding: Uses specified encoding parameter
+
+            Context: Destination Parameter
+                Destination path for copy and move operations:
+
+                - Type: String
+                - Required: For copy_file and move operations
+                - Validation: Must be within mindspace boundaries
+                - Directory Creation: Parent directories created as needed
+
+            Context: Encoding Parameter
+                Text encoding for file operations:
+
+                - Type: String
+                - Default: "utf-8"
+                - Valid Values: "utf-8", "utf-16", "ascii", "latin-1"
+                - Usage: File read/write operations
+
+            Context: Create Parents Parameter
+                Controls automatic parent directory creation:
+
+                - Type: Boolean
+                - Default: False for write operations, True for create_directory
+                - Usage: Write operations and directory creation
+
+    Context: Path Handling
+        Context: Path Validation
+            All paths undergo strict validation:
+
+            1. Non-empty Check: Path cannot be empty or whitespace
+            2. Type Validation: Path must be a string
+            3. Mindspace Resolution: Converted to absolute path within mindspace
+            4. Boundary Check: Verified to remain within mindspace after resolution
+            5. Security Check: Prevents directory traversal attacks
+
+        Context: Path Resolution
+            Path resolution process:
+
+            1. Convert relative paths to absolute using mindspace manager
+            2. Resolve symbolic links and path components
+            3. Verify resolved path remains within mindspace
+            4. Return validated Path object for operations
+
+        Context: Relative Path Display
+            For user-friendly output:
+
+            - Paths are displayed relative to mindspace root
+            - Absolute paths are converted to mindspace-relative format
+            - Error messages use relative paths for clarity
+            - Authorization prompts show relative paths
+
+    Context: Authorization System
+        Context: Authorization Context
+            Rich context information is provided for user authorization:
+
+            - Operation Type: Clear description of what will be performed
+            - Target Path: Mindspace-relative path being operated on
+            - Content Preview: For write operations, shows content size and preview
+            - Destination Path: For copy/move operations, shows target location
+            - File Information: Current file size and properties if file exists
+
+        Context: Authorization Levels
+            Operations are categorized by risk level:
+
+            - Read-Only Operations: read_file, list_directory, get_info
+            - Destructive Operations: write_file, append_to_file, delete_file, copy_file, move, create_directory, remove_directory
+
+        Context: Authorization Denial
+            When authorization is denied:
+
+            - `AIToolAuthorizationDenied` exception is raised
+            - Clear message indicates which operation was denied
+            - Original request parameters are preserved
+            - No partial operations are performed
+
+    Context: Error Handling
+        Context: Mindspace Validation
+            Before any operation:
+
+            - Verify mindspace is currently open
+            - Raise `AIToolExecutionError` if no mindspace available
+            - Provide clear guidance about mindspace requirement
+
+        Context: File System Errors
+            Common filesystem errors are handled gracefully:
+
+            - File Not Found: Clear message about missing files/directories
+            - Permission Denied: Specific error about access permissions
+            - File Too Large: Clear message about size limits
+            - Disk Full: Appropriate error for storage issues
+            - Path Too Long: Error for excessively long paths
+
+        Context: Timeout Protection
+            All operations have timeout protection:
+
+            - File Read/Write: 30-second timeout
+            - Directory Operations: 10-15 second timeout
+            - Copy/Move Operations: 30-second timeout
+            - Timeout Error: Raises `AIToolTimeoutError` with context
+
+        Context: Error Recovery
+            Error handling includes recovery strategies:
+
+            - Atomic Operations: Use temporary files and rename for safety
+            - Cleanup: Remove temporary files on failure
+            - Context Preservation: Include full error context in exceptions
+            - Logging: Comprehensive error logging for debugging
+
+    Context: Performance Characteristics
+        Context: File Size Limits
+            The tool enforces file size limits for security and performance:
+
+            - Maximum File Size: 10MB for all file operations
+            - Size Checking: Validates before processing
+            - Memory Efficiency: Streams large files when possible
+            - Clear Error Messages: Specific feedback about size violations
+
+        Context: Timeout Configuration
+            Operation timeouts are configured based on expected duration:
+
+            - File I/O: 30 seconds for read/write operations
+            - Directory Listing: 15 seconds for large directories
+            - File Operations: 10 seconds for create/delete operations
+            - Copy/Move: 30 seconds for file transfers
+
+        Context: Concurrency Considerations
+            The tool is designed for safe concurrent use:
+
+            - Thread Safety: Uses asyncio.to_thread for blocking operations
+            - No Shared State: Each operation is independent
+            - Atomic Operations: File writes use atomic rename
+            - Resource Cleanup: Proper cleanup of temporary resources
+
+    Context: Usage Examples
+        Context: Reading Files
+            ```json
+            {
+                "tool": "filesystem",
+                "arguments": {
+                    "operation": "read_file",
+                    "path": "src/main.py"
+                }
+            }
+            ```
+
+            Reads the contents of src/main.py with UTF-8 encoding.
+
+        Context: Writing Files
+            ```json
+            {
+                "tool": "filesystem", 
+                "arguments": {
+                    "operation": "write_file",
+                    "path": "output/result.txt",
+                    "content": "Hello, World!",
+                    "create_parents": true
+                }
+            }
+            ```
+
+            Creates output/result.txt with the specified content, creating the output directory if needed.
+
+        Context: Directory Listing
+            ```json
+            {
+                "tool": "filesystem",
+                "arguments": {
+                    "operation": "list_directory",
+                    "path": "src"
+                }
+            }
+            ```
+
+            Lists all files and directories in the src folder.
+
+        Context: File Information
+            ```json
+            {
+                "tool": "filesystem",
+                "arguments": {
+                    "operation": "get_info", 
+                    "path": "README.md"
+                }
+            }
+            ```
+
+            Retrieves detailed information about README.md including size, modification time, and permissions.
+
+        Context: Copying Files
+            ```json
+            {
+                "tool": "filesystem",
+                "arguments": {
+                    "operation": "copy_file",
+                    "path": "template.txt",
+                    "destination": "backup/template-backup.txt"
+                }
+            }
+            ```
+
+            Creates a copy of template.txt in the backup directory.
+
+    Context: Integration Considerations
+        Context: Mindspace Management
+            Applications using the filesystem tool must:
+
+            - Ensure a mindspace is open before calling filesystem operations
+            - Handle `AIToolExecutionError` when no mindspace is available
+            - Provide clear guidance to users about mindspace requirements
+            - Manage mindspace lifecycle appropriately
+
+        Context: User Experience
+            For optimal user experience:
+
+            - Provide clear descriptions in authorization requests
+            - Show progress indicators for long-running operations
+            - Handle authorization denials gracefully
+            - Offer retry mechanisms for transient failures
+
+        Context: Error Recovery
+            Applications should implement comprehensive error handling:
+
+            - Catch and handle all filesystem-related exceptions
+            - Provide user-friendly error messages
+            - Implement retry logic for transient failures
+            - Log errors appropriately for debugging
+
+        Context: Security Considerations
+            When integrating the filesystem tool:
+
+            - Never bypass the authorization system
+            - Validate user inputs before passing to the tool
+            - Monitor file system usage and quotas
+            - Implement appropriate audit logging
+            - Respect the mindspace boundary restrictions
