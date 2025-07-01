@@ -8,9 +8,15 @@ from typing import Tuple
 class TerminalBase(ABC):
     """Abstract base class defining terminal interface."""
 
-    def __init__(self) -> None:
-        """Initialize terminal base."""
+    def __init__(self, working_directory: str) -> None:
+        """
+        Initialize terminal base.
+
+        Args:
+            working_directory: Directory where the terminal process should start
+        """
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._working_directory = working_directory
         self._process_id: int | None = None
         self._process_name: str = ""
         self._running = True

@@ -1275,6 +1275,7 @@ class ColumnManager(QWidget):
 
         if command:
             title = os.path.basename(command)
+
         else:
             title = "Terminal"
 

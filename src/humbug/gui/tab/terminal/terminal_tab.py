@@ -14,6 +14,7 @@ from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
 from humbug.gui.tab.terminal.terminal_widget import TerminalWidget
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.terminal.terminal_base import TerminalBase
 from humbug.terminal.terminal_factory import create_terminal
 from humbug.language.language_manager import LanguageManager
@@ -88,6 +89,7 @@ class TerminalTab(TabBase):
         self._logger = logging.getLogger("TerminalTab")
         self._command = command
         self._style_manager = StyleManager()
+        self._mindspace_manager = MindspaceManager()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -120,7 +122,7 @@ class TerminalTab(TabBase):
         self._install_activation_tracking(self._terminal_widget)
 
         # Initialize process and task tracking
-        self._terminal_process: TerminalBase = create_terminal()
+        self._terminal_process: TerminalBase = create_terminal(self._mindspace_manager.mindspace_path())
         self._tasks: Set[asyncio.Task] = set()
         self._running = True
         self._transferring = False
@@ -397,7 +399,7 @@ class TerminalTab(TabBase):
         source_tab._tasks.clear()
 
         # Create a new terminal implementation for this tab
-        self._terminal_process = create_terminal()
+        self._terminal_process = create_terminal(self._mindspace_manager.mindspace_path())
 
         # Transfer the process state
         source_tab._terminal_process.transfer_to(self._terminal_process)

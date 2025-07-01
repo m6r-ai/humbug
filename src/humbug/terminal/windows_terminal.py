@@ -81,9 +81,14 @@ class PROCESS_INFORMATION(Structure):
 class WindowsTerminal(TerminalBase):
     """Windows-specific terminal implementation using ConPTY."""
 
-    def __init__(self):
-        """Initialize Windows terminal."""
-        super().__init__()
+    def __init__(self, working_directory: str):
+        """
+        Initialize Windows terminal.
+
+        Args:
+            working_directory: Directory where the terminal process should start
+        """
+        super().__init__(working_directory)
 
         # Store handles
         self._pty_handle = None
@@ -234,7 +239,7 @@ class WindowsTerminal(TerminalBase):
                 False,
                 EXTENDED_STARTUPINFO_PRESENT,
                 None,
-                None,
+                self._working_directory,  # Set working directory
                 byref(startup_info_ex.StartupInfo),
                 byref(process_info)
             ):

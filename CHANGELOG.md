@@ -25,6 +25,7 @@ Bug fixes:
 - Under some circumstances, the column manager could crash when removing an ephemeral tab.
 - `m6rc` now uses mindspace-relative file paths to ensure consistency with the filesystem tool.
 - The System Shell is now known as the Humbug Shell.
+- The terminal now starts in the mindspace folder.
 
 ## v0.16 (2025-06-16)
 

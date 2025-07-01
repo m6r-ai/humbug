@@ -26,9 +26,14 @@ from humbug.terminal.terminal_base import TerminalBase
 class UnixTerminal(TerminalBase):
     """Unix-specific terminal implementation."""
 
-    def __init__(self) -> None:
-        """Initialize Unix terminal."""
-        super().__init__()
+    def __init__(self, working_directory: str) -> None:
+        """
+        Initialize Unix terminal.
+
+        Args:
+            working_directory: Directory where the terminal process should start
+        """
+        super().__init__(working_directory)
         self._main_fd: int | None = None
 
     def _set_nonblocking(self, fd: int) -> None:
@@ -103,8 +108,8 @@ class UnixTerminal(TerminalBase):
                 os.environ.clear()
                 os.environ.update(env)
 
-                # Change to user's home directory
-                os.chdir(home_dir)
+                # Change to the specified working directory
+                os.chdir(self._working_directory)
 
                 # Execute shell/command
                 os.execvp(shell.split()[0], shell.split())
