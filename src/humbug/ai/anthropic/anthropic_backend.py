@@ -82,11 +82,18 @@ class AnthropicBackend(AIBackend):
 
         # Add tool results as structured content
         for tool_result in tool_results:
-            content_parts.append({
+            content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
+
+            result: Dict[str, Any] = {
                 "type": "tool_result",
                 "tool_use_id": tool_result.id,
-                "content": tool_result.content
-            })
+                "content": content
+            }
+
+            if tool_result.error:
+                result["is_error"] = True
+
+            content_parts.append(result)
 
         return {
             "role": "user",
