@@ -1372,6 +1372,7 @@ class ConversationWidget(QWidget):
 
             # Store AIConversation reference in metadata
             metadata["ai_conversation_ref"] = self._ai_conversation
+            metadata["is_streaming"] = self._is_streaming
 
         return metadata
 
@@ -1415,7 +1416,8 @@ class ConversationWidget(QWidget):
             self._register_ai_conversation_callbacks()
 
             # Update streaming state if the AI conversation is already streaming
-            self._is_streaming = ai_conversation.is_streaming()
+            self._is_streaming = metadata["is_streaming"]
+            print(f"Restoring streaming state: {self._is_streaming}")
             self._input.set_streaming(self._is_streaming)
             conversation_settings = ai_conversation.conversation_settings()
             self._input.set_model(conversation_settings.model)

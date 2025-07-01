@@ -54,7 +54,6 @@ class ConversationInput(ConversationMessage):
         # Timer intervals
         self._slow_interval_ms = int(10000 / self._animation_steps)
         self._debounce_interval_ms = int(1250 / self._animation_steps)
-        print(f"Slow interval: {self._slow_interval_ms} ms, Debounce interval: {self._debounce_interval_ms} ms")
 
         # Slow timer - always running during streaming to provide regular updates
         self._slow_timer = QTimer()
@@ -177,7 +176,6 @@ class ConversationInput(ConversationMessage):
     def _start_border_animation(self) -> None:
         """Start the border fade animation."""
         # Initialize animation state based on current theme
-        print("Starting border animation")
         is_dark_mode = self._style_manager.color_mode() == ColorMode.DARK
         if is_dark_mode:
             # Start with white in dark mode
@@ -199,7 +197,6 @@ class ConversationInput(ConversationMessage):
         """Stop the border animation and restore normal styling."""
         self._slow_timer.stop()
         self._debounce_timer.stop()
-        print("Stopped border animation")
         self._animation_frame = 0
         self._pending_message = False
         self._no_message_counter = 0
