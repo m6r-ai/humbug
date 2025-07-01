@@ -55,7 +55,7 @@ def get_arabic_strings() -> LanguageStrings:
         zoom_in="تكبير",
         zoom_out="تصغير",
         reset_zoom="إعادة تعيين التكبير",
-        show_system_shell="عرض الطرفية النظامية",
+        show_system_shell="عرض صدفة هامبغ",
         show_all_columns="عرض كل الأعمدة",
         split_column_left="تقسيم العمود لليسار",
         split_column_right="تقسيم العمود لليمين",

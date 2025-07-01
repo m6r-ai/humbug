@@ -1088,7 +1088,7 @@ class ColumnManager(QWidget):
         system_tab = SystemTab("", self)
 
         # Use language strings for the tab title
-        self._add_tab(system_tab, "System Shell")
+        self._add_tab(system_tab, "Humbug Shell")
         return system_tab
 
     def clear_system_interactions(self) -> None:
@@ -1409,7 +1409,7 @@ class ColumnManager(QWidget):
             return os.path.splitext(os.path.basename(state.path))[0]
 
         if isinstance(tab, SystemTab):
-            return "System Shell"
+            return "Humbug Shell"
 
         if isinstance(tab, TerminalTab):
             if state.metadata and "command" in state.metadata:

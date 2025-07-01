@@ -55,7 +55,7 @@ def get_english_strings() -> LanguageStrings:
         zoom_in="Zoom In",
         zoom_out="Zoom Out",
         reset_zoom="Reset Zoom",
-        show_system_shell="Show System Shell",
+        show_system_shell="Show Humbug Shell",
         show_all_columns="Show All Columns",
         split_column_left="Split Column Left",
         split_column_right="Split Column Right",

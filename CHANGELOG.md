@@ -24,6 +24,7 @@ Bug fixes:
 - File renames did not reliably update wiki tabs that were based on the old filename.
 - Under some circumstances, the column manager could crash when removing an ephemeral tab.
 - `m6rc` now uses mindspace-relative file paths to ensure consistency with the filesystem tool.
+- The System Shell is now known as the Humbug Shell.
 
 ## v0.16 (2025-06-16)
 
