@@ -28,33 +28,6 @@ class ConversationInput(ConversationMessage):
         self._current_model = ""
         self._submit_button: QToolButton | None = None
 
-        # Animation state for streaming border
-        self._animation_frame = 0
-
-        # Animation parameters for smooth fade
-        self._animation_steps = 16  # Steps for half cycle (start to mid)
-        self._fade_direction = 1    # 1 for brightening, -1 for darkening
-
-        # Timer intervals
-        self._slow_interval_ms = int(10000 / self._animation_steps)
-        self._debounce_interval_ms = int(1250 / self._animation_steps)
-
-        # Slow timer - always running during streaming to provide regular updates
-        self._slow_timer = QTimer()
-        self._slow_timer.timeout.connect(self._on_slow_timer)
-        self._slow_timer.setInterval(self._slow_interval_ms)
-
-        # Debounce timer for message notifications
-        self._debounce_timer = QTimer()
-        self._debounce_timer.setSingleShot(True)
-        self._debounce_timer.timeout.connect(self._on_debounce_timeout)
-        self._debounce_timer.setInterval(self._debounce_interval_ms)
-
-        # Pending message flag and counter for smooth transition
-        self._pending_message = False
-        self._no_message_counter = 0
-        self._max_no_message_cycles = 16  # Number of cycles before disabling debounce timer
-
         super().__init__(parent, is_input=True)
 
         # Connect text cursor signals
@@ -70,6 +43,34 @@ class ConversationInput(ConversationMessage):
 
         # Connect text changes to update button state
         self._text_area.textChanged.connect(self._handle_text_changed)
+
+        # Animation state for streaming border
+        self._animation_frame = 0
+
+        # Animation parameters for smooth fade
+        self._animation_steps = 16  # Steps for half cycle (start to mid)
+        self._fade_direction = 1    # 1 for brightening, -1 for darkening
+
+        # Timer intervals
+        self._slow_interval_ms = int(10000 / self._animation_steps)
+        self._debounce_interval_ms = int(1250 / self._animation_steps)
+        print(f"Slow interval: {self._slow_interval_ms} ms, Debounce interval: {self._debounce_interval_ms} ms")
+
+        # Slow timer - always running during streaming to provide regular updates
+        self._slow_timer = QTimer()
+        self._slow_timer.setInterval(self._slow_interval_ms)
+        self._slow_timer.timeout.connect(self._on_slow_timer)
+
+        # Pending message flag and counter for smooth transition
+        self._pending_message = False
+        self._no_message_counter = 0
+        self._max_no_message_cycles = 16  # Number of cycles before disabling debounce timer
+
+        # Debounce timer for message notifications
+        self._debounce_timer = QTimer()
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.timeout.connect(self._on_debounce_timeout)
+        self._debounce_timer.setInterval(self._debounce_interval_ms)
 
         self._update_header_text()
         self._handle_style_changed()
@@ -103,12 +104,12 @@ class ConversationInput(ConversationMessage):
         self._update_header_text()
         self._update_submit_button_state()
 
-        return
         # Start or stop border animation based on streaming state
         if streaming and not was_streaming:
             self._start_border_animation()
+            return
 
-        elif not streaming and was_streaming:
+        if not streaming and was_streaming:
             self._stop_border_animation()
 
     def trigger_streaming_animation(self) -> None:
@@ -122,22 +123,20 @@ class ConversationInput(ConversationMessage):
 
         When a new message is received, the no-message counter is reset to zero.
         """
-        print("Triggering streaming animation update")
         if not self._is_streaming:
             return
 
         # Reset the no-message counter since we received a message
         self._no_message_counter = 0
 
-        if not self._debounce_timer.isActive():
-            # No debounce timer running - trigger immediate update
-            self._update_border_animation()
-            self._debounce_timer.start()
-            self._pending_message = False
-
-        else:
-            # Debounce timer is active - just set the pending flag
+        if self._debounce_timer.isActive():
             self._pending_message = True
+            return
+
+        # No debounce timer running - trigger immediate update
+        self._update_border_animation()
+        self._debounce_timer.start()
+        self._pending_message = False
 
     def _on_slow_timer(self) -> None:
         """Handle slow timer timeout - provides regular animation updates."""
@@ -160,20 +159,20 @@ class ConversationInput(ConversationMessage):
             self._update_border_animation()
             self._debounce_timer.start()
             self._pending_message = False
+            return
 
-        else:
-            # No message during debounce period
-            self._no_message_counter += 1
+        # No message during debounce period
+        self._no_message_counter += 1
 
-            if self._no_message_counter >= self._max_no_message_cycles:
-                # Reached maximum cycles - stop debounce timer
-                # Animation will continue with slow timer only
-                pass  # Timer naturally stops (single-shot)
+        if self._no_message_counter >= self._max_no_message_cycles:
+            # Reached maximum cycles - stop debounce timer
+            # Animation will continue with slow timer only
+            self._no_message_counter = 0
+            return
 
-            else:
-                # Continue fast animation for smooth transition
-                self._update_border_animation()
-                self._debounce_timer.start()
+        # Continue fast animation for smooth transition
+        self._update_border_animation()
+        self._debounce_timer.start()
 
     def _start_border_animation(self) -> None:
         """Start the border fade animation."""
