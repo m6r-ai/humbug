@@ -82,12 +82,12 @@ class AnthropicBackend(AIBackend):
 
         # Add tool results as structured content
         for tool_result in tool_results:
-            content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
+            tool_content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
 
             result: Dict[str, Any] = {
                 "type": "tool_result",
                 "tool_use_id": tool_result.id,
-                "content": content
+                "content": tool_content
             }
 
             if tool_result.error:

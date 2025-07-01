@@ -86,12 +86,19 @@ class GoogleBackend(AIBackend):
         # Add tool results as function response parts
         if tool_results:
             for tool_result in tool_results:
+                response: Dict[str, Any] = {
+                }
+
+                if tool_result.error:
+                    response["error"] = tool_result.error
+
+                else:
+                    response["content"] = tool_result.content
+
                 parts.append({
                     "functionResponse": {
                         "name": tool_result.name,
-                        "response": {
-                            "content": tool_result.content
-                        }
+                        "response": response
                     }
                 })
 

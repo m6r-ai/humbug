@@ -87,9 +87,12 @@ class OllamaBackend(AIBackend):
         # Add tool result messages
         if tool_results:
             for tool_result in tool_results:
+                tool_content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
+
                 messages.append({
                     "role": "tool",
-                    "content": tool_result.content
+                    "tool_call_id": tool_result.id,
+                    "content": tool_content
                 })
 
         # Add user message if there's content
