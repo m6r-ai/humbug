@@ -405,17 +405,6 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Check if we need to create parent directories
-        if create_parents and not path.parent.exists():
-            # Validate parent path is also within mindspace
-            parent_relative = self._mindspace_manager.get_mindspace_relative_path(str(path.parent))
-            if parent_relative is None:
-                raise AIToolExecutionError(
-                    f"Parent directory would be outside mindspace: {path.parent}",
-                    "filesystem",
-                    arguments
-                )
-
         # Request authorization
         context = self._build_authorization_context(
             "write_file",
