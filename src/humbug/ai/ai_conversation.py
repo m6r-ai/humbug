@@ -381,7 +381,7 @@ class AIConversation:
             self._conversation.add_message(tool_result_message)
             await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
 
-        # Create an explicit user message with tool results (for the AI to see the results)
+        # Create a specific user message with the tool results
         tool_response_message = AIMessage.create(
             AIMessageSource.USER,
             content="",
