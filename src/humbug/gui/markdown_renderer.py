@@ -544,9 +544,10 @@ class MarkdownRenderer(MarkdownASTVisitor):
         if self._is_local_file(node.url):
             image, loaded_successfully = self._load_local_image(node.url)
 
-        # Create a resource for this image
+        # Create a resource for this image if it doesn't already exist
         resource_name = f"image_{hash(node.url)}"
-        self._document.addResource(QTextDocument.ResourceType.ImageResource, resource_name, image)
+        if not self._document.resource(QTextDocument.ResourceType.ImageResource, resource_name):
+            self._document.addResource(QTextDocument.ResourceType.ImageResource, resource_name, image)
 
         # Create an image format
         img_format = QTextImageFormat()
