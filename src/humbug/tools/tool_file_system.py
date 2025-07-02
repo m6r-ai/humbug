@@ -258,7 +258,7 @@ class ToolFileSystem(AITool):
             "get_info": self._get_info,
         }
 
-        if operation not in handlers.keys():
+        if operation not in handlers:
             raise AIToolExecutionError(
                 f"Unsupported operation: {operation}",
                 "filesystem",
