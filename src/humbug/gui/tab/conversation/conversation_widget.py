@@ -142,6 +142,10 @@ class ConversationWidget(QWidget):
 
         self._last_submitted_message: str = ""
 
+        # We need to track any unfinished message because that won't appear in the transcript until
+        # it completes.  If we move a conversation to a new tab, we need to ensure it doesn't get lost.
+        self._current_unfinished_message: AIMessage | None = None
+
         self._last_update_time: float = 0  # Timestamp of last UI update
         self._update_timer = QTimer(self)  # Timer for throttled updates
         self._update_timer.setSingleShot(True)
@@ -412,6 +416,7 @@ class ConversationWidget(QWidget):
         Args:
             message: The message that was added
         """
+        self._current_unfinished_message = message
         await self.add_message(message)
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
@@ -481,6 +486,8 @@ class ConversationWidget(QWidget):
         Args:
             message: The message that was completed
         """
+        self._current_unfinished_message = None
+
         # Cancel any pending update
         if self._update_timer.isActive():
             self._update_timer.stop()
@@ -1373,6 +1380,7 @@ class ConversationWidget(QWidget):
             # Store AIConversation reference in metadata
             metadata["ai_conversation_ref"] = self._ai_conversation
             metadata["is_streaming"] = self._is_streaming
+            metadata["current_unfinished_message"] = self._current_unfinished_message
 
         return metadata
 
@@ -1417,10 +1425,15 @@ class ConversationWidget(QWidget):
 
             # Update streaming state if the AI conversation is already streaming
             self._is_streaming = metadata["is_streaming"]
-            print(f"Restoring streaming state: {self._is_streaming}")
             self._input.set_streaming(self._is_streaming)
             conversation_settings = ai_conversation.conversation_settings()
             self._input.set_model(conversation_settings.model)
+
+            current_unfinished_message = metadata.get("current_unfinished_message")
+            if current_unfinished_message:
+                loop = asyncio.get_event_loop()
+                loop.create_task(self.add_message(current_unfinished_message))
+                self._current_unfinished_message = current_unfinished_message
 
         else:
             # Restore settings
