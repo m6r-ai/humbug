@@ -1,5 +1,6 @@
 """Mistral backend implementation."""
 import json
+import re
 from typing import Dict, List, Any
 
 from humbug.ai.ai_backend import AIBackend, RequestConfig
@@ -86,9 +87,11 @@ class MistralBackend(AIBackend):
             for tool_result in tool_results:
                 tool_content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
 
+                # Mistral can't handle some special characters in tool IDs, so we sanitize them.
+                # This only occurs if we switch AI backends mid-conversation.
                 messages.append({
                     "role": "tool",
-                    "tool_call_id": tool_result.id,
+                    "tool_call_id": re.sub(r"[^a-zA-Z0-9]", "", tool_result.id)[-9:],
                     "content": tool_content
                 })
 
@@ -118,9 +121,11 @@ class MistralBackend(AIBackend):
         }
 
         if tool_calls:
+            # Mistral can't handle some special characters in tool IDs, so we sanitize them.
+            # This only occurs if we switch AI backends mid-conversation.
             message["tool_calls"] = [
                 {
-                    "id": call.id,
+                    "id": re.sub(r"[^a-zA-Z0-9]", "", call.id)[-9:],
                     "type": "function",
                     "function": {
                         "name": call.name,
@@ -144,28 +149,26 @@ class MistralBackend(AIBackend):
         """
         result: List[Dict[str, Any]] = []
         last_user_message_index = -1
+        current_turn_message_index = -1
 
         for message in conversation_history:
             if message.source == AIMessageSource.USER:
+                # If we have tool results this was an auto-generated user message - it doesn't count as a turn
+                if not message.tool_results:
+                    # If we never finished the last turn then we need to remove it
+                    if current_turn_message_index >= 0:
+                        self._logger.debug("Removing unfinished turn at index %d", current_turn_message_index)
+                        result = result[:current_turn_message_index]
+
+                    current_turn_message_index = len(result)
+
                 last_user_message_index = len(result)
+
                 user_messages = self._build_user_message(
                     content=message.content,
                     tool_results=message.tool_results
                 )
                 result.extend(user_messages)
-                continue
-
-            # Check for problematic messages that should trigger cleanup
-            is_problematic = (
-                message.source == AIMessageSource.SYSTEM or
-                (message.source == AIMessageSource.AI and (not message.completed or message.error)) or
-                (message.source == AIMessageSource.REASONING and (not message.completed or message.error))
-            )
-
-            if is_problematic and last_user_message_index >= 0:
-                self._logger.debug("Removing user message and subsequent messages due to %s", message.source)
-                result = result[:last_user_message_index]
-                last_user_message_index = -1
                 continue
 
             if message.source == AIMessageSource.AI:
@@ -178,7 +181,18 @@ class MistralBackend(AIBackend):
                     tool_calls=message.tool_calls
                 )
                 result.append(assistant_msg)
+
+                # If we have an AI message that has no tool calls then we've finished this turn
+                if not message.tool_calls:
+                    current_turn_message_index = -1
+                    last_user_message_index = -1
+
                 continue
+
+        # Remove anything after the last user message - we'll start with that last one
+        assert last_user_message_index >= 0, "Last user message index should be valid"
+        self._logger.debug("Removing unfinished user message at index %d", last_user_message_index)
+        result = result[:last_user_message_index+1]
 
         return result
 

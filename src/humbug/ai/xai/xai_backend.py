@@ -155,23 +155,10 @@ class XAIBackend(AIBackend):
         """
         result: List[Dict[str, Any]] = []
         last_user_message_index = -1
+        current_turn_message_index = -1
         last_reasoning_message: AIMessage | None = None
 
         for message in conversation_history:
-            # Check for problematic messages that should trigger cleanup
-            is_problematic = (
-                message.source == AIMessageSource.SYSTEM or
-                (message.source == AIMessageSource.AI and (not message.completed or message.error)) or
-                (message.source == AIMessageSource.REASONING and (not message.completed or message.error))
-            )
-
-            if is_problematic and last_user_message_index >= 0:
-                self._logger.debug("Removing user message and subsequent messages due to %s", message.source)
-                result = result[:last_user_message_index]
-                last_user_message_index = -1
-                last_reasoning_message = None
-                continue
-
             if message.source == AIMessageSource.TOOL_CALL:
                 # If we had a reasoning message, combine it with the tool call
                 if last_reasoning_message is None:
@@ -191,7 +178,17 @@ class XAIBackend(AIBackend):
             last_reasoning_message = None
 
             if message.source == AIMessageSource.USER:
+                # If we have tool results this was an auto-generated user message - it doesn't count as a turn
+                if not message.tool_results:
+                    # If we never finished the last turn then we need to remove it
+                    if current_turn_message_index >= 0:
+                        self._logger.debug("Removing unfinished turn at index %d", current_turn_message_index)
+                        result = result[:current_turn_message_index]
+
+                    current_turn_message_index = len(result)
+
                 last_user_message_index = len(result)
+
                 user_messages = self._build_user_message(
                     content=message.content,
                     tool_results=message.tool_results
@@ -209,6 +206,12 @@ class XAIBackend(AIBackend):
                     tool_calls=message.tool_calls
                 )
                 result.append(assistant_msg)
+
+                # If we have an AI message that has no tool calls then we've finished this turn
+                if not message.tool_calls:
+                    current_turn_message_index = -1
+                    last_user_message_index = -1
+
                 continue
 
             if message.source == AIMessageSource.REASONING:
@@ -217,6 +220,11 @@ class XAIBackend(AIBackend):
 
                 last_reasoning_message = message
                 continue
+
+        # Remove anything after the last user message - we'll start with that last one
+        assert last_user_message_index >= 0, "Last user message index should be valid"
+        self._logger.debug("Removing unfinished user message at index %d", last_user_message_index)
+        result = result[:last_user_message_index+1]
 
         return result
 
