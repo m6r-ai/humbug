@@ -11,7 +11,8 @@ Context: Conversation tabs
         Each card has:
 
         - A header section containing the sender name ("You", "Assitant Reasoning", "Assistant Response",
-        or "System Message"), colour coded to show these in different colours based on the role.
+        "System Message", "Tool Call" or "Tool Response"), colour coded to show these in different colours based
+        on the role.
         - A content section.
         - 10px spacing between cards
         - 10px padding within the content area
@@ -106,6 +107,11 @@ Context: Conversation tabs
         will send the message to the AI.  When streaming a response back from the AI, this changes
         to a stop icon that allows the message to be cancelled.
 
+        When a message is being processed by the AI, the border of the input box will pulse
+        between black and white.  If no new messages are being received, this will pulse slowly,
+        taking 20s to transition.  If new messages are being received, this will pulse quickly,
+        taking 2.5s to transition.
+
     Context: Selection behaviour
         Selection of text is limited to within a single message - it cannot span across multiple
         messages or between the input area and message history.
@@ -152,7 +158,16 @@ Context: Conversation tabs
         Context: Conversation settings
             Selecting this will pop up the conversation settings dialog.
 
+    Contest: Tool use
+        Many of the AI models support tool use.  This allows the AI to make use of tools provided by Humbug.
+
+        Some tools are safe and can thus be used automatically, but some may have security or safety implications.
+        For these tools the user must authorize their use before the AI can use them.
+
+        Each tool decides if it needs the user's authorization, and if it does then the tool will ask the user
+        to approve or decline the use by adding buttons to the relevant "Tool Call" message in the conversation.
+        One approved or declined, these buttons will be removed.
+
     Context: Tab label
         If the user is not actively watching a tab and a conversation turn completes, then the tab label background
         will turn purple to indicate to the user that they should look at the tab.
-

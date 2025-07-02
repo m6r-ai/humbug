@@ -1,5 +1,6 @@
 Context: System tab
-    The system supports exactly one system tab.  This can either be hidden or displayed.
+    The system supports exactly one system tab.  This can either be hidden or displayed.  This tab is
+    labelled the "Humbug Shell".
 
     The system tab supports a conversation-like view for command interactions between the user and the system.
     These are similar to command line tools in a conventional shell or command prompt environment.
