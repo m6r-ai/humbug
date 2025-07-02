@@ -14,8 +14,6 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError
 
 
-
-
 class ToolFileSystem(AITool):
     """
     Comprehensive filesystem tool.
@@ -246,11 +244,21 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        if operation not in [
-            "read_file", "write_file", "append_to_file",
-            "list_directory", "create_directory", "remove_directory", 
-            "delete_file", "copy_file", "move", "get_info"
-        ]:
+        # Route to specific operation handler
+        handlers = {
+            "read_file": self._read_file,
+            "write_file": self._write_file,
+            "append_to_file": self._append_to_file,
+            "list_directory": self._list_directory,
+            "create_directory": self._create_directory,
+            "remove_directory": self._remove_directory,
+            "delete_file": self._delete_file,
+            "copy_file": self._copy_file,
+            "move": self._move,
+            "get_info": self._get_info,
+        }
+
+        if operation not in handlers.keys():
             raise AIToolExecutionError(
                 f"Unsupported operation: {operation}",
                 "filesystem",
@@ -260,20 +268,6 @@ class ToolFileSystem(AITool):
         self._logger.debug("Filesystem operation requested: %s", operation)
 
         try:
-            # Route to specific operation handler
-            handlers = {
-                "read_file": self._read_file,
-                "write_file": self._write_file,
-                "append_to_file": self._append_to_file,
-                "list_directory": self._list_directory,
-                "create_directory": self._create_directory,
-                "remove_directory": self._remove_directory,
-                "delete_file": self._delete_file,
-                "copy_file": self._copy_file,
-                "move": self._move,
-                "get_info": self._get_info,
-            }
-
             result = await handlers[operation](arguments, request_authorization)
             self._logger.info("Filesystem operation completed successfully: %s", operation)
             return result
@@ -674,8 +668,11 @@ class ToolFileSystem(AITool):
 
         if path.exists():
             if path.is_dir():
-                relative_path = self._mindspace_manager.get_relative_path(str(path))
-                return f"Directory already exists: {relative_path}"
+                raise AIToolExecutionError(
+                    f"Directory already exists: {arguments['path']}",
+                    "filesystem",
+                    arguments
+                )
 
             raise AIToolExecutionError(
                 f"Path exists but is not a directory: {arguments['path']}",
