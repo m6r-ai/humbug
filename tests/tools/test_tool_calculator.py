@@ -23,6 +23,15 @@ def safe_evaluator():
     return SafeMathEvaluator()
 
 
+@pytest.fixture
+def mock_authorization():
+    """Fixture providing a mocked authorization callback."""
+    async def mock_auth_callback(tool_name, arguments, context, destructive):
+        return True  # Default to authorized
+
+    return mock_auth_callback
+
+
 class TestToolCalculatorDefinition:
     """Test the calculator tool definition."""
 
@@ -445,92 +454,92 @@ class TestSafeMathEvaluatorErrorHandling:
 class TestToolCalculatorExecution:
     """Test the calculator tool execution."""
 
-    def test_execute_basic_arithmetic(self, calculator_tool):
+    def test_execute_basic_arithmetic(self, calculator_tool, mock_authorization):
         """Test execution with basic arithmetic."""
-        result = asyncio.run(calculator_tool.execute({"expression": "2 + 3"}))
+        result = asyncio.run(calculator_tool.execute({"expression": "2 + 3"}, mock_authorization))
         assert result == "5"
 
-        result = asyncio.run(calculator_tool.execute({"expression": "10 * 5"}))
+        result = asyncio.run(calculator_tool.execute({"expression": "10 * 5"}, mock_authorization))
         assert result == "50"
 
-    def test_execute_complex_expression(self, calculator_tool):
+    def test_execute_complex_expression(self, calculator_tool, mock_authorization):
         """Test execution with complex expressions."""
-        result = asyncio.run(calculator_tool.execute({"expression": "sqrt(16) + sin(0)"}))
+        result = asyncio.run(calculator_tool.execute({"expression": "sqrt(16) + sin(0)"}, mock_authorization))
         assert result == "4"
 
-        result = asyncio.run(calculator_tool.execute({"expression": "2 * pi * 5"}))
+        result = asyncio.run(calculator_tool.execute({"expression": "2 * pi * 5"}, mock_authorization))
         expected = str(2 * math.pi * 5)
         assert result == expected
 
-    def test_execute_with_complex_numbers(self, calculator_tool):
+    def test_execute_with_complex_numbers(self, calculator_tool, mock_authorization):
         """Test execution with complex numbers."""
-        result = asyncio.run(calculator_tool.execute({"expression": "sqrt(-1)"}))
+        result = asyncio.run(calculator_tool.execute({"expression": "sqrt(-1)"}, mock_authorization))
         assert result == "1j"
 
-        result = asyncio.run(calculator_tool.execute({"expression": "j * j"}))
+        result = asyncio.run(calculator_tool.execute({"expression": "j * j"}, mock_authorization))
         assert result == "-1"
 
-    def test_execute_missing_expression(self, calculator_tool):
+    def test_execute_missing_expression(self, calculator_tool, mock_authorization):
         """Test execution without expression argument."""
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(calculator_tool.execute({}))
+            asyncio.run(calculator_tool.execute({}, mock_authorization))
 
         error = exc_info.value
         assert "Expression is required" in str(error)
         assert error.tool_name == "calculate"
 
-    def test_execute_empty_expression(self, calculator_tool):
+    def test_execute_empty_expression(self, calculator_tool, mock_authorization):
         """Test execution with empty expression."""
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(calculator_tool.execute({"expression": ""}))
+            asyncio.run(calculator_tool.execute({"expression": ""}, mock_authorization))
 
         error = exc_info.value
         assert "Expression is required" in str(error)
 
-    def test_execute_non_string_expression(self, calculator_tool):
+    def test_execute_non_string_expression(self, calculator_tool, mock_authorization):
         """Test execution with non-string expression."""
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(calculator_tool.execute({"expression": 123}))
+            asyncio.run(calculator_tool.execute({"expression": 123}, mock_authorization))
 
         error = exc_info.value
         assert "Expression must be a string" in str(error)
 
-    def test_execute_division_by_zero_error(self, calculator_tool):
+    def test_execute_division_by_zero_error(self, calculator_tool, mock_authorization):
         """Test execution with division by zero."""
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(calculator_tool.execute({"expression": "5 / 0"}))
+            asyncio.run(calculator_tool.execute({"expression": "5 / 0"}, mock_authorization))
 
         error = exc_info.value
         assert "Division by zero" in str(error)
         assert error.tool_name == "calculate"
         assert error.__cause__.__class__ == ZeroDivisionError
 
-    def test_execute_invalid_expression_error(self, calculator_tool):
+    def test_execute_invalid_expression_error(self, calculator_tool, mock_authorization):
         """Test execution with invalid expression."""
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(calculator_tool.execute({"expression": "2 +"}))
+            asyncio.run(calculator_tool.execute({"expression": "2 +"}, mock_authorization))
 
         error = exc_info.value
         assert "Invalid mathematical expression" in str(error)
         assert error.__cause__.__class__ == ValueError
 
-    def test_execute_overflow_error(self, calculator_tool):
+    def test_execute_overflow_error(self, calculator_tool, mock_authorization):
         """Test execution with overflow."""
         with pytest.raises(AIToolExecutionError) as exc_info:
             # Need to use a non-integer expression to trigger overflow
-            asyncio.run(calculator_tool.execute({"expression": "3.2 ** 1000"}))
+            asyncio.run(calculator_tool.execute({"expression": "3.2 ** 1000"}, mock_authorization))
 
         error = exc_info.value
         assert "too large" in str(error)
         assert error.__cause__.__class__ == OverflowError
 
-    def test_execute_unexpected_error_handling(self, calculator_tool):
+    def test_execute_unexpected_error_handling(self, calculator_tool, mock_authorization):
         """Test handling of unexpected errors."""
         with patch.object(calculator_tool._evaluator, 'evaluate') as mock_evaluate:
             mock_evaluate.side_effect = RuntimeError("Unexpected error")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(calculator_tool.execute({"expression": "1 + 1"}))
+                asyncio.run(calculator_tool.execute({"expression": "1 + 1"}, mock_authorization))
 
             error = exc_info.value
             assert "Failed to calculate expression" in str(error)
@@ -555,9 +564,9 @@ class TestToolCalculatorParametrized:
         ("e", str(math.e)),
         ("j", "1j"),
     ])
-    def test_various_expressions(self, calculator_tool, expression, expected):
+    def test_various_expressions(self, calculator_tool, mock_authorization, expression, expected):
         """Test various mathematical expressions."""
-        result = asyncio.run(calculator_tool.execute({"expression": expression}))
+        result = asyncio.run(calculator_tool.execute({"expression": expression}, mock_authorization))
 
         if expected.replace(".", "").replace("-", "").isdigit():
             # Numeric comparison with tolerance
@@ -577,10 +586,10 @@ class TestToolCalculatorParametrized:
         "__import__('os')",
         "exec('print(1)')",
     ])
-    def test_invalid_expressions_raise_errors(self, calculator_tool, invalid_expression):
+    def test_invalid_expressions_raise_errors(self, calculator_tool, mock_authorization, invalid_expression):
         """Test that various invalid expressions raise AIToolExecutionError."""
         with pytest.raises(AIToolExecutionError):
-            asyncio.run(calculator_tool.execute({"expression": invalid_expression}))
+            asyncio.run(calculator_tool.execute({"expression": invalid_expression}, mock_authorization))
 
     @pytest.mark.parametrize("complex_expr,should_be_real", [
         ("j * j", True),  # Should be -1
@@ -589,9 +598,9 @@ class TestToolCalculatorParametrized:
         ("1 + 0*j", True),  # Should be simplified to 1
         ("sin(j)", False),  # Should remain complex
     ])
-    def test_complex_number_simplification(self, calculator_tool, complex_expr, should_be_real):
+    def test_complex_number_simplification(self, calculator_tool, mock_authorization, complex_expr, should_be_real):
         """Test that complex numbers are simplified when appropriate."""
-        result = asyncio.run(calculator_tool.execute({"expression": complex_expr}))
+        result = asyncio.run(calculator_tool.execute({"expression": complex_expr}, mock_authorization))
 
         if should_be_real:
             # Should not contain 'j' in the result
@@ -622,12 +631,12 @@ class TestToolCalculatorSecurity:
         "issubclass(int, object)",
         "compile('1+1', '<string>', 'eval')",
     ])
-    def test_malicious_expressions_blocked(self, calculator_tool, malicious_expr):
+    def test_malicious_expressions_blocked(self, calculator_tool, mock_authorization, malicious_expr):
         """Test that malicious expressions are blocked."""
         with pytest.raises(AIToolExecutionError):
-            asyncio.run(calculator_tool.execute({"expression": malicious_expr}))
+            asyncio.run(calculator_tool.execute({"expression": malicious_expr}, mock_authorization))
 
-    def test_only_safe_builtins_allowed(self, calculator_tool):
+    def test_only_safe_builtins_allowed(self, calculator_tool, mock_authorization):
         """Test that only explicitly allowed functions work."""
         # These should work
         safe_expressions = [
@@ -636,7 +645,7 @@ class TestToolCalculatorSecurity:
         ]
 
         for expr in safe_expressions:
-            result = asyncio.run(calculator_tool.execute({"expression": expr}))
+            result = asyncio.run(calculator_tool.execute({"expression": expr}, mock_authorization))
             assert isinstance(result, str)
 
         # These should not work
@@ -647,7 +656,7 @@ class TestToolCalculatorSecurity:
 
         for expr in unsafe_expressions:
             with pytest.raises(AIToolExecutionError):
-                asyncio.run(calculator_tool.execute({"expression": expr}))
+                asyncio.run(calculator_tool.execute({"expression": expr}, mock_authorization))
 
 
 class TestToolCalculatorIntegration:
@@ -662,17 +671,17 @@ class TestToolCalculatorIntegration:
         assert callable(calculator_tool.get_definition)
         assert callable(calculator_tool.execute)
 
-    def test_end_to_end_calculation(self, calculator_tool):
+    def test_end_to_end_calculation(self, calculator_tool, mock_authorization):
         """Test end-to-end calculation workflow."""
         # Complex mathematical expression
         expression = "sqrt(pow(3, 2) + pow(4, 2)) + sin(pi/6) + log(e)"
-        result = asyncio.run(calculator_tool.execute({"expression": expression}))
+        result = asyncio.run(calculator_tool.execute({"expression": expression}, mock_authorization))
 
         # Expected: sqrt(9 + 16) + 0.5 + 1 = 5 + 0.5 + 1 = 6.5
         expected = 5.0 + 0.5 + 1.0
         assert float(result) == pytest.approx(expected)
 
-    def test_multiple_calculations_independent(self, calculator_tool):
+    def test_multiple_calculations_independent(self, calculator_tool, mock_authorization):
         """Test that multiple calculations are independent."""
         expressions = [
             "2 + 2",
@@ -683,7 +692,7 @@ class TestToolCalculatorIntegration:
 
         results = []
         for expr in expressions:
-            result = asyncio.run(calculator_tool.execute({"expression": expr}))
+            result = asyncio.run(calculator_tool.execute({"expression": expr}, mock_authorization))
             results.append(result)
 
         # Verify all results are correct and independent
