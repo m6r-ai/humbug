@@ -6,19 +6,23 @@ Whether you're a human or an AI, the most important things in software developme
 problem you're trying to solve and the software you've building with to solve it.  Humbug is designed to
 help you with both.
 
-Humbug seeks to bring all your sources of information into one framework.  It integrates a dynamic wiki-like
-view, a powerful conversation interface that supports multiple simultaneous chats with one or more AIs, integrated
-terminal emulation, file editing, and a powerful system shell that makes it easy to create detailed structured prompts
-that will allow your AIs to do their best work.
-
-Humbug supports large language models (LLMs) from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI,
+It supports large language models (LLMs) from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI,
 and you have total flexibility over which one you use at any time.  You can use 2 or more at
 the same time, so if you want multiple opinions then it's easy to get them.  It's your choice whether these are
 local models, or cloud-hosted.
 
-While Humbug lets you use cloud-based tools, it runs locally on your computer.  Everything it does is captured
-in local files so you always retain complete control over your projects.  It's up to you how you structure them,
-how you handle version management, and where you run your AI tools.
+Humbug runs locally on your computer so you always retain complete control over your projects.
+
+## Tools - for you and your AI
+
+If you want to build software with AI you need tools to interact with your design and your code.  Humbug gives you
+powerful conversations, editors, terminal emulators, a system shell, a dynamic documentation wiki.
+
+Humbug gives your LLMs a clock, a comprehensive scientific calculator, and access to the files and directories in
+your project mindspace.
+
+The combination means both you and your AIs can easily work on any aspect of your software, either working
+collaboratively, or working on different things at the same time.
 
 ## Metaphor - solving the AI context problem
 
@@ -79,6 +83,7 @@ can be used to refine the Metaphor context.
   modes.
 - Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating
   the conversation that was forked.
+- When a conversation is actively communicating with an LLM the input message box border pulses.
 
 ## Humbug in action
 
@@ -106,6 +111,15 @@ Compatible with MacOS X, Linux, and Windows 10/11.
 - Configurable temperature settings for supported models.
 - Handles reasoning outputs for models that support them.
 - Error handling and retry mechanisms for API requests.
+- Supports tool/function calling for all models that can support it
+
+### AI tools
+
+- Calculator: gives the LLM a scientific calculator (including complex number support).
+- Clock: allows the LLM to get the current date and time.
+- Filesystem:
+  - Files: lets the LLM read, write, delete, append, copy, move, and get info.
+  - Directories: lets it read, create, delete, and move.
 
 ### Conversation features
 
@@ -134,7 +148,7 @@ Compatible with MacOS X, Linux, and Windows 10/11.
   command).
 - Auto-backup functionality for unsaved changes.
 
-### System shell
+### Humbug (system) shell
 
 - Command line interface, giving access to a variety of features within Humbug.
 - Using the `m6rc` command withinn the shell will automatically start a conversation if the Metaphor prompt compiles

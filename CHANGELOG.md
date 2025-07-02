@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v0.17 (2025-07-xx)
+## v0.17 (2025-07-02)
 
 New features:
 
@@ -12,6 +12,7 @@ New features:
   modes.
 - Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating
   the conversation that was forked.
+- When a conversation is actively communicating with an LLM the input message box border pulses.
 
 Bug fixes:
 
@@ -26,6 +27,7 @@ Bug fixes:
 - `m6rc` now uses mindspace-relative file paths to ensure consistency with the filesystem tool.
 - The System Shell is now known as the Humbug Shell.
 - The terminal now starts in the mindspace folder.
+- When streaming conversations that reference local files we could end up blocked.
 
 ## v0.16 (2025-06-16)
 
