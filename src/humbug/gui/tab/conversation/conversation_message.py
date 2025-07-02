@@ -430,6 +430,10 @@ class ConversationMessage(QFrame):
                                 AIMessageSource.USER, AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT):
             self.setVisible(True)
 
+    def message_id(self) -> str | None:
+        """Get the unique message ID."""
+        return self._message_id
+
     def _copy_message(self) -> None:
         """Copy the entire message content to clipboard."""
         content = self._message_content

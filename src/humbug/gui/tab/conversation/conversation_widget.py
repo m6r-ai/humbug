@@ -392,12 +392,12 @@ class ConversationWidget(QWidget):
         """
         # Find the message widget that corresponds to this tool call message
         for msg_widget in self._messages:
-            if hasattr(msg_widget, '_message_id') and msg_widget._message_id == message.id:
+            if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
                 msg_widget.show_tool_approval_ui(tool_call, destructive)
                 break
 
-    def _handle_tool_call_approved(self, tool_call: AIToolCall) -> None:
+    def _handle_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
