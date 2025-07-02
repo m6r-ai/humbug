@@ -8,7 +8,6 @@ from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
 from PySide6.QtWidgets import QWidget, QToolButton
 
 from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import ColorMode
 from humbug.gui.tab.conversation.conversation_message import ConversationMessage
 
 
@@ -48,7 +47,7 @@ class ConversationInput(ConversationMessage):
         self._animation_frame = 0
 
         # Animation parameters for smooth fade
-        self._animation_steps = 16  # Steps for half cycle (start to mid)
+        self._animation_steps = 32  # Steps for half cycle (start to mid)
         self._fade_direction = 1    # 1 for brightening, -1 for darkening
 
         # Timer intervals
@@ -176,15 +175,7 @@ class ConversationInput(ConversationMessage):
     def _start_border_animation(self) -> None:
         """Start the border fade animation."""
         # Initialize animation state based on current theme
-        is_dark_mode = self._style_manager.color_mode() == ColorMode.DARK
-        if is_dark_mode:
-            # Start with white in dark mode
-            self._animation_frame = self._animation_steps // 2
-
-        else:
-            # Start with black in light mode
-            self._animation_frame = 0
-
+        self._animation_frame = self._animation_steps // 2
         self._fade_direction = 1
         self._pending_message = False
         self._no_message_counter = 0
