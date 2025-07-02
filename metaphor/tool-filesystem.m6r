@@ -37,7 +37,7 @@ Context: Filesystem Tool
                 - Operation: "read_file"
                 - Required Parameters: path
                 - Optional Parameters: encoding
-                - Authorization: Required (read-only)
+                - Authorization: Not required (read-only)
                 - File Size Limit: 10MB maximum
 
             Context: Write File
@@ -82,7 +82,7 @@ Context: Filesystem Tool
 
                 - Operation: "get_info"
                 - Required Parameters: path
-                - Authorization: Required (read-only)
+                - Authorization: Not required (read-only)
                 - Information Provided: Size, modification time, permissions, type
 
         Context: Directory Operations
@@ -91,7 +91,7 @@ Context: Filesystem Tool
 
                 - Operation: "list_directory"
                 - Required Parameters: path
-                - Authorization: Required (read-only)
+                - Authorization: Not required (read-only)
                 - Output: Sorted list with file/directory indicators and sizes
 
             Context: Create Directory

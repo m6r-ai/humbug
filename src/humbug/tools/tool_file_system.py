@@ -293,7 +293,7 @@ class ToolFileSystem(AITool):
     async def _read_file(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Read file contents."""
         path = self._validate_and_resolve_path(arguments["path"], "read_file")
@@ -321,16 +321,6 @@ class ToolFileSystem(AITool):
             max_mb = self._max_file_size_bytes / (1024 * 1024)
             raise AIToolExecutionError(
                 f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)",
-                "filesystem",
-                arguments
-            )
-
-        # Request authorization
-        context = self._build_authorization_context("read_file", path, encoding=encoding)
-        authorized = await request_authorization("filesystem", arguments, context, False)
-        if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to read file: {arguments['path']}",
                 "filesystem",
                 arguments
             )
@@ -574,7 +564,7 @@ class ToolFileSystem(AITool):
     async def _list_directory(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """List directory contents."""
         path = self._validate_and_resolve_path(arguments["path"], "list_directory")
@@ -589,16 +579,6 @@ class ToolFileSystem(AITool):
         if not path.is_dir():
             raise AIToolExecutionError(
                 f"Path is not a directory: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
-
-        # Request authorization
-        context = self._build_authorization_context("list_directory", path)
-        authorized = await request_authorization("filesystem", arguments, context, False)
-        if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to list directory: {arguments['path']}",
                 "filesystem",
                 arguments
             )
@@ -1097,7 +1077,7 @@ class ToolFileSystem(AITool):
     async def _get_info(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Get detailed information about file or directory."""
         path = self._validate_and_resolve_path(arguments["path"], "get_info")
@@ -1105,16 +1085,6 @@ class ToolFileSystem(AITool):
         if not path.exists():
             raise AIToolExecutionError(
                 f"Path does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
-
-        # Request authorization
-        context = self._build_authorization_context("get_info", path)
-        authorized = await request_authorization("filesystem", arguments, context, False)
-        if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to get info: {arguments['path']}",
                 "filesystem",
                 arguments
             )
