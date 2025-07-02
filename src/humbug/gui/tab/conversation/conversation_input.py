@@ -51,8 +51,8 @@ class ConversationInput(ConversationMessage):
         self._fade_direction = 1    # 1 for brightening, -1 for darkening
 
         # Timer intervals
-        self._slow_interval_ms = int(10000 / self._animation_steps)
-        self._debounce_interval_ms = int(1250 / self._animation_steps)
+        self._slow_interval_ms = int(6000 / self._animation_steps)
+        self._debounce_interval_ms = int(750 / self._animation_steps)
 
         # Slow timer - always running during streaming to provide regular updates
         self._slow_timer = QTimer()
