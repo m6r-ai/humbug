@@ -526,7 +526,8 @@ class MetaphorASTBuilder:
         else:
             match = token_next.value
 
-        path = os.path.join(self._embed_path, match)
+        stripped_match = match.rstrip()
+        path = os.path.join(self._embed_path, stripped_match)
         recurse = "**/" in match
         files = glob.glob(path, recursive=recurse)
         if not files:

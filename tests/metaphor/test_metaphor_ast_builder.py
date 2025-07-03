@@ -493,6 +493,26 @@ def test_python_embedding(ast_builder, setup_files):
     assert "print('Hello, World!')" in code_text
 
 
+def test_python_embedding2(ast_builder, setup_files):
+    """Test embedding of Python files with syntax highlighting."""
+    input_text = (
+        "Context: Code\n"
+        "    Some context\n"
+        f"    Embed: {setup_files}/test.py \n"  # Trailing space should not affect parsing
+    )
+
+    root = MetaphorRootNode()
+    ast_builder.build_ast(root, input_text, "test.txt", [])
+    context = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
+    code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
+
+    # Find the code block
+    code_text = "\n".join(node.value() for node in code_nodes)
+    assert "```python" in code_text
+    assert "def hello():" in code_text
+    assert "print('Hello, World!')" in code_text
+
+
 def test_multiple_file_embedding(ast_builder, setup_files):
     """Test embedding multiple files using wildcards."""
     input_text = (
