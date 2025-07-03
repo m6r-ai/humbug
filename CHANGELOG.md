@@ -12,6 +12,8 @@ Bug fixes:
 - Resolve problem with trailing whitespace after Metaphor embedded filenames.
 - When writing files to the filesystem, use a "destructive" button colour for overwrites, and "recommended" for new files.
 - When copying files to the filesystem, use a "destructive" button colour for overwrites, and "recommended" for new files.
+- The filesystem tool did not fully validate all arguments.  While this wouldn't have failed, it wouldn't have given
+  useful exception responses.
 
 ## v0.17 (2025-07-02)
 
