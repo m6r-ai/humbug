@@ -914,6 +914,9 @@ class ToolFileSystem(AITool):
 
         destination_path = self._validate_and_resolve_path(destination_str, "copy_file")
 
+        # Are we going to create a new file or overwrite an existing one?
+        destructive = destination_path.exists()
+
         if not source_path.exists():
             raise AIToolExecutionError(
                 f"Source file does not exist: {arguments['path']}",
@@ -944,7 +947,7 @@ class ToolFileSystem(AITool):
             "copy_file", source_path, 
             destination=str(destination_path)
         )
-        authorized = await request_authorization("filesystem", arguments, context, True)
+        authorized = await request_authorization("filesystem", arguments, context, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to copy file: {arguments['path']} -> {destination_str}",
