@@ -184,13 +184,13 @@ class GoogleBackend(AIBackend):
 
                     current_turn_message_index = len(result)
 
-                last_user_message_index = len(result)
-
                 user_msg = self._build_user_message(
                     content=message.content,
                     tool_results=message.tool_results
                 )
                 result.append(user_msg)
+
+                last_user_message_index = len(result) - 1
                 continue
 
             if message.source == AIMessageSource.AI:

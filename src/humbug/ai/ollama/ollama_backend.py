@@ -208,13 +208,13 @@ class OllamaBackend(AIBackend):
 
                     current_turn_message_index = len(result)
 
-                last_user_message_index = len(result)
-
                 user_messages = self._build_user_message(
                     content=message.content,
                     tool_results=message.tool_results
                 )
                 result.extend(user_messages)
+
+                last_user_message_index = len(result) - 1
                 continue
 
             if message.source == AIMessageSource.REASONING:
