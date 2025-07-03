@@ -4,7 +4,7 @@ Tests for the filesystem tool
 import asyncio
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock
 
 import pytest
 
@@ -414,7 +414,7 @@ class TestToolFileSystemReadFile:
             
             error = exc_info.value
             assert "File reading timed out" in str(error)
-            assert error.timeout_seconds == 30.0
+            assert error.timeout_duration == 30.0
 
     def test_read_file_content_unicode_error(self, filesystem_tool):
         """Test _read_file_content with unicode decode error."""
@@ -647,7 +647,7 @@ class TestToolFileSystemWriteFile:
             
             error = exc_info.value
             assert "File writing timed out" in str(error)
-            assert error.timeout_seconds == 30.0
+            assert error.timeout_duration == 30.0
 
     def test_write_file_content_permission_error(self, filesystem_tool):
         """Test _write_file_content with permission error."""
