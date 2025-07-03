@@ -354,7 +354,7 @@ class MindspaceInlineEditor(QWidget):
             self._set_validation_state(False, self._language_manager.strings().error_empty_name)
             return
 
-        # Check for invalid file system characters
+        # Check for invalid filesystem characters
         invalid_chars = r'\/:*?"<>|'
         if any(c in invalid_chars for c in text):
             self._set_validation_state(False, self._language_manager.strings().error_invalid_characters)

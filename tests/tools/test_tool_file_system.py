@@ -10,7 +10,7 @@ from datetime import datetime
 
 import pytest
 
-from humbug.tools.tool_file_system import ToolFileSystem
+from humbug.tools.tool_filesystem import ToolFileSystem
 from humbug.ai.ai_tool_manager import (
     AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolTimeoutError
@@ -21,7 +21,7 @@ from humbug.mindspace.mindspace_error import MindspaceNotFoundError
 @pytest.fixture
 def mock_mindspace_manager():
     """Fixture providing a mocked mindspace manager."""
-    with patch('humbug.tools.tool_file_system.MindspaceManager') as mock_manager_class:
+    with patch('humbug.tools.tool_filesystem.MindspaceManager') as mock_manager_class:
         mock_manager = MagicMock()
         mock_manager_class.return_value = mock_manager
         
@@ -1238,7 +1238,7 @@ class TestToolFileSystemIntegration:
     def test_end_to_end_file_workflow(self, temp_directory):
         """Test end-to-end file operations with real filesystem."""
         # Create a fresh filesystem tool with separate mindspace manager mock for this test
-        with patch('humbug.tools.tool_file_system.MindspaceManager') as mock_manager_class:
+        with patch('humbug.tools.tool_filesystem.MindspaceManager') as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager_class.return_value = mock_manager
             mock_manager.has_mindspace.return_value = True
@@ -1332,7 +1332,7 @@ class TestToolFileSystemIntegration:
 
     def test_end_to_end_directory_workflow(self, temp_directory):
         """Test end-to-end directory operations with real filesystem."""
-        with patch('humbug.tools.tool_file_system.MindspaceManager') as mock_manager_class:
+        with patch('humbug.tools.tool_filesystem.MindspaceManager') as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager_class.return_value = mock_manager
             mock_manager.has_mindspace.return_value = True
@@ -1410,7 +1410,7 @@ class TestToolFileSystemIntegration:
 
     def test_multiple_operations_independence(self, temp_directory):
         """Test that multiple operations are independent."""
-        with patch('humbug.tools.tool_file_system.MindspaceManager') as mock_manager_class:
+        with patch('humbug.tools.tool_filesystem.MindspaceManager') as mock_manager_class:
             mock_manager = MagicMock()
             mock_manager_class.return_value = mock_manager
             mock_manager.has_mindspace.return_value = True

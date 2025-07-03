@@ -19,8 +19,8 @@ New features:
 
 - All models that support tool/function calling now implement tool/function calling.  Safe tools do not require user
   authorization but any tools that might do damage require an explicit authorization from the user.
-- Added clock, calculator, and file system tools.  These allow the LLM to read the data/time, perform calcuations,
-  and interact with the current mindspace's file system.
+- Added clock, calculator, and filesystem tools.  These allow the LLM to read the data/time, perform calcuations,
+  and interact with the current mindspace's filesystem.
 - Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking
   modes.
 - Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating

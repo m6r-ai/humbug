@@ -81,7 +81,7 @@ async function createDirectories(outputDir, urlPath) {
 }
 
 /**
- * Render a single page and save it to the file system.
+ * Render a single page and save it to the filesystem.
  * @param {object} browser - Puppeteer browser instance.
  * @param {string} url - URL to render.
  * @param {string} outputPath - Path to save the rendered file.

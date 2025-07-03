@@ -1909,7 +1909,7 @@
     },
     {
       "type": "COMMENT",
-      "value": " * Render a single page and save it to the file system.",
+      "value": " * Render a single page and save it to the filesystem.",
       "start": 0
     },
     {

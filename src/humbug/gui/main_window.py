@@ -46,7 +46,7 @@ from humbug.mindspace.system.system_command_registry import SystemCommandRegistr
 from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.tools.tool_calculator import ToolCalculator
 from humbug.tools.tool_clock import ToolClock
-from humbug.tools.tool_file_system import ToolFileSystem
+from humbug.tools.tool_filesystem import ToolFileSystem
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 

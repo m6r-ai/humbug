@@ -377,6 +377,6 @@ Context: Filesystem Tool
 
             - Never bypass the authorization system
             - Validate user inputs before passing to the tool
-            - Monitor file system usage and quotas
+            - Monitor filesystem usage and quotas
             - Implement appropriate audit logging
             - Respect the mindspace boundary restrictions

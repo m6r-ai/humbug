@@ -108,6 +108,53 @@ class ToolFileSystem(AITool):
                 {}
             )
 
+    def _get_value_from_key(self, key: str, arguments: Dict[str, Any]) -> Any:
+        """
+        Extract value from arguments dictionary.
+
+        Args:
+            key: Key to extract from arguments
+            arguments: Dictionary containing operation parameters
+
+        Returns:
+            Value for the given key
+
+        Raises:
+            AIToolExecutionError: If key is missing or value is not valid
+        """
+        if key not in arguments:
+            raise AIToolExecutionError(
+                "No 'path' argument provided",
+                "filesystem",
+                arguments
+            )
+
+        return arguments[key]
+
+    def _get_str_value_from_key(self, key: str, arguments: Dict[str, Any]) -> str:
+        """
+        Extract string value from arguments dictionary.
+
+        Args:
+            key: Key to extract from arguments
+            arguments: Dictionary containing operation parameters
+
+        Returns:
+            String value for the given key
+
+        Raises:
+            AIToolExecutionError: If key is missing or value is not a string
+        """
+        value = self._get_value_from_key(key, arguments)
+        if not isinstance(value, str):
+            raise AIToolExecutionError(
+                f"'{key}' must be a string",
+                "filesystem",
+                arguments
+            )
+
+        return value
+
     def _validate_and_resolve_path(self, path_str: str, operation: str) -> Path:
         """
         Validate path is within mindspace and resolve to absolute path.
@@ -236,13 +283,7 @@ class ToolFileSystem(AITool):
         self._validate_mindspace_access()
 
         # Extract and validate operation
-        operation = arguments.get("operation", "")
-        if not operation:
-            raise AIToolExecutionError(
-                "Operation parameter is required",
-                "filesystem",
-                arguments
-            )
+        operation = self._get_str_value_from_key("operation", arguments)
 
         # Route to specific operation handler
         handlers = {
@@ -290,8 +331,8 @@ class ToolFileSystem(AITool):
         _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Read file contents."""
-        path = self._validate_and_resolve_path(arguments["path"], "read_file")
-        encoding = arguments.get("encoding", "utf-8")
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path = self._validate_and_resolve_path(path_arg, "read_file")
 
         # Validate file exists and is readable
         if not path.exists():
@@ -318,6 +359,8 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 arguments
             )
+
+        encoding = arguments.get("encoding", "utf-8")
 
         # Read file with timeout
         try:
@@ -366,17 +409,26 @@ class ToolFileSystem(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Write content to file (create or overwrite)."""
-        path = self._validate_and_resolve_path(arguments["path"], "write_file")
-        content = arguments.get("content", "")
-        encoding = arguments.get("encoding", "utf-8")
-        create_parents = arguments.get("create_parents", False)
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path = self._validate_and_resolve_path(path_arg, "write_file")
 
-        if not isinstance(content, str):
+        if "content" not in arguments:
             raise AIToolExecutionError(
-                "Content must be a string",
+                "No 'content' argument provided",
                 "filesystem",
                 arguments
             )
+
+        content = arguments["content"]
+        if not isinstance(content, str):
+            raise AIToolExecutionError(
+                "'content' must be a string",
+                "filesystem",
+                arguments
+            )
+
+        encoding = arguments.get("encoding", "utf-8")
+        create_parents = arguments.get("create_parents", False)
 
         # Check content size
         content_size = len(content.encode(encoding))
@@ -384,7 +436,7 @@ class ToolFileSystem(AITool):
             size_mb = content_size / (1024 * 1024)
             max_mb = self._max_file_size_bytes / (1024 * 1024)
             raise AIToolExecutionError(
-                f"Content too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)",
+                f"'content' too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)",
                 "filesystem",
                 arguments
             )
@@ -467,16 +519,8 @@ class ToolFileSystem(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Append content to existing file."""
-        path = self._validate_and_resolve_path(arguments["path"], "append_to_file")
-        content = arguments.get("content", "")
-        encoding = arguments.get("encoding", "utf-8")
-
-        if not isinstance(content, str):
-            raise AIToolExecutionError(
-                "Content must be a string",
-                "filesystem",
-                arguments
-            )
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path = self._validate_and_resolve_path(path_arg, "append_to_file")
 
         # File must exist for append
         if not path.exists():
@@ -492,6 +536,9 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 arguments
             )
+
+        content = self._get_str_value_from_key("content", arguments)
+        encoding = arguments.get("encoding", "utf-8")
 
         # Check total size after append
         current_size = path.stat().st_size
@@ -564,7 +611,8 @@ class ToolFileSystem(AITool):
         _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """List directory contents."""
-        path = self._validate_and_resolve_path(arguments["path"], "list_directory")
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path = self._validate_and_resolve_path(path_arg, "list_directory")
 
         if not path.exists():
             raise AIToolExecutionError(
@@ -666,7 +714,8 @@ class ToolFileSystem(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Create directory (with parents if needed)."""
-        path = self._validate_and_resolve_path(arguments["path"], "create_directory")
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path = self._validate_and_resolve_path(path_arg, "create_directory")
         create_parents = arguments.get("create_parents", True)
 
         if path.exists():
@@ -746,7 +795,8 @@ class ToolFileSystem(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Remove empty directory."""
-        path = self._validate_and_resolve_path(arguments["path"], "remove_directory")
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path = self._validate_and_resolve_path(path_arg, "remove_directory")
 
         if not path.exists():
             raise AIToolExecutionError(
@@ -829,7 +879,8 @@ class ToolFileSystem(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Delete file."""
-        path = self._validate_and_resolve_path(arguments["path"], "delete_file")
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path = self._validate_and_resolve_path(path_arg, "delete_file")
 
         if not path.exists():
             raise AIToolExecutionError(
@@ -902,20 +953,8 @@ class ToolFileSystem(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Copy file to destination."""
-        source_path = self._validate_and_resolve_path(arguments["path"], "copy_file")
-        destination_str = arguments.get("destination", "")
-
-        if not destination_str:
-            raise AIToolExecutionError(
-                "Destination parameter is required for copy_file operation",
-                "filesystem",
-                arguments
-            )
-
-        destination_path = self._validate_and_resolve_path(destination_str, "copy_file")
-
-        # Are we going to create a new file or overwrite an existing one?
-        destructive = destination_path.exists()
+        path_arg = self._get_str_value_from_key("path", arguments)
+        source_path = self._validate_and_resolve_path(path_arg, "copy_file")
 
         if not source_path.exists():
             raise AIToolExecutionError(
@@ -930,6 +969,12 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 arguments
             )
+
+        destination_arg = self._get_str_value_from_key("destination", arguments)
+        destination_path = self._validate_and_resolve_path(destination_arg, "copy_file")
+
+        # Are we going to create a new file or overwrite an existing one?
+        destructive = destination_path.exists()
 
         # Check source file size
         source_size = source_path.stat().st_size
@@ -950,7 +995,7 @@ class ToolFileSystem(AITool):
         authorized = await request_authorization("filesystem", arguments, context, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(
-                f"User denied permission to copy file: {arguments['path']} -> {destination_str}",
+                f"User denied permission to copy file: {arguments['path']} -> {destination_arg}",
                 "filesystem",
                 arguments
             )
@@ -1003,17 +1048,8 @@ class ToolFileSystem(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Move/rename file or directory."""
-        source_path = self._validate_and_resolve_path(arguments["path"], "move")
-        destination_str = arguments.get("destination", "")
-
-        if not destination_str:
-            raise AIToolExecutionError(
-                "Destination parameter is required for move operation",
-                "filesystem",
-                arguments
-            )
-
-        destination_path = self._validate_and_resolve_path(destination_str, "move")
+        path_arg = self._get_str_value_from_key("path", arguments)
+        source_path = self._validate_and_resolve_path(path_arg, "move")
 
         if not source_path.exists():
             raise AIToolExecutionError(
@@ -1021,6 +1057,9 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 arguments
             )
+
+        destination_arg = self._get_str_value_from_key("destination", arguments)
+        destination_path = self._validate_and_resolve_path(destination_arg, "move")
 
         # Request authorization
         context = self._build_authorization_context(
@@ -1030,7 +1069,7 @@ class ToolFileSystem(AITool):
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
-                f"User denied permission to move: {arguments['path']} -> {destination_str}",
+                f"User denied permission to move: {arguments['path']} -> {destination_arg}",
                 "filesystem",
                 arguments
             )
@@ -1083,7 +1122,8 @@ class ToolFileSystem(AITool):
         _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Get detailed information about file or directory."""
-        path = self._validate_and_resolve_path(arguments["path"], "get_info")
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path = self._validate_and_resolve_path(path_arg, "get_info")
 
         if not path.exists():
             raise AIToolExecutionError(
