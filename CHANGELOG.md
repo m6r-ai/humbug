@@ -1,5 +1,16 @@
 # Change log for Humbug
 
+## v0.18 (2025-07-xx)
+
+New features:
+
+TBD
+
+Bug fixes:
+
+- Resolve problem with responses back to parallel tool calls.
+- Resolve problem with trailing whitespace after Metaphor embedded filenames.
+
 ## v0.17 (2025-07-02)
 
 New features:
