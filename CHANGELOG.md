@@ -10,6 +10,7 @@ Bug fixes:
 
 - Resolve problem with responses back to parallel tool calls.
 - Resolve problem with trailing whitespace after Metaphor embedded filenames.
+- When writing files to the filesystem, use a "destructive" button colour for overwrites, and "recommended" for new files.
 
 ## v0.17 (2025-07-02)
 

@@ -389,6 +389,9 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
+        # Are we going to create a new file or overwrite an existing one?
+        destructive = path.exists()
+
         # Request authorization
         context = self._build_authorization_context(
             "write_file",
@@ -397,7 +400,7 @@ class ToolFileSystem(AITool):
             encoding=encoding,
             create_parents=create_parents
         )
-        authorized = await request_authorization("filesystem", arguments, context, True)
+        authorized = await request_authorization("filesystem", arguments, context, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(
                 f"User denied permission to write file: {arguments['path']}",
