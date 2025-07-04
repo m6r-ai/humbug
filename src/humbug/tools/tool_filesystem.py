@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import shutil
 import tempfile
@@ -8,7 +7,7 @@ from typing import Dict, Any, List
 
 from humbug.ai.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
-    AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolTimeoutError
+    AIToolAuthorizationDenied, AIToolAuthorizationCallback
 )
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError
@@ -27,7 +26,6 @@ class ToolFileSystem(AITool):
         Initialize the filesystem tool.
 
         Args:
-            mindspace_manager: Manager for the current mindspace
             max_file_size_mb: Maximum file size in MB for read/write operations
         """
         self._mindspace_manager = MindspaceManager()
@@ -277,7 +275,6 @@ class ToolFileSystem(AITool):
         Raises:
             AIToolExecutionError: If operation fails
             AIToolAuthorizationDenied: If user denies authorization
-            AIToolTimeoutError: If operation times out
         """
         # Validate mindspace is open
         self._validate_mindspace_access()
@@ -313,7 +310,7 @@ class ToolFileSystem(AITool):
             self._logger.info("Filesystem operation completed successfully: %s", operation)
             return result
 
-        except (AIToolExecutionError, AIToolAuthorizationDenied, AIToolTimeoutError):
+        except (AIToolExecutionError, AIToolAuthorizationDenied):
             # Re-raise our own errors
             raise
 
@@ -362,32 +359,12 @@ class ToolFileSystem(AITool):
 
         encoding = arguments.get("encoding", "utf-8")
 
-        # Read file with timeout
-        try:
-            content, actual_size = await asyncio.wait_for(
-                asyncio.to_thread(self._read_file_content, path, encoding),
-                timeout=30.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "File reading timed out",
-                "filesystem",
-                arguments,
-                30.0
-            ) from e
-
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"File: {relative_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
-
-    def _read_file_content(self, path: Path, encoding: str) -> tuple[str, int]:
-        """Synchronous helper for file reading."""
+        # Read file content
         try:
             with open(path, 'r', encoding=encoding) as f:
                 content = f.read()
 
-            file_size = path.stat().st_size
-            return content, file_size
+            actual_size = path.stat().st_size
 
         except UnicodeDecodeError as e:
             raise AIToolExecutionError(
@@ -402,6 +379,16 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 {"path": str(path)}
             ) from e
+
+        except OSError as e:
+            raise AIToolExecutionError(
+                f"Failed to read file: {str(e)}",
+                "filesystem",
+                {"path": str(path)}
+            ) from e
+
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        return f"File: {relative_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
 
     async def _write_file(
         self,
@@ -460,26 +447,7 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Write file with timeout
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(self._write_file_content, path, content, encoding, create_parents),
-                timeout=30.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "File writing timed out",
-                "filesystem",
-                arguments,
-                30.0
-            ) from e
-
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"File written successfully: {relative_path} ({content_size:,} bytes)"
-
-    def _write_file_content(self, path: Path, content: str, encoding: str, create_parents: bool) -> None:
-        """Synchronous helper for file writing."""
+        # Write file content
         try:
             # Create parent directories if requested
             if create_parents:
@@ -512,6 +480,9 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 {"path": str(path)}
             ) from e
+
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        return f"File written successfully: {relative_path} ({content_size:,} bytes)"
 
     async def _append_to_file(
         self,
@@ -556,7 +527,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context(
-            "append_to_file", path, 
+            "append_to_file", path,
             content=content, encoding=encoding
         )
         authorized = await request_authorization("filesystem", arguments, context, True)
@@ -567,26 +538,7 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Append to file with timeout
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(self._append_file_content, path, content, encoding),
-                timeout=30.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "File append timed out",
-                "filesystem",
-                arguments,
-                30.0
-            ) from e
-
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"Content appended successfully: {relative_path} (+{content_size:,} bytes)"
-
-    def _append_file_content(self, path: Path, content: str, encoding: str) -> None:
-        """Synchronous helper for file appending."""
+        # Append to file
         try:
             with open(path, 'a', encoding=encoding) as f:
                 f.write(content)
@@ -604,6 +556,9 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 {"path": str(path)}
             ) from e
+
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        return f"Content appended successfully: {relative_path} (+{content_size:,} bytes)"
 
     async def _list_directory(
         self,
@@ -628,36 +583,7 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # List directory with timeout
-        try:
-            items = await asyncio.wait_for(
-                asyncio.to_thread(self._list_directory_contents, path),
-                timeout=15.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "Directory listing timed out",
-                "filesystem",
-                arguments,
-                15.0
-            ) from e
-
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        result_lines = [f"Directory: {relative_path}", f"Items: {len(items)}", ""]
-
-        for item in sorted(items, key=lambda x: (x['type'], x['name'])):
-            if item['type'] == 'directory':
-                result_lines.append(f"📁 {item['name']}/")
-
-            else:
-                size_str = f" ({item['size']:,} bytes)" if item['size'] is not None else ""
-                result_lines.append(f"📄 {item['name']}{size_str}")
-
-        return "\n".join(result_lines)
-
-    def _list_directory_contents(self, path: Path) -> List[Dict[str, Any]]:
-        """Synchronous helper for directory listing."""
+        # List directory contents
         try:
             items = []
             for item in path.iterdir():
@@ -692,8 +618,6 @@ class ToolFileSystem(AITool):
                         'size': None
                     })
 
-            return items
-
         except PermissionError as e:
             raise AIToolExecutionError(
                 f"Permission denied listing directory: {str(e)}",
@@ -707,6 +631,19 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 {"path": str(path)}
             ) from e
+
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        result_lines = [f"Directory: {relative_path}", f"Items: {len(items)}", ""]
+
+        for item in sorted(items, key=lambda x: (x['type'], x['name'])):
+            if item['type'] == 'directory':
+                result_lines.append(f"📁 {item['name']}/")
+
+            else:
+                size_str = f" ({item['size']:,} bytes)" if item['size'] is not None else ""
+                result_lines.append(f"📄 {item['name']}{size_str}")
+
+        return "\n".join(result_lines)
 
     async def _create_directory(
         self,
@@ -734,7 +671,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context(
-            "create_directory", path, 
+            "create_directory", path,
             create_parents=create_parents
         )
         authorized = await request_authorization("filesystem", arguments, context, False)
@@ -745,26 +682,7 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Create directory with timeout
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(self._create_directory_sync, path, create_parents),
-                timeout=10.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "Directory creation timed out",
-                "filesystem",
-                arguments,
-                10.0
-            ) from e
-
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"Directory created successfully: {relative_path}"
-
-    def _create_directory_sync(self, path: Path, create_parents: bool) -> None:
-        """Synchronous helper for directory creation."""
+        # Create directory
         try:
             path.mkdir(parents=create_parents, exist_ok=False)
 
@@ -788,6 +706,9 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 {"path": str(path)}
             ) from e
+
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        return f"Directory created successfully: {relative_path}"
 
     async def _remove_directory(
         self,
@@ -839,39 +760,23 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Remove directory with timeout
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(self._remove_directory_sync, path),
-                timeout=10.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "Directory removal timed out",
-                "filesystem",
-                arguments,
-                10.0
-            ) from e
-
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"Directory removed successfully: {relative_path}"
-
-    def _remove_directory_sync(self, path: Path) -> None:
-        """Synchronous helper for directory removal."""
+        # Remove directory
         try:
             path.rmdir()
 
         except OSError as e:
             if not path.exists():
                 # Directory was already removed
-                return
+                pass
+            else:
+                raise AIToolExecutionError(
+                    f"Failed to remove directory (may not be empty): {str(e)}",
+                    "filesystem",
+                    {"path": str(path)}
+                ) from e
 
-            raise AIToolExecutionError(
-                f"Failed to remove directory (may not be empty): {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        return f"Directory removed successfully: {relative_path}"
 
     async def _delete_file(
         self,
@@ -906,26 +811,7 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Delete file with timeout
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(self._delete_file_sync, path),
-                timeout=10.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "File deletion timed out",
-                "filesystem",
-                arguments,
-                10.0
-            ) from e
-
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"File deleted successfully: {relative_path}"
-
-    def _delete_file_sync(self, path: Path) -> None:
-        """Synchronous helper for file deletion."""
+        # Delete file
         try:
             path.unlink()
 
@@ -939,13 +825,16 @@ class ToolFileSystem(AITool):
         except OSError as e:
             if not path.exists():
                 # File was already deleted
-                return
+                pass
+            else:
+                raise AIToolExecutionError(
+                    f"Failed to delete file: {str(e)}",
+                    "filesystem",
+                    {"path": str(path)}
+                ) from e
 
-            raise AIToolExecutionError(
-                f"Failed to delete file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        return f"File deleted successfully: {relative_path}"
 
     async def _copy_file(
         self,
@@ -989,7 +878,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context(
-            "copy_file", source_path, 
+            "copy_file", source_path,
             destination=str(destination_path)
         )
         authorized = await request_authorization("filesystem", arguments, context, destructive)
@@ -1000,27 +889,7 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Copy file with timeout
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(self._copy_file_sync, source_path, destination_path),
-                timeout=30.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "File copy timed out",
-                "filesystem",
-                arguments,
-                30.0
-            ) from e
-
-        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
-        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
-        return f"File copied successfully: {source_relative} -> {dest_relative}"
-
-    def _copy_file_sync(self, source_path: Path, destination_path: Path) -> None:
-        """Synchronous helper for file copying."""
+        # Copy file
         try:
             # Create parent directories if needed
             destination_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1041,6 +910,10 @@ class ToolFileSystem(AITool):
                 "filesystem",
                 {"source": str(source_path), "destination": str(destination_path)}
             ) from e
+
+        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
+        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
+        return f"File copied successfully: {source_relative} -> {dest_relative}"
 
     async def _move(
         self,
@@ -1063,7 +936,7 @@ class ToolFileSystem(AITool):
 
         # Request authorization
         context = self._build_authorization_context(
-            "move", source_path, 
+            "move", source_path,
             destination=str(destination_path)
         )
         authorized = await request_authorization("filesystem", arguments, context, True)
@@ -1074,27 +947,7 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Move with timeout
-        try:
-            await asyncio.wait_for(
-                asyncio.to_thread(self._move_sync, source_path, destination_path),
-                timeout=30.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "Move operation timed out",
-                "filesystem",
-                arguments,
-                30.0
-            ) from e
-
-        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
-        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
-        return f"Moved successfully: {source_relative} -> {dest_relative}"
-
-    def _move_sync(self, source_path: Path, destination_path: Path) -> None:
-        """Synchronous helper for moving files/directories."""
+        # Move file or directory
         try:
             # Create parent directories if needed
             destination_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1116,6 +969,10 @@ class ToolFileSystem(AITool):
                 {"source": str(source_path), "destination": str(destination_path)}
             ) from e
 
+        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
+        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
+        return f"Moved successfully: {source_relative} -> {dest_relative}"
+
     async def _get_info(
         self,
         arguments: Dict[str, Any],
@@ -1132,25 +989,7 @@ class ToolFileSystem(AITool):
                 arguments
             )
 
-        # Get info with timeout
-        try:
-            info = await asyncio.wait_for(
-                asyncio.to_thread(self._get_info_sync, path),
-                timeout=10.0
-            )
-
-        except asyncio.TimeoutError as e:
-            raise AIToolTimeoutError(
-                "Get info operation timed out",
-                "filesystem",
-                arguments,
-                10.0
-            ) from e
-
-        return info
-
-    def _get_info_sync(self, path: Path) -> str:
-        """Synchronous helper for getting file/directory information."""
+        # Get file or directory information
         try:
             stat_info = path.stat()
             relative_path = self._mindspace_manager.get_relative_path(str(path))
