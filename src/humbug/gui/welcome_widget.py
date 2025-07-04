@@ -4,7 +4,6 @@ from PySide6.QtWidgets import QVBoxLayout, QLabel, QFrame, QWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
 
-from humbug import format_version
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 
@@ -31,7 +30,7 @@ class WelcomeWidget(QFrame):
         layout.addSpacing(20)  # Space between icon and title
 
         # Application name
-        self._title_label = QLabel(f"Humbug v{format_version()}")
+        self._title_label = QLabel("Humbug v0.17")
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
 
         # Add widgets to layout
