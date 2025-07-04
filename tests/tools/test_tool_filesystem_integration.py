@@ -3,7 +3,7 @@ Integration and parametrized tests for the filesystem tool.
 """
 import asyncio
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 
@@ -204,31 +204,47 @@ class TestToolFileSystemAuthorizationContext:
 
     def test_authorization_context_copy_includes_destination(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test authorization context for copy operation includes destination."""
-        mock_mindspace_manager.get_absolute_path.side_effect = [
-            "/test/mindspace/source.txt",
-            "/test/mindspace/dest.txt"
-        ]
-        mock_mindspace_manager.get_mindspace_relative_path.side_effect = [
-            "source.txt",
-            "dest.txt"
-        ]
-        mock_mindspace_manager.get_relative_path.side_effect = [
-            "source.txt",
-            "dest.txt"
-        ]
+        call_count = [0]
+        
+        def mock_get_absolute_path(path):
+            if path == "source.txt":
+                return "/test/mindspace/source.txt"
 
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_file') as mock_is_file, \
+            if path == "dest.txt":
+                return "/test/mindspace/dest.txt"
+
+            return f"/test/mindspace/{path}"
+
+        def mock_get_relative_path(path):
+            if "source.txt" in str(path):
+                return "source.txt"
+
+            if "dest.txt" in str(path):
+                return "dest.txt"
+
+            return str(path).split("/")[-1]
+
+        def mock_resolve():
+            call_count[0] += 1
+            if call_count[0] == 1:  # First call for source
+                return Path("/test/mindspace/source.txt")
+ 
+            return Path("/test/mindspace/dest.txt")
+
+        def mock_exists():
+            # Return True for source, False for destination
+            return call_count[0] == 1
+
+        mock_mindspace_manager.get_absolute_path.side_effect = mock_get_absolute_path
+        mock_mindspace_manager.get_mindspace_relative_path.side_effect = ["source.txt", "dest.txt"]
+        mock_mindspace_manager.get_relative_path.side_effect = mock_get_relative_path
+
+        with patch('pathlib.Path.resolve', side_effect=mock_resolve), \
+             patch('pathlib.Path.exists', side_effect=mock_exists), \
+             patch('pathlib.Path.is_file', return_value=True), \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('pathlib.Path.mkdir') as mock_mkdir, \
+             patch('pathlib.Path.mkdir'), \
              patch('shutil.copy2') as mock_copy2:
-
-            source_path = Path("/test/mindspace/source.txt")
-            dest_path = Path("/test/mindspace/dest.txt")
-            mock_resolve.side_effect = [source_path, dest_path]
-            mock_exists.side_effect = [True, False]
-            mock_is_file.return_value = True
 
             mock_stat_result = MagicMock()
             mock_stat_result.st_size = 100
@@ -499,7 +515,3 @@ class TestToolFileSystemErrorHandling:
                 # append_to_file checks for content later, so it fails on path validation first
                 # write_file checks for content early
                 assert "No 'content' argument provided" in str(error)
-
-
-# Import mock_open here to avoid import issues
-from unittest.mock import mock_open

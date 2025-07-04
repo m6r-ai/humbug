@@ -571,6 +571,7 @@ class TestToolCalculatorParametrized:
         if expected.replace(".", "").replace("-", "").isdigit():
             # Numeric comparison with tolerance
             assert float(result) == pytest.approx(float(expected))
+
         else:
             assert result == expected
 
@@ -605,6 +606,7 @@ class TestToolCalculatorParametrized:
         if should_be_real:
             # Should not contain 'j' in the result
             assert 'j' not in result
+
         else:
             # Should contain 'j' in the result
             assert 'j' in result or 'complex' in str(type(eval(result)))

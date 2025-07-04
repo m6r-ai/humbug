@@ -110,6 +110,7 @@ def mock_path_factory():
 
             if items is not None:
                 mock_path.iterdir.return_value = items
+
             else:
                 mock_path.iterdir.return_value = []
 
