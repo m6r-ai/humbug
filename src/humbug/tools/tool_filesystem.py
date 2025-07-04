@@ -122,7 +122,7 @@ class ToolFileSystem(AITool):
         """
         if key not in arguments:
             raise AIToolExecutionError(
-                "No 'path' argument provided",
+                f"No '{key}' argument provided",
                 "filesystem",
                 arguments
             )
