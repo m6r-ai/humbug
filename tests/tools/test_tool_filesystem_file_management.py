@@ -22,12 +22,17 @@ class TestToolFileSystemDeleteFile:
         with patch('pathlib.Path.resolve') as mock_resolve, \
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.unlink') as mock_unlink:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 100
+            mock_stat.return_value = mock_stat_result
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "delete_file", "path": "file.txt"},
@@ -92,12 +97,17 @@ class TestToolFileSystemDeleteFile:
 
         with patch('pathlib.Path.resolve') as mock_resolve, \
              patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.is_file') as mock_is_file:
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 100
+            mock_stat.return_value = mock_stat_result
 
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
                 asyncio.run(filesystem_tool.execute(
@@ -127,12 +137,14 @@ class TestToolFileSystemDeleteFile:
             mock_is_file.return_value = True
             mock_unlink.side_effect = OSError("File not found")
 
-            result = asyncio.run(filesystem_tool.execute(
-                {"operation": "delete_file", "path": "file.txt"},
-                mock_authorization
-            ))
+            with pytest.raises(AIToolExecutionError) as exc_info:
+                result = asyncio.run(filesystem_tool.execute(
+                    {"operation": "delete_file", "path": "file.txt"},
+                    mock_authorization
+                ))
 
-            assert "File deleted successfully: file.txt" in result
+            error = exc_info.value
+            assert "Failed to delete file" in str(error)
 
     def test_delete_file_permission_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test deleting file with permission error."""
@@ -142,12 +154,18 @@ class TestToolFileSystemDeleteFile:
         with patch('pathlib.Path.resolve') as mock_resolve, \
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.unlink') as mock_unlink:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 100
+            mock_stat.return_value = mock_stat_result
+
             mock_unlink.side_effect = PermissionError("Access denied")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
@@ -167,12 +185,18 @@ class TestToolFileSystemDeleteFile:
         with patch('pathlib.Path.resolve') as mock_resolve, \
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.unlink') as mock_unlink:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 100
+            mock_stat.return_value = mock_stat_result
+
             mock_unlink.side_effect = OSError("I/O error")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
@@ -329,9 +353,13 @@ class TestToolFileSystemCopyFile:
         mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/source.txt"
         mock_mindspace_manager.get_mindspace_relative_path.return_value = "source.txt"
 
-        with patch('pathlib.Path.resolve') as mock_resolve:
+        with patch('pathlib.Path.resolve') as mock_resolve, \
+             patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file:
             mock_path = Path("/test/mindspace/source.txt")
             mock_resolve.return_value = mock_path
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
@@ -340,7 +368,7 @@ class TestToolFileSystemCopyFile:
                 ))
 
             error = exc_info.value
-            assert "No 'path' argument provided" in str(error)
+            assert "No 'destination' argument provided" in str(error)
 
     def test_copy_file_source_too_large(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test copying file that exceeds size limit."""
@@ -583,9 +611,11 @@ class TestToolFileSystemMove:
         mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/source.txt"
         mock_mindspace_manager.get_mindspace_relative_path.return_value = "source.txt"
 
-        with patch('pathlib.Path.resolve') as mock_resolve:
+        with patch('pathlib.Path.resolve') as mock_resolve, \
+             patch('pathlib.Path.exists') as mock_exists:
             mock_path = Path("/test/mindspace/source.txt")
             mock_resolve.return_value = mock_path
+            mock_exists.return_value = True
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
@@ -594,7 +624,7 @@ class TestToolFileSystemMove:
                 ))
 
             error = exc_info.value
-            assert "No 'path' argument provided" in str(error)
+            assert "No 'destination' argument provided" in str(error)
 
     def test_move_authorization_denied(self, filesystem_tool, mock_mindspace_manager, mock_authorization_denied):
         """Test moving when authorization is denied."""
