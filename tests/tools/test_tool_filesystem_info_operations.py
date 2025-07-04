@@ -2,7 +2,6 @@
 Tests for filesystem tool info operations: get_info.
 """
 import asyncio
-from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 

@@ -650,9 +650,13 @@ class TestToolFileSystemAppendFile:
         mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
         mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
 
-        with patch('pathlib.Path.resolve') as mock_resolve:
+        with patch('pathlib.Path.resolve') as mock_resolve, \
+             patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file:
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
@@ -661,7 +665,7 @@ class TestToolFileSystemAppendFile:
                 ))
 
             error = exc_info.value
-            assert "No 'path' argument provided" in str(error)
+            assert "No 'content' argument provided" in str(error)
 
     def test_append_file_authorization_denied(self, filesystem_tool, mock_mindspace_manager, mock_authorization_denied):
         """Test appending when authorization is denied."""
