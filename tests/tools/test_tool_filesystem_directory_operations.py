@@ -584,12 +584,14 @@ class TestToolFileSystemRemoveDirectory:
             mock_iterdir.return_value = []
             mock_rmdir.side_effect = OSError("Directory not found")
 
-            result = asyncio.run(filesystem_tool.execute(
-                {"operation": "remove_directory", "path": "empty_dir"},
-                mock_authorization
-            ))
+            with pytest.raises(AIToolExecutionError) as exc_info:
+                asyncio.run(filesystem_tool.execute(
+                    {"operation": "remove_directory", "path": "empty_dir"},
+                    mock_authorization
+                ))
 
-            assert "Directory removed successfully: empty_dir" in result
+            error = exc_info.value
+            assert "Failed to remove directory" in str(error)
 
     def test_remove_directory_os_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test removing directory with OS error."""
@@ -616,4 +618,4 @@ class TestToolFileSystemRemoveDirectory:
                 ))
 
             error = exc_info.value
-            assert "Failed to remove directory (may not be empty)" in str(error)
+            assert "Failed to remove directory" in str(error)

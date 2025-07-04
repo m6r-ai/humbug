@@ -171,7 +171,7 @@ class TestToolFileSystemValidation:
             asyncio.run(filesystem_tool.execute({"path": "file.txt"}, mock_authorization))
 
         error = exc_info.value
-        assert "No 'path' argument provided" in str(error)
+        assert "No 'operation' argument provided" in str(error)
 
     def test_execute_invalid_operation(self, filesystem_tool, mock_authorization):
         """Test execute with invalid operation."""

@@ -443,33 +443,62 @@ class TestToolFileSystemErrorHandling:
         """Test that operations requiring destination fail appropriately."""
         operations_needing_destination = ["copy_file", "move"]
 
-        for operation in operations_needing_destination:
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(
-                    {"operation": operation, "path": "source.txt"},
-                    mock_authorization
-                ))
+        with patch('pathlib.Path.resolve') as mock_resolve, \
+             patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data="test content")) as mock_file:
 
-            error = exc_info.value
-            # The error message varies but should indicate missing parameter
-            assert "No 'path' argument provided" in str(error)
+            mock_path = Path("/test/mindspace/source.txt")
+            mock_resolve.return_value = mock_path
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 12
+            mock_stat.return_value = mock_stat_result
+
+            for operation in operations_needing_destination:
+                with pytest.raises(AIToolExecutionError) as exc_info:
+                    asyncio.run(filesystem_tool.execute(
+                        {"operation": operation, "path": "source.txt"},
+                        mock_authorization
+                    ))
+
+                error = exc_info.value
+                # The error message varies but should indicate missing parameter
+                assert "No 'destination' argument provided" in str(error)
 
     def test_operations_requiring_content_fail_without_it(self, filesystem_tool, mock_authorization):
         """Test that operations requiring content fail appropriately."""
         operations_needing_content = ["write_file", "append_to_file"]
 
-        for operation in operations_needing_content:
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(
-                    {"operation": operation, "path": "file.txt"},
-                    mock_authorization
-                ))
+        with patch('pathlib.Path.resolve') as mock_resolve, \
+             patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data="test content")) as mock_file:
 
-            error = exc_info.value
-            # append_to_file checks for content later, so it fails on path validation first
-            # write_file checks for content early
-            assert ("No 'content' argument provided" in str(error) or 
-                    "No 'path' argument provided" in str(error))
+            mock_path = Path("/test/mindspace/file.txt")
+            mock_resolve.return_value = mock_path
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 12
+            mock_stat.return_value = mock_stat_result
+
+            for operation in operations_needing_content:
+                with pytest.raises(AIToolExecutionError) as exc_info:
+                    asyncio.run(filesystem_tool.execute(
+                        {"operation": operation, "path": "file.txt"},
+                        mock_authorization
+                    ))
+
+                error = exc_info.value
+                # append_to_file checks for content later, so it fails on path validation first
+                # write_file checks for content early
+                assert "No 'content' argument provided" in str(error)
 
 
 # Import mock_open here to avoid import issues
