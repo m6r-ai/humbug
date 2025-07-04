@@ -174,13 +174,6 @@ class ToolFileSystem(AITool):
                 {"operation": operation, "path": path_str}
             )
 
-        if not isinstance(path_str, str):
-            raise AIToolExecutionError(
-                "Path must be a string",
-                "filesystem",
-                {"operation": operation, "path": path_str}
-            )
-
         try:
             # Convert to absolute path via mindspace manager
             abs_path = self._mindspace_manager.get_absolute_path(path_str)

@@ -619,3 +619,54 @@ class TestToolFileSystemRemoveDirectory:
 
             error = exc_info.value
             assert "Failed to remove directory" in str(error)
+
+    def test_remove_directory_authorization_context_permission_error_on_directory_listing(
+        self,
+        filesystem_tool,
+        mock_mindspace_manager,
+        mock_authorization
+    ):
+        """Test authorization context building with permission error when listing directory contents."""
+        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/protected_dir"
+        mock_mindspace_manager.get_mindspace_relative_path.return_value = "protected_dir"
+        mock_mindspace_manager.get_relative_path.return_value = "protected_dir"
+
+        call_count = [0]
+        def mock_iterdir_side_effect():
+            call_count[0] += 1
+            if call_count[0] == 1:
+                # First call: checking if directory is empty
+                return []
+
+            # Subsequent calls: during authorization context building
+            raise PermissionError("Permission denied")
+
+        with patch('pathlib.Path.resolve') as mock_resolve, \
+            patch('pathlib.Path.exists') as mock_exists, \
+            patch('pathlib.Path.is_dir') as mock_is_dir, \
+            patch('pathlib.Path.iterdir') as mock_iterdir, \
+            patch('pathlib.Path.rmdir') as mock_rmdir:
+
+            mock_path = Path("/test/mindspace/protected_dir")
+            mock_resolve.return_value = mock_path
+            mock_exists.return_value = True
+            mock_is_dir.return_value = True
+            mock_iterdir.side_effect = mock_iterdir_side_effect
+
+            result = asyncio.run(filesystem_tool.execute(
+                {"operation": "remove_directory", "path": "protected_dir"},
+                mock_authorization
+            ))
+
+            assert "Directory removed successfully: protected_dir" in result
+
+            # Verify that authorization was called, which means
+            # _build_authorization_context completed successfully despite the PermissionError
+            mock_authorization.assert_called_once()
+            args = mock_authorization.call_args[0]
+            context = args[2]  # Third argument is context
+
+            # The context should include the permission denied message
+            assert "Operation: remove_directory" in context
+            assert "Path: protected_dir" in context
+            assert "Directory items: Permission denied" in context

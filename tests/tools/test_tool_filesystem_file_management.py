@@ -215,7 +215,7 @@ class TestToolFileSystemCopyFile:
     def test_copy_file_success_new_destination(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test successful file copying to new destination."""
         call_count = [0]  # Use list to make it mutable in nested function
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -423,7 +423,7 @@ class TestToolFileSystemCopyFile:
     def test_copy_file_authorization_denied(self, filesystem_tool, mock_mindspace_manager, mock_authorization_denied):
         """Test copying file when authorization is denied."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -468,7 +468,7 @@ class TestToolFileSystemCopyFile:
     def test_copy_file_permission_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test copying file with permission error."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -517,7 +517,7 @@ class TestToolFileSystemCopyFile:
     def test_copy_file_os_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test copying file with OS error."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -570,7 +570,7 @@ class TestToolFileSystemMove:
     def test_move_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test successful file moving."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -620,7 +620,7 @@ class TestToolFileSystemMove:
     def test_move_directory_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test successful directory moving."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source_dir":
                 return "/test/mindspace/source_dir"
@@ -707,7 +707,7 @@ class TestToolFileSystemMove:
     def test_move_authorization_denied(self, filesystem_tool, mock_mindspace_manager, mock_authorization_denied):
         """Test moving when authorization is denied."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -742,7 +742,7 @@ class TestToolFileSystemMove:
     def test_move_with_parent_creation(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test moving with parent directory creation."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -789,7 +789,7 @@ class TestToolFileSystemMove:
     def test_move_permission_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test moving with permission error."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -828,7 +828,7 @@ class TestToolFileSystemMove:
     def test_move_os_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test moving with OS error."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"

@@ -205,7 +205,7 @@ class TestToolFileSystemAuthorizationContext:
     def test_authorization_context_copy_includes_destination(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test authorization context for copy operation includes destination."""
         call_count = [0]
-        
+
         def mock_get_absolute_path(path):
             if path == "source.txt":
                 return "/test/mindspace/source.txt"
@@ -228,7 +228,7 @@ class TestToolFileSystemAuthorizationContext:
             call_count[0] += 1
             if call_count[0] == 1:  # First call for source
                 return Path("/test/mindspace/source.txt")
- 
+
             return Path("/test/mindspace/dest.txt")
 
         def mock_exists():
@@ -435,7 +435,7 @@ class TestToolFileSystemErrorHandling:
     def test_all_operations_handle_mindspace_validation(self, mock_mindspace_manager, mock_authorization):
         """Test that all operations properly validate mindspace access."""
         from humbug.tools.tool_filesystem import ToolFileSystem
-        
+
         mock_mindspace_manager.has_mindspace.return_value = False
         filesystem_tool = ToolFileSystem()
         filesystem_tool._mindspace_manager = mock_mindspace_manager
