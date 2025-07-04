@@ -3,7 +3,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 from humbug.ai.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,

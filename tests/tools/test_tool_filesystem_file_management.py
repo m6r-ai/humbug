@@ -138,7 +138,7 @@ class TestToolFileSystemDeleteFile:
             mock_unlink.side_effect = OSError("File not found")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
-                result = asyncio.run(filesystem_tool.execute(
+                asyncio.run(filesystem_tool.execute(
                     {"operation": "delete_file", "path": "file.txt"},
                     mock_authorization
                 ))
@@ -231,7 +231,6 @@ class TestToolFileSystemCopyFile:
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('pathlib.Path.mkdir') as mock_mkdir, \
              patch('shutil.copy2') as mock_copy2:
 
             # Mock source and destination paths
@@ -277,9 +276,7 @@ class TestToolFileSystemCopyFile:
         with patch('pathlib.Path.resolve') as mock_resolve, \
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.stat') as mock_stat, \
-             patch('pathlib.Path.mkdir') as mock_mkdir, \
-             patch('shutil.copy2') as mock_copy2:
+             patch('pathlib.Path.stat') as mock_stat:
 
             source_path = Path("/test/mindspace/source.txt")
             dest_path = Path("/test/mindspace/dest.txt")
@@ -448,7 +445,6 @@ class TestToolFileSystemCopyFile:
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('pathlib.Path.mkdir') as mock_mkdir, \
              patch('shutil.copy2') as mock_copy2:
 
             source_path = Path("/test/mindspace/source.txt")
@@ -487,7 +483,6 @@ class TestToolFileSystemCopyFile:
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('pathlib.Path.mkdir') as mock_mkdir, \
              patch('shutil.copy2') as mock_copy2:
 
             source_path = Path("/test/mindspace/source.txt")
@@ -569,7 +564,6 @@ class TestToolFileSystemMove:
 
         with patch('pathlib.Path.resolve') as mock_resolve, \
              patch('pathlib.Path.exists') as mock_exists, \
-             patch('pathlib.Path.mkdir') as mock_mkdir, \
              patch('pathlib.Path.rename') as mock_rename:
 
             source_path = Path("/test/mindspace/source_dir")
