@@ -765,15 +765,11 @@ class ToolFileSystem(AITool):
             path.rmdir()
 
         except OSError as e:
-            if not path.exists():
-                # Directory was already removed
-                pass
-            else:
-                raise AIToolExecutionError(
-                    f"Failed to remove directory (may not be empty): {str(e)}",
-                    "filesystem",
-                    {"path": str(path)}
-                ) from e
+            raise AIToolExecutionError(
+                f"Failed to remove directory: {str(e)}",
+                "filesystem",
+                {"path": str(path)}
+            ) from e
 
         relative_path = self._mindspace_manager.get_relative_path(str(path))
         return f"Directory removed successfully: {relative_path}"
@@ -823,15 +819,11 @@ class ToolFileSystem(AITool):
             ) from e
 
         except OSError as e:
-            if not path.exists():
-                # File was already deleted
-                pass
-            else:
-                raise AIToolExecutionError(
-                    f"Failed to delete file: {str(e)}",
-                    "filesystem",
-                    {"path": str(path)}
-                ) from e
+            raise AIToolExecutionError(
+                f"Failed to delete file: {str(e)}",
+                "filesystem",
+                {"path": str(path)}
+            ) from e
 
         relative_path = self._mindspace_manager.get_relative_path(str(path))
         return f"File deleted successfully: {relative_path}"
