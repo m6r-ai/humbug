@@ -24,7 +24,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
@@ -38,9 +38,9 @@ class TestToolFileSystemGetInfo:
             mock_stat_result.st_mode = 0o100644  # Regular file with 644 permissions
             mock_stat.return_value = mock_stat_result
 
-            mock_datetime = MagicMock()
-            mock_datetime.isoformat.return_value = "2022-01-01T00:00:00"
-            mock_fromtimestamp.return_value = mock_datetime
+            mock_datetime_instance = MagicMock()
+            mock_datetime_instance.isoformat.return_value = "2022-01-01T00:00:00"
+            mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "get_info", "path": "file.txt"},
@@ -65,7 +65,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/README")
             mock_resolve.return_value = mock_path
@@ -79,9 +79,9 @@ class TestToolFileSystemGetInfo:
             mock_stat_result.st_mode = 0o100644
             mock_stat.return_value = mock_stat_result
 
-            mock_datetime = MagicMock()
-            mock_datetime.isoformat.return_value = "2022-01-01T00:00:00"
-            mock_fromtimestamp.return_value = mock_datetime
+            mock_datetime_instance = MagicMock()
+            mock_datetime_instance.isoformat.return_value = "2022-01-01T00:00:00"
+            mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "get_info", "path": "README"},
@@ -116,7 +116,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/dir")
             mock_resolve.return_value = mock_path
@@ -130,9 +130,9 @@ class TestToolFileSystemGetInfo:
             mock_stat_result.st_mode = 0o040755  # Directory with 755 permissions
             mock_stat.return_value = mock_stat_result
 
-            mock_datetime = MagicMock()
-            mock_datetime.isoformat.return_value = "2022-01-01T00:00:00"
-            mock_fromtimestamp.return_value = mock_datetime
+            mock_datetime_instance = MagicMock()
+            mock_datetime_instance.isoformat.return_value = "2022-01-01T00:00:00"
+            mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "get_info", "path": "dir"},
@@ -157,7 +157,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/empty_dir")
             mock_resolve.return_value = mock_path
@@ -171,9 +171,9 @@ class TestToolFileSystemGetInfo:
             mock_stat_result.st_mode = 0o040755
             mock_stat.return_value = mock_stat_result
 
-            mock_datetime = MagicMock()
-            mock_datetime.isoformat.return_value = "2022-01-01T00:00:00"
-            mock_fromtimestamp.return_value = mock_datetime
+            mock_datetime_instance = MagicMock()
+            mock_datetime_instance.isoformat.return_value = "2022-01-01T00:00:00"
+            mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "get_info", "path": "empty_dir"},
@@ -194,7 +194,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/protected_dir")
             mock_resolve.return_value = mock_path
@@ -208,9 +208,9 @@ class TestToolFileSystemGetInfo:
             mock_stat_result.st_mode = 0o040755
             mock_stat.return_value = mock_stat_result
 
-            mock_datetime = MagicMock()
-            mock_datetime.isoformat.return_value = "2022-01-01T00:00:00"
-            mock_fromtimestamp.return_value = mock_datetime
+            mock_datetime_instance = MagicMock()
+            mock_datetime_instance.isoformat.return_value = "2022-01-01T00:00:00"
+            mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "get_info", "path": "protected_dir"},
@@ -230,7 +230,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/special")
             mock_resolve.return_value = mock_path
@@ -243,9 +243,9 @@ class TestToolFileSystemGetInfo:
             mock_stat_result.st_mode = 0o020666  # Character device
             mock_stat.return_value = mock_stat_result
 
-            mock_datetime = MagicMock()
-            mock_datetime.isoformat.return_value = "2022-01-01T00:00:00"
-            mock_fromtimestamp.return_value = mock_datetime
+            mock_datetime_instance = MagicMock()
+            mock_datetime_instance.isoformat.return_value = "2022-01-01T00:00:00"
+            mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "get_info", "path": "special"},
@@ -335,7 +335,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/large.bin")
             mock_resolve.return_value = mock_path
@@ -349,9 +349,9 @@ class TestToolFileSystemGetInfo:
             mock_stat_result.st_mode = 0o100644
             mock_stat.return_value = mock_stat_result
 
-            mock_datetime = MagicMock()
-            mock_datetime.isoformat.return_value = "2022-01-01T00:00:00"
-            mock_fromtimestamp.return_value = mock_datetime
+            mock_datetime_instance = MagicMock()
+            mock_datetime_instance.isoformat.return_value = "2022-01-01T00:00:00"
+            mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "get_info", "path": "large.bin"},
@@ -380,7 +380,7 @@ class TestToolFileSystemGetInfo:
                  patch('pathlib.Path.is_file') as mock_is_file, \
                  patch('pathlib.Path.is_dir') as mock_is_dir, \
                  patch('pathlib.Path.stat') as mock_stat, \
-                 patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+                 patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
                 mock_path = Path("/test/mindspace/test_file")
                 mock_resolve.return_value = mock_path
@@ -394,9 +394,9 @@ class TestToolFileSystemGetInfo:
                 mock_stat_result.st_mode = mode
                 mock_stat.return_value = mock_stat_result
 
-                mock_datetime = MagicMock()
-                mock_datetime.isoformat.return_value = "2022-01-01T00:00:00"
-                mock_fromtimestamp.return_value = mock_datetime
+                mock_datetime_instance = MagicMock()
+                mock_datetime_instance.isoformat.return_value = "2022-01-01T00:00:00"
+                mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
                 result = asyncio.run(filesystem_tool.execute(
                     {"operation": "get_info", "path": "test_file"},
@@ -416,7 +416,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('datetime.datetime.fromtimestamp') as mock_fromtimestamp:
+             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
@@ -430,9 +430,9 @@ class TestToolFileSystemGetInfo:
             mock_stat_result.st_mode = 0o100644
             mock_stat.return_value = mock_stat_result
 
-            mock_datetime = MagicMock()
-            mock_datetime.isoformat.return_value = "2023-01-01T00:00:00"
-            mock_fromtimestamp.return_value = mock_datetime
+            mock_datetime_instance = MagicMock()
+            mock_datetime_instance.isoformat.return_value = "2023-01-01T00:00:00"
+            mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             result = asyncio.run(filesystem_tool.execute(
                 {"operation": "get_info", "path": "file.txt"},
@@ -440,5 +440,5 @@ class TestToolFileSystemGetInfo:
             ))
 
             # Verify that fromtimestamp was called with the correct timestamp
-            mock_fromtimestamp.assert_called_with(1672531200.0)
+            mock_datetime.fromtimestamp.assert_called_with(1672531200.0)
             assert "Modified: 2023-01-01T00:00:00" in result
