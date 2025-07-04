@@ -411,7 +411,7 @@ class TestToolFileSystemReadFile:
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('asyncio.to_thread') as mock_to_thread:
+             patch('builtins.open') as mock_open:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
@@ -422,12 +422,8 @@ class TestToolFileSystemReadFile:
             mock_stat_result.st_size = 100
             mock_stat.return_value = mock_stat_result
 
-            # Make to_thread raise the unicode error
-            mock_to_thread.side_effect = AIToolExecutionError(
-                "Failed to decode file with encoding 'utf-8': invalid",
-                "filesystem",
-                {"path": "/test/file.txt", "encoding": "utf-8"}
-            )
+            # Mock open to raise UnicodeDecodeError
+            mock_open.side_effect = UnicodeDecodeError('utf-8', b'', 0, 1, 'invalid start byte')
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
@@ -447,7 +443,7 @@ class TestToolFileSystemReadFile:
              patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('asyncio.to_thread') as mock_to_thread:
+             patch('builtins.open') as mock_open:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
@@ -458,12 +454,8 @@ class TestToolFileSystemReadFile:
             mock_stat_result.st_size = 100
             mock_stat.return_value = mock_stat_result
 
-            # Make to_thread raise the permission error
-            mock_to_thread.side_effect = AIToolExecutionError(
-                "Permission denied reading file: Access denied",
-                "filesystem",
-                {"path": "/test/file.txt"}
-            )
+            # Mock open to raise PermissionError
+            mock_open.side_effect = PermissionError("Access denied")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
@@ -696,18 +688,14 @@ class TestToolFileSystemWriteFile:
 
         with patch('pathlib.Path.resolve') as mock_resolve, \
              patch('pathlib.Path.exists') as mock_exists, \
-             patch('asyncio.to_thread') as mock_to_thread:
+             patch('tempfile.NamedTemporaryFile') as mock_temp_file:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
             mock_exists.return_value = False
 
-            # Make to_thread raise the permission error
-            mock_to_thread.side_effect = AIToolExecutionError(
-                "Permission denied writing file: Access denied",
-                "filesystem",
-                {"path": "/test/file.txt"}
-            )
+            # Mock tempfile to raise PermissionError
+            mock_temp_file.side_effect = PermissionError("Access denied")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
@@ -725,18 +713,14 @@ class TestToolFileSystemWriteFile:
 
         with patch('pathlib.Path.resolve') as mock_resolve, \
              patch('pathlib.Path.exists') as mock_exists, \
-             patch('asyncio.to_thread') as mock_to_thread:
+             patch('tempfile.NamedTemporaryFile') as mock_temp_file:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
             mock_exists.return_value = False
 
-            # Make to_thread raise the OS error
-            mock_to_thread.side_effect = AIToolExecutionError(
-                "Failed to write file: Disk full",
-                "filesystem",
-                {"path": "/test/file.txt"}
-            )
+            # Mock tempfile to raise OSError
+            mock_temp_file.side_effect = OSError("Disk full")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
@@ -998,17 +982,31 @@ class TestToolFileSystemParametrized:
         error = exc_info.value
         assert expected_error in str(error)
 
-    def test_invalid_path_inputs_falsy_values(self, filesystem_tool, mock_authorization):
-        """Test falsy path inputs that are handled by the empty string check."""
-        falsy_values = [None, [], {}, 0, False]
+    @pytest.mark.parametrize("falsy_value,expected_error", [
+        (None, "'path' must be a string"),
+        ([], "'path' must be a string"),
+        ({}, "'path' must be a string"),
+        (0, "'path' must be a string"),
+        (False, "'path' must be a string"),
+    ])
+    def test_invalid_path_inputs_falsy_values(self, filesystem_tool, mock_authorization, falsy_value, expected_error):
+        """Test falsy path inputs and their specific error messages."""
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(filesystem_tool.execute(
+                {"operation": "read_file", "path": falsy_value},
+                mock_authorization
+            ))
 
-        for falsy_value in falsy_values:
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(
-                    {"operation": "read_file", "path": falsy_value},
-                    mock_authorization
-                ))
+        error = exc_info.value
+        assert expected_error in str(error)
 
-            error = exc_info.value
-            # All falsy values are caught by the empty string check first
-            assert "Path parameter is required" in str(error)
+    def test_empty_string_path(self, filesystem_tool, mock_authorization):
+        """Test empty string path specifically."""
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(filesystem_tool.execute(
+                {"operation": "read_file", "path": ""},
+                mock_authorization
+            ))
+
+        error = exc_info.value
+        assert "Path parameter is required" in str(error)
