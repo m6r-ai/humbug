@@ -47,6 +47,7 @@ from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.tools.tool_calculator import ToolCalculator
 from humbug.tools.tool_clock import ToolClock
 from humbug.tools.tool_filesystem import ToolFileSystem
+from humbug.tools.tool_system import ToolSystem
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
@@ -63,11 +64,6 @@ class MainWindow(QMainWindow):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
         strings = self._language_manager.strings()
-
-        self._ai_tool_manager = AIToolManager()
-        self._ai_tool_manager.register_tool(ToolCalculator())
-        self._ai_tool_manager.register_tool(ToolClock())
-        self._ai_tool_manager.register_tool(ToolFileSystem())
 
         # Humbug menu actions
         self._about_action = QAction(strings.about_humbug, self)
@@ -422,6 +418,12 @@ class MainWindow(QMainWindow):
         # Register help command last so it can see all other commands
         help_command = HelpCommand(self._command_registry)
         self._command_registry.register_command(help_command)
+
+        self._ai_tool_manager = AIToolManager()
+        self._ai_tool_manager.register_tool(ToolCalculator())
+        self._ai_tool_manager.register_tool(ToolClock())
+        self._ai_tool_manager.register_tool(ToolFileSystem())
+        self._ai_tool_manager.register_tool(ToolSystem(self._column_manager))
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 
