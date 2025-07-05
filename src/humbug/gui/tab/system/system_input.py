@@ -7,14 +7,14 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent, QObject
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
-from humbug.gui.tab.system.system_command_completion_result import SystemCommandCompletionResult
+from humbug.gui.tab.system.system_command_completion_result import ShellCommandCompletionResult
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_message_source import ShellMessageSource
 
 
 class SystemInput(SystemMessage):
-    """Widget for system message input that matches history styling and behaves like a terminal."""
+    """Widget for shell message input that matches history styling and behaves like a terminal."""
 
     # Forward text cursor signals from the input area
     cursorPositionChanged = Signal()
@@ -24,7 +24,7 @@ class SystemInput(SystemMessage):
     tab_completion_requested = Signal(str, bool, bool, int)  # text, is_continuation, move_forward, cursor_position
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the system input widget."""
+        """Initialize the shell input widget."""
         super().__init__(parent, is_input=True)
 
         # Command history tracking
@@ -46,7 +46,7 @@ class SystemInput(SystemMessage):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
-        self._message_source = SystemMessageSource.USER  # Set default source for styling
+        self._message_source = ShellMessageSource.USER  # Set default source for styling
         self._update_header_text()
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
@@ -251,7 +251,7 @@ class SystemInput(SystemMessage):
         self._history_position = -1
         self._current_command = ""
 
-    def apply_completion(self, result: SystemCommandCompletionResult) -> None:
+    def apply_completion(self, result: ShellCommandCompletionResult) -> None:
         """
         Apply a tab completion to the input area.
 

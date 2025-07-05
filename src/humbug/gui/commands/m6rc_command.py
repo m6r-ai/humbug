@@ -6,13 +6,13 @@ from typing import Callable, Dict, List
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_model import ReasoningCapability
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.system.system_command import SystemCommand
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_command import ShellCommand
+from humbug.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
 
-class M6rcCommand(SystemCommand):
+class M6rcCommand(ShellCommand):
     """Command to create a new conversation with a Metaphor file."""
 
     def __init__(
@@ -78,7 +78,7 @@ class M6rcCommand(SystemCommand):
         args = self._get_positional_arguments(tokens)
         if not args:
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 "No file path provided"
             )
             return False
@@ -100,14 +100,14 @@ class M6rcCommand(SystemCommand):
                 temperature_val = float(temp_values[0])
                 if temperature_val < 0.0 or temperature_val > 1.0:
                     self._mindspace_manager.add_system_interaction(
-                        SystemMessageSource.ERROR,
+                        ShellMessageSource.ERROR,
                         "Temperature must be between 0.0 and 1.0"
                     )
                     return False
 
             except ValueError:
                 self._mindspace_manager.add_system_interaction(
-                    SystemMessageSource.ERROR,
+                    ShellMessageSource.ERROR,
                     "Temperature must be a valid number"
                 )
                 return False
@@ -126,7 +126,7 @@ class M6rcCommand(SystemCommand):
             file_path = self._mindspace_manager.get_absolute_path(args[0])
             if not os.path.exists(file_path):
                 self._mindspace_manager.add_system_interaction(
-                    SystemMessageSource.ERROR,
+                    ShellMessageSource.ERROR,
                     f"File not found: {file_path}"
                 )
                 return False
@@ -135,7 +135,7 @@ class M6rcCommand(SystemCommand):
                 return False
 
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.SUCCESS,
+                ShellMessageSource.SUCCESS,
                 f"Started Metaphor conversation from {file_path}"
             )
             return True
@@ -143,7 +143,7 @@ class M6rcCommand(SystemCommand):
         except Exception as e:
             self._logger.error("Failed to create Metaphor conversation: %s", str(e), exc_info=True)
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Failed to create Metaphor conversation: {str(e)}"
             )
             return False

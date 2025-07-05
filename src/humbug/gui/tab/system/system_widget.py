@@ -11,13 +11,13 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.system.system_command_processor import SystemCommandProcessor
+from humbug.gui.tab.system.system_command_processor import ShellCommandProcessor
 from humbug.gui.tab.system.system_input import SystemInput
 from humbug.gui.tab.system.system_message import SystemMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.system.system_message import SystemMessage as SystemMessageModel
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_message import ShellMessage as ShellMessageModel
+from humbug.shell.shell_message_source import ShellMessageSource
 
 
 class SystemWidgetEventFilter(QObject):
@@ -126,7 +126,7 @@ class SystemWidget(QWidget):
         self._input.tab_completion_requested.connect(self._handle_tab_completion)
 
         # Create command processor
-        self._command_processor = SystemCommandProcessor()
+        self._command_processor = ShellCommandProcessor()
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
@@ -225,7 +225,7 @@ class SystemWidget(QWidget):
 
         # Process messages from newest to oldest
         for message in reversed(system_messages):
-            if message.source == SystemMessageSource.USER:
+            if message.source == ShellMessageSource.USER:
                 # Add user message content if not already in list
                 content = message.content.strip()
                 if content and content not in user_commands:
@@ -325,7 +325,7 @@ class SystemWidget(QWidget):
 
         self._messages.clear()
 
-    def _add_system_message(self, message: SystemMessageModel) -> None:
+    def _add_system_message(self, message: ShellMessageModel) -> None:
         """Add a message from the system message history."""
         msg_widget = SystemMessage(self)
         msg_widget.selectionChanged.connect(
@@ -358,7 +358,7 @@ class SystemWidget(QWidget):
         """
         # Add user message to system interactions
         self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.USER,
+            ShellMessageSource.USER,
             command_text
         )
 

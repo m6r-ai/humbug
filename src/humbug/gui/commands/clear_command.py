@@ -3,11 +3,11 @@
 import logging
 from typing import List, Callable
 
-from humbug.mindspace.system.system_command import SystemCommand
+from humbug.shell.shell_command import ShellCommand
 from humbug.syntax.command.command_lexer import Token
 
 
-class ClearCommand(SystemCommand):
+class ClearCommand(ShellCommand):
     """Command to clear the system shell history."""
 
     def __init__(self, process_clear_command_callback: Callable[[], bool]) -> None:

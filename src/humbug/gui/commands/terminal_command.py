@@ -1,13 +1,13 @@
-"""Command for creating a new terminal tab from the system interface."""
+"""Command for creating a new terminal tab from the system shell."""
 
 from typing import Callable, List
 
-from humbug.mindspace.system.system_command import SystemCommand
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_command import ShellCommand
+from humbug.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
-class TerminalCommand(SystemCommand):
+class TerminalCommand(ShellCommand):
     """Command to create a new terminal tab."""
 
     def __init__(self, create_terminal_callback: Callable[[], bool]) -> None:
@@ -41,7 +41,7 @@ class TerminalCommand(SystemCommand):
         """
         self._create_terminal()
         self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.SUCCESS,
+            ShellMessageSource.SUCCESS,
             "Started new terminal"
         )
         return True

@@ -1,16 +1,16 @@
-"""Command for opening or creating files in an editor tab from the system terminal."""
+"""Command for opening or creating files in an editor tab from the system shell."""
 
 import logging
 import os
 from typing import List, Callable
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.system.system_command import SystemCommand
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_command import ShellCommand
+from humbug.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
-class EditCommand(SystemCommand):
+class EditCommand(ShellCommand):
     """Command to open or create a file in an editor tab."""
 
     def __init__(self, edit_file_callback: Callable[[str], bool]) -> None:
@@ -51,7 +51,7 @@ class EditCommand(SystemCommand):
         args = self._get_positional_arguments(tokens)
         if not args:
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 "No filename specified. Usage: edit <filename>"
             )
             return False
@@ -67,20 +67,20 @@ class EditCommand(SystemCommand):
 
                     except OSError as e:
                         self._mindspace_manager.add_system_interaction(
-                            SystemMessageSource.ERROR,
+                            ShellMessageSource.ERROR,
                             f"Failed to create directory: {str(e)}"
                         )
                         return False
 
             if not self._edit_file(full_path):
                 self._mindspace_manager.add_system_interaction(
-                    SystemMessageSource.ERROR,
+                    ShellMessageSource.ERROR,
                     f"Failed to edit file: {args[0]}"
                 )
                 return False
 
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.SUCCESS,
+                ShellMessageSource.SUCCESS,
                 f"Editing file: {args[0]}"
             )
             return True
@@ -88,7 +88,7 @@ class EditCommand(SystemCommand):
         except Exception as e:
             self._logger.exception("Error processing file: %s", str(e))
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Error processing file: {str(e)}"
             )
             return False

@@ -7,7 +7,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.syntax.command.command_parser import CommandParser
 
 
-class SystemCommandHighlighter(QSyntaxHighlighter):
+class ShellCommandHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for system command lines."""
 
     def __init__(self, parent: QTextDocument) -> None:
@@ -16,7 +16,7 @@ class SystemCommandHighlighter(QSyntaxHighlighter):
 
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
-        self._logger = logging.getLogger("SystemCommandHighlighter")
+        self._logger = logging.getLogger("ShellCommandHighlighter")
 
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""

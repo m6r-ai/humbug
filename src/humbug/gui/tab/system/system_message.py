@@ -17,7 +17,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.system.system_text_edit import SystemTextEdit
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_message_source import ShellMessageSource
 
 
 class SystemMessage(QFrame):
@@ -48,7 +48,7 @@ class SystemMessage(QFrame):
 
         # Will store the actual message source
         self._message_id: str | None = None
-        self._message_source: SystemMessageSource | None = None
+        self._message_source: ShellMessageSource | None = None
         self._message_timestamp: datetime | None = None
         self._message_content = ""
 
@@ -123,7 +123,7 @@ class SystemMessage(QFrame):
         strings = self._language_manager.strings()
 
         # Map from message source to display text
-        if self._message_source == SystemMessageSource.USER:
+        if self._message_source == ShellMessageSource.USER:
             role_text = strings.role_you
 
         else:
@@ -157,7 +157,7 @@ class SystemMessage(QFrame):
 
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, source: SystemMessageSource, timestamp: datetime, message_id: str) -> None:
+    def set_content(self, text: str, source: ShellMessageSource, timestamp: datetime, message_id: str) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
 
@@ -173,7 +173,7 @@ class SystemMessage(QFrame):
 
         # Set the content in the text area
         self._text_area.set_text(text)
-        if source == SystemMessageSource.USER:
+        if source == ShellMessageSource.USER:
             self._text_area.enable_highlighter()
 
         # Update the header
@@ -184,11 +184,11 @@ class SystemMessage(QFrame):
     def _set_role_style(self) -> None:
         """Set the role label color based on message source."""
         # Map message source to color role
-        if self._message_source == SystemMessageSource.USER:
+        if self._message_source == ShellMessageSource.USER:
             colour = ColorRole.MESSAGE_USER
             background_colour = ColorRole.MESSAGE_USER_BACKGROUND
 
-        elif self._message_source == SystemMessageSource.ERROR:
+        elif self._message_source == ShellMessageSource.ERROR:
             colour = ColorRole.MESSAGE_SYSTEM_ERROR
             background_colour = ColorRole.MESSAGE_BACKGROUND
 
@@ -249,16 +249,16 @@ class SystemMessage(QFrame):
 
         # Map message types to role colors
         role_colours = {
-            SystemMessageSource.USER: ColorRole.MESSAGE_USER,
-            SystemMessageSource.ERROR: ColorRole.MESSAGE_SYSTEM_ERROR,
-            SystemMessageSource.SUCCESS: ColorRole.MESSAGE_SYSTEM_SUCCESS
+            ShellMessageSource.USER: ColorRole.MESSAGE_USER,
+            ShellMessageSource.ERROR: ColorRole.MESSAGE_SYSTEM_ERROR,
+            ShellMessageSource.SUCCESS: ColorRole.MESSAGE_SYSTEM_SUCCESS
         }
 
-        current_style = self._message_source or SystemMessageSource.USER
+        current_style = self._message_source or ShellMessageSource.USER
         role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
         label_color = self._style_manager.get_color_str(role)
         background_color = self._style_manager.get_color_str(
-            ColorRole.MESSAGE_USER_BACKGROUND if current_style == SystemMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+            ColorRole.MESSAGE_USER_BACKGROUND if current_style == ShellMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
         )
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
 
@@ -313,7 +313,7 @@ class SystemMessage(QFrame):
 
         # Determine border color based on state
         border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
-                 ColorRole.MESSAGE_USER_BACKGROUND if current_style == SystemMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+                 ColorRole.MESSAGE_USER_BACKGROUND if current_style == ShellMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
 
         self.setStyleSheet(f"""
             QWidget {{

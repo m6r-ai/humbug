@@ -12,7 +12,7 @@ from PySide6.QtGui import (
 )
 
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.system.system_command_highlighter import SystemCommandHighlighter
+from humbug.gui.tab.system.system_command_highlighter import ShellCommandHighlighter
 
 
 class SystemTextEdit(QTextEdit):
@@ -56,7 +56,7 @@ class SystemTextEdit(QTextEdit):
         # Track current content length for incremental updates
         self._current_length = 0
 
-        self._highlighter: SystemCommandHighlighter | None = None
+        self._highlighter: ShellCommandHighlighter | None = None
 
         self._logger = logging.getLogger("SystemTextEdit")
 
@@ -208,7 +208,7 @@ class SystemTextEdit(QTextEdit):
 
     def enable_highlighter(self) -> None:
         """Enable syntax highlighting for system commands."""
-        self._highlighter = SystemCommandHighlighter(self.document())
+        self._highlighter = ShellCommandHighlighter(self.document())
         self.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere)
 
 

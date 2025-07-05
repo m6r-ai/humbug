@@ -1,25 +1,25 @@
-"""Processes system commands and handles tab completion."""
+"""Processes shell commands and handles tab completion."""
 
 import logging
 import os
 from typing import List
 
-from humbug.gui.tab.system.system_command_completion_result import SystemCommandCompletionResult
+from humbug.gui.tab.system.system_command_completion_result import ShellCommandCompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_command_registry import ShellCommandRegistry
+from humbug.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.command.command_lexer import TokenType, Token
 from humbug.syntax.command.command_parser import CommandParser
 
 
-class SystemCommandProcessor:
-    """Processes system commands using the command registry."""
+class ShellCommandProcessor:
+    """Processes shell commands using the command registry."""
 
     def __init__(self) -> None:
         """Initialize command processor."""
         self._logger = logging.getLogger("CommandProcessor")
         self._mindspace_manager = MindspaceManager()
-        self._command_registry = SystemCommandRegistry()
+        self._command_registry = ShellCommandRegistry()
 
         # Tab completion state tracking
         self._tab_completions: List[str] = []
@@ -91,7 +91,7 @@ class SystemCommandProcessor:
         cmd = self._get_command_name(self._current_tokens)
         if not cmd:
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 "Invalid command format. Type 'help' for a list of available commands."
             )
             return
@@ -99,7 +99,7 @@ class SystemCommandProcessor:
         command = self._command_registry.get_command(cmd)
         if not command:
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Unknown command: {cmd}. Type 'help' for a list of available commands."
             )
             return
@@ -110,7 +110,7 @@ class SystemCommandProcessor:
         except Exception as e:
             self._logger.error("Error executing command '%s': %s", command_text, str(e), exc_info=True)
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
 
@@ -163,7 +163,7 @@ class SystemCommandProcessor:
         is_continuation: bool,
         move_forward: bool,
         cursor_position: int
-    ) -> SystemCommandCompletionResult:
+    ) -> ShellCommandCompletionResult:
         """
         Handle tab completion for the current input text.
 
@@ -174,11 +174,11 @@ class SystemCommandProcessor:
             cursor_position: Position of cursor in text
 
         Returns:
-            SystemCommandCompletionResult with information about what to replace
+            ShellCommandCompletionResult with information about what to replace
         """
         # If empty text, nothing to complete
         if not current_text:
-            return SystemCommandCompletionResult(success=False)
+            return ShellCommandCompletionResult(success=False)
 
         # Handle continuation of existing tab completion
         if is_continuation and self._tab_completion_active and self._tab_completions:
@@ -191,7 +191,7 @@ class SystemCommandProcessor:
             end_pos = self._completion_start_pos + len(self._current_completion_text)
 
             # Create result with dynamic end position
-            result = SystemCommandCompletionResult(
+            result = ShellCommandCompletionResult(
                 success=True,
                 replacement=new_completion,
                 start_pos=self._completion_start_pos,
@@ -245,11 +245,11 @@ class SystemCommandProcessor:
         else:
             # Get the command
             if not cmd:
-                return SystemCommandCompletionResult(success=False)
+                return ShellCommandCompletionResult(success=False)
 
             command = self._command_registry.get_command(cmd)
             if not command:
-                return SystemCommandCompletionResult(success=False)
+                return ShellCommandCompletionResult(success=False)
 
             # Get completions from the command
             arguments = command.get_token_completions(
@@ -264,7 +264,7 @@ class SystemCommandProcessor:
             completions = [self._escape_text(match) for match in matches]
 
         if not completions:
-            return SystemCommandCompletionResult(success=False)
+            return ShellCommandCompletionResult(success=False)
 
         start_pos = token.start
         end_pos = token.start + len(token.value)
@@ -277,7 +277,7 @@ class SystemCommandProcessor:
             add_space = not completion.endswith(os.path.sep)
             self._current_completion_index = 0
 
-            return SystemCommandCompletionResult(
+            return ShellCommandCompletionResult(
                 success=True,
                 replacement=completion,
                 start_pos=start_pos,
@@ -292,7 +292,7 @@ class SystemCommandProcessor:
         completion = completions[0]
         self._current_completion_text = completion
 
-        return SystemCommandCompletionResult(
+        return ShellCommandCompletionResult(
             success=True,
             replacement=completion,
             start_pos=start_pos,

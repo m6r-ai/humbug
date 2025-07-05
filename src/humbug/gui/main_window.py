@@ -42,8 +42,8 @@ from humbug.metaphor import (
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
-from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_command_registry import ShellCommandRegistry
+from humbug.shell.shell_message_source import ShellMessageSource
 from humbug.tools.tool_calculator import ToolCalculator
 from humbug.tools.tool_clock import ToolClock
 from humbug.tools.tool_filesystem import ToolFileSystem
@@ -394,7 +394,7 @@ class MainWindow(QMainWindow):
         self._mindspace_manager = MindspaceManager()
 
         # Initialize command registry and register commands
-        self._command_registry = SystemCommandRegistry()
+        self._command_registry = ShellCommandRegistry()
 
         # Create and register commands
         clear_command = ClearCommand(self._process_clear_command)
@@ -1066,7 +1066,7 @@ class MainWindow(QMainWindow):
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 error
             )
             return
@@ -1281,7 +1281,7 @@ class MainWindow(QMainWindow):
 
         except MindspaceError as e:
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
+                ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
             )
             return False
 
@@ -1325,7 +1325,7 @@ class MainWindow(QMainWindow):
         except FileNotFoundError:
             error = f"File not found: {file_path}"
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR, error
+                ShellMessageSource.ERROR, error
             )
             return False
 
@@ -1333,7 +1333,7 @@ class MainWindow(QMainWindow):
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR, error
+                ShellMessageSource.ERROR, error
             )
             return False
 
@@ -1345,7 +1345,7 @@ class MainWindow(QMainWindow):
 
         except MindspaceError as e:
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
+                ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
             )
             return False
 

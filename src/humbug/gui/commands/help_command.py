@@ -1,18 +1,18 @@
-"""Command for displaying help information in the system terminal."""
+"""Command for displaying help information in the system shell."""
 
 from typing import List
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.system.system_command import SystemCommand
-from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_command import ShellCommand
+from humbug.shell.shell_command_registry import ShellCommandRegistry
+from humbug.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
-class HelpCommand(SystemCommand):
+class HelpCommand(ShellCommand):
     """Command to display help information."""
 
-    def __init__(self, registry: SystemCommandRegistry) -> None:
+    def __init__(self, registry: ShellCommandRegistry) -> None:
         """
         Initialize the command.
 
@@ -55,7 +55,7 @@ class HelpCommand(SystemCommand):
                 return True
 
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Unknown command: {command_name}"
             )
             return False
@@ -74,7 +74,7 @@ class HelpCommand(SystemCommand):
         help_text += "\nType 'help <command>' or '<command> --help' for detailed help on a specific command."
 
         self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.SUCCESS,
+            ShellMessageSource.SUCCESS,
             help_text
         )
 

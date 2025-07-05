@@ -3,7 +3,7 @@
 from typing import NamedTuple
 
 
-class SystemCommandCompletionResult(NamedTuple):
+class ShellCommandCompletionResult(NamedTuple):
     """Represents the result of a tab completion request."""
     success: bool
     replacement: str | None = None     # The text to insert as replacement

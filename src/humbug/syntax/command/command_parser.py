@@ -4,7 +4,7 @@ System shell command parser
 This module implements a parser for command lines, extending the functionality of the base parser.
 """
 
-from humbug.mindspace.system.system_command_registry import SystemCommandRegistry
+from humbug.shell.shell_command_registry import ShellCommandRegistry
 from humbug.syntax.command.command_lexer import CommandLexer
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
@@ -18,7 +18,7 @@ class CommandParser(Parser):
     """
     def __init__(self) -> None:
         super().__init__()
-        self._command_registry = SystemCommandRegistry()
+        self._command_registry = ShellCommandRegistry()
 
     def parse(self, prev_parser_state: ParserState | None, input_str: str) -> None:
         """

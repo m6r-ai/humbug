@@ -1,19 +1,19 @@
-"""Base class for system commands."""
+"""Base class for shell commands."""
 
 import logging
 import os
 from typing import Dict, List
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.system.system_message_source import SystemMessageSource
+from humbug.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
-class SystemCommand:
-    """Base class for all system commands."""
+class ShellCommand:
+    """Base class for all shell commands."""
 
     def __init__(self) -> None:
-        """Initialize base system command."""
+        """Initialize base shell command."""
         self._logger = logging.getLogger(self.__class__.__name__)
         self._mindspace_manager = MindspaceManager()
 
@@ -104,7 +104,7 @@ class SystemCommand:
         except Exception as e:
             self._logger.error("Error executing command: %s", str(e), exc_info=True)
             self._mindspace_manager.add_system_interaction(
-                SystemMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
             return False
@@ -218,7 +218,7 @@ class SystemCommand:
 
         # Display help
         self._mindspace_manager.add_system_interaction(
-            SystemMessageSource.SUCCESS,
+            ShellMessageSource.SUCCESS,
             help_text
         )
 

@@ -3,20 +3,20 @@ import logging
 import os
 from typing import List
 
-from humbug.mindspace.system.system_message import SystemMessage
+from humbug.shell.shell_message import ShellMessage
 
 
-class SystemInteractions:
-    """Manages the system interaction history."""
+class ShellInteractions:
+    """Manages the shell interaction history."""
 
     MAX_MESSAGES = 100
 
     def __init__(self) -> None:
         """Initialize empty interaction history."""
-        self._messages: List[SystemMessage] = []
+        self._messages: List[ShellMessage] = []
         self._logger = logging.getLogger("SystemInteraction")
 
-    def add_message(self, message: SystemMessage) -> None:
+    def add_message(self, message: ShellMessage) -> None:
         """Add a message to the history, maintaining the max message limit."""
         self._messages.append(message)
 
@@ -24,7 +24,7 @@ class SystemInteractions:
         if len(self._messages) > self.MAX_MESSAGES:
             self._messages = self._messages[-self.MAX_MESSAGES:]
 
-    def get_messages(self) -> List[SystemMessage]:
+    def get_messages(self) -> List[ShellMessage]:
         """Get a copy of all messages in the interaction history."""
         return self._messages.copy()
 
@@ -46,14 +46,14 @@ class SystemInteractions:
                 data = json.load(f)
 
             messages_data = data.get("messages", [])
-            self._messages = [SystemMessage.from_dict(msg) for msg in messages_data]
+            self._messages = [ShellMessage.from_dict(msg) for msg in messages_data]
 
             # Ensure we don't exceed the maximum
             if len(self._messages) > self.MAX_MESSAGES:
                 self._messages = self._messages[-self.MAX_MESSAGES:]
 
         except (json.JSONDecodeError, KeyError):
-            self._logger.exception("Failed to load system interaction history")
+            self._logger.exception("Failed to load shell interaction history")
 
             # If there's an error loading, start with an empty history
             self._messages = []

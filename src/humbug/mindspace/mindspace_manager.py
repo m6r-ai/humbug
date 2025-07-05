@@ -13,12 +13,12 @@ from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal
 
-from humbug.mindspace.system.system_interactions import SystemInteractions
-from humbug.mindspace.system.system_message import SystemMessage
-from humbug.mindspace.system.system_message_source import SystemMessageSource
 from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
 from humbug.mindspace.mindspace_settings import MindspaceSettings
+from humbug.shell.shell_interactions import ShellInteractions
+from humbug.shell.shell_message import ShellMessage
+from humbug.shell.shell_message_source import ShellMessageSource
 
 
 class MindspaceManager(QObject):
@@ -65,7 +65,7 @@ class MindspaceManager(QObject):
             self._settings: MindspaceSettings | None = None
             self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
             self._directory_tracker = MindspaceDirectoryTracker()
-            self._system_interactions = SystemInteractions()
+            self._system_interactions = ShellInteractions()
             self._initialized = True
 
     def mindspace_path(self) -> str:
@@ -464,7 +464,7 @@ class MindspaceManager(QObject):
         """Get the last used conversations directory."""
         return self._directory_tracker.conversations_directory()
 
-    def add_system_interaction(self, source: SystemMessageSource, content: str) -> SystemMessage:
+    def add_system_interaction(self, source: ShellMessageSource, content: str) -> ShellMessage:
         """
         Add a new system interaction message.
 
@@ -473,7 +473,7 @@ class MindspaceManager(QObject):
             content: Content of the message
 
         Returns:
-            The created SystemMessage
+            The created ShellMessage
 
         Raises:
             MindspaceNotFoundError: If no mindspace is open
@@ -481,18 +481,18 @@ class MindspaceManager(QObject):
         if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
-        message = SystemMessage.create(source, content)
+        message = ShellMessage.create(source, content)
         self._system_interactions.add_message(message)
         self._save_system_interactions()
         self.system_interactions_updated.emit()
         return message
 
-    def get_system_interactions(self) -> List[SystemMessage]:
+    def get_system_interactions(self) -> List[ShellMessage]:
         """
         Get all system interaction messages.
 
         Returns:
-            List of SystemMessage objects
+            List of ShellMessage objects
 
         Raises:
             MindspaceNotFoundError: If no mindspace is open

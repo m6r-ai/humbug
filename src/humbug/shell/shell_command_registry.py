@@ -2,18 +2,18 @@ from typing import Dict, List
 
 from PySide6.QtCore import QObject
 
-from humbug.mindspace.system.system_command import SystemCommand
+from humbug.shell.shell_command import ShellCommand
 
 
-class SystemCommandRegistry(QObject):
-    """Registry for system commands."""
+class ShellCommandRegistry(QObject):
+    """Registry for shell commands."""
 
     _instance = None
 
-    def __new__(cls) -> 'SystemCommandRegistry':
+    def __new__(cls) -> 'ShellCommandRegistry':
         """Singleton pattern implementation."""
         if cls._instance is None:
-            cls._instance = super(SystemCommandRegistry, cls).__new__(cls)
+            cls._instance = super(ShellCommandRegistry, cls).__new__(cls)
 
         return cls._instance
 
@@ -21,12 +21,12 @@ class SystemCommandRegistry(QObject):
         """Initialize QObject base class if not already done."""
         if not hasattr(self, '_initialized'):
             super().__init__()
-            self._commands: Dict[str, SystemCommand] = {}
+            self._commands: Dict[str, ShellCommand] = {}
             self._aliases: Dict[str, str] = {}
             self._initialized = True
 
 
-    def register_command(self, command: SystemCommand) -> None:
+    def register_command(self, command: ShellCommand) -> None:
         """
         Register a command with the registry.
 
@@ -40,7 +40,7 @@ class SystemCommandRegistry(QObject):
         for alias in command.aliases():
             self._aliases[alias] = command_name
 
-    def get_command(self, name: str) -> SystemCommand | None:
+    def get_command(self, name: str) -> ShellCommand | None:
         """
         Get a command by name or alias.
 
@@ -56,7 +56,7 @@ class SystemCommandRegistry(QObject):
 
         return self._commands.get(name)
 
-    def get_all_commands(self) -> Dict[str, SystemCommand]:
+    def get_all_commands(self) -> Dict[str, ShellCommand]:
         """
         Get all registered commands.
 
