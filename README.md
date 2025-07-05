@@ -75,7 +75,8 @@ can be used to refine the Metaphor context.
 
 ## What's new in v0.18
 
-- TBD
+- Added a "system" tool that gives the AI the ability to start terminal, wiki, editor, Humbug shell, and conversation tabs.
+- Added support for Qwen3:8b model.
 
 ## Humbug in action
 

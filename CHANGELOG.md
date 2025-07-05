@@ -4,7 +4,8 @@
 
 New features:
 
-TBD
+- Added a "system" tool that gives the AI the ability to start terminal, wiki, editor, Humbug shell, and conversation tabs.
+- Added support for Qwen3:8b model.
 
 Bug fixes:
 

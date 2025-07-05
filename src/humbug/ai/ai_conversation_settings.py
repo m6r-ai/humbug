@@ -204,7 +204,7 @@ class AIConversationSettings:
         "gemma3:4b-it-qat": AIModel(
             name="gemma3:4b-it-qat",
             provider="ollama",
-            context_window=2048,
+            context_window=131072,
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
@@ -213,7 +213,7 @@ class AIConversationSettings:
         "llama3.2": AIModel(
             name="llama3.2",
             provider="ollama",
-            context_window=2048,
+            context_window=131072,
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
@@ -222,7 +222,7 @@ class AIConversationSettings:
         "phi4": AIModel(
             name="phi4",
             provider="ollama",
-            context_window=2048,
+            context_window=16384,
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
@@ -231,7 +231,7 @@ class AIConversationSettings:
         "qwen3:4b": AIModel(
             name="qwen3:4b",
             provider="ollama",
-            context_window=2048,
+            context_window=40960,
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
@@ -240,7 +240,25 @@ class AIConversationSettings:
         "qwen3:4b (thinking)": AIModel(
             name="qwen3:4b",
             provider="ollama",
-            context_window=2048,
+            context_window=40960,
+            max_output_tokens=2048,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "qwen3:8b": AIModel(
+            name="qwen3:8b",
+            provider="ollama",
+            context_window=40960,
+            max_output_tokens=2048,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "qwen3:8b (thinking)": AIModel(
+            name="qwen3:8b",
+            provider="ollama",
+            context_window=40960,
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
