@@ -14,6 +14,10 @@ Bug fixes:
 - When copying files to the filesystem, use a "destructive" button colour for overwrites, and "recommended" for new files.
 - The filesystem tool did not fully validate all arguments.  While this wouldn't have failed, it wouldn't have given
   useful exception responses.
+- The filesystem tool sometime reported successes for no-op operations that are really failures.  The tool now reports the
+  failures so the LLM is aware it didn't cause the operation to succeed.
+- The filesystem tool did not fully validate all arguments passed to it.  It now carefully checks all args are present and
+  in a valid form.
 
 ## v0.17 (2025-07-02)
 
