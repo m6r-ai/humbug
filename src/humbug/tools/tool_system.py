@@ -45,10 +45,11 @@ class ToolSystem(AITool):
             name="system",
             description=(
                 "Control the application interface and workspace. Available operations: "
-                "edit_file (open/create files for editing), new_terminal (create terminal tabs), "
-                "new_conversation (start AI conversations with optional model/temperature), "
-                "show_system_shell (open system command interface), "
-                "open_wiki (browse files/directories in wiki view). "
+                "edit_file (open/create files for the user to edit them), "
+                "new_terminal (create a terminal tab for the user), "
+                "new_conversation (start an AI conversation for the user, with optional model/temperature), "
+                "show_system_shell (open system command interface for the user), "
+                "open_wiki (open a wiki view for the user to let them browse files/directories). "
                 "All operations work within the current mindspace. "
                 "Returns detailed information about created tabs, opened files, and operation results."
             ),
