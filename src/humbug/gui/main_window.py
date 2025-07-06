@@ -921,7 +921,7 @@ class MainWindow(QMainWindow):
 
     def _show_system_shell(self) -> None:
         """Show the system tab."""
-        self._column_manager.show_system()
+        self._column_manager.show_system_shell()
 
     def _show_all_columns(self) -> None:
         """Show all columns equally."""
@@ -1062,7 +1062,7 @@ class MainWindow(QMainWindow):
             prompt = format_preamble() + formatter.format(syntax_tree)
 
         except MetaphorASTBuilderError as e:
-            self._column_manager.show_system()
+            self._column_manager.show_system_shell()
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
             self._mindspace_manager.add_system_interaction(

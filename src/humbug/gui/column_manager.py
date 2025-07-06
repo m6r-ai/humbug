@@ -660,11 +660,6 @@ class ColumnManager(QWidget):
         self._active_column = column
         self._update_tabs()
 
-    def _is_system_tab_active(self) -> bool:
-        """Check if the currently active tab is a system tab."""
-        tab = self._get_current_tab()
-        return isinstance(tab, ShellTab)
-
     def _get_target_column_for_new_tab(self) -> ColumnWidget:
         """
         Determine which column should receive a new tab.
@@ -1073,23 +1068,23 @@ class ColumnManager(QWidget):
 
         return None
 
-    def show_system(self) -> ShellTab:
+    def show_system_shell(self) -> ShellTab:
         """
-            Show the system tab.
+            Show the system shell tab.
 
         Returns:
-            The system tab
+            The system shell tab
         """
         for tab in self._tabs.values():
             if isinstance(tab, ShellTab):
                 self._set_current_tab(tab.tab_id())
                 return tab
 
-        system_tab = ShellTab("", self)
+        shell_tab = ShellTab("", self)
 
         # Use language strings for the tab title
-        self._add_tab(system_tab, "Humbug Shell")
-        return system_tab
+        self._add_tab(shell_tab, "Humbug Shell")
+        return shell_tab
 
     def clear_system_interactions(self) -> None:
         """Clear the system tab interactions."""

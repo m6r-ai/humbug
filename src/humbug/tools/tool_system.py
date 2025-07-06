@@ -465,7 +465,7 @@ class ToolSystem(AITool):
 
         try:
             self._column_manager.protect_current_tab(True)
-            self._column_manager.show_system()
+            self._column_manager.show_system_shell()
             self._column_manager.protect_current_tab(False)
             return "Opened system shell tab"
 
