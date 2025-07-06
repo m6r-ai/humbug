@@ -5,6 +5,6 @@ class TabType(Enum):
     """Enumeration of available tab types."""
     CONVERSATION = auto()
     EDITOR = auto()
-    SYSTEM = auto()
+    SHELL = auto()
     TERMINAL = auto()
     WIKI = auto()

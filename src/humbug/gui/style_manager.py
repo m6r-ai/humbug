@@ -775,7 +775,7 @@ class StyleManager(QObject):
         ''')
 
         # System tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
-        self._write_icon(f'{prefix}system-{suffix}.svg', f'''
+        self._write_icon(f'{prefix}shell-{suffix}.svg', f'''
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 7C3 5.11438 3 4.17157 3.58579 3.58579C4.17157 3 5.11438 3 7 3H12H17C18.8856 3 19.8284
                     3 20.4142 3.58579C21 4.17157 21 5.11438 21 7V10V13C21 14.8856 21 15.8284 20.4142 16.4142C19.8284

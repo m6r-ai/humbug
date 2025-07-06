@@ -12,10 +12,10 @@ from PySide6.QtGui import (
 )
 
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.system.system_command_highlighter import ShellCommandHighlighter
+from humbug.gui.tab.shell.shell_command_highlighter import ShellCommandHighlighter
 
 
-class SystemTextEdit(QTextEdit):
+class ShellTextEdit(QTextEdit):
     """QTextEdit that automatically adjusts its height to content."""
 
     mousePressed = Signal(QMouseEvent)
@@ -58,7 +58,7 @@ class SystemTextEdit(QTextEdit):
 
         self._highlighter: ShellCommandHighlighter | None = None
 
-        self._logger = logging.getLogger("SystemTextEdit")
+        self._logger = logging.getLogger("ShellTextEdit")
 
         # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
         palette = self.palette()
@@ -202,7 +202,7 @@ class SystemTextEdit(QTextEdit):
         self._pending_update = False
         self.updateGeometry()
 
-        # Ensure parent SystemMessage updates as well
+        # Ensure parent ShellMessage updates as well
         if self.parent():
             cast(QWidget, self.parent()).updateGeometry()
 

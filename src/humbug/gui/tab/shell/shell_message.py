@@ -15,12 +15,12 @@ from PySide6.QtGui import (
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.system.system_text_edit import SystemTextEdit
+from humbug.gui.tab.shell.shell_text_edit import ShellTextEdit
 from humbug.language.language_manager import LanguageManager
 from humbug.shell.shell_message_source import ShellMessageSource
 
 
-class SystemMessage(QFrame):
+class ShellMessage(QFrame):
     """Widget for displaying a single message in the system history with header."""
 
     selectionChanged = Signal(bool)
@@ -39,7 +39,7 @@ class SystemMessage(QFrame):
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
         self._is_input = is_input
 
-        self._logger = logging.getLogger("SystemMessage")
+        self._logger = logging.getLogger("ShellMessage")
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -74,7 +74,7 @@ class SystemMessage(QFrame):
         self._layout.addWidget(self._header)
 
         # Create text area
-        self._text_area = SystemTextEdit(is_input, self)
+        self._text_area = ShellTextEdit(is_input, self)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -196,7 +196,7 @@ class SystemMessage(QFrame):
             colour = ColorRole.MESSAGE_SYSTEM_SUCCESS
             background_colour = ColorRole.MESSAGE_BACKGROUND
 
-        # Warning: This needs to stay in sync with SystemInput
+        # Warning: This needs to stay in sync with ShellInput
         self._role_label.setStyleSheet(f"""
             QLabel {{
                 color: {self._style_manager.get_color_str(colour)};
@@ -422,6 +422,6 @@ class SystemMessage(QFrame):
 
         return local_pos
 
-    def text_area(self) -> SystemTextEdit:
+    def text_area(self) -> ShellTextEdit:
         """Get the text area widget."""
         return self._text_area

@@ -18,7 +18,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.tab.editor.editor_tab import EditorTab
-from humbug.gui.tab.system.system_tab import SystemTab
+from humbug.gui.tab.shell.shell_tab import ShellTab
 from humbug.gui.tab.wiki.wiki_tab import WikiTab
 from humbug.gui.tab.tab_bar import TabBar
 from humbug.gui.tab.tab_base import TabBase
@@ -52,8 +52,8 @@ class TabData:
         elif isinstance(tab, EditorTab):
             icon = "editor"
 
-        elif isinstance(tab, SystemTab):
-            icon = "system"
+        elif isinstance(tab, ShellTab):
+            icon = "shell"
 
         elif isinstance(tab, TerminalTab):
             icon = "terminal"
@@ -663,7 +663,7 @@ class ColumnManager(QWidget):
     def _is_system_tab_active(self) -> bool:
         """Check if the currently active tab is a system tab."""
         tab = self._get_current_tab()
-        return isinstance(tab, SystemTab)
+        return isinstance(tab, ShellTab)
 
     def _get_target_column_for_new_tab(self) -> ColumnWidget:
         """
@@ -1073,7 +1073,7 @@ class ColumnManager(QWidget):
 
         return None
 
-    def show_system(self) -> SystemTab:
+    def show_system(self) -> ShellTab:
         """
             Show the system tab.
 
@@ -1081,11 +1081,11 @@ class ColumnManager(QWidget):
             The system tab
         """
         for tab in self._tabs.values():
-            if isinstance(tab, SystemTab):
+            if isinstance(tab, ShellTab):
                 self._set_current_tab(tab.tab_id())
                 return tab
 
-        system_tab = SystemTab("", self)
+        system_tab = ShellTab("", self)
 
         # Use language strings for the tab title
         self._add_tab(system_tab, "Humbug Shell")
@@ -1094,7 +1094,7 @@ class ColumnManager(QWidget):
     def clear_system_interactions(self) -> None:
         """Clear the system tab interactions."""
         for tab in self._tabs.values():
-            if isinstance(tab, SystemTab):
+            if isinstance(tab, ShellTab):
                 tab.clear_system_interactions()
                 return
 
@@ -1390,8 +1390,8 @@ class ColumnManager(QWidget):
                 editor_tab = EditorTab.restore_from_state(state, self)
                 return editor_tab
 
-            case TabType.SYSTEM:
-                return SystemTab.restore_from_state(state, self)
+            case TabType.SHELL:
+                return ShellTab.restore_from_state(state, self)
 
             case TabType.TERMINAL:
                 return TerminalTab.restore_from_state(state, self)
@@ -1409,7 +1409,7 @@ class ColumnManager(QWidget):
         if isinstance(tab, ConversationTab):
             return os.path.splitext(os.path.basename(state.path))[0]
 
-        if isinstance(tab, SystemTab):
+        if isinstance(tab, ShellTab):
             return "Humbug Shell"
 
         if isinstance(tab, TerminalTab):
@@ -1821,7 +1821,7 @@ class ColumnManager(QWidget):
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab | SystemTab):
+        if not isinstance(tab, ConversationTab | ShellTab):
             return False
 
         return tab.can_navigate_next_message()
@@ -1829,7 +1829,7 @@ class ColumnManager(QWidget):
     def navigate_next_message(self) -> None:
         """Navigate to next message in active conversation tab."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab | SystemTab):
+        if not isinstance(tab, ConversationTab | ShellTab):
             return
 
         tab.navigate_next_message()
@@ -1837,7 +1837,7 @@ class ColumnManager(QWidget):
     def can_navigate_previous_message(self) -> bool:
         """Check if previous message navigation is possible."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab | SystemTab):
+        if not isinstance(tab, ConversationTab | ShellTab):
             return False
 
         return tab.can_navigate_previous_message()
@@ -1845,7 +1845,7 @@ class ColumnManager(QWidget):
     def navigate_previous_message(self) -> None:
         """Navigate to previous message in active conversation tab."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab | SystemTab):
+        if not isinstance(tab, ConversationTab | ShellTab):
             return
 
         tab.navigate_previous_message()

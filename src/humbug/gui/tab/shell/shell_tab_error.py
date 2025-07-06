@@ -1,12 +1,12 @@
-"""Exception classes for system operations."""
+"""Exception classes for shell operations."""
 
 
-class SystemTabError(Exception):
-    """Base class for system-related exceptions."""
+class ShellTabError(Exception):
+    """Base class for shell-related exceptions."""
 
     def __init__(self, message: str, details: dict | None = None) -> None:
         """
-        Initialize system error.
+        Initialize shell error.
 
         Args:
             message: Error message

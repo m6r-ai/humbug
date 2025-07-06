@@ -12,7 +12,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.system.system_widget import SystemWidget
+from humbug.gui.tab.shell.shell_widget import ShellWidget
 from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
@@ -20,7 +20,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
-class SystemTab(TabBase):
+class ShellTab(TabBase):
     """
     System tab for Humbug application showing system interaction history.
 
@@ -37,7 +37,7 @@ class SystemTab(TabBase):
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
-        self._logger = logging.getLogger("SystemTab")
+        self._logger = logging.getLogger("ShellTab")
         self._mindspace_manager = MindspaceManager()
 
         # Create layout
@@ -54,13 +54,13 @@ class SystemTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create system widget
-        self._system_widget = SystemWidget(self)
-        self._system_widget.status_updated.connect(self.update_status)
-        layout.addWidget(self._system_widget)
+        self._shell_widget = ShellWidget(self)
+        self._shell_widget.status_updated.connect(self.update_status)
+        layout.addWidget(self._shell_widget)
 
         # Install activation tracking
-        self._install_activation_tracking(self._system_widget)
-        self._system_widget.activated.connect(self.activated)
+        self._install_activation_tracking(self._shell_widget)
+        self._shell_widget.activated.connect(self.activated)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -71,13 +71,13 @@ class SystemTab(TabBase):
 
     def refresh(self) -> None:
         """Refresh system interaction history display."""
-        self._system_widget.load_system_interactions()
+        self._shell_widget.load_system_interactions()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._system_widget.get_match_status()
+            current, total = self._shell_widget.get_match_status()
             self._find_widget.set_match_status(current, total)
 
         # Update status bar
@@ -94,7 +94,7 @@ class SystemTab(TabBase):
         Returns:
             TabState object containing serializable state
         """
-        metadata = self._system_widget.create_state_metadata(temp_state)
+        metadata = self._shell_widget.create_state_metadata(temp_state)
 
         return TabState(
             type=TabType.SYSTEM,
@@ -107,7 +107,7 @@ class SystemTab(TabBase):
         )
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'SystemTab':
+    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ShellTab':
         """
         Create and restore a tab from serialized state.
 
@@ -116,12 +116,12 @@ class SystemTab(TabBase):
             parent: Parent widget
 
         Returns:
-            Restored SystemTab instance
+            Restored ShellTab instance
         """
         tab = cls(state.tab_id, parent)
 
         if state.metadata:
-            tab._system_widget.restore_from_metadata(state.metadata)
+            tab._shell_widget.restore_from_metadata(state.metadata)
 
         return tab
 
@@ -173,43 +173,43 @@ class SystemTab(TabBase):
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
-        return self._system_widget.can_cut()
+        return self._shell_widget.can_cut()
 
     def cut(self) -> None:
         """Cut selected text to clipboard."""
-        self._system_widget.cut()
+        self._shell_widget.cut()
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
-        return self._system_widget.can_copy()
+        return self._shell_widget.can_copy()
 
     def copy(self) -> None:
         """Copy selected text to clipboard."""
-        self._system_widget.copy()
+        self._shell_widget.copy()
 
     def can_paste(self) -> bool:
         """Check if paste is available."""
-        return self._system_widget.can_paste()
+        return self._shell_widget.can_paste()
 
     def paste(self) -> None:
         """Paste text from clipboard."""
-        self._system_widget.paste()
+        self._shell_widget.paste()
 
     def can_submit(self) -> bool:
         """Check if message can be submitted."""
-        return self._system_widget.can_submit()
+        return self._shell_widget.can_submit()
 
     def submit(self) -> None:
         """Submit the current message."""
-        self._system_widget.submit()
+        self._shell_widget.submit()
         # After submission, update status
         self.update_status()
 
     def show_find(self) -> None:
         """Show the find widget."""
         # Get selected text if any
-        if self._system_widget.has_selection():
-            selected_text = self._system_widget.get_selected_text()
+        if self._shell_widget.has_selection():
+            selected_text = self._shell_widget.get_selected_text()
             if selected_text:
                 self._find_widget.set_search_text(selected_text)
             else:
@@ -221,12 +221,12 @@ class SystemTab(TabBase):
     def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._system_widget.clear_highlights()
+        self._shell_widget.clear_highlights()
 
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        current, total = self._system_widget.find_text(text, forward)
+        current, total = self._shell_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
 
     def _handle_style_changed(self) -> None:
@@ -240,23 +240,23 @@ class SystemTab(TabBase):
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""
-        return self._system_widget.can_navigate_next_message()
+        return self._shell_widget.can_navigate_next_message()
 
     def navigate_next_message(self) -> None:
         """Navigate to the next message."""
-        self._system_widget.navigate_to_next_message()
+        self._shell_widget.navigate_to_next_message()
 
     def can_navigate_previous_message(self) -> bool:
         """Check if navigation to previous message is possible."""
-        return self._system_widget.can_navigate_previous_message()
+        return self._shell_widget.can_navigate_previous_message()
 
     def navigate_previous_message(self) -> None:
         """Navigate to the previous message."""
-        self._system_widget.navigate_to_previous_message()
+        self._shell_widget.navigate_to_previous_message()
 
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
-        self._system_widget.set_input_text(text)
+        self._shell_widget.set_input_text(text)
 
     def update_status(self) -> None:
         """Update status bar with system tab information."""
@@ -266,4 +266,4 @@ class SystemTab(TabBase):
 
     def clear_system_interactions(self) -> None:
         """Clear the system history including command history."""
-        self._system_widget.clear_system_interactions()
+        self._shell_widget.clear_system_interactions()

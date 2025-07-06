@@ -4,7 +4,7 @@ import logging
 import os
 from typing import List
 
-from humbug.gui.tab.system.system_command_completion_result import ShellCommandCompletionResult
+from humbug.gui.tab.shell.shell_command_completion_result import ShellCommandCompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.shell.shell_command_registry import ShellCommandRegistry
 from humbug.shell.shell_message_source import ShellMessageSource

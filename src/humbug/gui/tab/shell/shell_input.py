@@ -7,13 +7,13 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent, QObject
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
-from humbug.gui.tab.system.system_command_completion_result import ShellCommandCompletionResult
-from humbug.gui.tab.system.system_message import SystemMessage
+from humbug.gui.tab.shell.shell_command_completion_result import ShellCommandCompletionResult
+from humbug.gui.tab.shell.shell_message import ShellMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.shell.shell_message_source import ShellMessageSource
 
 
-class SystemInput(SystemMessage):
+class ShellInput(ShellMessage):
     """Widget for shell message input that matches history styling and behaves like a terminal."""
 
     # Forward text cursor signals from the input area
@@ -155,7 +155,7 @@ class SystemInput(SystemMessage):
         """
         Handle special key events for terminal-like behavior.
 
-        This only handles keys that bubble up to the SystemInput,
+        This only handles keys that bubble up to the ShellInput,
         most keys are handled by the eventFilter.
         """
         # Handle Ctrl+J or Cmd+J for command submission (original behavior)

@@ -11,16 +11,16 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.system.system_command_processor import ShellCommandProcessor
-from humbug.gui.tab.system.system_input import SystemInput
-from humbug.gui.tab.system.system_message import SystemMessage
+from humbug.gui.tab.shell.shell_command_processor import ShellCommandProcessor
+from humbug.gui.tab.shell.shell_input import ShellInput
+from humbug.gui.tab.shell.shell_message import ShellMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.shell.shell_message import ShellMessage as ShellMessageModel
 from humbug.shell.shell_message_source import ShellMessageSource
 
 
-class SystemWidgetEventFilter(QObject):
+class ShellWidgetEventFilter(QObject):
     """Event filter to track activation events from child widgets."""
 
     widget_activated = Signal(object)
@@ -54,7 +54,7 @@ class SystemWidgetEventFilter(QObject):
         return super().eventFilter(obj, event)
 
 
-class SystemWidget(QWidget):
+class ShellWidget(QWidget):
     """Widget for displaying system with message history and input."""
 
     # Signal to notify tab of status changes
@@ -77,7 +77,7 @@ class SystemWidget(QWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self._logger = logging.getLogger("SystemWidget")
+        self._logger = logging.getLogger("ShellWidget")
 
         self._mindspace_manager = MindspaceManager()
         self._mindspace_manager.system_interactions_updated.connect(self.load_system_interactions)
@@ -85,8 +85,8 @@ class SystemWidget(QWidget):
         self._style_manager = StyleManager()
 
         # Widget tracking
-        self._messages: List[SystemMessage] = []
-        self._message_with_selection: SystemMessage | None = None
+        self._messages: List[ShellMessage] = []
+        self._message_with_selection: ShellMessage | None = None
 
         # Initialize tracking variables
         self._auto_scroll = True
@@ -112,7 +112,7 @@ class SystemWidget(QWidget):
         self._messages_container.setLayout(self._messages_layout)
 
         # Set up the input box
-        self._input = SystemInput(self._messages_container)
+        self._input = ShellInput(self._messages_container)
         self._input.cursorPositionChanged.connect(self._ensure_cursor_visible)
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
@@ -141,7 +141,7 @@ class SystemWidget(QWidget):
         system_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[SystemMessage, List[Tuple[int, int]]] = {}
+        self._search_highlights: Dict[ShellMessage, List[Tuple[int, int]]] = {}
 
         # Tracking for focused message
         self._focused_message_index = -1
@@ -169,14 +169,14 @@ class SystemWidget(QWidget):
         self._handle_style_changed()
 
         # Find functionality
-        self._matches: List[Tuple[SystemMessage, List[Tuple[int, int]]]] = []
+        self._matches: List[Tuple[ShellMessage, List[Tuple[int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
-        self._highlighted_widgets: Set[SystemMessage] = set()
+        self._highlighted_widgets: Set[ShellMessage] = set()
 
         # Set up activation tracking
-        self._event_filter = SystemWidgetEventFilter(self)
+        self._event_filter = ShellWidgetEventFilter(self)
         self._event_filter.widget_activated.connect(self._handle_widget_activation)
         self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
         self._install_activation_tracking(self._input)
@@ -327,14 +327,14 @@ class SystemWidget(QWidget):
 
     def _add_system_message(self, message: ShellMessageModel) -> None:
         """Add a message from the system message history."""
-        msg_widget = SystemMessage(self)
+        msg_widget = ShellMessage(self)
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
 
-        # Set content using fields from SystemMessage model
+        # Set content using fields from ShellMessage model
         msg_widget.set_content(
             message.content,
             message.source,
@@ -499,7 +499,7 @@ class SystemWidget(QWidget):
         # Emit activated signal to let the tab know this system was clicked
         self.activated.emit()
 
-        # Find the SystemMessage that contains this widget
+        # Find the ShellMessage that contains this widget
         message_widget = self._find_system_message(widget)
         if message_widget is None:
             return
@@ -523,7 +523,7 @@ class SystemWidget(QWidget):
         Args:
             widget: The widget that lost focus
         """
-        # Find the SystemMessage that contains this widget
+        # Find the ShellMessage that contains this widget
         message_widget = self._find_system_message(widget)
         if message_widget is None:
             return
@@ -535,19 +535,19 @@ class SystemWidget(QWidget):
         else:
             self._input.set_focused(False)
 
-    def _find_system_message(self, widget: QWidget) -> SystemMessage | None:
+    def _find_system_message(self, widget: QWidget) -> ShellMessage | None:
         """
-        Find the SystemMessage that contains the given widget.
+        Find the ShellMessage that contains the given widget.
 
         Args:
-            widget: The widget to find the containing SystemMessage for
+            widget: The widget to find the containing ShellMessage for
 
         Returns:
-            The SystemMessage containing the widget, or None if not found
+            The ShellMessage containing the widget, or None if not found
         """
         current: QObject = widget
         while current:
-            if isinstance(current, SystemMessage):
+            if isinstance(current, ShellMessage):
                 return current
 
             current = current.parent()
@@ -608,7 +608,7 @@ class SystemWidget(QWidget):
         self._input.set_focused(True)
         self._scroll_to_message(self._input)
 
-    def _scroll_to_message(self, message: SystemMessage) -> None:
+    def _scroll_to_message(self, message: ShellMessage) -> None:
         """Ensure the message is visible in the scroll area."""
         # Get the position of the message in the scroll area
         message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
@@ -643,7 +643,7 @@ class SystemWidget(QWidget):
             (0 <= self._focused_message_index < len(self._messages) and self._focused_message_index > 0)
         )
 
-    def _handle_selection_changed(self, message_widget: SystemMessage, has_selection: bool) -> None:
+    def _handle_selection_changed(self, message_widget: ShellMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
         if not has_selection:
             if self._message_with_selection:
@@ -955,7 +955,7 @@ class SystemWidget(QWidget):
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
 
-    def _handle_find_scroll(self, widget: SystemMessage, position: int) -> None:
+    def _handle_find_scroll(self, widget: ShellMessage, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
