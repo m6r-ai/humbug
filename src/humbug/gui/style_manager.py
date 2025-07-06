@@ -301,12 +301,12 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#808080"
             },
             ColorRole.MESSAGE_TOOL_CALL: {
-                ColorMode.DARK: "#c080c0",
-                ColorMode.LIGHT: "#a060a0"
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#808080"
             },
             ColorRole.MESSAGE_TOOL_RESULT: {
-                ColorMode.DARK: "#c0c040",
-                ColorMode.LIGHT: "#a0a020"
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#808080"
             },
             ColorRole.MESSAGE_SYSTEM_ERROR: {
                 ColorMode.DARK: "#c08080",
