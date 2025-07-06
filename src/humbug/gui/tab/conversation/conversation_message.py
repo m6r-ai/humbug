@@ -71,6 +71,14 @@ class ConversationMessage(QFrame):
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(4)
 
+        # Add expand/collapse button for all messages (input and non-input)
+        self._expand_button: QToolButton | None = None
+
+        if not is_input:
+            self._expand_button = QToolButton(self)
+            self._expand_button.clicked.connect(self._toggle_expanded)
+            self._header_layout.addWidget(self._expand_button)
+
         # Create role and timestamp labels
         self._role_label = QLabel(self)
         self._header_layout.addWidget(self._role_label)
@@ -80,7 +88,6 @@ class ConversationMessage(QFrame):
         self._save_message_button: QToolButton | None = None
         self._fork_message_button: QToolButton | None = None
         self._delete_message_button: QToolButton | None = None
-        self._expand_button: QToolButton | None = None
 
         if not is_input:
             self._copy_message_button = QToolButton(self)
@@ -90,11 +97,6 @@ class ConversationMessage(QFrame):
             self._save_message_button = QToolButton(self)
             self._save_message_button.clicked.connect(self._save_message)
             self._header_layout.addWidget(self._save_message_button)
-
-        # Add expand/collapse button for all messages (input and non-input)
-        self._expand_button = QToolButton(self)
-        self._expand_button.clicked.connect(self._toggle_expanded)
-        self._header_layout.addWidget(self._expand_button)
 
         # Add header widget to main layout
         self._layout.addWidget(self._header)
@@ -199,8 +201,8 @@ class ConversationMessage(QFrame):
             tooltip = strings.tooltip_collapse_message
 
         else:
-            # Show left arrow when collapsed
-            icon_name = "arrow-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-right"
+            # Show right arrow when collapsed
+            icon_name = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
             tooltip = strings.tooltip_expand_message
 
         # Update icon
