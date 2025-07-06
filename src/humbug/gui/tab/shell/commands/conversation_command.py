@@ -8,7 +8,7 @@ from humbug.ai.ai_model import ReasoningCapability
 from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
-from humbug.syntax.command.command_lexer import Token, TokenType
+from humbug.syntax.lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
 

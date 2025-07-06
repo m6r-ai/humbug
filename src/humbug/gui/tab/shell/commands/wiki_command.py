@@ -7,7 +7,7 @@ from typing import List, Callable
 from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
-from humbug.syntax.command.command_lexer import Token, TokenType
+from humbug.syntax.lexer import Token, TokenType
 
 
 class WikiCommand(ShellCommand):

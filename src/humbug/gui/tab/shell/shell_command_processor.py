@@ -4,12 +4,12 @@ import logging
 import os
 from typing import List
 
-from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.gui.tab.shell.shell_command_completion_result import ShellCommandCompletionResult
+from humbug.gui.tab.shell.shell_command_parser import ShellCommandParser
+from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
-from humbug.syntax.command.command_lexer import TokenType, Token
-from humbug.syntax.command.command_parser import CommandParser
+from humbug.syntax.lexer import TokenType, Token
 
 
 class ShellCommandProcessor:
@@ -131,7 +131,7 @@ class ShellCommandProcessor:
         self._current_completion_text = ""
 
         # Parse the input
-        parser = CommandParser()
+        parser = ShellCommandParser()
         parser.parse(None, current_text)
 
         # Store tokens

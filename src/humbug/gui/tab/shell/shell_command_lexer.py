@@ -9,7 +9,7 @@ from typing import Callable, Set
 from humbug.syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
-class CommandLexer(Lexer):
+class ShellCommandLexer(Lexer):
     """
     Lexer for command line input.
 

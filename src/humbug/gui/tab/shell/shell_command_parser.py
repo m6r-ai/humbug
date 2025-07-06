@@ -4,13 +4,13 @@ System shell command parser
 This module implements a parser for command lines, extending the functionality of the base parser.
 """
 
+from humbug.gui.tab.shell.shell_command_lexer import ShellCommandLexer
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
-from humbug.syntax.command.command_lexer import CommandLexer
 from humbug.syntax.lexer import TokenType
 from humbug.syntax.parser import Parser, ParserState
 
 
-class CommandParser(Parser):
+class ShellCommandParser(Parser):
     """
     Parser for command lines in the system shell.
 
@@ -27,7 +27,7 @@ class CommandParser(Parser):
         Args:
             input_str: The input string to parse
         """
-        lexer = CommandLexer()
+        lexer = ShellCommandLexer()
         lexer.lex(None, input_str)
 
         while True:

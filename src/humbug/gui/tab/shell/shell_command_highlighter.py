@@ -4,7 +4,7 @@ import logging
 
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.command.command_parser import CommandParser
+from humbug.gui.tab.shell.shell_command_parser import ShellCommandParser
 
 
 class ShellCommandHighlighter(QSyntaxHighlighter):
@@ -22,7 +22,7 @@ class ShellCommandHighlighter(QSyntaxHighlighter):
         """Apply highlighting to the given block of text."""
         try:
             # Parse the input
-            parser = CommandParser()
+            parser = ShellCommandParser()
             parser.parse(None, text)
 
             # Apply syntax highlighting based on token types

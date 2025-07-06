@@ -4,7 +4,7 @@ from typing import Callable, List
 
 from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
-from humbug.syntax.command.command_lexer import Token, TokenType
+from humbug.syntax.lexer import Token, TokenType
 
 
 class TerminalCommand(ShellCommand):
