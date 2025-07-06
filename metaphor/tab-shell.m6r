@@ -1,8 +1,8 @@
-Context: System tab
-    The system supports exactly one system tab.  This can either be hidden or displayed.  This tab is
+Context: Shelltab
+    The system supports exactly one shell tab.  This can either be hidden or displayed.  This tab is
     labelled the "Humbug Shell".
 
-    The system tab supports a conversation-like view for command interactions between the user and the system.
+    The shell tab supports a conversation-like view for command interactions between the user and the system.
     These are similar to command line tools in a conventional shell or command prompt environment.
 
     By default the user is presented with a command prompt.  They can type new commands which are then
@@ -24,26 +24,26 @@ Context: System tab
               command line completions, but cycling between possible options in the reverse order
 
     Context: History buffer
-        The system tab maintains a history of the last 100 commands that were entered, allowing the user to
+        The shell tab maintains a history of the last 100 commands that were entered, allowing the user to
         navigate and reuse previous commands.
 
     Context: Commands
-        When the user submits a command it is added to the command history and displayed in the systemt tab.
+        When the user submits a command it is added to the command history and displayed in the shell tab.
         Each commands is handed to a custom command processors with the results also being displayed in the
-        system tab.  Failed commands have a red response header, while successful commands have a green
+        shell tab.  Failed commands have a red response header, while successful commands have a green
         response header.
 
         If a command involves opening a new tab within the application GUI this will be done in a tab
-        column adjacent to the system tab, ensuring focus remains with the system tab and that the results
+        column adjacent to the shell tab, ensuring focus remains with the shell tab and that the results
         of the operation remain visible.  If only one column is currently active, this means a new column
         will be opened.  If two columns are displayed then any new tab will open in the other column.  If
-        three or more columns are open then a column adjacent to the one containing the system tab will
+        three or more columns are open then a column adjacent to the one containing the shell tab will
         be used, prefering the column to the right if this is an option.
 
         The following commands are available:
 
         Context: "clear" command
-            The clear command clears the system shell history.
+            The clear command clears the shell history.
 
         Context: "conversation" command
             The conversation command opens a new conversation.

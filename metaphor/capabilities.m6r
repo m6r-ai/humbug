@@ -231,7 +231,7 @@ Context: Capabilities
 
                 - Conversation tabs: For AI interactions
                 - Editor tabs: For file editing
-                - System tab: For interacting with Humbug system command line tools
+                - Shell tab: For interacting with Humbug system command line tools
                 - Terminal tabs: For interacting with local command line tools
                 - Wiki tabs: For viewing information within the mindspace
 
@@ -242,7 +242,7 @@ Context: Capabilities
 
                 Include: metaphor/tab-conversation.m6r
                 Include: metaphor/tab-editor.m6r
-                Include: metaphor/tab-system.m6r
+                Include: metaphor/tab-shell.m6r
                 Include: metaphor/tab-terminal.m6r
                 Include: metaphor/tab-wiki.m6r
 
@@ -901,8 +901,8 @@ Context: Capabilities
             Context: Separator
                 There will be a horizontal Separator
 
-            Context: Show System
-                The "Show System" menu item will show the system tab.
+            Context: Show Humbug Shell
+                The "Show Humbug Shell" menu item will show the system shell.
 
                 This will be matched with a keyboard shortcut (e.g. "Ctrl+Shift+Y" for Windows).
 
