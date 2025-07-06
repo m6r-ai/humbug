@@ -20,6 +20,12 @@ Bug fixes:
 - The filesystem tool did not fully validate all arguments passed to it.  It now carefully checks all args are present and
   in a valid form.
 
+Internal structure changes:
+
+- The internal mindspace logging and shell command interaction logic has been moved to the mindspace and the shell command
+  tab namespaces to reflect how they're actually used.
+- Shell command logic has moved the the shell command area of the GUI code.
+
 ## v0.17 (2025-07-02)
 
 New features:
