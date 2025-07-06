@@ -8,12 +8,12 @@ from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
 from humbug.gui.tab.shell.shell_command_completion_result import ShellCommandCompletionResult
-from humbug.gui.tab.shell.shell_message import ShellMessage
+from humbug.gui.tab.shell.shell_message_widget import ShellMessageWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.shell.shell_message_source import ShellMessageSource
 
 
-class ShellInput(ShellMessage):
+class ShellInput(ShellMessageWidget):
     """Widget for shell message input that matches history styling and behaves like a terminal."""
 
     # Forward text cursor signals from the input area

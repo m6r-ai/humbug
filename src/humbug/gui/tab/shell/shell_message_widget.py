@@ -20,7 +20,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.shell.shell_message_source import ShellMessageSource
 
 
-class ShellMessage(QFrame):
+class ShellMessageWidget(QFrame):
     """Widget for displaying a single message in the system history with header."""
 
     selectionChanged = Signal(bool)

@@ -202,7 +202,7 @@ class ShellTextEdit(QTextEdit):
         self._pending_update = False
         self.updateGeometry()
 
-        # Ensure parent ShellMessage updates as well
+        # Ensure parent updates as well
         if self.parent():
             cast(QWidget, self.parent()).updateGeometry()
 
