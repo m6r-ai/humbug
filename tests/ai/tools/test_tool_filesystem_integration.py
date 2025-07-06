@@ -10,7 +10,7 @@ import pytest
 from humbug.ai.ai_tool_manager import AIToolExecutionError
 
 
-class TestToolFileSystemIntegration:
+class TestAIToolFileSystemIntegration:
     """Integration tests for the filesystem tool."""
 
     def test_execute_read_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -86,7 +86,7 @@ class TestToolFileSystemIntegration:
             assert isinstance(error.__cause__, RuntimeError)
 
 
-class TestToolFileSystemAuthorizationContext:
+class TestAIToolFileSystemAuthorizationContext:
     """Test authorization context building for various operations."""
 
     def test_authorization_context_includes_operation_details(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -300,7 +300,7 @@ class TestToolFileSystemAuthorizationContext:
             assert "Current size: 2,048 bytes" in context
 
 
-class TestToolFileSystemParametrized:
+class TestAIToolFileSystemParametrized:
     """Parametrized tests for the filesystem tool."""
 
     @pytest.mark.parametrize("operation", [
@@ -310,8 +310,8 @@ class TestToolFileSystemParametrized:
     ])
     def test_supported_operations_in_definition(self, operation):
         """Test that all supported operations are included in definition."""
-        from humbug.tools.tool_filesystem import ToolFileSystem
-        filesystem_tool = ToolFileSystem()
+        from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+        filesystem_tool = AIToolFileSystem()
         definition = filesystem_tool.get_definition()
         operation_param = definition.parameters[0]
 
@@ -320,8 +320,8 @@ class TestToolFileSystemParametrized:
     @pytest.mark.parametrize("encoding", ["utf-8", "utf-16", "ascii", "latin-1"])
     def test_supported_encodings_in_definition(self, encoding):
         """Test that all supported encodings are included in definition."""
-        from humbug.tools.tool_filesystem import ToolFileSystem
-        filesystem_tool = ToolFileSystem()
+        from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+        filesystem_tool = AIToolFileSystem()
         definition = filesystem_tool.get_definition()
         encoding_param = next(p for p in definition.parameters if p.name == "encoding")
 
@@ -335,8 +335,8 @@ class TestToolFileSystemParametrized:
     ])
     def test_custom_max_file_sizes(self, max_size_mb, expected_bytes):
         """Test filesystem tool with different max file sizes."""
-        from humbug.tools.tool_filesystem import ToolFileSystem
-        tool = ToolFileSystem(max_file_size_mb=max_size_mb)
+        from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+        tool = AIToolFileSystem(max_file_size_mb=max_size_mb)
 
         assert tool._max_file_size_bytes == expected_bytes
 
@@ -429,15 +429,15 @@ class TestToolFileSystemParametrized:
         assert isinstance(requires_destination, bool)
 
 
-class TestToolFileSystemErrorHandling:
+class TestAIToolFileSystemErrorHandling:
     """Test error handling patterns across operations."""
 
     def test_all_operations_handle_mindspace_validation(self, mock_mindspace_manager, mock_authorization):
         """Test that all operations properly validate mindspace access."""
-        from humbug.tools.tool_filesystem import ToolFileSystem
+        from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
 
         mock_mindspace_manager.has_mindspace.return_value = False
-        filesystem_tool = ToolFileSystem()
+        filesystem_tool = AIToolFileSystem()
         filesystem_tool._mindspace_manager = mock_mindspace_manager
 
         operations = [

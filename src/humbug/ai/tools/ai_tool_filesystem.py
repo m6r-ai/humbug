@@ -13,7 +13,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError
 
 
-class ToolFileSystem(AITool):
+class AIToolFileSystem(AITool):
     """
     Comprehensive filesystem tool.
 
@@ -30,7 +30,7 @@ class ToolFileSystem(AITool):
         """
         self._mindspace_manager = MindspaceManager()
         self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
-        self._logger = logging.getLogger("ToolFileSystem")
+        self._logger = logging.getLogger("AIToolFileSystem")
 
     def get_definition(self) -> AIToolDefinition:
         """

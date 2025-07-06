@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from humbug.tools.tool_filesystem import ToolFileSystem
+from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
 
 
 @pytest.fixture
@@ -27,7 +27,7 @@ def mock_mindspace_manager():
 @pytest.fixture
 def filesystem_tool(mock_mindspace_manager):
     """Fixture providing a filesystem tool instance with mocked mindspace manager."""
-    tool = ToolFileSystem()
+    tool = AIToolFileSystem()
     tool._mindspace_manager = mock_mindspace_manager
     return tool
 

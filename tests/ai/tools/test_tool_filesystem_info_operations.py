@@ -10,7 +10,7 @@ import pytest
 from humbug.ai.ai_tool_manager import AIToolExecutionError
 
 
-class TestToolFileSystemGetInfo:
+class TestAIToolFileSystemGetInfo:
     """Test the get_info operation."""
 
     def test_get_info_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -24,7 +24,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+             patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path
@@ -65,7 +65,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+             patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/README")
             mock_resolve.return_value = mock_path
@@ -116,7 +116,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+             patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/dir")
             mock_resolve.return_value = mock_path
@@ -157,7 +157,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+             patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/empty_dir")
             mock_resolve.return_value = mock_path
@@ -194,7 +194,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
-             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+             patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/protected_dir")
             mock_resolve.return_value = mock_path
@@ -230,7 +230,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+             patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/special")
             mock_resolve.return_value = mock_path
@@ -335,7 +335,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+             patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/large.bin")
             mock_resolve.return_value = mock_path
@@ -380,7 +380,7 @@ class TestToolFileSystemGetInfo:
                  patch('pathlib.Path.is_file') as mock_is_file, \
                  patch('pathlib.Path.is_dir') as mock_is_dir, \
                  patch('pathlib.Path.stat') as mock_stat, \
-                 patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+                 patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
                 mock_path = Path("/test/mindspace/test_file")
                 mock_resolve.return_value = mock_path
@@ -416,7 +416,7 @@ class TestToolFileSystemGetInfo:
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
-             patch('humbug.tools.tool_filesystem.datetime') as mock_datetime:
+             patch('humbug.ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
             mock_path = Path("/test/mindspace/file.txt")
             mock_resolve.return_value = mock_path

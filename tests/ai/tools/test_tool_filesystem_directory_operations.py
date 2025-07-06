@@ -10,7 +10,7 @@ import pytest
 from humbug.ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
 
 
-class TestToolFileSystemListDirectory:
+class TestAIToolFileSystemListDirectory:
     """Test the list_directory operation."""
 
     def test_list_directory_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -217,7 +217,7 @@ class TestToolFileSystemListDirectory:
             assert "Failed to list directory" in str(error)
 
 
-class TestToolFileSystemCreateDirectory:
+class TestAIToolFileSystemCreateDirectory:
     """Test the create_directory operation."""
 
     def test_create_directory_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -407,7 +407,7 @@ class TestToolFileSystemCreateDirectory:
             assert "Failed to create directory" in str(error)
 
 
-class TestToolFileSystemRemoveDirectory:
+class TestAIToolFileSystemRemoveDirectory:
     """Test the remove_directory operation."""
 
     def test_remove_directory_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):

@@ -10,7 +10,7 @@ import pytest
 from humbug.ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
 
 
-class TestToolFileSystemReadFile:
+class TestAIToolFileSystemReadFile:
     """Test the read_file operation."""
 
     def test_read_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -244,7 +244,7 @@ class TestToolFileSystemReadFile:
             assert "Failed to read file" in str(error)
 
 
-class TestToolFileSystemWriteFile:
+class TestAIToolFileSystemWriteFile:
     """Test the write_file operation."""
 
     def test_write_file_success_new_file(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -507,7 +507,7 @@ class TestToolFileSystemWriteFile:
             assert "Failed to write file" in str(error)
 
 
-class TestToolFileSystemAppendFile:
+class TestAIToolFileSystemAppendFile:
     """Test the append_to_file operation."""
 
     def test_append_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):

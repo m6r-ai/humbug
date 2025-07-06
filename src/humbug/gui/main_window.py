@@ -15,6 +15,10 @@ from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
 from humbug.ai.ai_model import ReasoningCapability
 from humbug.ai.ai_tool_manager import AIToolManager
+from humbug.ai.tools.ai_tool_calculator import AIToolCalculator
+from humbug.ai.tools.ai_tool_clock import AIToolClock
+from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+from humbug.ai.tools.ai_tool_system import AIToolSystem
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
@@ -44,10 +48,6 @@ from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsErro
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.mindspace.mindspace_settings import MindspaceSettings
-from humbug.tools.tool_calculator import ToolCalculator
-from humbug.tools.tool_clock import ToolClock
-from humbug.tools.tool_filesystem import ToolFileSystem
-from humbug.tools.tool_system import ToolSystem
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 
@@ -420,10 +420,10 @@ class MainWindow(QMainWindow):
         self._command_registry.register_command(help_command)
 
         self._ai_tool_manager = AIToolManager()
-        self._ai_tool_manager.register_tool(ToolCalculator())
-        self._ai_tool_manager.register_tool(ToolClock())
-        self._ai_tool_manager.register_tool(ToolFileSystem())
-        self._ai_tool_manager.register_tool(ToolSystem(self._column_manager))
+        self._ai_tool_manager.register_tool(AIToolCalculator())
+        self._ai_tool_manager.register_tool(AIToolClock())
+        self._ai_tool_manager.register_tool(AIToolFileSystem())
+        self._ai_tool_manager.register_tool(AIToolSystem(self._column_manager))
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 

@@ -7,14 +7,14 @@ from unittest.mock import patch
 
 import pytest
 
-from humbug.tools.tool_calculator import ToolCalculator, SafeMathEvaluator
 from humbug.ai.ai_tool_manager import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
+from humbug.ai.tools.ai_tool_calculator import AIToolCalculator, SafeMathEvaluator
 
 
 @pytest.fixture
 def calculator_tool():
     """Fixture providing a calculator tool instance."""
-    return ToolCalculator()
+    return AIToolCalculator()
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def mock_authorization():
     return mock_auth_callback
 
 
-class TestToolCalculatorDefinition:
+class TestAIToolCalculatorDefinition:
     """Test the calculator tool definition."""
 
     def test_get_definition_returns_correct_structure(self, calculator_tool):
@@ -451,7 +451,7 @@ class TestSafeMathEvaluatorErrorHandling:
             safe_evaluator.evaluate("not True")
 
 
-class TestToolCalculatorExecution:
+class TestAIToolCalculatorExecution:
     """Test the calculator tool execution."""
 
     def test_execute_basic_arithmetic(self, calculator_tool, mock_authorization):
@@ -546,7 +546,7 @@ class TestToolCalculatorExecution:
             assert error.__cause__.__class__ == RuntimeError
 
 
-class TestToolCalculatorParametrized:
+class TestAIToolCalculatorParametrized:
     """Parametrized tests for the calculator tool."""
 
     @pytest.mark.parametrize("expression,expected", [
@@ -612,7 +612,7 @@ class TestToolCalculatorParametrized:
             assert 'j' in result or 'complex' in str(type(eval(result)))
 
 
-class TestToolCalculatorSecurity:
+class TestAIToolCalculatorSecurity:
     """Test security aspects of the calculator tool."""
 
     @pytest.mark.parametrize("malicious_expr", [
@@ -661,11 +661,11 @@ class TestToolCalculatorSecurity:
                 asyncio.run(calculator_tool.execute({"expression": expr}, mock_authorization))
 
 
-class TestToolCalculatorIntegration:
+class TestAIToolCalculatorIntegration:
     """Integration tests for the calculator tool."""
 
     def test_tool_inheritance(self, calculator_tool):
-        """Test that ToolCalculator properly inherits from AITool."""
+        """Test that AIToolCalculator properly inherits from AITool."""
 
         assert isinstance(calculator_tool, AITool)
         assert hasattr(calculator_tool, 'get_definition')

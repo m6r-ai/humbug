@@ -10,7 +10,7 @@ import pytest
 from humbug.ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
 
 
-class TestToolFileSystemDeleteFile:
+class TestAIToolFileSystemDeleteFile:
     """Test the delete_file operation."""
 
     def test_delete_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -209,7 +209,7 @@ class TestToolFileSystemDeleteFile:
             assert "Failed to delete file" in str(error)
 
 
-class TestToolFileSystemCopyFile:
+class TestAIToolFileSystemCopyFile:
     """Test the copy_file operation."""
 
     def test_copy_file_success_new_destination(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
@@ -564,7 +564,7 @@ class TestToolFileSystemCopyFile:
             assert "Failed to copy file" in str(error)
 
 
-class TestToolFileSystemMove:
+class TestAIToolFileSystemMove:
     """Test the move operation."""
 
     def test_move_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):

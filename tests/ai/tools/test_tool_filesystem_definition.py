@@ -7,19 +7,19 @@ from unittest.mock import patch
 
 import pytest
 
-from humbug.tools.tool_filesystem import ToolFileSystem
 from humbug.ai.ai_tool_manager import (
     AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
 )
+from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError
 
 
-class TestToolFileSystemDefinition:
+class TestAIToolFileSystemDefinition:
     """Test the filesystem tool definition."""
 
     def test_get_definition_returns_correct_structure(self):
         """Test that get_definition returns the correct tool definition structure."""
-        filesystem_tool = ToolFileSystem()
+        filesystem_tool = AIToolFileSystem()
         definition = filesystem_tool.get_definition()
 
         assert isinstance(definition, AIToolDefinition)
@@ -30,7 +30,7 @@ class TestToolFileSystemDefinition:
 
     def test_operation_parameter_definition(self):
         """Test the operation parameter definition."""
-        filesystem_tool = ToolFileSystem()
+        filesystem_tool = AIToolFileSystem()
         definition = filesystem_tool.get_definition()
         operation_param = definition.parameters[0]
 
@@ -47,7 +47,7 @@ class TestToolFileSystemDefinition:
 
     def test_path_parameter_definition(self):
         """Test the path parameter definition."""
-        filesystem_tool = ToolFileSystem()
+        filesystem_tool = AIToolFileSystem()
         definition = filesystem_tool.get_definition()
         path_param = definition.parameters[1]
 
@@ -60,7 +60,7 @@ class TestToolFileSystemDefinition:
 
     def test_optional_parameters_definition(self):
         """Test the optional parameters definitions."""
-        filesystem_tool = ToolFileSystem()
+        filesystem_tool = AIToolFileSystem()
         definition = filesystem_tool.get_definition()
         param_names = [p.name for p in definition.parameters]
 
@@ -76,19 +76,19 @@ class TestToolFileSystemDefinition:
 
     def test_custom_max_file_size_in_definition(self):
         """Test that custom max file size is reflected in definition."""
-        custom_tool = ToolFileSystem(max_file_size_mb=5)
+        custom_tool = AIToolFileSystem(max_file_size_mb=5)
         definition = custom_tool.get_definition()
 
         assert "Maximum file size: 5MB" in definition.description
 
 
-class TestToolFileSystemValidation:
+class TestAIToolFileSystemValidation:
     """Test validation through public interface."""
 
     def test_no_mindspace_error(self, mock_mindspace_manager, mock_authorization):
         """Test error when no mindspace is open."""
         mock_mindspace_manager.has_mindspace.return_value = False
-        filesystem_tool = ToolFileSystem()
+        filesystem_tool = AIToolFileSystem()
         filesystem_tool._mindspace_manager = mock_mindspace_manager
 
         with pytest.raises(AIToolExecutionError) as exc_info:
@@ -182,12 +182,12 @@ class TestToolFileSystemValidation:
         assert "Unsupported operation: invalid_op" in str(error)
 
 
-class TestToolFileSystemInheritance:
+class TestAIToolFileSystemInheritance:
     """Test tool inheritance and interface compliance."""
 
     def test_tool_inheritance(self):
-        """Test that ToolFileSystem properly inherits from AITool."""
-        filesystem_tool = ToolFileSystem()
+        """Test that AIToolFileSystem properly inherits from AITool."""
+        filesystem_tool = AIToolFileSystem()
         assert isinstance(filesystem_tool, AITool)
         assert hasattr(filesystem_tool, 'get_definition')
         assert hasattr(filesystem_tool, 'execute')
@@ -204,7 +204,7 @@ class TestToolFileSystemInheritance:
         ]
 
         for max_size_mb, expected_bytes in test_cases:
-            tool = ToolFileSystem(max_file_size_mb=max_size_mb)
+            tool = AIToolFileSystem(max_file_size_mb=max_size_mb)
             assert tool._max_file_size_bytes == expected_bytes
 
             definition = tool.get_definition()

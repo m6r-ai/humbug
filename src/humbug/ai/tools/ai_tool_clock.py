@@ -6,7 +6,7 @@ from humbug.ai.ai_tool_manager import (
 )
 
 
-class ToolClock(AITool):
+class AIToolClock(AITool):
     """Clock tool that returns the current time."""
 
     def get_definition(self) -> AIToolDefinition:
