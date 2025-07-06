@@ -18,8 +18,8 @@ from humbug.ai.ai_tool_manager import AIToolManager
 from humbug.ai.tools.ai_tool_calculator import AIToolCalculator
 from humbug.ai.tools.ai_tool_clock import AIToolClock
 from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
-from humbug.ai.tools.ai_tool_system import AIToolSystem
 from humbug.gui.about_dialog import AboutDialog
+from humbug.gui.ai_tool_system import AIToolSystem
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
 from humbug.gui.message_box import MessageBox, MessageBoxType

@@ -25,6 +25,7 @@ Internal structure changes:
 - The internal mindspace logging and shell command interaction logic has been moved to the mindspace and the shell command
   tab namespaces to reflect how they're actually used.
 - Shell command logic has moved the the shell command area of the GUI code.
+- Generic AI tools have moved to the ai/tools directory.
 
 ## v0.17 (2025-07-02)
 
