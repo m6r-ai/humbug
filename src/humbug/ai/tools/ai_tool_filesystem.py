@@ -3,7 +3,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from humbug.ai.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
@@ -578,27 +578,27 @@ class AIToolFileSystem(AITool):
 
         # List directory contents
         try:
-            items = []
-            for item in path.iterdir():
+            items: List[Dict[str, Any]] = []
+            for path_item in path.iterdir():
                 try:
-                    if item.is_file():
-                        size = item.stat().st_size
+                    if path_item.is_file():
+                        size = path_item.stat().st_size
                         items.append({
-                            'name': item.name,
+                            'name': path_item.name,
                             'type': 'file',
                             'size': size
                         })
 
-                    elif item.is_dir():
+                    elif path_item.is_dir():
                         items.append({
-                            'name': item.name,
+                            'name': path_item.name,
                             'type': 'directory',
                             'size': None
                         })
 
                     else:
                         items.append({
-                            'name': item.name,
+                            'name': path_item.name,
                             'type': 'other',
                             'size': None
                         })
@@ -606,7 +606,7 @@ class AIToolFileSystem(AITool):
                 except (PermissionError, OSError):
                     # Skip items we can't access
                     items.append({
-                        'name': item.name,
+                        'name': path_item.name,
                         'type': 'unknown',
                         'size': None
                     })
