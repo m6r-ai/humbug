@@ -4,9 +4,9 @@ import logging
 import os
 from typing import List, Callable
 
+from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.shell.shell_command import ShellCommand
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
@@ -50,8 +50,8 @@ class EditCommand(ShellCommand):
         # Get positional arguments
         args = self._get_positional_arguments(tokens)
         if not args:
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 "No filename specified. Usage: edit <filename>"
             )
             return False
@@ -66,29 +66,29 @@ class EditCommand(ShellCommand):
                         os.makedirs(directory, exist_ok=True)
 
                     except OSError as e:
-                        self._mindspace_manager.add_system_interaction(
-                            ShellMessageSource.ERROR,
+                        self._mindspace_manager.add_interaction(
+                            MindspaceMessageSource.ERROR,
                             f"Failed to create directory: {str(e)}"
                         )
                         return False
 
             if not self._edit_file(full_path):
-                self._mindspace_manager.add_system_interaction(
-                    ShellMessageSource.ERROR,
+                self._mindspace_manager.add_interaction(
+                    MindspaceMessageSource.ERROR,
                     f"Failed to edit file: {args[0]}"
                 )
                 return False
 
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.SUCCESS,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.SUCCESS,
                 f"Editing file: {args[0]}"
             )
             return True
 
         except Exception as e:
             self._logger.exception("Error processing file: %s", str(e))
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 f"Error processing file: {str(e)}"
             )
             return False

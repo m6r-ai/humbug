@@ -2,8 +2,8 @@
 
 from typing import Callable, List
 
-from humbug.shell.shell_command import ShellCommand
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.gui.tab.shell.shell_command import ShellCommand
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
@@ -40,8 +40,8 @@ class TerminalCommand(ShellCommand):
             True if command executed successfully, False otherwise
         """
         self._create_terminal()
-        self._mindspace_manager.add_system_interaction(
-            ShellMessageSource.SUCCESS,
+        self._mindspace_manager.add_interaction(
+            MindspaceMessageSource.SUCCESS,
             "Started new terminal"
         )
         return True

@@ -2,7 +2,7 @@ from typing import Dict, List
 
 from PySide6.QtCore import QObject
 
-from humbug.shell.shell_command import ShellCommand
+from humbug.gui.tab.shell.shell_command import ShellCommand
 
 
 class ShellCommandRegistry(QObject):

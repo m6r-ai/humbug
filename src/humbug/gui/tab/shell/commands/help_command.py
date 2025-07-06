@@ -2,10 +2,10 @@
 
 from typing import List
 
+from humbug.gui.tab.shell.shell_command import ShellCommand
+from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.shell.shell_command import ShellCommand
-from humbug.shell.shell_command_registry import ShellCommandRegistry
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
@@ -54,8 +54,8 @@ class HelpCommand(ShellCommand):
                 command.show_detailed_help()
                 return True
 
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 f"Unknown command: {command_name}"
             )
             return False
@@ -73,8 +73,8 @@ class HelpCommand(ShellCommand):
 
         help_text += "\nType 'help <command>' or '<command> --help' for detailed help on a specific command."
 
-        self._mindspace_manager.add_system_interaction(
-            ShellMessageSource.SUCCESS,
+        self._mindspace_manager.add_interaction(
+            MindspaceMessageSource.SUCCESS,
             help_text
         )
 

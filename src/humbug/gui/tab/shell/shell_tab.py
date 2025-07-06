@@ -71,7 +71,7 @@ class ShellTab(TabBase):
 
     def refresh(self) -> None:
         """Refresh system interaction history display."""
-        self._shell_widget.load_system_interactions()
+        self._shell_widget.load_interactions()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
@@ -264,6 +264,6 @@ class ShellTab(TabBase):
         message = StatusMessage(strings.system_status)
         self.status_message.emit(message)
 
-    def clear_system_interactions(self) -> None:
+    def clear_interactions(self) -> None:
         """Clear the system history including command history."""
-        self._shell_widget.clear_system_interactions()
+        self._shell_widget.clear_interactions()

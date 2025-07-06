@@ -15,10 +15,10 @@ from PySide6.QtCore import QObject, Signal
 
 from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
+from humbug.mindspace.mindspace_interactions import MindspaceInteractions
+from humbug.mindspace.mindspace_message import MindspaceMessage
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.mindspace.mindspace_settings import MindspaceSettings
-from humbug.shell.shell_interactions import ShellInteractions
-from humbug.shell.shell_message import ShellMessage
-from humbug.shell.shell_message_source import ShellMessageSource
 
 
 class MindspaceManager(QObject):
@@ -40,7 +40,7 @@ class MindspaceManager(QObject):
     settings_changed = Signal()
 
     # Signal emitted when system interactions are updated
-    system_interactions_updated = Signal()
+    interactions_updated = Signal()
 
     MINDSPACE_DIR = ".humbug"
     SETTINGS_FILE = "settings.json"
@@ -65,7 +65,7 @@ class MindspaceManager(QObject):
             self._settings: MindspaceSettings | None = None
             self._home_config = os.path.expanduser("~/.humbug/mindspace.json")
             self._directory_tracker = MindspaceDirectoryTracker()
-            self._system_interactions = ShellInteractions()
+            self._interactions = MindspaceInteractions()
             self._initialized = True
 
     def mindspace_path(self) -> str:
@@ -208,7 +208,7 @@ class MindspaceManager(QObject):
             self._settings = settings
             self._directory_tracker.load_tracking(path)
             self._update_home_tracking()
-            self._load_system_interactions()
+            self._load_interactions()
             self.settings_changed.emit()
 
         except Exception as e:
@@ -221,7 +221,7 @@ class MindspaceManager(QObject):
             self._directory_tracker.save_tracking(self._mindspace_path)
             self._mindspace_path = ""
             self._settings = None
-            self._system_interactions.clear()
+            self._interactions.clear()
             self._directory_tracker.clear_tracking()
             self._update_home_tracking()
             self.settings_changed.emit()
@@ -464,7 +464,7 @@ class MindspaceManager(QObject):
         """Get the last used conversations directory."""
         return self._directory_tracker.conversations_directory()
 
-    def add_system_interaction(self, source: ShellMessageSource, content: str) -> ShellMessage:
+    def add_interaction(self, source: MindspaceMessageSource, content: str) -> MindspaceMessage:
         """
         Add a new system interaction message.
 
@@ -473,7 +473,7 @@ class MindspaceManager(QObject):
             content: Content of the message
 
         Returns:
-            The created ShellMessage
+            The created MindspaceMessage
 
         Raises:
             MindspaceNotFoundError: If no mindspace is open
@@ -481,18 +481,18 @@ class MindspaceManager(QObject):
         if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
-        message = ShellMessage.create(source, content)
-        self._system_interactions.add_message(message)
-        self._save_system_interactions()
-        self.system_interactions_updated.emit()
+        message = MindspaceMessage.create(source, content)
+        self._interactions.add_message(message)
+        self._save_interactions()
+        self.interactions_updated.emit()
         return message
 
-    def get_system_interactions(self) -> List[ShellMessage]:
+    def get_interactions(self) -> List[MindspaceMessage]:
         """
         Get all system interaction messages.
 
         Returns:
-            List of ShellMessage objects
+            List of MindspaceMessage objects
 
         Raises:
             MindspaceNotFoundError: If no mindspace is open
@@ -500,9 +500,9 @@ class MindspaceManager(QObject):
         if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
-        return self._system_interactions.get_messages()
+        return self._interactions.get_messages()
 
-    def clear_system_interactions(self) -> None:
+    def clear_interactions(self) -> None:
         """
         Clear all system interaction messages.
 
@@ -512,11 +512,11 @@ class MindspaceManager(QObject):
         if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
-        self._system_interactions.clear()
-        self._save_system_interactions()
-        self.system_interactions_updated.emit()
+        self._interactions.clear()
+        self._save_interactions()
+        self.interactions_updated.emit()
 
-    def _save_system_interactions(self) -> None:
+    def _save_interactions(self) -> None:
         """Save system interactions to disk."""
         if not self.has_mindspace():
             return
@@ -528,13 +528,13 @@ class MindspaceManager(QObject):
 
             # Save interactions
             interactions_path = os.path.join(mindspace_dir, self.SYSTEM_INTERACTIONS_FILE)
-            self._system_interactions.save(interactions_path)
+            self._interactions.save(interactions_path)
 
         except OSError as e:
             # Non-critical error, don't raise any exceptions
             self._logger.error("Failed to save system interactions: %s", str(e))
 
-    def _load_system_interactions(self) -> None:
+    def _load_interactions(self) -> None:
         """Load system interactions from disk."""
         if not self.has_mindspace():
             return
@@ -545,7 +545,7 @@ class MindspaceManager(QObject):
                 self.MINDSPACE_DIR,
                 self.SYSTEM_INTERACTIONS_FILE
             )
-            self._system_interactions.load(interactions_path)
+            self._interactions.load(interactions_path)
 
         except Exception as e:
             # Non-critical error, don't raise any exceptions

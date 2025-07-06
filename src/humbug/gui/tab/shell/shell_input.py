@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QWidget
 from humbug.gui.tab.shell.shell_command_completion_result import ShellCommandCompletionResult
 from humbug.gui.tab.shell.shell_message_widget import ShellMessageWidget
 from humbug.language.language_manager import LanguageManager
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 
 
 class ShellInput(ShellMessageWidget):
@@ -46,7 +46,7 @@ class ShellInput(ShellMessageWidget):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
 
-        self._message_source = ShellMessageSource.USER  # Set default source for styling
+        self._message_source = MindspaceMessageSource.USER  # Set default source for styling
         self._update_header_text()
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:

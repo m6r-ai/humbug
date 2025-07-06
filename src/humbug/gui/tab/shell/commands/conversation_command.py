@@ -5,9 +5,9 @@ from typing import List, Callable, Dict
 
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_model import ReasoningCapability
+from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.shell.shell_command import ShellCommand
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
@@ -93,15 +93,15 @@ class ConversationCommand(ShellCommand):
             try:
                 temperature_val = float(temp_values[0])
                 if temperature_val < 0.0 or temperature_val > 1.0:
-                    self._mindspace_manager.add_system_interaction(
-                        ShellMessageSource.ERROR,
+                    self._mindspace_manager.add_interaction(
+                        MindspaceMessageSource.ERROR,
                         "Temperature must be between 0.0 and 1.0"
                     )
                     return False
 
             except ValueError:
-                self._mindspace_manager.add_system_interaction(
-                    ShellMessageSource.ERROR,
+                self._mindspace_manager.add_interaction(
+                    MindspaceMessageSource.ERROR,
                     "Temperature must be a valid number"
                 )
                 return False
@@ -120,16 +120,16 @@ class ConversationCommand(ShellCommand):
             # Success message would include model info if specified
             msg = "Started new conversation"
 
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.SUCCESS,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.SUCCESS,
                 msg
             )
             return True
 
         except Exception as e:
             self._logger.exception("Failed to create conversation: %s", str(e))
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 f"Failed to create conversation: {str(e)}"
             )
             return False

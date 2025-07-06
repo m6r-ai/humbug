@@ -4,10 +4,10 @@ import logging
 import os
 from typing import List
 
+from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.gui.tab.shell.shell_command_completion_result import ShellCommandCompletionResult
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.shell.shell_command_registry import ShellCommandRegistry
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.command.command_lexer import TokenType, Token
 from humbug.syntax.command.command_parser import CommandParser
 
@@ -90,16 +90,16 @@ class ShellCommandProcessor:
         self._parse_command_line(command_text)
         cmd = self._get_command_name(self._current_tokens)
         if not cmd:
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 "Invalid command format. Type 'help' for a list of available commands."
             )
             return
 
         command = self._command_registry.get_command(cmd)
         if not command:
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 f"Unknown command: {cmd}. Type 'help' for a list of available commands."
             )
             return
@@ -109,8 +109,8 @@ class ShellCommandProcessor:
 
         except Exception as e:
             self._logger.error("Error executing command '%s': %s", command_text, str(e), exc_info=True)
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
 

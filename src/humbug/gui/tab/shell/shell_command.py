@@ -5,7 +5,7 @@ import os
 from typing import Dict, List
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.command.command_lexer import Token, TokenType
 
 
@@ -103,8 +103,8 @@ class ShellCommand:
 
         except Exception as e:
             self._logger.error("Error executing command: %s", str(e), exc_info=True)
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
             return False
@@ -217,8 +217,8 @@ class ShellCommand:
                 help_text += f"  {option}\n    {description}\n"
 
         # Display help
-        self._mindspace_manager.add_system_interaction(
-            ShellMessageSource.SUCCESS,
+        self._mindspace_manager.add_interaction(
+            MindspaceMessageSource.SUCCESS,
             help_text
         )
 

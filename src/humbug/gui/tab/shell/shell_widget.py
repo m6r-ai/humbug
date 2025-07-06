@@ -16,8 +16,8 @@ from humbug.gui.tab.shell.shell_input import ShellInput
 from humbug.gui.tab.shell.shell_message_widget import ShellMessageWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.shell.shell_message import ShellMessage
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.mindspace.mindspace_message import MindspaceMessage
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 
 
 class ShellWidgetEventFilter(QObject):
@@ -80,7 +80,7 @@ class ShellWidget(QWidget):
         self._logger = logging.getLogger("ShellWidget")
 
         self._mindspace_manager = MindspaceManager()
-        self._mindspace_manager.system_interactions_updated.connect(self.load_system_interactions)
+        self._mindspace_manager.interactions_updated.connect(self.load_interactions)
 
         self._style_manager = StyleManager()
 
@@ -183,7 +183,7 @@ class ShellWidget(QWidget):
 
         # Load system interactions when initialized
         if self._mindspace_manager.has_mindspace():
-            self.load_system_interactions()
+            self.load_interactions()
 
     def _handle_tab_completion(
         self,
@@ -218,14 +218,14 @@ class ShellWidget(QWidget):
             return
 
         # Get all system messages
-        system_messages = self._mindspace_manager.get_system_interactions()
+        system_messages = self._mindspace_manager.get_interactions()
 
         # Extract user commands from messages (newest first)
         user_commands = []
 
         # Process messages from newest to oldest
         for message in reversed(system_messages):
-            if message.source == ShellMessageSource.USER:
+            if message.source == MindspaceMessageSource.USER:
                 # Add user message content if not already in list
                 content = message.content.strip()
                 if content and content not in user_commands:
@@ -238,7 +238,7 @@ class ShellWidget(QWidget):
         # Set the command history in the input widget
         self._input.set_command_history(user_commands)
 
-    def load_system_interactions(self) -> None:
+    def load_interactions(self) -> None:
         """
         Load system interaction messages from mindspace, optimizing to only remove
         early messages and add new messages at the end.
@@ -250,7 +250,7 @@ class ShellWidget(QWidget):
             return
 
         # Get system messages from mindspace manager
-        system_messages = self._mindspace_manager.get_system_interactions()
+        system_messages = self._mindspace_manager.get_interactions()
 
         # Handle empty cases
         if not system_messages:
@@ -312,20 +312,20 @@ class ShellWidget(QWidget):
         # Update command history after loading messages
         self._update_command_history()
 
-    def clear_system_interactions(self) -> None:
+    def clear_interactions(self) -> None:
         """Clear both the message display and command input history."""
         # Clear command history in input widget
         self._input.clear_command_history()
 
         # Clear message display (message widgets will be cleared when
-        # load_system_interactions is called with empty interactions)
+        # load_interactions is called with empty interactions)
         for msg in self._messages:
             self._messages_layout.removeWidget(msg)
             msg.deleteLater()
 
         self._messages.clear()
 
-    def _add_system_message(self, message: ShellMessage) -> None:
+    def _add_system_message(self, message: MindspaceMessage) -> None:
         """Add a message from the system message history."""
         msg_widget = ShellMessageWidget(self)
         msg_widget.selectionChanged.connect(
@@ -334,7 +334,7 @@ class ShellWidget(QWidget):
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
 
-        # Set content using fields from ShellMessage model
+        # Set content using fields from MindspaceMessage model
         msg_widget.set_content(
             message.content,
             message.source,
@@ -357,8 +357,8 @@ class ShellWidget(QWidget):
             command_text: The command text to process
         """
         # Add user message to system interactions
-        self._mindspace_manager.add_system_interaction(
-            ShellMessageSource.USER,
+        self._mindspace_manager.add_interaction(
+            MindspaceMessageSource.USER,
             command_text
         )
 
@@ -366,7 +366,7 @@ class ShellWidget(QWidget):
         self._command_processor.process_command(command_text)
 
         # Refresh the messages display
-        self.load_system_interactions()
+        self.load_interactions()
 
     def submit(self) -> None:
         """Submit current input text as a user system command."""
@@ -827,7 +827,7 @@ class ShellWidget(QWidget):
 
         # Refresh messages if we have a mindspace
         if self._mindspace_manager.has_mindspace():
-            self.load_system_interactions()
+            self.load_interactions()
 
     def _set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position in input area.

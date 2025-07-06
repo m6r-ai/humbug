@@ -3,24 +3,24 @@ from datetime import datetime
 from typing import Dict
 import uuid
 
-from humbug.shell.shell_message_source import ShellMessageSource
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 
 
 @dataclass
-class ShellMessage:
+class MindspaceMessage:
     """Represents a single shell message in the interaction history."""
     message_id: str
-    source: ShellMessageSource
+    source: MindspaceMessageSource
     content: str
     timestamp: datetime
 
     @classmethod
     def create(
         cls,
-        source: ShellMessageSource,
+        source: MindspaceMessageSource,
         content: str,
         timestamp: datetime | None = None
-    ) -> 'ShellMessage':
+    ) -> 'MindspaceMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
             timestamp = datetime.utcnow()
@@ -42,11 +42,11 @@ class ShellMessage:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict) -> 'ShellMessage':
-        """Create a ShellMessage instance from dictionary."""
+    def from_dict(cls, data: Dict) -> 'MindspaceMessage':
+        """Create a MindspaceMessage instance from dictionary."""
         return cls(
             message_id=data["message_id"],
-            source=ShellMessageSource(data["source"]),
+            source=MindspaceMessageSource(data["source"]),
             content=data["content"],
             timestamp=datetime.fromisoformat(data["timestamp"])
         )

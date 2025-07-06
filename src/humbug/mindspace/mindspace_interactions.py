@@ -3,20 +3,20 @@ import logging
 import os
 from typing import List
 
-from humbug.shell.shell_message import ShellMessage
+from humbug.mindspace.mindspace_message import MindspaceMessage
 
 
-class ShellInteractions:
-    """Manages the shell interaction history."""
+class MindspaceInteractions:
+    """Manages the mindspace interaction history."""
 
     MAX_MESSAGES = 100
 
     def __init__(self) -> None:
         """Initialize empty interaction history."""
-        self._messages: List[ShellMessage] = []
+        self._messages: List[MindspaceMessage] = []
         self._logger = logging.getLogger("SystemInteraction")
 
-    def add_message(self, message: ShellMessage) -> None:
+    def add_message(self, message: MindspaceMessage) -> None:
         """Add a message to the history, maintaining the max message limit."""
         self._messages.append(message)
 
@@ -24,7 +24,7 @@ class ShellInteractions:
         if len(self._messages) > self.MAX_MESSAGES:
             self._messages = self._messages[-self.MAX_MESSAGES:]
 
-    def get_messages(self) -> List[ShellMessage]:
+    def get_messages(self) -> List[MindspaceMessage]:
         """Get a copy of all messages in the interaction history."""
         return self._messages.copy()
 
@@ -46,7 +46,7 @@ class ShellInteractions:
                 data = json.load(f)
 
             messages_data = data.get("messages", [])
-            self._messages = [ShellMessage.from_dict(msg) for msg in messages_data]
+            self._messages = [MindspaceMessage.from_dict(msg) for msg in messages_data]
 
             # Ensure we don't exceed the maximum
             if len(self._messages) > self.MAX_MESSAGES:

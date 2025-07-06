@@ -3,7 +3,7 @@
 import logging
 from typing import List, Callable
 
-from humbug.shell.shell_command import ShellCommand
+from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.syntax.command.command_lexer import Token
 
 

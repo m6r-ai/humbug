@@ -33,6 +33,7 @@ from humbug.gui.tab.shell.commands.help_command import HelpCommand
 from humbug.gui.tab.shell.commands.m6rc_command import M6rcCommand
 from humbug.gui.tab.shell.commands.terminal_command import TerminalCommand
 from humbug.gui.tab.shell.commands.wiki_command import WikiCommand
+from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
@@ -41,9 +42,8 @@ from humbug.metaphor import (
 )
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.mindspace.mindspace_settings import MindspaceSettings
-from humbug.shell.shell_command_registry import ShellCommandRegistry
-from humbug.shell.shell_message_source import ShellMessageSource
 from humbug.tools.tool_calculator import ToolCalculator
 from humbug.tools.tool_clock import ToolClock
 from humbug.tools.tool_filesystem import ToolFileSystem
@@ -1065,8 +1065,8 @@ class MainWindow(QMainWindow):
             self._column_manager.show_system_shell()
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR,
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR,
                 error
             )
             return
@@ -1263,8 +1263,8 @@ class MainWindow(QMainWindow):
         Returns:
             True if command processed successfully, False otherwise
         """
-        self._column_manager.clear_system_interactions()
-        self._mindspace_manager.clear_system_interactions()
+        self._column_manager.clear_interactions()
+        self._mindspace_manager.clear_interactions()
         return True
 
     def _process_conversation_command(
@@ -1280,8 +1280,8 @@ class MainWindow(QMainWindow):
             self._column_manager.new_conversation(model, temperature, reasoning)
 
         except MindspaceError as e:
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
             )
             return False
 
@@ -1324,16 +1324,16 @@ class MainWindow(QMainWindow):
 
         except FileNotFoundError:
             error = f"File not found: {file_path}"
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR, error
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR, error
             )
             return False
 
         except MetaphorASTBuilderError as e:
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR, error
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR, error
             )
             return False
 
@@ -1344,8 +1344,8 @@ class MainWindow(QMainWindow):
             conversation_id = self._column_manager.new_conversation(model, temperature, reasoning)
 
         except MindspaceError as e:
-            self._mindspace_manager.add_system_interaction(
-                ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
+            self._mindspace_manager.add_interaction(
+                MindspaceMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
             )
             return False
 
