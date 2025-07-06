@@ -137,14 +137,10 @@ class AIBackend(ABC):
 
                             try:
                                 error_data = json.loads(response_message)
-                                error_msg = error_data.get("error", {})
-                                if not isinstance(error_msg, str):
-                                    error_msg = error_msg.get("message", "Unknown error")
 
                             except json.JSONDecodeError as e:
                                 self._logger.warning("Unable to parse: %s (%s)", response_message, str(e))
                                 error_data = {}
-                                error_msg = "Unknown error"
 
                             self._logger.debug("API error: %d: %s", response.status, error_data)
 
@@ -189,7 +185,7 @@ class AIBackend(ABC):
                                 content="",
                                 error=AIError(
                                     code=str(response.status),
-                                    message=f"API error {response.status}: {error_msg}",
+                                    message=f"API error {response.status}: {error_data}",
                                     retries_exhausted=True,
                                     details=error_data
                                 )
