@@ -245,6 +245,8 @@ def get_english_strings() -> LanguageStrings:
         tooltip_edit_file="Edit this file",
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop processing message",
+        tooltip_expand_message="Expand message",
+        tooltip_collapse_message="Collapse message",
 
         delete_from_here_title="Delete Messages",
         delete_from_here_message=(

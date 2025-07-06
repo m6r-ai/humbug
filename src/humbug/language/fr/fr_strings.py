@@ -245,6 +245,8 @@ def get_french_strings() -> LanguageStrings:
         tooltip_edit_file="Modifier ce fichier",
         tooltip_submit_message="Envoyer le message",
         tooltip_stop_message="Arrêter le traitement du message",
+        tooltip_expand_message="Étendre le message",
+        tooltip_collapse_message="Réduire le message",
 
         delete_from_here_title="Supprimer les messages",
         delete_from_here_message=(

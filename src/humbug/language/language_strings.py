@@ -237,6 +237,8 @@ class LanguageStrings:
     tooltip_edit_file: str
     tooltip_submit_message: str
     tooltip_stop_message: str
+    tooltip_expand_message: str
+    tooltip_collapse_message: str
 
     delete_from_here_title: str
     delete_from_here_message: str

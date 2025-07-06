@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
 )
-from PySide6.QtCore import Signal, QPoint, QSize
+from PySide6.QtCore import Signal, QPoint, QSize, Qt
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
 from humbug.ai.ai_message_source import AIMessageSource
@@ -80,6 +80,7 @@ class ConversationMessage(QFrame):
         self._save_message_button: QToolButton | None = None
         self._fork_message_button: QToolButton | None = None
         self._delete_message_button: QToolButton | None = None
+        self._expand_button: QToolButton | None = None
 
         if not is_input:
             self._copy_message_button = QToolButton(self)
@@ -89,6 +90,11 @@ class ConversationMessage(QFrame):
             self._save_message_button = QToolButton(self)
             self._save_message_button.clicked.connect(self._save_message)
             self._header_layout.addWidget(self._save_message_button)
+
+        # Add expand/collapse button for all messages (input and non-input)
+        self._expand_button = QToolButton(self)
+        self._expand_button.clicked.connect(self._toggle_expanded)
+        self._header_layout.addWidget(self._expand_button)
 
         # Add header widget to main layout
         self._layout.addWidget(self._header)
@@ -109,6 +115,9 @@ class ConversationMessage(QFrame):
         self._sections: List[ConversationMessageSection] = []
         self._section_with_selection: ConversationMessageSection | None = None
 
+        # Expanded state - default to True, will be updated in set_content based on message type
+        self._is_expanded = True
+
         # If this is an input widget then create the input section
         if is_input:
             section = self._create_section_widget()
@@ -127,6 +136,9 @@ class ConversationMessage(QFrame):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
         self._handle_language_changed()
+
+        # Update expand button state
+        self._update_expand_button()
 
     def is_focused(self) -> bool:
         """Check if this message is focused."""
@@ -151,6 +163,54 @@ class ConversationMessage(QFrame):
         """Set the bookmarked state."""
         self._is_bookmarked = bookmarked
         self._handle_style_changed()
+
+    def is_expanded(self) -> bool:
+        """Check if this message is expanded."""
+        return self._is_expanded
+
+    def set_expanded(self, expanded: bool) -> None:
+        """
+        Set the expanded state of this message.
+
+        Args:
+            expanded: Whether the message should be expanded
+        """
+        if self._is_expanded == expanded:
+            return
+
+        self._is_expanded = expanded
+        self._sections_container.setVisible(expanded)
+        self._update_expand_button()
+
+    def _toggle_expanded(self) -> None:
+        """Toggle the expanded state of this message."""
+        self.set_expanded(not self._is_expanded)
+
+    def _update_expand_button(self) -> None:
+        """Update the expand button icon and tooltip based on current state."""
+        if not self._expand_button:
+            return
+
+        strings = self._language_manager.strings()
+
+        if self._is_expanded:
+            # Show down arrow when expanded
+            icon_name = "arrow-down"
+            tooltip = strings.tooltip_collapse_message
+
+        else:
+            # Show left arrow when collapsed
+            icon_name = "arrow-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-right"
+            tooltip = strings.tooltip_expand_message
+
+        # Update icon
+        icon_base_size = 14
+        self._expand_button.setIcon(QIcon(self._style_manager.scale_icon(
+            self._style_manager.get_icon_path(icon_name), icon_base_size
+        )))
+
+        # Update tooltip
+        self._expand_button.setToolTip(tooltip)
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
@@ -177,6 +237,9 @@ class ConversationMessage(QFrame):
 
         if self._reject_button:
             self._reject_button.setText(strings.reject_tool_call)
+
+        # Update expand button tooltip
+        self._update_expand_button()
 
     def _update_role_text(self) -> None:
         """Update the role text based on current language."""
@@ -353,7 +416,8 @@ class ConversationMessage(QFrame):
                 self._fork_message_button = QToolButton(self)
                 self._fork_message_button.clicked.connect(self._fork_message)
                 self._fork_message_button.setToolTip(strings.tooltip_fork_message)
-                self._header_layout.addWidget(self._fork_message_button)
+                # Insert before expand button
+                self._header_layout.insertWidget(self._header_layout.count() - 1, self._fork_message_button)
 
             # Add delete button only for user messages
             elif style == AIMessageSource.USER and not self._is_input:
@@ -361,7 +425,13 @@ class ConversationMessage(QFrame):
                 self._delete_message_button = QToolButton(self)
                 self._delete_message_button.clicked.connect(self._delete_message)
                 self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
-                self._header_layout.addWidget(self._delete_message_button)
+                # Insert before expand button
+                self._header_layout.insertWidget(self._header_layout.count() - 1, self._delete_message_button)
+
+            # Set default expanded state based on message type
+            # Tool calls and tool results should be collapsed by default
+            default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
+            self.set_expanded(default_expanded)
 
             # Update header text with proper role
             self._update_role_text()
@@ -612,6 +682,12 @@ class ConversationMessage(QFrame):
             )))
             self._delete_message_button.setIconSize(icon_size)
             self._delete_message_button.setStyleSheet(button_style)
+
+        if self._expand_button:
+            self._expand_button.setIconSize(icon_size)
+            self._expand_button.setStyleSheet(button_style)
+            # Update the expand button icon and tooltip
+            self._update_expand_button()
 
         # Header widget styling
         self._header.setStyleSheet(f"""
