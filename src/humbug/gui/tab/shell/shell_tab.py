@@ -97,7 +97,7 @@ class ShellTab(TabBase):
         metadata = self._shell_widget.create_state_metadata(temp_state)
 
         return TabState(
-            type=TabType.SYSTEM,
+            type=TabType.SHELL,
             tab_id=self._tab_id,
             path="",  # System tab doesn't have a file path
             cursor_position=None,

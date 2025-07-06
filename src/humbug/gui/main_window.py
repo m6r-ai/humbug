@@ -18,13 +18,6 @@ from humbug.ai.ai_tool_manager import AIToolManager
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.color_role import ColorRole
 from humbug.gui.column_manager import ColumnManager
-from humbug.gui.commands.clear_command import ClearCommand
-from humbug.gui.commands.conversation_command import ConversationCommand
-from humbug.gui.commands.edit_command import EditCommand
-from humbug.gui.commands.help_command import HelpCommand
-from humbug.gui.commands.m6rc_command import M6rcCommand
-from humbug.gui.commands.terminal_command import TerminalCommand
-from humbug.gui.commands.wiki_command import WikiCommand
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.gui.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
@@ -33,6 +26,13 @@ from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
+from humbug.gui.tab.shell.commands.clear_command import ClearCommand
+from humbug.gui.tab.shell.commands.conversation_command import ConversationCommand
+from humbug.gui.tab.shell.commands.edit_command import EditCommand
+from humbug.gui.tab.shell.commands.help_command import HelpCommand
+from humbug.gui.tab.shell.commands.m6rc_command import M6rcCommand
+from humbug.gui.tab.shell.commands.terminal_command import TerminalCommand
+from humbug.gui.tab.shell.commands.wiki_command import WikiCommand
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
