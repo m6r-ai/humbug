@@ -1,7 +1,7 @@
 """Conversation message support."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, List
 import uuid
 
@@ -64,7 +64,7 @@ class AIMessage:
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
-            timestamp = datetime.utcnow()
+            timestamp = datetime.now(UTC)
 
         return cls(
             id=str(uuid.uuid4()),

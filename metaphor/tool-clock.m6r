@@ -75,7 +75,7 @@ Context: Clock Tool
             The tool execution follows this process:
 
             1. Extract format parameter (default to "iso")
-            2. Get current UTC time using `datetime.utcnow()`
+            2. Get current UTC time
             3. Format according to requested format type
             4. Return formatted time string
 

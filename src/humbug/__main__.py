@@ -1,7 +1,7 @@
 """Main entry point for the Humbug application."""
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, UTC
 import glob
 import logging
 from logging.handlers import RotatingFileHandler
@@ -27,7 +27,7 @@ def setup_logging() -> None:
     os.makedirs(log_dir, exist_ok=True)
 
     # Generate timestamp for log filename
-    timestamp = datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
     log_file = os.path.join(log_dir, f"{timestamp}.log")
 
     # Configure rotating file handler

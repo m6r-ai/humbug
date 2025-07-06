@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import Dict, Any
 
 from humbug.ai.ai_tool_manager import (
@@ -36,7 +36,7 @@ class AIToolClock(AITool):
         try:
             format_type = arguments.get("format", "iso")
 
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
 
             if format_type == "iso":
                 return now.isoformat() + "Z"
