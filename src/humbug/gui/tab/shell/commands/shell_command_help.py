@@ -9,7 +9,7 @@ from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.lexer import Token, TokenType
 
 
-class HelpCommand(ShellCommand):
+class ShellCommandHelp(ShellCommand):
     """Command to display help information."""
 
     def __init__(self, registry: ShellCommandRegistry) -> None:

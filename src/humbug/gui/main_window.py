@@ -26,13 +26,13 @@ from humbug.gui.status_message import StatusMessage
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
-from humbug.gui.tab.shell.commands.clear_command import ClearCommand
-from humbug.gui.tab.shell.commands.conversation_command import ConversationCommand
-from humbug.gui.tab.shell.commands.edit_command import EditCommand
-from humbug.gui.tab.shell.commands.help_command import HelpCommand
-from humbug.gui.tab.shell.commands.m6rc_command import M6rcCommand
-from humbug.gui.tab.shell.commands.terminal_command import TerminalCommand
-from humbug.gui.tab.shell.commands.wiki_command import WikiCommand
+from humbug.gui.tab.shell.commands.shell_command_clear import ShellCommandClear
+from humbug.gui.tab.shell.commands.shell_command_conversation import ShellCommandConversation
+from humbug.gui.tab.shell.commands.shell_command_edit import ShellCommandEdit
+from humbug.gui.tab.shell.commands.shell_command_help import ShellCommandHelp
+from humbug.gui.tab.shell.commands.shell_command_m6rc import ShellCommandM6rc
+from humbug.gui.tab.shell.commands.shell_command_terminal import ShellCommandTerminal
+from humbug.gui.tab.shell.commands.shell_command_wiki import ShellCommandWiki
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
@@ -397,26 +397,26 @@ class MainWindow(QMainWindow):
         self._command_registry = ShellCommandRegistry()
 
         # Create and register commands
-        clear_command = ClearCommand(self._process_clear_command)
+        clear_command = ShellCommandClear(self._process_clear_command)
         self._command_registry.register_command(clear_command)
 
-        conversation_command = ConversationCommand(self._process_conversation_command)
+        conversation_command = ShellCommandConversation(self._process_conversation_command)
         self._command_registry.register_command(conversation_command)
 
-        edit_command = EditCommand(self._process_edit_command)
+        edit_command = ShellCommandEdit(self._process_edit_command)
         self._command_registry.register_command(edit_command)
 
-        m6rc_command = M6rcCommand(self._process_m6rc_command)
+        m6rc_command = ShellCommandM6rc(self._process_m6rc_command)
         self._command_registry.register_command(m6rc_command)
 
-        terminal_command = TerminalCommand(self._process_terminal_command)
+        terminal_command = ShellCommandTerminal(self._process_terminal_command)
         self._command_registry.register_command(terminal_command)
 
-        wiki_command = WikiCommand(self._process_wiki_command)
+        wiki_command = ShellCommandWiki(self._process_wiki_command)
         self._command_registry.register_command(wiki_command)
 
         # Register help command last so it can see all other commands
-        help_command = HelpCommand(self._command_registry)
+        help_command = ShellCommandHelp(self._command_registry)
         self._command_registry.register_command(help_command)
 
         self._ai_tool_manager = AIToolManager()

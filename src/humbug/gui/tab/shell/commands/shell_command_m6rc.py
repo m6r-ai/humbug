@@ -1,5 +1,6 @@
 """Command to create a new conversation with a Metaphor file."""
 
+import logging
 import os
 from typing import Callable, Dict, List
 
@@ -12,7 +13,7 @@ from humbug.syntax.lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
 
-class M6rcCommand(ShellCommand):
+class ShellCommandM6rc(ShellCommand):
     """Command to create a new conversation with a Metaphor file."""
 
     def __init__(
@@ -26,6 +27,7 @@ class M6rcCommand(ShellCommand):
             create_metaphor_conversation_callback: Callback to create conversation with file path and optional model
         """
         super().__init__()
+        self._logger = logging.getLogger("ShellCommandM6rc")
         self._create_m6rc_conversation = create_m6rc_conversation_callback
         self._user_manager = UserManager()
         self._mindspace_manager = MindspaceManager()

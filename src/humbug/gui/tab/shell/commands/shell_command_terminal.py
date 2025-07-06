@@ -7,7 +7,7 @@ from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.lexer import Token, TokenType
 
 
-class TerminalCommand(ShellCommand):
+class ShellCommandTerminal(ShellCommand):
     """Command to create a new terminal tab."""
 
     def __init__(self, create_terminal_callback: Callable[[], bool]) -> None:

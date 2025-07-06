@@ -10,7 +10,7 @@ from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.lexer import Token, TokenType
 
 
-class WikiCommand(ShellCommand):
+class ShellCommandWiki(ShellCommand):
     """Command to open a wiki tab."""
 
     def __init__(self, wiki_file_callback: Callable[[str], bool]) -> None:
@@ -23,7 +23,7 @@ class WikiCommand(ShellCommand):
         super().__init__()
         self._wiki_file = wiki_file_callback
         self._mindspace_manager = MindspaceManager()
-        self._logger = logging.getLogger("WikiCommand")
+        self._logger = logging.getLogger("ShellCommandWiki")
 
     def name(self) -> str:
         """Get the name of the command."""

@@ -10,7 +10,7 @@ from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.lexer import Token, TokenType
 
 
-class EditCommand(ShellCommand):
+class ShellCommandEdit(ShellCommand):
     """Command to open or create a file in an editor tab."""
 
     def __init__(self, edit_file_callback: Callable[[str], bool]) -> None:
@@ -23,7 +23,7 @@ class EditCommand(ShellCommand):
         super().__init__()
         self._edit_file = edit_file_callback
         self._mindspace_manager = MindspaceManager()
-        self._logger = logging.getLogger("EditCommand")
+        self._logger = logging.getLogger("ShellCommandEdit")
 
     def name(self) -> str:
         """Get the name of the command."""

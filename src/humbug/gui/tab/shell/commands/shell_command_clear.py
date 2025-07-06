@@ -7,7 +7,7 @@ from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.syntax.lexer import Token
 
 
-class ClearCommand(ShellCommand):
+class ShellCommandClear(ShellCommand):
     """Command to clear the system shell history."""
 
     def __init__(self, process_clear_command_callback: Callable[[], bool]) -> None:
@@ -19,7 +19,7 @@ class ClearCommand(ShellCommand):
         """
         super().__init__()
         self._process_clear_command = process_clear_command_callback
-        self._logger = logging.getLogger("ClearCommand")
+        self._logger = logging.getLogger("ShellCommandClear")
 
     def name(self) -> str:
         """Get the name of the command."""

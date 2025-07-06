@@ -12,7 +12,7 @@ from humbug.syntax.lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
 
-class ConversationCommand(ShellCommand):
+class ShellCommandConversation(ShellCommand):
     """Command to create a new conversation tab."""
 
     def __init__(
@@ -29,7 +29,7 @@ class ConversationCommand(ShellCommand):
         self._create_conversation = create_conversation_callback
         self._mindspace_manager = MindspaceManager()
         self._user_manager = UserManager()
-        self._logger = logging.getLogger("ConversationCommand")
+        self._logger = logging.getLogger("ShellCommandConversation")
 
     def name(self) -> str:
         """Get the name of the command."""
