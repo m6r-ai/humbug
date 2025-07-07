@@ -1016,7 +1016,7 @@ class MainWindow(QMainWindow):
             }}
         """)
 
-    def _new_conversation(self) -> str | None:
+    def _new_conversation(self) -> ConversationTab | None:
         """Create new conversation tab."""
         if not self._mindspace_manager.has_mindspace():
             return None
@@ -1071,16 +1071,12 @@ class MainWindow(QMainWindow):
             )
             return
 
-        conversation_id = self._new_conversation()
-        if conversation_id is None:
-            return
-
-        # Get the tab and set input text
-        conversation_tab = self._column_manager.find_tab_by_id(conversation_id)
+        conversation_tab = self._new_conversation()
         if conversation_tab is None:
             return
 
-        cast(ConversationTab, conversation_tab).set_input_text(prompt)
+        # Set input text
+        conversation_tab.set_input_text(prompt)
 
     def _open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""
@@ -1338,10 +1334,9 @@ class MainWindow(QMainWindow):
             return False
 
         self._column_manager.protect_current_tab(True)
-        conversation_id: str | None = None
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            conversation_id = self._column_manager.new_conversation(model, temperature, reasoning)
+            conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
 
         except MindspaceError as e:
             self._mindspace_manager.add_interaction(
@@ -1350,14 +1345,10 @@ class MainWindow(QMainWindow):
             return False
 
         self._column_manager.protect_current_tab(False)
-        if conversation_id is None:
-            return False
-
-        conversation_tab = self._column_manager.find_tab_by_id(conversation_id)
         if conversation_tab is None:
             return False
 
-        cast(ConversationTab, conversation_tab).set_input_text(prompt)
+        conversation_tab.set_input_text(prompt)
 
         if should_submit:
             conversation_tab.submit()

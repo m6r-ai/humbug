@@ -44,12 +44,13 @@ class AIToolSystem(AITool):
         return AIToolDefinition(
             name="system",
             description=(
-                "Control the application interface and workspace. Available operations: "
-                "edit_file (open a file for the user to edit it, but does not create files), "
-                "new_terminal (create a terminal tab for the user), "
-                "new_conversation (start a new AI conversation for the user, with optional model/temperature), "
-                "show_system_shell (open system command interface for the user), "
-                "open_wiki (open a wiki view for the user to let them browse files/directories). "
+                "Control the application user interface on behalf of the user. Available operations: "
+                "open_editor (open a file in an editor tab), "
+                "new_terminal (create a terminal tab), "
+                "open_conversation (open an existing AI conversation in a conversation tab), "
+                "new_conversation (start a new AI conversation in a conversation tab, with optional model/temperature), "
+                "show_system_shell (open a system shell tab), "
+                "open_wiki (open a file/direcotry in a wiki tab). "
                 "All operations work within the current mindspace. "
                 "Returns detailed information about created tabs, opened files, and operation results."
             ),
@@ -59,12 +60,12 @@ class AIToolSystem(AITool):
                     type="string",
                     description="System operation to perform",
                     required=True,
-                    enum=["edit_file", "new_terminal", "new_conversation", "show_system_shell", "open_wiki"]
+                    enum=["open_editor", "new_terminal", "open_conversation", "new_conversation", "show_system_shell", "open_wiki"]
                 ),
                 AIToolParameter(
                     name="file_path",
                     type="string",
-                    description="Path to file or directory (for edit_file and open_wiki operations)",
+                    description="Path to file or directory (for open_editor, open_conversation, and open_wiki operations)",
                     required=False
                 ),
                 AIToolParameter(
@@ -177,42 +178,6 @@ class AIToolSystem(AITool):
                 {"operation": operation, "file_path": path_str}
             ) from e
 
-    def _build_authorization_context(self, operation: str, **kwargs: Any) -> str:
-        """
-        Build rich context information for user authorization.
-
-        Args:
-            operation: Operation being performed
-            **kwargs: Additional context information
-
-        Returns:
-            Formatted authorization context string
-        """
-        context_lines = [f"Operation: {operation}"]
-
-        if operation == "edit_file" and "file_path" in kwargs:
-            relative_path = self._mindspace_manager.get_relative_path(kwargs["file_path"])
-            context_lines.append(f"File: {relative_path}")
-
-            # Check if file exists
-            if os.path.exists(kwargs["file_path"]):
-                context_lines.append("Action: Open existing file for editing")
-            else:
-                context_lines.append("Action: Create new file for editing")
-
-        elif operation == "open_wiki" and "file_path" in kwargs:
-            relative_path = self._mindspace_manager.get_relative_path(kwargs["file_path"])
-            context_lines.append(f"Location: {relative_path}")
-
-        elif operation == "new_conversation":
-            if "model" in kwargs:
-                context_lines.append(f"Model: {kwargs['model']}")
-
-            if "temperature" in kwargs:
-                context_lines.append(f"Temperature: {kwargs['temperature']}")
-
-        return "\n".join(context_lines)
-
     async def execute(
         self,
         arguments: Dict[str, Any],
@@ -240,8 +205,9 @@ class AIToolSystem(AITool):
 
         # Route to specific operation handler
         handlers = {
-            "edit_file": self._edit_file,
+            "open_editor": self._open_editor,
             "new_terminal": self._new_terminal,
+            "open_conversation": self._open_conversation,
             "new_conversation": self._new_conversation,
             "show_system_shell": self._show_system_shell,
             "open_wiki": self._open_wiki,
@@ -273,27 +239,14 @@ class AIToolSystem(AITool):
                 arguments
             ) from e
 
-    async def _edit_file(
+    async def _open_editor(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Edit or create a file in an editor tab."""
         file_path_arg = self._get_str_value_from_key("file_path", arguments)
-        file_path = self._validate_and_resolve_path(file_path_arg, "edit_file")
-
-        # Check if we're creating a new file
-        file_exists = os.path.exists(file_path)
-
-        # Request authorization
-        context = self._build_authorization_context("edit_file", file_path=file_path)
-        authorized = await request_authorization("system", arguments, context, False)
-        if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to edit file: {file_path_arg}",
-                "system",
-                arguments
-            )
+        file_path = self._validate_and_resolve_path(file_path_arg, "open_editor")
 
         try:
             # Create parent directories if needed
@@ -303,12 +256,11 @@ class AIToolSystem(AITool):
 
             # Open the file in editor
             self._column_manager.protect_current_tab(True)
-            self._column_manager.open_file(file_path)
+            editor_tab = self._column_manager.open_file(file_path)
             self._column_manager.protect_current_tab(False)
 
             relative_path = self._mindspace_manager.get_relative_path(file_path)
-            action = "Opened existing file" if file_exists else "Created new file"
-            return f"{action} for editing: {relative_path}"
+            return f"Opened editor tab for file: {relative_path} (tab ID: {editor_tab.tab_id()})"
 
         except OSError as e:
             raise AIToolExecutionError(
@@ -327,24 +279,14 @@ class AIToolSystem(AITool):
     async def _new_terminal(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Create a new terminal tab."""
-        # Request authorization
-        context = self._build_authorization_context("new_terminal")
-        authorized = await request_authorization("system", arguments, context, False)
-        if not authorized:
-            raise AIToolAuthorizationDenied(
-                "User denied permission to create new terminal",
-                "system",
-                arguments
-            )
-
         try:
             self._column_manager.protect_current_tab(True)
-            terminal_id = self._column_manager.new_terminal()
+            terminal_tab = self._column_manager.new_terminal()
             self._column_manager.protect_current_tab(False)
-            return f"Created new terminal tab (ID: {terminal_id})"
+            return f"Created new terminal tab (tab ID: {terminal_tab.tab_id()})"
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -353,10 +295,59 @@ class AIToolSystem(AITool):
                 arguments
             ) from e
 
+    async def _open_conversation(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """Create a new conversation tab."""
+        # Get file path
+        file_path_arg = arguments.get("file_path", "")
+        if not file_path_arg:
+            raise AIToolExecutionError(
+                "No 'file_path' argument provided for open_conversation",
+                "system",
+                arguments
+            )
+
+        conversation_path = self._validate_and_resolve_path(file_path_arg, "open_conversation")
+
+        try:
+            # Ensure conversations directory exists
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+
+            # Create conversation
+            self._column_manager.protect_current_tab(True)
+            conversation_tab = self._column_manager.open_conversation(conversation_path, False)
+            self._column_manager.protect_current_tab(False)
+
+            if conversation_tab is None:
+                raise AIToolExecutionError(
+                    f"Conversation file '{file_path_arg}' does not exist or is not a valid conversation.",
+                    "system",
+                    arguments
+                )
+
+            return f"Created new conversation tab (tab ID: {conversation_tab.tab_id()})"
+
+        except MindspaceError as e:
+            raise AIToolExecutionError(
+                f"Failed to create conversation directory: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+        except Exception as e:
+            raise AIToolExecutionError(
+                f"Failed to create conversation: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
     async def _new_conversation(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Create a new conversation tab."""
         # Extract optional parameters
@@ -405,26 +396,16 @@ class AIToolSystem(AITool):
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
-        # Request authorization
-        context = self._build_authorization_context("new_conversation", model=model, temperature=temperature)
-        authorized = await request_authorization("system", arguments, context, False)
-        if not authorized:
-            raise AIToolAuthorizationDenied(
-                "User denied permission to create new conversation",
-                "system",
-                arguments
-            )
-
         try:
             # Ensure conversations directory exists
             self._mindspace_manager.ensure_mindspace_dir("conversations")
 
             # Create conversation
             self._column_manager.protect_current_tab(True)
-            conversation_id = self._column_manager.new_conversation(model, temperature, reasoning)
+            conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
             self._column_manager.protect_current_tab(False)
 
-            result_parts = [f"Created new conversation tab (ID: {conversation_id})"]
+            result_parts = [f"Created new conversation tab (tab ID: {conversation_tab.tab_id()})"]
             if model:
                 result_parts.append(f"Model: {model}")
 
@@ -450,24 +431,14 @@ class AIToolSystem(AITool):
     async def _show_system_shell(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Show the system shell tab."""
-        # Request authorization
-        context = self._build_authorization_context("show_system_shell")
-        authorized = await request_authorization("system", arguments, context, False)
-        if not authorized:
-            raise AIToolAuthorizationDenied(
-                "User denied permission to show system shell",
-                "system",
-                arguments
-            )
-
         try:
             self._column_manager.protect_current_tab(True)
-            self._column_manager.show_system_shell()
+            shell_tab = self._column_manager.show_system_shell()
             self._column_manager.protect_current_tab(False)
-            return "Opened system shell tab"
+            return f"Opened system shell tab (tab ID: {shell_tab.tab_id()})"
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -479,7 +450,7 @@ class AIToolSystem(AITool):
     async def _open_wiki(
         self,
         arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Open wiki view for a specific location or mindspace root."""
         # Get file path (optional)
@@ -491,25 +462,15 @@ class AIToolSystem(AITool):
             # Use mindspace root if no path provided
             wiki_path = self._mindspace_manager.get_absolute_path(".")
 
-        # Request authorization
-        context = self._build_authorization_context("open_wiki", file_path=wiki_path)
-        authorized = await request_authorization("system", arguments, context, False)
-        if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to open wiki: {file_path_arg or 'mindspace root'}",
-                "system",
-                arguments
-            )
-
         try:
             # Open wiki page
             self._column_manager.protect_current_tab(True)
-            self._column_manager.open_wiki_page(wiki_path, False)
+            wiki_tab = self._column_manager.open_wiki_page(wiki_path, False)
             self._column_manager.protect_current_tab(False)
 
             relative_path = self._mindspace_manager.get_relative_path(wiki_path)
-            location = relative_path if relative_path else "mindspace root"
-            return f"Opened wiki view for: {location}"
+            location = relative_path if relative_path else "."
+            return f"Opened wiki tab for: {location} (tab ID: {wiki_tab.tab_id()})"
 
         except Exception as e:
             raise AIToolExecutionError(

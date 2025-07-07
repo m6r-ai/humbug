@@ -1119,7 +1119,7 @@ class ColumnManager(QWidget):
         model: str | None = None,
         temperature: float | None = None,
         reasoning: ReasoningCapability | None = None
-    ) -> str:
+    ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
         timestamp = datetime.now(UTC)
@@ -1149,7 +1149,7 @@ class ColumnManager(QWidget):
         )
         conversation_tab.update_conversation_settings(conversation_settings)
         self._add_tab(conversation_tab, conversation_title)
-        return conversation_tab.tab_id()
+        return conversation_tab
 
     def open_conversation(self, path: str, ephemeral: bool) -> ConversationTab | None:
         """Open an existing conversation file."""
