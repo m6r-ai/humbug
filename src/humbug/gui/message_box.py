@@ -4,12 +4,13 @@ from enum import Enum, auto
 from typing import List
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QPlainTextEdit, QWidget
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QKeyEvent
 
 from humbug.gui.color_role import ColorRole
+from humbug.gui.min_height_text_edit import MinHeightTextEdit
 from humbug.gui.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
@@ -83,33 +84,12 @@ class MessageBox(QDialog):
             icon_label.setPixmap(icon)
             header_layout.addWidget(icon_label, alignment=Qt.AlignmentFlag.AlignTop)
 
-        # Add message text using QPlainTextEdit
-        self._text_edit = QPlainTextEdit()
-        self._text_edit.setPlainText(text)
+        # Add message text
+        self._text_edit = MinHeightTextEdit()
         self._text_edit.setReadOnly(True)
-        self._text_edit.setFrameStyle(0)  # No frame
+        self._text_edit.set_text(text)
 
-        # Calculate size based on content
-        doc = self._text_edit.document()
-        margins = self._text_edit.contentsMargins()
-        line_count = doc.lineCount()
-        font_metrics = self._text_edit.fontMetrics()
-        line_height = font_metrics.lineSpacing()
-
-        # For short messages (<= 3 lines), use fixed height with small margin
-        if line_count <= 3:
-            content_height = ((line_count + 3) * line_height) + margins.top() + margins.bottom()
-            self._text_edit.setFixedHeight(content_height)
-            self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        else:
-            # For longer messages, set reasonable max height with scrollbar
-            content_height = min(30 * line_height, int(self.screen().geometry().height() * 0.8))
-            self._text_edit.setMinimumHeight(40)  # Minimum 2 lines
-            self._text_edit.setMaximumHeight(content_height)
-            self._text_edit.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
-        header_layout.addWidget(self._text_edit, stretch=1)
+        header_layout.addWidget(self._text_edit)
         layout.addLayout(header_layout)
 
         # Add buttons
@@ -163,10 +143,6 @@ class MessageBox(QDialog):
 
         # Store escape button for key handling
         self._escape_button = escape_button
-
-        # Add spacing before buttons only if we have a scrollbar
-        if line_count > 2:
-            layout.addSpacing(12)
 
         button_layout.addStretch()
         layout.addLayout(button_layout)
@@ -237,7 +213,7 @@ class MessageBox(QDialog):
 
         # Apply scrollbar styling
         self._text_edit.setStyleSheet(f"""
-            QPlainTextEdit {{
+            QTextEdit {{
                 border: none;
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};

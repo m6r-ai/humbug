@@ -11,6 +11,7 @@ from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 from humbug.ai.ai_message_source import AIMessageSource
 from humbug.ai.ai_tool_manager import AIToolCall
 from humbug.gui.color_role import ColorRole
+from humbug.gui.min_height_text_edit import MinHeightTextEdit
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
@@ -110,6 +111,7 @@ class ConversationMessage(QFrame):
 
         # Tool approval widgets
         self._approval_widget: QWidget | None = None
+        self._text_edit: MinHeightTextEdit | None = None
         self._approve_button: QPushButton | None = None
         self._reject_button: QPushButton | None = None
 
@@ -316,27 +318,33 @@ class ConversationMessage(QFrame):
         self._section_with_selection = section
         self.selectionChanged.emit(has_selection)
 
-    def show_tool_approval_ui(self, tool_call: AIToolCall, destructive: bool) -> None:
+    def show_tool_approval_ui(self, tool_call: AIToolCall, reason: str, destructive: bool) -> None:
         """
         Show tool approval UI for the given tool calls.
 
         Args:
             tool_call: Tool call that needs approval
+            reason: Reason for the tool call
             destructive: Whether the tool calls are destructive
         """
         assert self._approval_widget is None, "Approval widget already exists"
 
-        self._approval_widget = self._create_tool_approval_widget(tool_call, destructive)
+        self._approval_widget = self._create_tool_approval_widget(tool_call, reason, destructive)
         self._layout.addWidget(self._approval_widget)
         self._handle_style_changed()
 
-    def _create_tool_approval_widget(self, tool_call: AIToolCall, destructive: bool) -> QWidget:
+    def _create_tool_approval_widget(self, tool_call: AIToolCall, reason: str, destructive: bool) -> QWidget:
         """Create widget for tool call approval."""
         approval_widget = QWidget()
         layout = QVBoxLayout(approval_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         strings = self._language_manager.strings()
+
+        self._text_edit = MinHeightTextEdit()
+        self._text_edit.set_text(reason)
+        self._text_edit.setReadOnly(True)
+        layout.addWidget(self._text_edit)
 
         # Approval buttons
         button_layout = QHBoxLayout()
@@ -352,6 +360,7 @@ class ConversationMessage(QFrame):
         self._approve_button.setMinimumWidth(min_button_width)
         self._approve_button.setMinimumHeight(min_button_height)
         self._approve_button.setProperty("recommended", not destructive)
+        self._approve_button.setContentsMargins(8, 8, 8, 8)
 
         self._reject_button = QPushButton(strings.reject_tool_call)
         self._reject_button.clicked.connect(self._reject_tool_call)
@@ -721,6 +730,7 @@ class ConversationMessage(QFrame):
 
         # Style approval buttons if present
         if self._approve_button:
+            self._approve_button.setFont(font)
             self._approve_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
@@ -756,6 +766,7 @@ class ConversationMessage(QFrame):
             """)
 
         if self._reject_button:
+            self._reject_button.setFont(font)
             self._reject_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
@@ -767,6 +778,18 @@ class ConversationMessage(QFrame):
                 }}
                 QPushButton:pressed {{
                     background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                }}
+            """)
+
+        if self._text_edit:
+            self._text_edit.setFont(font)
+            self._text_edit.setStyleSheet(f"""
+                QTextEdit {{
+                    color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    border: none;
+                    border-radius: 0x;
+                    padding: 0;
+                    margin: 0;
                 }}
             """)
 

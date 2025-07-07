@@ -274,8 +274,8 @@ class ConversationWidget(QWidget):
 
         msg_widget.set_content(message.content, message.source, message.timestamp, message.model or "", message.id)
 
-        # Add widget before input
-        self._messages_layout.insertWidget(self._messages_layout.count() - 1, msg_widget)
+        # Add widget before input and the stretch
+        self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
         self._messages.append(msg_widget)
 
         self._install_activation_tracking(msg_widget)
@@ -381,20 +381,27 @@ class ConversationWidget(QWidget):
         # Write the tool call to the transcript
         await self.write_transcript(message)
 
-    async def _on_tool_approval_required(self, message: AIMessage, tool_call: AIToolCall, destructive: bool) -> None:
+    async def _on_tool_approval_required(
+        self,
+        message: AIMessage,
+        tool_call: AIToolCall,
+        reason: str,
+        destructive: bool
+    ) -> None:
         """
         Handle tool approval requirement.
 
         Args:
             message: The tool call message
             tool_call: Tool call requiring approval
+            reason: Reason for the tool call
             destructive: Whether the tool calls are considered destructive
         """
         # Find the message widget that corresponds to this tool call message
         for msg_widget in self._messages:
             if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
-                msg_widget.show_tool_approval_ui(tool_call, destructive)
+                msg_widget.show_tool_approval_ui(tool_call, reason, destructive)
                 break
 
     def _handle_tool_call_approved(self, _tool_call: AIToolCall) -> None:
