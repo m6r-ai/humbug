@@ -1,186 +1,74 @@
-# Humbug v0.18
+# Humbug: an AI-native collaborative workspace
 
-Humbug is an extensible open-source tool designed to help you design, build and maintain software using AI.
+Build, reason, and create, side by side with AI.
 
-Whether you're a human or an AI, the most important things in software development are understanding the
-problem you're trying to solve and the software you've building with to solve it.  Humbug is designed to
-help you with both.
+## What is Humbug?
 
-It supports large language models (LLMs) from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI,
-and you have total flexibility over which one you use at any time.  You can use 2 or more at
-the same time, so if you want multiple opinions then it's easy to get them.  It's your choice whether these are
-local models, or cloud-hosted.
+Humbug is a modular, extensible platform that unifies your technical workflows with the power of AI.
+Think of it as an operating system for human-AI collaboration.
+It's a workspace where you and your AI colleagues manage code, documents, and ideas together.
 
-Humbug runs locally on your computer so you always retain complete control over your projects.
+## Why Humbug?
 
-## Tools - for you and your AI
+- **AI as a first-class citizen**  
+  Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.
+  Compare outputs, orchestrate tools, and explore new solutions with AIs as flexible, autonomous teammates.
 
-If you want to build software with AI you need tools to interact with your design and your code.  Humbug gives you
-powerful conversations, editors, terminal emulators, a system shell, a dynamic documentation wiki.
+- **Mindspaces: project-centric workspaces**  
+  Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
+  Switch between projects as easily as you switch between desktops.
 
-Humbug gives your LLMs a clock, a comprehensive scientific calculator, and access to the files and directories in
-your project mindspace.
+- **Structured context engineering with Metaphor**  
+  Go beyond ad-hoc prompts and make your intentions clear to get dramatically better results and lower operating costs.
+  Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
+  Think of it like a shell language for AI orchestration.
 
-The combination means both you and your AIs can easily work on any aspect of your software, either working
-collaboratively, or working on different things at the same time.
+- **Unified interface for building, **  
+  Interact through a modern GUI with multi-pane editing, real-time AI conversations, and rich documentation.
+  Or drop into a programmable terminal for full control.
 
-## Metaphor - solving the AI context problem
+- **Powerful, pluggable tools**  
+  Extend your LLMs with dynamic file operations, a scientific calculator, system clock access, UI orchestration, Markdown parsing, syntax highlighting, and more.
+  Humbug’s tool system makes it easy to add new capabilities for both human and AI use.
 
-The key to getting great results from AIs is to ensure they have the right context to work with.
+- **Designed for extensibility**  
+  Humbug is open-source and modular by design.
+  Add new AI backends, tools, or integrations with minimal friction.
 
-To do this, Humbug uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation
-language.  Metaphor is very quick to learn (just 5 keywords) and is structured to let you be clear about what you want
-your AI to do for you, so it's not left guessing or hallucinating.
+## What sets Humbug apart?
 
-By making prompt creation a repeatable engineering process it's easy to try new ideas, and iterate towards what you
-want.  If you don't like something, you can make adjustments to your Metaphor scripts and try again.  If you want to
-see if a different AI models will give you better results you can do that too!
+- **OS-like modularity without the baggage**  
+  Humbug brings isolation, concurrent processes, and the extensibility of an OS, without trying to replace your real operating system.
+  It sits on top of Windows, macOS, or Linux, giving a unified experience across all of them.
 
-Read [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) to find out more.
+- **Human–AI collaboration, engineered**  
+  When you're using AI, you're no longer working alone.
+  Both humans and AIs are first-class actors in Humbug.
+  Share a mindspace, exchange ideas, and use the same tools to get work done.
 
-While Metaphor is designed to help start your conversations with AI, and Humbug is the tool designed to get the most out of
-those conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into
-your software and documentation.  The built-in editor and terminal also lets you update and test anything you get back from
-the AI, and provides you access to any command line tools you might want to use.
+- **Built for teams and solo builders**  
+  Whether you’re scoping, prototyping, refactoring, extending, maintaining, documenting, or experimenting, Humbug gives you a new way to work.
 
-## What does that mean in practice?
+- **AI agnostic.**  
+  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI.
+  Seamlessly switch between models.
+  You can even switch model mid-conversation.
 
-Providing an AI everything it needs lets Metaphor stretch an AI model way beyond code completions.  This approach
-has been used throughout Humbug's development.
+- **Built by bootstrapping.**
+  Each version of Humbug has been built using the previous version.
+  Over 80% of the code was implemented by LLMs, allowing the designers to focus on functionality and maintaining a clean architecture.
 
-In most versions there have been many 100+ line changes to the code across multiple files that were all generated from
-single Metaphor prompts.  The biggest single AI-coded change was in v0.13, where 1600 lines of code were generated
-by Claude Sonnet 3.7.  That change had one bug that took 5 minutes to resolve!
+- **What you see is what you get.**
+  Humbug has only 4 package dependencies other than the standard Python library.
+  You can understand almost every part from the one git repo.
 
-Well over 80% of Humbug has been built and maintained by AI using Metaphor.
+## Learn more
 
-The ability to use AI for large refactoring and design tasks also means Humbug is a codebase that has been able to
-evolve very fast but with very little technical debt.
-
-One fun aspect of using Metaphor is you can use Humbug to become an expert on its own design.  If you use the
-Metaphor script `humbug-expert.m6r` and run this with a model that has a very large context window (e.g. Gemini)
-then you can ask the AI about the design or implementation of the software!
-
-## Engineering over vibes!
-
-Naive vibe coding can be a great way to experiment and try out ideas but can be incredibly frustrating for experienced
-engineers.  It can be an incredible way to support prototyping and brainstorming, but high quality code requires
-careful planning, review, and understanding.
-
-By offering a solid grounding context, Metaphor and Humbug aim to provide a way to capture the learnings from
-vibe coding into something that can be used in a more predictable way.  You can start from our reference context,
-explore interactively, update the context and iterate.  You can go further than normal vibe coding because you can also
-have conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback
-can be used to refine the Metaphor context.
-
-## What's new in v0.18
-
-- Added a "system" tool that gives the AI the ability to start terminal, wiki, editor, Humbug shell, and conversation tabs.
-- Added support for collapsing and expanding individual messages in a conversation.  By defaul tool use messages are
-  auto-hidden, but an authorization request message is now provided.
-- Added support for Qwen3:8b model.
-
-## Humbug in action
-
-![Humbug in action](./docs/humbug-v0.12-1.webp)
-
-![Humbug in action](./docs/humbug-v0.12-2.webp)
-
-![Humbug in action](./docs/humbug-v0.12-3.webp)
-
-![Humbug in action](./docs/humbug-v0.12-4.webp)
-
-![Humbug in action](./docs/humbug-v0.16-1.webp)
-
-## Features
-
-### Cross-platform support
-
-Compatible with MacOS X, Linux, and Windows 10/11.
-
-### AI interaction
-
-- Real-time streaming of AI responses.
-- Configurable AI model settings per conversation.
-- Supports Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI models.
-- Configurable temperature settings for supported models.
-- Handles reasoning outputs for models that support them.
-- Error handling and retry mechanisms for API requests.
-- Supports tool/function calling for all models that can support it
-
-### AI tools
-
-- Calculator: gives the LLM a scientific calculator (including complex number support).
-- Clock: allows the LLM to get the current date and time.
-- Filesystem:
-  - Files: lets the LLM read, write, delete, append, copy, move, and get info.
-  - Directories: lets it read, create, delete, and move.
-
-### Conversation features
-
-- Message history with distinct cards for user, AI reasoning, AI response, and system messages.
-- Code blocks are broken into sections and it's easy to copy a whole section or save it as a file.
-- Copy or save whole messages as Markdown.
-- Full text search across all parts of a conversation.
-- Syntax highlighting for various languages and file formats, including nested systax highlighting where code for
-  one language appears inside a different one.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,
-  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Solidity, Swift, and TypeScript.
-- Change AIs within a conversation, or fork (duplicate) conversations at any point.
-- Use Markdown-style code formatting in input messages (with syntax highlighting for code blocks).
-- Bookmarks messages for rapid navigation.
-
-### Wiki views
-
-- Wiki views (single click in the mindspace tree, drag and drop from the mindspace tree, or use the system shell's
-  `wiki` command) give you multiple sources of information about files and folders.
-- Edit actions are available to make it easy to update any part of your documentation or code.
-- Hyperlinks will take you to other docs or open your computer's default web browswer for external references.
-- Full text search across all parts of a wiki page.
-
-### File editing
-
-- Full file editing with syntax highlighting (double click in the mindspace tree, or use the system shell's `edit`
-  command).
-- Auto-backup functionality for unsaved changes.
-
-### Humbug (system) shell
-
-- Command line interface, giving access to a variety of features within Humbug.
-- Using the `m6rc` command withinn the shell will automatically start a conversation if the Metaphor prompt compiles
-  successfully.
-- Shell commands support context-aware command line completions using the tab key.
-- For more information, open select "Show System Shell" from the View menu and enter the command `help`.
-
-### Terminal emulator
-
-- Support for accessing the local shells/command prompts (Unix shells, or Windows command prompt).
-- Full text search across the terminal history.
-
-### Multi-tab interface
-
-- Tabs can be arranged into multiple columns, with columns being able to split, merge and swap.  It's a natural way to
-  discuss what you want with an AI and also look at the code you're working with.
-- Tabs can be easily rearranged and closed.
-- Drag and drop between columns.
-
-### Mindspace management
-
-- Project-specific environments with their own settings and state.
-- Mindspace settings include language, soft tabs, tab size, font size, and auto-backup options.
-- Mindspace state persistence for restoring open tabs and cursor positions.
-- Home directory tracking of last opened mindspace.
-
-### Multi-language support
-
-- Humbug can be configured to use different human languages.  Currently supported English, French,
-  and Arabic.
-
-## Getting started
-
-Humbug can use an Ollama model running locally on your system but the best results currently come from one of
-the cloud-based AIs.  To use them you'll need to get an API key (they're available from the various AI
-provider websites).  Most of them require you to pay for access, but Google and Mistral both currently offer
-free API keys for low volume testing, so you can get started with either, or both, of them.
+- **What's new:** [Latest updates](./CHANGELOG.md)
+- **Dive deeper:** [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor)
+- **Download:** [Download Humbug](https://github.com/m6r-ai/humbug/releases)
+- **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
+- **YouTube:** [@m6rai on YouTube](https://youtube.com/@m6rai)
 
 ## Requirements
 
@@ -191,7 +79,7 @@ free API keys for low volume testing, so you can get started with either, or bot
 - aiohttp (async HTTP client)
 - certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)
 
-## Installation
+## Developer installation
 
 1. Create and activate a virtual environment:
 
@@ -221,72 +109,12 @@ free API keys for low volume testing, so you can get started with either, or bot
    pip install -e .
    ```
 
-## Initial configuration
+4. Launch the application:
 
-The main configuration you require is to set up your API keys for whichever AI services you wish to use.
-As of v0.8 you can do this by opening the "User Settings" dialog on the Humbug menu.
+   ```bash
+   python -m humbug
+   ```
 
-Ollama does not need API keys as Humbug assumes it's running locally on your computer.
+5. Initial configuration:
 
-## Usage
-
-Launch the application:
-
-```bash
-python -m humbug
-```
-
-## Development
-
-Project structure:
-
-```text
-src/humbug/
-╷
-├── ai/            # AI backend and conversation implementations
-├── ast/           # Abstract syntax tree implementation
-├── gui/           # GUI components
-├── language/      # I18n management and strings
-├── markdown/      # Markdown parser
-├── metaphor/      # Metaphor parser and compiler
-├── mindspace/     # Mindspace management
-├── syntax/        # Syntax highlighting and parsing
-├── terminal/      # Terminal emulation
-├── user/          # User settings management
-└── __main__.py    # Main entry point
-```
-
-## Logging
-
-Debug logs are written to `~/.humbug/logs/` with timestamped filenames. The application maintains the last 50 log files, rotating them when they exceed 1MB.
-Please note this is in your home directory, not the `.humbug` directory that you get in a mindspace.
-
-## Licensing
-
-The software is released under an Apache 2.0 open source license.
-
-## Find out more on YouTube
-
-Find out more about Humbug and Metaphor on YouTube: [@m6rai on YouTube](https://youtube.com/@m6rai).
-
-## Join us on Discord
-
-Join us on [Discord](https://discord.gg/GZhJ7ZtgwN) to get help or share your ideas.
-
-## More information
-
-You can find out more about Metaphor and some of the things that have been done with it here:
-
-- [Getting started with Metaphor](https://github.com:/m6r-ai/getting-started-with-metaphor)
-- [m6rclib (Metaphor compiler library)](https://github.com:/m6r-ai/m6rclib)
-- [m6rc (Stand-alone Metaphor compiler)](https://github.com:/m6r-ai/m6rc)
-- [commit-critic (Code review tool)](https://github.com:/m6r-ai/commit-critic)
-- [demo-blog-editor (How we code up blog posts)](https://github.com:/m6r-ai/demo-blog-editor)
-
-## Commercial support
-
-Humbug and Metaphor are supported by M6R Ltd.  To find out more please head over to [m6r.ai](https://m6r.ai)
-
-## Contributing
-
-Contributions are welcome! Please submit a pull request with your proposed changes.
+   See [Getting Started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) for a step-by-step guide to getting Humbug up and running.
