@@ -130,6 +130,7 @@ class ColumnManager(QWidget):
 
         # Are we protecting the current tab against being ovewrwritten?
         self._protect_current_tab = False
+        self._protected_tab: TabBase | None = None
 
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._handle_style_changed)
@@ -141,6 +142,18 @@ class ColumnManager(QWidget):
     def protect_current_tab(self, protect: bool) -> None:
         """Set whether to protect the current tab from being overwritten."""
         self._protect_current_tab = protect
+
+        # If protecting, store the current tab
+        if protect:
+            self._protected_tab = self._get_current_tab()
+            return
+
+        # Unprotecting - ensure the protected tab is kept active!
+        if not self._protected_tab:
+            return
+
+        self._set_current_tab(self._protected_tab)
+        self._protected_tab = None
 
     def _update_mru_order(self, tab: TabBase, column: ColumnWidget) -> None:
         """
@@ -783,17 +796,13 @@ class ColumnManager(QWidget):
         widget = self._active_column.currentWidget()
         return cast(TabBase, widget) if widget else None
 
-    def _set_current_tab(self, tab_id: str) -> None:
+    def _set_current_tab(self, tab: TabBase) -> None:
         """
-        Set the current tab by ID.
+        Set the current active tab.
 
         Args:
-            tab_id: ID of the tab to make current
+            tab: The tab to make current
         """
-        tab = self._tabs.get(tab_id)
-        if not tab:
-            return
-
         # Find which column contains the tab
         column = self._find_column_for_tab(tab)
         if column is None:
@@ -1077,7 +1086,7 @@ class ColumnManager(QWidget):
         """
         for tab in self._tabs.values():
             if isinstance(tab, ShellTab):
-                self._set_current_tab(tab.tab_id())
+                self._set_current_tab(tab)
                 return tab
 
         shell_tab = ShellTab("", self)
@@ -1107,7 +1116,7 @@ class ColumnManager(QWidget):
         # Check if file is already open
         existing_tab = self._find_editor_tab_by_path(path)
         if existing_tab is not None:
-            self._set_current_tab(existing_tab.tab_id())
+            self._set_current_tab(existing_tab)
             return existing_tab
 
         editor = EditorTab("", path, None, self)
@@ -1159,7 +1168,7 @@ class ColumnManager(QWidget):
         abs_path = self._mindspace_manager.get_absolute_path(path)
         existing_tab = self._find_conversation_tab_by_path(abs_path)
         if existing_tab:
-            self._set_current_tab(existing_tab.tab_id())
+            self._set_current_tab(existing_tab)
             return existing_tab
 
         try:
@@ -1300,7 +1309,7 @@ class ColumnManager(QWidget):
         # Check if already open
         existing_tab = self._find_wiki_tab_by_path(path_minus_anchor)
         if existing_tab:
-            self._set_current_tab(existing_tab.tab_id())
+            self._set_current_tab(existing_tab)
 
             # If there's an anchor, scroll to it
             if anchor:
