@@ -342,9 +342,9 @@ class ShellWidget(QWidget):
             message.message_id
         )
 
-        # Add widget before input
+        # Add widget before input and the stretch
         count = self._messages_layout.count()
-        self._messages_layout.insertWidget(count - 1, msg_widget)
+        self._messages_layout.insertWidget(count - 2, msg_widget)
         self._messages.append(msg_widget)
 
         self._install_activation_tracking(msg_widget)
