@@ -280,6 +280,19 @@ class ConversationWidget(QWidget):
 
         self._install_activation_tracking(msg_widget)
 
+    async def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
+        """
+        Change the expansion state of a message.
+
+        Args:
+            message_index: Index of the message to change
+            expanded: Whether the message should be expanded
+        """
+        if message_index >= len(self._messages):
+            return
+
+        self._messages[message_index].set_expanded(expanded)
+
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all callbacks from the AIConversation object."""
         ai_conversation = cast(AIConversation, self._ai_conversation)
@@ -1358,6 +1371,13 @@ class ConversationWidget(QWidget):
         metadata["content"] = self._input.to_plain_text()
         metadata['cursor'] = self._get_cursor_position()
 
+        # Store message expansion states
+        expansion_states = []
+        for message_widget in self._messages:
+            expansion_states.append(message_widget.is_expanded())
+
+        metadata["message_expansion"] = expansion_states
+
         # Store bookmarks
         bookmark_data = []
         for message_widget, data in self._bookmarked_messages.items():
@@ -1407,6 +1427,17 @@ class ConversationWidget(QWidget):
 
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])
+
+        # Restore message expansion states if specified
+        if "message_expansion" in metadata:
+            expansion_states = metadata["message_expansion"]
+
+            # Our messages list has already been queued to be added but they're not yet there.
+            # Add our expansion states updates to the same event loop so they get processed
+            # after the messages are added.
+            loop = asyncio.get_event_loop()
+            for i, is_expanded in enumerate(expansion_states):
+                loop.create_task(self._change_message_expansion(i, is_expanded))
 
         # Restore bookmarks if specified
         if 'bookmarks' in metadata:
