@@ -302,14 +302,7 @@ class AIToolSystem(AITool):
     ) -> str:
         """Create a new conversation tab."""
         # Get file path
-        file_path_arg = arguments.get("file_path", "")
-        if not file_path_arg:
-            raise AIToolExecutionError(
-                "No 'file_path' argument provided for open_conversation",
-                "system",
-                arguments
-            )
-
+        file_path_arg = self._get_str_value_from_key("file_path", arguments)
         conversation_path = self._validate_and_resolve_path(file_path_arg, "open_conversation")
 
         try:
