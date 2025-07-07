@@ -1,4 +1,4 @@
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import Dict, Any
 
 from humbug.ai.ai_tool_manager import (
@@ -36,10 +36,10 @@ class AIToolClock(AITool):
         try:
             format_type = arguments.get("format", "iso")
 
-            now = datetime.now(UTC)
+            now = datetime.now(timezone.utc)
 
             if format_type == "iso":
-                return now.isoformat() + "Z"
+                return now.isoformat()[:26] + "Z"
 
             if format_type == "human":
                 return now.strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -47,7 +47,7 @@ class AIToolClock(AITool):
             if format_type == "timestamp":
                 return str(int(now.timestamp()))
 
-            return now.isoformat() + "Z"
+            return now.isoformat()[:26] + "Z"
 
         except Exception as e:
             raise AIToolExecutionError(

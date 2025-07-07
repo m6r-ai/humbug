@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import Dict
 import uuid
 
@@ -23,7 +23,7 @@ class MindspaceMessage:
     ) -> 'MindspaceMessage':
         """Create a new message with generated ID and current timestamp."""
         if timestamp is None:
-            timestamp = datetime.now(UTC)
+            timestamp = datetime.now(timezone.utc)
 
         return cls(
             message_id=str(uuid.uuid4()),

@@ -1,5 +1,5 @@
 import asyncio
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 import logging
 import os
 from typing import Dict, List, cast
@@ -1131,7 +1131,7 @@ class ColumnManager(QWidget):
     ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
-        timestamp = datetime.now(UTC)
+        timestamp = datetime.now(timezone.utc)
         conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
         filename = os.path.join("conversations", f"{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)

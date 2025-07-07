@@ -23,7 +23,7 @@ def mock_datetime():
     """Fixture providing a mocked datetime for predictable testing."""
     mock_dt = datetime(2023, 12, 25, 14, 30, 45, 123456)
     with patch('humbug.ai.tools.ai_tool_clock.datetime') as mock:
-        mock.utcnow.return_value = mock_dt
+        mock.now.return_value = mock_dt
         yield mock_dt
 
 
@@ -137,7 +137,7 @@ class TestAIToolClockErrorHandling:
     def test_execute_datetime_exception_wrapped(self, clock_tool, mock_authorization):
         """Test that datetime exceptions are properly wrapped."""
         with patch('humbug.ai.tools.ai_tool_clock.datetime') as mock_datetime:
-            mock_datetime.utcnow.side_effect = OSError("System clock error")
+            mock_datetime.now.side_effect = OSError("System clock error")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(clock_tool.execute({"format": "iso"}, mock_authorization))
@@ -155,7 +155,7 @@ class TestAIToolClockErrorHandling:
             mock_dt = MagicMock()
             mock_dt.timestamp.side_effect = ValueError("Invalid timestamp")
             mock_dt.isoformat.return_value = "2023-12-25T14:30:45.123456"
-            mock_datetime.utcnow.return_value = mock_dt
+            mock_datetime.now.return_value = mock_dt
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(clock_tool.execute({"format": "timestamp"}, mock_authorization))
@@ -169,7 +169,7 @@ class TestAIToolClockErrorHandling:
             # Create a datetime that will cause isoformat() to fail
             mock_dt = MagicMock()
             mock_dt.isoformat.side_effect = AttributeError("No isoformat method")
-            mock_datetime.utcnow.return_value = mock_dt
+            mock_datetime.now.return_value = mock_dt
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(clock_tool.execute({"format": "iso"}, mock_authorization))
@@ -183,7 +183,7 @@ class TestAIToolClockErrorHandling:
             # Create a datetime that will cause strftime() to fail
             mock_dt = MagicMock()
             mock_dt.strftime.side_effect = ValueError("Invalid format string")
-            mock_datetime.utcnow.return_value = mock_dt
+            mock_datetime.now.return_value = mock_dt
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(clock_tool.execute({"format": "human"}, mock_authorization))
