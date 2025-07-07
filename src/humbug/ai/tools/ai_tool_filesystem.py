@@ -204,52 +204,6 @@ class AIToolFileSystem(AITool):
                 {"operation": operation, "path": path_str}
             ) from e
 
-    def _build_authorization_context(self, operation: str, path: Path, **kwargs: Any) -> str:
-        """
-        Build rich context information for user authorization.
-
-        Args:
-            operation: Operation being performed
-            path: Path being operated on
-            **kwargs: Additional context information
-
-        Returns:
-            Formatted authorization context string
-        """
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        context_lines = [f"Operation: {operation}", f"Path: {relative_path}"]
-
-        # Add operation-specific context
-        if operation in ("write_file", "append_to_file") and "content" in kwargs:
-            content = kwargs["content"]
-            content_size = len(content.encode('utf-8'))
-            context_lines.append(f"Content size: {content_size:,} bytes")
-
-            # Show content preview for small files
-            if content_size <= 500:
-                preview = content[:200] + ("..." if len(content) > 200 else "")
-                context_lines.append(f"Content preview: {repr(preview)}")
-
-        elif operation in ("copy_file", "move") and "destination" in kwargs:
-            dest_relative = self._mindspace_manager.get_relative_path(kwargs["destination"])
-            context_lines.append(f"Destination: {dest_relative}")
-
-        # Add file/directory information if path exists
-        if path.exists():
-            if path.is_file():
-                size = path.stat().st_size
-                context_lines.append(f"Current size: {size:,} bytes")
-
-            elif path.is_dir():
-                try:
-                    items = list(path.iterdir())
-                    context_lines.append(f"Directory items: {len(items)}")
-
-                except PermissionError:
-                    context_lines.append("Directory items: Permission denied")
-
-        return "\n".join(context_lines)
-
     async def execute(
         self,
         arguments: Dict[str, Any],
@@ -421,17 +375,23 @@ class AIToolFileSystem(AITool):
                 arguments
             )
 
-        # Are we going to create a new file or overwrite an existing one?
-        destructive = path.exists()
+        # Build authorization context
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+
+        if path.exists():
+            context = f"Write content to '{relative_path}'. " \
+                "This will overwrite the existing file and the previous contents will be lost."
+            destructive = True
+
+        else:
+            context = f"Create a new file '{relative_path}' with the provided content."
+            if create_parents and not path.parent.exists():
+                parent_relative = self._mindspace_manager.get_relative_path(str(path.parent))
+                context += f" This will also create the parent directory '{parent_relative}'."
+
+            destructive = False
 
         # Request authorization
-        context = self._build_authorization_context(
-            "write_file",
-            path,
-            content=content,
-            encoding=encoding,
-            create_parents=create_parents
-        )
         authorized = await request_authorization("filesystem", arguments, context, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(
@@ -518,11 +478,11 @@ class AIToolFileSystem(AITool):
                 arguments
             )
 
+        # Build authorization context
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        context = f"Append content to the end of '{relative_path}'. This will modify the existing file."
+
         # Request authorization
-        context = self._build_authorization_context(
-            "append_to_file", path,
-            content=content, encoding=encoding
-        )
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
@@ -662,11 +622,14 @@ class AIToolFileSystem(AITool):
                 arguments
             )
 
+        # Build authorization context
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        context = f"Create a new directory '{relative_path}'."
+
+        if create_parents and not path.parent.exists():
+            context += " This will also create any missing parent directories."
+
         # Request authorization
-        context = self._build_authorization_context(
-            "create_directory", path,
-            create_parents=create_parents
-        )
         authorized = await request_authorization("filesystem", arguments, context, False)
         if not authorized:
             raise AIToolAuthorizationDenied(
@@ -743,8 +706,11 @@ class AIToolFileSystem(AITool):
                 arguments
             ) from e
 
+        # Build authorization context
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        context = f"Remove the empty directory '{relative_path}'. This directory will be permanently deleted."
+
         # Request authorization
-        context = self._build_authorization_context("remove_directory", path)
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
@@ -790,8 +756,11 @@ class AIToolFileSystem(AITool):
                 arguments
             )
 
+        # Build authorization context
+        relative_path = self._mindspace_manager.get_relative_path(str(path))
+        context = f"Delete the file '{relative_path}'. This file will be permanently removed and cannot be recovered."
+
         # Request authorization
-        context = self._build_authorization_context("delete_file", path)
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
@@ -847,9 +816,6 @@ class AIToolFileSystem(AITool):
         destination_arg = self._get_str_value_from_key("destination", arguments)
         destination_path = self._validate_and_resolve_path(destination_arg, "copy_file")
 
-        # Are we going to create a new file or overwrite an existing one?
-        destructive = destination_path.exists()
-
         # Check source file size
         source_size = source_path.stat().st_size
         if source_size > self._max_file_size_bytes:
@@ -861,11 +827,20 @@ class AIToolFileSystem(AITool):
                 arguments
             )
 
+        # Build authorization context
+        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
+        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
+
+        if destination_path.exists():
+            context = f"Copy '{source_relative}' to '{dest_relative}'. " \
+                "This will overwrite the existing destination file and its contents will be lost."
+            destructive = True
+
+        else:
+            context = f"Copy '{source_relative}' to '{dest_relative}'. This will create a new file at the destination."
+            destructive = False
+
         # Request authorization
-        context = self._build_authorization_context(
-            "copy_file", source_path,
-            destination=str(destination_path)
-        )
         authorized = await request_authorization("filesystem", arguments, context, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(
@@ -919,11 +894,27 @@ class AIToolFileSystem(AITool):
         destination_arg = self._get_str_value_from_key("destination", arguments)
         destination_path = self._validate_and_resolve_path(destination_arg, "move")
 
+        # Build authorization context
+        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
+        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
+
+        if source_path.is_file():
+            item_type = "file"
+
+        elif source_path.is_dir():
+            item_type = "directory"
+
+        else:
+            item_type = "item"
+
+        if destination_path.exists():
+            context = f"Move the {item_type} '{source_relative}' to '{dest_relative}'. " \
+                "This will overwrite the existing destination and its contents will be lost."
+
+        else:
+            context = f"Move the {item_type} '{source_relative}' to '{dest_relative}'."
+
         # Request authorization
-        context = self._build_authorization_context(
-            "move", source_path,
-            destination=str(destination_path)
-        )
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
             raise AIToolAuthorizationDenied(
