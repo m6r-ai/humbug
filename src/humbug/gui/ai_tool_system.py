@@ -45,12 +45,13 @@ class AIToolSystem(AITool):
             name="system",
             description=(
                 "Control the application user interface on behalf of the user. Available operations: "
-                "open_editor (open a file in an editor tab), "
-                "new_terminal (create a terminal tab), "
-                "open_conversation (open an existing AI conversation in a conversation tab), "
-                "new_conversation (start a new AI conversation in a conversation tab, with optional model/temperature), "
-                "show_system_shell (open a system shell tab), "
-                "open_wiki (open a file/direcotry in a wiki tab). "
+                "open_editor_tab (open a file in an editor tab), "
+                "new_terminal_tab (create a terminal tab), "
+                "open_conversation_tab (open an existing AI conversation in a conversation tab), "
+                "new_conversation_tab (start a new AI conversation in a conversation tab, with optional model/temperature), "
+                "show_system_shell_tab (open a system shell tab), "
+                "open_wiki_tab (open a file/direcotry in a wiki tab). "
+                "close_tab (close an existing tab by ID). "
                 "All operations work within the current mindspace. "
                 "Returns detailed information about created tabs, opened files, and operation results."
             ),
@@ -60,12 +61,26 @@ class AIToolSystem(AITool):
                     type="string",
                     description="System operation to perform",
                     required=True,
-                    enum=["open_editor", "new_terminal", "open_conversation", "new_conversation", "show_system_shell", "open_wiki"]
+                    enum=[
+                        "open_editor_tab",
+                        "new_terminal_tab",
+                        "open_conversation_tab",
+                        "new_conversation_tab",
+                        "show_system_shell_tab",
+                        "open_wiki_tab",
+                        "close_tab"
+                    ]
                 ),
                 AIToolParameter(
                     name="file_path",
                     type="string",
                     description="Path to file or directory (for open_editor, open_conversation, and open_wiki operations)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="tab_id",
+                    type="string",
+                    description="ID of a tab (for close_tab operation)",
                     required=False
                 ),
                 AIToolParameter(
@@ -205,12 +220,13 @@ class AIToolSystem(AITool):
 
         # Route to specific operation handler
         handlers = {
-            "open_editor": self._open_editor,
-            "new_terminal": self._new_terminal,
-            "open_conversation": self._open_conversation,
-            "new_conversation": self._new_conversation,
-            "show_system_shell": self._show_system_shell,
-            "open_wiki": self._open_wiki,
+            "open_editor_tab": self._open_editor_tab,
+            "new_terminal_tab": self._new_terminal_tab,
+            "open_conversation_tab": self._open_conversation_tab,
+            "new_conversation_tab": self._new_conversation_tab,
+            "show_system_shell_tab": self._show_system_shell_tab,
+            "open_wiki_tab": self._open_wiki_tab,
+            "close_tab": self._close_tab
         }
 
         if operation not in handlers:
@@ -239,7 +255,7 @@ class AIToolSystem(AITool):
                 arguments
             ) from e
 
-    async def _open_editor(
+    async def _open_editor_tab(
         self,
         arguments: Dict[str, Any],
         _request_authorization: AIToolAuthorizationCallback
@@ -276,7 +292,7 @@ class AIToolSystem(AITool):
                 arguments
             ) from e
 
-    async def _new_terminal(
+    async def _new_terminal_tab(
         self,
         arguments: Dict[str, Any],
         _request_authorization: AIToolAuthorizationCallback
@@ -295,7 +311,7 @@ class AIToolSystem(AITool):
                 arguments
             ) from e
 
-    async def _open_conversation(
+    async def _open_conversation_tab(
         self,
         arguments: Dict[str, Any],
         _request_authorization: AIToolAuthorizationCallback
@@ -337,7 +353,7 @@ class AIToolSystem(AITool):
                 arguments
             ) from e
 
-    async def _new_conversation(
+    async def _new_conversation_tab(
         self,
         arguments: Dict[str, Any],
         _request_authorization: AIToolAuthorizationCallback
@@ -421,7 +437,7 @@ class AIToolSystem(AITool):
                 arguments
             ) from e
 
-    async def _show_system_shell(
+    async def _show_system_shell_tab(
         self,
         arguments: Dict[str, Any],
         _request_authorization: AIToolAuthorizationCallback
@@ -440,7 +456,7 @@ class AIToolSystem(AITool):
                 arguments
             ) from e
 
-    async def _open_wiki(
+    async def _open_wiki_tab(
         self,
         arguments: Dict[str, Any],
         _request_authorization: AIToolAuthorizationCallback
@@ -468,6 +484,25 @@ class AIToolSystem(AITool):
         except Exception as e:
             raise AIToolExecutionError(
                 f"Failed to open wiki: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+    async def _close_tab(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """Close an existing tab by ID."""
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
+
+        try:
+            self._column_manager.close_tab_by_id(tab_id)
+            return f"Closed tab (tab ID: {tab_id})"
+
+        except Exception as e:
+            raise AIToolExecutionError(
+                f"Failed to close tab {tab_id}: {str(e)}",
                 "system",
                 arguments
             ) from e

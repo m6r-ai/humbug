@@ -193,7 +193,7 @@ class ColumnManager(QWidget):
                 continue
 
             if tab.is_ephemeral():
-                self._close_tab_by_id(tab.tab_id(), force_close=True)
+                self.close_tab_by_id(tab.tab_id(), force_close=True)
                 break  # Only one ephemeral tab per column
 
     def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
@@ -212,7 +212,7 @@ class ColumnManager(QWidget):
             tool_tip = self._mindspace_manager.get_relative_path(tool_tip)
 
         data = TabData(tab, title, tool_tip)
-        data.label.close_clicked.connect(lambda: self._close_tab_by_id(data.tab_id))
+        data.label.close_clicked.connect(lambda: self.close_tab_by_id(data.tab_id))
         tab.activated.connect(lambda: self._handle_tab_activated(tab))
         tab.updated_state_changed.connect(self._handle_tab_updated)
         tab.modified_state_changed.connect(self._handle_tab_modified)
@@ -715,7 +715,7 @@ class ColumnManager(QWidget):
             tab_data.label.set_current(True, True)
             self._stack.setCurrentWidget(self._columns_widget)
 
-    def _close_tab_by_id(self, tab_id: str, force_close: bool=False) -> None:
+    def close_tab_by_id(self, tab_id: str, force_close: bool=False) -> None:
         """
         Close a tab by its ID.
 
@@ -1664,18 +1664,18 @@ class ColumnManager(QWidget):
         # Find and close any editor tab for this file
         editor_tab = self._find_editor_tab_by_path(path)
         if editor_tab:
-            self._close_tab_by_id(editor_tab.tab_id(), True)
+            self.close_tab_by_id(editor_tab.tab_id(), True)
 
         # Also check for conversation files
         if path.endswith('.conv'):
             conversation_tab = self._find_conversation_tab_by_path(path)
             if conversation_tab:
-                self._close_tab_by_id(conversation_tab.tab_id(), True)
+                self.close_tab_by_id(conversation_tab.tab_id(), True)
 
         # Close any wiki page we may have had for this file
         wiki_tab = self._find_wiki_tab_by_path(path)
         if wiki_tab:
-            self._close_tab_by_id(wiki_tab.tab_id(), True)
+            self.close_tab_by_id(wiki_tab.tab_id(), True)
 
     def can_close_all_tabs(self) -> bool:
         """Can we close all the tabs that are open?"""
@@ -1690,7 +1690,7 @@ class ColumnManager(QWidget):
         """Close all open tabs."""
         all_tabs = list(self._tabs.values())
         for tab in all_tabs:
-            self._close_tab_by_id(tab.tab_id())
+            self.close_tab_by_id(tab.tab_id())
 
     def can_close_tab(self) -> bool:
         """Can we close the currently active tab?"""
@@ -1706,7 +1706,7 @@ class ColumnManager(QWidget):
         if tab is None:
             return
 
-        self._close_tab_by_id(tab.tab_id())
+        self.close_tab_by_id(tab.tab_id())
 
     def can_save_file(self) -> bool:
         """Check if the current file can be saved."""
