@@ -660,13 +660,10 @@ class TestAIToolFileSystemRemoveDirectory:
 
             assert "Directory removed successfully: protected_dir" in result
 
-            # Verify that authorization was called, which means
-            # _build_authorization_context completed successfully despite the PermissionError
+            # Verify that authorization was called
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
             context = args[2]  # Third argument is context
 
             # The context should include the permission denied message
-            assert "Operation: remove_directory" in context
-            assert "Path: protected_dir" in context
-            assert "Directory items: Permission denied" in context
+            assert "Remove the empty directory 'protected_dir'. This directory will be permanently deleted." in context

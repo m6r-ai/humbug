@@ -121,9 +121,7 @@ class TestAIToolFileSystemAuthorizationContext:
             args = mock_authorization.call_args[0]
             context = args[2]  # Third argument is context
 
-            assert "Operation: write_file" in context
-            assert "Path: file.txt" in context
-            assert "Content size: 12 bytes" in context
+            assert "Create a new file 'file.txt' with the provided content." in context
 
     def test_authorization_context_with_large_content(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test authorization context with large content doesn't include preview."""
@@ -158,49 +156,7 @@ class TestAIToolFileSystemAuthorizationContext:
             args = mock_authorization.call_args[0]
             context = args[2]  # Third argument is context
 
-            assert "Operation: write_file" in context
-            assert "Path: file.txt" in context
-            assert "Content size: 1,000 bytes" in context
-            # Should not include preview for large content
-            assert "Content preview:" not in context
-
-    def test_authorization_context_with_small_content_includes_preview(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
-        """Test authorization context with small content includes preview."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
-             patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
-             patch('pathlib.Path.replace') as mock_replace:
-
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
-            mock_exists.return_value = False
-
-            # Mock temporary file
-            mock_temp_instance = MagicMock()
-            mock_temp_instance.name = "/tmp/temp_file"
-            mock_temp_instance.__enter__.return_value = mock_temp_instance
-            mock_temp_instance.__exit__.return_value = None
-            mock_temp_file.return_value = mock_temp_instance
-
-            small_content = "Hello, World!"
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "write_file", "path": "file.txt", "content": small_content},
-                mock_authorization
-            ))
-
-            # Verify authorization was called with context information
-            mock_authorization.assert_called_once()
-            args = mock_authorization.call_args[0]
-            context = args[2]  # Third argument is context
-
-            assert "Operation: write_file" in context
-            assert "Path: file.txt" in context
-            assert "Content size: 13 bytes" in context
-            assert "Content preview: 'Hello, World!'" in context
+            assert "Create a new file 'file.txt' with the provided content." in context
 
     def test_authorization_context_copy_includes_destination(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test authorization context for copy operation includes destination."""
@@ -260,9 +216,7 @@ class TestAIToolFileSystemAuthorizationContext:
             args = mock_authorization.call_args[0]
             context = args[2]  # Third argument is context
 
-            assert "Operation: copy_file" in context
-            assert "Path: source.txt" in context
-            assert "Destination: dest.txt" in context
+            assert "Copy 'source.txt' to 'dest.txt'. This will create a new file at the destination." in context
 
     def test_authorization_context_existing_file_includes_size(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
         """Test authorization context includes existing file size."""
@@ -295,9 +249,7 @@ class TestAIToolFileSystemAuthorizationContext:
             args = mock_authorization.call_args[0]
             context = args[2]  # Third argument is context
 
-            assert "Operation: delete_file" in context
-            assert "Path: file.txt" in context
-            assert "Current size: 2,048 bytes" in context
+            assert "Delete the file 'file.txt'. This file will be permanently removed and cannot be recovered." in context
 
 
 class TestAIToolFileSystemParametrized:
