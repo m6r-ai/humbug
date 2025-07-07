@@ -90,15 +90,6 @@ class ConversationMessage(QFrame):
         self._fork_message_button: QToolButton | None = None
         self._delete_message_button: QToolButton | None = None
 
-        if not is_input:
-            self._copy_message_button = QToolButton(self)
-            self._copy_message_button.clicked.connect(self._copy_message)
-            self._header_layout.addWidget(self._copy_message_button)
-
-            self._save_message_button = QToolButton(self)
-            self._save_message_button.clicked.connect(self._save_message)
-            self._header_layout.addWidget(self._save_message_button)
-
         # Add header widget to main layout
         self._layout.addWidget(self._header)
 
@@ -422,13 +413,13 @@ class ConversationMessage(QFrame):
 
         # Check if style changed - if so, we need to recreate all sections
         if style != self._current_style:
+            # Add fork button only for AI messages
             if style == AIMessageSource.AI:
                 strings = self._language_manager.strings()
                 self._fork_message_button = QToolButton(self)
                 self._fork_message_button.clicked.connect(self._fork_message)
                 self._fork_message_button.setToolTip(strings.tooltip_fork_message)
-                # Insert before expand button
-                self._header_layout.insertWidget(self._header_layout.count() - 1, self._fork_message_button)
+                self._header_layout.addWidget(self._fork_message_button)
 
             # Add delete button only for user messages
             elif style == AIMessageSource.USER and not self._is_input:
@@ -436,8 +427,17 @@ class ConversationMessage(QFrame):
                 self._delete_message_button = QToolButton(self)
                 self._delete_message_button.clicked.connect(self._delete_message)
                 self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
-                # Insert before expand button
-                self._header_layout.insertWidget(self._header_layout.count() - 1, self._delete_message_button)
+                self._header_layout.addWidget(self._delete_message_button)
+
+            # We have copy and save buttons for several message sources
+            if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
+                self._copy_message_button = QToolButton(self)
+                self._copy_message_button.clicked.connect(self._copy_message)
+                self._header_layout.addWidget(self._copy_message_button)
+
+                self._save_message_button = QToolButton(self)
+                self._save_message_button.clicked.connect(self._save_message)
+                self._header_layout.addWidget(self._save_message_button)
 
             # Set default expanded state based on message type
             # Tool calls and tool results should be collapsed by default

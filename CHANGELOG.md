@@ -5,6 +5,8 @@
 New features:
 
 - Added a "system" tool that gives the AI the ability to start terminal, wiki, editor, Humbug shell, and conversation tabs.
+- Added support for collapsing and expanding individual messages in a conversation.  By defaul tool use messages are
+  auto-hidden, but an authorization request message is now provided.
 - Added support for Qwen3:8b model.
 
 Bug fixes:
@@ -19,6 +21,7 @@ Bug fixes:
   failures so the LLM is aware it didn't cause the operation to succeed.
 - The filesystem tool did not fully validate all arguments passed to it.  It now carefully checks all args are present and
   in a valid form.
+- MessageBox messages will now correctly size to fit the window.
 
 Internal structure changes:
 
