@@ -165,6 +165,10 @@ class AIToolSystem(AITool):
             )
 
         try:
+            # Check if our path starts with a separator.  If it does we'll assume it's for the root of the mindspace.
+            if path_str.startswith(os.sep):
+                path_str = path_str[1:]
+
             # Convert to absolute path via mindspace manager
             abs_path = self._mindspace_manager.get_absolute_path(path_str)
 
