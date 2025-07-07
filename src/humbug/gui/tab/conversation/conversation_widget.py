@@ -267,6 +267,7 @@ class ConversationWidget(QWidget):
         msg_widget.mouseReleased.connect(self._stop_scroll)
         msg_widget.forkRequested.connect(self._fork_from_message)
         msg_widget.deleteRequested.connect(self._delete_from_message)
+        msg_widget.expandRequested.connect(self._on_message_expanded)
 
         # Connect tool approval signals
         msg_widget.toolCallApproved.connect(self._handle_tool_call_approved)
@@ -428,6 +429,15 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
         loop.create_task(ai_conversation.reject_pending_tool_calls(reason))
+
+    def _on_message_expanded(self, expanded: bool) -> None:
+        """
+        Handle the change in scroll behaviour when a message is expanded or collapsed.
+        Args:
+            expanded: Whether the message is expanded or not
+        """
+        if expanded:
+            self._auto_scroll = False
 
     async def _on_message_added(self, message: AIMessage) -> None:
         """
@@ -1348,6 +1358,10 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop.create_task(ai_conversation.submit_message(message))
         loop.create_task(self.write_transcript(message))
+
+        # When we call this we should always scroll to the bottom and restore auto-scrolling
+        self._auto_scroll = True
+        self._scroll_to_bottom()
 
     def _handle_stop_request(self) -> None:
         """Handle stop request from input widget."""

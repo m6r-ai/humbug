@@ -29,6 +29,7 @@ class ConversationMessage(QFrame):
     mouseReleased = Signal()
     forkRequested = Signal()
     deleteRequested = Signal()
+    expandRequested = Signal(bool)
     toolCallApproved = Signal(AIToolCall)
     toolCallRejected = Signal(str)   # rejection reason
 
@@ -180,6 +181,7 @@ class ConversationMessage(QFrame):
     def _toggle_expanded(self) -> None:
         """Toggle the expanded state of this message."""
         self.set_expanded(not self._is_expanded)
+        self.expandRequested.emit(self._is_expanded)
 
     def _update_expand_button(self) -> None:
         """Update the expand button icon and tooltip based on current state."""
