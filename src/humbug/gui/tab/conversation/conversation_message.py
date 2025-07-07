@@ -196,13 +196,13 @@ class ConversationMessage(QFrame):
         strings = self._language_manager.strings()
 
         if self._is_expanded:
-            # Show down arrow when expanded
-            icon_name = "arrow-down"
+            # Show down expand when expanded
+            icon_name = "expand-down"
             tooltip = strings.tooltip_collapse_message
 
         else:
-            # Show right arrow when collapsed
-            icon_name = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
+            # Show right expand when collapsed
+            icon_name = "expand-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "expand-left"
             tooltip = strings.tooltip_expand_message
 
         # Update icon
@@ -685,9 +685,20 @@ class ConversationMessage(QFrame):
             self._delete_message_button.setIconSize(icon_size)
             self._delete_message_button.setStyleSheet(button_style)
 
+        # Button styling for message action buttons
+        expand_button_style = f"""
+            QToolButton {{
+                background-color: {background_color};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                margin: 0px;
+                padding: 0px;
+            }}
+        """
+
         if self._expand_button:
             self._expand_button.setIconSize(icon_size)
-            self._expand_button.setStyleSheet(button_style)
+            self._expand_button.setStyleSheet(expand_button_style)
             # Update the expand button icon and tooltip
             self._update_expand_button()
 

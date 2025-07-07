@@ -870,6 +870,27 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            # Right-pointing expand
+            self._write_icon(f'expand-right-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M20,8 L44,32 L20,56"/>
+                </svg>
+            ''')
+
+            # Left-pointing expand
+            self._write_icon(f'expand-left-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M44,8 L20,32 L44,56"/>
+                </svg>
+            ''')
+
+            # Down-pointing expand
+            self._write_icon(f'expand-down-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="6" fill="none" d="M8,20 L32,44 L56,20"/>
+                </svg>
+            ''')
+
             # Bulb on icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
             self._write_icon(f'info-{suffix}.svg', f'''
                 <svg width="800px" height="800px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
