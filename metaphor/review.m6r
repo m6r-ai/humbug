@@ -21,7 +21,7 @@ Context: Review guidelines
         unless you are explicitly asked to.
 
         Where useful, I would like you to write new software to show the user how any modified code should look.
-        Any such code should be show inline in your response.
+        Any such code should be shown inline in your response.
 
     Context: Review ranking
         For each review item, I want you to rank the importance of any proposed change.  This should be ranked from 1
