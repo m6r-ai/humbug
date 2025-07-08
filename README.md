@@ -8,6 +8,8 @@ Humbug is a modular, extensible platform that unifies your technical workflows w
 Think of it as an operating system for human-AI collaboration.
 It's a workspace where you and your AI colleagues manage code, documents, and ideas together.
 
+![Humbug in action](docs/v0.18-demo.gif)
+
 ## Why Humbug?
 
 - **AI as a first-class citizen**  
