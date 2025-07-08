@@ -50,7 +50,7 @@ It's a workspace where you and your AI colleagues manage code, documents, and id
   Both humans and AIs are first-class actors in Humbug.
   Share a mindspace, exchange ideas, and use the same tools to get work done.
 
-- **Built for teams and solo builders**  
+- **Adaptable to many problems.**  
   Whether you’re scoping, prototyping, refactoring, extending, maintaining, documenting, or experimenting, Humbug gives you a new way to work.
 
 - **AI agnostic.**  
