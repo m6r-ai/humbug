@@ -25,7 +25,7 @@ It's a workspace where you and your AI colleagues manage code, documents, and id
   Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
   Think of it like a shell language for AI orchestration.
 
-- **Unified interface for building, **  
+- **Unified interface for building**  
   Interact through a modern GUI with multi-pane editing, real-time AI conversations, and rich documentation.
   Or drop into a programmable terminal for full control.
 
