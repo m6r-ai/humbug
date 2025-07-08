@@ -37,6 +37,8 @@ It's a workspace where you and your AI colleagues manage code, documents, and id
   Humbug is open-source and modular by design.
   Add new AI backends, tools, or integrations with minimal friction.
 
+![Humbug in action](docs/v0.18-explore.gif)
+
 ## What sets Humbug apart?
 
 - **OS-like modularity without the baggage**  
