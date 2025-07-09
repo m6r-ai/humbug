@@ -180,6 +180,7 @@ class ShellWidget(QWidget):
         self._event_filter.widget_activated.connect(self._handle_widget_activation)
         self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
         self._install_activation_tracking(self._input)
+        self._install_activation_tracking(self._messages_container)
 
         # Load system interactions when initialized
         if self._mindspace_manager.has_mindspace():
@@ -499,6 +500,16 @@ class ShellWidget(QWidget):
         # Emit activated signal to let the tab know this system was clicked
         self.activated.emit()
 
+        # If we are clicking the messages container, focus the last focused message or input
+        if widget == self._messages_container:
+            # If we have a focus message then focus it
+            if self._focused_message_index != -1:
+                self._messages[self._focused_message_index].set_focused(True)
+                return
+
+            self._input.set_focused(True)
+            return
+
         # Find the ShellMessageWidget that contains this widget
         message_widget = self._find_system_message(widget)
         if message_widget is None:
@@ -511,10 +522,10 @@ class ShellWidget(QWidget):
         if message_widget in self._messages:
             self._focused_message_index = self._messages.index(message_widget)
             message_widget.set_focused(True)
+            return
 
-        else:
-            self._focused_message_index = -1
-            self._input.set_focused(True)
+        self._focused_message_index = -1
+        self._input.set_focused(True)
 
     def _handle_widget_deactivation(self, widget: QWidget) -> None:
         """
