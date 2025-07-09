@@ -11,7 +11,7 @@ from humbug.gui.tab.tab_state import TabState
 class TabEventFilter(QObject):
     """Event filter to track activation events from child widgets."""
 
-    widget_activated = Signal()
+    tab_activated = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the event filter."""
@@ -20,7 +20,10 @@ class TabEventFilter(QObject):
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Filter events to detect widget activation."""
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
-            self.widget_activated.emit()
+            if isinstance(watched, TabBase):
+                print(f"TabEventFilter: Widget activated: {watched}")
+                self.tab_activated.emit()
+
             return False  # Don't consume the event
 
         return super().eventFilter(watched, event)
@@ -55,7 +58,7 @@ class TabBase(QFrame):
 
         # Set up activation tracking
         self._event_filter = TabEventFilter(self)
-        self._event_filter.widget_activated.connect(self.activated)
+        self._event_filter.tab_activated.connect(self.activated)
         self.installEventFilter(self._event_filter)
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
