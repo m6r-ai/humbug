@@ -44,7 +44,9 @@ class AIToolSystem(AITool):
         return AIToolDefinition(
             name="system",
             description=(
-                "Control the application user interface on behalf of the user. Available operations: "
+                "The 'system' tool let's you control the application user interface for the user. It allows you to"
+                "present information to them, but does not give you the ability to control or use these tools directly. "
+                "Available operations are: "
                 "open_editor_tab (open a file in an editor tab), "
                 "new_terminal_tab (create a terminal tab), "
                 "open_conversation_tab (open an existing AI conversation in a conversation tab), "
