@@ -59,7 +59,6 @@ class ShellTab(TabBase):
         layout.addWidget(self._shell_widget)
 
         # Install activation tracking
-        self._install_activation_tracking(self._shell_widget)
         self._shell_widget.activated.connect(self.activated)
 
         self._language_manager = LanguageManager()
@@ -70,8 +69,7 @@ class ShellTab(TabBase):
         self._handle_style_changed()
 
     def activate(self) -> None:
-        """Activate the shell tab."""
-        print("ShellTab.activate called")
+        """Activate the tab."""
         self._shell_widget.activate()
 
     def refresh(self) -> None:

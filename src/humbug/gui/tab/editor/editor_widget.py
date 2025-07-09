@@ -1,10 +1,10 @@
 from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit
-from PySide6.QtCore import Qt, QRect
+from PySide6.QtCore import Qt, QRect, Signal, QObject, QEvent
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
-    QFocusEvent, QResizeEvent, QPaintEvent
+    QResizeEvent, QPaintEvent
 )
 
 from humbug.gui.color_role import ColorRole
@@ -15,8 +15,45 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 
+class EditorWidgetEventFilter(QObject):
+    """Event filter to track activation events from child widgets."""
+
+    widget_activated = Signal(object)
+    widget_deactivated = Signal(object)
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        """Initialize the event filter."""
+        super().__init__(parent)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        """
+        Filter events to detect widget activation.
+
+        Args:
+            obj: The object that received the event
+            event: The event that was received
+
+        Returns:
+            True if event was handled, False to pass to the target object
+        """
+        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
+            # Simply emit the signal with the object that received the event
+            self.widget_activated.emit(watched)
+            return False  # Don't consume the event
+
+        if event.type() == QEvent.Type.FocusOut:
+            # Emit a widget deactivated signal
+            self.widget_deactivated.emit(watched)
+            return False  # Don't consume the event
+
+        return super().eventFilter(watched, event)
+
+
 class EditorWidget(QPlainTextEdit):
     """Text editor widget with line numbers, syntax highlighting, and find functionality."""
+
+    # Emits when parent should be activated by user interaction
+    activated = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the editor."""
@@ -59,12 +96,30 @@ class EditorWidget(QPlainTextEdit):
         self._last_search = ""
         self._style_manager.style_changed.connect(self._handle_style_changed)
 
-    def focusInEvent(self, event: QFocusEvent) -> None:  # type: ignore[override]
-        """Handle focus in event."""
-        super().focusInEvent(event)
+        # Set up activation tracking
+        self._event_filter = EditorWidgetEventFilter(self)
+        self._event_filter.widget_activated.connect(self._handle_widget_activation)
+        self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
 
-        # Ensure this widget ends up with the focus
-        self.setFocus()
+        self.installEventFilter(self._event_filter)
+
+    def _handle_widget_activation(self, _widget: QWidget) -> None:
+        """
+        Handle activation of a widget.
+
+        Args:
+            widget: The widget that was activated
+        """
+        # Emit activated signal to let the tab know this editor was clicked
+        self.activated.emit()
+
+    def _handle_widget_deactivation(self, widget: QWidget) -> None:
+        """
+        Handle deactivation of a widget.
+
+        Args:
+            widget: The widget lost focus
+        """
 
     def _handle_language_changed(self) -> None:
         """Handle language changes by updating the UI."""

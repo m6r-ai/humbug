@@ -82,7 +82,6 @@ class ConversationTab(TabBase):
         layout.addWidget(self._conversation_widget)
 
         # Install activation tracking
-        self._install_activation_tracking(self._conversation_widget)
         self._conversation_widget.activated.connect(self.activated)
 
         self._language_manager = LanguageManager()
@@ -93,8 +92,7 @@ class ConversationTab(TabBase):
         self._handle_style_changed()
 
     def activate(self) -> None:
-        """Activate the conversation tab."""
-        print("ConversationTab.activate called")
+        """Activate the tab."""
         self._conversation_widget.activate()
 
     def handle_conversation_modified(self) -> None:

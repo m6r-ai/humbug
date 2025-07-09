@@ -118,9 +118,6 @@ class TerminalTab(TabBase):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
-        # Install activation tracking for the terminal
-        self._install_activation_tracking(self._terminal_widget)
-
         # Initialize process and task tracking
         self._terminal_process: TerminalBase = create_terminal(self._mindspace_manager.mindspace_path())
         self._tasks: Set[asyncio.Task] = set()
@@ -133,6 +130,10 @@ class TerminalTab(TabBase):
         # Start local shell process
         if start_process:
             self._create_tracked_task(self._start_process())
+
+    def activate(self) -> None:
+        """Activate the tab."""
+        self._terminal_widget.setFocus()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""

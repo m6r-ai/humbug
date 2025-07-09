@@ -1,4 +1,3 @@
-from typing import cast
 import uuid
 
 from PySide6.QtWidgets import QFrame, QWidget
@@ -21,7 +20,6 @@ class TabEventFilter(QObject):
         """Filter events to detect widget activation."""
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             if isinstance(watched, TabBase):
-                print(f"TabEventFilter: Widget activated: {watched}")
                 self.tab_activated.emit()
 
             return False  # Don't consume the event
@@ -63,20 +61,6 @@ class TabBase(QFrame):
 
     def activate(self) -> None:
         """Activate the tab."""
-
-    def _install_activation_tracking(self, widget: QWidget) -> None:
-        """
-        Install event filter on widget and all its children recursively.
-
-        Call this for any new widgets added to the tab that should trigger activation.
-
-        Args:
-            widget: Widget to track for activation events
-        """
-        widget.installEventFilter(self._event_filter)
-        child: QWidget
-        for child in widget.findChildren(QWidget):
-            cast(QWidget, child).installEventFilter(self._event_filter)
 
     def tab_id(self) -> str:
         """Get the tab's unique identifier."""

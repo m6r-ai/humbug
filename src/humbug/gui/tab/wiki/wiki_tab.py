@@ -78,7 +78,6 @@ class WikiTab(TabBase):
         layout.addWidget(self._wiki_content_widget)
 
         # Install activation tracking
-        self._install_activation_tracking(self._wiki_content_widget)
         self._wiki_content_widget.activated.connect(self.activated)
 
         self._language_manager = LanguageManager()

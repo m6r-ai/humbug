@@ -71,7 +71,8 @@ class EditorTab(TabBase):
         self._editor_widget.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor_widget)
 
-        self._install_activation_tracking(self._editor_widget)
+        # Install activation tracking
+        self._editor_widget.activated.connect(self.activated)
 
         if path and os.path.exists(path):
             with open(path, 'r', encoding='utf-8') as f:
@@ -100,6 +101,10 @@ class EditorTab(TabBase):
 
         # Connect to mindspace settings changes
         self._mindspace_manager.settings_changed.connect(self._handle_mindspace_settings_changed)
+
+    def activate(self) -> None:
+        """Activate the tab."""
+        self._editor_widget.setFocus()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements."""
