@@ -190,6 +190,10 @@ class MainWindow(QMainWindow):
         self._reset_zoom_action.setShortcut(QKeySequence("Ctrl+0"))
         self._reset_zoom_action.triggered.connect(lambda: self._set_zoom(1.0))
 
+        self._show_system_log_action = QAction(strings.show_system_log, self)
+        self._show_system_log_action.setShortcut(QKeySequence("Ctrl+Shift+L"))
+        self._show_system_log_action.triggered.connect(self._show_system_log)
+
         self._show_system_shell_action = QAction(strings.show_system_shell, self)
         self._show_system_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
         self._show_system_shell_action.triggered.connect(self._show_system_shell)
@@ -294,6 +298,7 @@ class MainWindow(QMainWindow):
         self._view_menu.addAction(self._zoom_out_action)
         self._view_menu.addAction(self._reset_zoom_action)
         self._view_menu.addSeparator()
+        self._view_menu.addAction(self._show_system_log_action)
         self._view_menu.addAction(self._show_system_shell_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_all_columns_action)
@@ -461,6 +466,7 @@ class MainWindow(QMainWindow):
         left_to_right = self._language_manager.left_to_right()
         self._zoom_in_action.setEnabled(current_zoom < 2.0)
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
+        self._show_system_log_action.setEnabled(has_mindspace)
         self._show_system_shell_action.setEnabled(has_mindspace)
         self._show_all_columns_action.setEnabled(column_manager.can_show_all_columns())
         self._split_column_left_action.setEnabled(column_manager.can_split_column())
@@ -919,8 +925,12 @@ class MainWindow(QMainWindow):
         """Open the wiki page in a new tab."""
         self._column_manager.open_wiki_page(self._mindspace_manager.get_absolute_path("."), False)
 
+    def _show_system_log(self) -> None:
+        """Show the log tab."""
+        self._column_manager.show_system_log()
+
     def _show_system_shell(self) -> None:
-        """Show the system tab."""
+        """Show the shell tab."""
         self._column_manager.show_system_shell()
 
     def _show_all_columns(self) -> None:

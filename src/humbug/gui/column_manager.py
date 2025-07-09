@@ -18,6 +18,7 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_error import ConversationError
 from humbug.gui.tab.conversation.conversation_tab import ConversationTab
 from humbug.gui.tab.editor.editor_tab import EditorTab
+from humbug.gui.tab.log.log_tab import LogTab
 from humbug.gui.tab.shell.shell_tab import ShellTab
 from humbug.gui.tab.wiki.wiki_tab import WikiTab
 from humbug.gui.tab.tab_bar import TabBar
@@ -51,6 +52,9 @@ class TabData:
 
         elif isinstance(tab, EditorTab):
             icon = "editor"
+
+        elif isinstance(tab, LogTab):
+            icon = "log"
 
         elif isinstance(tab, ShellTab):
             icon = "shell"
@@ -1100,6 +1104,24 @@ class ColumnManager(QWidget):
 
         return None
 
+    def show_system_log(self) -> LogTab:
+        """
+            Show the system log tab.
+
+        Returns:
+            The system log tab
+        """
+        for tab in self._tabs.values():
+            if isinstance(tab, LogTab):
+                self._set_current_tab(tab)
+                return tab
+
+        log_tab = LogTab("", self)
+
+        # Use language strings for the tab title
+        self._add_tab(log_tab, "Humbug Log")
+        return log_tab
+
     def show_system_shell(self) -> ShellTab:
         """
             Show the system shell tab.
@@ -1417,6 +1439,9 @@ class ColumnManager(QWidget):
                 editor_tab = EditorTab.restore_from_state(state, self)
                 return editor_tab
 
+            case TabType.LOG:
+                return LogTab.restore_from_state(state, self)
+
             case TabType.SHELL:
                 return ShellTab.restore_from_state(state, self)
 
@@ -1435,6 +1460,9 @@ class ColumnManager(QWidget):
         """Get appropriate title for tab type."""
         if isinstance(tab, ConversationTab):
             return os.path.splitext(os.path.basename(state.path))[0]
+
+        if isinstance(tab, LogTab):
+            return "Humbug Log"
 
         if isinstance(tab, ShellTab):
             return "Humbug Shell"
@@ -1847,15 +1875,15 @@ class ColumnManager(QWidget):
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab | ShellTab):
+        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
             return False
 
         return tab.can_navigate_next_message()
 
     def navigate_next_message(self) -> None:
-        """Navigate to next message in active conversation tab."""
+        """Navigate to next message in the tab."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab | ShellTab):
+        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
             return
 
         tab.navigate_next_message()
@@ -1863,15 +1891,15 @@ class ColumnManager(QWidget):
     def can_navigate_previous_message(self) -> bool:
         """Check if previous message navigation is possible."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab | ShellTab):
+        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
             return False
 
         return tab.can_navigate_previous_message()
 
     def navigate_previous_message(self) -> None:
-        """Navigate to previous message in active conversation tab."""
+        """Navigate to previous message in the tab."""
         tab = self._get_current_tab()
-        if not isinstance(tab, ConversationTab | ShellTab):
+        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
             return
 
         tab.navigate_previous_message()

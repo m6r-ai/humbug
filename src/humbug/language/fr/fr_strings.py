@@ -55,6 +55,7 @@ def get_french_strings() -> LanguageStrings:
         zoom_in="Zoom avant",
         zoom_out="Zoom arrière",
         reset_zoom="Réinitialiser le zoom",
+        show_system_log="Afficher le journal Humbug",
         show_system_shell="Afficher le shell Humbug",
         show_all_columns="Afficher toutes les colonnes",
         split_column_left="Diviser la colonne à gauche",

@@ -774,7 +774,17 @@ class StyleManager(QObject):
             </svg>
         ''')
 
-        # System tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
+        # Log tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
+        self._write_icon(f'{prefix}log-{suffix}.svg', f'''
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 12H7.75044C7.89947 12 8.03179 11.9046 8.07892 11.7632V11.7632L9.875 6.375V6.375C9.91626
+                    6.25122 10.0918 6.25238 10.1364 6.375V6.375L13.875 16.6562L13.885 16.6837C13.9253 16.7946 14.0812
+                    16.797 14.125 16.6875V16.6875L15.8841 12.2898V12.2898C15.9541 12.1148 16.1236 12 16.3122 12H19"
+                    stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        ''')
+
+        # Shell tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
         self._write_icon(f'{prefix}shell-{suffix}.svg', f'''
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M3 7C3 5.11438 3 4.17157 3.58579 3.58579C4.17157 3 5.11438 3 7 3H12H17C18.8856 3 19.8284
