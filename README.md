@@ -5,8 +5,11 @@ Build, reason, and create, side by side with AI.
 ## What is Humbug?
 
 Humbug is a modular, extensible platform that unifies your technical workflows with the power of AI.
-Think of it as an operating system for human-AI collaboration.
+Think of it as being like an operating system for human-AI collaboration.
 It's a workspace where you and your AI colleagues manage code, documents, and ideas together.
+
+If you know exactly what you want it has tools to let you do those things, but if you're not sure then you can let your AI
+take control and guide you through what you want to do.
 
 ![Humbug in action](docs/v0.18-demo.gif)
 
@@ -26,8 +29,8 @@ It's a workspace where you and your AI colleagues manage code, documents, and id
   Think of it like a shell language for AI orchestration.
 
 - **Unified interface for building**  
-  Interact through a modern GUI with multi-pane editing, real-time AI conversations, and rich documentation.
-  Or drop into a programmable terminal for full control.
+  Interact through a GUI with multi-pane editing, real-time AI conversations, and rich documentation.
+  Aternatively, drop into a programmable terminal for full control.
 
 - **Powerful, pluggable tools**  
   Extend your LLMs with dynamic file operations, a scientific calculator, system clock access, UI orchestration, Markdown parsing, syntax highlighting, and more.
@@ -41,11 +44,11 @@ It's a workspace where you and your AI colleagues manage code, documents, and id
 
 ## What sets Humbug apart?
 
-- **OS-like modularity without the baggage**  
+- **OS-like abstraction and modularity without the baggage**  
   Humbug brings isolation, concurrent processes, and the extensibility of an OS, without trying to replace your real operating system.
   It sits on top of Windows, macOS, or Linux, giving a unified experience across all of them.
 
-- **Human–AI collaboration, engineered**  
+- **Human–AI collaboration at the core**  
   When you're using AI, you're no longer working alone.
   Both humans and AIs are first-class actors in Humbug.
   Share a mindspace, exchange ideas, and use the same tools to get work done.
