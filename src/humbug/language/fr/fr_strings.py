@@ -206,6 +206,7 @@ def get_french_strings() -> LanguageStrings:
         conversation_status_no_temperature="Temp : N/D",
         terminal_status="Terminal : {name} ({columns}x{rows})",
         system_status="Statut du système",
+        log_status="Journal",
 
         # Bookmark Actions
         bookmark_section="Marquer/Démarquer",

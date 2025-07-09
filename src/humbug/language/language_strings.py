@@ -198,6 +198,7 @@ class LanguageStrings:
     conversation_status_no_temperature: str
     terminal_status: str
     system_status: str
+    log_status: str
 
     # Bookmark-related strings
     bookmark_section: str

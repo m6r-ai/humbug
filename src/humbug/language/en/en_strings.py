@@ -206,6 +206,7 @@ def get_english_strings() -> LanguageStrings:
         conversation_status_no_temperature="Temp: N/A",
         terminal_status="Terminal: {name} ({columns}x{rows})",
         system_status="System",
+        log_status="Log",
 
         # Bookmark-related strings
         bookmark_section="Toggle Bookmark",

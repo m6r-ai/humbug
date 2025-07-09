@@ -206,6 +206,7 @@ def get_arabic_strings() -> LanguageStrings:
         conversation_status_no_temperature="درجة الحرارة: غير متوفر",
         terminal_status="طرفية: {name} ({columns}x{rows})",
         system_status="نظام",
+        log_status="سجل",
 
         # Bookmark
         bookmark_section="تبديل الإشارة",
