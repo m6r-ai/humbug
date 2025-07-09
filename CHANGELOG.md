@@ -2,9 +2,16 @@
 
 ## v0.19 (2025-07-xx)
 
+New features:
+
+- Added a new system "log" tab type.  This will start to replace the log usage of the Humbug shell.
+
 Bug fixes:
 
 - Improved the system tool description so the LLM has a clearer idea of what the tool can do.
+- The terminal tab did not gain the keyboard focus correctly when the tab was opened.
+- When opening the Humbug shell or conversation window, the previously-active message was not correctly restored if the
+  user clicked the tab, but didn't click the message.
 
 ## v0.18 (2025-07-08)
 
