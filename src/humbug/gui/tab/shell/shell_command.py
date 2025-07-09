@@ -4,6 +4,7 @@ import logging
 import os
 from typing import Dict, List
 
+from humbug.gui.tab.shell.shell_history_manager import ShellHistoryManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.lexer import Token, TokenType
@@ -13,8 +14,14 @@ class ShellCommand:
     """Base class for all shell commands."""
 
     def __init__(self) -> None:
-        """Initialize base shell command."""
+        """
+        Initialize base shell command.
+
+        Args:
+            history_manager: Shell history manager for command output
+        """
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._history_manager = ShellHistoryManager()
         self._mindspace_manager = MindspaceManager()
 
     def name(self) -> str:
@@ -103,7 +110,7 @@ class ShellCommand:
 
         except Exception as e:
             self._logger.error("Error executing command: %s", str(e), exc_info=True)
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
@@ -217,7 +224,7 @@ class ShellCommand:
                 help_text += f"  {option}\n    {description}\n"
 
         # Display help
-        self._mindspace_manager.add_interaction(
+        self._history_manager.add_message(
             MindspaceMessageSource.SUCCESS,
             help_text
         )

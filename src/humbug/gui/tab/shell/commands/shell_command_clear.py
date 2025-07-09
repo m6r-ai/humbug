@@ -1,4 +1,4 @@
-"""Command for clearing the system shell history."""
+"""Command for clearing the shell history."""
 
 import logging
 from typing import List, Callable
@@ -8,7 +8,7 @@ from humbug.syntax.lexer import Token
 
 
 class ShellCommandClear(ShellCommand):
-    """Command to clear the system shell history."""
+    """Command to clear the shell history."""
 
     def __init__(self, process_clear_command_callback: Callable[[], bool]) -> None:
         """
@@ -31,7 +31,7 @@ class ShellCommandClear(ShellCommand):
 
     def help_text(self) -> str:
         """Get the help text for the command."""
-        return "Clear the system shell history"
+        return "Clear the shell history"
 
     def _execute_command(self, tokens: List[Token]) -> bool:
         """

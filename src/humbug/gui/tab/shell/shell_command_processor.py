@@ -7,7 +7,7 @@ from typing import List
 from humbug.gui.tab.shell.shell_command_completion_result import ShellCommandCompletionResult
 from humbug.gui.tab.shell.shell_command_parser import ShellCommandParser
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
-from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.gui.tab.shell.shell_history_manager import ShellHistoryManager
 from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.lexer import TokenType, Token
 
@@ -16,9 +16,14 @@ class ShellCommandProcessor:
     """Processes shell commands using the command registry."""
 
     def __init__(self) -> None:
-        """Initialize command processor."""
+        """
+        Initialize command processor.
+
+        Args:
+            history_manager: Shell history manager to use for command history
+        """
         self._logger = logging.getLogger("CommandProcessor")
-        self._mindspace_manager = MindspaceManager()
+        self._history_manager = ShellHistoryManager()
         self._command_registry = ShellCommandRegistry()
 
         # Tab completion state tracking
@@ -85,12 +90,15 @@ class ShellCommandProcessor:
         if not command_text:
             return
 
+        # Add user command to history
+        self._history_manager.add_message(MindspaceMessageSource.USER, command_text)
+
         self._completion_start_pos = 0
 
         self._parse_command_line(command_text)
         cmd = self._get_command_name(self._current_tokens)
         if not cmd:
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 "Invalid command format. Type 'help' for a list of available commands."
             )
@@ -98,7 +106,7 @@ class ShellCommandProcessor:
 
         command = self._command_registry.get_command(cmd)
         if not command:
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 f"Unknown command: {cmd}. Type 'help' for a list of available commands."
             )
@@ -109,7 +117,7 @@ class ShellCommandProcessor:
 
         except Exception as e:
             self._logger.error("Error executing command '%s': %s", command_text, str(e), exc_info=True)
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )

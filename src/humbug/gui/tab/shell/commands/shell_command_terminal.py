@@ -1,4 +1,4 @@
-"""Command for creating a new terminal tab from the system shell."""
+"""Command for creating a new terminal tab from the shell."""
 
 from typing import Callable, List
 
@@ -40,7 +40,7 @@ class ShellCommandTerminal(ShellCommand):
             True if command executed successfully, False otherwise
         """
         self._create_terminal()
-        self._mindspace_manager.add_interaction(
+        self._history_manager.add_message(
             MindspaceMessageSource.SUCCESS,
             "Started new terminal"
         )

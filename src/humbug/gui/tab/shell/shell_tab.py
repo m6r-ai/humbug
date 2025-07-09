@@ -1,7 +1,7 @@
 """
-System tab implementation for Humbug application.
+Shell tab implementation for Humbug application.
 
-This tab provides a system-level overview and functionality for viewing system interactions.
+This tab provides a shell command interface with its own persistent history.
 """
 
 import logging
@@ -22,15 +22,15 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 
 class ShellTab(TabBase):
     """
-    System tab for Humbug application showing system interaction history.
+    Shell tab for Humbug application showing shell command history.
 
-    This tab provides a way to view and interact with the system-level messages
-    and notifications that are tracked by the MindspaceManager.
+    This tab provides an interactive shell command interface with its own
+    persistent history that is separate from the system-wide message log.
     """
 
     def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
         """
-        Initialize the system tab.
+        Initialize the shell tab.
 
         Args:
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
@@ -53,7 +53,7 @@ class ShellTab(TabBase):
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         layout.addWidget(self._find_widget)
 
-        # Create system widget
+        # Create shell widget
         self._shell_widget = ShellWidget(self)
         self._shell_widget.status_updated.connect(self.update_status)
         layout.addWidget(self._shell_widget)
@@ -73,8 +73,8 @@ class ShellTab(TabBase):
         self._shell_widget.activate()
 
     def refresh(self) -> None:
-        """Refresh system interaction history display."""
-        self._shell_widget.load_interactions()
+        """Refresh shell command history display."""
+        self._shell_widget.load_messages()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
@@ -102,7 +102,7 @@ class ShellTab(TabBase):
         return TabState(
             type=TabType.SHELL,
             tab_id=self._tab_id,
-            path="",  # System tab doesn't have a file path
+            path="",  # Shell tab doesn't have a file path
             cursor_position=None,
             horizontal_scroll=None,
             vertical_scroll=None,
@@ -135,10 +135,10 @@ class ShellTab(TabBase):
         Args:
             path: Path to associate with this tab
         """
-        # Do nothing for terminal tabs
+        # Do nothing for shell tabs
 
     def can_close_tab(self) -> bool:
-        """Check if system can be closed."""
+        """Check if shell tab can be closed."""
         return True
 
     def close_tab(self) -> None:
@@ -149,7 +149,7 @@ class ShellTab(TabBase):
         return False
 
     def save(self) -> bool:
-        """Save is not applicable for system tab."""
+        """Save is not applicable for shell tab."""
         return True
 
     def can_save_as(self) -> bool:
@@ -157,7 +157,7 @@ class ShellTab(TabBase):
         return False
 
     def save_as(self) -> bool:
-        """Save as is not applicable for system tab."""
+        """Save as is not applicable for shell tab."""
         return True
 
     def can_undo(self) -> bool:
@@ -165,14 +165,14 @@ class ShellTab(TabBase):
         return False
 
     def undo(self) -> None:
-        """Undo not supported for system."""
+        """Undo not supported for shell tab."""
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
         return False
 
     def redo(self) -> None:
-        """Redo not supported for system."""
+        """Redo not supported for shell tab."""
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
@@ -262,11 +262,11 @@ class ShellTab(TabBase):
         self._shell_widget.set_input_text(text)
 
     def update_status(self) -> None:
-        """Update status bar with system tab information."""
+        """Update status bar with shell tab information."""
         strings = self._language_manager.strings()
-        message = StatusMessage(strings.system_status)
+        message = StatusMessage(strings.system_status)  # Using system_status for now
         self.status_message.emit(message)
 
     def clear_interactions(self) -> None:
-        """Clear the system history including command history."""
+        """Clear the shell history including command history."""
         self._shell_widget.clear_interactions()

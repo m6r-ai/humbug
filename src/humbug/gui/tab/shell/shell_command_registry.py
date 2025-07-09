@@ -3,6 +3,7 @@ from typing import Dict, List
 from PySide6.QtCore import QObject
 
 from humbug.gui.tab.shell.shell_command import ShellCommand
+from humbug.gui.tab.shell.shell_history_manager import ShellHistoryManager
 
 
 class ShellCommandRegistry(QObject):
@@ -24,6 +25,7 @@ class ShellCommandRegistry(QObject):
             self._commands: Dict[str, ShellCommand] = {}
             self._aliases: Dict[str, str] = {}
             self._initialized = True
+            self._history_manager = ShellHistoryManager()
 
 
     def register_command(self, command: ShellCommand) -> None:

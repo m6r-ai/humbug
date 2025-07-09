@@ -1,4 +1,4 @@
-"""System widget implementation for displaying system interaction history."""
+"""Shell widget implementation for displaying shell command history."""
 
 import logging
 from typing import Dict, List, Tuple, Any, Set, cast
@@ -12,12 +12,13 @@ from PySide6.QtGui import QCursor, QResizeEvent
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.shell.shell_command_processor import ShellCommandProcessor
+from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
+from humbug.gui.tab.shell.shell_history_manager import ShellHistoryManager
 from humbug.gui.tab.shell.shell_input import ShellInput
+from humbug.gui.tab.shell.shell_message import ShellMessage
 from humbug.gui.tab.shell.shell_message_widget import ShellMessageWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_message import MindspaceMessage
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 
 
 class ShellWidgetEventFilter(QObject):
@@ -55,7 +56,7 @@ class ShellWidgetEventFilter(QObject):
 
 
 class ShellWidget(QWidget):
-    """Widget for displaying system with message history and input."""
+    """Widget for displaying shell with message history and input."""
 
     # Signal to notify tab of status changes
     status_updated = Signal()
@@ -71,7 +72,7 @@ class ShellWidget(QWidget):
         parent: QWidget | None = None,
     ) -> None:
         """
-        Initialize the system widget.
+        Initialize the shell widget.
 
         Args:
             parent: Optional parent widget
@@ -79,9 +80,12 @@ class ShellWidget(QWidget):
         super().__init__(parent)
         self._logger = logging.getLogger("ShellWidget")
 
-        self._mindspace_manager = MindspaceManager()
-        self._mindspace_manager.interactions_updated.connect(self.load_interactions)
+        # Create shell history manager
+        self._command_registry = ShellCommandRegistry()
+        self._history_manager = ShellHistoryManager()
+        self._history_manager.history_updated.connect(self.load_messages)
 
+        self._mindspace_manager = MindspaceManager()
         self._style_manager = StyleManager()
 
         # Widget tracking
@@ -93,10 +97,10 @@ class ShellWidget(QWidget):
         self._last_scroll_maximum = 0
 
         # Create layout
-        system_layout = QVBoxLayout(self)
-        self.setLayout(system_layout)
-        system_layout.setContentsMargins(0, 0, 0, 0)
-        system_layout.setSpacing(0)
+        shell_layout = QVBoxLayout(self)
+        self.setLayout(shell_layout)
+        shell_layout.setContentsMargins(0, 0, 0, 0)
+        shell_layout.setSpacing(0)
 
         # Set up the scroll area
         self._scroll_area = QScrollArea()
@@ -138,7 +142,7 @@ class ShellWidget(QWidget):
         self._scroll_area.setWidget(self._messages_container)
 
         # Add the scroll area to the main layout
-        system_layout.addWidget(self._scroll_area)
+        shell_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
         self._search_highlights: Dict[ShellMessageWidget, List[Tuple[int, int]]] = {}
@@ -156,7 +160,7 @@ class ShellWidget(QWidget):
 
         # Setup context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._show_system_context_menu)
+        self.customContextMenuRequested.connect(self._show_shell_context_menu)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -179,9 +183,8 @@ class ShellWidget(QWidget):
         self._install_activation_tracking(self._input)
         self._install_activation_tracking(self._messages_container)
 
-        # Load system interactions when initialized
-        if self._mindspace_manager.has_mindspace():
-            self.load_interactions()
+        # Load shell messages when initialized
+        self.load_messages()
 
     def _handle_tab_completion(
         self,
@@ -207,27 +210,13 @@ class ShellWidget(QWidget):
 
     def _update_command_history(self) -> None:
         """
-        Update command history from system messages.
+        Update command history from shell messages.
 
-        Extracts all user messages from system history and adds them
+        Extracts all user messages from shell history and adds them
         to the command input history for up/down arrow navigation.
         """
-        if not self._mindspace_manager.has_mindspace():
-            return
-
-        # Get all system messages
-        system_messages = self._mindspace_manager.get_interactions()
-
-        # Extract user commands from messages (newest first)
-        user_commands = []
-
-        # Process messages from newest to oldest
-        for message in reversed(system_messages):
-            if message.source == MindspaceMessageSource.USER:
-                # Add user message content if not already in list
-                content = message.content.strip()
-                if content and content not in user_commands:
-                    user_commands.append(content)
+        # Get user commands from shell history (newest first)
+        user_commands = self._history_manager.get_user_commands()
 
         # Limit to a reasonable size (e.g., 100 items)
         if len(user_commands) > 100:
@@ -236,23 +225,20 @@ class ShellWidget(QWidget):
         # Set the command history in the input widget
         self._input.set_command_history(user_commands)
 
-    def load_interactions(self) -> None:
+    def load_messages(self) -> None:
         """
-        Load system interaction messages from mindspace, optimizing to only remove
+        Load shell messages from history, optimizing to only remove
         early messages and add new messages at the end.
 
         This optimized implementation assumes messages are only ever removed from the beginning
         of the list or added to the end of the list, and are never reordered.
         """
-        if not self._mindspace_manager.has_mindspace():
-            return
-
-        # Get system messages from mindspace manager
-        system_messages = self._mindspace_manager.get_interactions()
+        # Get shell messages from history manager
+        shell_messages = self._history_manager.get_messages()
 
         # Handle empty cases
-        if not system_messages:
-            # Clear all existing messages if there are none from the system
+        if not shell_messages:
+            # Clear all existing messages if there are none from the shell
             for msg in self._messages:
                 self._messages_layout.removeWidget(msg)
                 msg.deleteLater()
@@ -263,8 +249,8 @@ class ShellWidget(QWidget):
         # Handle case where we don't have any messages yet
         if not self._messages:
             # Simply add all messages
-            for message in system_messages:
-                self._add_system_message(message)
+            for message in shell_messages:
+                self._add_shell_message(message)
 
             self._auto_scroll = True
             self._scroll_to_bottom()
@@ -273,37 +259,37 @@ class ShellWidget(QWidget):
             self._update_command_history()
             return
 
-        # Find matching messages between existing UI messages and new system messages
-        # First, check if first system message exists in our UI message list
-        first_system_msg_id = system_messages[0].message_id
+        # Find matching messages between existing UI messages and new shell messages
+        # First, check if first shell message exists in our UI message list
+        first_shell_msg_id = shell_messages[0].message_id
 
         # Look for the first matching message ID in our existing messages
         first_match_index = -1
         for i, msg in enumerate(self._messages):
-            if msg.message_id() == first_system_msg_id:
+            if msg.message_id() == first_shell_msg_id:
                 first_match_index = i
                 break
 
-        # If found, remove any UI messages before this match (older messages removed from system)
+        # If found, remove any UI messages before this match (older messages removed from shell)
         if first_match_index > 0:
-            # Remove messages that are no longer at the beginning of the system interactions
+            # Remove messages that are no longer at the beginning of the shell messages
             for i in range(first_match_index):
                 msg = self._messages[0]  # Always remove the first message
                 self._messages_layout.removeWidget(msg)
                 msg.deleteLater()
                 self._messages.pop(0)  # Remove from list
 
-        # Find how many existing messages we have that match system messages
-        matching_count = min(len(self._messages), len(system_messages))
+        # Find how many existing messages we have that match shell messages
+        matching_count = min(len(self._messages), len(shell_messages))
 
         # Check if we need to add new messages at the end
-        if len(system_messages) > matching_count:
+        if len(shell_messages) > matching_count:
             # Add only the new messages that don't exist yet (at the end)
-            for message in system_messages[matching_count:]:
-                self._add_system_message(message)
+            for message in shell_messages[matching_count:]:
+                self._add_shell_message(message)
 
         # Scroll to the latest message if we added new ones
-        if len(system_messages) > matching_count:
+        if len(shell_messages) > matching_count:
             self._auto_scroll = True
             self._scroll_to_bottom()
 
@@ -312,19 +298,22 @@ class ShellWidget(QWidget):
 
     def clear_interactions(self) -> None:
         """Clear both the message display and command input history."""
+        # Clear shell history
+        self._history_manager.clear_history()
+
         # Clear command history in input widget
         self._input.clear_command_history()
 
         # Clear message display (message widgets will be cleared when
-        # load_interactions is called with empty interactions)
+        # load_messages is called with empty history)
         for msg in self._messages:
             self._messages_layout.removeWidget(msg)
             msg.deleteLater()
 
         self._messages.clear()
 
-    def _add_system_message(self, message: MindspaceMessage) -> None:
-        """Add a message from the system message history."""
+    def _add_shell_message(self, message: ShellMessage) -> None:
+        """Add a message from the shell message history."""
         msg_widget = ShellMessageWidget(self)
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
@@ -332,7 +321,7 @@ class ShellWidget(QWidget):
         msg_widget.scrollRequested.connect(self._handle_selection_scroll)
         msg_widget.mouseReleased.connect(self._stop_scroll)
 
-        # Set content using fields from MindspaceMessage model
+        # Set content using fields from ShellMessage model
         msg_widget.set_content(
             message.content,
             message.source,
@@ -354,25 +343,19 @@ class ShellWidget(QWidget):
         Args:
             command_text: The command text to process
         """
-        # Add user message to system interactions
-        self._mindspace_manager.add_interaction(
-            MindspaceMessageSource.USER,
-            command_text
-        )
-
-        # Process the command
+        # Process the command (this will add the user message and any responses to shell history)
         self._command_processor.process_command(command_text)
 
         # Refresh the messages display
-        self.load_interactions()
+        self.load_messages()
 
     def submit(self) -> None:
-        """Submit current input text as a user system command."""
+        """Submit current input text as a user shell command."""
         content = self._input.to_plain_text().strip()
         if not content:
             return
 
-        # Process as a command instead of simply adding to system interactions
+        # Process as a command
         self._process_command(content)
 
     def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
@@ -486,7 +469,7 @@ class ShellWidget(QWidget):
         """
         Install event filter on widget and all its children recursively.
 
-        Call this for any new widgets added to the system widget.
+        Call this for any new widgets added to the shell widget.
 
         Args:
             widget: Widget to track for activation events
@@ -503,7 +486,7 @@ class ShellWidget(QWidget):
         Args:
             widget: The widget that was activated
         """
-        # Emit activated signal to let the tab know this system was clicked
+        # Emit activated signal to let the tab know this shell was clicked
         self.activated.emit()
 
         # If we are clicking the messages container, focus the last focused message or input
@@ -512,7 +495,7 @@ class ShellWidget(QWidget):
             return
 
         # Find the ShellMessageWidget that contains this widget
-        message_widget = self._find_system_message(widget)
+        message_widget = self._find_shell_message(widget)
         if message_widget is None:
             return
 
@@ -536,7 +519,7 @@ class ShellWidget(QWidget):
             widget: The widget that lost focus
         """
         # Find the ShellMessageWidget that contains this widget
-        message_widget = self._find_system_message(widget)
+        message_widget = self._find_shell_message(widget)
         if message_widget is None:
             return
 
@@ -547,7 +530,7 @@ class ShellWidget(QWidget):
         else:
             self._input.set_focused(False)
 
-    def _find_system_message(self, widget: QWidget) -> ShellMessageWidget | None:
+    def _find_shell_message(self, widget: QWidget) -> ShellMessageWidget | None:
         """
         Find the ShellMessageWidget that contains the given widget.
 
@@ -744,7 +727,7 @@ class ShellWidget(QWidget):
             }}
         """)
 
-    def _show_system_context_menu(self, pos: QPoint) -> None:
+    def _show_shell_context_menu(self, pos: QPoint) -> None:
         """
         Create and show the context menu at the given position.
 
@@ -808,7 +791,7 @@ class ShellWidget(QWidget):
         Create metadata dictionary capturing current widget state.
 
         Returns:
-            Dictionary containing system state metadata
+            Dictionary containing shell state metadata
         """
         metadata: Dict[str, Any] = {}
 
@@ -835,9 +818,8 @@ class ShellWidget(QWidget):
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])
 
-        # Refresh messages if we have a mindspace
-        if self._mindspace_manager.has_mindspace():
-            self.load_interactions()
+        # Refresh messages
+        self.load_messages()
 
     def _set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position in input area.
