@@ -80,7 +80,7 @@ class LanguageStrings:
 
     # Input widget
     processing_message: str
-    input_prompt: str  # Format: "Message for {model}... ({key} to submit)"
+    input_prompt: str  # Format: "Chat with {model}... ({key} to submit)"
     command_prompt: str  # Format: "Command... (Enter or {key} to submit)"
 
     # Dialog and settings

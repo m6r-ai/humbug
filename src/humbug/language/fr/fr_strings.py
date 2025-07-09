@@ -85,7 +85,7 @@ def get_french_strings() -> LanguageStrings:
 
         # Input widget
         processing_message="Traitement de votre requête (Échap pour annuler)",
-        input_prompt="Message pour {model}... ({key} pour envoyer)",
+        input_prompt="Discuter avec {model}... ({key} pour envoyer)",
         command_prompt="Commande... (Entrée ou {key} pour envoyer)",
 
         # Dialog and settings
