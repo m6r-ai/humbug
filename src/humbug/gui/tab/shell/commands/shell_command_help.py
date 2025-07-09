@@ -66,6 +66,7 @@ class ShellCommandHelp(ShellCommand):
             this_help_text = cmd.help_text()
             if this_help_text:
                 help_text += f"  {name} - {this_help_text}\n"
+
             else:
                 help_text += f"  {name}\n"
 

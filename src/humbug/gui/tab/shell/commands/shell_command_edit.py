@@ -50,7 +50,7 @@ class ShellCommandEdit(ShellCommand):
         # Get positional arguments
         args = self._get_positional_arguments(tokens)
         if not args:
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 "No filename specified. Usage: edit <filename>"
             )
@@ -66,20 +66,20 @@ class ShellCommandEdit(ShellCommand):
                         os.makedirs(directory, exist_ok=True)
 
                     except OSError as e:
-                        self._mindspace_manager.add_interaction(
+                        self._history_manager.add_message(
                             MindspaceMessageSource.ERROR,
                             f"Failed to create directory: {str(e)}"
                         )
                         return False
 
             if not self._edit_file(full_path):
-                self._mindspace_manager.add_interaction(
+                self._history_manager.add_message(
                     MindspaceMessageSource.ERROR,
                     f"Failed to edit file: {args[0]}"
                 )
                 return False
 
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.SUCCESS,
                 f"Editing file: {args[0]}"
             )
@@ -87,7 +87,7 @@ class ShellCommandEdit(ShellCommand):
 
         except Exception as e:
             self._logger.exception("Error processing file: %s", str(e))
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 f"Error processing file: {str(e)}"
             )

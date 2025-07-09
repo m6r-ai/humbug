@@ -46,7 +46,7 @@ class ShellCommandWiki(ShellCommand):
         # Get positional arguments
         args = self._get_positional_arguments(tokens)
         if not args:
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 "No filename specified. Usage: wiki <filename>"
             )
@@ -62,20 +62,20 @@ class ShellCommandWiki(ShellCommand):
                         os.makedirs(directory, exist_ok=True)
 
                     except OSError as e:
-                        self._mindspace_manager.add_interaction(
+                        self._history_manager.add_message(
                             MindspaceMessageSource.ERROR,
                             f"Failed to create directory: {str(e)}"
                         )
                         return False
 
             if not self._wiki_file(full_path):
-                self._mindspace_manager.add_interaction(
+                self._history_manager.add_message(
                     MindspaceMessageSource.ERROR,
                     f"Failed to open page: {args[0]}"
                 )
                 return False
 
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.SUCCESS,
                 f"Opening page: {args[0]}"
             )
@@ -83,7 +83,7 @@ class ShellCommandWiki(ShellCommand):
 
         except Exception as e:
             self._logger.exception("Error processing page: %s", str(e))
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 f"Error processing page: {str(e)}"
             )

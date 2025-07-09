@@ -79,7 +79,7 @@ class ShellCommandM6rc(ShellCommand):
         # Get positional arguments
         args = self._get_positional_arguments(tokens)
         if not args:
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 "No file path provided"
             )
@@ -101,14 +101,14 @@ class ShellCommandM6rc(ShellCommand):
             try:
                 temperature_val = float(temp_values[0])
                 if temperature_val < 0.0 or temperature_val > 1.0:
-                    self._mindspace_manager.add_interaction(
+                    self._history_manager.add_message(
                         MindspaceMessageSource.ERROR,
                         "Temperature must be between 0.0 and 1.0"
                     )
                     return False
 
             except ValueError:
-                self._mindspace_manager.add_interaction(
+                self._history_manager.add_message(
                     MindspaceMessageSource.ERROR,
                     "Temperature must be a valid number"
                 )
@@ -127,7 +127,7 @@ class ShellCommandM6rc(ShellCommand):
             # Check if the path exists.  Convert to absolute path if it's relative
             file_path = self._mindspace_manager.get_absolute_path(args[0])
             if not os.path.exists(file_path):
-                self._mindspace_manager.add_interaction(
+                self._history_manager.add_message(
                     MindspaceMessageSource.ERROR,
                     f"File not found: {file_path}"
                 )
@@ -136,7 +136,7 @@ class ShellCommandM6rc(ShellCommand):
             if not self._create_m6rc_conversation(file_path, args, model, temperature_val, reasoning, should_submit):
                 return False
 
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.SUCCESS,
                 f"Started Metaphor conversation from {file_path}"
             )
@@ -144,7 +144,7 @@ class ShellCommandM6rc(ShellCommand):
 
         except Exception as e:
             self._logger.error("Failed to create Metaphor conversation: %s", str(e), exc_info=True)
-            self._mindspace_manager.add_interaction(
+            self._history_manager.add_message(
                 MindspaceMessageSource.ERROR,
                 f"Failed to create Metaphor conversation: {str(e)}"
             )
