@@ -92,6 +92,11 @@ class ConversationTab(TabBase):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+    def activate(self) -> None:
+        """Activate the conversation tab."""
+        print("ConversationTab.activate called")
+        self._conversation_widget.activate()
+
     def handle_conversation_modified(self) -> None:
         """Handle when the conversation is modified."""
         self._set_modified(True)

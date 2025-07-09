@@ -61,6 +61,9 @@ class TabBase(QFrame):
         self._event_filter.tab_activated.connect(self.activated)
         self.installEventFilter(self._event_filter)
 
+    def activate(self) -> None:
+        """Activate the tab."""
+
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """
         Install event filter on widget and all its children recursively.

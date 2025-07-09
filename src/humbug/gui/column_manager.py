@@ -121,6 +121,14 @@ class ColumnManager(QWidget):
         # Track active column
         self._active_column = self._tab_columns[0]
 
+        # Activation timer used to ensure tabs are activated correctly.  We only allow
+        # one activation at a time so we don't get races when we open a new tab but
+        # return back to the original.
+        self._activation_timer = QTimer(self)
+        self._activation_timer.setSingleShot(True)
+        self._activation_timer.timeout.connect(self._activate_current_tab)
+        self._activation_timer.setInterval(1)
+
         # Set initial state
         self._stack.setCurrentWidget(self._welcome_widget)
 
@@ -502,19 +510,19 @@ class ColumnManager(QWidget):
 
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
-        tab_widget = ColumnWidget()
-        tab_widget.setMinimumWidth(200)  # Set minimum width
-        tab_widget.currentChanged.connect(self._handle_tab_changed)
-        tab_widget.column_activated.connect(self._handle_column_activated)
-        tab_widget.tab_drop.connect(self._handle_tab_drop)
-        tab_widget.path_drop.connect(self._handle_path_drop)
+        column_widget = ColumnWidget()
+        column_widget.setMinimumWidth(200)  # Set minimum width
+        column_widget.currentChanged.connect(self._handle_tab_changed)
+        column_widget.column_activated.connect(self._handle_column_activated)
+        column_widget.tab_drop.connect(self._handle_tab_drop)
+        column_widget.path_drop.connect(self._handle_path_drop)
 
-        self._column_splitter.insertWidget(index, tab_widget)
-        self._tab_columns.insert(index, tab_widget)
+        self._column_splitter.insertWidget(index, column_widget)
+        self._tab_columns.insert(index, column_widget)
 
-        self._column_mru_order[tab_widget] = []
+        self._column_mru_order[column_widget] = []
 
-        return tab_widget
+        return column_widget
 
     def _handle_tab_merge(self, dragged_tab_id: str, target_tab_id: str) -> None:
         """Handle merging tabs when one is dropped directly onto another."""
@@ -621,7 +629,22 @@ class ColumnManager(QWidget):
         if change_focus:
             current_tab.setFocus()
 
+            # Ensure the new tab is activated, but we have to give a slight delay to allow for
+            # all signals to process correctly
+            if self._activation_timer.isActive():
+                self._activation_timer.stop()
+
+            self._activation_timer.start()
+
         self.tab_changed.emit()
+
+    def _activate_current_tab(self) -> None:
+        """Activate the current tab."""
+        current_tab = self._get_current_tab()
+        if not current_tab:
+            return
+
+        current_tab.activate()
 
     def _handle_tab_changed(self, _index: int) -> None:
         """
@@ -1574,7 +1597,6 @@ class ColumnManager(QWidget):
             if tab_column is None:
                 continue
 
-#            is_label_active = tab_column == self._active_column and tab == tab_column.currentWidget()
             label.handle_style_changed()
 
         self._column_splitter.setStyleSheet(f"""

@@ -69,6 +69,11 @@ class ShellTab(TabBase):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+    def activate(self) -> None:
+        """Activate the shell tab."""
+        print("ShellTab.activate called")
+        self._shell_widget.activate()
+
     def refresh(self) -> None:
         """Refresh system interaction history display."""
         self._shell_widget.load_interactions()

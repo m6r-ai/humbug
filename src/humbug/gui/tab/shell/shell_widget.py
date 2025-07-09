@@ -162,9 +162,6 @@ class ShellWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        # Set initial focus to input area
-        QTimer.singleShot(0, self._set_initial_focus)
-
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
@@ -476,6 +473,15 @@ class ShellWidget(QWidget):
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
+    def activate(self) -> None:
+        """Activate the shell widget."""
+        # If we have a focus message then focus it
+        if self._focused_message_index != -1:
+            self._messages[self._focused_message_index].set_focused(True)
+            return
+
+        self._input.set_focused(True)
+
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """
         Install event filter on widget and all its children recursively.
@@ -502,12 +508,7 @@ class ShellWidget(QWidget):
 
         # If we are clicking the messages container, focus the last focused message or input
         if widget == self._messages_container:
-            # If we have a focus message then focus it
-            if self._focused_message_index != -1:
-                self._messages[self._focused_message_index].set_focused(True)
-                return
-
-            self._input.set_focused(True)
+            self.activate()
             return
 
         # Find the ShellMessageWidget that contains this widget
@@ -702,10 +703,6 @@ class ShellWidget(QWidget):
         self._input.set_plain_text(text)
         self._input.setFocus()
 
-    def _set_initial_focus(self) -> None:
-        """Set initial focus to input area."""
-        self._input.setFocus()
-
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
         super().resizeEvent(event)
@@ -788,7 +785,9 @@ class ShellWidget(QWidget):
         """Copy selected text to clipboard."""
         if self._input.hasFocus():
             self._input.copy()
-        elif self._message_with_selection:
+            return
+
+        if self._message_with_selection:
             self._message_with_selection.copy_selection()
 
     def can_paste(self) -> bool:

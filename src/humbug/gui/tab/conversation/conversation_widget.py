@@ -232,9 +232,6 @@ class ConversationWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        # Set initial focus to input area
-        QTimer.singleShot(0, self._set_initial_focus)
-
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
@@ -682,6 +679,15 @@ class ConversationWidget(QWidget):
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
+    def activate(self) -> None:
+        """Activate the shell widget."""
+        # If we have a focus message then focus it
+        if self._focused_message_index != -1:
+            self._messages[self._focused_message_index].set_focused(True)
+            return
+
+        self._input.set_focused(True)
+
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """
         Install event filter on widget and all its children recursively.
@@ -703,17 +709,12 @@ class ConversationWidget(QWidget):
         Args:
             widget: The widget that was activated
         """
-        # Emit activated signal to let the tab know this conversation was clicked
+         # Emit activated signal to let the tab know this conversation was clicked
         self.activated.emit()
 
         # If we are clicking the messages container, focus the last focused message or input
         if widget == self._messages_container:
-            # If we have a focus message then focus it
-            if self._focused_message_index != -1:
-                self._messages[self._focused_message_index].set_focused(True)
-                return
-
-            self._input.set_focused(True)
+            self.activate()
             return
 
         # Find the ConversationMessage that contains this widget
@@ -960,10 +961,6 @@ class ConversationWidget(QWidget):
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._input.set_plain_text(text)
-        self._input.setFocus()
-
-    def _set_initial_focus(self) -> None:
-        """Set initial focus to input area."""
         self._input.setFocus()
 
     def load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool) -> None:
@@ -1312,8 +1309,9 @@ class ConversationWidget(QWidget):
         """Copy selected text to clipboard."""
         if self._input.hasFocus():
             self._input.copy()
+            return
 
-        elif self._message_with_selection:
+        if self._message_with_selection:
             self._message_with_selection.copy_selection()
 
     def can_paste(self) -> bool:
