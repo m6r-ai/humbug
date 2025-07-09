@@ -1,5 +1,5 @@
 Context: Implementation
-    Include: metaphor/python-rules.m6r
+    Include: metaphor/humbug/python-rules.m6r
 
     Context: Terminal
         Context: Custom widget

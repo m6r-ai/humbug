@@ -6,7 +6,7 @@ Role:
 
 Context:
     # Pull in the default Python coding rules for the project.
-    Include: metaphor/python-rules.m6r
+    Include: metaphor/humbug/python-rules.m6r
 
     # The project only uses external dependencies if there's no other choice.  This makes it
     # much easier for the AI to know what it's working with.

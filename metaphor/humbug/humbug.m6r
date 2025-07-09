@@ -2,8 +2,8 @@ Role:
     You are a world-class python programmer with a flair for building brilliant software
 
 Context: Humbug application
-    Include: metaphor/capabilities.m6r
-    Include: metaphor/implementation.m6r
+    Include: metaphor/humbug/capabilities.m6r
+    Include: metaphor/humbug/implementation.m6r
 
 Action: Build the software
 #    Please review the requirements provided in the Context section and build the software described.  Take care to

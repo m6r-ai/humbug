@@ -240,11 +240,11 @@ Context: Capabilities
                 Active tabs are a different colour to inactive tabs, and the active tab has a 2px border at the top to
                 highlight that it is the active tab.
 
-                Include: metaphor/tab-conversation.m6r
-                Include: metaphor/tab-editor.m6r
-                Include: metaphor/tab-shell.m6r
-                Include: metaphor/tab-terminal.m6r
-                Include: metaphor/tab-wiki.m6r
+                Include: metaphor/humbug/tab-conversation.m6r
+                Include: metaphor/humbug/tab-editor.m6r
+                Include: metaphor/humbug/tab-shell.m6r
+                Include: metaphor/humbug/tab-terminal.m6r
+                Include: metaphor/humbug/tab-wiki.m6r
 
             Context: Tab labels
                 Each tab has a tab label.  This comprises an icon indicating the tab type, a text label indicating the tab
