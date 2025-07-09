@@ -2,6 +2,10 @@
 
 ## v0.19 (2025-07-xx)
 
+Bug fixes:
+
+- Improved the system tool description so the LLM has a clearer idea of what the tool can do.
+
 ## v0.18 (2025-07-08)
 
 New features:
