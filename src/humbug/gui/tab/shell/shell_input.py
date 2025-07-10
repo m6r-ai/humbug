@@ -49,7 +49,7 @@ class ShellInput(ShellMessageWidget):
         self._message_source = ShellMessageSource.USER  # Set default source for styling
         self._update_header_text()
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """
         Filter events to intercept key presses in the text area.
 
@@ -60,7 +60,7 @@ class ShellInput(ShellMessageWidget):
         Returns:
             True if the event was handled, False to pass to the text area
         """
-        if obj == self._text_area and event.type() == QEvent.Type.KeyPress:
+        if watched == self._text_area and event.type() == QEvent.Type.KeyPress:
             # Cast to QKeyEvent
             key_event = cast(QKeyEvent, event)
 
@@ -122,7 +122,7 @@ class ShellInput(ShellMessageWidget):
                 return True
 
         # Let the event continue to the target
-        return super().eventFilter(obj, event)
+        return super().eventFilter(watched, event)
 
     def _handle_language_changed(self) -> None:
         """Handle language change event."""

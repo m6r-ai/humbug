@@ -178,33 +178,7 @@ class ShellMessageWidget(QFrame):
 
         # Update the header
         self._update_role_text()
-        self._set_role_style()
         self._handle_style_changed()
-
-    def _set_role_style(self) -> None:
-        """Set the role label color based on message source."""
-        # Map message source to color role
-        if self._message_source == ShellMessageSource.USER:
-            colour = ColorRole.MESSAGE_USER
-            background_colour = ColorRole.MESSAGE_USER_BACKGROUND
-
-        elif self._message_source == ShellMessageSource.ERROR:
-            colour = ColorRole.MESSAGE_SYSTEM_ERROR
-            background_colour = ColorRole.MESSAGE_BACKGROUND
-
-        else:
-            colour = ColorRole.MESSAGE_SYSTEM_SUCCESS
-            background_colour = ColorRole.MESSAGE_BACKGROUND
-
-        # Warning: This needs to stay in sync with ShellInput
-        self._role_label.setStyleSheet(f"""
-            QLabel {{
-                color: {self._style_manager.get_color_str(colour)};
-                margin: 0;
-                padding: 0;
-                background-color: {self._style_manager.get_color_str(background_colour)};
-            }}
-        """)
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -239,6 +213,31 @@ class ShellMessageWidget(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
+    def _set_role_style(self) -> None:
+        """Set the role label color based on message source."""
+        # Map message source to color role
+        if self._message_source == ShellMessageSource.USER:
+            colour = ColorRole.MESSAGE_USER
+            background_colour = ColorRole.MESSAGE_USER_BACKGROUND
+
+        elif self._message_source == ShellMessageSource.ERROR:
+            colour = ColorRole.MESSAGE_SYSTEM_ERROR
+            background_colour = ColorRole.MESSAGE_BACKGROUND
+
+        else:
+            colour = ColorRole.MESSAGE_SYSTEM_SUCCESS
+            background_colour = ColorRole.MESSAGE_BACKGROUND
+
+        # Warning: This needs to stay in sync with ShellInput
+        self._role_label.setStyleSheet(f"""
+            QLabel {{
+                color: {self._style_manager.get_color_str(colour)};
+                margin: 0;
+                padding: 0;
+                background-color: {self._style_manager.get_color_str(background_colour)};
+            }}
+        """)
+
     def _handle_style_changed(self) -> None:
         """Handle the style changing"""
         factor = self._style_manager.zoom_factor()
@@ -247,31 +246,13 @@ class ShellMessageWidget(QFrame):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        # Map message types to role colors
-        role_colours = {
-            ShellMessageSource.USER: ColorRole.MESSAGE_USER,
-            ShellMessageSource.ERROR: ColorRole.MESSAGE_SYSTEM_ERROR,
-            ShellMessageSource.SUCCESS: ColorRole.MESSAGE_SYSTEM_SUCCESS
-        }
+        self._set_role_style()
 
         current_style = self._message_source or ShellMessageSource.USER
-        role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
-        label_color = self._style_manager.get_color_str(role)
         background_color = self._style_manager.get_color_str(
             ColorRole.MESSAGE_USER_BACKGROUND if current_style == ShellMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
         )
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-
-        # Role label styling (bold)
-        self._role_label.setFont(font)
-        self._role_label.setStyleSheet(f"""
-            QLabel {{
-                color: {label_color};
-                margin: 0;
-                padding: 0;
-                background-color: {background_color};
-            }}
-        """)
 
         # Header widget styling
         self._header.setStyleSheet(f"""
