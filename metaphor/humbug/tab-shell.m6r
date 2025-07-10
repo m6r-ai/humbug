@@ -55,6 +55,9 @@ Context: Shelltab
         Context: "help" command
             The help command lists all the available commands.
 
+        Context: "log" command
+            The log command opens the mindspace log viewer.
+
         Context: "m6rc" command
             The m6rc command takes a named file and compiles it with the m6rc Metaphor compiler.  If the
             file compiles successfully then a new conversation is started using the prompt that has been
