@@ -48,7 +48,6 @@ class MindspaceManager(QObject):
     SYSTEM_INTERACTIONS_FILE = "system.json"
 
     _instance = None
-    _logger = logging.getLogger("MindspaceManager")
 
     def __new__(cls) -> 'MindspaceManager':
         """Create or return singleton instance."""
@@ -67,6 +66,7 @@ class MindspaceManager(QObject):
             self._directory_tracker = MindspaceDirectoryTracker()
             self._interactions = MindspaceInteractions()
             self._initialized = True
+            self._logger = logging.getLogger("MindspaceManager")
 
     def mindspace_path(self) -> str:
         """
