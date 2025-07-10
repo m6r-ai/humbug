@@ -34,6 +34,7 @@ from humbug.gui.tab.shell.commands.shell_command_clear import ShellCommandClear
 from humbug.gui.tab.shell.commands.shell_command_conversation import ShellCommandConversation
 from humbug.gui.tab.shell.commands.shell_command_edit import ShellCommandEdit
 from humbug.gui.tab.shell.commands.shell_command_help import ShellCommandHelp
+from humbug.gui.tab.shell.commands.shell_command_log import ShellCommandLog
 from humbug.gui.tab.shell.commands.shell_command_m6rc import ShellCommandM6rc
 from humbug.gui.tab.shell.commands.shell_command_terminal import ShellCommandTerminal
 from humbug.gui.tab.shell.commands.shell_command_wiki import ShellCommandWiki
@@ -410,6 +411,9 @@ class MainWindow(QMainWindow):
 
         edit_command = ShellCommandEdit(self._process_edit_command)
         self._command_registry.register_command(edit_command)
+
+        log_command = ShellCommandLog(self._process_log_command)
+        self._command_registry.register_command(log_command)
 
         m6rc_command = ShellCommandM6rc(self._process_m6rc_command)
         self._command_registry.register_command(m6rc_command)
@@ -1302,6 +1306,23 @@ class MainWindow(QMainWindow):
         try:
             self._column_manager.open_file(file_path)
             self._file_tree.reveal_and_select_file(file_path)
+
+        finally:
+            self._column_manager.protect_current_tab(False)
+
+        return True
+
+    def _process_log_command(self) -> bool:
+        """
+        Process the log command by opening the mindspace log.
+
+        Returns:
+            True if command processed successfully, False otherwise
+        """
+        self._column_manager.protect_current_tab(True)
+
+        try:
+            self._column_manager.show_system_log()
 
         finally:
             self._column_manager.protect_current_tab(False)
