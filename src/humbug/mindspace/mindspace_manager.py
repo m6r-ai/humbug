@@ -16,8 +16,8 @@ from PySide6.QtCore import QObject, Signal
 from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
 from humbug.mindspace.mindspace_interactions import MindspaceInteractions
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_message import MindspaceMessage
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 
 
@@ -464,12 +464,12 @@ class MindspaceManager(QObject):
         """Get the last used conversations directory."""
         return self._directory_tracker.conversations_directory()
 
-    def add_interaction(self, source: MindspaceMessageSource, content: str) -> MindspaceMessage:
+    def add_interaction(self, level: MindspaceLogLevel, content: str) -> MindspaceMessage:
         """
         Add a new system interaction message.
 
         Args:
-            source: Source of the message (user or system)
+            level: Log level of the message
             content: Content of the message
 
         Returns:
@@ -481,7 +481,7 @@ class MindspaceManager(QObject):
         if not self.has_mindspace():
             raise MindspaceNotFoundError("No mindspace is currently open")
 
-        message = MindspaceMessage.create(source, content)
+        message = MindspaceMessage.create(level, content)
         self._interactions.add_message(message)
         self._save_interactions()
         self.interactions_updated.emit()

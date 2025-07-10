@@ -5,21 +5,21 @@ from datetime import datetime, timezone
 from typing import Dict
 import uuid
 
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 
 
 @dataclass
 class ShellMessage:
     """Represents a single shell message in the command history."""
     message_id: str
-    source: MindspaceMessageSource
+    source: ShellMessageSource
     content: str
     timestamp: datetime
 
     @classmethod
     def create(
         cls,
-        source: MindspaceMessageSource,
+        source: ShellMessageSource,
         content: str,
         timestamp: datetime | None = None
     ) -> 'ShellMessage':
@@ -48,7 +48,7 @@ class ShellMessage:
         """Create a ShellMessage instance from dictionary."""
         return cls(
             message_id=data["message_id"],
-            source=MindspaceMessageSource(data["source"]),
+            source=ShellMessageSource(data["source"]),
             content=data["content"],
             timestamp=datetime.fromisoformat(data["timestamp"])
         )

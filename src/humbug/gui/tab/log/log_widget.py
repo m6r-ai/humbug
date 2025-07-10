@@ -241,7 +241,7 @@ class LogWidget(QWidget):
         # Set content using fields from MindspaceMessage model
         msg_widget.set_content(
             message.content,
-            message.source,
+            message.level,
             message.timestamp,
             message.message_id
         )
@@ -510,14 +510,14 @@ class LogWidget(QWidget):
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""
         return (
-            self._messages and
+            len(self._messages) > 0 and
             (self._focused_message_index == -1 or self._focused_message_index < len(self._messages) - 1)
         )
 
     def can_navigate_previous_message(self) -> bool:
         """Check if navigation to previous message is possible."""
         return (
-            self._messages and
+            len(self._messages) > 0 and
             (self._focused_message_index == -1 or self._focused_message_index > 0)
         )
 

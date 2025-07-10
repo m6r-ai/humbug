@@ -7,8 +7,8 @@ from typing import Callable, Dict, List
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_model import ReasoningCapability
 from humbug.gui.tab.shell.shell_command import ShellCommand
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
@@ -80,7 +80,7 @@ class ShellCommandM6rc(ShellCommand):
         args = self._get_positional_arguments(tokens)
         if not args:
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 "No file path provided"
             )
             return False
@@ -102,14 +102,14 @@ class ShellCommandM6rc(ShellCommand):
                 temperature_val = float(temp_values[0])
                 if temperature_val < 0.0 or temperature_val > 1.0:
                     self._history_manager.add_message(
-                        MindspaceMessageSource.ERROR,
+                        ShellMessageSource.ERROR,
                         "Temperature must be between 0.0 and 1.0"
                     )
                     return False
 
             except ValueError:
                 self._history_manager.add_message(
-                    MindspaceMessageSource.ERROR,
+                    ShellMessageSource.ERROR,
                     "Temperature must be a valid number"
                 )
                 return False
@@ -128,7 +128,7 @@ class ShellCommandM6rc(ShellCommand):
             file_path = self._mindspace_manager.get_absolute_path(args[0])
             if not os.path.exists(file_path):
                 self._history_manager.add_message(
-                    MindspaceMessageSource.ERROR,
+                    ShellMessageSource.ERROR,
                     f"File not found: {file_path}"
                 )
                 return False
@@ -137,7 +137,7 @@ class ShellCommandM6rc(ShellCommand):
                 return False
 
             self._history_manager.add_message(
-                MindspaceMessageSource.SUCCESS,
+                ShellMessageSource.SUCCESS,
                 f"Started Metaphor conversation from {file_path}"
             )
             return True
@@ -145,7 +145,7 @@ class ShellCommandM6rc(ShellCommand):
         except Exception as e:
             self._logger.error("Failed to create Metaphor conversation: %s", str(e), exc_info=True)
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Failed to create Metaphor conversation: {str(e)}"
             )
             return False

@@ -6,7 +6,7 @@ from typing import List, Callable, Dict
 from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_model import ReasoningCapability
 from humbug.gui.tab.shell.shell_command import ShellCommand
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
@@ -92,14 +92,14 @@ class ShellCommandConversation(ShellCommand):
                 temperature_val = float(temp_values[0])
                 if temperature_val < 0.0 or temperature_val > 1.0:
                     self._history_manager.add_message(
-                        MindspaceMessageSource.ERROR,
+                        ShellMessageSource.ERROR,
                         "Temperature must be between 0.0 and 1.0"
                     )
                     return False
 
             except ValueError:
                 self._history_manager.add_message(
-                    MindspaceMessageSource.ERROR,
+                    ShellMessageSource.ERROR,
                     "Temperature must be a valid number"
                 )
                 return False
@@ -117,7 +117,7 @@ class ShellCommandConversation(ShellCommand):
 
             # Success message would include model info if specified
             self._history_manager.add_message(
-                MindspaceMessageSource.SUCCESS,
+                ShellMessageSource.SUCCESS,
                 "Started new conversation"
             )
             return True
@@ -125,7 +125,7 @@ class ShellCommandConversation(ShellCommand):
         except Exception as e:
             self._logger.exception("Failed to create conversation: %s", str(e))
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Failed to create conversation: {str(e)}"
             )
             return False

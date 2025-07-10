@@ -4,7 +4,7 @@ import logging
 from typing import List, Callable
 
 from humbug.gui.tab.shell.shell_command import ShellCommand
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.lexer import Token
 
 
@@ -46,7 +46,7 @@ class ShellCommandLog(ShellCommand):
         """
         self._process_log_command()
         self._history_manager.add_message(
-            MindspaceMessageSource.SUCCESS,
+            ShellMessageSource.SUCCESS,
             "Opened mindspace log"
         )
 

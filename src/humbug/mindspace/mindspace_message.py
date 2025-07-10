@@ -3,21 +3,21 @@ from datetime import datetime, timezone
 from typing import Dict
 import uuid
 
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 @dataclass
 class MindspaceMessage:
     """Represents a single shell message in the interaction history."""
     message_id: str
-    source: MindspaceMessageSource
+    level: MindspaceLogLevel
     content: str
     timestamp: datetime
 
     @classmethod
     def create(
         cls,
-        source: MindspaceMessageSource,
+        level: MindspaceLogLevel,
         content: str,
         timestamp: datetime | None = None
     ) -> 'MindspaceMessage':
@@ -27,7 +27,7 @@ class MindspaceMessage:
 
         return cls(
             message_id=str(uuid.uuid4()),
-            source=source,
+            level=level,
             content=content,
             timestamp=timestamp
         )
@@ -36,7 +36,7 @@ class MindspaceMessage:
         """Convert message to dictionary for storage."""
         return {
             "message_id": self.message_id,
-            "source": self.source.value,
+            "level": self.level.value,
             "content": self.content,
             "timestamp": self.timestamp.isoformat()
         }
@@ -46,7 +46,7 @@ class MindspaceMessage:
         """Create a MindspaceMessage instance from dictionary."""
         return cls(
             message_id=data["message_id"],
-            source=MindspaceMessageSource(data["source"]),
+            level=MindspaceLogLevel(data["level"]),
             content=data["content"],
             timestamp=datetime.fromisoformat(data["timestamp"])
         )

@@ -94,6 +94,10 @@ class ColorRole(Enum):
     MESSAGE_LANGUAGE = auto()           # Language heading
     MESSAGE_BOOKMARK = auto()           # Bookmark highlight
     MESSAGE_STREAMING = auto()          # Message streaming
+    MESSAGE_TRACE = auto()              # Trace message
+    MESSAGE_INFORMATION = auto()        # Information message
+    MESSAGE_WARNING = auto()            # Warning message
+    MESSAGE_ERROR = auto()              # Error message
 
     # Status bar elements
     STATUS_BAR_BACKGROUND = auto()      # Status bar background

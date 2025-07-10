@@ -8,8 +8,8 @@ from PySide6.QtCore import QObject, Signal
 
 from humbug.gui.tab.shell.shell_history import ShellHistory
 from humbug.gui.tab.shell.shell_message import ShellMessage
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 
 
 class ShellHistoryManager(QObject):
@@ -56,7 +56,7 @@ class ShellHistoryManager(QObject):
 
         self.history_updated.emit()
 
-    def add_message(self, source: MindspaceMessageSource, content: str) -> ShellMessage:
+    def add_message(self, source: ShellMessageSource, content: str) -> ShellMessage:
         """
         Add a new shell message to history.
 

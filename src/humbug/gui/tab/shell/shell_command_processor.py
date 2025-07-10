@@ -8,7 +8,7 @@ from humbug.gui.tab.shell.shell_command_completion_result import ShellCommandCom
 from humbug.gui.tab.shell.shell_command_parser import ShellCommandParser
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.gui.tab.shell.shell_history_manager import ShellHistoryManager
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.lexer import TokenType, Token
 
 
@@ -91,7 +91,7 @@ class ShellCommandProcessor:
             return
 
         # Add user command to history
-        self._history_manager.add_message(MindspaceMessageSource.USER, command_text)
+        self._history_manager.add_message(ShellMessageSource.USER, command_text)
 
         self._completion_start_pos = 0
 
@@ -99,7 +99,7 @@ class ShellCommandProcessor:
         cmd = self._get_command_name(self._current_tokens)
         if not cmd:
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 "Invalid command format. Type 'help' for a list of available commands."
             )
             return
@@ -107,7 +107,7 @@ class ShellCommandProcessor:
         command = self._command_registry.get_command(cmd)
         if not command:
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Unknown command: {cmd}. Type 'help' for a list of available commands."
             )
             return
@@ -118,7 +118,7 @@ class ShellCommandProcessor:
         except Exception as e:
             self._logger.error("Error executing command '%s': %s", command_text, str(e), exc_info=True)
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
 

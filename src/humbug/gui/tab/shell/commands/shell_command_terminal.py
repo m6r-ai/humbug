@@ -3,7 +3,7 @@
 from typing import Callable, List
 
 from humbug.gui.tab.shell.shell_command import ShellCommand
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.lexer import Token, TokenType
 
 
@@ -41,7 +41,7 @@ class ShellCommandTerminal(ShellCommand):
         """
         self._create_terminal()
         self._history_manager.add_message(
-            MindspaceMessageSource.SUCCESS,
+            ShellMessageSource.SUCCESS,
             "Started new terminal"
         )
         return True

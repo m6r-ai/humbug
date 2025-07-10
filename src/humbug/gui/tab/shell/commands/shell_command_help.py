@@ -4,7 +4,7 @@ from typing import List
 
 from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.syntax.lexer import Token, TokenType
 
 
@@ -53,7 +53,7 @@ class ShellCommandHelp(ShellCommand):
                 return True
 
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Unknown command: {command_name}"
             )
             return False
@@ -73,7 +73,7 @@ class ShellCommandHelp(ShellCommand):
         help_text += "\nType 'help <command>' or '<command> --help' for detailed help on a specific command."
 
         self._history_manager.add_message(
-            MindspaceMessageSource.SUCCESS,
+            ShellMessageSource.SUCCESS,
             help_text
         )
 

@@ -38,7 +38,9 @@ from humbug.gui.tab.shell.commands.shell_command_log import ShellCommandLog
 from humbug.gui.tab.shell.commands.shell_command_m6rc import ShellCommandM6rc
 from humbug.gui.tab.shell.commands.shell_command_terminal import ShellCommandTerminal
 from humbug.gui.tab.shell.commands.shell_command_wiki import ShellCommandWiki
+from humbug.gui.tab.shell.shell_history_manager import ShellHistoryManager
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
 from humbug.metaphor import (
@@ -46,8 +48,8 @@ from humbug.metaphor import (
     format_errors, format_preamble
 )
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
@@ -401,6 +403,7 @@ class MainWindow(QMainWindow):
 
         # Initialize command registry and register commands
         self._command_registry = ShellCommandRegistry()
+        self._shell_history = ShellHistoryManager()
 
         # Create and register commands
         clear_command = ShellCommandClear(self._process_clear_command)
@@ -1079,10 +1082,7 @@ class MainWindow(QMainWindow):
             self._column_manager.show_system_shell()
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
-            self._mindspace_manager.add_interaction(
-                MindspaceMessageSource.ERROR,
-                error
-            )
+            self._mindspace_manager.add_interaction(MindspaceLogLevel.WARN, error)
             return
 
         conversation_tab = self._new_conversation()
@@ -1289,9 +1289,7 @@ class MainWindow(QMainWindow):
             self._column_manager.new_conversation(model, temperature, reasoning)
 
         except MindspaceError as e:
-            self._mindspace_manager.add_interaction(
-                MindspaceMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
-            )
+            self._shell_history.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
             return False
 
         finally:
@@ -1350,17 +1348,13 @@ class MainWindow(QMainWindow):
 
         except FileNotFoundError:
             error = f"File not found: {file_path}"
-            self._mindspace_manager.add_interaction(
-                MindspaceMessageSource.ERROR, error
-            )
+            self._shell_history.add_message(ShellMessageSource.ERROR, error)
             return False
 
         except MetaphorASTBuilderError as e:
             strings = self._language_manager.strings()
             error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
-            self._mindspace_manager.add_interaction(
-                MindspaceMessageSource.ERROR, error
-            )
+            self._shell_history.add_message(ShellMessageSource.ERROR, error)
             return False
 
         self._column_manager.protect_current_tab(True)
@@ -1369,9 +1363,7 @@ class MainWindow(QMainWindow):
             conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
 
         except MindspaceError as e:
-            self._mindspace_manager.add_interaction(
-                MindspaceMessageSource.ERROR, f"Failed to create conversation: {str(e)}"
-            )
+            self._shell_history.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
             return False
 
         self._column_manager.protect_current_tab(False)

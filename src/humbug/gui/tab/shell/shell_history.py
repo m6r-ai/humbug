@@ -6,7 +6,7 @@ import os
 from typing import List
 
 from humbug.gui.tab.shell.shell_message import ShellMessage
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 
 
 class ShellHistory:
@@ -131,7 +131,7 @@ class ShellHistory:
 
         # Process messages from newest to oldest
         for message in reversed(self._messages):
-            if message.source == MindspaceMessageSource.USER:
+            if message.source == ShellMessageSource.USER:
                 content = message.content.strip()
                 if content and content not in user_commands:
                     user_commands.append(content)

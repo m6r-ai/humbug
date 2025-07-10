@@ -17,7 +17,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.log.log_text_edit import LogTextEdit
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 
 
 class LogMessageWidget(QFrame):
@@ -46,7 +46,7 @@ class LogMessageWidget(QFrame):
 
         # Will store the actual message source
         self._message_id: str | None = None
-        self._message_source: MindspaceMessageSource | None = None
+        self._message_level: MindspaceLogLevel | None = None
         self._message_timestamp: datetime | None = None
         self._message_content = ""
 
@@ -64,8 +64,8 @@ class LogMessageWidget(QFrame):
         self._header_layout.setSpacing(4)
 
         # Create role and timestamp labels
-        self._role_label = QLabel(self)
-        self._header_layout.addWidget(self._role_label)
+        self._level_label = QLabel(self)
+        self._header_layout.addWidget(self._level_label)
         self._header_layout.addStretch()
 
         # Add header widget to main layout
@@ -112,25 +112,30 @@ class LogMessageWidget(QFrame):
 
     def _handle_language_changed(self) -> None:
         """Update text when language changes."""
-        self._update_role_text()
+        self._update_level_text()
 
-    def _update_role_text(self) -> None:
-        """Update the role text based on current language."""
-        strings = self._language_manager.strings()
+    def _update_level_text(self) -> None:
+        """Update the level text."""
+        # Map from message level to display text
+        if self._message_level == MindspaceLogLevel.TRACE:
+            level_text = "Trace"
 
-        # Map from message source to display text
-        if self._message_source == MindspaceMessageSource.USER:
-            role_text = strings.role_you
+        elif self._message_level == MindspaceLogLevel.INFO:
+            level_text = "Info"
+
+        elif self._message_level == MindspaceLogLevel.WARN:
+            level_text = "Warning"
 
         else:
-            role_text = strings.role_system
+            level_text = "Error"
 
         # Format with timestamp
         if self._message_timestamp is not None:
             timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-            self._role_label.setText(f"{role_text} @ {timestamp_str}")
+            self._level_label.setText(f"{level_text} @ {timestamp_str}")
+
         else:
-            self._role_label.setText(role_text)
+            self._level_label.setText(level_text)
 
     def _on_mouse_pressed(self, event: QMouseEvent) -> None:
         """Handle mouse press from text area."""
@@ -153,18 +158,18 @@ class LogMessageWidget(QFrame):
 
         self.selectionChanged.emit(has_selection)
 
-    def set_content(self, text: str, source: MindspaceMessageSource, timestamp: datetime, message_id: str) -> None:
+    def set_content(self, text: str, level: MindspaceLogLevel, timestamp: datetime, message_id: str) -> None:
         """
         Set content with style.
 
         Args:
             text: The message text content
-            source: The source of the message
+            level: The log level of the message
             timestamp: datetime object for the message timestamp
             message_id: Unique identifier for the message
         """
         self._message_id = message_id
-        self._message_source = source
+        self._message_level = level
         self._message_timestamp = timestamp
         self._message_content = text
 
@@ -172,31 +177,31 @@ class LogMessageWidget(QFrame):
         self._text_area.set_text(text)
 
         # Update the header
-        self._update_role_text()
-        self._set_role_style()
+        self._update_level_text()
+        self._set_level_style()
         self._handle_style_changed()
 
-    def _set_role_style(self) -> None:
-        """Set the role label color based on message source."""
+    def _set_level_style(self) -> None:
+        """Set the level label color based on message source."""
         # Map message source to color role
-        if self._message_source == MindspaceMessageSource.USER:
-            colour = ColorRole.MESSAGE_USER
-            background_colour = ColorRole.MESSAGE_USER_BACKGROUND
+        if self._message_level == MindspaceLogLevel.TRACE:
+            colour = ColorRole.MESSAGE_TRACE
 
-        elif self._message_source == MindspaceMessageSource.ERROR:
-            colour = ColorRole.MESSAGE_SYSTEM_ERROR
-            background_colour = ColorRole.MESSAGE_BACKGROUND
+        elif self._message_level == MindspaceLogLevel.INFO:
+            colour = ColorRole.MESSAGE_INFORMATION
+
+        elif self._message_level == MindspaceLogLevel.WARN:
+            colour = ColorRole.MESSAGE_WARNING
 
         else:
-            colour = ColorRole.MESSAGE_SYSTEM_SUCCESS
-            background_colour = ColorRole.MESSAGE_BACKGROUND
+            colour = ColorRole.MESSAGE_ERROR
 
-        self._role_label.setStyleSheet(f"""
+        self._level_label.setStyleSheet(f"""
             QLabel {{
                 color: {self._style_manager.get_color_str(colour)};
                 margin: 0;
                 padding: 0;
-                background-color: {self._style_manager.get_color_str(background_colour)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
         """)
 
@@ -243,22 +248,21 @@ class LogMessageWidget(QFrame):
 
         # Map message types to role colors
         role_colours = {
-            MindspaceMessageSource.USER: ColorRole.MESSAGE_USER,
-            MindspaceMessageSource.ERROR: ColorRole.MESSAGE_SYSTEM_ERROR,
-            MindspaceMessageSource.SUCCESS: ColorRole.MESSAGE_SYSTEM_SUCCESS
+            MindspaceLogLevel.TRACE: ColorRole.MESSAGE_TRACE,
+            MindspaceLogLevel.INFO: ColorRole.MESSAGE_INFORMATION,
+            MindspaceLogLevel.WARN: ColorRole.MESSAGE_WARNING,
+            MindspaceLogLevel.ERROR: ColorRole.MESSAGE_ERROR,
         }
 
-        current_style = self._message_source or MindspaceMessageSource.USER
-        role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
+        current_style = self._message_level or MindspaceLogLevel.ERROR
+        role = role_colours[current_style]
         label_color = self._style_manager.get_color_str(role)
-        background_color = self._style_manager.get_color_str(
-            ColorRole.MESSAGE_USER_BACKGROUND if current_style == MindspaceMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
-        )
         text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
 
         # Role label styling (bold)
-        self._role_label.setFont(font)
-        self._role_label.setStyleSheet(f"""
+        self._level_label.setFont(font)
+        self._level_label.setStyleSheet(f"""
             QLabel {{
                 color: {label_color};
                 margin: 0;
@@ -306,8 +310,7 @@ class LogMessageWidget(QFrame):
         """)
 
         # Determine border color based on state
-        border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
-                 ColorRole.MESSAGE_USER_BACKGROUND if current_style == MindspaceMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+        border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else ColorRole.MESSAGE_BACKGROUND
 
         self.setStyleSheet(f"""
             QWidget {{

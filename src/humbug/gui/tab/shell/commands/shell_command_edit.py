@@ -5,8 +5,8 @@ import os
 from typing import List, Callable
 
 from humbug.gui.tab.shell.shell_command import ShellCommand
+from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_message_source import MindspaceMessageSource
 from humbug.syntax.lexer import Token, TokenType
 
 
@@ -51,7 +51,7 @@ class ShellCommandEdit(ShellCommand):
         args = self._get_positional_arguments(tokens)
         if not args:
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 "No filename specified. Usage: edit <filename>"
             )
             return False
@@ -67,20 +67,20 @@ class ShellCommandEdit(ShellCommand):
 
                     except OSError as e:
                         self._history_manager.add_message(
-                            MindspaceMessageSource.ERROR,
+                            ShellMessageSource.ERROR,
                             f"Failed to create directory: {str(e)}"
                         )
                         return False
 
             if not self._edit_file(full_path):
                 self._history_manager.add_message(
-                    MindspaceMessageSource.ERROR,
+                    ShellMessageSource.ERROR,
                     f"Failed to edit file: {args[0]}"
                 )
                 return False
 
             self._history_manager.add_message(
-                MindspaceMessageSource.SUCCESS,
+                ShellMessageSource.SUCCESS,
                 f"Editing file: {args[0]}"
             )
             return True
@@ -88,7 +88,7 @@ class ShellCommandEdit(ShellCommand):
         except Exception as e:
             self._logger.exception("Error processing file: %s", str(e))
             self._history_manager.add_message(
-                MindspaceMessageSource.ERROR,
+                ShellMessageSource.ERROR,
                 f"Error processing file: {str(e)}"
             )
             return False

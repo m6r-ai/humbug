@@ -328,6 +328,22 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#c0a080",
                 ColorMode.LIGHT: "#a07050"
             },
+            ColorRole.MESSAGE_TRACE: {
+                ColorMode.DARK: "#a0a0a0",
+                ColorMode.LIGHT: "#606060"
+            },
+            ColorRole.MESSAGE_INFORMATION: {
+                ColorMode.DARK: "#80b0f0",
+                ColorMode.LIGHT: "#0060c0"
+            },
+            ColorRole.MESSAGE_WARNING: {
+                ColorMode.DARK: "#f0c040",
+                ColorMode.LIGHT: "#c0a020"
+            },
+            ColorRole.MESSAGE_ERROR: {
+                ColorMode.DARK: "#ff6060",
+                ColorMode.LIGHT: "#c03030"
+            },
 
             # Status bar elements
             ColorRole.STATUS_BAR_BACKGROUND: {
