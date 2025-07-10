@@ -160,7 +160,6 @@ class LanguageStrings:
     # Dialog titles
     mindspace_error_title: str
     conversation_error_title: str
-    metaphor_error_title: str
     settings_error_title: str
     error_opening_file_title: str
     error_saving_file_title: str

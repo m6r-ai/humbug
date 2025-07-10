@@ -81,5 +81,5 @@ def format_errors(errors: List[MetaphorASTBuilderSyntaxError]) -> str:
         )
         output.write(f"----------------\n{error_message}\n")
 
-    output.write("----------------\n")
+    output.write("----------------")
     return output.getvalue()

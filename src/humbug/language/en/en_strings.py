@@ -165,7 +165,6 @@ def get_english_strings() -> LanguageStrings:
         # Dialog titles
         mindspace_error_title="Mindspace Error",
         conversation_error_title="Conversation Error",
-        metaphor_error_title="Metaphor Processing Error",
         settings_error_title="Settings Error",
         error_opening_file_title="Error Opening File",
         error_saving_file_title="Error Saving File",

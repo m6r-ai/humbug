@@ -165,7 +165,6 @@ def get_french_strings() -> LanguageStrings:
         # Dialog titles
         mindspace_error_title="Erreur d'espace mental",
         conversation_error_title="Erreur de conversation",
-        metaphor_error_title="Erreur de traitement Metaphor",
         settings_error_title="Erreur de paramètres",
         error_opening_file_title="Erreur lors de l'ouverture du fichier",
         error_saving_file_title="Erreur lors de l'enregistrement du fichier",

@@ -1080,9 +1080,9 @@ class MainWindow(QMainWindow):
 
         except MetaphorASTBuilderError as e:
             self._column_manager.show_system_shell()
-            strings = self._language_manager.strings()
-            error = f"{strings.metaphor_error_title}\n```\n{format_errors(e.errors)}\n```"
+            error = f"Metaphor compiler error prevented new Metaphor conversation:\n\n{format_errors(e.errors)}"
             self._mindspace_manager.add_interaction(MindspaceLogLevel.WARN, error)
+            self._column_manager.show_system_log()
             return
 
         conversation_tab = self._new_conversation()
@@ -1352,8 +1352,7 @@ class MainWindow(QMainWindow):
             return False
 
         except MetaphorASTBuilderError as e:
-            strings = self._language_manager.strings()
-            error = f"{strings.metaphor_error_title}\n{format_errors(e.errors)}"
+            error = f"m6rc compile failed:\n\n{format_errors(e.errors)}"
             self._shell_history.add_message(ShellMessageSource.ERROR, error)
             return False
 

@@ -97,7 +97,7 @@ def test_format_errors_single_error():
         "    |\n"
         "    v\n"
         "test line\n"
-        "----------------\n"
+        "----------------"
     )
     assert format_errors([error]) == expected
 
@@ -132,14 +132,14 @@ def test_format_errors_multiple_errors():
         "   |\n"
         "   v\n"
         "xyz\n"
-        "----------------\n"
+        "----------------"
     )
     assert format_errors(errors) == expected
 
 
 def test_format_errors_empty_list():
     """Test formatting an empty error list."""
-    assert format_errors([]) == "----------------\n"
+    assert format_errors([]) == "----------------"
 
 
 def test_format_ast_remove_blank_lines():

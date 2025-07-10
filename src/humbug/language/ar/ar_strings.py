@@ -165,7 +165,6 @@ def get_arabic_strings() -> LanguageStrings:
         # Dialog titles
         mindspace_error_title="خطأ في المساحة الذهنية",
         conversation_error_title="خطأ في المحادثة",
-        metaphor_error_title="خطأ في معالجة ميتافور",
         settings_error_title="خطأ في الإعدادات",
         error_opening_file_title="خطأ في فتح الملف",
         error_saving_file_title="خطأ في حفظ الملف",
