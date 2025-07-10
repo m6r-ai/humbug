@@ -1119,7 +1119,7 @@ class ColumnManager(QWidget):
         log_tab = LogTab("", self)
 
         # Use language strings for the tab title
-        self._add_tab(log_tab, "Humbug Log")
+        self._add_tab(log_tab, "Mindspace Log")
         return log_tab
 
     def show_system_shell(self) -> ShellTab:
@@ -1462,7 +1462,7 @@ class ColumnManager(QWidget):
             return os.path.splitext(os.path.basename(state.path))[0]
 
         if isinstance(tab, LogTab):
-            return "Humbug Log"
+            return "Mindspace Log"
 
         if isinstance(tab, ShellTab):
             return "Humbug Shell"
