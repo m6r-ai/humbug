@@ -20,7 +20,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 
 
-class LogMessageWidget(QFrame):
+class LogMessage(QFrame):
     """Widget for displaying a single message in the log with header."""
 
     selectionChanged = Signal(bool)
@@ -37,7 +37,7 @@ class LogMessageWidget(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
-        self._logger = logging.getLogger("LogMessageWidget")
+        self._logger = logging.getLogger("LogMessage")
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)

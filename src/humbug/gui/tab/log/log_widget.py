@@ -11,7 +11,7 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
-from humbug.gui.tab.log.log_message_widget import LogMessageWidget
+from humbug.gui.tab.log.log_message import LogMessage
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_message import MindspaceMessage
@@ -82,8 +82,8 @@ class LogWidget(QWidget):
         self._style_manager = StyleManager()
 
         # Widget tracking
-        self._messages: List[LogMessageWidget] = []
-        self._message_with_selection: LogMessageWidget | None = None
+        self._messages: List[LogMessage] = []
+        self._message_with_selection: LogMessage | None = None
 
         # Initialize tracking variables
         self._auto_scroll = True
@@ -120,7 +120,7 @@ class LogWidget(QWidget):
         log_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[LogMessageWidget, List[Tuple[int, int]]] = {}
+        self._search_highlights: Dict[LogMessage, List[Tuple[int, int]]] = {}
 
         # Tracking for focused message
         self._focused_message_index = -1
@@ -145,11 +145,11 @@ class LogWidget(QWidget):
         self._handle_style_changed()
 
         # Find functionality
-        self._matches: List[Tuple[LogMessageWidget, List[Tuple[int, int]]]] = []
+        self._matches: List[Tuple[LogMessage, List[Tuple[int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
-        self._highlighted_widgets: Set[LogMessageWidget] = set()
+        self._highlighted_widgets: Set[LogMessage] = set()
 
         # Set up activation tracking
         self._event_filter = LogWidgetEventFilter(self)
@@ -231,7 +231,7 @@ class LogWidget(QWidget):
 
     def _add_log_message(self, message: MindspaceMessage) -> None:
         """Add a message from the mindspace message log."""
-        msg_widget = LogMessageWidget(self)
+        msg_widget = LogMessage(self)
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
@@ -388,7 +388,7 @@ class LogWidget(QWidget):
             self.activate()
             return
 
-        # Find the LogMessageWidget that contains this widget
+        # Find the LogMessage that contains this widget
         message_widget = self._find_log_message(widget)
         if message_widget is None:
             return
@@ -408,7 +408,7 @@ class LogWidget(QWidget):
         Args:
             widget: The widget that lost focus
         """
-        # Find the LogMessageWidget that contains this widget
+        # Find the LogMessage that contains this widget
         message_widget = self._find_log_message(widget)
         if message_widget is None:
             return
@@ -417,19 +417,19 @@ class LogWidget(QWidget):
         if self._focused_message_index != -1:
             self._messages[self._focused_message_index].set_focused(False)
 
-    def _find_log_message(self, widget: QWidget) -> LogMessageWidget | None:
+    def _find_log_message(self, widget: QWidget) -> LogMessage | None:
         """
-        Find the LogMessageWidget that contains the given widget.
+        Find the LogMessage that contains the given widget.
 
         Args:
-            widget: The widget to find the containing LogMessageWidget for
+            widget: The widget to find the containing LogMessage for
 
         Returns:
-            The LogMessageWidget containing the widget, or None if not found
+            The LogMessage containing the widget, or None if not found
         """
         current: QObject = widget
         while current:
-            if isinstance(current, LogMessageWidget):
+            if isinstance(current, LogMessage):
                 return current
 
             current = current.parent()
@@ -483,7 +483,7 @@ class LogWidget(QWidget):
             self._messages[index].set_focused(True)
             self._scroll_to_message(self._messages[index])
 
-    def _scroll_to_message(self, message: LogMessageWidget) -> None:
+    def _scroll_to_message(self, message: LogMessage) -> None:
         """Ensure the message is visible in the scroll area."""
         # Get the position of the message in the scroll area
         message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
@@ -521,7 +521,7 @@ class LogWidget(QWidget):
             (self._focused_message_index == -1 or self._focused_message_index > 0)
         )
 
-    def _handle_selection_changed(self, message_widget: LogMessageWidget, has_selection: bool) -> None:
+    def _handle_selection_changed(self, message_widget: LogMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
         if not has_selection:
             if self._message_with_selection:
@@ -747,7 +747,7 @@ class LogWidget(QWidget):
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
 
-    def _handle_find_scroll(self, widget: LogMessageWidget, position: int) -> None:
+    def _handle_find_scroll(self, widget: LogMessage, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
