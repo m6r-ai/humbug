@@ -178,32 +178,7 @@ class LogMessage(QFrame):
 
         # Update the header
         self._update_level_text()
-        self._set_level_style()
         self._handle_style_changed()
-
-    def _set_level_style(self) -> None:
-        """Set the level label color based on message source."""
-        # Map message source to color role
-        if self._message_level == MindspaceLogLevel.TRACE:
-            colour = ColorRole.MESSAGE_TRACE
-
-        elif self._message_level == MindspaceLogLevel.INFO:
-            colour = ColorRole.MESSAGE_INFORMATION
-
-        elif self._message_level == MindspaceLogLevel.WARN:
-            colour = ColorRole.MESSAGE_WARNING
-
-        else:
-            colour = ColorRole.MESSAGE_ERROR
-
-        self._level_label.setStyleSheet(f"""
-            QLabel {{
-                color: {self._style_manager.get_color_str(colour)};
-                margin: 0;
-                padding: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-        """)
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
