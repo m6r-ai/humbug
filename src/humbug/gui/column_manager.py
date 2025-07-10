@@ -1140,11 +1140,11 @@ class ColumnManager(QWidget):
         self._add_tab(shell_tab, "Humbug Shell")
         return shell_tab
 
-    def clear_interactions(self) -> None:
-        """Clear the system tab interactions."""
+    def clear_shell_history(self) -> None:
+        """Clear the shell tab history."""
         for tab in self._tabs.values():
             if isinstance(tab, ShellTab):
-                tab.clear_interactions()
+                tab.clear_history()
                 return
 
     def new_file(self) -> EditorTab:

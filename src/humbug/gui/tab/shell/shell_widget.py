@@ -296,7 +296,7 @@ class ShellWidget(QWidget):
         # Update command history after loading messages
         self._update_command_history()
 
-    def clear_interactions(self) -> None:
+    def clear_history(self) -> None:
         """Clear both the message display and command input history."""
         # Clear shell history
         self._history_manager.clear_history()

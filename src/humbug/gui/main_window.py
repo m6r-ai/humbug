@@ -1264,13 +1264,12 @@ class MainWindow(QMainWindow):
 
     def _process_clear_command(self) -> bool:
         """
-        Process the clear command by clearing system history.
+        Process the clear command by clearing shell history.
 
         Returns:
             True if command processed successfully, False otherwise
         """
-        self._column_manager.clear_interactions()
-        self._mindspace_manager.clear_interactions()
+        self._column_manager.clear_shell_history()
         return True
 
     def _process_conversation_command(

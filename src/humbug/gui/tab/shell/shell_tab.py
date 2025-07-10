@@ -267,6 +267,6 @@ class ShellTab(TabBase):
         message = StatusMessage(strings.system_status)  # Using system_status for now
         self.status_message.emit(message)
 
-    def clear_interactions(self) -> None:
+    def clear_history(self) -> None:
         """Clear the shell history including command history."""
-        self._shell_widget.clear_interactions()
+        self._shell_widget.clear_history()
