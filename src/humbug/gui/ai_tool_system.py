@@ -278,8 +278,11 @@ class AIToolSystem(AITool):
 
             # Open the file in editor
             self._column_manager.protect_current_tab(True)
-            editor_tab = self._column_manager.open_file(file_path)
-            self._column_manager.protect_current_tab(False)
+            try:
+                editor_tab = self._column_manager.open_file(file_path)
+
+            finally:
+                self._column_manager.protect_current_tab(False)
 
             relative_path = self._mindspace_manager.get_relative_path(file_path)
             return f"Opened editor tab for file: {relative_path} (tab ID: {editor_tab.tab_id()})"
@@ -306,8 +309,12 @@ class AIToolSystem(AITool):
         """Create a new terminal tab."""
         try:
             self._column_manager.protect_current_tab(True)
-            terminal_tab = self._column_manager.new_terminal()
-            self._column_manager.protect_current_tab(False)
+            try:
+                terminal_tab = self._column_manager.new_terminal()
+
+            finally:
+                self._column_manager.protect_current_tab(False)
+
             return f"Created new terminal tab (tab ID: {terminal_tab.tab_id()})"
 
         except Exception as e:
@@ -333,8 +340,11 @@ class AIToolSystem(AITool):
 
             # Create conversation
             self._column_manager.protect_current_tab(True)
-            conversation_tab = self._column_manager.open_conversation(conversation_path, False)
-            self._column_manager.protect_current_tab(False)
+            try:
+                conversation_tab = self._column_manager.open_conversation(conversation_path, False)
+
+            finally:
+                self._column_manager.protect_current_tab(False)
 
             if conversation_tab is None:
                 raise AIToolExecutionError(
@@ -417,8 +427,11 @@ class AIToolSystem(AITool):
 
             # Create conversation
             self._column_manager.protect_current_tab(True)
-            conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
-            self._column_manager.protect_current_tab(False)
+            try:
+                conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
+
+            finally:
+                self._column_manager.protect_current_tab(False)
 
             result_parts = [f"Created new conversation tab (tab ID: {conversation_tab.tab_id()})"]
             if model:
@@ -451,8 +464,13 @@ class AIToolSystem(AITool):
         """Show the system shell tab."""
         try:
             self._column_manager.protect_current_tab(True)
-            shell_tab = self._column_manager.show_system_shell()
-            self._column_manager.protect_current_tab(False)
+
+            try:
+                shell_tab = self._column_manager.show_system_shell()
+
+            finally:
+                self._column_manager.protect_current_tab(False)
+
             return f"Opened system shell tab (tab ID: {shell_tab.tab_id()})"
 
         except Exception as e:
@@ -480,8 +498,11 @@ class AIToolSystem(AITool):
         try:
             # Open wiki page
             self._column_manager.protect_current_tab(True)
-            wiki_tab = self._column_manager.open_wiki_page(wiki_path, False)
-            self._column_manager.protect_current_tab(False)
+            try:
+                wiki_tab = self._column_manager.open_wiki_page(wiki_path, False)
+
+            finally:
+                self._column_manager.protect_current_tab(False)
 
             relative_path = self._mindspace_manager.get_relative_path(wiki_path)
             location = relative_path if relative_path else "."
