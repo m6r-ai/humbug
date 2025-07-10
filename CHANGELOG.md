@@ -4,7 +4,8 @@
 
 New features:
 
-- Added a new system "log" tab type.  This will start to replace the log usage of the Humbug shell.
+- Added a new system "log" tab type.  Removed logging of Metaphor conversation errors from the Humbug shell.  Started adding
+  system audit logging for many types of system events.
 
 Bug fixes:
 
