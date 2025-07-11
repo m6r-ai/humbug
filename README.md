@@ -45,21 +45,20 @@ take control and guide you through what you want to do.
 ## What sets Humbug apart?
 
 - **OS-like abstraction and modularity without the baggage**  
-  Humbug brings isolation, concurrent processes, and the extensibility of an OS, without trying to replace your real operating system.
-  It sits on top of Windows, macOS, or Linux, giving a unified experience across all of them.
+  Humbug provides OS-like concepts without trying to replace your real operating system.
+  It unifies AI and UI interactions so it's easy to add tools that can be used by any AI, any user, or both.
+  It sits on top of Windows, macOS, or Linux, and provides a unified experience on all of them.
 
 - **Human–AI collaboration at the core**  
   When you're using AI, you're no longer working alone.
   Both humans and AIs are first-class actors in Humbug.
   Share a mindspace, exchange ideas, and use the same tools to get work done.
 
-- **Adaptable to many problems.**  
-  Whether you’re scoping, prototyping, refactoring, extending, maintaining, documenting, or experimenting, Humbug gives you a new way to work.
-
 - **AI agnostic.**  
   Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI.
   Seamlessly switch between models.
   You can even switch model mid-conversation.
+  You're not tied to any one provider, can optimize for cost, and are future-proofed when you want to use something new.
 
 - **Built by bootstrapping.**
   Each version of Humbug has been built using the previous version.
@@ -68,6 +67,11 @@ take control and guide you through what you want to do.
 - **What you see is what you get.**
   Humbug has only 4 package dependencies other than the standard Python library.
   You can understand almost every part from the one git repo.
+
+- **Not just a platform for developers.**
+  It's designed to help with any activities where you and your AIs need to work together on a problem.
+  While it has a lot of tools for software developers, it has been designed to support a much wider set of needs.
+  With its extensibility it's also easy to think about adding new tools for AIs, humans, or both.
 
 ## Learn more
 
