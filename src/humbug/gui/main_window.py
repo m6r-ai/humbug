@@ -855,7 +855,14 @@ class MainWindow(QMainWindow):
                 self._open_conversation_path(path, True)
                 return
 
-        self._column_manager.open_wiki_page(path, True)
+        wiki_tab = self._column_manager.open_wiki_page(path, True)
+        if wiki_tab is None:
+            return
+
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User opened wiki page: '{path}', tab ID: {wiki_tab.tab_id()}"
+        )
 
     def _handle_file_double_click(self, path: str) -> None:
         """Handle double click from the file tree."""
@@ -867,7 +874,14 @@ class MainWindow(QMainWindow):
         if not os.path.isfile(path):
             return
 
-        self._column_manager.open_file(path)
+        editor_tab = self._column_manager.open_file(path)
+        if editor_tab is None:
+            return
+
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User opened editor for file: '{path}', tab ID: {editor_tab.tab_id()}"
+        )
 
     def _handle_file_delete(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.
@@ -906,8 +920,13 @@ class MainWindow(QMainWindow):
     def _open_file_path(self, path: str) -> None:
         """Open file in editor tab."""
         try:
-            self._column_manager.open_file(path)
+            editor_tab = self._column_manager.open_file(path)
             self._file_tree.reveal_and_select_file(path)
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened editor for file: '{path}', tab ID: {editor_tab.tab_id()}"
+            )
 
         except OSError as e:
             strings = self._language_manager.strings()
@@ -1324,12 +1343,16 @@ class MainWindow(QMainWindow):
         self._column_manager.protect_current_tab(True)
 
         try:
-            self._column_manager.open_file(file_path)
+            editor_tab = self._column_manager.open_file(file_path)
             self._file_tree.reveal_and_select_file(file_path)
 
         finally:
             self._column_manager.protect_current_tab(False)
 
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Shell opened editor for: '{file_path}', tab ID: {editor_tab.tab_id()}"
+        )
         return True
 
     def _process_log_command(self) -> bool:
