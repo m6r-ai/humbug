@@ -53,6 +53,7 @@ class AIToolSystem(AITool):
                 "open_conversation_tab (open an existing AI conversation in a conversation tab), "
                 "new_conversation_tab (start a new AI conversation in a conversation tab, with optional model/temperature), "
                 "show_system_shell_tab (open a system shell tab), "
+                "show_log_tab (open the mindspace log tab), "
                 "open_wiki_tab (open a file/direcotry in a wiki tab). "
                 "close_tab (close an existing tab by ID). "
                 "All operations work within the current mindspace. "
@@ -70,6 +71,7 @@ class AIToolSystem(AITool):
                         "open_conversation_tab",
                         "new_conversation_tab",
                         "show_system_shell_tab",
+                        "show_log_tab",
                         "open_wiki_tab",
                         "close_tab"
                     ]
@@ -232,6 +234,7 @@ class AIToolSystem(AITool):
             "open_conversation_tab": self._open_conversation_tab,
             "new_conversation_tab": self._new_conversation_tab,
             "show_system_shell_tab": self._show_system_shell_tab,
+            "show_log_tab": self._show_log_tab,
             "open_wiki_tab": self._open_wiki_tab,
             "close_tab": self._close_tab
         }
@@ -289,9 +292,9 @@ class AIToolSystem(AITool):
             tab_id = editor_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened editor for file: '{relative_path}', tab ID: {tab_id})"
+                f"AI opened editor for file: '{relative_path}', tab ID: {tab_id}"
             )
-            return f"Opened editor tab for file: {relative_path} (tab ID: {tab_id})"
+            return f"Opened editor tab for file: '{relative_path}', tab ID: {tab_id}"
 
         except OSError as e:
             raise AIToolExecutionError(
@@ -326,7 +329,7 @@ class AIToolSystem(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI created new terminal, tab ID: {tab_id}"
             )
-            return f"Created new terminal tab (tab ID: {tab_id})"
+            return f"Created new terminal, tab ID: {tab_id}"
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -367,9 +370,9 @@ class AIToolSystem(AITool):
             tab_id = conversation_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened conversation for: '{conversation_path}', tab ID: {tab_id})"
+                f"AI opened conversation for: '{conversation_path}', tab ID: {tab_id}"
             )
-            return f"Created new conversation tab (tab ID: {tab_id})"
+            return f"Opened conversation for: '{conversation_path}', tab ID: {tab_id}"
 
         except MindspaceError as e:
             raise AIToolExecutionError(
@@ -454,7 +457,7 @@ class AIToolSystem(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI created new conversation, tab ID: {tab_id}"
             )
-            result_parts = [f"Created new conversation tab (tab ID: {tab_id})"]
+            result_parts = [f"Created new conversation, tab ID: {tab_id}"]
             if model:
                 result_parts.append(f"Model: {model}")
 
@@ -495,9 +498,38 @@ class AIToolSystem(AITool):
             tab_id = shell_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened system shell, tab ID: {tab_id})"
+                f"AI opened system shell, tab ID: {tab_id}"
             )
-            return f"Opened system shell tab (tab ID: {tab_id})"
+            return f"Opened system shell, tab ID: {tab_id}"
+
+        except Exception as e:
+            raise AIToolExecutionError(
+                f"Failed to show system shell: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+    async def _show_log_tab(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """Show the system shell tab."""
+        try:
+            self._column_manager.protect_current_tab(True)
+
+            try:
+                shell_tab = self._column_manager.show_system_log()
+
+            finally:
+                self._column_manager.protect_current_tab(False)
+
+            tab_id = shell_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI opened mindspace log, tab ID: {tab_id}"
+            )
+            return f"Opened mindspace log, tab ID: {tab_id}"
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -537,9 +569,9 @@ class AIToolSystem(AITool):
             tab_id = wiki_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened wiki tab for: '{location}', tab ID: {tab_id})"
+                f"AI opened wiki tab for: '{location}', tab ID: {tab_id}"
             )
-            return f"Opened wiki tab for: {location} (tab ID: {tab_id})"
+            return f"Opened wiki tab for: '{location}', tab ID: {tab_id}"
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -563,7 +595,7 @@ class AIToolSystem(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI closed tab, tab ID: {tab_id}"
             )
-            return f"Closed tab (tab ID: {tab_id})"
+            return f"Closed tab, tab ID: {tab_id}"
 
         except Exception as e:
             raise AIToolExecutionError(
