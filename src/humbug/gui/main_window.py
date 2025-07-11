@@ -1040,7 +1040,7 @@ class MainWindow(QMainWindow):
 
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            return self._column_manager.new_conversation()
+            conversation_tab = self._column_manager.new_conversation()
 
         except MindspaceError as e:
             strings = self._language_manager.strings()
@@ -1050,7 +1050,17 @@ class MainWindow(QMainWindow):
                 strings.mindspace_error_title,
                 strings.error_opening_conversation.format(str(e))
             )
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.ERROR,
+                f"User failed to create new conversation: {str(e)}"
+            )
             return None
+
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User created new conversion, tab ID: {conversation_tab.tab_id()}"
+        )
+        return conversation_tab
 
     def _new_metaphor_conversation(self) -> None:
         """Create new conversation from Metaphor file."""
@@ -1133,7 +1143,6 @@ class MainWindow(QMainWindow):
         try:
             self._column_manager.protect_current_tab(True)
             await self._column_manager.fork_conversation()
-            self._column_manager.protect_current_tab(False)
 
         except ConversationError as e:
             strings = self._language_manager.strings()
@@ -1144,6 +1153,9 @@ class MainWindow(QMainWindow):
                 strings.error_forking_conversation.format(str(e))
             )
 
+        finally:
+            self._column_manager.protect_current_tab(False)
+
     def _fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
         # Create task to fork conversation
@@ -1151,7 +1163,12 @@ class MainWindow(QMainWindow):
 
     def _close_tab(self) -> None:
         """Close the current tab."""
+        tab_id = self._column_manager.get_current_tab_id()
         self._column_manager.close_tab()
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User closed tab, tab ID: {tab_id}"
+        )
 
     def _submit_message(self) -> None:
         """Handle message submission."""
@@ -1286,15 +1303,20 @@ class MainWindow(QMainWindow):
         self._column_manager.protect_current_tab(True)
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            self._column_manager.new_conversation(model, temperature, reasoning)
+            conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
 
         except MindspaceError as e:
             self._shell_history.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
+            self._mindspace_manager.add_interaction(MindspaceLogLevel.ERROR, f"Shell failed to create conversation: {str(e)}")
             return False
 
         finally:
             self._column_manager.protect_current_tab(False)
 
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Shell created new conversion, tab ID: {conversation_tab.tab_id()}"
+        )
         return True
 
     def _process_edit_command(self, file_path: str) -> bool:
@@ -1365,7 +1387,9 @@ class MainWindow(QMainWindow):
             self._shell_history.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
             return False
 
-        self._column_manager.protect_current_tab(False)
+        finally:
+            self._column_manager.protect_current_tab(False)
+
         if conversation_tab is None:
             return False
 

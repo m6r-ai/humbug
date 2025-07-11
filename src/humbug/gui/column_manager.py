@@ -29,6 +29,7 @@ from humbug.gui.tab.tab_type import TabType
 from humbug.gui.tab.terminal.terminal_tab import TerminalTab
 from humbug.gui.welcome_widget import WelcomeWidget
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_wiki_error import MindspaceWikiError
@@ -237,11 +238,24 @@ class ColumnManager(QWidget):
             tool_tip = self._mindspace_manager.get_relative_path(tool_tip)
 
         data = TabData(tab, title, tool_tip)
-        data.label.close_clicked.connect(lambda: self.close_tab_by_id(data.tab_id))
+        data.label.close_clicked.connect(lambda: self._handle_close_clicked(data.tab_id))
         tab.activated.connect(lambda: self._handle_tab_activated(tab))
         tab.updated_state_changed.connect(self._handle_tab_updated)
         tab.modified_state_changed.connect(self._handle_tab_modified)
         return data
+
+    def _handle_close_clicked(self, tab_id: str) -> None:
+        """
+        Handle close button click on a tab label.
+
+        Args:
+            tab_id: ID of the tab to close
+        """
+        self.close_tab_by_id(tab_id)
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User closed tab, tab ID: {tab_id}"
+        )
 
     def _handle_tab_updated(self, tab_id: str, is_updated: bool) -> None:
         """
@@ -839,6 +853,19 @@ class ColumnManager(QWidget):
         self._active_column = column
         self._update_mru_order(tab, column)
         self._update_tabs()
+
+    def get_current_tab_id(self) -> str:
+        """
+        Get the ID of the currently active tab.
+
+        Returns:
+            The ID of the current tab, or an empty string if no tab is active
+        """
+        current_tab = self._get_current_tab()
+        if current_tab is None:
+            return ""
+
+        return current_tab.tab_id()
 
     def _make_tab_permanent(self, tab: TabBase) -> None:
         """Convert an ephemeral tab to permanent."""

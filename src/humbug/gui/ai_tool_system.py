@@ -8,6 +8,7 @@ from humbug.ai.ai_tool_manager import (
     AIToolAuthorizationDenied, AIToolAuthorizationCallback
 )
 from humbug.gui.column_manager import ColumnManager
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
 from humbug.user.user_manager import UserManager
@@ -285,7 +286,12 @@ class AIToolSystem(AITool):
                 self._column_manager.protect_current_tab(False)
 
             relative_path = self._mindspace_manager.get_relative_path(file_path)
-            return f"Opened editor tab for file: {relative_path} (tab ID: {editor_tab.tab_id()})"
+            tab_id = editor_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI opened editor for file: '{relative_path}', tab ID: {tab_id})"
+            )
+            return f"Opened editor tab for file: {relative_path} (tab ID: {tab_id})"
 
         except OSError as e:
             raise AIToolExecutionError(
@@ -315,7 +321,12 @@ class AIToolSystem(AITool):
             finally:
                 self._column_manager.protect_current_tab(False)
 
-            return f"Created new terminal tab (tab ID: {terminal_tab.tab_id()})"
+            tab_id = terminal_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI created new terminal, tab ID: {tab_id}"
+            )
+            return f"Created new terminal tab (tab ID: {tab_id})"
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -353,7 +364,12 @@ class AIToolSystem(AITool):
                     arguments
                 )
 
-            return f"Created new conversation tab (tab ID: {conversation_tab.tab_id()})"
+            tab_id = conversation_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI opened conversation for: '{conversation_path}', tab ID: {tab_id})"
+            )
+            return f"Created new conversation tab (tab ID: {tab_id})"
 
         except MindspaceError as e:
             raise AIToolExecutionError(
@@ -433,7 +449,12 @@ class AIToolSystem(AITool):
             finally:
                 self._column_manager.protect_current_tab(False)
 
-            result_parts = [f"Created new conversation tab (tab ID: {conversation_tab.tab_id()})"]
+            tab_id = conversation_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI created new conversation, tab ID: {tab_id}"
+            )
+            result_parts = [f"Created new conversation tab (tab ID: {tab_id})"]
             if model:
                 result_parts.append(f"Model: {model}")
 
@@ -471,7 +492,12 @@ class AIToolSystem(AITool):
             finally:
                 self._column_manager.protect_current_tab(False)
 
-            return f"Opened system shell tab (tab ID: {shell_tab.tab_id()})"
+            tab_id = shell_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI opened system shell, tab ID: {tab_id})"
+            )
+            return f"Opened system shell tab (tab ID: {tab_id})"
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -491,6 +517,7 @@ class AIToolSystem(AITool):
 
         if file_path_arg:
             wiki_path = self._validate_and_resolve_path(file_path_arg, "open_wiki")
+
         else:
             # Use mindspace root if no path provided
             wiki_path = self._mindspace_manager.get_absolute_path(".")
@@ -506,7 +533,13 @@ class AIToolSystem(AITool):
 
             relative_path = self._mindspace_manager.get_relative_path(wiki_path)
             location = relative_path if relative_path else "."
-            return f"Opened wiki tab for: {location} (tab ID: {wiki_tab.tab_id()})"
+
+            tab_id = wiki_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI opened wiki tab for: '{location}', tab ID: {tab_id})"
+            )
+            return f"Opened wiki tab for: {location} (tab ID: {tab_id})"
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -525,6 +558,11 @@ class AIToolSystem(AITool):
 
         try:
             self._column_manager.close_tab_by_id(tab_id)
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI closed tab, tab ID: {tab_id}"
+            )
             return f"Closed tab (tab ID: {tab_id})"
 
         except Exception as e:
