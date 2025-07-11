@@ -6,6 +6,7 @@ New features:
 
 - Added a new system "log" tab type.  Removed logging of Metaphor conversation errors from the Humbug shell.  Started adding
   system audit logging for many types of system events.
+- Added support for Grok4 and updated all Grok3 instances to production versions, rather than beta versions.
 
 Bug fixes:
 
@@ -13,6 +14,7 @@ Bug fixes:
 - The terminal tab did not gain the keyboard focus correctly when the tab was opened.
 - When opening the Humbug shell or conversation window, the previously-active message was not correctly restored if the
   user clicked the tab, but didn't click the message.
+- A couple of OpenAI LLM models had the wrong name.
 
 ## v0.18 (2025-07-08)
 

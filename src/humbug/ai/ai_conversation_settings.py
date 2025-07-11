@@ -339,7 +339,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "o3": AIModel(
-            name="o3-mini",
+            name="o3",
             provider="openai",
             context_window=200000,
             max_output_tokens=100000,
@@ -357,7 +357,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "o4-mini": AIModel(
-            name="o3-mini",
+            name="o4-mini",
             provider="openai",
             context_window=200000,
             max_output_tokens=100000,
@@ -367,8 +367,17 @@ class AIConversationSettings:
         ),
 
         # xAI models
-        "grok-3-beta": AIModel(
-            name="grok-3-beta",
+        "grok-4-0709": AIModel(
+            name="grok-4-0709",
+            provider="xai",
+            context_window=256000,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "grok-3": AIModel(
+            name="grok-3",
             provider="xai",
             context_window=131072,
             max_output_tokens=8192,
@@ -376,8 +385,8 @@ class AIConversationSettings:
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "grok-3-fast-beta": AIModel(
-            name="grok-3-beta",
+        "grok-3-fast": AIModel(
+            name="grok-3-fast",
             provider="xai",
             context_window=131072,
             max_output_tokens=8192,
@@ -385,8 +394,8 @@ class AIConversationSettings:
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "grok-3-mini-beta": AIModel(
-            name="grok-3-mini-beta",
+        "grok-3-mini": AIModel(
+            name="grok-3-mini",
             provider="xai",
             context_window=131072,
             max_output_tokens=8192,
@@ -394,8 +403,8 @@ class AIConversationSettings:
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "grok-3-mini-fast-beta": AIModel(
-            name="grok-3-mini-beta",
+        "grok-3-mini-fast": AIModel(
+            name="grok-3-mini-fast",
             provider="xai",
             context_window=131072,
             max_output_tokens=8192,
