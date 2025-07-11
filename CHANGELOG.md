@@ -7,6 +7,7 @@ New features:
 - Added a new system "log" tab type.  Removed logging of Metaphor conversation errors from the Humbug shell.  Started adding
   system audit logging for many types of system events.
 - Added support for Grok4 and updated all Grok3 instances to production versions, rather than beta versions.
+- Added a running total of both input and output tokens for conversation status.
 
 Bug fixes:
 

@@ -12,16 +12,23 @@ class AIConversationHistory:
     def __init__(self) -> None:
         """Initialize empty conversation history."""
         self._messages: List[AIMessage] = []
-        self._last_response_tokens = {"input": 0, "output": 0}
+        self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
 
     def clear(self) -> None:
         """Clear the conversation history."""
         self._messages.clear()
-        self._last_response_tokens = {"input": 0, "output": 0}
+        self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
 
     def add_message(self, message: AIMessage) -> None:
         """Add a message to the history."""
         self._messages.append(message)
+
+        # Update token counts if usage is provided
+        if message.usage:
+            self._last_response_tokens["input"] = message.usage.prompt_tokens
+            self._last_response_tokens["output"] = message.usage.completion_tokens
+            self._last_response_tokens["input_total"] += message.usage.prompt_tokens
+            self._last_response_tokens["output_total"] += message.usage.completion_tokens
 
     def update_message(
         self,
@@ -44,6 +51,8 @@ class AIConversationHistory:
                     if old_usage is None:
                         self._last_response_tokens["input"] = usage.prompt_tokens
                         self._last_response_tokens["output"] = usage.completion_tokens
+                        self._last_response_tokens["input_total"] += usage.prompt_tokens
+                        self._last_response_tokens["output_total"] += usage.completion_tokens
 
                 if completed is not None:
                     message.completed = completed
@@ -67,16 +76,3 @@ class AIConversationHistory:
     def get_token_counts(self) -> Dict[str, int]:
         """Get token counts from last response."""
         return self._last_response_tokens
-
-    def update_last_tokens(self, input_tokens: int, output_tokens: int) -> None:
-        """
-        Update token counts for the last response.
-
-        Args:
-            input_tokens: Number of input tokens
-            output_tokens: Number of output tokens
-        """
-        self._last_response_tokens = {
-            "input": input_tokens,
-            "output": output_tokens
-        }

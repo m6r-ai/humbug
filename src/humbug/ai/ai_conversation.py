@@ -155,12 +155,6 @@ class AIConversation:
 
             # Update settings if AI message
             if message.source == AIMessageSource.AI:
-                if message.usage:
-                    self._conversation.update_last_tokens(
-                        message.usage.prompt_tokens,
-                        message.usage.completion_tokens
-                    )
-
                 reasoning = message.reasoning_capability if message.reasoning_capability else ReasoningCapability.NO_REASONING
                 if message.model:
                     self.update_conversation_settings(AIConversationSettings(

@@ -77,7 +77,7 @@ class ConversationTab(TabBase):
         self._conversation_widget.forkFromIndexRequested.connect(self.forkFromIndexRequested)
         self._conversation_widget.status_updated.connect(self.update_status)
         self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
-        self._conversation_widget.message_finished.connect(self.handle_message_finished)
+        self._conversation_widget.submit_finished.connect(self.handle_submit_finished)
         self._conversation_widget.conversation_modified.connect(self.handle_conversation_modified)
         layout.addWidget(self._conversation_widget)
 
@@ -302,9 +302,9 @@ class ConversationTab(TabBase):
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
 
-    def handle_message_finished(self) -> None:
+    def handle_submit_finished(self) -> None:
         """
-        Handle when a message finishes processing.
+        Handle when a submitted message finishes processing.
         """
         # Update the tab bar to indicate content has changed
         self.set_updated(True)
@@ -334,8 +334,10 @@ class ConversationTab(TabBase):
             temperature=temp_display,
             input_tokens=counts['input'],
             max_input_tokens=settings.context_window,
+            total_input_tokens=counts['input_total'],
             output_tokens=counts['output'],
-            max_output_tokens=settings.max_output_tokens
+            max_output_tokens=settings.max_output_tokens,
+            total_output_tokens=counts['output_total']
         )
 
         self.status_message.emit(StatusMessage(status))
