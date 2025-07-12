@@ -5,7 +5,7 @@ from typing import List
 from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
-from humbug.lib.syntax.lexer import Token, TokenType
+from syntax.lexer import Token, TokenType
 
 
 class ShellCommandHelp(ShellCommand):

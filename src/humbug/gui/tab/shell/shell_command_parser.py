@@ -6,8 +6,8 @@ This module implements a parser for command lines, extending the functionality o
 
 from humbug.gui.tab.shell.shell_command_lexer import ShellCommandLexer
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
-from humbug.lib.syntax.lexer import TokenType
-from humbug.lib.syntax.parser import Parser, ParserState
+from syntax.lexer import TokenType
+from syntax.parser import Parser, ParserState
 
 
 class ShellCommandParser(Parser):

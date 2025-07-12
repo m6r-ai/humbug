@@ -27,8 +27,16 @@ exclude_lines = [
     "except ImportError:"
 ]
 
+# Package discovery configuration
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["dast*", "humbug*"]
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/humbug"]
+packages = [
+    "src/dast",
+    "src/humbug"
+]
 
 [tool.mypy]
 disallow_untyped_defs = true
@@ -74,7 +82,7 @@ extension-pkg-whitelist = "PySide6"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
-addopts = "-ra -q --cov=src/humbug --cov-report=html"
+addopts = "-ra -q --cov=src --cov-report=html"
 testpaths = ["tests"]
 pythonpath = ["src"]
 python_files = ["test_*.py"]

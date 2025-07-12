@@ -9,7 +9,7 @@ from humbug.gui.tab.shell.shell_command_parser import ShellCommandParser
 from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.gui.tab.shell.shell_history_manager import ShellHistoryManager
 from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
-from humbug.lib.syntax.lexer import TokenType, Token
+from syntax.lexer import TokenType, Token
 
 
 class ShellCommandProcessor:

@@ -7,10 +7,10 @@ import difflib
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
-from syntax_test_serializer import serialize_tokens_and_state, load_tokens_from_json
+from syntax.parser_registry import ParserRegistry
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
-from humbug.lib.syntax.parser_registry import ParserRegistry
-from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax_test_serializer import serialize_tokens_and_state, load_tokens_from_json
 
 
 def get_test_fixtures_dir() -> Path:

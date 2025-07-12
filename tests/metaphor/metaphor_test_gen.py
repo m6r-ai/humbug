@@ -10,7 +10,7 @@ from humbug.metaphor.metaphor_ast_builder import MetaphorASTBuilder
 from humbug.metaphor.metaphor_ast_node import MetaphorRootNode
 
 # pylint: disable=unused-import
-import humbug.lib.syntax.parser_imports
+import syntax.parser_imports
 # pylint: enable=unused-import
 
 from tests.metaphor.metaphor_ast_serializer import save_ast_to_json

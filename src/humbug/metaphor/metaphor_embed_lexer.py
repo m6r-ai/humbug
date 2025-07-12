@@ -1,7 +1,7 @@
 from typing import List
 
 from humbug.metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
-from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class MetaphorEmbedLexer:

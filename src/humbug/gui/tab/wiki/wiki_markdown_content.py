@@ -13,7 +13,7 @@ from humbug.gui.color_role import ColorRole
 from humbug.gui.tab.wiki.wiki_content import WikiContent
 from humbug.gui.tab.wiki.wiki_markdown_content_section import WikiMarkdownContentSection
 from humbug.language.language_manager import LanguageManager
-from humbug.lib.syntax.programming_language import ProgrammingLanguage
+from syntax.programming_language import ProgrammingLanguage
 from humbug.markdown.markdown_converter import MarkdownConverter
 
 

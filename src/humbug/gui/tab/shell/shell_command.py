@@ -6,7 +6,7 @@ from typing import Dict, List
 
 from humbug.gui.tab.shell.shell_history_manager import ShellHistoryManager
 from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
-from humbug.lib.syntax.lexer import Token, TokenType
+from syntax.lexer import Token, TokenType
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
 

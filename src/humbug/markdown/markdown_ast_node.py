@@ -5,7 +5,7 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
-from humbug.lib.ast.ast import ASTNode, ASTVisitor
+from dast.ast import ASTNode, ASTVisitor
 
 
 class MarkdownASTNode(ASTNode):

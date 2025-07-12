@@ -4,11 +4,11 @@ Tests for the markdown AST builder
 import os
 import pytest
 
-from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
-
 # pylint: disable=unused-import
-import humbug.lib.syntax.parser_imports
+import syntax.parser_imports
 # pylint: enable=unused-import
+
+from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
 
 from markdown_test_utils import (
     find_test_files,

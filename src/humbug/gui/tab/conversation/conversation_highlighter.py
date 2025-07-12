@@ -7,9 +7,9 @@ from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 from PySide6.QtCore import Signal
 
 from humbug.gui.style_manager import StyleManager
-from humbug.lib.syntax.lexer import TokenType
-from humbug.lib.syntax.markdown.markdown_parser import MarkdownParser, MarkdownParserState
-from humbug.lib.syntax.programming_language import ProgrammingLanguage
+from syntax.lexer import TokenType
+from syntax.markdown.markdown_parser import MarkdownParser, MarkdownParserState
+from syntax.programming_language import ProgrammingLanguage
 
 
 class ConversationHighlighterBlockData(QTextBlockUserData):

@@ -15,7 +15,7 @@ from PySide6.QtGui import (
 )
 
 from humbug.gui.color_role import ColorRole
-from humbug.lib.syntax.lexer import TokenType
+from syntax.lexer import TokenType
 
 
 class ColorMode(Enum):

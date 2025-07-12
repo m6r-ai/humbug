@@ -17,8 +17,8 @@ from humbug.gui.tab.wiki.wiki_content import WikiContent
 from humbug.gui.markdown_text_edit import MarkdownTextEdit
 from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
 from humbug.language.language_manager import LanguageManager
-from humbug.lib.syntax.programming_language import ProgrammingLanguage
-from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax.programming_language import ProgrammingLanguage
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class WikiFileContent(WikiContent):

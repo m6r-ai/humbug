@@ -14,10 +14,11 @@ from typing import List
 from PySide6.QtCore import QObject, QEvent
 from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 
-from humbug.gui.main_window import MainWindow
 # pylint: disable=unused-import
-import humbug.lib.syntax.parser_imports
+import syntax.parser_imports
 # pylint: enable=unused-import
+
+from humbug.gui.main_window import MainWindow
 
 
 def setup_logging() -> None:

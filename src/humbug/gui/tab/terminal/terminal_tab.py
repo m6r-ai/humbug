@@ -6,6 +6,9 @@ from typing import Any, Coroutine, Dict, Set
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
+from terminal.terminal_base import TerminalBase
+from terminal.terminal_factory import create_terminal
+
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.status_message import StatusMessage
@@ -14,8 +17,6 @@ from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
 from humbug.gui.tab.terminal.terminal_widget import TerminalWidget
-from humbug.lib.terminal.terminal_base import TerminalBase
-from humbug.lib.terminal.terminal_factory import create_terminal
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 
