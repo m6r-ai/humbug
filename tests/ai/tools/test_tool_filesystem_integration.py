@@ -3,30 +3,25 @@ Integration and parametrized tests for the filesystem tool.
 """
 import asyncio
 from pathlib import Path
+from typing import Tuple
 from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 
 from ai.ai_tool_manager import AIToolExecutionError
+from ai.tools.ai_tool_filesystem import AIToolFileSystem
 
 
 class TestAIToolFileSystemIntegration:
     """Integration tests for the filesystem tool."""
 
-    def test_execute_read_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_execute_read_file_success(self, filesystem_tool, mock_authorization):
         """Test execute with read_file operation."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open', mock_open(read_data="test content")) as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -42,19 +37,12 @@ class TestAIToolFileSystemIntegration:
             assert "File: file.txt" in result
             assert "test content" in result
 
-    def test_execute_write_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_execute_write_file_success(self, filesystem_tool, mock_authorization):
         """Test execute with write_file operation."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
              patch('pathlib.Path.replace') as mock_replace:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = False
 
             # Mock temporary file
@@ -71,7 +59,7 @@ class TestAIToolFileSystemIntegration:
 
             assert "File written successfully: file.txt (12 bytes)" in result
 
-    def test_execute_unexpected_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_execute_unexpected_error(self, filesystem_tool, mock_authorization):
         """Test execute with unexpected error."""
         # Patch one of the operation handlers to raise an unexpected error
         with patch.object(filesystem_tool, '_read_file', side_effect=RuntimeError("Unexpected error")):
@@ -89,19 +77,12 @@ class TestAIToolFileSystemIntegration:
 class TestAIToolFileSystemAuthorizationContext:
     """Test authorization context building for various operations."""
 
-    def test_authorization_context_includes_operation_details(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_authorization_context_includes_operation_details(self, filesystem_tool, mock_authorization):
         """Test that authorization context includes relevant operation details."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
              patch('pathlib.Path.replace') as mock_replace:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = False
 
             # Mock temporary file
@@ -123,84 +104,28 @@ class TestAIToolFileSystemAuthorizationContext:
 
             assert "Create a new file 'file.txt' with the provided content." in context
 
-    def test_authorization_context_with_large_content(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
-        """Test authorization context with large content doesn't include preview."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
-             patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
-             patch('pathlib.Path.replace') as mock_replace:
-
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
-            mock_exists.return_value = False
-
-            # Mock temporary file
-            mock_temp_instance = MagicMock()
-            mock_temp_instance.name = "/tmp/temp_file"
-            mock_temp_instance.__enter__.return_value = mock_temp_instance
-            mock_temp_instance.__exit__.return_value = None
-            mock_temp_file.return_value = mock_temp_instance
-
-            large_content = "x" * 1000
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "write_file", "path": "file.txt", "content": large_content},
-                mock_authorization
-            ))
-
-            # Verify authorization was called with context information
-            mock_authorization.assert_called_once()
-            args = mock_authorization.call_args[0]
-            context = args[2]  # Third argument is context
-
-            assert "Create a new file 'file.txt' with the provided content." in context
-
-    def test_authorization_context_copy_includes_destination(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_authorization_context_copy_includes_destination(self, custom_path_resolver, mock_authorization):
         """Test authorization context for copy operation includes destination."""
-        call_count = [0]
+        # Create custom resolver that handles both source and destination paths
+        path_mapping = {
+            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
+            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+        }
+        resolver = custom_path_resolver(path_mapping=path_mapping)
+        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
 
-        def mock_get_absolute_path(path):
-            if path == "source.txt":
-                return "/test/mindspace/source.txt"
-
-            if path == "dest.txt":
-                return "/test/mindspace/dest.txt"
-
-            return f"/test/mindspace/{path}"
-
-        def mock_get_relative_path(path):
-            if "source.txt" in str(path):
-                return "source.txt"
-
-            if "dest.txt" in str(path):
-                return "dest.txt"
-
-            return str(path).split("/")[-1]
-
-        def mock_resolve():
-            call_count[0] += 1
-            if call_count[0] == 1:  # First call for source
-                return Path("/test/mindspace/source.txt")
-
-            return Path("/test/mindspace/dest.txt")
-
-        def mock_exists():
-            # Return True for source, False for destination
-            return call_count[0] == 1
-
-        mock_mindspace_manager.get_absolute_path.side_effect = mock_get_absolute_path
-        mock_mindspace_manager.get_mindspace_relative_path.side_effect = ["source.txt", "dest.txt"]
-        mock_mindspace_manager.get_relative_path.side_effect = mock_get_relative_path
-
-        with patch('pathlib.Path.resolve', side_effect=mock_resolve), \
-             patch('pathlib.Path.exists', side_effect=mock_exists), \
-             patch('pathlib.Path.is_file', return_value=True), \
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.mkdir'), \
              patch('shutil.copy2') as mock_copy2:
+
+            # Mock exists to return True for source, False for destination
+            def exists_side_effect(path_obj):
+                return "source.txt" in str(path_obj)
+
+            mock_exists.side_effect = exists_side_effect
+            mock_is_file.return_value = True
 
             mock_stat_result = MagicMock()
             mock_stat_result.st_size = 100
@@ -218,26 +143,14 @@ class TestAIToolFileSystemAuthorizationContext:
 
             assert "Copy 'source.txt' to 'dest.txt'. This will create a new file at the destination." in context
 
-    def test_authorization_context_existing_file_includes_size(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_authorization_context_existing_file_includes_size(self, filesystem_tool, mock_authorization):
         """Test authorization context includes existing file size."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
-             patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.unlink') as mock_unlink:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
-
-            mock_stat_result = MagicMock()
-            mock_stat_result.st_size = 2048
-            mock_stat.return_value = mock_stat_result
 
             asyncio.run(filesystem_tool.execute(
                 {"operation": "delete_file", "path": "file.txt"},
@@ -260,20 +173,18 @@ class TestAIToolFileSystemParametrized:
         "create_directory", "remove_directory", "delete_file",
         "copy_file", "move", "get_info"
     ])
-    def test_supported_operations_in_definition(self, operation):
+    def test_supported_operations_in_definition(self, operation, mock_path_resolver):
         """Test that all supported operations are included in definition."""
-        from ai.tools.ai_tool_filesystem import AIToolFileSystem
-        filesystem_tool = AIToolFileSystem()
+        filesystem_tool = AIToolFileSystem(resolve_path=mock_path_resolver)
         definition = filesystem_tool.get_definition()
         operation_param = definition.parameters[0]
 
         assert operation in operation_param.enum
 
     @pytest.mark.parametrize("encoding", ["utf-8", "utf-16", "ascii", "latin-1"])
-    def test_supported_encodings_in_definition(self, encoding):
+    def test_supported_encodings_in_definition(self, encoding, mock_path_resolver):
         """Test that all supported encodings are included in definition."""
-        from ai.tools.ai_tool_filesystem import AIToolFileSystem
-        filesystem_tool = AIToolFileSystem()
+        filesystem_tool = AIToolFileSystem(resolve_path=mock_path_resolver)
         definition = filesystem_tool.get_definition()
         encoding_param = next(p for p in definition.parameters if p.name == "encoding")
 
@@ -285,10 +196,9 @@ class TestAIToolFileSystemParametrized:
         (10, 10 * 1024 * 1024),
         (50, 50 * 1024 * 1024),
     ])
-    def test_custom_max_file_sizes(self, max_size_mb, expected_bytes):
+    def test_custom_max_file_sizes(self, max_size_mb, expected_bytes, mock_path_resolver):
         """Test filesystem tool with different max file sizes."""
-        from ai.tools.ai_tool_filesystem import AIToolFileSystem
-        tool = AIToolFileSystem(max_file_size_mb=max_size_mb)
+        tool = AIToolFileSystem(resolve_path=mock_path_resolver, max_file_size_mb=max_size_mb)
 
         assert tool._max_file_size_bytes == expected_bytes
 
@@ -384,41 +294,15 @@ class TestAIToolFileSystemParametrized:
 class TestAIToolFileSystemErrorHandling:
     """Test error handling patterns across operations."""
 
-    def test_all_operations_handle_mindspace_validation(self, mock_mindspace_manager, mock_authorization):
-        """Test that all operations properly validate mindspace access."""
-        from ai.tools.ai_tool_filesystem import AIToolFileSystem
-
-        mock_mindspace_manager.has_mindspace.return_value = False
-        filesystem_tool = AIToolFileSystem()
-        filesystem_tool._mindspace_manager = mock_mindspace_manager
-
-        operations = [
-            "read_file", "write_file", "append_to_file", "list_directory",
-            "create_directory", "remove_directory", "delete_file", "get_info"
-        ]
-
-        for operation in operations:
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(
-                    {"operation": operation, "path": "test"},
-                    mock_authorization
-                ))
-
-            error = exc_info.value
-            assert "No mindspace is currently open" in str(error)
-
     def test_operations_requiring_destination_fail_without_it(self, filesystem_tool, mock_authorization):
         """Test that operations requiring destination fail appropriately."""
         operations_needing_destination = ["copy_file", "move"]
 
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open', mock_open(read_data="test content")) as mock_file:
 
-            mock_path = Path("/test/mindspace/source.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -441,14 +325,11 @@ class TestAIToolFileSystemErrorHandling:
         """Test that operations requiring content fail appropriately."""
         operations_needing_content = ["write_file", "append_to_file"]
 
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open', mock_open(read_data="test content")) as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -467,3 +348,99 @@ class TestAIToolFileSystemErrorHandling:
                 # append_to_file checks for content later, so it fails on path validation first
                 # write_file checks for content early
                 assert "No 'content' argument provided" in str(error)
+
+
+class TestAIToolFileSystemPathResolverIntegration:
+    """Test integration with different path resolver behaviors."""
+
+    def test_path_resolver_validation_error(self, mock_authorization):
+        """Test that path resolver validation errors are properly propagated."""
+        def failing_resolver(path: str) -> Tuple[Path, str]:
+            if path == "forbidden":
+                raise ValueError("Access to this path is forbidden")
+            return Path(f"/test/mindspace/{path}"), path
+
+        filesystem_tool = AIToolFileSystem(resolve_path=failing_resolver)
+
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(filesystem_tool.execute(
+                {"operation": "read_file", "path": "forbidden"},
+                mock_authorization
+            ))
+
+        error = exc_info.value
+        assert "Access to this path is forbidden" in str(error)
+
+    def test_path_resolver_custom_display_paths(self, mock_authorization):
+        """Test that custom display paths from resolver are used correctly."""
+        def custom_resolver(path: str) -> Tuple[Path, str]:
+            # Return custom display path that's different from input
+            abs_path = Path(f"/test/mindspace/{path}")
+            display_path = f"custom_prefix/{path}"
+            return abs_path, display_path
+
+        filesystem_tool = AIToolFileSystem(resolve_path=custom_resolver)
+
+        with patch('pathlib.Path.exists') as mock_exists, \
+             patch('pathlib.Path.is_file') as mock_is_file, \
+             patch('pathlib.Path.stat') as mock_stat, \
+             patch('builtins.open', mock_open(read_data="test content")) as mock_file:
+
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = 12
+            mock_stat.return_value = mock_stat_result
+
+            result = asyncio.run(filesystem_tool.execute(
+                {"operation": "read_file", "path": "file.txt"},
+                mock_authorization
+            ))
+
+            # Verify the custom display path is used in the result
+            assert "File: custom_prefix/file.txt" in result
+
+    def test_path_resolver_absolute_vs_relative_handling(self, mock_authorization):
+        """Test that path resolver handles both absolute and relative paths correctly."""
+        def flexible_resolver(path: str) -> Tuple[Path, str]:
+            if path.startswith('/'):
+                # Absolute path - strip leading slash for display
+                display_path = path[1:] if path != '/' else ''
+                abs_path = Path(f"/test/mindspace/{display_path}")
+
+            else:
+                # Relative path
+                display_path = path
+                abs_path = Path(f"/test/mindspace/{path}")
+
+            return abs_path, display_path
+
+        filesystem_tool = AIToolFileSystem(resolve_path=flexible_resolver)
+
+        test_cases = [
+            ("file.txt", "file.txt"),
+            ("/file.txt", "file.txt"),
+            ("dir/file.txt", "dir/file.txt"),
+            ("/dir/file.txt", "dir/file.txt"),
+        ]
+
+        for input_path, expected_display in test_cases:
+            with patch('pathlib.Path.exists') as mock_exists, \
+                 patch('pathlib.Path.is_file') as mock_is_file, \
+                 patch('pathlib.Path.stat') as mock_stat, \
+                 patch('builtins.open', mock_open(read_data="test content")) as mock_file:
+
+                mock_exists.return_value = True
+                mock_is_file.return_value = True
+
+                mock_stat_result = MagicMock()
+                mock_stat_result.st_size = 12
+                mock_stat.return_value = mock_stat_result
+
+                result = asyncio.run(filesystem_tool.execute(
+                    {"operation": "read_file", "path": input_path},
+                    mock_authorization
+                ))
+
+                assert f"File: {expected_display}" in result

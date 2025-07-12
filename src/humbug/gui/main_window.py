@@ -4,7 +4,8 @@ import asyncio
 import json
 import logging
 import os
-from typing import cast, Dict, List
+from pathlib import Path
+from typing import cast, Dict, List, Tuple
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
@@ -436,7 +437,7 @@ class MainWindow(QMainWindow):
         self._ai_tool_manager = AIToolManager()
         self._ai_tool_manager.register_tool(AIToolCalculator())
         self._ai_tool_manager.register_tool(AIToolClock())
-        self._ai_tool_manager.register_tool(AIToolFileSystem())
+        self._ai_tool_manager.register_tool(AIToolFileSystem(self._resolve_mindspace_path))
         self._ai_tool_manager.register_tool(AIToolSystem(self._column_manager))
 
         QTimer.singleShot(0, self._restore_last_mindspace)
@@ -1090,6 +1091,22 @@ class MainWindow(QMainWindow):
 
         # Get the absolute path of the current mindspace
         return self._mindspace_manager.get_relative_path(path)
+
+    def _resolve_mindspace_path(self, path: str) -> Tuple[Path, str]:
+        # Check if our path starts with a separator.  If it does we'll assume it's for the root of the mindspace.
+        if path.startswith(os.sep):
+            path = path[1:]
+
+        # Convert to absolute path via mindspace manager
+        abs_path = self._mindspace_manager.get_absolute_path(path)
+        resolved_path = Path(abs_path).resolve()
+
+        # Verify the resolved path is still within mindspace
+        relative_path = self._mindspace_manager.get_mindspace_relative_path(str(resolved_path))
+        if relative_path is None:
+            raise ValueError(f"Path is outside mindspace boundaries: {path}")
+
+        return resolved_path, relative_path
 
     def _new_metaphor_conversation(self) -> None:
         """Create new conversation from Metaphor file."""

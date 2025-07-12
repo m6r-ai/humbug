@@ -2,34 +2,32 @@ import logging
 import shutil
 import tempfile
 from datetime import datetime
-import os
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Callable, Tuple
 
 from ai.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback
 )
-from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_error import MindspaceNotFoundError
 
 
 class AIToolFileSystem(AITool):
     """
     Comprehensive filesystem tool.
 
-    All operations require user authorization and are restricted to the current mindspace.
+    All operations require user authorization and are restricted to filesystem boundaries.
     Provides secure file and directory operations with proper error handling and logging.
     """
 
-    def __init__(self, max_file_size_mb: int = 10):
+    def __init__(self, resolve_path: Callable[[str], Tuple[Path, str]], max_file_size_mb: int = 10):
         """
         Initialize the filesystem tool.
 
         Args:
+            resolve_path: Callback to resolve and validate paths, returns (absolute_path, display_path)
             max_file_size_mb: Maximum file size in MB for read/write operations
         """
-        self._mindspace_manager = MindspaceManager()
+        self._resolve_path = resolve_path
         self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
         self._logger = logging.getLogger("AIToolFileSystem")
 
@@ -93,20 +91,6 @@ class AIToolFileSystem(AITool):
             ]
         )
 
-    def _validate_mindspace_access(self) -> None:
-        """
-        Validate that a mindspace is currently open.
-
-        Raises:
-            AIToolExecutionError: If no mindspace is open
-        """
-        if not self._mindspace_manager.has_mindspace():
-            raise AIToolExecutionError(
-                "No mindspace is currently open. Filesystem operations require an active mindspace.",
-                "filesystem",
-                {}
-            )
-
     def _get_value_from_key(self, key: str, arguments: Dict[str, Any]) -> Any:
         """
         Extract value from arguments dictionary.
@@ -154,19 +138,19 @@ class AIToolFileSystem(AITool):
 
         return value
 
-    def _validate_and_resolve_path(self, path_str: str, operation: str) -> Path:
+    def _validate_and_resolve_path(self, path_str: str, operation: str) -> Tuple[Path, str]:
         """
-        Validate path is within mindspace and resolve to absolute path.
+        Validate path and resolve to absolute path with display path.
 
         Args:
             path_str: String path to validate and resolve
             operation: Operation being performed (for error context)
 
         Returns:
-            Resolved Path object within mindspace
+            Tuple of (resolved absolute Path, display path string)
 
         Raises:
-            AIToolExecutionError: If path is invalid or outside mindspace
+            AIToolExecutionError: If path is invalid or outside boundaries
         """
         if not path_str:
             raise AIToolExecutionError(
@@ -176,35 +160,18 @@ class AIToolFileSystem(AITool):
             )
 
         try:
-            # Check if our path starts with a separator.  If it does we'll assume it's for the root of the mindspace.
-            if path_str.startswith(os.sep):
-                path_str = path_str[1:]
+            return self._resolve_path(path_str)
 
-            # Convert to absolute path via mindspace manager
-            abs_path = self._mindspace_manager.get_absolute_path(path_str)
-            resolved_path = Path(abs_path).resolve()
-
-            # Verify the resolved path is still within mindspace
-            relative_path = self._mindspace_manager.get_mindspace_relative_path(str(resolved_path))
-            if relative_path is None:
-                raise AIToolExecutionError(
-                    f"Path is outside mindspace boundaries: {path_str}",
-                    "filesystem",
-                    {"operation": operation, "path": path_str}
-                )
-
-            return resolved_path
-
-        except MindspaceNotFoundError as e:
+        except ValueError as e:
             raise AIToolExecutionError(
-                f"Mindspace error: {str(e)}",
+                f"Invalid path '{path_str}': {str(e)}",
                 "filesystem",
                 {"operation": operation, "path": path_str}
             ) from e
 
         except Exception as e:
             raise AIToolExecutionError(
-                f"Invalid path '{path_str}': {str(e)}",
+                f"Failed to resolve path '{path_str}': {str(e)}",
                 "filesystem",
                 {"operation": operation, "path": path_str}
             ) from e
@@ -228,9 +195,6 @@ class AIToolFileSystem(AITool):
             AIToolExecutionError: If operation fails
             AIToolAuthorizationDenied: If user denies authorization
         """
-        # Validate mindspace is open
-        self._validate_mindspace_access()
-
         # Extract and validate operation
         operation = self._get_str_value_from_key("operation", arguments)
 
@@ -281,7 +245,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Read file contents."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path = self._validate_and_resolve_path(path_arg, "read_file")
+        path, display_path = self._validate_and_resolve_path(path_arg, "read_file")
 
         # Validate file exists and is readable
         if not path.exists():
@@ -339,8 +303,7 @@ class AIToolFileSystem(AITool):
                 {"path": str(path)}
             ) from e
 
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"File: {relative_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
+        return f"File: {display_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
 
     async def _write_file(
         self,
@@ -349,7 +312,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Write content to file (create or overwrite)."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path = self._validate_and_resolve_path(path_arg, "write_file")
+        path, display_path = self._validate_and_resolve_path(path_arg, "write_file")
 
         if "content" not in arguments:
             raise AIToolExecutionError(
@@ -381,18 +344,22 @@ class AIToolFileSystem(AITool):
             )
 
         # Build authorization context
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-
         if path.exists():
-            context = f"Write content to '{relative_path}'. " \
+            context = f"Write content to '{display_path}'. " \
                 "This will overwrite the existing file and the previous contents will be lost."
             destructive = True
 
         else:
-            context = f"Create a new file '{relative_path}' with the provided content."
+            context = f"Create a new file '{display_path}' with the provided content."
             if create_parents and not path.parent.exists():
-                parent_relative = self._mindspace_manager.get_relative_path(str(path.parent))
-                context += f" This will also create the parent directory '{parent_relative}'."
+                # Get display path for parent directory
+                try:
+                    _, parent_display_path = self._resolve_path(str(path.parent))
+                    context += f" This will also create the parent directory '{parent_display_path}'."
+
+                except Exception:
+                    # If we can't resolve parent for display, just mention it generically
+                    context += " This will also create the parent directory."
 
             destructive = False
 
@@ -439,8 +406,7 @@ class AIToolFileSystem(AITool):
                 {"path": str(path)}
             ) from e
 
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"File written successfully: {relative_path} ({content_size:,} bytes)"
+        return f"File written successfully: {display_path} ({content_size:,} bytes)"
 
     async def _append_to_file(
         self,
@@ -449,7 +415,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Append content to existing file."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path = self._validate_and_resolve_path(path_arg, "append_to_file")
+        path, display_path = self._validate_and_resolve_path(path_arg, "append_to_file")
 
         # File must exist for append
         if not path.exists():
@@ -484,8 +450,7 @@ class AIToolFileSystem(AITool):
             )
 
         # Build authorization context
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        context = f"Append content to the end of '{relative_path}'. This will modify the existing file."
+        context = f"Append content to the end of '{display_path}'. This will modify the existing file."
 
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, True)
@@ -515,8 +480,7 @@ class AIToolFileSystem(AITool):
                 {"path": str(path)}
             ) from e
 
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"Content appended successfully: {relative_path} (+{content_size:,} bytes)"
+        return f"Content appended successfully: {display_path} (+{content_size:,} bytes)"
 
     async def _list_directory(
         self,
@@ -525,7 +489,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """List directory contents."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path = self._validate_and_resolve_path(path_arg, "list_directory")
+        path, display_path = self._validate_and_resolve_path(path_arg, "list_directory")
 
         if not path.exists():
             raise AIToolExecutionError(
@@ -590,8 +554,7 @@ class AIToolFileSystem(AITool):
                 {"path": str(path)}
             ) from e
 
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        result_lines = [f"Directory: {relative_path}", f"Items: {len(items)}", ""]
+        result_lines = [f"Directory: {display_path}", f"Items: {len(items)}", ""]
 
         for item in sorted(items, key=lambda x: (x['type'], x['name'])):
             if item['type'] == 'directory':
@@ -610,7 +573,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Create directory (with parents if needed)."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path = self._validate_and_resolve_path(path_arg, "create_directory")
+        path, display_path = self._validate_and_resolve_path(path_arg, "create_directory")
         create_parents = arguments.get("create_parents", True)
 
         if path.exists():
@@ -628,8 +591,7 @@ class AIToolFileSystem(AITool):
             )
 
         # Build authorization context
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        context = f"Create a new directory '{relative_path}'."
+        context = f"Create a new directory '{display_path}'."
 
         if create_parents and not path.parent.exists():
             context += " This will also create any missing parent directories."
@@ -668,8 +630,7 @@ class AIToolFileSystem(AITool):
                 {"path": str(path)}
             ) from e
 
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"Directory created successfully: {relative_path}"
+        return f"Directory created successfully: {display_path}"
 
     async def _remove_directory(
         self,
@@ -678,7 +639,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Remove empty directory."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path = self._validate_and_resolve_path(path_arg, "remove_directory")
+        path, display_path = self._validate_and_resolve_path(path_arg, "remove_directory")
 
         if not path.exists():
             raise AIToolExecutionError(
@@ -712,8 +673,7 @@ class AIToolFileSystem(AITool):
             ) from e
 
         # Build authorization context
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        context = f"Remove the empty directory '{relative_path}'. This directory will be permanently deleted."
+        context = f"Remove the empty directory '{display_path}'. This directory will be permanently deleted."
 
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, True)
@@ -735,8 +695,7 @@ class AIToolFileSystem(AITool):
                 {"path": str(path)}
             ) from e
 
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"Directory removed successfully: {relative_path}"
+        return f"Directory removed successfully: {display_path}"
 
     async def _delete_file(
         self,
@@ -745,7 +704,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Delete file."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path = self._validate_and_resolve_path(path_arg, "delete_file")
+        path, display_path = self._validate_and_resolve_path(path_arg, "delete_file")
 
         if not path.exists():
             raise AIToolExecutionError(
@@ -762,8 +721,7 @@ class AIToolFileSystem(AITool):
             )
 
         # Build authorization context
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        context = f"Delete the file '{relative_path}'. This file will be permanently removed and cannot be recovered."
+        context = f"Delete the file '{display_path}'. This file will be permanently removed and cannot be recovered."
 
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, True)
@@ -792,8 +750,7 @@ class AIToolFileSystem(AITool):
                 {"path": str(path)}
             ) from e
 
-        relative_path = self._mindspace_manager.get_relative_path(str(path))
-        return f"File deleted successfully: {relative_path}"
+        return f"File deleted successfully: {display_path}"
 
     async def _copy_file(
         self,
@@ -802,7 +759,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Copy file to destination."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        source_path = self._validate_and_resolve_path(path_arg, "copy_file")
+        source_path, source_display_path = self._validate_and_resolve_path(path_arg, "copy_file")
 
         if not source_path.exists():
             raise AIToolExecutionError(
@@ -819,7 +776,7 @@ class AIToolFileSystem(AITool):
             )
 
         destination_arg = self._get_str_value_from_key("destination", arguments)
-        destination_path = self._validate_and_resolve_path(destination_arg, "copy_file")
+        destination_path, dest_display_path = self._validate_and_resolve_path(destination_arg, "copy_file")
 
         # Check source file size
         source_size = source_path.stat().st_size
@@ -833,16 +790,13 @@ class AIToolFileSystem(AITool):
             )
 
         # Build authorization context
-        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
-        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
-
         if destination_path.exists():
-            context = f"Copy '{source_relative}' to '{dest_relative}'. " \
+            context = f"Copy '{source_display_path}' to '{dest_display_path}'. " \
                 "This will overwrite the existing destination file and its contents will be lost."
             destructive = True
 
         else:
-            context = f"Copy '{source_relative}' to '{dest_relative}'. This will create a new file at the destination."
+            context = f"Copy '{source_display_path}' to '{dest_display_path}'. This will create a new file at the destination."
             destructive = False
 
         # Request authorization
@@ -876,9 +830,7 @@ class AIToolFileSystem(AITool):
                 {"source": str(source_path), "destination": str(destination_path)}
             ) from e
 
-        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
-        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
-        return f"File copied successfully: {source_relative} -> {dest_relative}"
+        return f"File copied successfully: {source_display_path} -> {dest_display_path}"
 
     async def _move(
         self,
@@ -887,7 +839,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Move/rename file or directory."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        source_path = self._validate_and_resolve_path(path_arg, "move")
+        source_path, source_display_path = self._validate_and_resolve_path(path_arg, "move")
 
         if not source_path.exists():
             raise AIToolExecutionError(
@@ -897,12 +849,9 @@ class AIToolFileSystem(AITool):
             )
 
         destination_arg = self._get_str_value_from_key("destination", arguments)
-        destination_path = self._validate_and_resolve_path(destination_arg, "move")
+        destination_path, dest_display_path = self._validate_and_resolve_path(destination_arg, "move")
 
         # Build authorization context
-        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
-        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
-
         if source_path.is_file():
             item_type = "file"
 
@@ -913,11 +862,11 @@ class AIToolFileSystem(AITool):
             item_type = "item"
 
         if destination_path.exists():
-            context = f"Move the {item_type} '{source_relative}' to '{dest_relative}'. " \
+            context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'. " \
                 "This will overwrite the existing destination and its contents will be lost."
 
         else:
-            context = f"Move the {item_type} '{source_relative}' to '{dest_relative}'."
+            context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'."
 
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, True)
@@ -950,9 +899,7 @@ class AIToolFileSystem(AITool):
                 {"source": str(source_path), "destination": str(destination_path)}
             ) from e
 
-        source_relative = self._mindspace_manager.get_relative_path(str(source_path))
-        dest_relative = self._mindspace_manager.get_relative_path(str(destination_path))
-        return f"Moved successfully: {source_relative} -> {dest_relative}"
+        return f"Moved successfully: {source_display_path} -> {dest_display_path}"
 
     async def _get_info(
         self,
@@ -961,7 +908,7 @@ class AIToolFileSystem(AITool):
     ) -> str:
         """Get detailed information about file or directory."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path = self._validate_and_resolve_path(path_arg, "get_info")
+        path, display_path = self._validate_and_resolve_path(path_arg, "get_info")
 
         if not path.exists():
             raise AIToolExecutionError(
@@ -973,11 +920,10 @@ class AIToolFileSystem(AITool):
         # Get file or directory information
         try:
             stat_info = path.stat()
-            relative_path = self._mindspace_manager.get_relative_path(str(path))
             modified_time = datetime.fromtimestamp(stat_info.st_mtime).isoformat()
 
             if path.is_file():
-                return f"""File: {relative_path}
+                return f"""File: {display_path}
 Type: File
 Size: {stat_info.st_size:,} bytes
 Modified: {modified_time}
@@ -994,13 +940,13 @@ Extension: {path.suffix or 'None'}"""
                 except PermissionError:
                     items_info = "Permission denied"
 
-                return f"""Directory: {relative_path}
+                return f"""Directory: {display_path}
 Type: Directory
 Items: {items_info}
 Modified: {modified_time}
 Permissions: {oct(stat_info.st_mode)[-3:]}"""
 
-            return f"""Path: {relative_path}
+            return f"""Path: {display_path}
 Type: Other (neither file nor directory)
 Modified: {modified_time}
 Permissions: {oct(stat_info.st_mode)[-3:]}"""

@@ -13,20 +13,13 @@ from ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
 class TestAIToolFileSystemReadFile:
     """Test the read_file operation."""
 
-    def test_read_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_read_file_success(self, filesystem_tool, mock_authorization):
         """Test successful file reading."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open', mock_open(read_data="test content")) as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -44,62 +37,43 @@ class TestAIToolFileSystemReadFile:
             assert "Encoding: utf-8" in result
             assert "test content" in result
 
-    def test_read_file_not_exists(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_read_file_not_exists(self, filesystem_tool, mock_authorization):
         """Test reading non-existent file."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists:
-
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
+        with patch('pathlib.Path.exists') as mock_exists:
             mock_exists.return_value = False
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
-                    {"operation": "read_file", "path": "file.txt"},
+                    {"operation": "read_file", "path": "nonexistent.txt"},
                     mock_authorization
                 ))
 
             error = exc_info.value
-            assert "File does not exist: file.txt" in str(error)
+            assert "File does not exist: nonexistent.txt" in str(error)
 
-    def test_read_file_not_file(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_read_file_not_file(self, filesystem_tool, mock_authorization):
         """Test reading when path is not a file."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = False
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
-                    {"operation": "read_file", "path": "file.txt"},
+                    {"operation": "read_file", "path": "dir"},
                     mock_authorization
                 ))
 
             error = exc_info.value
-            assert "Path is not a file: file.txt" in str(error)
+            assert "Path is not a file: dir" in str(error)
 
-    def test_read_file_too_large(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_read_file_too_large(self, filesystem_tool, mock_authorization):
         """Test reading file that exceeds size limit."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -109,27 +83,20 @@ class TestAIToolFileSystemReadFile:
 
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(filesystem_tool.execute(
-                    {"operation": "read_file", "path": "file.txt"},
+                    {"operation": "read_file", "path": "large.txt"},
                     mock_authorization
                 ))
 
             error = exc_info.value
             assert "File too large: 11.0MB (max: 10.0MB)" in str(error)
 
-    def test_read_file_custom_encoding(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_read_file_custom_encoding(self, filesystem_tool, mock_authorization):
         """Test reading file with custom encoding."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open', mock_open(read_data="test content")) as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -145,21 +112,15 @@ class TestAIToolFileSystemReadFile:
             assert "Encoding: utf-16" in result
             assert "test content" in result
             # Verify the encoding was passed to open
-            mock_file.assert_called_with(mock_path, 'r', encoding='utf-16')
+            mock_file.assert_called_with(Path("/test/mindspace/file.txt"), 'r', encoding='utf-16')
 
-    def test_read_file_unicode_decode_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_read_file_unicode_decode_error(self, filesystem_tool, mock_authorization):
         """Test reading file with unicode decode error."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open') as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -179,19 +140,13 @@ class TestAIToolFileSystemReadFile:
             error = exc_info.value
             assert "Failed to decode file with encoding 'utf-8'" in str(error)
 
-    def test_read_file_permission_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_read_file_permission_error(self, filesystem_tool, mock_authorization):
         """Test reading file with permission error."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open') as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -211,19 +166,13 @@ class TestAIToolFileSystemReadFile:
             error = exc_info.value
             assert "Permission denied reading file" in str(error)
 
-    def test_read_file_os_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_read_file_os_error(self, filesystem_tool, mock_authorization):
         """Test reading file with OS error."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open') as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -247,19 +196,12 @@ class TestAIToolFileSystemReadFile:
 class TestAIToolFileSystemWriteFile:
     """Test the write_file operation."""
 
-    def test_write_file_success_new_file(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_success_new_file(self, filesystem_tool, mock_authorization):
         """Test successful writing to new file."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
              patch('pathlib.Path.replace') as mock_replace:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = False  # New file
 
             # Mock temporary file
@@ -280,19 +222,12 @@ class TestAIToolFileSystemWriteFile:
             args = mock_authorization.call_args[0]
             assert args[3] is False  # destructive parameter
 
-    def test_write_file_success_overwrite(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_success_overwrite(self, filesystem_tool, mock_authorization):
         """Test successful writing to existing file (overwrite)."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
              patch('pathlib.Path.replace') as mock_replace:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True  # Existing file
 
             # Mock temporary file
@@ -313,76 +248,48 @@ class TestAIToolFileSystemWriteFile:
             args = mock_authorization.call_args[0]
             assert args[3] is True  # destructive parameter
 
-    def test_write_file_no_content(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_no_content(self, filesystem_tool, mock_authorization):
         """Test writing file without content parameter."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(filesystem_tool.execute(
+                {"operation": "write_file", "path": "file.txt"},
+                mock_authorization
+            ))
 
-        with patch('pathlib.Path.resolve') as mock_resolve:
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
+        error = exc_info.value
+        assert "No 'content' argument provided" in str(error)
 
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(
-                    {"operation": "write_file", "path": "file.txt"},
-                    mock_authorization
-                ))
-
-            error = exc_info.value
-            assert "No 'content' argument provided" in str(error)
-
-    def test_write_file_non_string_content(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_non_string_content(self, filesystem_tool, mock_authorization):
         """Test writing file with non-string content."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(filesystem_tool.execute(
+                {"operation": "write_file", "path": "file.txt", "content": 123},
+                mock_authorization
+            ))
 
-        with patch('pathlib.Path.resolve') as mock_resolve:
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
+        error = exc_info.value
+        assert "'content' must be a string" in str(error)
 
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(
-                    {"operation": "write_file", "path": "file.txt", "content": 123},
-                    mock_authorization
-                ))
-
-            error = exc_info.value
-            assert "'content' must be a string" in str(error)
-
-    def test_write_file_content_too_large(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_content_too_large(self, filesystem_tool, mock_authorization):
         """Test writing file with content that exceeds size limit."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
+        # Create content larger than 10MB
+        large_content = "x" * (11 * 1024 * 1024)
 
-        with patch('pathlib.Path.resolve') as mock_resolve:
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(filesystem_tool.execute(
+                {"operation": "write_file", "path": "file.txt", "content": large_content},
+                mock_authorization
+            ))
 
-            # Create content larger than 10MB
-            large_content = "x" * (11 * 1024 * 1024)
+        error = exc_info.value
+        assert "'content' too large: 11.0MB (max: 10.0MB)" in str(error)
 
-            with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(
-                    {"operation": "write_file", "path": "file.txt", "content": large_content},
-                    mock_authorization
-                ))
-
-            error = exc_info.value
-            assert "'content' too large: 11.0MB (max: 10.0MB)" in str(error)
-
-    def test_write_file_custom_encoding(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_custom_encoding(self, filesystem_tool, mock_authorization):
         """Test writing file with custom encoding."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
              patch('pathlib.Path.replace') as mock_replace:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = False
 
             # Mock temporary file
@@ -403,20 +310,13 @@ class TestAIToolFileSystemWriteFile:
             kwargs = mock_temp_file.call_args[1]
             assert kwargs['encoding'] == 'utf-16'
 
-    def test_write_file_create_parents(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_create_parents(self, filesystem_tool, mock_authorization):
         """Test writing file with create_parents option."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/dir/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "dir/file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "dir/file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir') as mock_mkdir, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
              patch('pathlib.Path.replace') as mock_replace:
 
-            mock_path = Path("/test/mindspace/dir/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = False
 
             # Mock temporary file
@@ -435,16 +335,9 @@ class TestAIToolFileSystemWriteFile:
             # Verify mkdir was called with parents=True
             mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
-    def test_write_file_authorization_denied(self, filesystem_tool, mock_mindspace_manager, mock_authorization_denied):
+    def test_write_file_authorization_denied(self, filesystem_tool, mock_authorization_denied):
         """Test writing file when authorization is denied."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists:
-
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
+        with patch('pathlib.Path.exists') as mock_exists:
             mock_exists.return_value = False
 
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
@@ -456,17 +349,11 @@ class TestAIToolFileSystemWriteFile:
             error = exc_info.value
             assert "User denied permission to write file: file.txt" in str(error)
 
-    def test_write_file_permission_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_permission_error(self, filesystem_tool, mock_authorization):
         """Test writing file with permission error."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = False
 
             # Mock tempfile to raise PermissionError
@@ -481,17 +368,11 @@ class TestAIToolFileSystemWriteFile:
             error = exc_info.value
             assert "Permission denied writing file" in str(error)
 
-    def test_write_file_os_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_write_file_os_error(self, filesystem_tool, mock_authorization):
         """Test writing file with OS error."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = False
 
             # Mock tempfile to raise OSError
@@ -510,20 +391,13 @@ class TestAIToolFileSystemWriteFile:
 class TestAIToolFileSystemAppendFile:
     """Test the append_to_file operation."""
 
-    def test_append_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_append_file_success(self, filesystem_tool, mock_authorization):
         """Test successful appending to file."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open', mock_open()) as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -538,18 +412,11 @@ class TestAIToolFileSystemAppendFile:
 
             assert "Content appended successfully: file.txt (+11 bytes)" in result
             # Verify the file was opened in append mode
-            mock_file.assert_called_with(mock_path, 'a', encoding='utf-8')
+            mock_file.assert_called_with(Path("/test/mindspace/file.txt"), 'a', encoding='utf-8')
 
-    def test_append_file_not_exists(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_append_file_not_exists(self, filesystem_tool, mock_authorization):
         """Test appending to non-existent file."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists:
-
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
+        with patch('pathlib.Path.exists') as mock_exists:
             mock_exists.return_value = False
 
             with pytest.raises(AIToolExecutionError) as exc_info:
@@ -561,17 +428,11 @@ class TestAIToolFileSystemAppendFile:
             error = exc_info.value
             assert "File does not exist: file.txt" in str(error)
 
-    def test_append_file_not_file(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_append_file_not_file(self, filesystem_tool, mock_authorization):
         """Test appending to path that is not a file."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/dir"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "dir"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file:
 
-            mock_path = Path("/test/mindspace/dir")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = False
 
@@ -584,18 +445,12 @@ class TestAIToolFileSystemAppendFile:
             error = exc_info.value
             assert "Path is not a file: dir" in str(error)
 
-    def test_append_file_too_large_after_append(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_append_file_too_large_after_append(self, filesystem_tool, mock_authorization):
         """Test appending when result would exceed size limit."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -615,20 +470,13 @@ class TestAIToolFileSystemAppendFile:
             error = exc_info.value
             assert "File would be too large after append" in str(error)
 
-    def test_append_file_custom_encoding(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_append_file_custom_encoding(self, filesystem_tool, mock_authorization):
         """Test appending with custom encoding."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open', mock_open()) as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -643,18 +491,12 @@ class TestAIToolFileSystemAppendFile:
 
             assert "Content appended successfully" in result
             # Verify the encoding was passed to open
-            mock_file.assert_called_with(mock_path, 'a', encoding='utf-16')
+            mock_file.assert_called_with(Path("/test/mindspace/file.txt"), 'a', encoding='utf-16')
 
-    def test_append_file_no_content(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_append_file_no_content(self, filesystem_tool, mock_authorization):
         """Test appending without content parameter."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file:
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -667,18 +509,12 @@ class TestAIToolFileSystemAppendFile:
             error = exc_info.value
             assert "No 'content' argument provided" in str(error)
 
-    def test_append_file_authorization_denied(self, filesystem_tool, mock_mindspace_manager, mock_authorization_denied):
+    def test_append_file_authorization_denied(self, filesystem_tool, mock_authorization_denied):
         """Test appending when authorization is denied."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -695,19 +531,13 @@ class TestAIToolFileSystemAppendFile:
             error = exc_info.value
             assert "User denied permission to append to file: file.txt" in str(error)
 
-    def test_append_file_permission_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_append_file_permission_error(self, filesystem_tool, mock_authorization):
         """Test appending with permission error."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open') as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
@@ -727,19 +557,13 @@ class TestAIToolFileSystemAppendFile:
             error = exc_info.value
             assert "Permission denied appending to file" in str(error)
 
-    def test_append_file_os_error(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_append_file_os_error(self, filesystem_tool, mock_authorization):
         """Test appending with OS error."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('builtins.open') as mock_file:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
 

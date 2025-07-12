@@ -2,7 +2,6 @@
 Tests for filesystem tool info operations: get_info.
 """
 import asyncio
-from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -13,21 +12,14 @@ from ai.ai_tool_manager import AIToolExecutionError
 class TestAIToolFileSystemGetInfo:
     """Test the get_info operation."""
 
-    def test_get_info_file_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_file_success(self, filesystem_tool, mock_authorization):
         """Test successful file info retrieval."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
             mock_is_dir.return_value = False
@@ -54,21 +46,15 @@ class TestAIToolFileSystemGetInfo:
             assert "Permissions: 644" in result
             assert "Extension: .txt" in result
 
-    def test_get_info_file_no_extension(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_file_no_extension(self, filesystem_tool, mock_authorization):
         """Test file info retrieval for file without extension."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/README"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "README"
-        mock_mindspace_manager.get_relative_path.return_value = "README"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
+             patch('pathlib.Path.suffix', new_callable=lambda: ""), \
              patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-            mock_path = Path("/test/mindspace/README")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
             mock_is_dir.return_value = False
@@ -91,12 +77,8 @@ class TestAIToolFileSystemGetInfo:
             assert "File: README" in result
             assert "Extension: None" in result
 
-    def test_get_info_directory_success(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_directory_success(self, filesystem_tool, mock_authorization):
         """Test successful directory info retrieval."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/dir"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "dir"
-        mock_mindspace_manager.get_relative_path.return_value = "dir"
-
         # Mock directory items
         mock_file = MagicMock()
         mock_file.is_file.return_value = True
@@ -110,16 +92,13 @@ class TestAIToolFileSystemGetInfo:
         mock_other.is_file.return_value = False
         mock_other.is_dir.return_value = False
 
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
              patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-            mock_path = Path("/test/mindspace/dir")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = False
             mock_is_dir.return_value = True
@@ -145,22 +124,15 @@ class TestAIToolFileSystemGetInfo:
             assert "Modified: 2022-01-01T00:00:00" in result
             assert "Permissions: 755" in result
 
-    def test_get_info_directory_empty(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_directory_empty(self, filesystem_tool, mock_authorization):
         """Test directory info retrieval for empty directory."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/empty_dir"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "empty_dir"
-        mock_mindspace_manager.get_relative_path.return_value = "empty_dir"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
              patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-            mock_path = Path("/test/mindspace/empty_dir")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = False
             mock_is_dir.return_value = True
@@ -182,22 +154,15 @@ class TestAIToolFileSystemGetInfo:
 
             assert "Items: 0 total (0 files, 0 directories)" in result
 
-    def test_get_info_directory_permission_denied_listing(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_directory_permission_denied_listing(self, filesystem_tool, mock_authorization):
         """Test directory info retrieval with permission denied for listing."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/protected_dir"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "protected_dir"
-        mock_mindspace_manager.get_relative_path.return_value = "protected_dir"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('pathlib.Path.iterdir') as mock_iterdir, \
              patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-            mock_path = Path("/test/mindspace/protected_dir")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = False
             mock_is_dir.return_value = True
@@ -219,21 +184,14 @@ class TestAIToolFileSystemGetInfo:
 
             assert "Items: Permission denied" in result
 
-    def test_get_info_other_type(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_other_type(self, filesystem_tool, mock_authorization):
         """Test info retrieval for other types (neither file nor directory)."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/special"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "special"
-        mock_mindspace_manager.get_relative_path.return_value = "special"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-            mock_path = Path("/test/mindspace/special")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = False
             mock_is_dir.return_value = False
@@ -257,16 +215,9 @@ class TestAIToolFileSystemGetInfo:
             assert "Modified: 2022-01-01T00:00:00" in result
             assert "Permissions: 666" in result
 
-    def test_get_info_path_not_exists(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_path_not_exists(self, filesystem_tool, mock_authorization):
         """Test info retrieval for non-existent path."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/nonexistent"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "nonexistent"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists:
-
-            mock_path = Path("/test/mindspace/nonexistent")
-            mock_resolve.return_value = mock_path
+        with patch('pathlib.Path.exists') as mock_exists:
             mock_exists.return_value = False
 
             with pytest.raises(AIToolExecutionError) as exc_info:
@@ -278,17 +229,11 @@ class TestAIToolFileSystemGetInfo:
             error = exc_info.value
             assert "Path does not exist: nonexistent" in str(error)
 
-    def test_get_info_permission_error_stat(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_permission_error_stat(self, filesystem_tool, mock_authorization):
         """Test info retrieval with permission error on stat."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/protected"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "protected"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.stat') as mock_stat:
 
-            mock_path = Path("/test/mindspace/protected")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_stat.side_effect = PermissionError("Access denied")
 
@@ -301,17 +246,11 @@ class TestAIToolFileSystemGetInfo:
             error = exc_info.value
             assert "Permission denied getting info" in str(error)
 
-    def test_get_info_os_error_stat(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_os_error_stat(self, filesystem_tool, mock_authorization):
         """Test info retrieval with OS error on stat."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/broken"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "broken"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.stat') as mock_stat:
 
-            mock_path = Path("/test/mindspace/broken")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_stat.side_effect = OSError("I/O error")
 
@@ -324,21 +263,14 @@ class TestAIToolFileSystemGetInfo:
             error = exc_info.value
             assert "Failed to get info" in str(error)
 
-    def test_get_info_large_file(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_large_file(self, filesystem_tool, mock_authorization):
         """Test info retrieval for large file with proper formatting."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/large.bin"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "large.bin"
-        mock_mindspace_manager.get_relative_path.return_value = "large.bin"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-            mock_path = Path("/test/mindspace/large.bin")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
             mock_is_dir.return_value = False
@@ -361,7 +293,7 @@ class TestAIToolFileSystemGetInfo:
             # Check that large numbers are formatted with commas
             assert "Size: 1,234,567,890 bytes" in result
 
-    def test_get_info_different_permissions(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_different_permissions(self, filesystem_tool, mock_authorization):
         """Test info retrieval with different permission modes."""
         test_cases = [
             (0o100755, "755"),  # Executable file
@@ -371,19 +303,12 @@ class TestAIToolFileSystemGetInfo:
         ]
 
         for mode, expected_perms in test_cases:
-            mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/test_file"
-            mock_mindspace_manager.get_mindspace_relative_path.return_value = "test_file"
-            mock_mindspace_manager.get_relative_path.return_value = "test_file"
-
-            with patch('pathlib.Path.resolve') as mock_resolve, \
-                 patch('pathlib.Path.exists') as mock_exists, \
+            with patch('pathlib.Path.exists') as mock_exists, \
                  patch('pathlib.Path.is_file') as mock_is_file, \
                  patch('pathlib.Path.is_dir') as mock_is_dir, \
                  patch('pathlib.Path.stat') as mock_stat, \
                  patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-                mock_path = Path("/test/mindspace/test_file")
-                mock_resolve.return_value = mock_path
                 mock_exists.return_value = True
                 mock_is_file.return_value = True
                 mock_is_dir.return_value = False
@@ -405,21 +330,14 @@ class TestAIToolFileSystemGetInfo:
 
                 assert f"Permissions: {expected_perms}" in result
 
-    def test_get_info_datetime_formatting(self, filesystem_tool, mock_mindspace_manager, mock_authorization):
+    def test_get_info_datetime_formatting(self, filesystem_tool, mock_authorization):
         """Test that datetime formatting works correctly."""
-        mock_mindspace_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-        mock_mindspace_manager.get_mindspace_relative_path.return_value = "file.txt"
-        mock_mindspace_manager.get_relative_path.return_value = "file.txt"
-
-        with patch('pathlib.Path.resolve') as mock_resolve, \
-             patch('pathlib.Path.exists') as mock_exists, \
+        with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
              patch('pathlib.Path.is_dir') as mock_is_dir, \
              patch('pathlib.Path.stat') as mock_stat, \
              patch('ai.tools.ai_tool_filesystem.datetime') as mock_datetime:
 
-            mock_path = Path("/test/mindspace/file.txt")
-            mock_resolve.return_value = mock_path
             mock_exists.return_value = True
             mock_is_file.return_value = True
             mock_is_dir.return_value = False

@@ -3,6 +3,7 @@ Shared fixtures and utilities for tool tests.
 """
 import tempfile
 from pathlib import Path
+from typing import Tuple
 from unittest.mock import MagicMock
 
 import pytest
@@ -11,25 +12,47 @@ from ai.tools.ai_tool_filesystem import AIToolFileSystem
 
 
 @pytest.fixture
-def mock_mindspace_manager():
-    """Fixture providing a mocked mindspace manager."""
-    mock_manager = MagicMock()
+def mock_path_resolver():
+    """Fixture providing a simple path resolver for testing."""
+    def resolver(path: str) -> Tuple[Path, str]:
+        """
+        Simple test path resolver that maps paths to a test mindspace.
 
-    # Default behavior - mindspace is available
-    mock_manager.has_mindspace.return_value = True
-    mock_manager.get_absolute_path.return_value = "/test/mindspace/file.txt"
-    mock_manager.get_mindspace_relative_path.return_value = "file.txt"
-    mock_manager.get_relative_path.return_value = "file.txt"
+        Args:
+            path: Input path string
 
-    return mock_manager
+        Returns:
+            Tuple of (absolute_path, display_path)
+
+        Raises:
+            ValueError: If path is invalid
+        """
+        if not path:
+            raise ValueError("Path cannot be empty")
+
+        # Handle leading separator (treat as mindspace root)
+        if path.startswith('/'):
+            path = path[1:]
+
+        # Simple validation - reject paths that go outside boundaries
+        if '..' in path or path.startswith('/'):
+            raise ValueError(f"Path is outside allowed boundaries: {path}")
+
+        # Create absolute path for operations
+        abs_path = Path(f"/test/mindspace/{path}")
+
+        # Use the input path as display path (after removing leading slash)
+        display_path = path
+
+        return abs_path, display_path
+
+    return resolver
 
 
 @pytest.fixture
-def filesystem_tool(mock_mindspace_manager):
-    """Fixture providing a filesystem tool instance with mocked mindspace manager."""
-    tool = AIToolFileSystem()
-    tool._mindspace_manager = mock_mindspace_manager
-    return tool
+def filesystem_tool(mock_path_resolver):
+    """Fixture providing a filesystem tool instance with mocked path resolver."""
+    return AIToolFileSystem(resolve_path=mock_path_resolver)
 
 
 @pytest.fixture
@@ -117,3 +140,40 @@ def mock_path_factory():
         return mock_path
 
     return _create_mock_path
+
+
+@pytest.fixture
+def custom_path_resolver():
+    """Factory for creating custom path resolvers for specific test scenarios."""
+    def _create_resolver(path_mapping=None, validation_func=None):
+        """
+        Create a custom path resolver with specific behaviors.
+
+        Args:
+            path_mapping: Dict mapping input paths to (abs_path, display_path) tuples
+            validation_func: Function to validate paths, should raise ValueError if invalid
+
+        Returns:
+            Path resolver function
+        """
+        def resolver(path: str) -> Tuple[Path, str]:
+            if validation_func:
+                validation_func(path)
+
+            if path_mapping and path in path_mapping:
+                abs_path_str, display_path = path_mapping[path]
+                return Path(abs_path_str), display_path
+
+            # Default behavior
+            if not path:
+                raise ValueError("Path cannot be empty")
+
+            if path.startswith('/'):
+                path = path[1:]
+
+            abs_path = Path(f"/test/mindspace/{path}")
+            return abs_path, path
+
+        return resolver
+
+    return _create_resolver
