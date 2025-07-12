@@ -8,8 +8,8 @@ from humbug.ai.ai_conversation_settings import AIConversationSettings
 from humbug.ai.ai_model import ReasoningCapability
 from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
+from humbug.lib.syntax.lexer import Token, TokenType
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.syntax.lexer import Token, TokenType
 from humbug.user.user_manager import UserManager
 
 

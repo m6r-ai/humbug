@@ -1,9 +1,9 @@
 from typing import Dict, List, Final, Any
 
 from humbug.metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
-from humbug.syntax.parser_registry import ParserRegistry
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
+from humbug.lib.syntax.parser_registry import ParserRegistry
+from humbug.lib.syntax.programming_language import ProgrammingLanguage
+from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class MetaphorLexer:

@@ -15,9 +15,9 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
     MarkdownImageNode, MarkdownLinkNode
 )
-from humbug.syntax.parser_registry import ParserRegistry
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
+from humbug.lib.syntax.parser_registry import ParserRegistry
+from humbug.lib.syntax.programming_language import ProgrammingLanguage
+from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class TableBufferState:

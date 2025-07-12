@@ -12,7 +12,7 @@ from humbug.metaphor import (
 )
 
 # pylint: disable=unused-import
-import humbug.syntax.parser_imports
+import humbug.lib.syntax.parser_imports
 # pylint: enable=unused-import
 
 from metaphor_test_utils import (

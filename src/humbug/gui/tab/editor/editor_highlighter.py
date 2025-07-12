@@ -7,9 +7,9 @@ from PySide6.QtGui import (
     QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 )
 from humbug.gui.style_manager import StyleManager
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.parser import ParserState
-from humbug.syntax.parser_registry import ParserRegistry
+from humbug.lib.syntax.programming_language import ProgrammingLanguage
+from humbug.lib.syntax.parser import ParserState
+from humbug.lib.syntax.parser_registry import ParserRegistry
 
 
 class EditorHighlighterBlockData(QTextBlockUserData):

@@ -6,11 +6,11 @@ import pytest
 from pathlib import Path
 
 # Import all parsers to ensure they are registered
-import humbug.syntax.parser_imports
+import humbug.lib.syntax.parser_imports
 
-from humbug.syntax.parser_registry import ParserRegistry
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
+from humbug.lib.syntax.parser_registry import ParserRegistry
+from humbug.lib.syntax.programming_language import ProgrammingLanguage
+from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from syntax_test_utils import (
     find_test_files,

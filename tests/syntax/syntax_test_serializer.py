@@ -4,9 +4,9 @@ Serializer for syntax parser tokens and parser state for test comparison.
 import json
 from typing import List, Dict, Any, Optional
 
-from humbug.syntax.lexer import Token
-from humbug.syntax.parser import ParserState
-from humbug.syntax.programming_language import ProgrammingLanguage
+from humbug.lib.syntax.lexer import Token
+from humbug.lib.syntax.parser import ParserState
+from humbug.lib.syntax.programming_language import ProgrammingLanguage
 
 
 def serialize_token(token: Token) -> Dict[str, Any]:

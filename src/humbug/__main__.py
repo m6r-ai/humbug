@@ -16,7 +16,7 @@ from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 
 from humbug.gui.main_window import MainWindow
 # pylint: disable=unused-import
-import humbug.syntax.parser_imports
+import humbug.lib.syntax.parser_imports
 # pylint: enable=unused-import
 
 

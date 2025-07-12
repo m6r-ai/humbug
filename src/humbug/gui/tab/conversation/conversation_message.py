@@ -16,9 +16,9 @@ from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.conversation.conversation_message_section import ConversationMessageSection
 from humbug.gui.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.language.language_manager import LanguageManager
+from humbug.lib.syntax.programming_language import ProgrammingLanguage
 from humbug.markdown.markdown_ast_node import MarkdownDocumentNode, MarkdownTextNode
 from humbug.markdown.markdown_converter import MarkdownConverter
-from humbug.syntax.programming_language import ProgrammingLanguage
 
 
 class ConversationMessage(QFrame):

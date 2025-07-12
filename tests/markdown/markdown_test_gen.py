@@ -7,7 +7,7 @@ import argparse
 from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
 
 # pylint: disable=unused-import
-import humbug.syntax.parser_imports
+import humbug.lib.syntax.parser_imports
 # pylint: enable=unused-import
 
 from tests.markdown.markdown_ast_serializer import save_ast_to_json

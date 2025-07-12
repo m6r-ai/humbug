@@ -4,7 +4,7 @@ import logging
 from typing import List, Callable
 
 from humbug.gui.tab.shell.shell_command import ShellCommand
-from humbug.syntax.lexer import Token
+from humbug.lib.syntax.lexer import Token
 
 
 class ShellCommandClear(ShellCommand):

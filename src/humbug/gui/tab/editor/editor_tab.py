@@ -20,10 +20,10 @@ from humbug.gui.tab.tab_base import TabBase
 from humbug.gui.tab.tab_state import TabState
 from humbug.gui.tab.tab_type import TabType
 from humbug.language.language_manager import LanguageManager
+from humbug.lib.syntax.programming_language import ProgrammingLanguage
+from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class EditorTab(TabBase):

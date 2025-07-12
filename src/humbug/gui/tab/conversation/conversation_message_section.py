@@ -20,9 +20,9 @@ from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.tab.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
 from humbug.language.language_manager import LanguageManager
+from humbug.lib.syntax.programming_language import ProgrammingLanguage
+from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
 from humbug.markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
-from humbug.syntax.programming_language import ProgrammingLanguage
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class ConversationMessageSection(QFrame):

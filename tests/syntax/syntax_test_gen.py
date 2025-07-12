@@ -4,11 +4,11 @@ Utility script to generate test fixtures from source code files using the parser
 """
 import argparse
 
-from humbug.syntax.parser_registry import ParserRegistry
-from humbug.syntax.programming_language_utils import ProgrammingLanguageUtils
+from humbug.lib.syntax.parser_registry import ParserRegistry
+from humbug.lib.syntax.programming_language_utils import ProgrammingLanguageUtils
 
 # pylint: disable=unused-import
-import humbug.syntax.parser_imports
+import humbug.lib.syntax.parser_imports
 # pylint: enable=unused-import
 
 from tests.syntax.syntax_test_serializer import save_tokens_to_json
