@@ -16,7 +16,7 @@ def mock_path_resolver():
     """Fixture providing a simple path resolver for testing."""
     def resolver(path: str) -> Tuple[Path, str]:
         """
-        Simple test path resolver that maps paths to a test mindspace.
+        Simple test path resolver that maps paths to a test sandbox.
 
         Args:
             path: Input path string
@@ -30,7 +30,7 @@ def mock_path_resolver():
         if not path:
             raise ValueError("Path cannot be empty")
 
-        # Handle leading separator (treat as mindspace root)
+        # Handle leading separator (treat as sandbox root)
         if path.startswith('/'):
             path = path[1:]
 
@@ -39,7 +39,7 @@ def mock_path_resolver():
             raise ValueError(f"Path is outside allowed boundaries: {path}")
 
         # Create absolute path for operations
-        abs_path = Path(f"/test/mindspace/{path}")
+        abs_path = Path(f"/test/sandbox/{path}")
 
         # Use the input path as display path (after removing leading slash)
         display_path = path
@@ -171,7 +171,7 @@ def custom_path_resolver():
             if path.startswith('/'):
                 path = path[1:]
 
-            abs_path = Path(f"/test/mindspace/{path}")
+            abs_path = Path(f"/test/sandbox/{path}")
             return abs_path, path
 
         return resolver

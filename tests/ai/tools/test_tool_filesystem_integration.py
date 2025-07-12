@@ -108,8 +108,8 @@ class TestAIToolFileSystemAuthorizationContext:
         """Test authorization context for copy operation includes destination."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -361,7 +361,7 @@ class TestAIToolFileSystemPathResolverIntegration:
         def failing_resolver(path: str) -> Tuple[Path, str]:
             if path == "forbidden":
                 raise ValueError("Access to this path is forbidden")
-            return Path(f"/test/mindspace/{path}"), path
+            return Path(f"/test/sandbox/{path}"), path
 
         filesystem_tool = AIToolFileSystem(resolve_path=failing_resolver)
 
@@ -378,7 +378,7 @@ class TestAIToolFileSystemPathResolverIntegration:
         """Test that custom display paths from resolver are used correctly."""
         def custom_resolver(path: str) -> Tuple[Path, str]:
             # Return custom display path that's different from input
-            abs_path = Path(f"/test/mindspace/{path}")
+            abs_path = Path(f"/test/sandbox/{path}")
             display_path = f"custom_prefix/{path}"
             return abs_path, display_path
 
@@ -410,12 +410,12 @@ class TestAIToolFileSystemPathResolverIntegration:
             if path.startswith('/'):
                 # Absolute path - strip leading slash for display
                 display_path = path[1:] if path != '/' else ''
-                abs_path = Path(f"/test/mindspace/{display_path}")
+                abs_path = Path(f"/test/sandbox/{display_path}")
 
             else:
                 # Relative path
                 display_path = path
-                abs_path = Path(f"/test/mindspace/{path}")
+                abs_path = Path(f"/test/sandbox/{path}")
 
             return abs_path, display_path
 

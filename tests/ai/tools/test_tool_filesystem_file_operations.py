@@ -112,7 +112,7 @@ class TestAIToolFileSystemReadFile:
             assert "Encoding: utf-16" in result
             assert "test content" in result
             # Verify the encoding was passed to open
-            mock_file.assert_called_with(Path("/test/mindspace/file.txt"), 'r', encoding='utf-16')
+            mock_file.assert_called_with(Path("/test/sandbox/file.txt"), 'r', encoding='utf-16')
 
     def test_read_file_unicode_decode_error(self, filesystem_tool, mock_authorization):
         """Test reading file with unicode decode error."""
@@ -412,7 +412,7 @@ class TestAIToolFileSystemAppendFile:
 
             assert "Content appended successfully: file.txt (+11 bytes)" in result
             # Verify the file was opened in append mode
-            mock_file.assert_called_with(Path("/test/mindspace/file.txt"), 'a', encoding='utf-8')
+            mock_file.assert_called_with(Path("/test/sandbox/file.txt"), 'a', encoding='utf-8')
 
     def test_append_file_not_exists(self, filesystem_tool, mock_authorization):
         """Test appending to non-existent file."""
@@ -491,7 +491,7 @@ class TestAIToolFileSystemAppendFile:
 
             assert "Content appended successfully" in result
             # Verify the encoding was passed to open
-            mock_file.assert_called_with(Path("/test/mindspace/file.txt"), 'a', encoding='utf-16')
+            mock_file.assert_called_with(Path("/test/sandbox/file.txt"), 'a', encoding='utf-16')
 
     def test_append_file_no_content(self, filesystem_tool, mock_authorization):
         """Test appending without content parameter."""

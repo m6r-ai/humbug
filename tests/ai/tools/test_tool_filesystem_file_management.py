@@ -147,8 +147,8 @@ class TestAIToolFileSystemCopyFile:
         """Test successful file copying to new destination."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -190,8 +190,8 @@ class TestAIToolFileSystemCopyFile:
         """Test successful file copying with overwrite."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -293,8 +293,8 @@ class TestAIToolFileSystemCopyFile:
         """Test copying file when authorization is denied."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -331,8 +331,8 @@ class TestAIToolFileSystemCopyFile:
         """Test copying file with permission error."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -372,8 +372,8 @@ class TestAIToolFileSystemCopyFile:
         """Test copying file with OS error."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -417,8 +417,8 @@ class TestAIToolFileSystemMove:
         """Test successful file moving."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -449,8 +449,8 @@ class TestAIToolFileSystemMove:
         """Test successful directory moving."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source_dir": ("/test/mindspace/source_dir", "source_dir"),
-            "dest_dir": ("/test/mindspace/dest_dir", "dest_dir")
+            "source_dir": ("/test/sandbox/source_dir", "source_dir"),
+            "dest_dir": ("/test/sandbox/dest_dir", "dest_dir")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -505,8 +505,8 @@ class TestAIToolFileSystemMove:
         """Test moving when authorization is denied."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -527,8 +527,8 @@ class TestAIToolFileSystemMove:
         """Test moving with parent directory creation."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "new_dir/dest.txt": ("/test/mindspace/new_dir/dest.txt", "new_dir/dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "new_dir/dest.txt": ("/test/sandbox/new_dir/dest.txt", "new_dir/dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -552,8 +552,8 @@ class TestAIToolFileSystemMove:
         """Test moving with permission error."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)
@@ -578,8 +578,8 @@ class TestAIToolFileSystemMove:
         """Test moving with OS error."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
-            "source.txt": ("/test/mindspace/source.txt", "source.txt"),
-            "dest.txt": ("/test/mindspace/dest.txt", "dest.txt")
+            "source.txt": ("/test/sandbox/source.txt", "source.txt"),
+            "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
         filesystem_tool = AIToolFileSystem(resolve_path=resolver)

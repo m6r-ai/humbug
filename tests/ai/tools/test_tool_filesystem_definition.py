@@ -23,7 +23,7 @@ class TestAIToolFileSystemDefinition:
 
         assert isinstance(definition, AIToolDefinition)
         assert definition.name == "filesystem"
-        assert "Perform filesystem operations within the current mindspace" in definition.description
+        assert "Perform filesystem operations within the current sandbox" in definition.description
         assert "Maximum file size: 10MB" in definition.description
         assert len(definition.parameters) == 6
 

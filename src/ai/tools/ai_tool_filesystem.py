@@ -41,8 +41,8 @@ class AIToolFileSystem(AITool):
         return AIToolDefinition(
             name="filesystem",
             description=(
-                f"Perform filesystem operations within the current mindspace. "
-                f"All operations require user authorization and are restricted to mindspace boundaries. "
+                f"Perform filesystem operations within the current sandbox. "
+                f"All operations require user authorization and are restricted to sandbox boundaries. "
                 f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
             ),
             parameters=[
@@ -60,7 +60,7 @@ class AIToolFileSystem(AITool):
                 AIToolParameter(
                     name="path",
                     type="string",
-                    description="Path to file or directory (relative to mindspace root or absolute)",
+                    description="Path to file or directory (relative to sandbox root or absolute)",
                     required=True
                 ),
                 AIToolParameter(

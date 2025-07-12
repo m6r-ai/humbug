@@ -535,9 +535,9 @@ class MetaphorASTBuilder:
 
         for file in files:
             input_text = self._read_file(file)
-            mindspace_relative_path = self._get_cannonical_path(file) if self._get_cannonical_path else file
-            if not mindspace_relative_path:
+            relative_path = self._get_cannonical_path(file) if self._get_cannonical_path else file
+            if not relative_path:
                 self._record_syntax_error(token_next, f"Could not get canonical path for {file}")
                 return
 
-            self._lexers.append(MetaphorEmbedLexer(input_text, mindspace_relative_path))
+            self._lexers.append(MetaphorEmbedLexer(input_text, relative_path))
