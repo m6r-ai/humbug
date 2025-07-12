@@ -10,7 +10,7 @@ from PySide6.QtCore import QObject, Signal
 
 from ai.ai_backend import AIBackend
 from ai.ai_backend_settings import AIBackendSettings
-from ai.ai_provider import AIProvider
+from ai.ai_manager import AIManager
 
 from humbug.user.user_settings import UserSettings
 
@@ -49,7 +49,7 @@ class UserManager(QObject):
             super().__init__()
             self._user_path = os.path.expanduser(f"~/{self.USER_DIR}")
             self._settings: UserSettings | None = None
-            self._ai_backends: Dict[str, AIBackend] = {}
+            self._ai_manager = AIManager()
             self._load_settings()
             self._initialize_ai_backends()
             self._initialized = True
@@ -136,7 +136,7 @@ class UserManager(QObject):
                     url=""
                 )
 
-        self._ai_backends = AIProvider.create_backends(settings.ai_backends)
+        self._ai_manager.initialize_from_settings(settings.ai_backends)
         self._logger.info("Initialized AI backends with available settings")
 
     def update_settings(self, new_settings: UserSettings) -> None:
@@ -153,8 +153,8 @@ class UserManager(QObject):
             self._settings = new_settings
             self._save_settings()
 
-            # Re-initialize backends with new settings
-            self._initialize_ai_backends()
+            # Update AI backends with new settings
+            self._ai_manager.update_backend_settings(new_settings.ai_backends)
 
             # Emit signal to notify listeners
             self.settings_changed.emit()
@@ -178,4 +178,4 @@ class UserManager(QObject):
         Returns:
             Dictionary mapping provider names to backend instances
         """
-        return self._ai_backends
+        return self._ai_manager.get_backends()

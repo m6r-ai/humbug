@@ -8,14 +8,13 @@ from typing import Any, Callable, Dict, List, Set
 
 from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_conversation_settings import AIConversationSettings
+from ai.ai_manager import AIManager
 from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
 from ai.ai_model import ReasoningCapability
 from ai.ai_response import AIError
 from ai.ai_tool_manager import AIToolManager, AIToolCall
 from ai.ai_usage import AIUsage
-
-from humbug.user.user_manager import UserManager
 
 
 class AIConversationEvent(Enum):
@@ -42,7 +41,7 @@ class AIConversation:
     def __init__(self) -> None:
         """Initialize the AIConversation."""
         self._logger = logging.getLogger("AIConversation")
-        self._user_manager = UserManager()
+        self._ai_manager = AIManager()
         self._tool_manager = AIToolManager()
         self._settings = AIConversationSettings()
         self._conversation = AIConversationHistory()
@@ -197,7 +196,7 @@ class AIConversation:
 
             # Get appropriate backend for conversation
             provider = AIConversationSettings.get_provider(settings.model)
-            backend = self._user_manager.get_ai_backends().get(provider)
+            backend = self._ai_manager.get_backends().get(provider)
 
             if not backend:
                 error_msg = f"No backend available for provider: {provider}"
