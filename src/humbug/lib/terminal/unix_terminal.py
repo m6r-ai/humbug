@@ -20,7 +20,7 @@ import termios
 import tty
 from typing import Tuple, cast
 
-from humbug.terminal.terminal_base import TerminalBase
+from humbug.lib.terminal.terminal_base import TerminalBase
 
 
 class UnixTerminal(TerminalBase):

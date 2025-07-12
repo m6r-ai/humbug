@@ -3,7 +3,7 @@
 import os
 from typing import Type
 
-from humbug.terminal.terminal_base import TerminalBase
+from humbug.lib.terminal.terminal_base import TerminalBase
 
 # Lazy imports to avoid loading unnecessary platform code
 _unix_terminal: Type[TerminalBase] | None = None
@@ -24,13 +24,13 @@ def create_terminal(working_directory: str) -> TerminalBase:
 
     if os.name == 'nt':
         if _windows_terminal is None:
-            from humbug.terminal.windows_terminal import WindowsTerminal  # pylint: disable=import-outside-toplevel
+            from humbug.lib.terminal.windows_terminal import WindowsTerminal  # pylint: disable=import-outside-toplevel
             _windows_terminal = WindowsTerminal
 
         return _windows_terminal(working_directory)
 
     if _unix_terminal is None:
-        from humbug.terminal.unix_terminal import UnixTerminal  # pylint: disable=import-outside-toplevel
+        from humbug.lib.terminal.unix_terminal import UnixTerminal  # pylint: disable=import-outside-toplevel
         _unix_terminal = UnixTerminal
 
     return _unix_terminal(working_directory)

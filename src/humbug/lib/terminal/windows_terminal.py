@@ -17,7 +17,7 @@ import msvcrt
 import os
 from typing import Tuple, cast
 
-from humbug.terminal.terminal_base import TerminalBase
+from humbug.lib.terminal.terminal_base import TerminalBase
 
 
 # Define DWORD_PTR for 64-bit compatibility

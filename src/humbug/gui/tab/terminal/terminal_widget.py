@@ -15,8 +15,8 @@ from PySide6.QtGui import (
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.tab.terminal.terminal_selection import TerminalSelection
-from humbug.terminal.terminal_buffer import CharacterAttributes, TerminalBuffer
-from humbug.terminal.terminal_state import TerminalState
+from humbug.lib.terminal.terminal_buffer import CharacterAttributes, TerminalBuffer
+from humbug.lib.terminal.terminal_state import TerminalState
 
 
 @dataclass
