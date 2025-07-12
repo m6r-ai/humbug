@@ -3,10 +3,10 @@ import os
 from pathlib import Path
 from typing import List, Set, cast
 
-from humbug.metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
-from humbug.metaphor.metaphor_embed_lexer import MetaphorEmbedLexer
-from humbug.metaphor.metaphor_lexer import MetaphorLexer
-from humbug.metaphor.metaphor_ast_node import (
+from metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
+from metaphor.metaphor_embed_lexer import MetaphorEmbedLexer
+from metaphor.metaphor_lexer import MetaphorLexer
+from metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
 )

@@ -6,12 +6,12 @@ Utility script to generate test fixtures from Metaphor files.
 import argparse
 import sys
 
-from humbug.metaphor.metaphor_ast_builder import MetaphorASTBuilder
-from humbug.metaphor.metaphor_ast_node import MetaphorRootNode
-
 # pylint: disable=unused-import
 import syntax.parser_imports
 # pylint: enable=unused-import
+
+from metaphor.metaphor_ast_builder import MetaphorASTBuilder
+from metaphor.metaphor_ast_node import MetaphorRootNode
 
 from tests.metaphor.metaphor_ast_serializer import save_ast_to_json
 

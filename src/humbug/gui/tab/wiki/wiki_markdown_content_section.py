@@ -11,6 +11,10 @@ from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
 )
 
+from markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
+from syntax.programming_language import ProgrammingLanguage
+from syntax.programming_language_utils import ProgrammingLanguageUtils
+
 from humbug.gui.color_role import ColorRole
 from humbug.gui.style_manager import StyleManager
 from humbug.gui.markdown_block_data import HeadingBlockData
@@ -18,9 +22,6 @@ from humbug.gui.markdown_renderer import MarkdownRenderer
 from humbug.gui.markdown_text_edit import MarkdownTextEdit
 from humbug.gui.tab.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
 from humbug.language.language_manager import LanguageManager
-from syntax.programming_language import ProgrammingLanguage
-from syntax.programming_language_utils import ProgrammingLanguageUtils
-from humbug.markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
 
 
 class WikiMarkdownContentSection(QFrame):

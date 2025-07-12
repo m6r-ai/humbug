@@ -14,11 +14,7 @@ from PySide6.QtGui import (
     QTextTableFormat, QTextFrameFormat, QTextLength, QImage, QTextImageFormat
 )
 
-from humbug.gui.color_role import ColorRole
-from humbug.gui.style_manager import StyleManager
-from humbug.gui.markdown_block_data import HeadingBlockData
-from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.markdown.markdown_ast_node import (
+from markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownDocumentNode, MarkdownParagraphNode, MarkdownHeadingNode,
     MarkdownTextNode, MarkdownBoldNode, MarkdownEmphasisNode, MarkdownInlineCodeNode,
     MarkdownCodeBlockNode, MarkdownListItemNode, MarkdownOrderedListNode,
@@ -26,6 +22,11 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
     MarkdownLinkNode, MarkdownImageNode
 )
+
+from humbug.gui.color_role import ColorRole
+from humbug.gui.style_manager import StyleManager
+from humbug.gui.markdown_block_data import HeadingBlockData
+from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class MarkdownRenderer(MarkdownASTVisitor):

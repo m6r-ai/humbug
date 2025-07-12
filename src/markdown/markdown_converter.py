@@ -10,8 +10,9 @@ from typing import List, Tuple, cast
 
 from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
-from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
-from humbug.markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode
+
+from markdown.markdown_ast_builder import MarkdownASTBuilder
+from markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode
 
 
 class MarkdownConverter:

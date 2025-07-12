@@ -8,10 +8,10 @@ import difflib
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
-from metaphor_ast_serializer import serialize_ast, load_ast_from_json
+from metaphor.metaphor_ast_builder import MetaphorASTBuilder
+from metaphor.metaphor_ast_node import MetaphorRootNode
 
-from humbug.metaphor.metaphor_ast_builder import MetaphorASTBuilder
-from humbug.metaphor.metaphor_ast_node import MetaphorRootNode
+from metaphor_ast_serializer import serialize_ast, load_ast_from_json
 
 
 def get_test_fixtures_dir() -> Path:

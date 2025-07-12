@@ -6,7 +6,11 @@ import logging
 import re
 from typing import Dict, List, Tuple, Any, cast
 
-from humbug.markdown.markdown_ast_node import (
+from syntax.parser_registry import ParserRegistry
+from syntax.programming_language import ProgrammingLanguage
+from syntax.programming_language_utils import ProgrammingLanguageUtils
+
+from markdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode, MarkdownLineBreakNode,
     MarkdownEmphasisNode, MarkdownBoldNode, MarkdownHeadingNode,
     MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
@@ -15,9 +19,6 @@ from humbug.markdown.markdown_ast_node import (
     MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
     MarkdownImageNode, MarkdownLinkNode
 )
-from syntax.parser_registry import ParserRegistry
-from syntax.programming_language import ProgrammingLanguage
-from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class TableBufferState:

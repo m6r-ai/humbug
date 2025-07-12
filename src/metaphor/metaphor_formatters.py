@@ -3,7 +3,7 @@
 import io
 from typing import List
 
-from humbug.metaphor.metaphor_ast_builder import MetaphorASTBuilderSyntaxError
+from metaphor.metaphor_ast_builder import MetaphorASTBuilderSyntaxError
 
 
 def format_preamble() -> str:

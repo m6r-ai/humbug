@@ -7,9 +7,9 @@ from pathlib import Path
 import difflib
 from typing import Dict, Any, List, Tuple, Optional
 
-from markdown_ast_serializer import serialize_ast, load_ast_from_json
+from markdown.markdown_ast_builder import MarkdownASTBuilder
 
-from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
+from markdown_ast_serializer import serialize_ast, load_ast_from_json
 
 
 def get_test_fixtures_dir() -> Path:

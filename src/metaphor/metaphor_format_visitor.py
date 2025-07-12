@@ -6,7 +6,8 @@ import io
 from typing import Any, Dict, Final, TextIO, Type, cast
 
 from dast.ast import ASTNode
-from humbug.metaphor.metaphor_ast_node import (
+
+from metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorASTVisitor, MetaphorActionNode, MetaphorCodeNode,
     MetaphorContextNode, MetaphorRoleNode, MetaphorRootNode, MetaphorTextNode
 )

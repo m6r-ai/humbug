@@ -4,7 +4,7 @@ Visitor class for serializing and comparing markdown AST structures
 from typing import Dict, Any
 import json
 
-from humbug.markdown.markdown_ast_node import (
+from markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownASTNode, MarkdownDocumentNode,
     MarkdownTextNode, MarkdownLineBreakNode, MarkdownEmphasisNode,
     MarkdownBoldNode, MarkdownHeadingNode, MarkdownParagraphNode,

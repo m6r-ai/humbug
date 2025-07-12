@@ -4,7 +4,8 @@ Visitor class to print markdown AST structures for debugging
 from typing import List, Any, cast
 
 from dast.ast import ASTNode
-from humbug.markdown.markdown_ast_node import (
+
+from markdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownTextNode, MarkdownHeadingNode, MarkdownInlineCodeNode,
     MarkdownCodeBlockNode, MarkdownASTNode, MarkdownTableNode, MarkdownTableHeaderNode,
     MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,

@@ -9,12 +9,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor
 
+from markdown.markdown_converter import MarkdownConverter
+from syntax.programming_language import ProgrammingLanguage
+
 from humbug.gui.color_role import ColorRole
 from humbug.gui.tab.wiki.wiki_content import WikiContent
 from humbug.gui.tab.wiki.wiki_markdown_content_section import WikiMarkdownContentSection
 from humbug.language.language_manager import LanguageManager
-from syntax.programming_language import ProgrammingLanguage
-from humbug.markdown.markdown_converter import MarkdownConverter
 
 
 class WikiMarkdownContent(WikiContent):

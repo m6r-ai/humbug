@@ -8,7 +8,7 @@ import pytest
 import syntax.parser_imports
 # pylint: enable=unused-import
 
-from humbug.markdown.markdown_ast_builder import MarkdownASTBuilder
+from markdown.markdown_ast_builder import MarkdownASTBuilder
 
 from markdown_test_utils import (
     find_test_files,

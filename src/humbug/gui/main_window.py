@@ -13,6 +13,11 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
+from metaphor import (
+    MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorFormatVisitor, MetaphorRootNode,
+    format_errors, format_preamble
+)
+
 from humbug.ai.ai_model import ReasoningCapability
 from humbug.ai.ai_tool_manager import AIToolManager
 from humbug.ai.tools.ai_tool_calculator import AIToolCalculator
@@ -43,10 +48,6 @@ from humbug.gui.tab.shell.shell_command_registry import ShellCommandRegistry
 from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
 from humbug.gui.user_settings_dialog import UserSettingsDialog
 from humbug.language.language_manager import LanguageManager
-from humbug.metaphor import (
-    MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorFormatVisitor, MetaphorRootNode,
-    format_errors, format_preamble
-)
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
