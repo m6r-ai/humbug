@@ -18,7 +18,7 @@ from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 import syntax.parser_imports
 # pylint: enable=unused-import
 
-from humbug.gui.main_window import MainWindow
+from humbug.main_window import MainWindow
 
 
 def setup_logging() -> None:
