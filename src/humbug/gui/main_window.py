@@ -351,7 +351,7 @@ class MainWindow(QMainWindow):
         self._splitter.addWidget(self._column_manager)
 
         # Set initial file tree width
-        self._splitter.setSizes([240, self.width() - 240])
+        self._splitter.setSizes([300, self.width() - 300])
 
         # Set the stretch factors: 0 for file tree (no stretch) and 1 for column manager (stretch to fill)
         self._splitter.setStretchFactor(0, 0)
