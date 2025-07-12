@@ -160,8 +160,10 @@ class TestAIToolFileSystemCopyFile:
              patch('shutil.copy2') as mock_copy2:
 
             # Mock exists to return True for source, False for destination
-            def exists_side_effect(path_obj):
-                return "source.txt" in str(path_obj)
+            def exists_side_effect():
+                # Get the path from the mock object's string representation
+                path_str = str(mock_exists.return_value.__self__ if hasattr(mock_exists.return_value, '__self__') else mock_exists)
+                return "source.txt" in path_str
 
             mock_exists.side_effect = exists_side_effect
             mock_is_file.return_value = True
@@ -300,8 +302,12 @@ class TestAIToolFileSystemCopyFile:
              patch('pathlib.Path.stat') as mock_stat:
 
             # Mock exists to return True for source, False for destination
-            def exists_side_effect(path_obj):
-                return "source.txt" in str(path_obj)
+            # We need to track which path object is being checked
+            call_count = [0]
+            def exists_side_effect():
+                call_count[0] += 1
+                # First call is for source (should exist), second is for destination (should not exist)
+                return call_count[0] == 1
 
             mock_exists.side_effect = exists_side_effect
             mock_is_file.return_value = True
@@ -336,8 +342,11 @@ class TestAIToolFileSystemCopyFile:
              patch('shutil.copy2') as mock_copy2:
 
             # Mock exists to return True for source, False for destination
-            def exists_side_effect(path_obj):
-                return "source.txt" in str(path_obj)
+            call_count = [0]
+            def exists_side_effect():
+                call_count[0] += 1
+                # First call is for source (should exist), second is for destination (should not exist)
+                return call_count[0] == 1
 
             mock_exists.side_effect = exists_side_effect
             mock_is_file.return_value = True
@@ -374,8 +383,11 @@ class TestAIToolFileSystemCopyFile:
              patch('shutil.copy2') as mock_copy2:
 
             # Mock exists to return True for source, False for destination
-            def exists_side_effect(path_obj):
-                return "source.txt" in str(path_obj)
+            call_count = [0]
+            def exists_side_effect():
+                call_count[0] += 1
+                # First call is for source (should exist), second is for destination (should not exist)
+                return call_count[0] == 1
 
             mock_exists.side_effect = exists_side_effect
             mock_is_file.return_value = True
