@@ -5,7 +5,7 @@ of a Metaphor document.
 
 from typing import List, Any, cast
 
-from humbug.ast.ast import ASTNode, ASTVisitor
+from humbug.lib.ast.ast import ASTNode, ASTVisitor
 
 
 class MetaphorASTNode(ASTNode):

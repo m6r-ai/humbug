@@ -5,7 +5,7 @@ Format visitor implementation for Metaphor AST.
 import io
 from typing import Any, Dict, Final, TextIO, Type, cast
 
-from humbug.ast.ast import ASTNode
+from humbug.lib.ast.ast import ASTNode
 from humbug.metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorASTVisitor, MetaphorActionNode, MetaphorCodeNode,
     MetaphorContextNode, MetaphorRoleNode, MetaphorRootNode, MetaphorTextNode
