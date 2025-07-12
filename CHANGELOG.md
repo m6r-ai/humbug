@@ -17,6 +17,12 @@ Bug fixes:
   user clicked the tab, but didn't click the message.
 - A couple of OpenAI LLM models had the wrong name.
 
+Internal structure changes:
+
+- Massively reworked the source code structure.  Instead of all components sitting under src/humbug, many generic components
+  have been moved to the src directory.  At the same time, any dependendencies that might make reuse of those components
+  has been reworked so they can stand alone.
+
 ## v0.18 (2025-07-08)
 
 New features:
