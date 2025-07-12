@@ -1082,6 +1082,14 @@ class MainWindow(QMainWindow):
         )
         return conversation_tab
 
+    def _get_canonical_mindspace_path(self, path: str) -> str | None:
+        """Get the canonical path of the current mindspace."""
+        if not self._mindspace_manager.has_mindspace():
+            return None
+
+        # Get the absolute path of the current mindspace
+        return self._mindspace_manager.get_relative_path(path)
+
     def _new_metaphor_conversation(self) -> None:
         """Create new conversation from Metaphor file."""
         # Show file dialog
@@ -1101,7 +1109,7 @@ class MainWindow(QMainWindow):
         self._mindspace_manager.update_file_dialog_directory(file_path)
         search_path = self._mindspace_manager.mindspace_path()
 
-        metaphor_ast_builder = MetaphorASTBuilder()
+        metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
         try:
             syntax_tree = MetaphorRootNode()
             metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, [file_path])
@@ -1385,7 +1393,7 @@ class MainWindow(QMainWindow):
         """Process the m6rc command."""
         search_path = self._mindspace_manager.mindspace_path()
 
-        metaphor_ast_builder = MetaphorASTBuilder()
+        metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
         try:
             syntax_tree = MetaphorRootNode()
             metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, args)

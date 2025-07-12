@@ -1,7 +1,7 @@
 import glob
 import os
 from pathlib import Path
-from typing import List, Set, cast
+from typing import List, Set, cast, Callable
 
 from metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
 from metaphor.metaphor_embed_lexer import MetaphorEmbedLexer
@@ -10,7 +10,6 @@ from metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode,
     MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
 )
-from humbug.mindspace.mindspace_manager import MindspaceManager
 
 
 class MetaphorASTBuilderFileAlreadyUsedError(Exception):
@@ -51,7 +50,7 @@ class MetaphorASTBuilder:
         embed_path (str): Path used to search for embedded files.
         current_token (MetaphorToken | None): The current token being processed.
     """
-    def __init__(self) -> None:
+    def __init__(self, get_cannonical_path_callback: Callable[[str], str | None] | None = None) -> None:
         self._parse_errors: List[MetaphorASTBuilderSyntaxError] = []
         self._lexers: List[MetaphorLexer | MetaphorEmbedLexer] = []
         self._previously_seen_files: Set[str] = set()
@@ -59,7 +58,7 @@ class MetaphorASTBuilder:
         self._embed_path: str = ""
         self._current_token: MetaphorToken | None = None
         self._arguments: List[str] = []
-        self._mindspace_manager = MindspaceManager()
+        self._get_cannonical_path: Callable[[str], str | None] | None = get_cannonical_path_callback
 
     def _has_role_node(self, node: MetaphorASTNode) -> bool:
         """
@@ -536,5 +535,9 @@ class MetaphorASTBuilder:
 
         for file in files:
             input_text = self._read_file(file)
-            mindspace_relative_path = self._mindspace_manager.get_relative_path(file)
+            mindspace_relative_path = self._get_cannonical_path(file) if self._get_cannonical_path else file
+            if not mindspace_relative_path:
+                self._record_syntax_error(token_next, f"Could not get canonical path for {file}")
+                return
+
             self._lexers.append(MetaphorEmbedLexer(input_text, mindspace_relative_path))
