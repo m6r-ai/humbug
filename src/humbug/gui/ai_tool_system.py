@@ -2,8 +2,8 @@ import logging
 import os
 from typing import Dict, Any
 
-from humbug.ai.ai_conversation_settings import AIConversationSettings
-from humbug.ai.ai_tool_manager import (
+from ai.ai_conversation_settings import AIConversationSettings
+from ai.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback
 )

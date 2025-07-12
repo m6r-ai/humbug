@@ -8,8 +8,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from humbug.ai.tools.ai_tool_clock import AIToolClock
-from humbug.ai.ai_tool_manager import AIToolDefinition, AIToolParameter, AIToolExecutionError, AITool
+from ai.tools.ai_tool_clock import AIToolClock
+from ai.ai_tool_manager import AIToolDefinition, AIToolParameter, AIToolExecutionError, AITool
 
 
 @pytest.fixture
@@ -22,7 +22,7 @@ def clock_tool():
 def mock_datetime():
     """Fixture providing a mocked datetime for predictable testing."""
     mock_dt = datetime(2023, 12, 25, 14, 30, 45, 123456)
-    with patch('humbug.ai.tools.ai_tool_clock.datetime') as mock:
+    with patch('ai.tools.ai_tool_clock.datetime') as mock:
         mock.now.return_value = mock_dt
         yield mock_dt
 
@@ -136,7 +136,7 @@ class TestAIToolClockErrorHandling:
 
     def test_execute_datetime_exception_wrapped(self, clock_tool, mock_authorization):
         """Test that datetime exceptions are properly wrapped."""
-        with patch('humbug.ai.tools.ai_tool_clock.datetime') as mock_datetime:
+        with patch('ai.tools.ai_tool_clock.datetime') as mock_datetime:
             mock_datetime.now.side_effect = OSError("System clock error")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
@@ -150,7 +150,7 @@ class TestAIToolClockErrorHandling:
 
     def test_execute_timestamp_conversion_error(self, clock_tool, mock_authorization):
         """Test handling of timestamp conversion errors."""
-        with patch('humbug.ai.tools.ai_tool_clock.datetime') as mock_datetime:
+        with patch('ai.tools.ai_tool_clock.datetime') as mock_datetime:
             # Create a datetime that will cause timestamp() to fail
             mock_dt = MagicMock()
             mock_dt.timestamp.side_effect = ValueError("Invalid timestamp")
@@ -165,7 +165,7 @@ class TestAIToolClockErrorHandling:
 
     def test_execute_isoformat_error(self, clock_tool, mock_authorization):
         """Test handling of isoformat errors."""
-        with patch('humbug.ai.tools.ai_tool_clock.datetime') as mock_datetime:
+        with patch('ai.tools.ai_tool_clock.datetime') as mock_datetime:
             # Create a datetime that will cause isoformat() to fail
             mock_dt = MagicMock()
             mock_dt.isoformat.side_effect = AttributeError("No isoformat method")
@@ -179,7 +179,7 @@ class TestAIToolClockErrorHandling:
 
     def test_execute_strftime_error(self, clock_tool, mock_authorization):
         """Test handling of strftime errors."""
-        with patch('humbug.ai.tools.ai_tool_clock.datetime') as mock_datetime:
+        with patch('ai.tools.ai_tool_clock.datetime') as mock_datetime:
             # Create a datetime that will cause strftime() to fail
             mock_dt = MagicMock()
             mock_dt.strftime.side_effect = ValueError("Invalid format string")

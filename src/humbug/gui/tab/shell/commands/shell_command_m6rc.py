@@ -4,11 +4,12 @@ import logging
 import os
 from typing import Callable, Dict, List
 
-from humbug.ai.ai_conversation_settings import AIConversationSettings
-from humbug.ai.ai_model import ReasoningCapability
+from ai.ai_conversation_settings import AIConversationSettings
+from ai.ai_model import ReasoningCapability
+from syntax.lexer import Token, TokenType
+
 from humbug.gui.tab.shell.shell_command import ShellCommand
 from humbug.gui.tab.shell.shell_message_source import ShellMessageSource
-from syntax.lexer import Token, TokenType
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.user.user_manager import UserManager
 

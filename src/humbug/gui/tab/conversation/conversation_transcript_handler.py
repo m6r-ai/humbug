@@ -6,7 +6,8 @@ import logging
 import os
 from typing import Dict, List, Any
 
-from humbug.ai.ai_message import AIMessage
+from ai.ai_message import AIMessage
+
 from humbug.gui.tab.conversation.conversation_transcript_error import (
     ConversationTranscriptFormatError, ConversationTranscriptIOError
 )

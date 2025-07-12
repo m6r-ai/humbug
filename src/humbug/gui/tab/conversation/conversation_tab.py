@@ -10,8 +10,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from humbug.ai.ai_conversation_settings import AIConversationSettings
-from humbug.ai.ai_message_source import AIMessageSource
+from ai.ai_conversation_settings import AIConversationSettings
+from ai.ai_message_source import AIMessageSource
+
 from humbug.gui.color_role import ColorRole
 from humbug.gui.find_widget import FindWidget
 from humbug.gui.status_message import StatusMessage

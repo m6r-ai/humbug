@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 
-from humbug.ai.ai_tool_manager import AIToolExecutionError
+from ai.ai_tool_manager import AIToolExecutionError
 
 
 class TestAIToolFileSystemIntegration:
@@ -262,7 +262,7 @@ class TestAIToolFileSystemParametrized:
     ])
     def test_supported_operations_in_definition(self, operation):
         """Test that all supported operations are included in definition."""
-        from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+        from ai.tools.ai_tool_filesystem import AIToolFileSystem
         filesystem_tool = AIToolFileSystem()
         definition = filesystem_tool.get_definition()
         operation_param = definition.parameters[0]
@@ -272,7 +272,7 @@ class TestAIToolFileSystemParametrized:
     @pytest.mark.parametrize("encoding", ["utf-8", "utf-16", "ascii", "latin-1"])
     def test_supported_encodings_in_definition(self, encoding):
         """Test that all supported encodings are included in definition."""
-        from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+        from ai.tools.ai_tool_filesystem import AIToolFileSystem
         filesystem_tool = AIToolFileSystem()
         definition = filesystem_tool.get_definition()
         encoding_param = next(p for p in definition.parameters if p.name == "encoding")
@@ -287,7 +287,7 @@ class TestAIToolFileSystemParametrized:
     ])
     def test_custom_max_file_sizes(self, max_size_mb, expected_bytes):
         """Test filesystem tool with different max file sizes."""
-        from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+        from ai.tools.ai_tool_filesystem import AIToolFileSystem
         tool = AIToolFileSystem(max_file_size_mb=max_size_mb)
 
         assert tool._max_file_size_bytes == expected_bytes
@@ -386,7 +386,7 @@ class TestAIToolFileSystemErrorHandling:
 
     def test_all_operations_handle_mindspace_validation(self, mock_mindspace_manager, mock_authorization):
         """Test that all operations properly validate mindspace access."""
-        from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+        from ai.tools.ai_tool_filesystem import AIToolFileSystem
 
         mock_mindspace_manager.has_mindspace.return_value = False
         filesystem_tool = AIToolFileSystem()

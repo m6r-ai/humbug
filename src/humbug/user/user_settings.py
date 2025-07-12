@@ -5,7 +5,8 @@ import json
 import os
 from typing import Dict
 
-from humbug.ai.ai_backend_settings import AIBackendSettings
+from ai.ai_backend_settings import AIBackendSettings
+
 from humbug.language.language_code import LanguageCode
 from humbug.gui.style_manager import ColorMode
 

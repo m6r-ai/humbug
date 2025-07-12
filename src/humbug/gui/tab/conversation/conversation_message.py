@@ -8,12 +8,12 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, QPoint, QSize, Qt
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
+from ai.ai_message_source import AIMessageSource
+from ai.ai_tool_manager import AIToolCall
 from markdown.markdown_ast_node import MarkdownDocumentNode, MarkdownTextNode
 from markdown.markdown_converter import MarkdownConverter
 from syntax.programming_language import ProgrammingLanguage
 
-from humbug.ai.ai_message_source import AIMessageSource
-from humbug.ai.ai_tool_manager import AIToolCall
 from humbug.gui.color_role import ColorRole
 from humbug.gui.min_height_text_edit import MinHeightTextEdit
 from humbug.gui.style_manager import StyleManager

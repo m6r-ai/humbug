@@ -12,12 +12,13 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QEvent, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
 
-from humbug.ai.ai_conversation import AIConversation, AIConversationEvent
-from humbug.ai.ai_conversation_history import AIConversationHistory
-from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
-from humbug.ai.ai_message import AIMessage
-from humbug.ai.ai_message_source import AIMessageSource
-from humbug.ai.ai_tool_manager import AIToolCall
+from ai.ai_conversation import AIConversation, AIConversationEvent
+from ai.ai_conversation_history import AIConversationHistory
+from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
+from ai.ai_message import AIMessage
+from ai.ai_message_source import AIMessageSource
+from ai.ai_tool_manager import AIToolCall
+
 from humbug.gui.color_role import ColorRole
 from humbug.gui.message_box import MessageBox, MessageBoxType
 from humbug.gui.style_manager import StyleManager

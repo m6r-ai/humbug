@@ -18,11 +18,12 @@ from metaphor import (
     format_errors, format_preamble
 )
 
-from humbug.ai.ai_model import ReasoningCapability
-from humbug.ai.ai_tool_manager import AIToolManager
-from humbug.ai.tools.ai_tool_calculator import AIToolCalculator
-from humbug.ai.tools.ai_tool_clock import AIToolClock
-from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+from ai.ai_model import ReasoningCapability
+from ai.ai_tool_manager import AIToolManager
+from ai.tools.ai_tool_calculator import AIToolCalculator
+from ai.tools.ai_tool_clock import AIToolClock
+from ai.tools.ai_tool_filesystem import AIToolFileSystem
+
 from humbug.gui.about_dialog import AboutDialog
 from humbug.gui.ai_tool_system import AIToolSystem
 from humbug.gui.color_role import ColorRole

@@ -7,10 +7,10 @@ from unittest.mock import patch
 
 import pytest
 
-from humbug.ai.ai_tool_manager import (
+from ai.ai_tool_manager import (
     AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
 )
-from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+from ai.tools.ai_tool_filesystem import AIToolFileSystem
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError
 
 

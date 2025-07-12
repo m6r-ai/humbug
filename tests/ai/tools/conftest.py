@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from humbug.ai.tools.ai_tool_filesystem import AIToolFileSystem
+from ai.tools.ai_tool_filesystem import AIToolFileSystem
 
 
 @pytest.fixture

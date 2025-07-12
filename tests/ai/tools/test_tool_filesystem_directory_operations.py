@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from humbug.ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
+from ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
 
 
 class TestAIToolFileSystemListDirectory:

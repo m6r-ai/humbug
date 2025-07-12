@@ -13,8 +13,9 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from humbug.ai.ai_backend_settings import AIBackendSettings
-from humbug.ai.ai_provider import AIProvider
+from ai.ai_backend_settings import AIBackendSettings
+from ai.ai_provider import AIProvider
+
 from humbug.gui.style_manager import StyleManager, ColorMode
 from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager

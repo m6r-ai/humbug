@@ -7,8 +7,8 @@ from unittest.mock import patch
 
 import pytest
 
-from humbug.ai.ai_tool_manager import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
-from humbug.ai.tools.ai_tool_calculator import AIToolCalculator, SafeMathEvaluator
+from ai.ai_tool_manager import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
+from ai.tools.ai_tool_calculator import AIToolCalculator, SafeMathEvaluator
 
 
 @pytest.fixture

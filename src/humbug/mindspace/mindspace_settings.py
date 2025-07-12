@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 import json
 
-from humbug.ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
+from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 
 
 @dataclass
