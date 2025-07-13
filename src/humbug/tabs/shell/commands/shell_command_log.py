@@ -1,10 +1,11 @@
 """Command for opening the mindspace log."""
 
 import logging
-from typing import List, Callable
+from typing import List
 
 from syntax.lexer import Token
 
+from humbug.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
 
@@ -12,7 +13,7 @@ from humbug.tabs.shell.shell_message_source import ShellMessageSource
 class ShellCommandLog(ShellCommand):
     """Command to open the mindspace log."""
 
-    def __init__(self, process_log_command_callback: Callable[[], bool]) -> None:
+    def __init__(self, column_manager: ColumnManager) -> None:
         """
         Initialize the command.
 
@@ -20,7 +21,7 @@ class ShellCommandLog(ShellCommand):
             process_clear_command_callback: Callback to process the clear command
         """
         super().__init__()
-        self._process_log_command = process_log_command_callback
+        self._column_manager = column_manager
         self._logger = logging.getLogger("ShellCommandLog")
 
     def name(self) -> str:
@@ -45,7 +46,14 @@ class ShellCommandLog(ShellCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        self._process_log_command()
+        self._column_manager.protect_current_tab(True)
+
+        try:
+            self._column_manager.show_system_log()
+
+        finally:
+            self._column_manager.protect_current_tab(False)
+
         self._history_manager.add_message(
             ShellMessageSource.SUCCESS,
             "Opened mindspace log"

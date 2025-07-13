@@ -5,7 +5,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import cast, Dict, List, Tuple
+from typing import cast, Dict, Tuple
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
@@ -19,7 +19,6 @@ from metaphor import (
     format_errors, format_preamble
 )
 
-from ai.ai_model import ReasoningCapability
 from ai.ai_tool_manager import AIToolManager
 from ai.tools.ai_tool_calculator import AIToolCalculator
 from ai.tools.ai_tool_clock import AIToolClock
@@ -50,9 +49,7 @@ from humbug.tabs.shell.commands.shell_command_log import ShellCommandLog
 from humbug.tabs.shell.commands.shell_command_m6rc import ShellCommandM6rc
 from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTerminal
 from humbug.tabs.shell.commands.shell_command_wiki import ShellCommandWiki
-from humbug.tabs.shell.shell_history_manager import ShellHistoryManager
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 from humbug.user.user_settings_dialog import UserSettingsDialog
@@ -406,33 +403,16 @@ class MainWindow(QMainWindow):
 
         # Initialize command registry and register commands
         self._command_registry = ShellCommandRegistry()
-        self._shell_history = ShellHistoryManager()
-
-        # Create and register commands
-        clear_command = ShellCommandClear(self._process_clear_command)
-        self._command_registry.register_command(clear_command)
-
-        conversation_command = ShellCommandConversation(self._process_conversation_command)
-        self._command_registry.register_command(conversation_command)
-
-        edit_command = ShellCommandEdit(self._process_edit_command)
-        self._command_registry.register_command(edit_command)
-
-        log_command = ShellCommandLog(self._process_log_command)
-        self._command_registry.register_command(log_command)
-
-        m6rc_command = ShellCommandM6rc(self._process_m6rc_command)
-        self._command_registry.register_command(m6rc_command)
-
-        terminal_command = ShellCommandTerminal(self._process_terminal_command)
-        self._command_registry.register_command(terminal_command)
-
-        wiki_command = ShellCommandWiki(self._process_wiki_command)
-        self._command_registry.register_command(wiki_command)
+        self._command_registry.register_command(ShellCommandClear(self._column_manager))
+        self._command_registry.register_command(ShellCommandConversation(self._column_manager))
+        self._command_registry.register_command(ShellCommandEdit(self._column_manager))
+        self._command_registry.register_command(ShellCommandLog(self._column_manager))
+        self._command_registry.register_command(ShellCommandM6rc(self._column_manager))
+        self._command_registry.register_command(ShellCommandTerminal(self._column_manager))
+        self._command_registry.register_command(ShellCommandWiki(self._column_manager))
 
         # Register help command last so it can see all other commands
-        help_command = ShellCommandHelp(self._command_registry)
-        self._command_registry.register_command(help_command)
+        self._command_registry.register_command(ShellCommandHelp(self._command_registry))
 
         self._ai_tool_manager = AIToolManager()
         self._ai_tool_manager.register_tool(AIToolCalculator())
@@ -1328,149 +1308,3 @@ class MainWindow(QMainWindow):
         self._save_mindspace_state()
         self._close_all_tabs()
         event.accept()
-
-    def _process_clear_command(self) -> bool:
-        """
-        Process the clear command by clearing shell history.
-
-        Returns:
-            True if command processed successfully, False otherwise
-        """
-        self._column_manager.clear_shell_history()
-        return True
-
-    def _process_conversation_command(
-        self,
-        model: str | None,
-        temperature: float | None,
-        reasoning: ReasoningCapability | None
-    ) -> bool:
-        """Process the conversation command."""
-        self._column_manager.protect_current_tab(True)
-        try:
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
-            conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
-
-        except MindspaceError as e:
-            self._shell_history.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
-            self._mindspace_manager.add_interaction(MindspaceLogLevel.ERROR, f"Shell failed to create conversation: {str(e)}")
-            return False
-
-        finally:
-            self._column_manager.protect_current_tab(False)
-
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"Shell created new conversion, tab ID: {conversation_tab.tab_id()}"
-        )
-        return True
-
-    def _process_edit_command(self, file_path: str) -> bool:
-        """Process the edit command."""
-        self._column_manager.protect_current_tab(True)
-
-        try:
-            editor_tab = self._column_manager.open_file(file_path)
-            self._file_tree.reveal_and_select_file(file_path)
-
-        finally:
-            self._column_manager.protect_current_tab(False)
-
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"Shell opened editor for: '{file_path}', tab ID: {editor_tab.tab_id()}"
-        )
-        return True
-
-    def _process_log_command(self) -> bool:
-        """
-        Process the log command by opening the mindspace log.
-
-        Returns:
-            True if command processed successfully, False otherwise
-        """
-        self._column_manager.protect_current_tab(True)
-
-        try:
-            self._column_manager.show_system_log()
-
-        finally:
-            self._column_manager.protect_current_tab(False)
-
-        return True
-
-    def _process_m6rc_command(
-        self,
-        file_path: str,
-        args: List[str],
-        model: str | None,
-        temperature: float | None,
-        reasoning: ReasoningCapability | None,
-        should_submit: bool
-    ) -> bool:
-        """Process the m6rc command."""
-        search_path = self._mindspace_manager.mindspace_path()
-
-        metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
-        try:
-            syntax_tree = MetaphorRootNode()
-            metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, args)
-            formatter = MetaphorFormatVisitor()
-            prompt = format_preamble() + formatter.format(syntax_tree)
-
-        except FileNotFoundError:
-            error = f"File not found: {file_path}"
-            self._shell_history.add_message(ShellMessageSource.ERROR, error)
-            return False
-
-        except MetaphorASTBuilderError as e:
-            error = f"m6rc compile failed:\n\n{format_errors(e.errors)}"
-            self._shell_history.add_message(ShellMessageSource.ERROR, error)
-            return False
-
-        self._column_manager.protect_current_tab(True)
-        try:
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
-            conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
-
-        except MindspaceError as e:
-            self._shell_history.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
-            return False
-
-        finally:
-            self._column_manager.protect_current_tab(False)
-
-        if conversation_tab is None:
-            return False
-
-        conversation_tab.set_input_text(prompt)
-
-        if should_submit:
-            conversation_tab.submit()
-
-        return True
-
-    def _process_terminal_command(self) -> bool:
-        """Process the terminal command."""
-        self._column_manager.protect_current_tab(True)
-
-        try:
-            self._column_manager.new_terminal()
-
-        finally:
-            self._column_manager.protect_current_tab(False)
-
-        return True
-
-    def _process_wiki_command(self, path: str) -> bool:
-        """Process the wiki command."""
-        self._column_manager.protect_current_tab(True)
-
-        try:
-            self._column_manager.open_wiki_page(path, False)
-            self._file_tree.reveal_and_select_file(path)
-
-        finally:
-            self._column_manager.protect_current_tab(False)
-
-        return True

@@ -2,10 +2,12 @@
 
 import logging
 import os
-from typing import List, Callable
+from typing import List
 
 from syntax.lexer import Token, TokenType
 
+from humbug.column_manager import ColumnManager
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
@@ -14,7 +16,7 @@ from humbug.tabs.shell.shell_message_source import ShellMessageSource
 class ShellCommandEdit(ShellCommand):
     """Command to open or create a file in an editor tab."""
 
-    def __init__(self, edit_file_callback: Callable[[str], bool]) -> None:
+    def __init__(self, column_manager: ColumnManager) -> None:
         """
         Initialize edit command.
 
@@ -22,7 +24,7 @@ class ShellCommandEdit(ShellCommand):
             open_file_callback: Callback to open an existing file
         """
         super().__init__()
-        self._edit_file = edit_file_callback
+        self._column_manager = column_manager
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("ShellCommandEdit")
 
@@ -73,13 +75,18 @@ class ShellCommandEdit(ShellCommand):
                         )
                         return False
 
-            if not self._edit_file(full_path):
-                self._history_manager.add_message(
-                    ShellMessageSource.ERROR,
-                    f"Failed to edit file: {args[0]}"
-                )
-                return False
+            self._column_manager.protect_current_tab(True)
 
+            try:
+                editor_tab = self._column_manager.open_file(full_path)
+
+            finally:
+                self._column_manager.protect_current_tab(False)
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Shell opened editor for: '{full_path}', tab ID: {editor_tab.tab_id()}"
+            )
             self._history_manager.add_message(
                 ShellMessageSource.SUCCESS,
                 f"Editing file: {args[0]}"

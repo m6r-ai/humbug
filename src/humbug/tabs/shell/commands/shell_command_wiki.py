@@ -2,10 +2,11 @@
 
 import logging
 import os
-from typing import List, Callable
+from typing import List
 
 from syntax.lexer import Token, TokenType
 
+from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
@@ -14,7 +15,7 @@ from humbug.tabs.shell.shell_message_source import ShellMessageSource
 class ShellCommandWiki(ShellCommand):
     """Command to open a wiki tab."""
 
-    def __init__(self, wiki_file_callback: Callable[[str], bool]) -> None:
+    def __init__(self, column_manager: ColumnManager) -> None:
         """
         Initialize wiki command.
 
@@ -22,7 +23,7 @@ class ShellCommandWiki(ShellCommand):
             open_file_callback: Callback to open an existing file
         """
         super().__init__()
-        self._wiki_file = wiki_file_callback
+        self._column_manager = column_manager
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("ShellCommandWiki")
 
@@ -69,12 +70,13 @@ class ShellCommandWiki(ShellCommand):
                         )
                         return False
 
-            if not self._wiki_file(full_path):
-                self._history_manager.add_message(
-                    ShellMessageSource.ERROR,
-                    f"Failed to open page: {args[0]}"
-                )
-                return False
+            self._column_manager.protect_current_tab(True)
+
+            try:
+                self._column_manager.open_wiki_page(full_path, False)
+
+            finally:
+                self._column_manager.protect_current_tab(False)
 
             self._history_manager.add_message(
                 ShellMessageSource.SUCCESS,

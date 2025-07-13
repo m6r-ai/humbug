@@ -2,12 +2,18 @@
 
 import logging
 import os
-from typing import Callable, Dict, List
+from typing import Dict, List
 
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_model import ReasoningCapability
 from syntax.lexer import Token, TokenType
 
+from metaphor.metaphor_ast_builder import MetaphorASTBuilder, MetaphorASTBuilderError
+from metaphor.metaphor_ast_node import MetaphorRootNode
+from metaphor.metaphor_formatters import format_errors, format_preamble
+from metaphor.metaphor_format_visitor import MetaphorFormatVisitor
+from humbug.column_manager import ColumnManager
+from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
@@ -17,10 +23,7 @@ from humbug.user.user_manager import UserManager
 class ShellCommandM6rc(ShellCommand):
     """Command to create a new conversation with a Metaphor file."""
 
-    def __init__(
-        self,
-        create_m6rc_conversation_callback: Callable[[str, List[str], str | None, float | None, ReasoningCapability | None, bool], bool]
-    ) -> None:
+    def __init__(self, column_manager: ColumnManager) -> None:
         """
         Initialize the command.
 
@@ -29,7 +32,7 @@ class ShellCommandM6rc(ShellCommand):
         """
         super().__init__()
         self._logger = logging.getLogger("ShellCommandM6rc")
-        self._create_m6rc_conversation = create_m6rc_conversation_callback
+        self._column_manager = column_manager
         self._user_manager = UserManager()
         self._mindspace_manager = MindspaceManager()
 
@@ -66,6 +69,14 @@ class ShellCommandM6rc(ShellCommand):
 
         # Default for unknown options
         return 0
+
+    def _get_canonical_mindspace_path(self, path: str) -> str | None:
+        """Get the canonical path of the current mindspace."""
+        if not self._mindspace_manager.has_mindspace():
+            return None
+
+        # Get the absolute path of the current mindspace
+        return self._mindspace_manager.get_relative_path(path)
 
     def _execute_command(self, tokens: List[Token]) -> bool:
         """
@@ -134,8 +145,44 @@ class ShellCommandM6rc(ShellCommand):
                 )
                 return False
 
-            if not self._create_m6rc_conversation(file_path, args, model, temperature_val, reasoning, should_submit):
+            search_path = self._mindspace_manager.mindspace_path()
+
+            metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
+            try:
+                syntax_tree = MetaphorRootNode()
+                metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, args)
+                formatter = MetaphorFormatVisitor()
+                prompt = format_preamble() + formatter.format(syntax_tree)
+
+            except FileNotFoundError:
+                error = f"File not found: {file_path}"
+                self._history_manager.add_message(ShellMessageSource.ERROR, error)
                 return False
+
+            except MetaphorASTBuilderError as e:
+                error = f"m6rc compile failed:\n\n{format_errors(e.errors)}"
+                self._history_manager.add_message(ShellMessageSource.ERROR, error)
+                return False
+
+            self._column_manager.protect_current_tab(True)
+            try:
+                self._mindspace_manager.ensure_mindspace_dir("conversations")
+                conversation_tab = self._column_manager.new_conversation(model, temperature_val, reasoning)
+
+            except MindspaceError as e:
+                self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
+                return False
+
+            finally:
+                self._column_manager.protect_current_tab(False)
+
+            if conversation_tab is None:
+                return False
+
+            conversation_tab.set_input_text(prompt)
+
+            if should_submit:
+                conversation_tab.submit()
 
             self._history_manager.add_message(
                 ShellMessageSource.SUCCESS,

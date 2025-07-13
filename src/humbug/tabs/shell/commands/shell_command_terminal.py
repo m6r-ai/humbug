@@ -1,9 +1,10 @@
 """Command for creating a new terminal tab from the shell."""
 
-from typing import Callable, List
+from typing import List
 
 from syntax.lexer import Token, TokenType
 
+from humbug.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
 
@@ -11,7 +12,7 @@ from humbug.tabs.shell.shell_message_source import ShellMessageSource
 class ShellCommandTerminal(ShellCommand):
     """Command to create a new terminal tab."""
 
-    def __init__(self, create_terminal_callback: Callable[[], bool]) -> None:
+    def __init__(self, column_manager: ColumnManager) -> None:
         """
         Initialize the command.
 
@@ -19,7 +20,7 @@ class ShellCommandTerminal(ShellCommand):
             create_terminal_callback: Function to call to create a new terminal
         """
         super().__init__()
-        self._create_terminal = create_terminal_callback
+        self._column_manager = column_manager
 
     def name(self) -> str:
         return "terminal"
@@ -40,7 +41,14 @@ class ShellCommandTerminal(ShellCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        self._create_terminal()
+        self._column_manager.protect_current_tab(True)
+
+        try:
+            self._column_manager.new_terminal()
+
+        finally:
+            self._column_manager.protect_current_tab(False)
+
         self._history_manager.add_message(
             ShellMessageSource.SUCCESS,
             "Started new terminal"

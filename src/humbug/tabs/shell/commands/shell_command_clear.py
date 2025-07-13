@@ -1,17 +1,18 @@
 """Command for clearing the shell history."""
 
 import logging
-from typing import List, Callable
+from typing import List
 
 from syntax.lexer import Token
 
+from humbug.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 
 
 class ShellCommandClear(ShellCommand):
     """Command to clear the shell history."""
 
-    def __init__(self, process_clear_command_callback: Callable[[], bool]) -> None:
+    def __init__(self, column_manager: ColumnManager) -> None:
         """
         Initialize the command.
 
@@ -19,7 +20,7 @@ class ShellCommandClear(ShellCommand):
             process_clear_command_callback: Callback to process the clear command
         """
         super().__init__()
-        self._process_clear_command = process_clear_command_callback
+        self._column_manager = column_manager
         self._logger = logging.getLogger("ShellCommandClear")
 
     def name(self) -> str:
@@ -44,4 +45,5 @@ class ShellCommandClear(ShellCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        return self._process_clear_command()
+        self._column_manager.clear_shell_history()
+        return True

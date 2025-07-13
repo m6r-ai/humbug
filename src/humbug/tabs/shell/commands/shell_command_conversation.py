@@ -1,12 +1,15 @@
 """Command for creating a new conversation tab from the system shell."""
 
 import logging
-from typing import List, Callable, Dict
+from typing import List, Dict
 
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_model import ReasoningCapability
 from syntax.lexer import Token, TokenType
 
+from humbug.column_manager import ColumnManager
+from humbug.mindspace.mindspace_error import MindspaceError
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
 from humbug.user.user_manager import UserManager
@@ -15,10 +18,7 @@ from humbug.user.user_manager import UserManager
 class ShellCommandConversation(ShellCommand):
     """Command to create a new conversation tab."""
 
-    def __init__(
-        self,
-        create_conversation_callback: Callable[[str | None, float | None, ReasoningCapability | None], bool]
-    ) -> None:
+    def __init__(self, column_manager: ColumnManager) -> None:
         """
         Initialize conversation command.
 
@@ -26,7 +26,7 @@ class ShellCommandConversation(ShellCommand):
             create_conversation_callback: Callback to create a new conversation with optional model
         """
         super().__init__()
-        self._create_conversation = create_conversation_callback
+        self._column_manager = column_manager
         self._user_manager = UserManager()
         self._logger = logging.getLogger("ShellCommandConversation")
 
@@ -113,13 +113,29 @@ class ShellCommandConversation(ShellCommand):
 
         try:
             # Create new conversation with model if specified
-            if not self._create_conversation(model, temperature_val, reasoning):
+            self._column_manager.protect_current_tab(True)
+            try:
+                self._mindspace_manager.ensure_mindspace_dir("conversations")
+                conversation_tab = self._column_manager.new_conversation(model, temperature_val, reasoning)
+
+            except MindspaceError as e:
+                self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.ERROR,
+                    f"Shell failed to create conversation: {str(e)}"
+                )
                 return False
 
-            # Success message would include model info if specified
+            finally:
+                self._column_manager.protect_current_tab(False)
+
             self._history_manager.add_message(
                 ShellMessageSource.SUCCESS,
                 "Started new conversation"
+            )
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Shell created new conversion, tab ID: {conversation_tab.tab_id()}"
             )
             return True
 
