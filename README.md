@@ -4,12 +4,14 @@ Build, reason, and create, side by side with AI.
 
 ## What is Humbug?
 
-Humbug is a modular, extensible platform that unifies your technical workflows with the power of AI.
+Humbug is a modular, extensible platform that augments your workflows with AI.
 Think of it as being like an operating system for human-AI collaboration.
-It's a workspace where you and your AI colleagues manage code, documents, and ideas together.
+It's a workspace where you and your AI colleagues work on ideas together.
 
 If you know exactly what you want it has tools to let you do those things, but if you're not sure then you can let your AI
 take control and guide you through what you want to do.
+
+Humbug lets you work on lots of different types of problems, but it shines at supporting you build software.
 
 ![Humbug in action](docs/v0.18-demo.gif)
 
@@ -81,6 +83,10 @@ take control and guide you through what you want to do.
 - **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
 - **YouTube:** [@m6rai on YouTube](https://youtube.com/@m6rai)
 
+## Get involved!
+
+Humbug is open source and the project welcomes contributions.  If you're interested in how then join the Discover server.
+
 ## Requirements
 
 - Python 3.10 or higher
@@ -129,3 +135,10 @@ take control and guide you through what you want to do.
 5. Initial configuration:
 
    See [Getting Started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) for a step-by-step guide to getting Humbug up and running.
+
+## Navigating the code
+
+The code is designed to be modular to make it easy to understand.
+Humbug itself includes a wiki-like viewer so if you clone this git repo you can simply create a mindspace with your humbug directory as the root of the mindspace.
+Open it up and click the top-level `humbug` folder and you'll see this `README.md` file.
+Any folders with their own `README.md` will give you pointers about what's in that folder.
