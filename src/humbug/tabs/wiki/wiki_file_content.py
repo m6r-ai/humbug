@@ -17,12 +17,12 @@ from syntax.programming_language_utils import ProgrammingLanguageUtils
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
-from humbug.tabs.wiki.wiki_content import WikiContent
+from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
 from humbug.tabs.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 
 
-class WikiFileContent(WikiContent):
+class WikiFileContent(WikiContentWidget):
     """Widget for displaying file content in the wiki with editing capabilities."""
 
     def __init__(self, parent: QWidget | None = None) -> None:

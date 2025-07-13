@@ -10,7 +10,6 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
-from humbug.mindspace.mindspace_wiki import MindspaceWiki
 from humbug.style_manager import StyleManager
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
@@ -49,9 +48,6 @@ class WikiTab(TabBase):
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("WikiTab")
         self._path = path
-
-        # Get or create mindspace wiki manager
-        self._wiki_manager = MindspaceWiki()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -114,7 +110,7 @@ class WikiTab(TabBase):
         """
         try:
             # Try to resolve the link path
-            resolved_path = self._wiki_manager.resolve_link(cast(str, self._path), url)
+            resolved_path = self._wiki_content_widget.resolve_link(cast(str, self._path), url)
             if resolved_path is not None:
                 # It's a local mindspace link - open in wiki tab
                 self.open_wiki_path.emit(resolved_path)

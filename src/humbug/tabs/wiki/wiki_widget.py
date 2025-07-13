@@ -13,10 +13,10 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_wiki import MindspaceWiki, MindspaceWikiContentType
 from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 from humbug.style_manager import StyleManager
-from humbug.tabs.wiki.wiki_content import WikiContent
+from humbug.tabs.wiki.wiki_content import WikiContent, WikiContentType
+from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
 from humbug.tabs.wiki.wiki_error import WikiIOError
 from humbug.tabs.wiki.wiki_file_content import WikiFileContent
 from humbug.tabs.wiki.wiki_markdown_content import WikiMarkdownContent
@@ -94,15 +94,15 @@ class WikiWidget(QWidget):
         self._logger = logging.getLogger("WikiWidget")
         self._path = path
 
-        self._mindspace_wiki = MindspaceWiki()
+        self._wiki = WikiContent()
 
         # File watching integration
         self._file_watcher = MindspaceFileWatcher()
         self._watched_paths: Set[str] = set()
 
         # Widget tracking
-        self._content_blocks: List[WikiContent] = []
-        self._content_with_selection: WikiContent | None = None
+        self._content_blocks: List[WikiContentWidget] = []
+        self._content_with_selection: WikiContentWidget | None = None
 
         # Initialize tracking variables
         self._auto_scroll = True
@@ -142,7 +142,7 @@ class WikiWidget(QWidget):
         content_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[WikiContent, List[Tuple[int, int, int]]] = {}
+        self._search_highlights: Dict[WikiContentWidget, List[Tuple[int, int, int]]] = {}
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._handle_language_changed)
@@ -170,11 +170,11 @@ class WikiWidget(QWidget):
         self._handle_style_changed()
 
         # Find functionality
-        self._matches: List[Tuple[WikiContent, List[Tuple[int, int, int]]]] = []
+        self._matches: List[Tuple[WikiContentWidget, List[Tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
-        self._highlighted_widgets: Set[WikiContent] = set()
+        self._highlighted_widgets: Set[WikiContentWidget] = set()
 
         # Set up activation tracking
         self._event_filter = WikiWidgetEventFilter(self)
@@ -290,7 +290,7 @@ class WikiWidget(QWidget):
                 for _ in range(min(target_match, total)):
                     self.find_text(find_state['last_search'], True)
 
-    def _add_content_block(self, content_type: MindspaceWikiContentType, content: str) -> WikiContent:
+    def _add_content_block(self, content_type: WikiContentType, content: str) -> WikiContentWidget:
         """
         Add a new content block to the wiki view.
 
@@ -299,15 +299,15 @@ class WikiWidget(QWidget):
             content: The content text
 
         Returns:
-            The created WikiContent widget
+            The created WikiContentWidget widget
         """
-        if content_type == MindspaceWikiContentType.MARKDOWN:
-            content_widget: WikiContent = WikiMarkdownContent(self)
+        if content_type == WikiContentType.MARKDOWN:
+            content_widget: WikiContentWidget = WikiMarkdownContent(self)
 
-        elif content_type == MindspaceWikiContentType.MARKDOWN_PREVIEW:
+        elif content_type == WikiContentType.MARKDOWN_PREVIEW:
             content_widget = WikiMarkdownPreviewContent(self)
 
-        elif content_type == MindspaceWikiContentType.FILE:
+        elif content_type == WikiContentType.FILE:
             content_widget = WikiFileContent(self)
 
         else:
@@ -398,8 +398,8 @@ class WikiWidget(QWidget):
     def load_content(self) -> None:
         """Load content from the mindspace wiki."""
         try:
-            # Use MindspaceWiki to get content and dependencies
-            content_list, dependencies = self._mindspace_wiki.get_wiki_content(self._path)
+            # Get content and dependencies
+            content_list, dependencies = self._wiki.get_wiki_content(self._path)
 
             # Clear existing content blocks
             self.clear_content()
@@ -426,6 +426,19 @@ class WikiWidget(QWidget):
 
         self._content_blocks = []
         self._content_with_selection = None
+
+    def resolve_link(self, current_path: str, target_path: str) -> str | None:
+        """
+        Resolve a link to an absolute path.
+
+        Args:
+            current_path: Path of the current wiki page
+            target_path: Target path from the link
+
+        Returns:
+            Absolute path to the target or None if it's an external link
+        """
+        return self._wiki.resolve_link(current_path, target_path)
 
     def set_path(self, new_path: str) -> None:
         """
@@ -567,7 +580,7 @@ class WikiWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
-    def _handle_selection_changed(self, content_widget: WikiContent, has_selection: bool) -> None:
+    def _handle_selection_changed(self, content_widget: WikiContentWidget, has_selection: bool) -> None:
         """Handle selection changes in content widgets."""
         if not has_selection:
             if self._content_with_selection:
@@ -795,7 +808,7 @@ class WikiWidget(QWidget):
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
 
-    def _handle_find_scroll(self, widget: WikiContent, section_num: int, position: int) -> None:
+    def _handle_find_scroll(self, widget: WikiContentWidget, section_num: int, position: int) -> None:
         """
         Handle scroll requests from find operations.
 

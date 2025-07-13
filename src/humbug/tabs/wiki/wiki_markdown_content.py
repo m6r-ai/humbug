@@ -14,11 +14,11 @@ from syntax.programming_language import ProgrammingLanguage
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.tabs.wiki.wiki_content import WikiContent
+from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
 from humbug.tabs.wiki.wiki_markdown_content_section import WikiMarkdownContentSection
 
 
-class WikiMarkdownContent(WikiContent):
+class WikiMarkdownContent(WikiContentWidget):
     """Widget for displaying markdown content in the wiki with sections."""
 
     def __init__(self, parent: QWidget | None = None, contained: bool = False) -> None:

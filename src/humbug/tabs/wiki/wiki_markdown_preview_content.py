@@ -9,11 +9,11 @@ from PySide6.QtGui import QColor
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
-from humbug.tabs.wiki.wiki_content import WikiContent
+from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
 from humbug.tabs.wiki.wiki_markdown_content import WikiMarkdownContent
 
 
-class WikiMarkdownPreviewContent(WikiContent):
+class WikiMarkdownPreviewContent(WikiContentWidget):
     """Widget for displaying markdown preview content in the wiki with a distinct visual container."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
