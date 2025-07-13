@@ -275,11 +275,12 @@ class AIToolCalculator(AITool):
             name="calculate",
             description=(
                 "Mathematical expression evaluator. "
-                "Arithmetic: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power). "
-                "Trigonometry: sin cos tan. "
-                "Logarithms: log log10 exp. "
-                "Other functions: sqrt abs round min max pow floor ceil. "
-                "Constants: pi e j (imaginary unit). "
+                "Support the following operations:\n"
+                "- Arithmetic: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power)\n"
+                "- Trigonometry: sin cos tan\n"
+                "- Logarithms: log log10 exp\n"
+                "- Other functions: sqrt abs round min max pow floor ceil\n"
+                "- Constants: pi e j (imaginary unit)\n"
                 "Supports parentheses, nested expressions, and complex numbers. "
                 "Results are simplified to real numbers when imaginary part is negligible."
             ),

@@ -8,6 +8,7 @@ New features:
   system audit logging for many types of system events.
 - Added support for Grok4 and updated all Grok3 instances to production versions, rather than beta versions.
 - Added a running total of both input and output tokens for conversation status.
+- Improved the "system" AI tools so the AI can now get details of all open tabs, and can move tabs between columns.
 
 Bug fixes:
 
