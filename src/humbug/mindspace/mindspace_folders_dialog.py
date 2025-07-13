@@ -8,9 +8,8 @@ from PySide6.QtWidgets import (
 )
 
 from humbug.language.language_manager import LanguageManager
-from humbug.settings.settings_components import (
-    SettingsContainer, SettingsFactory
-)
+from humbug.settings.settings_container import SettingsContainer
+from humbug.settings.settings_factory import SettingsFactory
 from humbug.style_manager import StyleManager
 
 

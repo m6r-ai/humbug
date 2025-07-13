@@ -10,7 +10,8 @@ from PySide6.QtCore import Signal
 from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 
 from humbug.language.language_manager import LanguageManager
-from humbug.settings.settings_components import SettingsContainer, SettingsFactory
+from humbug.settings.settings_container import SettingsContainer
+from humbug.settings.settings_factory import SettingsFactory
 from humbug.style_manager import StyleManager
 from humbug.user.user_manager import UserManager
 

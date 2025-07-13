@@ -18,10 +18,11 @@ from ai.ai_manager import AIManager
 
 from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager
-from humbug.settings.settings_components import (
-    SettingsContainer, SettingsFactory, SettingsSection,
-    SettingsCheckbox, SettingsTextField
-)
+from humbug.settings.settings_checkbox import SettingsCheckbox
+from humbug.settings.settings_container import SettingsContainer
+from humbug.settings.settings_factory import SettingsFactory
+from humbug.settings.settings_section import SettingsSection
+from humbug.settings.settings_text_field import SettingsTextField
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.user.user_settings import UserSettings
 
