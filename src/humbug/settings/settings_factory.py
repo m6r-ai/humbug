@@ -8,15 +8,15 @@ various types of settings items with default styling and behavior.
 from typing import List, Any, Tuple
 from PySide6.QtWidgets import QWidget
 
-from .settings_spacer import SettingsSpacer
-from .settings_header import SettingsHeader
-from .settings_section import SettingsSection
-from .settings_checkbox import SettingsCheckbox
-from .settings_combo import SettingsCombo
-from .settings_spinbox import SettingsSpinBox
-from .settings_double_spinbox import SettingsDoubleSpinBox
-from .settings_text_field import SettingsTextField
-from .settings_display import SettingsDisplay
+from humbug.settings.settings_spacer import SettingsSpacer
+from humbug.settings.settings_header import SettingsHeader
+from humbug.settings.settings_section import SettingsSection
+from humbug.settings.settings_checkbox import SettingsCheckbox
+from humbug.settings.settings_combo import SettingsCombo
+from humbug.settings.settings_spinbox import SettingsSpinBox
+from humbug.settings.settings_double_spinbox import SettingsDoubleSpinBox
+from humbug.settings.settings_text_field import SettingsTextField
+from humbug.settings.settings_display import SettingsDisplay
 
 
 class SettingsFactory:

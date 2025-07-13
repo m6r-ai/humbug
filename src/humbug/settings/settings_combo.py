@@ -7,9 +7,9 @@ setting widget.
 
 from typing import List, Any, Tuple
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QComboBox, QListView
+from PySide6.QtWidgets import QWidget, QComboBox, QListView
 
-from .settings_field import SettingsField
+from humbug.settings.settings_field import SettingsField
 
 
 class SettingsCombo(SettingsField):

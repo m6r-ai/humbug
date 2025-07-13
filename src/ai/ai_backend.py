@@ -118,7 +118,7 @@ class AIBackend(ABC):
                 post_timeout = aiohttp.ClientTimeout(
                     total=None,
                     sock_connect=20,
-                    sock_read=120
+                    sock_read=300
                 )
 
                 # Use explicit IPv4 for local connections as localhost can cause SSL issues!

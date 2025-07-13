@@ -5,9 +5,9 @@ This module defines the SettingsDoubleSpinBox class which provides a double spin
 setting widget for float values.
 """
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QDoubleSpinBox
+from PySide6.QtWidgets import QWidget, QDoubleSpinBox
 
-from .settings_field import SettingsField
+from humbug.settings.settings_field import SettingsField
 
 
 class SettingsDoubleSpinBox(SettingsField):

@@ -5,10 +5,10 @@ This module defines the SettingsDisplay class which provides a read-only display
 field widget.
 """
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PySide6.QtWidgets import QWidget, QLabel
 from PySide6.QtCore import Qt
 
-from .settings_field import SettingsField
+from humbug.settings.settings_field import SettingsField
 from humbug.style_manager import ColorRole
 
 

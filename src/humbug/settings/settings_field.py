@@ -5,11 +5,9 @@ This module defines the SettingsField class which provides a foundation for sett
 that include a label and an interactive control.
 """
 
-from typing import Any
-
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 
-from .settings_item import SettingsItem
+from humbug.settings.settings_item import SettingsItem
 
 
 class SettingsField(SettingsItem):

@@ -5,9 +5,9 @@ This module defines the SettingsTextField class which provides a text field
 setting widget.
 """
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLineEdit
+from PySide6.QtWidgets import QWidget, QLineEdit
 
-from .settings_field import SettingsField
+from humbug.settings.settings_field import SettingsField
 
 
 class SettingsTextField(SettingsField):

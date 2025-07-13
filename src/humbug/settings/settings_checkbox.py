@@ -5,9 +5,9 @@ This module defines the SettingsCheckbox class which provides a checkbox
 setting widget with label.
 """
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QCheckBox
+from PySide6.QtWidgets import QWidget, QCheckBox
 
-from .settings_field import SettingsField
+from humbug.settings.settings_field import SettingsField
 
 
 class SettingsCheckbox(SettingsField):

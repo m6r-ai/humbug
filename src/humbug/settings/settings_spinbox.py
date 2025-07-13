@@ -5,9 +5,9 @@ This module defines the SettingsSpinBox class which provides an integer spin box
 setting widget.
 """
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QSpinBox
+from PySide6.QtWidgets import QWidget, QSpinBox
 
-from .settings_field import SettingsField
+from humbug.settings.settings_field import SettingsField
 
 
 class SettingsSpinBox(SettingsField):

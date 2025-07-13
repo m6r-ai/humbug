@@ -7,7 +7,7 @@ for consistent spacing in settings dialogs.
 
 from PySide6.QtWidgets import QWidget
 
-from .settings_item import SettingsItem
+from humbug.settings.settings_item import SettingsItem
 
 
 class SettingsSpacer(SettingsItem):

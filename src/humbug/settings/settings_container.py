@@ -10,7 +10,7 @@ from typing import List
 from PySide6.QtWidgets import QWidget, QVBoxLayout
 from PySide6.QtCore import Signal
 
-from .settings_item import SettingsItem
+from humbug.settings.settings_item import SettingsItem
 from humbug.style_manager import StyleManager
 
 

@@ -7,7 +7,7 @@ widget for grouping related settings.
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
 
-from .settings_item import SettingsItem
+from humbug.settings.settings_item import SettingsItem
 from humbug.style_manager import ColorRole
 
 
