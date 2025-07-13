@@ -169,6 +169,143 @@ class ColumnManager(QWidget):
         self._set_current_tab(self._protected_tab)
         self._protected_tab = None
 
+    def num_colunns(self):
+        """Get the number of columns currently in use."""
+        return len(self._tab_columns)
+
+    def list_all_tabs(self) -> List[Dict[str, str | int | bool]]:
+        """
+        Get information about all currently open tabs across all columns.
+
+        Returns:
+            List of dictionaries containing tab information:
+            - tab_id: Unique identifier for the tab
+            - title: Display title of the tab
+            - type: Type of tab (conversation, editor, wiki, etc.)
+            - path: File path (if applicable, relative to mindspace)
+            - column_index: Index of the column containing the tab
+            - is_active: Whether this tab is currently active in its column
+            - is_active_column: Whether this tab's column is the active column
+            - is_modified: Whether the tab has unsaved changes
+            - is_ephemeral: Whether the tab is temporary
+        """
+        tab_info = []
+
+        for column_index, column in enumerate(self._tab_columns):
+            current_tab_index = column.currentIndex()
+            is_active_column = column == self._active_column
+
+            for tab_index in range(column.count()):
+                tab = cast(TabBase, column.widget(tab_index))
+                tab_id = tab.tab_id()
+                label = self._tab_labels.get(tab_id)
+
+                # Determine tab type
+                tab_type = "unknown"
+                if isinstance(tab, ConversationTab):
+                    tab_type = "conversation"
+
+                elif isinstance(tab, EditorTab):
+                    tab_type = "editor"
+
+                elif isinstance(tab, LogTab):
+                    tab_type = "log"
+
+                elif isinstance(tab, ShellTab):
+                    tab_type = "shell"
+
+                elif isinstance(tab, TerminalTab):
+                    tab_type = "terminal"
+
+                elif isinstance(tab, WikiTab):
+                    tab_type = "wiki"
+
+                # Get relative path if available
+                path = tab.path()
+                relative_path = ""
+                if path:
+                    relative_path = self._mindspace_manager.get_relative_path(path)
+
+                tab_info.append({
+                    "tab_id": tab_id,
+                    "title": label.text() if label else "",
+                    "type": tab_type,
+                    "path": relative_path,
+                    "column_index": column_index,
+                    "is_active": tab_index == current_tab_index,
+                    "is_active_column": is_active_column,
+                    "is_modified": tab.is_modified(),
+                    "is_ephemeral": tab.is_ephemeral()
+                })
+
+        return tab_info
+
+    def move_tab_to_column(self, tab_id: str, target_column_index: int) -> bool:
+        """
+        Move a tab to a specific column by index.
+
+        Args:
+            tab_id: ID of the tab to move
+            target_column_index: Index of the target column (0-based)
+
+        Returns:
+            True if the tab was successfully moved, False otherwise
+
+        Raises:
+            ValueError: If target_column_index is invalid or tab_id doesn't exist
+        """
+        # Validate tab exists
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            raise ValueError(f"Tab with ID '{tab_id}' not found")
+
+        # Find source column
+        source_column = self._find_column_for_tab(tab)
+        if source_column is None:
+            raise ValueError(f"Could not find column for tab '{tab_id}'")
+
+        # Validate target column index
+        if target_column_index < 0:
+            raise ValueError(f"Target column index must be non-negative, got {target_column_index}")
+
+        # Validate target column index
+        if target_column_index >= 6:
+            raise ValueError(f"Target column index must be less than 6, got {target_column_index}")
+
+        # Create new columns if necessary (up to maximum of 6)
+        if target_column_index >= len(self._tab_columns):
+            self._create_column(len(self._tab_columns))
+            target_column_index = len(self._tab_columns) - 1
+
+        target_column = self._tab_columns[target_column_index]
+
+        # Don't move if already in target column
+        if source_column == target_column:
+            return False
+
+        # Move the tab
+        self._move_tab_between_columns(tab, source_column, target_column)
+
+        # Update active column to target
+        self._active_column = target_column
+
+        # If source column is now empty, remove it (unless it's the last column)
+        if source_column.count() == 0 and len(self._tab_columns) > 1:
+            source_column_index = self._tab_columns.index(source_column)
+            self._remove_column_and_resize(source_column_index, source_column)
+
+            # Adjust target column index if we removed a column before it
+            if source_column_index < target_column_index:
+                target_column_index -= 1
+
+        # Resize columns to distribute space evenly
+        self.show_all_columns()
+
+        # Update tab states
+        self._update_tabs()
+
+        return True
+
     def _update_mru_order(self, tab: TabBase, column: ColumnWidget) -> None:
         """
         Update the MRU order when a tab is activated.

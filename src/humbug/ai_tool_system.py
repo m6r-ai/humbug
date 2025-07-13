@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from typing import Dict, Any
@@ -56,6 +57,8 @@ class AIToolSystem(AITool):
                 "show_log_tab (open the mindspace log tab), "
                 "open_wiki_tab (open a file/direcotry in a wiki tab). "
                 "close_tab (close an existing tab by ID). "
+                "list_tabs (enumerate all currently open tabs across all columns), "
+                "move_tab (move a tab to a specific column by index - there are a maximum of 6 columns). "
                 "All operations work within the current mindspace. "
                 "Returns detailed information about created tabs, opened files, and operation results."
             ),
@@ -73,7 +76,9 @@ class AIToolSystem(AITool):
                         "show_system_shell_tab",
                         "show_log_tab",
                         "open_wiki_tab",
-                        "close_tab"
+                        "close_tab",
+                        "list_tabs",
+                        "move_tab"
                     ]
                 ),
                 AIToolParameter(
@@ -85,7 +90,13 @@ class AIToolSystem(AITool):
                 AIToolParameter(
                     name="tab_id",
                     type="string",
-                    description="ID of a tab (for close_tab operation)",
+                    description="ID of a tab (for close_tab and move_tab operations)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="target_column",
+                    type="integer",
+                    description="Target column index (0-based) for move_tab operation",
                     required=False
                 ),
                 AIToolParameter(
@@ -142,6 +153,37 @@ class AIToolSystem(AITool):
         if not isinstance(value, str):
             raise AIToolExecutionError(
                 f"'{key}' must be a string",
+                "system",
+                arguments
+            )
+
+        return value
+
+    def _get_int_value_from_key(self, key: str, arguments: Dict[str, Any]) -> int:
+        """
+        Extract integer value from arguments dictionary.
+
+        Args:
+            key: Key to extract from arguments
+            arguments: Dictionary containing operation parameters
+
+        Returns:
+            Integer value for the given key
+
+        Raises:
+            AIToolExecutionError: If key is missing or value is not an integer
+        """
+        if key not in arguments:
+            raise AIToolExecutionError(
+                f"No '{key}' argument provided",
+                "system",
+                arguments
+            )
+
+        value = arguments[key]
+        if not isinstance(value, int):
+            raise AIToolExecutionError(
+                f"'{key}' must be an integer",
                 "system",
                 arguments
             )
@@ -236,7 +278,9 @@ class AIToolSystem(AITool):
             "show_system_shell_tab": self._show_system_shell_tab,
             "show_log_tab": self._show_log_tab,
             "open_wiki_tab": self._open_wiki_tab,
-            "close_tab": self._close_tab
+            "close_tab": self._close_tab,
+            "list_tabs": self._list_tabs,
+            "move_tab": self._move_tab
         }
 
         if operation not in handlers:
@@ -600,6 +644,92 @@ class AIToolSystem(AITool):
         except Exception as e:
             raise AIToolExecutionError(
                 f"Failed to close tab {tab_id}: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+    async def _list_tabs(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """List all currently open tabs across all columns."""
+        try:
+            tab_info = self._column_manager.list_all_tabs()
+
+            if not tab_info:
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    "AI requested tab list: no tabs currently open"
+                )
+                return "No tabs are currently open."
+
+            # Format the response as a structured JSON string for easy parsing
+            result = {
+                "total_tabs": len(tab_info),
+                "total_columns": self._column_manager.num_colunns(),
+                "tabs": tab_info
+            }
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested tab list: {len(tab_info)} tabs across {result['total_columns']} columns"
+            )
+
+            return f"Current tabs:\n{json.dumps(result, indent=2)}"
+
+        except Exception as e:
+            raise AIToolExecutionError(
+                f"Failed to list tabs: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+    async def _move_tab(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """Move a tab to a specific column."""
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
+        target_column = self._get_int_value_from_key("target_column", arguments)
+
+        try:
+            # Validate target column is non-negative
+            if target_column < 0:
+                raise AIToolExecutionError(
+                    f"Target column must be non-negative, got {target_column}",
+                    "system",
+                    arguments
+                )
+
+            # Attempt to move the tab
+            success = self._column_manager.move_tab_to_column(tab_id, target_column)
+
+            if success:
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"AI moved tab {tab_id} to column {target_column}"
+                )
+                return f"Successfully moved tab {tab_id} to column {target_column}"
+
+            # If not successful, it means the tab was already in the target column
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI attempted to move tab {tab_id} to column {target_column} (already in target column)"
+            )
+            return f"Tab {tab_id} was already in column {target_column}"
+
+        except ValueError as e:
+            raise AIToolExecutionError(
+                str(e),
+                "system",
+                arguments
+            ) from e
+
+        except Exception as e:
+            raise AIToolExecutionError(
+                f"Failed to move tab {tab_id} to column {target_column}: {str(e)}",
                 "system",
                 arguments
             ) from e
