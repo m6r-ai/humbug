@@ -13,7 +13,6 @@ from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
-from humbug.find_widget import FindWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -22,6 +21,7 @@ from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
 from humbug.tabs.editor.editor_highlighter import EditorHighlighter
 from humbug.tabs.editor.editor_widget import EditorWidget
+from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType

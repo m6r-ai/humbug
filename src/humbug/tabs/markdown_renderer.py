@@ -24,9 +24,9 @@ from markdown.markdown_ast_node import (
 )
 
 from humbug.color_role import ColorRole
-from humbug.markdown_block_data import HeadingBlockData
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
+from humbug.tabs.markdown_block_data import HeadingBlockData
 
 
 class MarkdownRenderer(MarkdownASTVisitor):

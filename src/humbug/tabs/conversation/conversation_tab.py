@@ -14,7 +14,6 @@ from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message_source import AIMessageSource
 
 from humbug.color_role import ColorRole
-from humbug.find_widget import FindWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
@@ -25,6 +24,7 @@ from humbug.tabs.conversation.conversation_transcript_error import (
 )
 from humbug.tabs.conversation.conversation_transcript_handler import ConversationTranscriptHandler
 from humbug.tabs.conversation.conversation_widget import ConversationWidget
+from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType

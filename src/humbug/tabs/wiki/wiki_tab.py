@@ -8,12 +8,12 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from humbug.color_role import ColorRole
-from humbug.find_widget import FindWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.mindspace.mindspace_wiki import MindspaceWiki
 from humbug.mindspace.mindspace_wiki_error import MindspaceWikiError
 from humbug.style_manager import StyleManager
+from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType

@@ -55,7 +55,7 @@ from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
-from humbug.user_settings_dialog import UserSettingsDialog
+from humbug.user.user_settings_dialog import UserSettingsDialog
 
 
 class MainWindow(QMainWindow):

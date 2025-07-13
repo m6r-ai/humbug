@@ -9,11 +9,11 @@ import logging
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from humbug.color_role import ColorRole
-from humbug.find_widget import FindWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
+from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.log.log_widget import LogWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState

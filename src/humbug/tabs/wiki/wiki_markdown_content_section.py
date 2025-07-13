@@ -17,11 +17,11 @@ from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.markdown_block_data import HeadingBlockData
-from humbug.markdown_renderer import MarkdownRenderer
-from humbug.markdown_text_edit import MarkdownTextEdit
 from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
+from humbug.tabs.markdown_block_data import HeadingBlockData
+from humbug.tabs.markdown_renderer import MarkdownRenderer
+from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 
 
 class WikiMarkdownContentSection(QFrame):
