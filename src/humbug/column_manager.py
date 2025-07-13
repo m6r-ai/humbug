@@ -18,7 +18,6 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
-from humbug.mindspace.mindspace_wiki_error import MindspaceWikiError
 from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_error import ConversationError
@@ -26,13 +25,14 @@ from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.log.log_tab import LogTab
 from humbug.tabs.shell.shell_tab import ShellTab
-from humbug.tabs.wiki.wiki_tab import WikiTab
 from humbug.tabs.tab_bar import TabBar
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_label import TabLabel
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
 from humbug.tabs.terminal.terminal_tab import TerminalTab
+from humbug.tabs.wiki.wiki_error import WikiError
+from humbug.tabs.wiki.wiki_tab import WikiTab
 from humbug.welcome_widget import WelcomeWidget
 
 
@@ -1403,7 +1403,7 @@ class ColumnManager(QWidget):
 
             return wiki_tab
 
-        except MindspaceWikiError as e:
+        except WikiError as e:
             self._logger.exception("Failed to open wiki page: %s", str(e))
             raise
 

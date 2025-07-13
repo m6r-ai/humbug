@@ -11,12 +11,12 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.mindspace.mindspace_wiki import MindspaceWiki
-from humbug.mindspace.mindspace_wiki_error import MindspaceWikiError
 from humbug.style_manager import StyleManager
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
+from humbug.tabs.wiki.wiki_error import WikiError
 from humbug.tabs.wiki.wiki_widget import WikiWidget
 
 
@@ -123,7 +123,7 @@ class WikiTab(TabBase):
             # Otherwise, it's an external link - open in browser
             self._open_external_url(url)
 
-        except MindspaceWikiError as e:
+        except WikiError as e:
             # Show error message if link couldn't be handled
             strings = self._language_manager.strings()
             MessageBox.show_message(
@@ -205,7 +205,7 @@ class WikiTab(TabBase):
             Created WikiTab instance
 
         Raises:
-            MindspaceWikiError: If the wiki tab cannot be loaded
+            WikiError: If the wiki tab cannot be loaded
         """
         try:
             wiki_tab = cls("", path, parent)
@@ -213,7 +213,7 @@ class WikiTab(TabBase):
             return wiki_tab
 
         except Exception as e:
-            raise MindspaceWikiError(f"Failed to create wiki tab: {str(e)}") from e
+            raise WikiError(f"Failed to create wiki tab: {str(e)}") from e
 
     @classmethod
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'WikiTab':
@@ -234,7 +234,7 @@ class WikiTab(TabBase):
             return tab
 
         except Exception as e:
-            raise MindspaceWikiError(f"Failed to restore wiki tab: {str(e)}") from e
+            raise WikiError(f"Failed to restore wiki tab: {str(e)}") from e
 
     def can_save(self) -> bool:
         """Check if wiki can be saved."""

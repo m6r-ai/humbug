@@ -14,10 +14,10 @@ from PySide6.QtGui import QCursor, QResizeEvent
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_wiki import MindspaceWiki, MindspaceWikiContentType
-from humbug.mindspace.mindspace_wiki_error import MindspaceWikiIOError
 from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 from humbug.style_manager import StyleManager
 from humbug.tabs.wiki.wiki_content import WikiContent
+from humbug.tabs.wiki.wiki_error import WikiIOError
 from humbug.tabs.wiki.wiki_file_content import WikiFileContent
 from humbug.tabs.wiki.wiki_markdown_content import WikiMarkdownContent
 from humbug.tabs.wiki.wiki_markdown_preview_content import WikiMarkdownPreviewContent
@@ -416,7 +416,7 @@ class WikiWidget(QWidget):
             self._scroll_to_top()
 
         except Exception as e:
-            raise MindspaceWikiIOError(f"Failed to read wiki file: {str(e)}") from e
+            raise WikiIOError(f"Failed to read wiki file: {str(e)}") from e
 
     def clear_content(self) -> None:
         """Clear all content blocks."""

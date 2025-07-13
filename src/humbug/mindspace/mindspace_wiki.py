@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import List, Tuple, Set, cast
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_wiki_error import MindspaceWikiIOError
+from humbug.tabs.wiki.wiki_error import WikiIOError
 
 
 class MindspaceWikiContentType(Enum):
@@ -42,7 +42,7 @@ class MindspaceWiki:
             Tuple of (content_list, dependency_paths)
 
         Raises:
-            MindspaceWikiIOError: If the path cannot be read or does not exist
+            WikiIOError: If the path cannot be read or does not exist
         """
         # Track dependencies - always include the main path
         dependencies: Set[str] = {os.path.abspath(path)}
@@ -50,7 +50,7 @@ class MindspaceWiki:
         # Get file info
         if not os.path.exists(path):
             self._logger.error("Path does not exist: %s", path)
-            raise MindspaceWikiIOError(f"Path does not exist: {path}")
+            raise WikiIOError(f"Path does not exist: {path}")
 
         if os.path.isdir(path):
             # Generate directory listing
@@ -124,7 +124,7 @@ class MindspaceWiki:
             File size in bytes
 
         Raises:
-            MindspaceWikiIOError: If file size cannot be accessed
+            WikiIOError: If file size cannot be accessed
         """
         try:
             file_stat = os.stat(file_path)
@@ -132,7 +132,7 @@ class MindspaceWiki:
 
         except OSError as e:
             self._logger.warning("Failed to get size for %s: %s", file_path, str(e))
-            raise MindspaceWikiIOError(f"Failed to get size for {file_path}: {str(e)}") from e
+            raise WikiIOError(f"Failed to get size for {file_path}: {str(e)}") from e
 
     def _get_file_permissions(self, file_path: str) -> str:
         """
@@ -145,7 +145,7 @@ class MindspaceWiki:
             Formatted permissions string (e.g., 'rwxr-xr-x')
 
         Raises:
-            MindspaceWikiIOError: If file permissions cannot be accessed
+            WikiIOError: If file permissions cannot be accessed
         """
         try:
             file_stat = os.stat(file_path)
@@ -153,7 +153,7 @@ class MindspaceWiki:
 
         except OSError as e:
             self._logger.warning("Failed to get permissions for %s: %s", file_path, str(e))
-            raise MindspaceWikiIOError(f"Failed to get permissions for {file_path}: {str(e)}") from e
+            raise WikiIOError(f"Failed to get permissions for {file_path}: {str(e)}") from e
 
     def _get_file_modification_time(self, file_path: str) -> str:
         """
@@ -166,7 +166,7 @@ class MindspaceWiki:
             Formatted modification time string
 
         Raises:
-            MindspaceWikiIOError: If file modification time cannot be accessed
+            WikiIOError: If file modification time cannot be accessed
         """
         try:
             file_stat = os.stat(file_path)
@@ -175,7 +175,7 @@ class MindspaceWiki:
 
         except OSError as e:
             self._logger.warning("Failed to get modification time for %s: %s", file_path, str(e))
-            raise MindspaceWikiIOError(f"Failed to get modification time for {file_path}: {str(e)}") from e
+            raise WikiIOError(f"Failed to get modification time for {file_path}: {str(e)}") from e
 
     def _format_permissions(self, mode: int) -> str:
         """
@@ -225,7 +225,7 @@ class MindspaceWiki:
             size = self._get_file_size_bytes(parent_path)
             max_width = max(max_width, len(str(size)))
 
-        except MindspaceWikiIOError:
+        except WikiIOError:
             pass
 
         # Check all entries in the directory
@@ -235,7 +235,7 @@ class MindspaceWiki:
                 size = self._get_file_size_bytes(full_path)
                 max_width = max(max_width, len(str(size)))
 
-            except MindspaceWikiIOError:
+            except WikiIOError:
                 pass
 
         return max_width
@@ -287,7 +287,7 @@ class MindspaceWiki:
                     f"**Path**: {rel_path}"
                 ])
 
-            except MindspaceWikiIOError as e:
+            except WikiIOError as e:
                 self._logger.warning("Could not retrieve metadata for %s: %s", directory_path, str(e))
 
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
@@ -327,7 +327,7 @@ class MindspaceWiki:
                         size_str = str(size).rjust(max_size_width)
                         lines.append(f"`{permissions}  {size_str}  {mod_time}  `[`{f}{suffix}`]({full_path})  ")
 
-                    except MindspaceWikiIOError:
+                    except WikiIOError:
                         # Fallback without metadata if we can't get it
                         lines.append(f"[`{f}{suffix}`]({full_path})  ")
 
@@ -345,7 +345,7 @@ class MindspaceWiki:
                     size_str = str(size).rjust(max_size_width)
                     lines.append(f"`{permissions}  {size_str}  {mod_time}  `[`{f}{suffix}`]({full_path})")
 
-                except MindspaceWikiIOError:
+                except WikiIOError:
                     # Fallback without metadata if we can't get it
                     lines.append(f"[`{f}{suffix}`]({full_path})")
 
@@ -426,7 +426,7 @@ class MindspaceWiki:
                     f"**Path**: {rel_path}"
                 ])
 
-            except MindspaceWikiIOError as e:
+            except WikiIOError as e:
                 self._logger.warning("Could not retrieve metadata for %s: %s", file_path, str(e))
 
             contents.append((MindspaceWikiContentType.MARKDOWN, "\n".join(lines)))
@@ -497,7 +497,7 @@ class MindspaceWiki:
             Absolute path to the target or None if it's an external link
 
         Raises:
-            MindspaceWikiIOError: If the target path does not exist
+            WikiIOError: If the target path does not exist
         """
         # Handle anchors separately
         if target_path.startswith("#"):
@@ -524,7 +524,7 @@ class MindspaceWiki:
 
         # Check if path exists
         if not os.path.exists(base_path):
-            raise MindspaceWikiIOError(f"Path does not exist: {base_path}")
+            raise WikiIOError(f"Path does not exist: {base_path}")
 
         # Return resolved path with anchor if present
         if anchor:
