@@ -22,6 +22,7 @@ Internal structure changes:
 - Massively reworked the source code structure.  Instead of all components sitting under src/humbug, many generic components
   have been moved to the src directory.  At the same time, any dependendencies that might make reuse of those components
   has been reworked so they can stand alone.
+- The structure of shell commands has been simplified so they no longer call-back into the MainWindow class.
 
 ## v0.18 (2025-07-08)
 
