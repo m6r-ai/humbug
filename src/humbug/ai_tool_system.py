@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_tool_manager import (
@@ -43,6 +43,8 @@ class AIToolSystem(AITool):
         Returns:
             Tool definition with parameters and description
         """
+        operations = self.get_operation_definitions()
+        operation_names: List[str] = list(operations.keys())
         return AIToolDefinition(
             name="system",
             description=(
@@ -53,9 +55,9 @@ class AIToolSystem(AITool):
                 "- new_terminal_tab: create a terminal tab for the user (you cannot run commands in this directly)\n"
                 "- open_conversation_tab: open an existing AI conversation in a conversation tab\n"
                 "- new_conversation_tab: start a new AI conversation in a conversation tab, with optional model/temperature\n"
-                "- show_system_shell_tab: open a system shell tab)\n"
-                "- show_log_tab: open the mindspace log tab)\n"
-                "- open_wiki_tab: open a file/direcotry in a wiki tab)\n"
+                "- show_system_shell_tab: open a system shell tab\n"
+                "- show_log_tab: open the mindspace log tab\n"
+                "- open_wiki_tab: open a file/directory in a wiki tab\n"
                 "- tab_info: get information about a tab, given its ID (if no ID then gets the current tab info)\n"
                 "- close_tab: close an existing tab\n"
                 "- list_tabs: enumerate all currently open tabs across all columns)\n"
@@ -69,19 +71,7 @@ class AIToolSystem(AITool):
                     type="string",
                     description="System operation to perform",
                     required=True,
-                    enum=[
-                        "open_editor_tab",
-                        "new_terminal_tab",
-                        "open_conversation_tab",
-                        "new_conversation_tab",
-                        "show_system_shell_tab",
-                        "show_log_tab",
-                        "open_wiki_tab",
-                        "tab_info",
-                        "close_tab",
-                        "list_tabs",
-                        "move_tab"
-                    ]
+                    enum=operation_names
                 ),
                 AIToolParameter(
                     name="file_path",

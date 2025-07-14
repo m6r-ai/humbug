@@ -38,6 +38,8 @@ class AIToolFileSystem(AITool):
         Returns:
             Tool definition with parameters and description
         """
+        operations = self.get_operation_definitions()
+        operation_names: List[str] = list(operations.keys())
         return AIToolDefinition(
             name="filesystem",
             description=(
@@ -51,11 +53,7 @@ class AIToolFileSystem(AITool):
                     type="string",
                     description="Filesystem operation to perform",
                     required=True,
-                    enum=[
-                        "read_file", "write_file", "append_to_file",
-                        "list_directory", "create_directory", "remove_directory",
-                        "delete_file", "copy_file", "move", "get_info"
-                    ]
+                    enum=operation_names
                 ),
                 AIToolParameter(
                     name="path",
