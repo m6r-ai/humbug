@@ -1189,11 +1189,15 @@ class MainWindow(QMainWindow):
 
     def _close_tab(self) -> None:
         """Close the current tab."""
-        tab_id = self._column_manager.get_current_tab_id()
+        tab = self._column_manager.get_current_tab()
+        if tab is None:
+            self._logger.error("No current tab to close")
+            return
+
         self._column_manager.close_tab()
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User closed tab, tab ID: {tab_id}"
+            f"User closed tab, tab ID: {tab.tab_id()}"
         )
 
     def _submit_message(self) -> None:

@@ -56,6 +56,7 @@ class AIToolSystem(AITool):
                 "- show_system_shell_tab: open a system shell tab)\n"
                 "- show_log_tab: open the mindspace log tab)\n"
                 "- open_wiki_tab: open a file/direcotry in a wiki tab)\n"
+                "- tab_info: get information about a tab, given its ID (if no ID then gets the current tab info)\n"
                 "- close_tab: close an existing tab\n"
                 "- list_tabs: enumerate all currently open tabs across all columns)\n"
                 "- move_tab: move a tab to a specific column by index - there are a maximum of 6 columns\n"
@@ -76,6 +77,7 @@ class AIToolSystem(AITool):
                         "show_system_shell_tab",
                         "show_log_tab",
                         "open_wiki_tab",
+                        "tab_info",
                         "close_tab",
                         "list_tabs",
                         "move_tab"
@@ -90,13 +92,13 @@ class AIToolSystem(AITool):
                 AIToolParameter(
                     name="tab_id",
                     type="string",
-                    description="ID of a tab (for close_tab and move_tab operations)",
+                    description="ID of a tab (for tab_info, close_tab and move_tab operations)",
                     required=False
                 ),
                 AIToolParameter(
                     name="target_column",
                     type="integer",
-                    description="Target column index (0-based) for move_tab operation",
+                    description="Target column index (0-based) (for move_tab operation)",
                     required=False
                 ),
                 AIToolParameter(
@@ -278,6 +280,7 @@ class AIToolSystem(AITool):
             "show_system_shell_tab": self._show_system_shell_tab,
             "show_log_tab": self._show_log_tab,
             "open_wiki_tab": self._open_wiki_tab,
+            "tab_info": self._tab_info,
             "close_tab": self._close_tab,
             "list_tabs": self._list_tabs,
             "move_tab": self._move_tab
@@ -620,6 +623,49 @@ class AIToolSystem(AITool):
         except Exception as e:
             raise AIToolExecutionError(
                 f"Failed to open wiki: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+    async def _tab_info(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """Get information about a specific tab by ID or the current tab."""
+        tab_id = self._get_str_value_from_key("tab_id", arguments) if "tab_id" in arguments else None
+
+        try:
+            # If no tab ID provided, use the current tab
+            if not tab_id:
+                current_tab = self._column_manager.get_current_tab()
+                if not current_tab:
+                    raise AIToolExecutionError(
+                        "No current tab is open",
+                        "system",
+                        arguments
+                    )
+
+                tab_id = current_tab.tab_id()
+
+            # Get tab info
+            tab_info = self._column_manager.get_tab_info_by_id(tab_id)
+            if not tab_info:
+                raise AIToolExecutionError(
+                    f"No tab found with ID: {tab_id}",
+                    "system",
+                    arguments
+                )
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested info for tab ID: {tab_id}"
+            )
+            return f"Tab info for ID {tab_id}:\n{json.dumps(tab_info, indent=2)}"
+
+        except Exception as e:
+            raise AIToolExecutionError(
+                f"Failed to get tab info for ID {tab_id}: {str(e)}",
                 "system",
                 arguments
             ) from e

@@ -159,7 +159,7 @@ class ColumnManager(QWidget):
 
         # If protecting, store the current tab
         if protect:
-            self._protected_tab = self._get_current_tab()
+            self._protected_tab = self.get_current_tab()
             return
 
         # Unprotecting - ensure the protected tab is kept active!
@@ -173,12 +173,15 @@ class ColumnManager(QWidget):
         """Get the number of columns currently in use."""
         return len(self._tab_columns)
 
-    def list_all_tabs(self) -> List[Dict[str, str | int | bool]]:
+    def _get_tab_info(self, tab: TabBase) -> Dict[str, str | int | bool]:
         """
-        Get information about all currently open tabs across all columns.
+        Get detailed information about a specific tab.
+
+        Args:
+            tab: The tab we want information about
 
         Returns:
-            List of dictionaries containing tab information:
+            Dictionary containing tab information:
             - tab_id: Unique identifier for the tab
             - title: Display title of the tab
             - type: Type of tab (conversation, editor, wiki, etc.)
@@ -189,54 +192,82 @@ class ColumnManager(QWidget):
             - is_modified: Whether the tab has unsaved changes
             - is_ephemeral: Whether the tab is temporary
         """
+        tab_id = tab.tab_id()
+        label = self._tab_labels.get(tab_id)
+
+        # Determine tab type
+        tab_type = "unknown"
+        if isinstance(tab, ConversationTab):
+            tab_type = "conversation"
+
+        elif isinstance(tab, EditorTab):
+            tab_type = "editor"
+
+        elif isinstance(tab, LogTab):
+            tab_type = "log"
+
+        elif isinstance(tab, ShellTab):
+            tab_type = "shell"
+
+        elif isinstance(tab, TerminalTab):
+            tab_type = "terminal"
+
+        elif isinstance(tab, WikiTab):
+            tab_type = "wiki"
+
+        # Get relative path if available
+        path = tab.path()
+        relative_path = ""
+        if path:
+            relative_path = self._mindspace_manager.get_relative_path(path)
+
+        # Find the column containing this tab
+        column_index = -1
+        for index, column in enumerate(self._tab_columns):
+            if column.indexOf(tab) != -1:
+                column_index = index
+                break
+
+        return {
+            "tab_id": tab_id,
+            "title": label.text() if label else "",
+            "type": tab_type,
+            "path": relative_path,
+            "column_index": column_index,
+            "is_modified": tab.is_modified(),
+            "is_ephemeral": tab.is_ephemeral()
+        }
+
+    def get_tab_info_by_id(self, tab_id: str) -> Dict[str, str | int | bool]:
+        """
+        Get information about a specific tab or the current tab.
+
+        Args:
+            tab_id: ID of the tab to get information for. If None, uses the current tab.
+
+        Returns:
+            Dictionary containing tab information
+        """
+        # Find the tab by ID
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            raise ValueError(f"Tab with ID '{tab_id}' not found")
+
+        return self._get_tab_info(tab)
+
+    def list_all_tabs(self) -> List[Dict[str, str | int | bool]]:
+        """
+        Get information about all currently open tabs across all columns.
+
+        Returns:
+            List of dictionaries containing tab information
+        """
         tab_info = []
 
-        for column_index, column in enumerate(self._tab_columns):
-            current_tab_index = column.currentIndex()
-            is_active_column = column == self._active_column
-
+        for column in self._tab_columns:
             for tab_index in range(column.count()):
                 tab = cast(TabBase, column.widget(tab_index))
-                tab_id = tab.tab_id()
-                label = self._tab_labels.get(tab_id)
-
-                # Determine tab type
-                tab_type = "unknown"
-                if isinstance(tab, ConversationTab):
-                    tab_type = "conversation"
-
-                elif isinstance(tab, EditorTab):
-                    tab_type = "editor"
-
-                elif isinstance(tab, LogTab):
-                    tab_type = "log"
-
-                elif isinstance(tab, ShellTab):
-                    tab_type = "shell"
-
-                elif isinstance(tab, TerminalTab):
-                    tab_type = "terminal"
-
-                elif isinstance(tab, WikiTab):
-                    tab_type = "wiki"
-
-                # Get relative path if available
-                path = tab.path()
-                relative_path = ""
-                if path:
-                    relative_path = self._mindspace_manager.get_relative_path(path)
-
-                tab_info.append({
-                    "tab_id": tab_id,
-                    "title": label.text() if label else "",
-                    "type": tab_type,
-                    "path": relative_path,
-                    "column_index": column_index,
-                    "is_active": tab_index == current_tab_index,
-                    "is_active_column": is_active_column,
-                    "is_modified": tab.is_modified(),
-                    "is_ephemeral": tab.is_ephemeral()
-                })
+                tab_info.append(self._get_tab_info(tab))
 
         return tab_info
 
@@ -774,7 +805,7 @@ class ColumnManager(QWidget):
             pass  # No existing connections
 
         # Connect the current tab to the status message signal
-        current_tab = self._get_current_tab()
+        current_tab = self.get_current_tab()
         if not current_tab:
             return
 
@@ -796,7 +827,7 @@ class ColumnManager(QWidget):
 
     def _activate_current_tab(self) -> None:
         """Activate the current tab."""
-        current_tab = self._get_current_tab()
+        current_tab = self.get_current_tab()
         if not current_tab:
             return
 
@@ -815,7 +846,7 @@ class ColumnManager(QWidget):
         self._active_column = column
 
         # Update MRU order for the newly selected tab
-        current_tab = self._get_current_tab()
+        current_tab = self.get_current_tab()
         if current_tab:
             self._update_mru_order(current_tab, column)
 
@@ -965,7 +996,7 @@ class ColumnManager(QWidget):
 
         return None
 
-    def _get_current_tab(self) -> TabBase | None:
+    def get_current_tab(self) -> TabBase | None:
         """
         Get the currently active tab.
 
@@ -991,19 +1022,6 @@ class ColumnManager(QWidget):
         self._active_column = column
         self._update_mru_order(tab, column)
         self._update_tabs()
-
-    def get_current_tab_id(self) -> str:
-        """
-        Get the ID of the currently active tab.
-
-        Returns:
-            The ID of the current tab, or an empty string if no tab is active
-        """
-        current_tab = self._get_current_tab()
-        if current_tab is None:
-            return ""
-
-        return current_tab.tab_id()
 
     def _make_tab_permanent(self, tab: TabBase) -> None:
         """Convert an ephemeral tab to permanent."""
@@ -1049,7 +1067,7 @@ class ColumnManager(QWidget):
         Returns:
             The path of the current tab, or an empty string if no tab is active
         """
-        current_tab = self._get_current_tab()
+        current_tab = self.get_current_tab()
         if not current_tab:
             return ""
 
@@ -1078,7 +1096,7 @@ class ColumnManager(QWidget):
         target_column = self._create_column(target_column_number)
 
         # Move the current tab to the new column
-        current_tab = self._get_current_tab()
+        current_tab = self.get_current_tab()
         if not current_tab:
             return
 
@@ -1396,7 +1414,7 @@ class ColumnManager(QWidget):
 
     def can_fork_conversation(self) -> bool:
         """Check if the current tab can be forked."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not tab or not isinstance(tab, ConversationTab):
             return False
 
@@ -1404,7 +1422,7 @@ class ColumnManager(QWidget):
 
     async def fork_conversation(self) -> None:
         """Fork an existing conversation into a new tab."""
-        conversation_tab = self._get_current_tab()
+        conversation_tab = self.get_current_tab()
         if not isinstance(conversation_tab, ConversationTab):
             return
 
@@ -1441,7 +1459,7 @@ class ColumnManager(QWidget):
 
     async def fork_conversation_from_index(self, message_index: int) -> None:
         """Fork an existing conversation with partial history into a new tab."""
-        conversation_tab = self._get_current_tab()
+        conversation_tab = self.get_current_tab()
         if not isinstance(conversation_tab, ConversationTab):
             return
 
@@ -1802,12 +1820,12 @@ class ColumnManager(QWidget):
 
     def can_undo(self) -> bool:
         """Check if the last action can be undone."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         return False if tab is None else tab.can_undo()
 
     def undo(self) -> None:
         """Undo the last action."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return
 
@@ -1815,12 +1833,12 @@ class ColumnManager(QWidget):
 
     def can_redo(self) -> bool:
         """Check if the last action can be redone."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         return False if tab is None else tab.can_redo()
 
     def redo(self) -> None:
         """Redo the last undone action."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return
 
@@ -1828,12 +1846,12 @@ class ColumnManager(QWidget):
 
     def can_cut(self) -> bool:
         """Check if the current selection can be cut."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         return False if tab is None else tab.can_cut()
 
     def cut(self) -> None:
         """Cut the current selection."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return
 
@@ -1841,12 +1859,12 @@ class ColumnManager(QWidget):
 
     def can_copy(self) -> bool:
         """Check if the current selection can be copied."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         return False if tab is None else tab.can_copy()
 
     def copy(self) -> None:
         """Copy the current selection."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return
 
@@ -1854,12 +1872,12 @@ class ColumnManager(QWidget):
 
     def can_paste(self) -> bool:
         """Check if the current selection can be pasted."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         return False if not tab else tab.can_paste()
 
     def paste(self) -> None:
         """Paste the current selection."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return
 
@@ -1867,12 +1885,12 @@ class ColumnManager(QWidget):
 
     def can_show_find(self) -> bool:
         """Check if the current tab can show the find dialog."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         return tab is not None
 
     def show_find(self) -> None:
         """Show the find dialog for the current tab."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return
 
@@ -1918,7 +1936,7 @@ class ColumnManager(QWidget):
 
     def can_close_tab(self) -> bool:
         """Can we close the currently active tab?"""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
 
         # We only care if a tab is open.  Actually closing it may mean taking other
         # actions such as saving.
@@ -1926,7 +1944,7 @@ class ColumnManager(QWidget):
 
     def close_tab(self) -> None:
         """Close the currently active tab."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return
 
@@ -1934,7 +1952,7 @@ class ColumnManager(QWidget):
 
     def can_save_file(self) -> bool:
         """Check if the current file can be saved."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return False
 
@@ -1942,7 +1960,7 @@ class ColumnManager(QWidget):
 
     def save_file(self) -> str:
         """Save the current file."""
-        current_tab = self._get_current_tab()
+        current_tab = self.get_current_tab()
         if not isinstance(current_tab, EditorTab):
             return ""
 
@@ -1953,7 +1971,7 @@ class ColumnManager(QWidget):
 
     def can_save_file_as(self) -> bool:
         """Check if the current file can be saved as a new file."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return False
 
@@ -1961,7 +1979,7 @@ class ColumnManager(QWidget):
 
     def save_file_as(self) -> str:
         """Save the current file with a new name."""
-        current_tab = self._get_current_tab()
+        current_tab = self.get_current_tab()
         if not isinstance(current_tab, EditorTab):
             return ""
 
@@ -2001,7 +2019,7 @@ class ColumnManager(QWidget):
 
     def can_submit_message(self) -> bool:
         """Check if the current tab can submit a message."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return False
 
@@ -2009,7 +2027,7 @@ class ColumnManager(QWidget):
 
     def submit_message(self) -> None:
         """Handle message submission."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if tab is None:
             return
 
@@ -2017,12 +2035,12 @@ class ColumnManager(QWidget):
 
     def can_show_conversation_settings_dialog(self) -> bool:
         """Check if the conversation settings dialog can be shown."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         return isinstance(tab, ConversationTab)
 
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return
 
@@ -2030,7 +2048,7 @@ class ColumnManager(QWidget):
 
     def handle_esc_key(self) -> bool:
         """Handle processing of the "Esc" key."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return False
 
@@ -2039,7 +2057,7 @@ class ColumnManager(QWidget):
 
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab | LogTab | ShellTab):
             return False
 
@@ -2047,7 +2065,7 @@ class ColumnManager(QWidget):
 
     def navigate_next_message(self) -> None:
         """Navigate to next message in the tab."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab | LogTab | ShellTab):
             return
 
@@ -2055,7 +2073,7 @@ class ColumnManager(QWidget):
 
     def can_navigate_previous_message(self) -> bool:
         """Check if previous message navigation is possible."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab | LogTab | ShellTab):
             return False
 
@@ -2063,7 +2081,7 @@ class ColumnManager(QWidget):
 
     def navigate_previous_message(self) -> None:
         """Navigate to previous message in the tab."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab | LogTab | ShellTab):
             return
 
@@ -2071,7 +2089,7 @@ class ColumnManager(QWidget):
 
     def can_toggle_bookmark(self) -> bool:
         """Can we toggle a bookmark?"""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return False
 
@@ -2079,7 +2097,7 @@ class ColumnManager(QWidget):
 
     def is_checked_bookmark(self) -> bool:
         """Is the current bookmark set (checked)?"""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return False
 
@@ -2087,7 +2105,7 @@ class ColumnManager(QWidget):
 
     def toggle_bookmark(self) -> None:
         """Handle toggling a bookmark."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return
 
@@ -2095,7 +2113,7 @@ class ColumnManager(QWidget):
 
     def can_navigate_next_bookmark(self) -> bool:
         """Can we move to the next bookmark?"""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return False
 
@@ -2103,7 +2121,7 @@ class ColumnManager(QWidget):
 
     def navigate_next_bookmark(self) -> None:
         """Handle navigating to the next bookmark."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return
 
@@ -2111,7 +2129,7 @@ class ColumnManager(QWidget):
 
     def can_navigate_previous_bookmark(self) -> bool:
         """Can we move to the previous bookmark?"""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return False
 
@@ -2119,7 +2137,7 @@ class ColumnManager(QWidget):
 
     def navigate_previous_bookmark(self) -> None:
         """Handle navigating to the previous bookmark."""
-        tab = self._get_current_tab()
+        tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return
 
