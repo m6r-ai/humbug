@@ -415,10 +415,14 @@ class MainWindow(QMainWindow):
         self._command_registry.register_command(ShellCommandHelp(self._command_registry))
 
         self._ai_tool_manager = AIToolManager()
-        self._ai_tool_manager.register_tool(AIToolCalculator())
-        self._ai_tool_manager.register_tool(AIToolClock())
-        self._ai_tool_manager.register_tool(AIToolFileSystem(self._resolve_mindspace_path))
-        self._ai_tool_manager.register_tool(AIToolSystem(self._column_manager))
+        self._ai_tool_manager.register_tool(
+            AIToolCalculator(), "Calculator: performs arithmetic, trigonometry, logarithms, and other calculations"
+        )
+        self._ai_tool_manager.register_tool(AIToolClock(), "Clock: gets the current time and date")
+        self._ai_tool_manager.register_tool(
+            AIToolFileSystem(self._resolve_mindspace_path), "FileSystem: handles file operations in the current mindspace"
+        )
+        self._ai_tool_manager.register_tool(AIToolSystem(self._column_manager), "System: implements UI automations within Humbug")
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 

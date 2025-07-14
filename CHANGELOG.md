@@ -8,7 +8,8 @@ New features:
   system audit logging for many types of system events.
 - Added support for Grok4 and updated all Grok3 instances to production versions, rather than beta versions.
 - Added a running total of both input and output tokens for conversation status.
-- Improved the "system" AI tools so the AI can now get details of all open tabs, and can move tabs between columns.
+- Improved the "system" AI tools so the AI can now get details about a specific tab, get information about all open tabs, and
+  move tabs between columns.
 - Added a section about AI tools to the mindspace settings dialog, where users can enable and disable individual AI tools.
 
 Bug fixes:
@@ -19,6 +20,7 @@ Bug fixes:
   user clicked the tab, but didn't click the message.
 - A couple of OpenAI LLM models had the wrong name.
 - Increased the timeout on HTTP requests to LLMs to 5 minutes to allow for them planning to use tools.
+- The Humbug shell message labels did not scale correctly when the display was zoomed.
 
 Internal structure changes:
 
