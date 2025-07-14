@@ -50,6 +50,7 @@ class TabLabel(QWidget):
         self._layout.addWidget(self._type_button)
 
         self._label = QLabel(text)
+        self._label.setIndent(0)
         self._layout.addWidget(self._label)
 
         self._close_button = QToolButton()

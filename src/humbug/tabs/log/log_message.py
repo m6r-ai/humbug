@@ -65,6 +65,7 @@ class LogMessage(QFrame):
 
         # Create role and timestamp labels
         self._level_label = QLabel(self)
+        self._level_label.setIndent(0)
         self._header_layout.addWidget(self._level_label)
         self._header_layout.addStretch()
 

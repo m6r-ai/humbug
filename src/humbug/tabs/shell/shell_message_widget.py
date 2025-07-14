@@ -67,6 +67,7 @@ class ShellMessageWidget(QFrame):
 
         # Create role and timestamp labels
         self._role_label = QLabel(self)
+        self._role_label.setIndent(0)
         self._header_layout.addWidget(self._role_label)
         self._header_layout.addStretch()
 
