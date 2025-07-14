@@ -44,6 +44,8 @@ class AnthropicStreamResponse(AIStreamResponse):
             if "message" in chunk and "usage" in chunk["message"]:
                 usage = chunk["message"]["usage"]
                 self._input_tokens = usage.get("input_tokens", 0)
+                self._input_tokens += usage.get("cache_creation_input_tokens", 0)
+                self._input_tokens += usage.get("cache_read_input_tokens", 0)
 
         elif event_type == "content_block_start":
             content_block = chunk.get("content_block", {})
