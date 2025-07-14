@@ -247,6 +247,7 @@ class ShellMessageWidget(QFrame):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
+        self._role_label.setFont(font)
         self._set_role_style()
 
         current_style = self._message_source or ShellMessageSource.USER
