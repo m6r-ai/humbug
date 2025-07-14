@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import logging
-from typing import Any, Dict, List, Callable, Awaitable
+from typing import Any, Dict, List, Callable, Awaitable, Set
 
 
 @dataclass
@@ -67,6 +67,16 @@ class AIToolResult:
             'content': self.content,
             'error': self.error
         }
+
+
+@dataclass
+class AIToolOperationDefinition:
+    """Definition of a tool operation (sub-command)."""
+    name: str
+    handler: Callable
+    allowed_parameters: Set[str]
+    required_parameters: Set[str]
+    description: str
 
 
 # Type alias for the authorization callback
@@ -137,6 +147,83 @@ class AITool(ABC):
         Returns:
             AIToolDefinition describing this tool's interface
         """
+
+    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+        """
+        Get operation definitions for this tool.
+
+        Returns:
+            Dictionary mapping operation names to their definitions.
+            Default implementation returns empty dict for tools without operations.
+        """
+        return {}
+
+    def validate_operation_arguments(self, arguments: Dict[str, Any]) -> None:
+        """
+        Validate arguments for the specified operation.
+
+        Args:
+            arguments: Dictionary of tool arguments including 'operation'
+
+        Raises:
+            AIToolExecutionError: If arguments are invalid for the operation
+        """
+        operation_definitions = self.get_operation_definitions()
+
+        # If no operations defined, skip validation
+        if not operation_definitions:
+            return
+
+        # Extract operation name
+        operation = arguments.get("operation")
+        if not operation:
+            raise AIToolExecutionError(
+                "No 'operation' argument provided",
+                self.get_definition().name,
+                arguments
+            )
+
+        if not isinstance(operation, str):
+            raise AIToolExecutionError(
+                "'operation' must be a string",
+                self.get_definition().name,
+                arguments
+            )
+
+        # Check if operation is valid
+        if operation not in operation_definitions:
+            available_operations = ", ".join(sorted(operation_definitions.keys()))
+            raise AIToolExecutionError(
+                f"Unsupported operation: {operation}. Available operations: {available_operations}",
+                self.get_definition().name,
+                arguments
+            )
+
+        operation_def = operation_definitions[operation]
+
+        # Check for invalid parameters (parameters that exist but aren't allowed for this operation)
+        provided_params = set(arguments.keys())
+        # Always allow 'operation' parameter
+        provided_params.discard("operation")
+
+        invalid_params = provided_params - operation_def.allowed_parameters
+        if invalid_params:
+            invalid_list = ", ".join(sorted(invalid_params))
+            raise AIToolExecutionError(
+                f"Parameter(s) {invalid_list} not valid for operation '{operation}'",
+                self.get_definition().name,
+                arguments
+            )
+
+        # Check for missing required parameters
+        missing_params = operation_def.required_parameters - provided_params
+        if missing_params:
+            missing_list = ", ".join(sorted(missing_params))
+            raise AIToolExecutionError(
+                f"Required parameter(s) {missing_list} missing for operation '{operation}'",
+                self.get_definition().name,
+                arguments
+            )
 
     @abstractmethod
     async def execute(
@@ -400,6 +487,9 @@ class AIToolManager:
                 tool_call.name,
                 tool_call.arguments
             )
+
+            # Validate operation arguments before execution
+            tool.validate_operation_arguments(tool_call.arguments)
 
             result = await tool.execute(tool_call.arguments, request_authorization)
 

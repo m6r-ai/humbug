@@ -6,7 +6,7 @@ from typing import Dict, Any
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
-    AIToolAuthorizationDenied, AIToolAuthorizationCallback
+    AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition
 )
 from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
@@ -115,6 +115,93 @@ class AIToolSystem(AITool):
                 )
             ]
         )
+
+    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+        """
+        Get operation definitions for this tool.
+
+        Returns:
+            Dictionary mapping operation names to their definitions
+        """
+        return {
+            "open_editor_tab": AIToolOperationDefinition(
+                name="open_editor_tab",
+                handler=self._open_editor_tab,
+                allowed_parameters={"file_path"},
+                required_parameters={"file_path"},
+                description="Open a file in an editor tab"
+            ),
+            "new_terminal_tab": AIToolOperationDefinition(
+                name="new_terminal_tab",
+                handler=self._new_terminal_tab,
+                allowed_parameters=set(),
+                required_parameters=set(),
+                description="Create a terminal tab for the user"
+            ),
+            "open_conversation_tab": AIToolOperationDefinition(
+                name="open_conversation_tab",
+                handler=self._open_conversation_tab,
+                allowed_parameters={"file_path"},
+                required_parameters={"file_path"},
+                description="Open an existing AI conversation in a conversation tab"
+            ),
+            "new_conversation_tab": AIToolOperationDefinition(
+                name="new_conversation_tab",
+                handler=self._new_conversation_tab,
+                allowed_parameters={"model", "temperature"},
+                required_parameters=set(),
+                description="Start a new AI conversation in a conversation tab, with optional model/temperature"
+            ),
+            "show_system_shell_tab": AIToolOperationDefinition(
+                name="show_system_shell_tab",
+                handler=self._show_system_shell_tab,
+                allowed_parameters=set(),
+                required_parameters=set(),
+                description="Open a system shell tab"
+            ),
+            "show_log_tab": AIToolOperationDefinition(
+                name="show_log_tab",
+                handler=self._show_log_tab,
+                allowed_parameters=set(),
+                required_parameters=set(),
+                description="Open the mindspace log tab"
+            ),
+            "open_wiki_tab": AIToolOperationDefinition(
+                name="open_wiki_tab",
+                handler=self._open_wiki_tab,
+                allowed_parameters={"file_path"},
+                required_parameters=set(),
+                description="Open a file/directory in a wiki tab"
+            ),
+            "tab_info": AIToolOperationDefinition(
+                name="tab_info",
+                handler=self._tab_info,
+                allowed_parameters={"tab_id"},
+                required_parameters=set(),
+                description="Get information about a tab, given its ID (if no ID then gets the current tab info)"
+            ),
+            "close_tab": AIToolOperationDefinition(
+                name="close_tab",
+                handler=self._close_tab,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Close an existing tab"
+            ),
+            "list_tabs": AIToolOperationDefinition(
+                name="list_tabs",
+                handler=self._list_tabs,
+                allowed_parameters=set(),
+                required_parameters=set(),
+                description="Enumerate all currently open tabs across all columns"
+            ),
+            "move_tab": AIToolOperationDefinition(
+                name="move_tab",
+                handler=self._move_tab,
+                allowed_parameters={"tab_id", "target_column"},
+                required_parameters={"tab_id", "target_column"},
+                description="Move a tab to a specific column by index - there are a maximum of 6 columns"
+            )
+        }
 
     def _validate_mindspace_access(self) -> None:
         """
@@ -268,35 +355,38 @@ class AIToolSystem(AITool):
         # Validate mindspace is open
         self._validate_mindspace_access()
 
-        # Extract and validate operation
-        operation = self._get_str_value_from_key("operation", arguments)
-
-        # Route to specific operation handler
-        handlers = {
-            "open_editor_tab": self._open_editor_tab,
-            "new_terminal_tab": self._new_terminal_tab,
-            "open_conversation_tab": self._open_conversation_tab,
-            "new_conversation_tab": self._new_conversation_tab,
-            "show_system_shell_tab": self._show_system_shell_tab,
-            "show_log_tab": self._show_log_tab,
-            "open_wiki_tab": self._open_wiki_tab,
-            "tab_info": self._tab_info,
-            "close_tab": self._close_tab,
-            "list_tabs": self._list_tabs,
-            "move_tab": self._move_tab
-        }
-
-        if operation not in handlers:
+        # Extract operation name
+        operation = arguments.get("operation")
+        if not operation:
             raise AIToolExecutionError(
-                f"Unsupported operation: {operation}",
+                "No 'operation' argument provided",
                 "system",
                 arguments
             )
 
+        if not isinstance(operation, str):
+            raise AIToolExecutionError(
+                "'operation' must be a string",
+                "system",
+                arguments
+            )
+
+        # Get operation definition
+        operation_definitions = self.get_operation_definitions()
+        if operation not in operation_definitions:
+            available_operations = ", ".join(sorted(operation_definitions.keys()))
+            raise AIToolExecutionError(
+                f"Unsupported operation: {operation}. Available operations: {available_operations}",
+                "system",
+                arguments
+            )
+
+        operation_def = operation_definitions[operation]
+
         self._logger.debug("System operation requested: %s", operation)
 
         try:
-            result = await handlers[operation](arguments, request_authorization)
+            result = await operation_def.handler(arguments, request_authorization)
             self._logger.info("System operation completed successfully: %s", operation)
             return result
 
@@ -633,7 +723,7 @@ class AIToolSystem(AITool):
         _request_authorization: AIToolAuthorizationCallback
     ) -> str:
         """Get information about a specific tab by ID or the current tab."""
-        tab_id = self._get_str_value_from_key("tab_id", arguments) if "tab_id" in arguments else None
+        tab_id = arguments.get("tab_id")
 
         try:
             # If no tab ID provided, use the current tab
@@ -647,6 +737,14 @@ class AIToolSystem(AITool):
                     )
 
                 tab_id = current_tab.tab_id()
+
+            # Validate tab_id is a string if provided
+            if not isinstance(tab_id, str):
+                raise AIToolExecutionError(
+                    "'tab_id' must be a string",
+                    "system",
+                    arguments
+                )
 
             # Get tab info
             tab_info = self._column_manager.get_tab_info_by_id(tab_id)

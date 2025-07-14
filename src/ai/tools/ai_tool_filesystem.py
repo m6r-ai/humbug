@@ -7,7 +7,7 @@ from typing import Dict, Any, List, Callable, Tuple
 
 from ai.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
-    AIToolAuthorizationDenied, AIToolAuthorizationCallback
+    AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition
 )
 
 
@@ -91,28 +91,85 @@ class AIToolFileSystem(AITool):
             ]
         )
 
-    def _get_value_from_key(self, key: str, arguments: Dict[str, Any]) -> Any:
+    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """
-        Extract value from arguments dictionary.
-
-        Args:
-            key: Key to extract from arguments
-            arguments: Dictionary containing operation parameters
+        Get operation definitions for this tool.
 
         Returns:
-            Value for the given key
-
-        Raises:
-            AIToolExecutionError: If key is missing or value is not valid
+            Dictionary mapping operation names to their definitions
         """
-        if key not in arguments:
-            raise AIToolExecutionError(
-                f"No '{key}' argument provided",
-                "filesystem",
-                arguments
+        return {
+            "read_file": AIToolOperationDefinition(
+                name="read_file",
+                handler=self._read_file,
+                allowed_parameters={"path", "encoding"},
+                required_parameters={"path"},
+                description="Read file contents"
+            ),
+            "write_file": AIToolOperationDefinition(
+                name="write_file",
+                handler=self._write_file,
+                allowed_parameters={"path", "content", "encoding", "create_parents"},
+                required_parameters={"path", "content"},
+                description="Write content to file (create or overwrite)"
+            ),
+            "append_to_file": AIToolOperationDefinition(
+                name="append_to_file",
+                handler=self._append_to_file,
+                allowed_parameters={"path", "content", "encoding"},
+                required_parameters={"path", "content"},
+                description="Append content to existing file"
+            ),
+            "list_directory": AIToolOperationDefinition(
+                name="list_directory",
+                handler=self._list_directory,
+                allowed_parameters={"path"},
+                required_parameters={"path"},
+                description="List directory contents"
+            ),
+            "create_directory": AIToolOperationDefinition(
+                name="create_directory",
+                handler=self._create_directory,
+                allowed_parameters={"path", "create_parents"},
+                required_parameters={"path"},
+                description="Create directory (with parents if needed)"
+            ),
+            "remove_directory": AIToolOperationDefinition(
+                name="remove_directory",
+                handler=self._remove_directory,
+                allowed_parameters={"path"},
+                required_parameters={"path"},
+                description="Remove empty directory"
+            ),
+            "delete_file": AIToolOperationDefinition(
+                name="delete_file",
+                handler=self._delete_file,
+                allowed_parameters={"path"},
+                required_parameters={"path"},
+                description="Delete file"
+            ),
+            "copy_file": AIToolOperationDefinition(
+                name="copy_file",
+                handler=self._copy_file,
+                allowed_parameters={"path", "destination"},
+                required_parameters={"path", "destination"},
+                description="Copy file to destination"
+            ),
+            "move": AIToolOperationDefinition(
+                name="move",
+                handler=self._move,
+                allowed_parameters={"path", "destination"},
+                required_parameters={"path", "destination"},
+                description="Move/rename file or directory"
+            ),
+            "get_info": AIToolOperationDefinition(
+                name="get_info",
+                handler=self._get_info,
+                allowed_parameters={"path"},
+                required_parameters={"path"},
+                description="Get detailed information about file or directory"
             )
-
-        return arguments[key]
+        }
 
     def _get_str_value_from_key(self, key: str, arguments: Dict[str, Any]) -> str:
         """
@@ -128,7 +185,14 @@ class AIToolFileSystem(AITool):
         Raises:
             AIToolExecutionError: If key is missing or value is not a string
         """
-        value = self._get_value_from_key(key, arguments)
+        if key not in arguments:
+            raise AIToolExecutionError(
+                f"No '{key}' argument provided",
+                "filesystem",
+                arguments
+            )
+
+        value = arguments[key]
         if not isinstance(value, str):
             raise AIToolExecutionError(
                 f"'{key}' must be a string",
@@ -195,34 +259,38 @@ class AIToolFileSystem(AITool):
             AIToolExecutionError: If operation fails
             AIToolAuthorizationDenied: If user denies authorization
         """
-        # Extract and validate operation
-        operation = self._get_str_value_from_key("operation", arguments)
-
-        # Route to specific operation handler
-        handlers = {
-            "read_file": self._read_file,
-            "write_file": self._write_file,
-            "append_to_file": self._append_to_file,
-            "list_directory": self._list_directory,
-            "create_directory": self._create_directory,
-            "remove_directory": self._remove_directory,
-            "delete_file": self._delete_file,
-            "copy_file": self._copy_file,
-            "move": self._move,
-            "get_info": self._get_info,
-        }
-
-        if operation not in handlers:
+        # Extract operation name
+        operation = arguments.get("operation")
+        if not operation:
             raise AIToolExecutionError(
-                f"Unsupported operation: {operation}",
+                "No 'operation' argument provided",
                 "filesystem",
                 arguments
             )
 
+        if not isinstance(operation, str):
+            raise AIToolExecutionError(
+                "'operation' must be a string",
+                "filesystem",
+                arguments
+            )
+
+        # Get operation definition
+        operation_definitions = self.get_operation_definitions()
+        if operation not in operation_definitions:
+            available_operations = ", ".join(sorted(operation_definitions.keys()))
+            raise AIToolExecutionError(
+                f"Unsupported operation: {operation}. Available operations: {available_operations}",
+                "filesystem",
+                arguments
+            )
+
+        operation_def = operation_definitions[operation]
+
         self._logger.debug("Filesystem operation requested: %s", operation)
 
         try:
-            result = await handlers[operation](arguments, request_authorization)
+            result = await operation_def.handler(arguments, request_authorization)
             self._logger.info("Filesystem operation completed successfully: %s", operation)
             return result
 
@@ -314,21 +382,7 @@ class AIToolFileSystem(AITool):
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path(path_arg, "write_file")
 
-        if "content" not in arguments:
-            raise AIToolExecutionError(
-                "No 'content' argument provided",
-                "filesystem",
-                arguments
-            )
-
-        content = arguments["content"]
-        if not isinstance(content, str):
-            raise AIToolExecutionError(
-                "'content' must be a string",
-                "filesystem",
-                arguments
-            )
-
+        content = self._get_str_value_from_key("content", arguments)
         encoding = arguments.get("encoding", "utf-8")
         create_parents = arguments.get("create_parents", False)
 
