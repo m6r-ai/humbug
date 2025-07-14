@@ -136,8 +136,8 @@ def get_french_strings() -> LanguageStrings:
         backup_settings="Paramètres de sauvegarde",
         auto_backup="Sauvegarde automatique",
         backup_interval="Intervalle de sauvegarde (secondes)",
-        tool_settings="Paramètres des outils",
-        tools_description="Description des outils",
+        tool_settings="Paramètres des outils IA",
+        tools_description="Activer ou désactiver des outils individuels pour cet espace mental",
 
         # Conversation settings
         model_info="Informations sur le modèle",

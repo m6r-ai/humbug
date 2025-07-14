@@ -136,8 +136,8 @@ def get_arabic_strings() -> LanguageStrings:
         backup_settings="إعدادات النسخ الاحتياطي",
         auto_backup="نسخ احتياطي تلقائي",
         backup_interval="فترة النسخ الاحتياطي (ثواني)",
-        tool_settings="إعدادات الأداة",
-        tools_description="وصف الأداة",
+        tool_settings="إعدادات أدوات الذكاء الاصطناعي",
+        tools_description="تفعيل أو إلغاء تفعيل الأدوات الفردية لهذا المساحة الذهنية",
 
         # Conversation settings
         model_info="معلومات النموذج",
