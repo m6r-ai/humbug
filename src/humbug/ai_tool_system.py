@@ -45,26 +45,28 @@ class AIToolSystem(AITool):
         """
         operations = self.get_operation_definitions()
         operation_names: List[str] = list(operations.keys())
+
+        # Build description from operations
+        base_description = (
+            "The 'system' tool let's you (the AI) control the application user interface for the user. "
+            "It does not give you the ability to control or use these tools directly."
+        )
+
+        # Generate operations list
+        operation_list = []
+        for name, op_def in operations.items():
+            operation_list.append(f"- {name}: {op_def.description}")
+
+        footer_description = (
+            "All operations work within the current mindspace. "
+            "Returns detailed information about created tabs, opened files, and operation results."
+        )
+
+        description = f"{base_description}\nAvailable operations are:\n" + "\n".join(operation_list) + f"\n{footer_description}"
+
         return AIToolDefinition(
             name="system",
-            description=(
-                "The 'system' tool let's you (the AI) control the application user interface for the user. "
-                "It does not give you the ability to control or use these tools directly. "
-                "Available operations are:\n"
-                "- open_editor_tab: open a file in an editor tab\n"
-                "- new_terminal_tab: create a terminal tab for the user (you cannot run commands in this directly)\n"
-                "- open_conversation_tab: open an existing AI conversation in a conversation tab\n"
-                "- new_conversation_tab: start a new AI conversation in a conversation tab, with optional model/temperature\n"
-                "- show_system_shell_tab: open a system shell tab\n"
-                "- show_log_tab: open the mindspace log tab\n"
-                "- open_wiki_tab: open a file/directory in a wiki tab\n"
-                "- tab_info: get information about a tab, given its ID (if no ID then gets the current tab info)\n"
-                "- close_tab: close an existing tab\n"
-                "- list_tabs: enumerate all currently open tabs across all columns)\n"
-                "- move_tab: move a tab to a specific column by index - there are a maximum of 6 columns\n"
-                "All operations work within the current mindspace. "
-                "Returns detailed information about created tabs, opened files, and operation results."
-            ),
+            description=description,
             parameters=[
                 AIToolParameter(
                     name="operation",
@@ -119,77 +121,77 @@ class AIToolSystem(AITool):
                 handler=self._open_editor_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
-                description="Open a file in an editor tab"
+                description="open a file in an editor tab"
             ),
             "new_terminal_tab": AIToolOperationDefinition(
                 name="new_terminal_tab",
                 handler=self._new_terminal_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="Create a terminal tab for the user"
+                description="create a terminal tab for the user (you cannot run commands in this directly)"
             ),
             "open_conversation_tab": AIToolOperationDefinition(
                 name="open_conversation_tab",
                 handler=self._open_conversation_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
-                description="Open an existing AI conversation in a conversation tab"
+                description="open an existing AI conversation in a conversation tab"
             ),
             "new_conversation_tab": AIToolOperationDefinition(
                 name="new_conversation_tab",
                 handler=self._new_conversation_tab,
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
-                description="Start a new AI conversation in a conversation tab, with optional model/temperature"
+                description="start a new AI conversation in a conversation tab, with optional model/temperature"
             ),
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
                 handler=self._show_system_shell_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="Open a system shell tab"
+                description="open a system shell tab"
             ),
             "show_log_tab": AIToolOperationDefinition(
                 name="show_log_tab",
                 handler=self._show_log_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="Open the mindspace log tab"
+                description="open the mindspace log tab"
             ),
             "open_wiki_tab": AIToolOperationDefinition(
                 name="open_wiki_tab",
                 handler=self._open_wiki_tab,
                 allowed_parameters={"file_path"},
                 required_parameters=set(),
-                description="Open a file/directory in a wiki tab"
+                description="open a file/directory in a wiki tab"
             ),
             "tab_info": AIToolOperationDefinition(
                 name="tab_info",
                 handler=self._tab_info,
                 allowed_parameters={"tab_id"},
                 required_parameters=set(),
-                description="Get information about a tab, given its ID (if no ID then gets the current tab info)"
+                description="get information about a tab, given its ID (if no ID then gets the current tab info)"
             ),
             "close_tab": AIToolOperationDefinition(
                 name="close_tab",
                 handler=self._close_tab,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Close an existing tab"
+                description="close an existing tab"
             ),
             "list_tabs": AIToolOperationDefinition(
                 name="list_tabs",
                 handler=self._list_tabs,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="Enumerate all currently open tabs across all columns"
+                description="enumerate all currently open tabs across all columns"
             ),
             "move_tab": AIToolOperationDefinition(
                 name="move_tab",
                 handler=self._move_tab,
                 allowed_parameters={"tab_id", "target_column"},
                 required_parameters={"tab_id", "target_column"},
-                description="Move a tab to a specific column by index - there are a maximum of 6 columns"
+                description="move a tab to a specific column by index - there are a maximum of 6 columns"
             )
         }
 

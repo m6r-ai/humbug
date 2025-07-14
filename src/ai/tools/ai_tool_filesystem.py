@@ -40,13 +40,24 @@ class AIToolFileSystem(AITool):
         """
         operations = self.get_operation_definitions()
         operation_names: List[str] = list(operations.keys())
+
+        # Build description from operations
+        base_description = (
+            f"Perform filesystem operations within the current sandbox. "
+            f"Write operations require user authorization and all operations are restricted to the sandbox boundaries. "
+            f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
+        )
+
+        # Generate operations list
+        operation_list = []
+        for name, op_def in operations.items():
+            operation_list.append(f"- {name}: {op_def.description}")
+
+        description = f"{base_description}\nAvailable operations are:\n" + "\n".join(operation_list)
+
         return AIToolDefinition(
             name="filesystem",
-            description=(
-                f"Perform filesystem operations within the current sandbox. "
-                f"All operations require user authorization and are restricted to sandbox boundaries. "
-                f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
-            ),
+            description=description,
             parameters=[
                 AIToolParameter(
                     name="operation",
@@ -102,70 +113,70 @@ class AIToolFileSystem(AITool):
                 handler=self._read_file,
                 allowed_parameters={"path", "encoding"},
                 required_parameters={"path"},
-                description="Read file contents"
+                description="read file contents"
             ),
             "write_file": AIToolOperationDefinition(
                 name="write_file",
                 handler=self._write_file,
                 allowed_parameters={"path", "content", "encoding", "create_parents"},
                 required_parameters={"path", "content"},
-                description="Write content to file (create or overwrite)"
+                description="write content to file (create or overwrite)"
             ),
             "append_to_file": AIToolOperationDefinition(
                 name="append_to_file",
                 handler=self._append_to_file,
                 allowed_parameters={"path", "content", "encoding"},
                 required_parameters={"path", "content"},
-                description="Append content to existing file"
+                description="append content to existing file"
             ),
             "list_directory": AIToolOperationDefinition(
                 name="list_directory",
                 handler=self._list_directory,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
-                description="List directory contents"
+                description="list directory contents"
             ),
             "create_directory": AIToolOperationDefinition(
                 name="create_directory",
                 handler=self._create_directory,
                 allowed_parameters={"path", "create_parents"},
                 required_parameters={"path"},
-                description="Create directory (with parents if needed)"
+                description="create directory"
             ),
             "remove_directory": AIToolOperationDefinition(
                 name="remove_directory",
                 handler=self._remove_directory,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
-                description="Remove empty directory"
+                description="remove empty directory"
             ),
             "delete_file": AIToolOperationDefinition(
                 name="delete_file",
                 handler=self._delete_file,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
-                description="Delete file"
+                description="delete file"
             ),
             "copy_file": AIToolOperationDefinition(
                 name="copy_file",
                 handler=self._copy_file,
                 allowed_parameters={"path", "destination"},
                 required_parameters={"path", "destination"},
-                description="Copy file to destination"
+                description="copy file to destination"
             ),
             "move": AIToolOperationDefinition(
                 name="move",
                 handler=self._move,
                 allowed_parameters={"path", "destination"},
                 required_parameters={"path", "destination"},
-                description="Move/rename file or directory"
+                description="move/rename file or directory"
             ),
             "get_info": AIToolOperationDefinition(
                 name="get_info",
                 handler=self._get_info,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
-                description="Get detailed information about file or directory"
+                description="get detailed information about file or directory"
             )
         }
 
