@@ -34,6 +34,7 @@ class SettingsField(SettingsItem):
         self._layout.setContentsMargins(0, 4, 0, 4)
 
         self._label = QLabel(label_text)
+        self._label.setIndent(0)
         self._layout.addWidget(self._label)
 
         self.setLayout(self._layout)

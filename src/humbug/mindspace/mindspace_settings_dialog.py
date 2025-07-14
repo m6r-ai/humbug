@@ -5,15 +5,19 @@ This dialog allows users to configure mindspace settings such as tab behavior an
 Settings are persisted to the mindspace's settings.json file.
 """
 
+from typing import cast
+
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
 )
 from PySide6.QtCore import Signal
 
 from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
+from ai.ai_tool_manager import AIToolManager
 
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
+from humbug.settings.settings_checkbox import SettingsCheckbox
 from humbug.settings.settings_container import SettingsContainer
 from humbug.settings.settings_factory import SettingsFactory
 from humbug.style_manager import StyleManager
@@ -43,6 +47,9 @@ class MindspaceSettingsDialog(QDialog):
 
         self._initial_settings: MindspaceSettings | None = None
         self._current_settings: MindspaceSettings | None = None
+        self._tool_checkboxes: dict[str, QWidget] = {}
+
+        self._tool_manager = AIToolManager()
 
         style_manager = StyleManager()
 
@@ -76,6 +83,17 @@ class MindspaceSettingsDialog(QDialog):
         # Reasoning capabilities
         self._reasoning_combo = SettingsFactory.create_combo(strings.settings_reasoning_label)
         self._settings_container.add_setting(self._reasoning_combo)
+
+        # AI tools section
+        spacer = SettingsFactory.create_spacer(24)
+        self._settings_container.add_setting(spacer)
+
+        # Tools section
+        tools_section = SettingsFactory.create_section(strings.tool_settings, strings.tools_description)
+        self._settings_container.add_setting(tools_section)
+
+        # Create checkboxes for each tool
+        self._create_tool_checkboxes()
 
         spacer = SettingsFactory.create_spacer(24)
         self._settings_container.add_setting(spacer)
@@ -159,6 +177,14 @@ class MindspaceSettingsDialog(QDialog):
         # Apply consistent dialog styling
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
+    def _create_tool_checkboxes(self) -> None:
+        """Create checkboxes for each available tool."""
+        tool_configs = self._tool_manager.get_all_tool_configs()
+        for config in tool_configs:
+            checkbox = SettingsFactory.create_checkbox(config.display_name)
+            self._tool_checkboxes[config.name] = checkbox
+            self._settings_container.add_setting(checkbox)
+
     def _handle_auto_backup_change(self) -> None:
         """Handle changes to auto backup checkbox."""
         auto_backup_checked = self._auto_backup_check.get_value()
@@ -214,6 +240,11 @@ class MindspaceSettingsDialog(QDialog):
 
     def get_settings(self) -> MindspaceSettings:
         """Get current settings from dialog."""
+        # Get enabled tools from checkboxes
+        enabled_tools = {}
+        for tool_name, checkbox in self._tool_checkboxes.items():
+            enabled_tools[tool_name] = cast(SettingsCheckbox, checkbox).get_value()
+
         return MindspaceSettings(
             use_soft_tabs=self._soft_tabs_check.get_value(),
             tab_size=self._tab_size_spin.get_value(),
@@ -221,7 +252,8 @@ class MindspaceSettingsDialog(QDialog):
             auto_backup_interval=self._backup_interval_spin.get_value(),
             model=self._model_combo.get_text(),
             temperature=self._temp_spin.get_value(),
-            reasoning=self._reasoning_combo.get_value()
+            reasoning=self._reasoning_combo.get_value(),
+            enabled_tools=enabled_tools
         )
 
     def set_settings(self, settings: MindspaceSettings) -> None:
@@ -234,7 +266,8 @@ class MindspaceSettingsDialog(QDialog):
             auto_backup_interval=settings.auto_backup_interval,
             model=settings.model,
             temperature=settings.temperature,
-            reasoning=settings.reasoning
+            reasoning=settings.reasoning,
+            enabled_tools=settings.enabled_tools.copy()
         )
 
         # Editor settings
@@ -260,6 +293,11 @@ class MindspaceSettingsDialog(QDialog):
         self._update_model_capabilities(settings.model)
         self._reasoning_combo.set_value(settings.reasoning)
 
+        # Set tool checkboxes
+        for tool_name, checkbox in self._tool_checkboxes.items():
+            enabled = settings.enabled_tools.get(tool_name, True)
+            cast(SettingsCheckbox, checkbox).set_value(enabled)
+
         # Reset the modified state
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
@@ -268,6 +306,10 @@ class MindspaceSettingsDialog(QDialog):
         """Handle Apply button click."""
         settings = self.get_settings()
         self._current_settings = settings
+
+        # Update the tool manager with the new settings
+        self._tool_manager.set_tool_enabled_states(settings.enabled_tools)
+
         self.settings_changed.emit(settings)
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
@@ -280,6 +322,9 @@ class MindspaceSettingsDialog(QDialog):
     def reject(self) -> None:
         """Handle Cancel button click."""
         if self._initial_settings:
+            # Restore original tool settings
+            self._tool_manager.set_tool_enabled_states(self._initial_settings.enabled_tools)
+
             self.settings_changed.emit(self._initial_settings)
 
         super().reject()

@@ -13,6 +13,8 @@ from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal
 
+from ai.ai_tool_manager import AIToolManager
+
 from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError
 from humbug.mindspace.mindspace_interactions import MindspaceInteractions
@@ -66,6 +68,7 @@ class MindspaceManager(QObject):
             self._directory_tracker = MindspaceDirectoryTracker()
             self._interactions = MindspaceInteractions()
             self._initialized = True
+            self._tool_manager = AIToolManager()
             self._logger = logging.getLogger("MindspaceManager")
 
     def mindspace_path(self) -> str:
@@ -109,6 +112,10 @@ class MindspaceManager(QObject):
         try:
             new_settings.save(settings_path)
             self._settings = new_settings
+
+            # Apply tool settings to the tool manager
+            self._apply_tool_settings(new_settings)
+
             self.settings_changed.emit()
 
         except OSError as e:
@@ -155,7 +162,7 @@ class MindspaceManager(QObject):
                 os.makedirs(os.path.join(path, folder), exist_ok=True)
 
             # Create and save default settings
-            settings = MindspaceSettings()
+            settings = MindspaceSettings(self._tool_manager.get_default_enabled_tools())
             settings.save(os.path.join(mindspace_dir, self.SETTINGS_FILE))
 
             # Create empty session file
@@ -209,6 +216,10 @@ class MindspaceManager(QObject):
             self._directory_tracker.load_tracking(path)
             self._update_home_tracking()
             self._load_interactions()
+
+            # Apply tool settings to the tool manager
+            self._apply_tool_settings(settings)
+
             self.settings_changed.emit()
 
         except Exception as e:
@@ -224,6 +235,10 @@ class MindspaceManager(QObject):
             self._interactions.clear()
             self._directory_tracker.clear_tracking()
             self._update_home_tracking()
+
+            # Reset tool manager to default state
+            self._reset_tool_manager()
+
             self.settings_changed.emit()
 
     def save_mindspace_state(self, state: Dict) -> None:
@@ -442,6 +457,27 @@ class MindspaceManager(QObject):
 
         except OSError as e:
             self._logger.error("Failed to update home tracking: %s", str(e))
+            # Non-critical error, don't raise
+
+    def _apply_tool_settings(self, settings: MindspaceSettings) -> None:
+        """Apply tool settings to the tool manager."""
+        try:
+            self._tool_manager.set_tool_enabled_states(settings.enabled_tools)
+            self._logger.debug("Applied tool settings to tool manager: %s", settings.enabled_tools)
+
+        except Exception as e:
+            self._logger.error("Failed to apply tool settings: %s", str(e))
+            # Non-critical error, don't raise
+
+    def _reset_tool_manager(self) -> None:
+        """Reset tool manager to default state when no mindspace is open."""
+        try:
+            default_tools = self._tool_manager.get_default_enabled_tools()
+            self._tool_manager.set_tool_enabled_states(default_tools)
+            self._logger.debug("Reset tool manager to default state")
+
+        except Exception as e:
+            self._logger.error("Failed to reset tool manager: %s", str(e))
             # Non-critical error, don't raise
 
     def update_file_dialog_directory(self, path: str) -> None:

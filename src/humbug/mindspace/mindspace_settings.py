@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 import json
+from typing import Dict
 
 from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
+from ai.ai_tool_manager import AIToolManager
 
 
 @dataclass
@@ -11,6 +13,7 @@ class MindspaceSettings:
 
     This class handles the loading and saving of settings to a JSON file.
     """
+    enabled_tools: Dict[str, bool]
     model: str = AIConversationSettings.get_default_model({})  # Will be overridden with actual backends
     temperature: float = 0.7  # Default temperature
     reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
@@ -26,12 +29,24 @@ class MindspaceSettings:
             data = json.load(f)
             editor = data.get("editor", {})
             conversation = data.get("conversation", {})
+            tools = data.get("tools", {})
+
             default_model = AIConversationSettings.get_default_model({})
             default_reasoning = AIConversationSettings.get_reasoning_capability(default_model)
 
             # Handle reasoning bitflag from JSON
             reasoning_value = conversation.get("reasoning", default_reasoning.value)
             reasoning = ReasoningCapability(reasoning_value)
+
+            # Handle enabled tools - start with defaults and override with saved values
+            tool_manager = AIToolManager()
+            enabled_tools = tool_manager.get_default_enabled_tools()
+            saved_enabled_tools = tools.get("enabled", {})
+
+            # Update with saved values, but only for tools that exist in the configuration
+            for tool_name, enabled in saved_enabled_tools.items():
+                if tool_name in enabled_tools:
+                    enabled_tools[tool_name] = enabled
 
             return cls(
                 model=conversation.get("model", default_model),
@@ -40,7 +55,8 @@ class MindspaceSettings:
                 use_soft_tabs=editor.get("useSoftTabs", True),
                 tab_size=editor.get("tabSize", 4),
                 auto_backup=editor.get("autoBackup", False),
-                auto_backup_interval=editor.get("autoBackupInterval", 300)
+                auto_backup_interval=editor.get("autoBackupInterval", 300),
+                enabled_tools=enabled_tools
             )
 
     def save(self, path: str) -> None:
@@ -56,6 +72,9 @@ class MindspaceSettings:
                 "tabSize": self.tab_size,
                 "autoBackup": self.auto_backup,
                 "autoBackupInterval": self.auto_backup_interval,
+            },
+            "tools": {
+                "enabled": self.enabled_tools,
             },
         }
         with open(path, 'w', encoding='utf-8') as f:

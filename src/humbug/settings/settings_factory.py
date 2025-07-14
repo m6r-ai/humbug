@@ -38,9 +38,9 @@ class SettingsFactory:
         return SettingsHeader(title, parent)
 
     @staticmethod
-    def create_section(title: str, parent: QWidget | None = None) -> SettingsSection:
+    def create_section(title: str, description: str | None = None, parent: QWidget | None = None) -> SettingsSection:
         """Create a section header."""
-        return SettingsSection(title, parent)
+        return SettingsSection(title, description, parent)
 
     @staticmethod
     def create_checkbox(text: str, parent: QWidget | None = None) -> SettingsCheckbox:

@@ -131,6 +131,8 @@ class LanguageStrings:
     backup_settings: str
     auto_backup: str
     backup_interval: str
+    tool_settings: str
+    tools_description: str
 
     # Conversation settings
     model_info: str

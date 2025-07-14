@@ -30,10 +30,10 @@ class SettingsHeader(SettingsItem):
         super().__init__(parent)
 
         layout = QVBoxLayout()
-        zoom_factor = self._style_manager.zoom_factor()
-        layout.setContentsMargins(0, 0, 0, int(16 * zoom_factor))
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self._label = QLabel(title)
+        self._label.setIndent(0)
         layout.addWidget(self._label)
 
         self.setLayout(layout)
@@ -55,5 +55,9 @@ class SettingsHeader(SettingsItem):
                 font-size: {scaled_font_size}pt;
                 font-weight: bold;
                 color: {color};
+                border-radius: none;
+                border: 0px;
+                padding: 0px;
+                margin: 0px 0px 0.75em 0px;
             }}
         """)

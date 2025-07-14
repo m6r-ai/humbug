@@ -161,9 +161,45 @@ class AITool(ABC):
         """
 
 
+@dataclass
+class AIToolConfig:
+    """Configuration for an AI tool."""
+    name: str
+    display_name: str
+    description: str
+    enabled_by_default: bool = True
+
+
 class AIToolManager:
     """Singleton manager for AI tools."""
 
+    # Static configuration of available tools
+    _TOOL_CONFIGS: List[AIToolConfig] = [
+        AIToolConfig(
+            name="calculate",
+            display_name="Calculator",
+            description="Mathematical expression evaluator",
+            enabled_by_default=True
+        ),
+        AIToolConfig(
+            name="get_current_time",
+            display_name="Current Time",
+            description="Get the current date and time",
+            enabled_by_default=True
+        ),
+        AIToolConfig(
+            name="filesystem",
+            display_name="File System",
+            description="Perform filesystem operations",
+            enabled_by_default=True
+        ),
+        AIToolConfig(
+            name="system",
+            display_name="System Control",
+            description="Control the application user interface",
+            enabled_by_default=True
+        ),
+    ]
     _instance: 'AIToolManager | None' = None
 
     def __new__(cls) -> 'AIToolManager':
@@ -175,8 +211,34 @@ class AIToolManager:
     def __init__(self) -> None:
         if not hasattr(self, '_initialized'):
             self._tools: Dict[str, AITool] = {}
+            self._enabled_tools: Dict[str, bool] = self.get_default_enabled_tools()
             self._logger = logging.getLogger("AIToolManager")
             self._initialized = True
+
+    def _get_tool_config(self, tool_name: str) -> AIToolConfig | None:
+        """
+        Get configuration for a specific tool.
+
+        Args:
+            tool_name: Name of the tool
+
+        Returns:
+            Tool configuration if found, None otherwise
+        """
+        for config in self._TOOL_CONFIGS:
+            if config.name == tool_name:
+                return config
+
+        return None
+
+    def get_all_tool_configs(self) -> List[AIToolConfig]:
+        """
+        Get all available tool configurations.
+
+        Returns:
+            List of all tool configurations
+        """
+        return self._TOOL_CONFIGS.copy()
 
     def register_tool(self, tool: AITool) -> None:
         """
@@ -194,6 +256,12 @@ class AIToolManager:
             raise ValueError(f"Tool '{definition.name}' is already registered")
 
         self._tools[definition.name] = tool
+
+        # Set default enabled state if not already configured
+        if definition.name not in self._enabled_tools:
+            config = self._get_tool_config(definition.name)
+            self._enabled_tools[definition.name] = config.enabled_by_default if config else True
+
         self._logger.info("Registered tool: %s", definition.name)
 
     def unregister_tool(self, name: str) -> None:
@@ -207,14 +275,72 @@ class AIToolManager:
             del self._tools[name]
             self._logger.info("Unregistered tool: %s", name)
 
-    def get_tool_definitions(self) -> List[AIToolDefinition]:
+    def set_tool_enabled(self, tool_name: str, enabled: bool) -> None:
         """
-        Get definitions for all registered tools.
+        Enable or disable a tool.
+
+        Args:
+            tool_name: Name of the tool to enable/disable
+            enabled: Whether the tool should be enabled
+        """
+        self._enabled_tools[tool_name] = enabled
+        self._logger.debug("Tool '%s' %s", tool_name, "enabled" if enabled else "disabled")
+
+    def is_tool_enabled(self, tool_name: str) -> bool:
+        """
+        Check if a tool is enabled.
+
+        Args:
+            tool_name: Name of the tool to check
 
         Returns:
-            List of tool definitions
+            True if the tool is enabled, False otherwise
         """
-        return [tool.get_definition() for tool in self._tools.values()]
+        return self._enabled_tools.get(tool_name, True)
+
+    def set_tool_enabled_states(self, enabled_states: Dict[str, bool]) -> None:
+        """
+        Set enabled states for multiple tools.
+
+        Args:
+            enabled_states: Dictionary mapping tool names to their enabled state
+        """
+        for tool_name, enabled in enabled_states.items():
+            self.set_tool_enabled(tool_name, enabled)
+
+    def get_tool_enabled_states(self) -> Dict[str, bool]:
+        """
+        Get enabled states for all tools.
+
+        Returns:
+            Dictionary mapping tool names to their enabled state
+        """
+        return self._enabled_tools.copy()
+
+    def get_default_enabled_tools(self) -> Dict[str, bool]:
+        """
+        Get default enabled state for all tools.
+
+        Returns:
+            Dictionary mapping tool names to their default enabled state
+        """
+        return {
+            config.name: config.enabled_by_default
+            for config in self._TOOL_CONFIGS
+        }
+
+    def get_tool_definitions(self) -> List[AIToolDefinition]:
+        """
+        Get definitions for all registered and enabled tools.
+
+        Returns:
+            List of tool definitions for enabled tools only
+        """
+        return [
+            tool.get_definition()
+            for tool_name, tool in self._tools.items()
+            if self.is_tool_enabled(tool_name)
+        ]
 
     async def execute_tool(
         self,
@@ -233,6 +359,16 @@ class AIToolManager:
         """
         if tool_call.name not in self._tools:
             error_msg = f"Unknown tool: {tool_call.name}"
+            self._logger.error(error_msg)
+            return AIToolResult(
+                id=tool_call.id,
+                name=tool_call.name,
+                content="",
+                error=error_msg
+            )
+
+        if not self.is_tool_enabled(tool_call.name):
+            error_msg = f"Tool is disabled: {tool_call.name}"
             self._logger.error(error_msg)
             return AIToolResult(
                 id=tool_call.id,
@@ -298,3 +434,10 @@ class AIToolManager:
     def get_tool_names(self) -> List[str]:
         """Get names of all registered tools."""
         return list(self._tools.keys())
+
+    def get_enabled_tool_names(self) -> List[str]:
+        """Get names of all enabled tools."""
+        return [
+            tool_name for tool_name in self._tools
+            if self.is_tool_enabled(tool_name)
+        ]

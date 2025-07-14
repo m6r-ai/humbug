@@ -136,6 +136,8 @@ def get_english_strings() -> LanguageStrings:
         backup_settings="Backup Settings",
         auto_backup="Auto Backup",
         backup_interval="Backup Interval (seconds)",
+        tool_settings="AI Tool Settings",
+        tools_description="Enable or disable individual tools for this mindspace",
 
         # Conversation settings
         model_info="Model Information",

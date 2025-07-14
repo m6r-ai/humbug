@@ -1254,8 +1254,8 @@ class StyleManager(QObject):
                 background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
                 border: none;
                 border-radius: 4px;
-                padding: 0;
-                margin: 0;
+                padding: 0px;
+                margin: 0px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
 
@@ -1278,8 +1278,8 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 4px;
-                padding: 0;
-                margin: 0;
+                padding: 0px;
+                margin: 0px;
             }}
             QCheckBox::indicator {{
                 width: {int(18 * zoom_factor)}px;
@@ -1303,7 +1303,7 @@ class StyleManager(QObject):
                 border: none;
                 border-radius: 4px;
                 padding: 6px;
-                margin: 0;
+                margin: 0px;
                 font-size: {int(base_font_size * zoom_factor)}pt;
             }}
             QComboBox:disabled {{
