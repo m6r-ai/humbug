@@ -67,33 +67,28 @@ class AnthropicBackend(AIBackend):
             User message dictionary with structured content
         """
         # For Anthropic, tool results are structured content within the user message
-        if not tool_results:
-            return {
-                "role": "user",
-                "content": content
-            }
-
-        # Process tool results
         content_parts = []
-
-        # Add text content if present
         if content:
-            content_parts.append({"type": "text", "text": content})
+            content_parts.append({
+                "type": "text",
+                "text": content
+            })
 
-        # Add tool results as structured content
-        for tool_result in tool_results:
-            tool_content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
+        if tool_results:
+            # Add tool results as structured content
+            for tool_result in tool_results:
+                tool_content = tool_result.content if not tool_result.error else f"Error: {tool_result.error}"
 
-            result: Dict[str, Any] = {
-                "type": "tool_result",
-                "tool_use_id": tool_result.id,
-                "content": tool_content
-            }
+                result: Dict[str, Any] = {
+                    "type": "tool_result",
+                    "tool_use_id": tool_result.id,
+                    "content": tool_content
+                }
 
-            if tool_result.error:
-                result["is_error"] = True
+                if tool_result.error:
+                    result["is_error"] = True
 
-            content_parts.append(result)
+                content_parts.append(result)
 
         return {
             "role": "user",
@@ -244,8 +239,12 @@ class AnthropicBackend(AIBackend):
 
         # Remove anything after the last user message - we'll start with that last one
         assert last_user_message_index >= 0, "Last user message index should be valid"
-        self._logger.debug("Removing unfinished user message at index %d", last_user_message_index)
         result = result[:last_user_message_index+1]
+
+        # Find the last user message and ensure it has cache control set
+        last_user_message = result[-1]
+        last_user_content = last_user_message["content"][0]
+        last_user_content["cache_control"] = {"type": "ephemeral"}
 
         return result
 

@@ -11,6 +11,7 @@ New features:
 - Improved the "system" AI tools so the AI can now get details about a specific tab, get information about all open tabs, and
   move tabs between columns.
 - Added a section about AI tools to the mindspace settings dialog, where users can enable and disable individual AI tools.
+- The Anthropic backend now uses prompt caching to reduce token costs.
 
 Bug fixes:
 

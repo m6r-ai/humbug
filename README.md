@@ -85,7 +85,7 @@ Humbug lets you work on lots of different types of problems, but it shines at su
 
 ## Get involved!
 
-Humbug is open source and the project welcomes contributions.  If you're interested in how then join the Discover server.
+Humbug is open source and the project welcomes contributions.  If you're interested in how then join the Discord server.
 
 ## Requirements
 
