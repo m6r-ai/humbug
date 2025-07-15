@@ -5,14 +5,14 @@ from typing import Dict, Any
 import json
 
 from markdown.markdown_ast_node import (
-    MarkdownASTVisitor, MarkdownASTNode, MarkdownDocumentNode,
-    MarkdownTextNode, MarkdownLineBreakNode, MarkdownEmphasisNode,
-    MarkdownBoldNode, MarkdownHeadingNode, MarkdownParagraphNode,
-    MarkdownOrderedListNode, MarkdownUnorderedListNode, MarkdownListItemNode,
-    MarkdownInlineCodeNode, MarkdownCodeBlockNode, MarkdownTableNode,
-    MarkdownTableHeaderNode, MarkdownTableBodyNode, MarkdownTableRowNode,
-    MarkdownTableCellNode, MarkdownHorizontalRuleNode, MarkdownImageNode,
-    MarkdownLinkNode
+    MarkdownASTVisitor, MarkdownASTNode, MarkdownASTDocumentNode,
+    MarkdownASTTextNode, MarkdownASTLineBreakNode, MarkdownASTEmphasisNode,
+    MarkdownASTBoldNode, MarkdownASTHeadingNode, MarkdownASTParagraphNode,
+    MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode, MarkdownASTListItemNode,
+    MarkdownASTInlineCodeNode, MarkdownASTCodeBlockNode, MarkdownASTTableNode,
+    MarkdownASTTableHeaderNode, MarkdownASTTableBodyNode, MarkdownASTTableRowNode,
+    MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode, MarkdownASTImageNode,
+    MarkdownASTLinkNode
 )
 
 
@@ -40,7 +40,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
         if node.line_end is not None:
             result["line_end"] = node.line_end
 
-    def visit_MarkdownDocumentNode(self, node: MarkdownDocumentNode) -> Dict[str, Any]:
+    def visit_MarkdownASTDocumentNode(self, node: MarkdownASTDocumentNode) -> Dict[str, Any]:
         """Serialize a document node."""
         result = {
             "type": "document",
@@ -58,7 +58,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownTextNode(self, node: MarkdownTextNode) -> Dict[str, Any]:
+    def visit_MarkdownASTTextNode(self, node: MarkdownASTTextNode) -> Dict[str, Any]:
         """Serialize a text node."""
         result = {
             "type": "text",
@@ -67,13 +67,13 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
         self._add_line_info(result, node)
         return result
 
-    def visit_MarkdownLineBreakNode(self, node: MarkdownLineBreakNode) -> Dict[str, Any]:
+    def visit_MarkdownASTLineBreakNode(self, node: MarkdownASTLineBreakNode) -> Dict[str, Any]:
         """Serialize a line break node."""
         result = {"type": "linebreak"}
         self._add_line_info(result, node)
         return result
 
-    def visit_MarkdownEmphasisNode(self, node: MarkdownEmphasisNode) -> Dict[str, Any]:
+    def visit_MarkdownASTEmphasisNode(self, node: MarkdownASTEmphasisNode) -> Dict[str, Any]:
         """Serialize an emphasis node."""
         result = {
             "type": "emphasis",
@@ -87,7 +87,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownBoldNode(self, node: MarkdownBoldNode) -> Dict[str, Any]:
+    def visit_MarkdownASTBoldNode(self, node: MarkdownASTBoldNode) -> Dict[str, Any]:
         """Serialize a bold node."""
         result = {
             "type": "bold",
@@ -101,7 +101,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownHeadingNode(self, node: MarkdownHeadingNode) -> Dict[str, Any]:
+    def visit_MarkdownASTHeadingNode(self, node: MarkdownASTHeadingNode) -> Dict[str, Any]:
         """Serialize a heading node."""
         result = {
             "type": "heading",
@@ -117,7 +117,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownParagraphNode(self, node: MarkdownParagraphNode) -> Dict[str, Any]:
+    def visit_MarkdownASTParagraphNode(self, node: MarkdownASTParagraphNode) -> Dict[str, Any]:
         """Serialize a paragraph node."""
         result = {
             "type": "paragraph",
@@ -131,7 +131,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownOrderedListNode(self, node: MarkdownOrderedListNode) -> Dict[str, Any]:
+    def visit_MarkdownASTOrderedListNode(self, node: MarkdownASTOrderedListNode) -> Dict[str, Any]:
         """Serialize an ordered list node."""
         result = {
             "type": "ordered_list",
@@ -147,7 +147,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownUnorderedListNode(self, node: MarkdownUnorderedListNode) -> Dict[str, Any]:
+    def visit_MarkdownASTUnorderedListNode(self, node: MarkdownASTUnorderedListNode) -> Dict[str, Any]:
         """Serialize an unordered list node."""
         result = {
             "type": "unordered_list",
@@ -162,7 +162,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownListItemNode(self, node: MarkdownListItemNode) -> Dict[str, Any]:
+    def visit_MarkdownASTListItemNode(self, node: MarkdownASTListItemNode) -> Dict[str, Any]:
         """Serialize a list item node."""
         result = {
             "type": "list_item",
@@ -176,7 +176,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownInlineCodeNode(self, node: MarkdownInlineCodeNode) -> Dict[str, Any]:
+    def visit_MarkdownASTInlineCodeNode(self, node: MarkdownASTInlineCodeNode) -> Dict[str, Any]:
         """Serialize an inline code node."""
         result = {
             "type": "inline_code",
@@ -185,7 +185,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
         self._add_line_info(result, node)
         return result
 
-    def visit_MarkdownCodeBlockNode(self, node: MarkdownCodeBlockNode) -> Dict[str, Any]:
+    def visit_MarkdownASTCodeBlockNode(self, node: MarkdownASTCodeBlockNode) -> Dict[str, Any]:
         """Serialize a code block node."""
         result = {
             "type": "code_block",
@@ -195,7 +195,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
         self._add_line_info(result, node)
         return result
 
-    def visit_MarkdownTableNode(self, node: MarkdownTableNode) -> Dict[str, Any]:
+    def visit_MarkdownASTTableNode(self, node: MarkdownASTTableNode) -> Dict[str, Any]:
         """Serialize a table node."""
         result = {
             "type": "table",
@@ -209,7 +209,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownTableHeaderNode(self, node: MarkdownTableHeaderNode) -> Dict[str, Any]:
+    def visit_MarkdownASTTableHeaderNode(self, node: MarkdownASTTableHeaderNode) -> Dict[str, Any]:
         """Serialize a table header node."""
         result = {
             "type": "table_header",
@@ -223,7 +223,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownTableBodyNode(self, node: MarkdownTableBodyNode) -> Dict[str, Any]:
+    def visit_MarkdownASTTableBodyNode(self, node: MarkdownASTTableBodyNode) -> Dict[str, Any]:
         """Serialize a table body node."""
         result = {
             "type": "table_body",
@@ -237,7 +237,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownTableRowNode(self, node: MarkdownTableRowNode) -> Dict[str, Any]:
+    def visit_MarkdownASTTableRowNode(self, node: MarkdownASTTableRowNode) -> Dict[str, Any]:
         """Serialize a table row node."""
         result = {
             "type": "table_row",
@@ -251,7 +251,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownTableCellNode(self, node: MarkdownTableCellNode) -> Dict[str, Any]:
+    def visit_MarkdownASTTableCellNode(self, node: MarkdownASTTableCellNode) -> Dict[str, Any]:
         """Serialize a table cell node."""
         result = {
             "type": "table_cell",
@@ -267,13 +267,13 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownHorizontalRuleNode(self, node: MarkdownHorizontalRuleNode) -> Dict[str, Any]:
+    def visit_MarkdownASTHorizontalRuleNode(self, node: MarkdownASTHorizontalRuleNode) -> Dict[str, Any]:
         """Serialize a horizontal rule node."""
         result = {"type": "horizontal_rule"}
         self._add_line_info(result, node)
         return result
 
-    def visit_MarkdownLinkNode(self, node: MarkdownLinkNode) -> Dict[str, Any]:
+    def visit_MarkdownASTLinkNode(self, node: MarkdownASTLinkNode) -> Dict[str, Any]:
         """Serialize a link node."""
         result = {
             "type": "link",
@@ -292,7 +292,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
 
         return result
 
-    def visit_MarkdownImageNode(self, node: MarkdownImageNode) -> Dict[str, Any]:
+    def visit_MarkdownASTImageNode(self, node: MarkdownASTImageNode) -> Dict[str, Any]:
         """Serialize an image node."""
         result = {
             "type": "image",

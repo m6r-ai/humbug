@@ -67,10 +67,10 @@ def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:
     Example:
         Input: "This is **bold** and _italic_"
         Output: [
-            MarkdownTextNode("This is "),
-            MarkdownBoldNode([MarkdownTextNode("bold")]),
-            MarkdownTextNode(" and "),
-            MarkdownEmphasisNode([MarkdownTextNode("italic")])
+            MarkdownASTTextNode("This is "),
+            MarkdownASTBoldNode([MarkdownASTTextNode("bold")]),
+            MarkdownASTTextNode(" and "),
+            MarkdownASTEmphasisNode([MarkdownASTTextNode("italic")])
         ]
     ...
     """
@@ -346,7 +346,7 @@ def parse_inline_formatting(self, text: str) -> List[MarkdownASTNode]:
             start = i
             while i < len(text) and not self._is_formatting_start(text, i):
                 i += 1
-            nodes.append(MarkdownTextNode(text[start:i]))
+            nodes.append(MarkdownASTTextNode(text[start:i]))
     return nodes
 ```
 Each `_parse_*` and `_is_*_start` helper can focus on just one kind of element.

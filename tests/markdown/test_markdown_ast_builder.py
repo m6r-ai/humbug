@@ -54,7 +54,7 @@ def test_document_property(ast_builder):
     updated_doc = ast_builder.document()
     assert updated_doc is not None
     assert len(updated_doc.children) == 1
-    assert updated_doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert updated_doc.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
 
     # Verify same document instance is returned
     assert updated_doc is ast_builder.document()
@@ -65,9 +65,9 @@ def test_simple_paragraph(ast_builder):
     doc = ast_builder.build_ast("This is a paragraph.")
     assert doc is not None
     assert len(doc.children) == 1
-    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
     assert len(doc.children[0].children) == 1
-    assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
+    assert doc.children[0].children[0].__class__.__name__ == "MarkdownASTTextNode"
     assert doc.children[0].children[0].content == "This is a paragraph."
 
 
@@ -76,10 +76,10 @@ def test_heading(ast_builder):
     doc = ast_builder.build_ast("# Heading 1")
     assert doc is not None
     assert len(doc.children) == 1
-    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[0].level == 1
     assert len(doc.children[0].children) == 1
-    assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
+    assert doc.children[0].children[0].__class__.__name__ == "MarkdownASTTextNode"
     assert doc.children[0].children[0].content == "Heading 1"
 
 
@@ -96,7 +96,7 @@ def test_heading_with_leading_spaces(ast_builder):
         doc = ast_builder.build_ast(markdown)
         assert len(doc.children) == 1
         heading = doc.children[0]
-        assert heading.__class__.__name__ == "MarkdownHeadingNode"
+        assert heading.__class__.__name__ == "MarkdownASTHeadingNode"
         assert heading.level == expected_level
         assert heading.children[0].content == expected_content
 
@@ -107,7 +107,7 @@ def test_heading_with_too_many_spaces(ast_builder):
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
     # Should be treated as a paragraph, not a heading
-    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_mixed_heading_indentation(ast_builder):
@@ -129,7 +129,7 @@ def test_mixed_heading_indentation(ast_builder):
 
     for i, (expected_level, expected_content) in enumerate(levels_and_content):
         heading = doc.children[i]
-        assert heading.__class__.__name__ == "MarkdownHeadingNode"
+        assert heading.__class__.__name__ == "MarkdownASTHeadingNode"
         assert heading.level == expected_level
         assert heading.children[0].content == expected_content
 
@@ -140,14 +140,14 @@ def test_bold_text(ast_builder):
     assert doc is not None
     assert len(doc.children) == 1
     paragraph = doc.children[0]
-    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
     assert len(paragraph.children) == 3
-    assert paragraph.children[0].__class__.__name__ == "MarkdownTextNode"
+    assert paragraph.children[0].__class__.__name__ == "MarkdownASTTextNode"
     assert paragraph.children[0].content == "This is "
-    assert paragraph.children[1].__class__.__name__ == "MarkdownBoldNode"
-    assert paragraph.children[1].children[0].__class__.__name__ == "MarkdownTextNode"
+    assert paragraph.children[1].__class__.__name__ == "MarkdownASTBoldNode"
+    assert paragraph.children[1].children[0].__class__.__name__ == "MarkdownASTTextNode"
     assert paragraph.children[1].children[0].content == "bold"
-    assert paragraph.children[2].__class__.__name__ == "MarkdownTextNode"
+    assert paragraph.children[2].__class__.__name__ == "MarkdownASTTextNode"
     assert paragraph.children[2].content == " text."
 
 
@@ -155,12 +155,12 @@ def test_underscore_formatting(ast_builder, ast_builder_no_underscores):
     """Test underscore formatting behavior."""
     # With underscores enabled
     doc = ast_builder.build_ast("_italic_ and __bold__")
-    assert doc.children[0].children[0].__class__.__name__ == "MarkdownEmphasisNode"
-    assert doc.children[0].children[2].__class__.__name__ == "MarkdownBoldNode"
+    assert doc.children[0].children[0].__class__.__name__ == "MarkdownASTEmphasisNode"
+    assert doc.children[0].children[2].__class__.__name__ == "MarkdownASTBoldNode"
 
     # With underscores disabled
     doc = ast_builder_no_underscores.build_ast("_italic_ and __bold__")
-    assert doc.children[0].children[0].__class__.__name__ == "MarkdownTextNode"
+    assert doc.children[0].children[0].__class__.__name__ == "MarkdownASTTextNode"
     assert doc.children[0].children[0].content == "_italic_ and __bold__"
 
 
@@ -169,11 +169,11 @@ def test_nested_formatting(ast_builder):
     doc = ast_builder.build_ast("This is **bold with *italic* inside**.")
     paragraph = doc.children[0]
     bold_node = paragraph.children[1]
-    assert bold_node.__class__.__name__ == "MarkdownBoldNode"
+    assert bold_node.__class__.__name__ == "MarkdownASTBoldNode"
     assert len(bold_node.children) == 3
-    assert bold_node.children[0].__class__.__name__ == "MarkdownTextNode"
+    assert bold_node.children[0].__class__.__name__ == "MarkdownASTTextNode"
     assert bold_node.children[0].content == "bold with "
-    assert bold_node.children[1].__class__.__name__ == "MarkdownEmphasisNode"
+    assert bold_node.children[1].__class__.__name__ == "MarkdownASTEmphasisNode"
 
 
 def test_headings(ast_builder):
@@ -188,17 +188,17 @@ def test_headings(ast_builder):
 """
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 6
-    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[0].level == 1
-    assert doc.children[1].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[1].level == 2
-    assert doc.children[2].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[2].level == 1
-    assert doc.children[3].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[3].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[3].level == 2
-    assert doc.children[4].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[4].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[4].level == 3
-    assert doc.children[5].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[5].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[5].level == 3
 
 
@@ -212,10 +212,10 @@ def test_unordered_list(ast_builder):
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
     list_node = doc.children[0]
-    assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
     assert len(list_node.children) == 3
     for item in list_node.children:
-        assert item.__class__.__name__ == "MarkdownListItemNode"
+        assert item.__class__.__name__ == "MarkdownASTListItemNode"
 
 
 def test_ordered_list(ast_builder):
@@ -228,7 +228,7 @@ def test_ordered_list(ast_builder):
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
     list_node = doc.children[0]
-    assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+    assert list_node.__class__.__name__ == "MarkdownASTOrderedListNode"
     assert len(list_node.children) == 3
     assert list_node.start == 1
 
@@ -251,9 +251,9 @@ def test_nested_list(ast_builder):
     first_item = list_node.children[0]
     assert len(first_item.children) == 2
     nested_list = first_item.children[0]
-    assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+    assert nested_list.__class__.__name__ == "MarkdownASTParagraphNode"
     nested_list = first_item.children[1]
-    assert nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert nested_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
     assert len(nested_list.children) == 2
 
 
@@ -277,12 +277,12 @@ def test_nested_list2(ast_builder):
     first_item = list_node.children[0]
     assert len(first_item.children) == 3
     nested_list = first_item.children[0]
-    assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+    assert nested_list.__class__.__name__ == "MarkdownASTParagraphNode"
     first_nested_list = first_item.children[1]
-    assert first_nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert first_nested_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
     assert len(first_nested_list.children) == 2
     second_nested_list = first_item.children[2]
-    assert second_nested_list.__class__.__name__ == "MarkdownOrderedListNode"
+    assert second_nested_list.__class__.__name__ == "MarkdownASTOrderedListNode"
     assert len(second_nested_list.children) == 2
 
 
@@ -306,12 +306,12 @@ def test_nested_list3(ast_builder):
     first_item = list_node.children[0]
     assert len(first_item.children) == 3
     nested_list = first_item.children[0]
-    assert nested_list.__class__.__name__ == "MarkdownParagraphNode"
+    assert nested_list.__class__.__name__ == "MarkdownASTParagraphNode"
     first_nested_list = first_item.children[1]
-    assert first_nested_list.__class__.__name__ == "MarkdownOrderedListNode"
+    assert first_nested_list.__class__.__name__ == "MarkdownASTOrderedListNode"
     assert len(first_nested_list.children) == 2
     second_nested_list = first_item.children[2]
-    assert second_nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert second_nested_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
     assert len(second_nested_list.children) == 2
 
 
@@ -328,9 +328,9 @@ def test_list_with_continuation1(ast_builder):
     list_node = doc.children[0]
     assert len(list_node.children) == 3
     first_item = list_node.children[0]
-    assert first_item.__class__.__name__ == "MarkdownListItemNode"
+    assert first_item.__class__.__name__ == "MarkdownASTListItemNode"
     paragraph = first_item.children[0]
-    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
     assert len(paragraph.children) == 3
 
 
@@ -347,9 +347,9 @@ def test_list_with_continuation2(ast_builder):
     list_node = doc.children[0]
     assert len(list_node.children) == 3
     second_item = list_node.children[1]
-    assert second_item.__class__.__name__ == "MarkdownListItemNode"
+    assert second_item.__class__.__name__ == "MarkdownASTListItemNode"
     paragraph = second_item.children[0]
-    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
     assert len(paragraph.children) == 3
 
 
@@ -366,9 +366,9 @@ continues on this line
     list_node = doc.children[0]
     assert len(list_node.children) == 3
     second_item = list_node.children[1]
-    assert second_item.__class__.__name__ == "MarkdownListItemNode"
+    assert second_item.__class__.__name__ == "MarkdownASTListItemNode"
     paragraph = second_item.children[0]
-    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
     assert len(paragraph.children) == 3
 
 
@@ -381,7 +381,7 @@ print("Hello, world!")
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
     code_block = doc.children[0]
-    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
     assert code_block.language == "python"
     assert "def hello():" in code_block.content
     assert "print(\"Hello, world!\")" in code_block.content
@@ -398,17 +398,17 @@ def test_table(ast_builder):
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
     table = doc.children[0]
-    assert table.__class__.__name__ == "MarkdownTableNode"
+    assert table.__class__.__name__ == "MarkdownASTTableNode"
     assert len(table.children) == 2
 
     # Check header
     header = table.children[0]
-    assert header.__class__.__name__ == "MarkdownTableHeaderNode"
+    assert header.__class__.__name__ == "MarkdownASTTableHeaderNode"
     assert len(header.children) == 1  # One row
 
     # Check body
     body = table.children[1]
-    assert body.__class__.__name__ == "MarkdownTableBodyNode"
+    assert body.__class__.__name__ == "MarkdownASTTableBodyNode"
     assert len(body.children) == 2  # Two rows
 
 def test_horizontal_rule(ast_builder):
@@ -422,9 +422,9 @@ After rule
 """
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 3
-    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-    assert doc.children[1].__class__.__name__ == "MarkdownHorizontalRuleNode"
-    assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTHorizontalRuleNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_link(ast_builder):
@@ -433,7 +433,7 @@ def test_link(ast_builder):
     paragraph = doc.children[0]
     assert len(paragraph.children) == 3
     link = paragraph.children[1]
-    assert link.__class__.__name__ == "MarkdownLinkNode"
+    assert link.__class__.__name__ == "MarkdownASTLinkNode"
     assert link.url == "https://example.com"
     assert len(link.children) == 1
     assert link.children[0].content == "link"
@@ -444,7 +444,7 @@ def test_image(ast_builder):
     doc = ast_builder.build_ast("![Alt text](image.jpg \"Image title\")")
     paragraph = doc.children[0]
     image = paragraph.children[0]
-    assert image.__class__.__name__ == "MarkdownImageNode"
+    assert image.__class__.__name__ == "MarkdownASTImageNode"
     assert image.url == "image.jpg"
     assert image.alt_text == "Alt text"
     assert image.title == "Image title"
@@ -511,7 +511,7 @@ def test_complex_nested_formatting(ast_builder):
         assert doc is not None
         assert len(doc.children) >= 1
         paragraph = doc.children[0]
-        assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+        assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_malformed_formatting_edge_cases(ast_builder):
@@ -567,13 +567,13 @@ def test_complex_link_parentheses(ast_builder):
         if markdown.startswith('!'):
             # Image
             image = paragraph.children[0]
-            assert image.__class__.__name__ == "MarkdownImageNode"
+            assert image.__class__.__name__ == "MarkdownASTImageNode"
             assert '(' in image.url and ')' in image.url
 
         else:
             # Link
             link = paragraph.children[0]
-            assert link.__class__.__name__ == "MarkdownLinkNode"
+            assert link.__class__.__name__ == "MarkdownASTLinkNode"
             assert '(' in link.url and ')' in link.url
 
 
@@ -592,7 +592,7 @@ def test_inline_code_with_formatting_inside(ast_builder):
         doc = ast_builder.build_ast(markdown)
         paragraph = doc.children[0]
         code_node = paragraph.children[0]
-        assert code_node.__class__.__name__ == "MarkdownInlineCodeNode"
+        assert code_node.__class__.__name__ == "MarkdownASTInlineCodeNode"
         # Content should be preserved as-is without formatting
         assert "**" in code_node.content or "*" in code_node.content or "__" in code_node.content or "_" in code_node.content or "[" in code_node.content
 
@@ -612,7 +612,7 @@ def test_incomplete_link_info(ast_builder):
         paragraph = doc.children[0]
         assert len(paragraph.children) == 1
         image = paragraph.children[0]
-        assert image.__class__.__name__ == "MarkdownTextNode"
+        assert image.__class__.__name__ == "MarkdownASTTextNode"
 
 
 def test_code_block_with_programming_languages(ast_builder):
@@ -667,7 +667,7 @@ and more text
         doc = ast_builder.build_ast(code)
         assert len(doc.children) == 1
         code_block = doc.children[0]
-        assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+        assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
         assert len(code_block.content.strip()) > 0
 
 
@@ -685,7 +685,7 @@ Outer code block continues
     doc = ast_builder.build_ast(nested_fences)
     assert len(doc.children) == 1
     code_block = doc.children[0]
-    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
     assert "Nested code block" in code_block.content
 
 
@@ -701,7 +701,7 @@ def test_code_block_with_mixed_content(ast_builder):
     doc = ast_builder.build_ast(code_with_markdown)
     assert len(doc.children) == 1
     code_block = doc.children[0]
-    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
     # Content should be preserved as-is
     assert "# This looks like a heading" in code_block.content
     assert "- This looks like a list" in code_block.content
@@ -731,7 +731,7 @@ def test_loose_vs_tight_ordered_lists(ast_builder):
     doc = ast_builder.build_ast(tight_list)
     assert len(doc.children) == 1
     list_node = doc.children[0]
-    assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+    assert list_node.__class__.__name__ == "MarkdownASTOrderedListNode"
     assert list_node.tight is True
 
     # Test loose list
@@ -769,7 +769,7 @@ def test_loose_vs_tight_unordered_lists(ast_builder):
     doc = ast_builder.build_ast(tight_list)
     assert len(doc.children) == 1
     list_node = doc.children[0]
-    assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
     assert list_node.tight is True
 
     # Test loose list
@@ -797,20 +797,20 @@ def test_complex_nested_list_structures(ast_builder):
     doc = ast_builder.build_ast(complex_nested)
     assert len(doc.children) == 1
     main_list = doc.children[0]
-    assert main_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert main_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
     assert len(main_list.children) == 3
 
     # Check first item has nested unordered list
     first_item = main_list.children[0]
     assert len(first_item.children) == 2  # paragraph + nested list
     nested_list = first_item.children[1]
-    assert nested_list.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert nested_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
 
     # Check second item has nested ordered list
     second_item = main_list.children[1]
     assert len(second_item.children) == 2  # paragraph + nested list
     ordered_nested = second_item.children[1]
-    assert ordered_nested.__class__.__name__ == "MarkdownOrderedListNode"
+    assert ordered_nested.__class__.__name__ == "MarkdownASTOrderedListNode"
 
 def test_list_continuation_and_interruption(ast_builder):
     """Test text continuation within lists and list interruption."""
@@ -841,9 +841,9 @@ Not a list item
     doc = ast_builder.build_ast(interrupted_list)
     # Should create two separate lists with paragraph in between
     assert len(doc.children) == 3
-    assert doc.children[0].__class__.__name__ == "MarkdownUnorderedListNode"
-    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
-    assert doc.children[2].__class__.__name__ == "MarkdownUnorderedListNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownASTUnorderedListNode"
 
 
 def test_ordered_list_with_custom_start(ast_builder):
@@ -855,7 +855,7 @@ def test_ordered_list_with_custom_start(ast_builder):
     doc = ast_builder.build_ast(custom_start)
     assert len(doc.children) == 1
     list_node = doc.children[0]
-    assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+    assert list_node.__class__.__name__ == "MarkdownASTOrderedListNode"
     assert list_node.start == 5
 
     complex_lists_with_continuation = """- First list item
@@ -887,7 +887,7 @@ def test_table_alignment_variations(ast_builder):
     doc = ast_builder.build_ast(table_markdown)
     assert len(doc.children) == 1
     table = doc.children[0]
-    assert table.__class__.__name__ == "MarkdownTableNode"
+    assert table.__class__.__name__ == "MarkdownASTTableNode"
 
     # Check header row for alignment
     header = table.children[0]
@@ -926,10 +926,10 @@ def test_double_header_row(ast_builder):
     doc = ast_builder.build_ast(table_markdown)
     assert len(doc.children) == 2
     text = doc.children[0]
-    assert text.__class__.__name__ == "MarkdownParagraphNode"
+    assert text.__class__.__name__ == "MarkdownASTParagraphNode"
 
     table = doc.children[1]
-    assert table.__class__.__name__ == "MarkdownTableNode"
+    assert table.__class__.__name__ == "MarkdownASTTableNode"
 
     # Check header row for alignment
     header = table.children[0]
@@ -953,10 +953,10 @@ def test_incomplete_table_alignment_variations(ast_builder):
     doc = ast_builder.build_ast(table_markdown)
     assert len(doc.children) == 2
     line0 = doc.children[0]
-    assert line0.__class__.__name__ == "MarkdownParagraphNode"
+    assert line0.__class__.__name__ == "MarkdownASTParagraphNode"
     assert line0.children[0].content == "| Left | Center | Right |"
     line1 = doc.children[1]
-    assert line1.__class__.__name__ == "MarkdownParagraphNode"
+    assert line1.__class__.__name__ == "MarkdownASTParagraphNode"
     assert line1.children[0].content == "|:-----|:------:|------:|"
 
 
@@ -967,7 +967,7 @@ def test_solitary_table_separator(ast_builder):
     doc = ast_builder.build_ast(table_markdown)
     assert len(doc.children) == 1
     line0 = doc.children[0]
-    assert line0.__class__.__name__ == "MarkdownParagraphNode"
+    assert line0.__class__.__name__ == "MarkdownASTParagraphNode"
     assert line0.children[0].content == "|:-----|:------:|------:|"
 
 
@@ -981,7 +981,7 @@ def test_table_with_complex_content(ast_builder):
     doc = ast_builder.build_ast(complex_table)
     assert len(doc.children) == 1
     table = doc.children[0]
-    assert table.__class__.__name__ == "MarkdownTableNode"
+    assert table.__class__.__name__ == "MarkdownASTTableNode"
 
     # Check header contains formatted content
     header = table.children[0]
@@ -990,17 +990,17 @@ def test_table_with_complex_content(ast_builder):
     # First header cell should contain bold text
     bold_cell = header_row.children[0]
     assert len(bold_cell.children) == 1
-    assert bold_cell.children[0].__class__.__name__ == "MarkdownBoldNode"
+    assert bold_cell.children[0].__class__.__name__ == "MarkdownASTBoldNode"
 
     # Second header cell should contain italic text
     italic_cell = header_row.children[1]
     assert len(italic_cell.children) == 1
-    assert italic_cell.children[0].__class__.__name__ == "MarkdownEmphasisNode"
+    assert italic_cell.children[0].__class__.__name__ == "MarkdownASTEmphasisNode"
 
     # Third header cell should contain code
     code_cell = header_row.children[2]
     assert len(code_cell.children) == 1
-    assert code_cell.children[0].__class__.__name__ == "MarkdownInlineCodeNode"
+    assert code_cell.children[0].__class__.__name__ == "MarkdownASTInlineCodeNode"
 
 
 def test_table_edge_cases(ast_builder):
@@ -1014,7 +1014,7 @@ def test_table_edge_cases(ast_builder):
     doc = ast_builder.build_ast(uneven_table)
     assert len(doc.children) == 1
     table = doc.children[0]
-    assert table.__class__.__name__ == "MarkdownTableNode"
+    assert table.__class__.__name__ == "MarkdownASTTableNode"
 
     # Should handle uneven rows gracefully
     body = table.children[1]
@@ -1030,12 +1030,12 @@ with even more text on this line."""
     doc = ast_builder.build_ast(paragraph_continuation)
     assert len(doc.children) == 1
     paragraph = doc.children[0]
-    assert paragraph.__class__.__name__ == "MarkdownParagraphNode"
+    assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
 
     # Should contain all text with spaces between lines
     full_text = ""
     for child in paragraph.children:
-        if child.__class__.__name__ == "MarkdownTextNode":
+        if child.__class__.__name__ == "MarkdownASTTextNode":
             full_text += child.content
 
     assert "This is the first line" in full_text
@@ -1062,7 +1062,7 @@ def test_list_item_continuation(ast_builder):
     # Extract all text content
     full_text = ""
     for child in first_paragraph.children:
-        if child.__class__.__name__ == "MarkdownTextNode":
+        if child.__class__.__name__ == "MarkdownASTTextNode":
             full_text += child.content
 
     assert "First list item" in full_text
@@ -1083,7 +1083,7 @@ Third line continues normally"""
     # Should contain line break node
     has_line_break = False
     for child in paragraph.children:
-        if child.__class__.__name__ == "MarkdownLineBreakNode":
+        if child.__class__.__name__ == "MarkdownASTLineBreakNode":
             has_line_break = True
             break
 
@@ -1108,11 +1108,11 @@ continues normally"""
     doc = ast_builder.build_ast(mixed_continuation)
     # Should have heading, paragraph, list, line break, and another paragraph
     assert len(doc.children) == 5
-    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
-    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
-    assert doc.children[2].__class__.__name__ == "MarkdownUnorderedListNode"
-    assert doc.children[3].__class__.__name__ == "MarkdownLineBreakNode"
-    assert doc.children[4].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert doc.children[3].__class__.__name__ == "MarkdownASTLineBreakNode"
+    assert doc.children[4].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_unclosed_code_block(ast_builder):
@@ -1124,7 +1124,7 @@ def unclosed_function():
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
     code_block = doc.children[0]
-    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
     assert code_block.language == "python"
 
 
@@ -1141,7 +1141,7 @@ Outer code block continues
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
     code_block = doc.children[0]
-    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
     assert "Nested code block" in code_block.content
 
 
@@ -1154,8 +1154,8 @@ def test_incomplete_table(ast_builder):
     doc = ast_builder.build_ast(markdown)
     # The AST builder should not create a table without any body rows
     assert len(doc.children) == 2
-    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_invalid_table_separator(ast_builder):
@@ -1168,7 +1168,7 @@ def test_invalid_table_separator(ast_builder):
     doc = ast_builder.build_ast(markdown)
     # Should be treated as paragraphs
     assert len(doc.children) == 3
-    assert all(child.__class__.__name__ == "MarkdownParagraphNode" for child in doc.children)
+    assert all(child.__class__.__name__ == "MarkdownASTParagraphNode" for child in doc.children)
 
 
 def test_mixed_list_markers(ast_builder):
@@ -1183,7 +1183,7 @@ def test_mixed_list_markers(ast_builder):
     assert len(doc.children) >= 1
     # All should be unordered lists
     for child in doc.children:
-        assert child.__class__.__name__ == "MarkdownUnorderedListNode"
+        assert child.__class__.__name__ == "MarkdownASTUnorderedListNode"
 
 
 def test_empty_elements(ast_builder):
@@ -1227,9 +1227,9 @@ def test_first_update_with_none_previous(ast_builder):
 
     assert doc is not None
     assert len(doc.children) == 2
-    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[0].children[0].content == "Initial heading"
-    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
     assert doc.children[1].children[0].content == "Initial paragraph."
 
 
@@ -1245,7 +1245,7 @@ def test_update_with_empty_document(ast_builder):
     doc = ast_builder.update_ast(new_text, previous)
 
     assert len(doc.children) == 1
-    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[0].children[0].content == "New heading"
 
 
@@ -1301,10 +1301,10 @@ def test_structure_type_change(ast_builder):
     doc = ast_builder.update_ast(new_text, previous)
 
     assert len(doc.children) == 3
-    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-    assert doc.children[1].__class__.__name__ == "MarkdownHeadingNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[1].level == 2
-    assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_add_content_beginning(ast_builder):
@@ -1400,7 +1400,7 @@ def test_list_modifications(ast_builder):
     doc = ast_builder.update_ast(new_text, previous)
 
     list_node = doc.children[0]
-    assert list_node.__class__.__name__ == "MarkdownUnorderedListNode"
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
     assert len(list_node.children) == 4
 
     # Check first item was modified
@@ -1423,7 +1423,7 @@ def test_list_type_change(ast_builder):
     doc = ast_builder.update_ast(new_text, previous)
 
     list_node = doc.children[0]
-    assert list_node.__class__.__name__ == "MarkdownOrderedListNode"
+    assert list_node.__class__.__name__ == "MarkdownASTOrderedListNode"
     assert len(list_node.children) == 3
 
 
@@ -1470,7 +1470,7 @@ def test_table_modifications(ast_builder):
     doc = ast_builder.update_ast(new_text, previous)
 
     table = doc.children[0]
-    assert table.__class__.__name__ == "MarkdownTableNode"
+    assert table.__class__.__name__ == "MarkdownASTTableNode"
 
     # Check header has 3 columns
     header = table.children[0]
@@ -1496,8 +1496,8 @@ def test_table_to_paragraph_conversion(ast_builder):
 
     # Should be converted to paragraphs
     assert len(doc.children) == 2
-    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_code_block_modifications(ast_builder):
@@ -1519,7 +1519,7 @@ def another_function():
     doc = ast_builder.update_ast(new_text, previous)
 
     code_block = doc.children[0]
-    assert code_block.__class__.__name__ == "MarkdownCodeBlockNode"
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
     assert "new_function" in code_block.content
     assert "another_function" in code_block.content
 
@@ -1552,7 +1552,7 @@ def test_inline_formatting_changes(ast_builder):
 
     paragraph = doc.children[0]
     formatting_node = paragraph.children[1]
-    assert formatting_node.__class__.__name__ == "MarkdownEmphasisNode"
+    assert formatting_node.__class__.__name__ == "MarkdownASTEmphasisNode"
 
 
 def test_link_modifications(ast_builder):
@@ -1565,7 +1565,7 @@ def test_link_modifications(ast_builder):
 
     paragraph = doc.children[0]
     link = paragraph.children[1]
-    assert link.__class__.__name__ == "MarkdownLinkNode"
+    assert link.__class__.__name__ == "MarkdownASTLinkNode"
     assert link.url == "http://new.com"
     assert link.children[0].content == "new site"
 
@@ -1580,7 +1580,7 @@ def test_image_modifications(ast_builder):
 
     paragraph = doc.children[0]
     image = paragraph.children[0]
-    assert image.__class__.__name__ == "MarkdownImageNode"
+    assert image.__class__.__name__ == "MarkdownASTImageNode"
     assert image.url == "new.jpg"
     assert image.alt_text == "new alt"
     assert image.title == "New title"
@@ -1595,10 +1595,10 @@ def test_horizontal_rule_changes(ast_builder):
     doc = ast_builder.update_ast(new_text, previous)
 
     assert len(doc.children) == 3
-    assert doc.children[0].__class__.__name__ == "MarkdownParagraphNode"
-    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
     assert doc.children[1].children[0].content == "Middle"
-    assert doc.children[2].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_multiple_updates_sequence(ast_builder):
@@ -1635,7 +1635,7 @@ def test_line_break_modifications(ast_builder):
     paragraph = doc.children[0]
     # Should have line break in different position
     has_line_break = any(
-        child.__class__.__name__ == "MarkdownLineBreakNode"
+        child.__class__.__name__ == "MarkdownASTLineBreakNode"
         for child in paragraph.children
     )
     assert has_line_break
@@ -1721,7 +1721,7 @@ Updated final paragraph."""
     # Check list type changed to ordered
     list_element = None
     for child in doc.children:
-        if child.__class__.__name__ == "MarkdownOrderedListNode":
+        if child.__class__.__name__ == "MarkdownASTOrderedListNode":
             list_element = child
             break
     assert list_element is not None
@@ -1729,7 +1729,7 @@ Updated final paragraph."""
     # Check code block language changed
     code_element = None
     for child in doc.children:
-        if child.__class__.__name__ == "MarkdownCodeBlockNode":
+        if child.__class__.__name__ == "MarkdownASTCodeBlockNode":
             code_element = child
             break
     assert code_element is not None
@@ -1746,8 +1746,8 @@ def test_whitespace_only_changes(ast_builder):
 
     # Structure should be the same but properly formatted
     assert len(doc.children) == 2
-    assert doc.children[0].__class__.__name__ == "MarkdownHeadingNode"
-    assert doc.children[1].__class__.__name__ == "MarkdownParagraphNode"
+    assert doc.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_identical_content_update(ast_builder):

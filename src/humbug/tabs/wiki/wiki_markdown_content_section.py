@@ -11,7 +11,7 @@ from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
 )
 
-from markdown.markdown_ast_node import MarkdownASTNode, MarkdownTextNode
+from markdown.markdown_ast_node import MarkdownASTNode, MarkdownASTTextNode
 from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
@@ -237,7 +237,7 @@ class WikiMarkdownContentSection(QFrame):
         """
         # If we have code block node, extract its content as plain text
         if not self._use_markdown:
-            text_content = cast(MarkdownTextNode, content)
+            text_content = cast(MarkdownASTTextNode, content)
             self._text_area.set_text(text_content.content)
             return
 

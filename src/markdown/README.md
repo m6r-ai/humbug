@@ -22,27 +22,27 @@ The core parser that constructs an AST from markdown text:
 Defines all AST node types for markdown elements:
 
 - **`MarkdownASTNode`** - Base class for all markdown AST nodes
-- **`MarkdownDocumentNode`** - Root document node
-- **`MarkdownTextNode`** - Plain text content
-- **`MarkdownParagraphNode`** - Paragraph blocks
-- **`MarkdownHeadingNode`** - Headings (H1-H6) with anchor ID generation
-- **`MarkdownEmphasisNode`** - Italic text (*text*)
-- **`MarkdownBoldNode`** - Bold text (**text**)
-- **`MarkdownInlineCodeNode`** - Inline code (`code`)
-- **`MarkdownCodeBlockNode`** - Code blocks with language support
-- **`MarkdownListNode`** - Base for list types
-- **`MarkdownOrderedListNode`** - Numbered lists
-- **`MarkdownUnorderedListNode`** - Bullet lists
-- **`MarkdownListItemNode`** - Individual list items
-- **`MarkdownTableNode`** - Table structures
-- **`MarkdownTableHeaderNode`** - Table headers
-- **`MarkdownTableBodyNode`** - Table body
-- **`MarkdownTableRowNode`** - Table rows
-- **`MarkdownTableCellNode`** - Table cells with alignment
-- **`MarkdownLinkNode`** - Links with URL and title
-- **`MarkdownImageNode`** - Images with alt text
-- **`MarkdownHorizontalRuleNode`** - Horizontal rules
-- **`MarkdownLineBreakNode`** - Line breaks
+- **`MarkdownASTDocumentNode`** - Root document node
+- **`MarkdownASTTextNode`** - Plain text content
+- **`MarkdownASTParagraphNode`** - Paragraph blocks
+- **`MarkdownASTHeadingNode`** - Headings (H1-H6) with anchor ID generation
+- **`MarkdownASTEmphasisNode`** - Italic text (*text*)
+- **`MarkdownASTBoldNode`** - Bold text (**text**)
+- **`MarkdownASTInlineCodeNode`** - Inline code (`code`)
+- **`MarkdownASTCodeBlockNode`** - Code blocks with language support
+- **`MarkdownASTListNode`** - Base for list types
+- **`MarkdownASTOrderedListNode`** - Numbered lists
+- **`MarkdownASTUnorderedListNode`** - Bullet lists
+- **`MarkdownASTListItemNode`** - Individual list items
+- **`MarkdownASTTableNode`** - Table structures
+- **`MarkdownASTTableHeaderNode`** - Table headers
+- **`MarkdownASTTableBodyNode`** - Table body
+- **`MarkdownASTTableRowNode`** - Table rows
+- **`MarkdownASTTableCellNode`** - Table cells with alignment
+- **`MarkdownASTLinkNode`** - Links with URL and title
+- **`MarkdownASTImageNode`** - Images with alt text
+- **`MarkdownASTHorizontalRuleNode`** - Horizontal rules
+- **`MarkdownASTLineBreakNode`** - Line breaks
 
 ### `markdown_ast_printer.py`
 Converts AST back to markdown text:

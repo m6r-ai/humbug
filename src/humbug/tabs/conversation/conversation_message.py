@@ -10,7 +10,7 @@ from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
 from ai.ai_message_source import AIMessageSource
 from ai_tool import AIToolCall
-from markdown.markdown_ast_node import MarkdownDocumentNode, MarkdownTextNode
+from markdown.markdown_ast_node import MarkdownASTDocumentNode, MarkdownASTTextNode
 from markdown.markdown_converter import MarkdownConverter
 from syntax.programming_language import ProgrammingLanguage
 
@@ -468,8 +468,8 @@ class ConversationMessage(QFrame):
 
         else:
             # Input widgets don't use markdown processing
-            text_node = MarkdownDocumentNode()
-            text_node.add_child(MarkdownTextNode(text))
+            text_node = MarkdownASTDocumentNode()
+            text_node.add_child(MarkdownASTTextNode(text))
             sections_data = [(text_node, None)]
 
         # Create or update sections

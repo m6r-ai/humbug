@@ -12,7 +12,7 @@ from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from markdown.markdown_ast_builder import MarkdownASTBuilder
-from markdown.markdown_ast_node import MarkdownCodeBlockNode, MarkdownASTNode, MarkdownDocumentNode
+from markdown.markdown_ast_node import MarkdownASTCodeBlockNode, MarkdownASTNode, MarkdownASTDocumentNode
 
 
 class MarkdownConverter:
@@ -84,7 +84,7 @@ class MarkdownConverter:
         def add_markdown_section() -> None:
             if current_markdown_nodes:
                 # Create a container node for these markdown nodes
-                container = MarkdownDocumentNode(self._source_path)
+                container = MarkdownASTDocumentNode(self._source_path)
                 for node in current_markdown_nodes:
                     container.add_child(node)
 
@@ -94,7 +94,7 @@ class MarkdownConverter:
 
         # Process all nodes in the document
         for node in document.children:
-            if isinstance(node, MarkdownCodeBlockNode):
+            if isinstance(node, MarkdownASTCodeBlockNode):
                 # Add any accumulated markdown before this code block
                 add_markdown_section()
 

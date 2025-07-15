@@ -24,7 +24,7 @@ class MarkdownASTVisitor(ASTVisitor):
     """Base visitor class for Markdown AST traversal."""
 
 
-class MarkdownDocumentNode(MarkdownASTNode):
+class MarkdownASTDocumentNode(MarkdownASTNode):
     """Root node representing an entire HTML document."""
 
     def __init__(self, source_path: str | None = None) -> None:
@@ -38,11 +38,11 @@ class MarkdownDocumentNode(MarkdownASTNode):
         self.source_path = source_path
 
 
-class MarkdownParagraphNode(MarkdownASTNode):
+class MarkdownASTParagraphNode(MarkdownASTNode):
     """Node representing an HTML paragraph (<p>)."""
 
 
-class MarkdownHeadingNode(MarkdownASTNode):
+class MarkdownASTHeadingNode(MarkdownASTNode):
     """Node representing an HTML heading (<h1> through <h6>)."""
     def __init__(self, level: int, anchor_id: str) -> None:
         """
@@ -58,7 +58,7 @@ class MarkdownHeadingNode(MarkdownASTNode):
         self.anchor_id = anchor_id
 
 
-class MarkdownOrderedListNode(MarkdownASTNode):
+class MarkdownASTOrderedListNode(MarkdownASTNode):
     """Node representing an HTML ordered list (<ol>)."""
     def __init__(self, indent: int = 0, start: int = 1) -> None:
         """
@@ -79,7 +79,7 @@ class MarkdownOrderedListNode(MarkdownASTNode):
         self.tight = True
 
 
-class MarkdownUnorderedListNode(MarkdownASTNode):
+class MarkdownASTUnorderedListNode(MarkdownASTNode):
     """Node representing an HTML unordered list (<ul>)."""
     def __init__(self, indent: int = 0) -> None:
         """
@@ -99,11 +99,11 @@ class MarkdownUnorderedListNode(MarkdownASTNode):
         self.tight = True
 
 
-class MarkdownListItemNode(MarkdownASTNode):
+class MarkdownASTListItemNode(MarkdownASTNode):
     """Node representing an HTML list item (<li>)."""
 
 
-class MarkdownTextNode(MarkdownASTNode):
+class MarkdownASTTextNode(MarkdownASTNode):
     """Node representing plain text content."""
     def __init__(self, content: str) -> None:
         """
@@ -116,15 +116,15 @@ class MarkdownTextNode(MarkdownASTNode):
         self.content = content
 
 
-class MarkdownBoldNode(MarkdownASTNode):
+class MarkdownASTBoldNode(MarkdownASTNode):
     """Node representing bold text (<b> or <strong>)."""
 
 
-class MarkdownEmphasisNode(MarkdownASTNode):
+class MarkdownASTEmphasisNode(MarkdownASTNode):
     """Node representing emphasized text (<em> or <i>)."""
 
 
-class MarkdownInlineCodeNode(MarkdownASTNode):
+class MarkdownASTInlineCodeNode(MarkdownASTNode):
     """Node representing inline code (<code>)."""
     def __init__(self, content: str = "") -> None:
         """
@@ -137,7 +137,7 @@ class MarkdownInlineCodeNode(MarkdownASTNode):
         self.content = content
 
 
-class MarkdownLinkNode(MarkdownASTNode):
+class MarkdownASTLinkNode(MarkdownASTNode):
     """Node representing a link (<a>)."""
     def __init__(self, url: str = "", title: str | None = None) -> None:
         """
@@ -152,7 +152,7 @@ class MarkdownLinkNode(MarkdownASTNode):
         self.title = title
 
 
-class MarkdownImageNode(MarkdownASTNode):
+class MarkdownASTImageNode(MarkdownASTNode):
     """Node representing an image (<img>)."""
     def __init__(self, url: str = "", alt_text: str = "", title: str | None = None) -> None:
         """
@@ -169,7 +169,7 @@ class MarkdownImageNode(MarkdownASTNode):
         self.title = title
 
 
-class MarkdownCodeBlockNode(MarkdownASTNode):
+class MarkdownASTCodeBlockNode(MarkdownASTNode):
     """Node representing a code block (<pre><code>)."""
     def __init__(self, language: str = "", content: str = "") -> None:
         """
@@ -184,27 +184,27 @@ class MarkdownCodeBlockNode(MarkdownASTNode):
         self.content = content
 
 
-class MarkdownLineBreakNode(MarkdownASTNode):
+class MarkdownASTLineBreakNode(MarkdownASTNode):
     """Node representing a line break."""
 
 
-class MarkdownTableNode(MarkdownASTNode):
+class MarkdownASTTableNode(MarkdownASTNode):
     """Node representing an HTML table (<table>)."""
 
 
-class MarkdownTableHeaderNode(MarkdownASTNode):
+class MarkdownASTTableHeaderNode(MarkdownASTNode):
     """Node representing the header row section of a table (<thead>)."""
 
 
-class MarkdownTableBodyNode(MarkdownASTNode):
+class MarkdownASTTableBodyNode(MarkdownASTNode):
     """Node representing the body section of a table (<tbody>)."""
 
 
-class MarkdownTableRowNode(MarkdownASTNode):
+class MarkdownASTTableRowNode(MarkdownASTNode):
     """Node representing a table row (<tr>)."""
 
 
-class MarkdownTableCellNode(MarkdownASTNode):
+class MarkdownASTTableCellNode(MarkdownASTNode):
     """Node representing a table cell (<td> or <th>)."""
     def __init__(self, is_header: bool = False, alignment: str = "left") -> None:
         """
@@ -219,5 +219,5 @@ class MarkdownTableCellNode(MarkdownASTNode):
         self.alignment = alignment
 
 
-class MarkdownHorizontalRuleNode(MarkdownASTNode):
+class MarkdownASTHorizontalRuleNode(MarkdownASTNode):
     """Node representing a horizontal rule (<hr>)."""

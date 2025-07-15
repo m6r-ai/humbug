@@ -11,13 +11,13 @@ from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from markdown.markdown_ast_node import (
-    MarkdownASTNode, MarkdownDocumentNode, MarkdownTextNode, MarkdownLineBreakNode,
-    MarkdownEmphasisNode, MarkdownBoldNode, MarkdownHeadingNode,
-    MarkdownParagraphNode, MarkdownOrderedListNode, MarkdownUnorderedListNode,
-    MarkdownListItemNode, MarkdownInlineCodeNode, MarkdownCodeBlockNode,
-    MarkdownTableNode, MarkdownTableHeaderNode, MarkdownTableBodyNode,
-    MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
-    MarkdownImageNode, MarkdownLinkNode
+    MarkdownASTNode, MarkdownASTDocumentNode, MarkdownASTTextNode, MarkdownASTLineBreakNode,
+    MarkdownASTEmphasisNode, MarkdownASTBoldNode, MarkdownASTHeadingNode,
+    MarkdownASTParagraphNode, MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,
+    MarkdownASTListItemNode, MarkdownASTInlineCodeNode, MarkdownASTCodeBlockNode,
+    MarkdownASTTableNode, MarkdownASTTableHeaderNode, MarkdownASTTableBodyNode,
+    MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
+    MarkdownASTImageNode, MarkdownASTLinkNode
 )
 
 
@@ -70,18 +70,18 @@ class TableBufferState:
 class ListState:
     """Tracks the state of a list and its items during parsing."""
 
-    def __init__(self, list_node: MarkdownOrderedListNode | MarkdownUnorderedListNode, indent: int) -> None:
+    def __init__(self, list_node: MarkdownASTOrderedListNode | MarkdownASTUnorderedListNode, indent: int) -> None:
         """
         Initialize a list state tracker.
 
         Args:
-            list_node: The list node (MarkdownOrderedListNode or MarkdownUnorderedListNode)
+            list_node: The list node (MarkdownASTOrderedListNode or MarkdownASTUnorderedListNode)
             indent: The indentation level of the list marker
         """
         self.list_node = list_node
         self.indent = indent
         self.marker_length = 0
-        self.last_item: MarkdownListItemNode | None = None
+        self.last_item: MarkdownASTListItemNode | None = None
         self.contains_blank_line = False
 
 
@@ -110,7 +110,7 @@ class MarkdownASTBuilder:
         self._logger = logging.getLogger("MarkdownASTBuilder")
 
         # Initialize an empty document
-        self._document = MarkdownDocumentNode()
+        self._document = MarkdownASTDocumentNode()
 
         # Mapping from line numbers to nodes for incremental updates
         self._line_to_node_map: Dict[int, List[MarkdownASTNode]] = {}
@@ -122,7 +122,7 @@ class MarkdownASTBuilder:
         self._list_stack: List[ListState] = []
 
         # Text continuation tracking
-        self._last_paragraph: MarkdownParagraphNode | None = None
+        self._last_paragraph: MarkdownASTParagraphNode | None = None
         self._last_processed_line_type: str = ""
         self._blank_line_count: int = 0
 
@@ -139,7 +139,7 @@ class MarkdownASTBuilder:
         # Table state tracking using the new buffer approach
         self._table_buffer = TableBufferState()
 
-    def document(self) -> MarkdownDocumentNode:
+    def document(self) -> MarkdownASTDocumentNode:
         """
         Get the current document node.
 
@@ -359,7 +359,7 @@ class MarkdownASTBuilder:
                     if paren_end != -1:
                         # Add any accumulated text before this image
                         if current_text:
-                            nodes.append(MarkdownTextNode(current_text))
+                            nodes.append(MarkdownASTTextNode(current_text))
                             current_text = ""
 
                         # Extract the alt text and URL
@@ -368,7 +368,7 @@ class MarkdownASTBuilder:
                         url, title = self._parse_url_and_title(url_title)
 
                         # Create image node
-                        image_node = MarkdownImageNode(url, alt_text, title)
+                        image_node = MarkdownASTImageNode(url, alt_text, title)
                         nodes.append(image_node)
 
                         # Move past the closing parenthesis
@@ -385,7 +385,7 @@ class MarkdownASTBuilder:
                     if paren_end != -1:
                         # Add any accumulated text before this link
                         if current_text:
-                            nodes.append(MarkdownTextNode(current_text))
+                            nodes.append(MarkdownASTTextNode(current_text))
                             current_text = ""
 
                         # Extract the link text and URL
@@ -394,7 +394,7 @@ class MarkdownASTBuilder:
                         url, title = self._parse_url_and_title(url_title)
 
                         # Create link node
-                        link_node = MarkdownLinkNode(url, title)
+                        link_node = MarkdownASTLinkNode(url, title)
 
                         # Process the content inside the link text recursively
                         for child_node in self._parse_inline_formatting(link_text):
@@ -413,12 +413,12 @@ class MarkdownASTBuilder:
                 if end_pos != -1:
                     # Add any accumulated text before this code block
                     if current_text:
-                        nodes.append(MarkdownTextNode(current_text))
+                        nodes.append(MarkdownASTTextNode(current_text))
                         current_text = ""
 
                     # Extract the code content (excluding backticks)
                     code_content = text[i+1:end_pos]
-                    nodes.append(MarkdownInlineCodeNode(code_content))
+                    nodes.append(MarkdownASTInlineCodeNode(code_content))
 
                     # Move past the closing backtick
                     i = end_pos + 1
@@ -435,14 +435,14 @@ class MarkdownASTBuilder:
                 if end_pos != -1:
                     # Add any accumulated text before this bold block
                     if current_text:
-                        nodes.append(MarkdownTextNode(current_text))
+                        nodes.append(MarkdownASTTextNode(current_text))
                         current_text = ""
 
                     # Extract the bold content (excluding markers)
                     bold_content = text[i+2:end_pos]
 
                     # Create bold node and process its content recursively
-                    bold_node = MarkdownBoldNode()
+                    bold_node = MarkdownASTBoldNode()
 
                     # Process the content inside the bold
                     for child_node in self._parse_inline_formatting(bold_content):
@@ -465,14 +465,14 @@ class MarkdownASTBuilder:
                 if end_pos != -1 and (end_pos + 1 >= len(text) or text[end_pos+1] != marker):  # Avoid **
                     # Add any accumulated text before this italic block
                     if current_text:
-                        nodes.append(MarkdownTextNode(current_text))
+                        nodes.append(MarkdownASTTextNode(current_text))
                         current_text = ""
 
                     # Extract the italic content (excluding markers)
                     italic_content = text[i+1:end_pos]
 
                     # Create emphasis node and process its content recursively
-                    emphasis_node = MarkdownEmphasisNode()
+                    emphasis_node = MarkdownASTEmphasisNode()
 
                     # Process the content inside the emphasis
                     for child_node in self._parse_inline_formatting(italic_content):
@@ -490,11 +490,11 @@ class MarkdownASTBuilder:
 
         # Add any remaining accumulated text
         if current_text:
-            nodes.append(MarkdownTextNode(current_text))
+            nodes.append(MarkdownASTTextNode(current_text))
 
         # Append a line break node if needed
         if has_line_break:
-            nodes.append(MarkdownLineBreakNode())
+            nodes.append(MarkdownASTLineBreakNode())
 
         return nodes
 
@@ -544,7 +544,7 @@ class MarkdownASTBuilder:
             self._used_header_ids[anchor_id] += 1
             anchor_id = f"{anchor_id}-{self._used_header_ids[anchor_id]}"
 
-        heading = MarkdownHeadingNode(level, anchor_id)
+        heading = MarkdownASTHeadingNode(level, anchor_id)
         for node in self._parse_inline_formatting(content):
             heading.add_child(node)
 
@@ -554,7 +554,7 @@ class MarkdownASTBuilder:
 
         self._document.add_child(heading)
 
-    def _parse_text(self, text: str, line_num: int) -> MarkdownParagraphNode:
+    def _parse_text(self, text: str, line_num: int) -> MarkdownASTParagraphNode:
         """
         Parse a text line and create a paragraph node.
 
@@ -562,7 +562,7 @@ class MarkdownASTBuilder:
             text: The text content
             line_num: The line number
         """
-        paragraph = MarkdownParagraphNode()
+        paragraph = MarkdownASTParagraphNode()
         for node in self._parse_inline_formatting(text):
             paragraph.add_child(node)
 
@@ -623,7 +623,7 @@ class MarkdownASTBuilder:
         assert current_list.last_item is not None, "Current list state should have a last item"
         return current_list.last_item
 
-    def _find_or_create_ordered_list(self, indent: int, start_number: int) -> MarkdownOrderedListNode:
+    def _find_or_create_ordered_list(self, indent: int, start_number: int) -> MarkdownASTOrderedListNode:
         """
         Find or create an ordered list at the given indent level with specified start number.
 
@@ -637,7 +637,7 @@ class MarkdownASTBuilder:
         # Check if we already have an ordered list at this level
         if self._list_stack and self._list_stack[-1].indent == indent:
             list_state = self._list_stack[-1]
-            if isinstance(list_state.list_node, MarkdownOrderedListNode):
+            if isinstance(list_state.list_node, MarkdownASTOrderedListNode):
                 return list_state.list_node
 
             # Different list type, close it
@@ -647,7 +647,7 @@ class MarkdownASTBuilder:
         parent = self._find_parent_for_list()
 
         # Create new ordered list
-        new_list = MarkdownOrderedListNode(indent, start_number)
+        new_list = MarkdownASTOrderedListNode(indent, start_number)
         parent.add_child(new_list)
 
         # Create and add list state
@@ -681,14 +681,14 @@ class MarkdownASTBuilder:
         current_list = cast(ListState, self._current_list_state())
 
         # Create the list item
-        item = MarkdownListItemNode()
+        item = MarkdownASTListItemNode()
         list_node.add_child(item)
 
         # Calculate the actual content indentation for this specific marker
         current_list.marker_length = len(number) + 2  # +2 for the "." and space after number
 
         # Create a paragraph for the content
-        paragraph = MarkdownParagraphNode()
+        paragraph = MarkdownASTParagraphNode()
         for node in self._parse_inline_formatting(content):
             paragraph.add_child(node)
 
@@ -705,7 +705,7 @@ class MarkdownASTBuilder:
         current_list.last_item = item
         self._last_processed_line_type = 'ordered_list_item'
 
-    def _find_or_create_unordered_list(self, indent: int) -> MarkdownUnorderedListNode:
+    def _find_or_create_unordered_list(self, indent: int) -> MarkdownASTUnorderedListNode:
         """
         Find or create an unordered list at the given indent level.
 
@@ -718,7 +718,7 @@ class MarkdownASTBuilder:
         # Check if we already have an unordered list at this level
         if self._list_stack and self._list_stack[-1].indent == indent:
             list_state = self._list_stack[-1]
-            if isinstance(list_state.list_node, MarkdownUnorderedListNode):
+            if isinstance(list_state.list_node, MarkdownASTUnorderedListNode):
                 return list_state.list_node
 
             # Different list type, close it
@@ -728,7 +728,7 @@ class MarkdownASTBuilder:
         parent = self._find_parent_for_list()
 
         # Create new unordered list
-        new_list = MarkdownUnorderedListNode(indent)
+        new_list = MarkdownASTUnorderedListNode(indent)
         parent.add_child(new_list)
 
         # Create and add list state
@@ -759,14 +759,14 @@ class MarkdownASTBuilder:
         current_list = cast(ListState, self._current_list_state())
 
         # Create the list item
-        item = MarkdownListItemNode()
+        item = MarkdownASTListItemNode()
         list_node.add_child(item)
 
         # Calculate the actual content indentation for this specific marker
         current_list.marker_length = len(marker) + 1  # +1 for the space after marker
 
         # Create a paragraph for the content
-        paragraph = MarkdownParagraphNode()
+        paragraph = MarkdownASTParagraphNode()
         for node in self._parse_inline_formatting(content):
             paragraph.add_child(node)
 
@@ -783,7 +783,7 @@ class MarkdownASTBuilder:
         current_list.last_item = item
         self._last_processed_line_type = 'unordered_list_item'
 
-    def _parse_horizontal_rule(self, line_num: int) -> MarkdownHorizontalRuleNode:
+    def _parse_horizontal_rule(self, line_num: int) -> MarkdownASTHorizontalRuleNode:
         """
         Parse a horizontal rule line and create a horizontal rule node.
 
@@ -793,7 +793,7 @@ class MarkdownASTBuilder:
         Returns:
             A horizontal rule node
         """
-        horizontal_rule = MarkdownHorizontalRuleNode()
+        horizontal_rule = MarkdownASTHorizontalRuleNode()
         horizontal_rule.line_start = line_num
         horizontal_rule.line_end = line_num
         self._register_node_line(horizontal_rule, line_num)
@@ -893,9 +893,9 @@ class MarkdownASTBuilder:
             None
         """
         # Create the table structure
-        table_node = MarkdownTableNode()
-        header_node = MarkdownTableHeaderNode()
-        body_node = MarkdownTableBodyNode()
+        table_node = MarkdownASTTableNode()
+        header_node = MarkdownASTTableHeaderNode()
+        body_node = MarkdownASTTableBodyNode()
 
         # Set line information
         table_node.line_start = self._table_buffer.start_line
@@ -907,7 +907,7 @@ class MarkdownASTBuilder:
         table_node.add_child(body_node)
 
         # Process header rows
-        row_node = MarkdownTableRowNode()
+        row_node = MarkdownASTTableRowNode()
         row_line = self._table_buffer.start_line
         row_node.line_start = row_line
         row_node.line_end = row_line
@@ -919,7 +919,7 @@ class MarkdownASTBuilder:
                 alignment = self._table_buffer.alignments[j]
 
             # Create cell
-            cell_node = MarkdownTableCellNode(is_header=True, alignment=alignment)
+            cell_node = MarkdownASTTableCellNode(is_header=True, alignment=alignment)
 
             # Add content to cell
             for text_node in self._parse_inline_formatting(cell_content):
@@ -938,7 +938,7 @@ class MarkdownASTBuilder:
         body_node.line_start = body_start_line
 
         for i, row_cells in enumerate(self._table_buffer.body_rows):
-            row_node = MarkdownTableRowNode()
+            row_node = MarkdownASTTableRowNode()
             row_line = body_start_line + i
             row_node.line_start = row_line
             row_node.line_end = row_line
@@ -950,7 +950,7 @@ class MarkdownASTBuilder:
                     alignment = self._table_buffer.alignments[j]
 
                 # Create cell
-                cell_node = MarkdownTableCellNode(is_header=False, alignment=alignment)
+                cell_node = MarkdownASTTableCellNode(is_header=False, alignment=alignment)
 
                 # Add content to cell
                 for text_node in self._parse_inline_formatting(cell_content):
@@ -1018,7 +1018,7 @@ class MarkdownASTBuilder:
             None
         """
         # Create a code block node for the unclosed block
-        code_block = MarkdownCodeBlockNode(
+        code_block = MarkdownASTCodeBlockNode(
             language=self._code_block_language,
             content='\n'.join(self._code_block_content)
         )
@@ -1058,8 +1058,8 @@ class MarkdownASTBuilder:
         # Case 1: Continue a paragraph
         if self._last_paragraph and self._last_processed_line_type == 'text':
             # Add a space between the continued text as long as we didn't just have a line break
-            if not isinstance(self._last_paragraph.children[-1], MarkdownLineBreakNode):
-                self._last_paragraph.add_child(MarkdownTextNode(" "))
+            if not isinstance(self._last_paragraph.children[-1], MarkdownASTLineBreakNode):
+                self._last_paragraph.add_child(MarkdownASTTextNode(" "))
 
             for node in self._parse_inline_formatting(text):
                 self._last_paragraph.add_child(node)
@@ -1099,11 +1099,11 @@ class MarkdownASTBuilder:
 
             # Find the paragraph within the last list item and continue it
             last_item = list_state.last_item
-            paragraph = cast(MarkdownParagraphNode, last_item.children[-1])
+            paragraph = cast(MarkdownASTParagraphNode, last_item.children[-1])
 
             # If we weren't just preceded by a line break then add a space
-            if paragraph.children and not isinstance(paragraph.children[-1], MarkdownLineBreakNode):
-                paragraph.add_child(MarkdownTextNode(" "))
+            if paragraph.children and not isinstance(paragraph.children[-1], MarkdownASTLineBreakNode):
+                paragraph.add_child(MarkdownASTTextNode(" "))
 
             for node in self._parse_inline_formatting(formatted_text):
                 paragraph.add_child(node)
@@ -1149,7 +1149,7 @@ class MarkdownASTBuilder:
                 self._handle_incomplete_table()
 
         if line_type == 'line_break':
-            self._document.add_child(MarkdownLineBreakNode())
+            self._document.add_child(MarkdownASTLineBreakNode())
             return
 
         if line_type == 'blank':
@@ -1236,7 +1236,7 @@ class MarkdownASTBuilder:
         self._last_processed_line_type = line_type
         self._blank_line_count = 0
 
-    def build_ast(self, text: str) -> MarkdownDocumentNode:
+    def build_ast(self, text: str) -> MarkdownASTDocumentNode:
         """
         Build a complete AST from the given text.
 
@@ -1246,7 +1246,7 @@ class MarkdownASTBuilder:
         Returns:
             The document root node
         """
-        self._document = MarkdownDocumentNode(self._source_path)
+        self._document = MarkdownASTDocumentNode(self._source_path)
         self._line_to_node_map = {}
         self._reset_list_state()
         self._last_paragraph = None
@@ -1281,7 +1281,7 @@ class MarkdownASTBuilder:
 
         return self._document
 
-    def update_ast(self, text: str, previous_text: str, path: str | None = None) -> MarkdownDocumentNode:
+    def update_ast(self, text: str, previous_text: str, path: str | None = None) -> MarkdownASTDocumentNode:
         """
         Update the AST incrementally based on changes between previous_text and text.
 

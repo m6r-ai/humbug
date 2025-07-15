@@ -15,12 +15,12 @@ from PySide6.QtGui import (
 )
 
 from markdown.markdown_ast_node import (
-    MarkdownASTVisitor, MarkdownDocumentNode, MarkdownParagraphNode, MarkdownHeadingNode,
-    MarkdownTextNode, MarkdownBoldNode, MarkdownEmphasisNode, MarkdownInlineCodeNode,
-    MarkdownCodeBlockNode, MarkdownListItemNode, MarkdownOrderedListNode,
-    MarkdownUnorderedListNode, MarkdownLineBreakNode, MarkdownTableNode, MarkdownTableHeaderNode,
-    MarkdownTableBodyNode, MarkdownTableRowNode, MarkdownTableCellNode, MarkdownHorizontalRuleNode,
-    MarkdownLinkNode, MarkdownImageNode
+    MarkdownASTVisitor, MarkdownASTDocumentNode, MarkdownASTParagraphNode, MarkdownASTHeadingNode,
+    MarkdownASTTextNode, MarkdownASTBoldNode, MarkdownASTEmphasisNode, MarkdownASTInlineCodeNode,
+    MarkdownASTCodeBlockNode, MarkdownASTListItemNode, MarkdownASTOrderedListNode,
+    MarkdownASTUnorderedListNode, MarkdownASTLineBreakNode, MarkdownASTTableNode, MarkdownASTTableHeaderNode,
+    MarkdownASTTableBodyNode, MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
+    MarkdownASTLinkNode, MarkdownASTImageNode
 )
 
 from humbug.color_role import ColorRole
@@ -71,7 +71,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         pixel_image.fill(self._style_manager.get_color(ColorRole.TABLE_BORDER))
         self._document.addResource(QTextDocument.ResourceType.ImageResource, "pixel", pixel_image)
 
-    def visit_MarkdownDocumentNode(self, node: MarkdownDocumentNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTDocumentNode(self, node: MarkdownASTDocumentNode) -> None:  # pylint: disable=invalid-name
         """
         Render a document node to the QTextDocument.
 
@@ -116,7 +116,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Enable all the changes to render
         cursor.endEditBlock()
 
-    def visit_MarkdownParagraphNode(self, node: MarkdownParagraphNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTParagraphNode(self, node: MarkdownASTParagraphNode) -> None:  # pylint: disable=invalid-name
         """
         Render a paragraph node to the QTextDocument.
 
@@ -135,23 +135,23 @@ class MarkdownRenderer(MarkdownASTVisitor):
         tight = False
         if node.parent:
             parent_list_node = node.parent.parent
-            if isinstance(parent_list_node, (MarkdownOrderedListNode, MarkdownUnorderedListNode)):
+            if isinstance(parent_list_node, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode)):
                 if parent_list_node.tight:
                     tight = True
 
         # If the previous sibling is a list, we need to add a top margin
         previous_sibling = node.previous_sibling()
-        if previous_sibling and isinstance(previous_sibling, (MarkdownOrderedListNode, MarkdownUnorderedListNode)):
+        if previous_sibling and isinstance(previous_sibling, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode)):
             block_format.setTopMargin(self._default_font_height)
 
         # If there is no previous sibling, check if our parent is a list item.  If it is, we also need to add a top margin.
-        elif not previous_sibling and node.parent and isinstance(node.parent, MarkdownListItemNode):
+        elif not previous_sibling and node.parent and isinstance(node.parent, MarkdownASTListItemNode):
             if not tight:
                 block_format.setTopMargin(self._default_font_height)
 
         # If the next sibling is a horizontal rule, we don't need a bottom margin
         next_sibling = node.next_sibling()
-        if next_sibling and isinstance(next_sibling, MarkdownHorizontalRuleNode):
+        if next_sibling and isinstance(next_sibling, MarkdownASTHorizontalRuleNode):
             block_format.setBottomMargin(0)
 
         # If we are in a tight list, we don't need a bottom margin either
@@ -183,7 +183,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setBlockFormat(orig_block_format)
 
-    def visit_MarkdownHeadingNode(self, node: MarkdownHeadingNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTHeadingNode(self, node: MarkdownASTHeadingNode) -> None:  # pylint: disable=invalid-name
         """
         Render a heading node to the QTextDocument.
 
@@ -215,7 +215,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # We don't need a top margin if this is the first block in the document or
         # if the previous sibling is a horizontal rule
         previous_sibling = node.previous_sibling()
-        if previous_sibling and not isinstance(previous_sibling, MarkdownHorizontalRuleNode):
+        if previous_sibling and not isinstance(previous_sibling, MarkdownASTHorizontalRuleNode):
             block_format.setTopMargin(self._default_font_height * multipliers[level])
 
         block_format.setBottomMargin(self._default_font_height)
@@ -235,7 +235,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setBlockFormat(orig_block_format)
 
-    def visit_MarkdownTextNode(self, node: MarkdownTextNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTextNode(self, node: MarkdownASTTextNode) -> None:  # pylint: disable=invalid-name
         """
         Render a text node to the QTextDocument with space normalization.
 
@@ -255,7 +255,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
                 # If previous sibling is a text node ending with space
                 # and current text starts with space, remove the leading space
-                if (isinstance(prev_sibling, MarkdownTextNode) and
+                if (isinstance(prev_sibling, MarkdownASTTextNode) and
                     prev_sibling.content.rstrip() != prev_sibling.content and  # ends with whitespace
                     text.startswith(' ')):
                     text = text.lstrip(' ')
@@ -266,7 +266,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.insertText(text)
 
-    def visit_MarkdownBoldNode(self, node: MarkdownBoldNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTBoldNode(self, node: MarkdownASTBoldNode) -> None:  # pylint: disable=invalid-name
         """
         Render a bold node to the QTextDocument.
 
@@ -287,7 +287,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         is_in_heading = False
         parent = node.parent
         while parent is not None:
-            if isinstance(parent, MarkdownHeadingNode):
+            if isinstance(parent, MarkdownASTHeadingNode):
                 is_in_heading = True
                 break
 
@@ -307,7 +307,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Restore previous format
         self._cursor.setCharFormat(orig_char_format)
 
-    def visit_MarkdownEmphasisNode(self, node: MarkdownEmphasisNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTEmphasisNode(self, node: MarkdownASTEmphasisNode) -> None:  # pylint: disable=invalid-name
         """
         Render an emphasis node to the QTextDocument.
 
@@ -331,7 +331,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Restore previous format
         self._cursor.setCharFormat(orig_char_format)
 
-    def visit_MarkdownInlineCodeNode(self, node: MarkdownInlineCodeNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTInlineCodeNode(self, node: MarkdownASTInlineCodeNode) -> None:  # pylint: disable=invalid-name
         """
         Render an inline code node to the QTextDocument.
 
@@ -350,7 +350,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         code_format.setFontFixedPitch(True)
 
         # If we are inside a link, then keep the link color, otherwise set the code color
-        if not node.parent or not isinstance(node.parent, MarkdownLinkNode):
+        if not node.parent or not isinstance(node.parent, MarkdownASTLinkNode):
             code_format.setForeground(self._style_manager.get_color(ColorRole.SYNTAX_12))
 
         self._cursor.setCharFormat(code_format)
@@ -360,7 +360,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Restore previous format
         self._cursor.setCharFormat(orig_char_format)
 
-    def visit_MarkdownLinkNode(self, node: MarkdownLinkNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTLinkNode(self, node: MarkdownASTLinkNode) -> None:  # pylint: disable=invalid-name
         """
         Render a link node to the QTextDocument.
 
@@ -523,7 +523,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         image.fill(self._style_manager.get_color(ColorRole.BACKGROUND_SECONDARY))
         return image
 
-    def visit_MarkdownImageNode(self, node: MarkdownImageNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTImageNode(self, node: MarkdownASTImageNode) -> None:  # pylint: disable=invalid-name
         """
         Render an image node to the QTextDocument.
 
@@ -578,7 +578,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Insert the image
         self._cursor.insertImage(img_format)
 
-    def visit_MarkdownCodeBlockNode(self, node: MarkdownCodeBlockNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTCodeBlockNode(self, node: MarkdownASTCodeBlockNode) -> None:  # pylint: disable=invalid-name
         """
         Render a code block node to the QTextDocument.
 
@@ -620,7 +620,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         self._cursor.setBlockFormat(orig_block_format)
 
-    def _list_node_visitor(self, node: MarkdownOrderedListNode | MarkdownUnorderedListNode) -> None:
+    def _list_node_visitor(self, node: MarkdownASTOrderedListNode | MarkdownASTUnorderedListNode) -> None:
         """
         Handle the common list node visitor operations.
 
@@ -656,7 +656,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         if not self._cursor.atBlockStart():
             self._cursor.insertBlock()
 
-    def visit_MarkdownOrderedListNode(self, node: MarkdownOrderedListNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTOrderedListNode(self, node: MarkdownASTOrderedListNode) -> None:  # pylint: disable=invalid-name
         """
         Render an ordered list node to the QTextDocument.
 
@@ -687,7 +687,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._list_node_visitor(node)
         self._cursor.setBlockFormat(orig_block_format)
 
-    def visit_MarkdownUnorderedListNode(self, node: MarkdownUnorderedListNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTUnorderedListNode(self, node: MarkdownASTUnorderedListNode) -> None:  # pylint: disable=invalid-name
         """
         Render an unordered list node to the QTextDocument.
 
@@ -717,7 +717,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._list_node_visitor(node)
         self._cursor.setBlockFormat(orig_block_format)
 
-    def visit_MarkdownListItemNode(self, node: MarkdownListItemNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTListItemNode(self, node: MarkdownASTListItemNode) -> None:  # pylint: disable=invalid-name
         """
         Render a list item node to the QTextDocument.
 
@@ -737,7 +737,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         for child in node.children:
             self.visit(child)
 
-    def visit_MarkdownLineBreakNode(self, node: MarkdownLineBreakNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTLineBreakNode(self, node: MarkdownASTLineBreakNode) -> None:  # pylint: disable=invalid-name
         """
         Render a line break node to the QTextDocument.
 
@@ -754,7 +754,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Insert line break character
         self._cursor.insertText("\u2028")
 
-    def visit_MarkdownTableNode(self, node: MarkdownTableNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableNode(self, node: MarkdownASTTableNode) -> None:  # pylint: disable=invalid-name
         """
         Render a table node to the QTextDocument.
 
@@ -772,9 +772,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         has_valid_structure = False
 
         for child in node.children:
-            if isinstance(child, MarkdownTableHeaderNode) and child.children:
+            if isinstance(child, MarkdownASTTableHeaderNode) and child.children:
                 for header_child in node.children:
-                    if isinstance(header_child, MarkdownTableBodyNode) and header_child.children:
+                    if isinstance(header_child, MarkdownASTTableBodyNode) and header_child.children:
                         has_valid_structure = True
                         break
 
@@ -798,7 +798,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # Note: Qt needs a block after a table otherwise it segfaults!
         self._cursor.insertBlock()
 
-    def _render_table_as_text(self, node: MarkdownTableNode) -> None:
+    def _render_table_as_text(self, node: MarkdownASTTableNode) -> None:
         """
         Render a table as plain text when it has an invalid structure.
 
@@ -810,41 +810,41 @@ class MarkdownRenderer(MarkdownASTVisitor):
         """
         # Create a paragraph for each row in the table
         for child in node.children:
-            if isinstance(child, MarkdownTableHeaderNode):
+            if isinstance(child, MarkdownASTTableHeaderNode):
                 for row in child.children:
-                    paragraph = MarkdownParagraphNode()
+                    paragraph = MarkdownASTParagraphNode()
 
                     # Create a text representation of the row
                     row_text = "|"
                     for cell in row.children:
                         cell_text = ""
                         for content in cell.children:
-                            if isinstance(content, MarkdownTextNode):
+                            if isinstance(content, MarkdownASTTextNode):
                                 cell_text += content.content
 
                         row_text += f" {cell_text} |"
 
-                    paragraph.add_child(MarkdownTextNode(row_text))
+                    paragraph.add_child(MarkdownASTTextNode(row_text))
                     self.visit(paragraph)
 
-            if isinstance(child, MarkdownTableBodyNode):
+            if isinstance(child, MarkdownASTTableBodyNode):
                 for row in child.children:
-                    paragraph = MarkdownParagraphNode()
+                    paragraph = MarkdownASTParagraphNode()
 
                     # Create a text representation of the row
                     row_text = "|"
                     for cell in row.children:
                         cell_text = ""
                         for content in cell.children:
-                            if isinstance(content, MarkdownTextNode):
+                            if isinstance(content, MarkdownASTTextNode):
                                 cell_text += content.content
 
                         row_text += f" {cell_text} |"
 
-                    paragraph.add_child(MarkdownTextNode(row_text))
+                    paragraph.add_child(MarkdownASTTextNode(row_text))
                     self.visit(paragraph)
 
-    def visit_MarkdownTableHeaderNode(self, node: MarkdownTableHeaderNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableHeaderNode(self, node: MarkdownASTTableHeaderNode) -> None:  # pylint: disable=invalid-name
         """
         Render a table header node to the QTextDocument.
 
@@ -859,7 +859,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         for child in node.children:
             self.visit(child)
 
-    def visit_MarkdownTableBodyNode(self, node: MarkdownTableBodyNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableBodyNode(self, node: MarkdownASTTableBodyNode) -> None:  # pylint: disable=invalid-name
         """
         Render a table body node to the QTextDocument.
 
@@ -874,7 +874,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         for child in node.children:
             self.visit(child)
 
-    def visit_MarkdownTableRowNode(self, node: MarkdownTableRowNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableRowNode(self, node: MarkdownASTTableRowNode) -> None:  # pylint: disable=invalid-name
         """
         Render a table row node to the QTextDocument.
 
@@ -885,7 +885,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
             None
         """
         # Is this the first row of a table?
-        is_first_row = isinstance(node.parent, MarkdownTableHeaderNode) and node is node.parent.children[0]
+        is_first_row = isinstance(node.parent, MarkdownASTTableHeaderNode) and node is node.parent.children[0]
 
         # If this is the first row, we need to create the table
         if is_first_row:
@@ -896,13 +896,13 @@ class MarkdownRenderer(MarkdownASTVisitor):
                 return
 
             # Count all rows in header and body to determine row count
-            header = cast(MarkdownTableHeaderNode, node.parent)
+            header = cast(MarkdownASTTableHeaderNode, node.parent)
             body = None
 
             # Find the table body (sibling of header)
-            table_node = cast(MarkdownTableNode, header.parent)
+            table_node = cast(MarkdownASTTableNode, header.parent)
             for sibling in table_node.children:
-                if isinstance(sibling, MarkdownTableBodyNode):
+                if isinstance(sibling, MarkdownASTTableBodyNode):
                     body = sibling
                     break
 
@@ -945,7 +945,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
                 cell_cursor = table_cell.firstCursorPosition()
 
                 # Apply cell format based on alignment
-                if isinstance(cell_node, MarkdownTableCellNode):
+                if isinstance(cell_node, MarkdownASTTableCellNode):
                     # Create the cell format object
                     cell_format = table_cell.format().toTableCellFormat()
                     cell_format.setBorderStyle(QTextFrameFormat.BorderStyle.BorderStyle_Solid)
@@ -995,19 +995,19 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._current_row += 1
 
         # Check if this is the last row in the table
-        if ((isinstance(node.parent, MarkdownTableHeaderNode) and
+        if ((isinstance(node.parent, MarkdownASTTableHeaderNode) and
                 node is node.parent.children[-1] and
                 not any(
-                    isinstance(sibling, MarkdownTableBodyNode) for sibling in cast(MarkdownTableNode, node.parent.parent).children
+                    isinstance(sibling, MarkdownASTTableBodyNode) for sibling in cast(MarkdownASTTableNode, node.parent.parent).children
                 )
             ) or
-            (isinstance(node.parent, MarkdownTableBodyNode) and node is node.parent.children[-1])
+            (isinstance(node.parent, MarkdownASTTableBodyNode) and node is node.parent.children[-1])
         ):
             # Reset table state
             self._current_table = None
             self._current_row = 0
 
-    def visit_MarkdownTableCellNode(self, node: MarkdownTableCellNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTTableCellNode(self, node: MarkdownASTTableCellNode) -> None:  # pylint: disable=invalid-name
         """
         Render a table cell node to the QTextDocument.
 
@@ -1021,7 +1021,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         for child in node.children:
             self.visit(child)
 
-    def visit_MarkdownHorizontalRuleNode(self, node: MarkdownHorizontalRuleNode) -> None:  # pylint: disable=invalid-name
+    def visit_MarkdownASTHorizontalRuleNode(self, node: MarkdownASTHorizontalRuleNode) -> None:  # pylint: disable=invalid-name
         """
         Render a horizontal rule node to the QTextDocument.
 
@@ -1035,7 +1035,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
         # However, if the previous sibling is a table then we don't need to do this because
         # one already exists.
         previous_sibling = node.previous_sibling()
-        if not previous_sibling or not isinstance(previous_sibling, MarkdownTableNode):
+        if not previous_sibling or not isinstance(previous_sibling, MarkdownASTTableNode):
             self._cursor.insertBlock()
 
         # This is a workaround for the fact that QTextDocument doesn't support
@@ -1050,6 +1050,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
 
         # In most cases we need to add 2 new blocks after the horizontal rule
         # to ensure proper spacing.  However, if the previous sibling is a
-        # MarkdownTableNode then we only need to add one.
-        if not previous_sibling or not isinstance(previous_sibling, MarkdownTableNode):
+        # MarkdownASTTableNode then we only need to add one.
+        if not previous_sibling or not isinstance(previous_sibling, MarkdownASTTableNode):
             self._cursor.insertBlock()
