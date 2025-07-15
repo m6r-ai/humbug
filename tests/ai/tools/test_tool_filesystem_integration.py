@@ -8,11 +8,11 @@ from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 
-from ai.ai_tool_manager import AIToolExecutionError
-from ai.tools.ai_tool_filesystem import AIToolFileSystem
+from ai_tool import AIToolExecutionError
+from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 
 
-class TestAIToolFileSystemIntegration:
+class TestFileSystemAIToolIntegration:
     """Integration tests for the filesystem tool."""
 
     def test_execute_read_file_success(self, filesystem_tool, mock_authorization):
@@ -74,7 +74,7 @@ class TestAIToolFileSystemIntegration:
             assert isinstance(error.__cause__, RuntimeError)
 
 
-class TestAIToolFileSystemAuthorizationContext:
+class TestFileSystemAIToolAuthorizationContext:
     """Test authorization context building for various operations."""
 
     def test_authorization_context_includes_operation_details(self, filesystem_tool, mock_authorization):
@@ -112,7 +112,7 @@ class TestAIToolFileSystemAuthorizationContext:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -168,7 +168,7 @@ class TestAIToolFileSystemAuthorizationContext:
             assert "Delete the file 'file.txt'. This file will be permanently removed and cannot be recovered." in context
 
 
-class TestAIToolFileSystemParametrized:
+class TestFileSystemAIToolParametrized:
     """Parametrized tests for the filesystem tool."""
 
     @pytest.mark.parametrize("operation", [
@@ -178,7 +178,7 @@ class TestAIToolFileSystemParametrized:
     ])
     def test_supported_operations_in_definition(self, operation, mock_path_resolver):
         """Test that all supported operations are included in definition."""
-        filesystem_tool = AIToolFileSystem(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
         definition = filesystem_tool.get_definition()
         operation_param = definition.parameters[0]
 
@@ -187,7 +187,7 @@ class TestAIToolFileSystemParametrized:
     @pytest.mark.parametrize("encoding", ["utf-8", "utf-16", "ascii", "latin-1"])
     def test_supported_encodings_in_definition(self, encoding, mock_path_resolver):
         """Test that all supported encodings are included in definition."""
-        filesystem_tool = AIToolFileSystem(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
         definition = filesystem_tool.get_definition()
         encoding_param = next(p for p in definition.parameters if p.name == "encoding")
 
@@ -201,7 +201,7 @@ class TestAIToolFileSystemParametrized:
     ])
     def test_custom_max_file_sizes(self, max_size_mb, expected_bytes, mock_path_resolver):
         """Test filesystem tool with different max file sizes."""
-        tool = AIToolFileSystem(resolve_path=mock_path_resolver, max_file_size_mb=max_size_mb)
+        tool = FileSystemAITool(resolve_path=mock_path_resolver, max_file_size_mb=max_size_mb)
 
         assert tool._max_file_size_bytes == expected_bytes
 
@@ -294,7 +294,7 @@ class TestAIToolFileSystemParametrized:
         assert isinstance(requires_destination, bool)
 
 
-class TestAIToolFileSystemErrorHandling:
+class TestFileSystemAIToolErrorHandling:
     """Test error handling patterns across operations."""
 
     def test_operations_requiring_destination_fail_without_it(self, filesystem_tool, mock_authorization):
@@ -353,7 +353,7 @@ class TestAIToolFileSystemErrorHandling:
                 assert "No 'content' argument provided" in str(error)
 
 
-class TestAIToolFileSystemPathResolverIntegration:
+class TestFileSystemAIToolPathResolverIntegration:
     """Test integration with different path resolver behaviors."""
 
     def test_path_resolver_validation_error(self, mock_authorization):
@@ -363,7 +363,7 @@ class TestAIToolFileSystemPathResolverIntegration:
                 raise ValueError("Access to this path is forbidden")
             return Path(f"/test/sandbox/{path}"), path
 
-        filesystem_tool = AIToolFileSystem(resolve_path=failing_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=failing_resolver)
 
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(filesystem_tool.execute(
@@ -382,7 +382,7 @@ class TestAIToolFileSystemPathResolverIntegration:
             display_path = f"custom_prefix/{path}"
             return abs_path, display_path
 
-        filesystem_tool = AIToolFileSystem(resolve_path=custom_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=custom_resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -419,7 +419,7 @@ class TestAIToolFileSystemPathResolverIntegration:
 
             return abs_path, display_path
 
-        filesystem_tool = AIToolFileSystem(resolve_path=flexible_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=flexible_resolver)
 
         test_cases = [
             ("file.txt", "file.txt"),

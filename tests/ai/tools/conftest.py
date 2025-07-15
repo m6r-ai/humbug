@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ai.tools.ai_tool_filesystem import AIToolFileSystem
+from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 
 
 @pytest.fixture
@@ -52,7 +52,7 @@ def mock_path_resolver():
 @pytest.fixture
 def filesystem_tool(mock_path_resolver):
     """Fixture providing a filesystem tool instance with mocked path resolver."""
-    return AIToolFileSystem(resolve_path=mock_path_resolver)
+    return FileSystemAITool(resolve_path=mock_path_resolver)
 
 
 @pytest.fixture

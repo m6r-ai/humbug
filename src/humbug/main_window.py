@@ -20,12 +20,11 @@ from metaphor import (
 )
 
 from ai_tool import AIToolManager
-from ai_tool.tools.ai_tool_calculator import AIToolCalculator
-from ai_tool.tools.ai_tool_clock import AIToolClock
-from ai_tool.tools.ai_tool_filesystem import AIToolFileSystem
+from ai_tool.tools.calculator_ai_tool import CalculatorAITool
+from ai_tool.tools.clock_ai_tool import ClockAITool
+from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 
 from humbug.about_dialog import AboutDialog
-from humbug.ai_tool_system import AIToolSystem
 from humbug.color_role import ColorRole
 from humbug.column_manager import ColumnManager
 from humbug.message_box import MessageBox, MessageBoxType
@@ -39,6 +38,7 @@ from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
+from humbug.system_ai_tool import SystemAITool
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.shell.commands.shell_command_clear import ShellCommandClear
@@ -416,13 +416,13 @@ class MainWindow(QMainWindow):
 
         self._ai_tool_manager = AIToolManager()
         self._ai_tool_manager.register_tool(
-            AIToolCalculator(), "Calculator: performs arithmetic, trigonometry, logarithms, and other calculations"
+            CalculatorAITool(), "Calculator: performs arithmetic, trigonometry, logarithms, and other calculations"
         )
-        self._ai_tool_manager.register_tool(AIToolClock(), "Clock: gets the current time and date")
+        self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
-            AIToolFileSystem(self._resolve_mindspace_path), "FileSystem: handles file operations in the current mindspace"
+            FileSystemAITool(self._resolve_mindspace_path), "FileSystem: handles file operations in the current mindspace"
         )
-        self._ai_tool_manager.register_tool(AIToolSystem(self._column_manager), "System: implements UI automations within Humbug")
+        self._ai_tool_manager.register_tool(SystemAITool(self._column_manager), "System: implements UI automations within Humbug")
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 

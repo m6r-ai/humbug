@@ -6,11 +6,11 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
-from ai.tools.ai_tool_filesystem import AIToolFileSystem
+from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
+from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 
 
-class TestAIToolFileSystemDeleteFile:
+class TestFileSystemAIToolDeleteFile:
     """Test the delete_file operation."""
 
     def test_delete_file_success(self, filesystem_tool, mock_authorization):
@@ -140,7 +140,7 @@ class TestAIToolFileSystemDeleteFile:
             assert "Failed to delete file" in str(error)
 
 
-class TestAIToolFileSystemCopyFile:
+class TestFileSystemAIToolCopyFile:
     """Test the copy_file operation."""
 
     def test_copy_file_success_new_destination(self, custom_path_resolver, mock_authorization):
@@ -151,7 +151,7 @@ class TestAIToolFileSystemCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -194,7 +194,7 @@ class TestAIToolFileSystemCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -297,7 +297,7 @@ class TestAIToolFileSystemCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -335,7 +335,7 @@ class TestAIToolFileSystemCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -376,7 +376,7 @@ class TestAIToolFileSystemCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -410,7 +410,7 @@ class TestAIToolFileSystemCopyFile:
             assert "Failed to copy file" in str(error)
 
 
-class TestAIToolFileSystemMove:
+class TestFileSystemAIToolMove:
     """Test the move operation."""
 
     def test_move_file_success(self, custom_path_resolver, mock_authorization):
@@ -421,7 +421,7 @@ class TestAIToolFileSystemMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -453,7 +453,7 @@ class TestAIToolFileSystemMove:
             "dest_dir": ("/test/sandbox/dest_dir", "dest_dir")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -509,7 +509,7 @@ class TestAIToolFileSystemMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists:
             mock_exists.return_value = True
@@ -531,7 +531,7 @@ class TestAIToolFileSystemMove:
             "new_dir/dest.txt": ("/test/sandbox/new_dir/dest.txt", "new_dir/dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir') as mock_mkdir, \
@@ -556,7 +556,7 @@ class TestAIToolFileSystemMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir'), \
@@ -582,7 +582,7 @@ class TestAIToolFileSystemMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = AIToolFileSystem(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir'), \

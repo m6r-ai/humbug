@@ -6,7 +6,7 @@ from ai_tool import (
 )
 
 
-class AIToolClock(AITool):
+class ClockAITool(AITool):
     """Clock tool that returns the current time."""
 
     def get_definition(self) -> AIToolDefinition:

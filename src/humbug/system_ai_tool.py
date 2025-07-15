@@ -15,7 +15,7 @@ from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceEr
 from humbug.user.user_manager import UserManager
 
 
-class AIToolSystem(AITool):
+class SystemAITool(AITool):
     """
     System operations tool for LLM interaction.
 
@@ -34,7 +34,7 @@ class AIToolSystem(AITool):
         self._column_manager = column_manager
         self._mindspace_manager = MindspaceManager()
         self._user_manager = UserManager()
-        self._logger = logging.getLogger("AIToolSystem")
+        self._logger = logging.getLogger("SystemAITool")
 
     def get_definition(self) -> AIToolDefinition:
         """

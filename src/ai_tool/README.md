@@ -21,7 +21,6 @@ This module provides a comprehensive framework for creating, managing, and execu
 - **`ai_tool_registered.py`** - Internal representation of registered tools with their metadata
 
 ### Supporting Components
-- **`types.py`** - Type definitions and aliases used throughout the framework
 - **`__init__.py`** - Public API exports for backward compatibility
 
 ## Key Features

@@ -8,21 +8,21 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from ai.tools.ai_tool_clock import AIToolClock
-from ai.ai_tool_manager import AIToolDefinition, AIToolParameter, AIToolExecutionError, AITool
+from ai_tool import AIToolDefinition, AIToolParameter, AIToolExecutionError, AITool
+from ai_tool.tools.clock_ai_tool import ClockAITool
 
 
 @pytest.fixture
 def clock_tool():
     """Fixture providing a clock tool instance."""
-    return AIToolClock()
+    return ClockAITool()
 
 
 @pytest.fixture
 def mock_datetime():
     """Fixture providing a mocked datetime for predictable testing."""
     mock_dt = datetime(2023, 12, 25, 14, 30, 45, 123456)
-    with patch('ai.tools.ai_tool_clock.datetime') as mock:
+    with patch('ai_tool.tools.clock_ai_tool.datetime') as mock:
         mock.now.return_value = mock_dt
         yield mock_dt
 
@@ -36,7 +36,7 @@ def mock_authorization():
     return mock_auth_callback
 
 
-class TestAIToolClockDefinition:
+class TestClockAIToolDefinition:
     """Test the clock tool definition."""
 
     def test_get_definition_returns_correct_structure(self, clock_tool):
@@ -73,7 +73,7 @@ class TestAIToolClockDefinition:
         assert timezone_param.enum is None
 
 
-class TestAIToolClockExecution:
+class TestClockAIToolExecution:
     """Test the clock tool execution."""
 
     def test_execute_default_format(self, clock_tool, mock_datetime, mock_authorization):
@@ -131,12 +131,12 @@ class TestAIToolClockExecution:
         assert result == "2023-12-25T14:30:45.123456Z"
 
 
-class TestAIToolClockErrorHandling:
+class TestClockAIToolErrorHandling:
     """Test error handling in the clock tool."""
 
     def test_execute_datetime_exception_wrapped(self, clock_tool, mock_authorization):
         """Test that datetime exceptions are properly wrapped."""
-        with patch('ai.tools.ai_tool_clock.datetime') as mock_datetime:
+        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.side_effect = OSError("System clock error")
 
             with pytest.raises(AIToolExecutionError) as exc_info:
@@ -150,7 +150,7 @@ class TestAIToolClockErrorHandling:
 
     def test_execute_timestamp_conversion_error(self, clock_tool, mock_authorization):
         """Test handling of timestamp conversion errors."""
-        with patch('ai.tools.ai_tool_clock.datetime') as mock_datetime:
+        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
             # Create a datetime that will cause timestamp() to fail
             mock_dt = MagicMock()
             mock_dt.timestamp.side_effect = ValueError("Invalid timestamp")
@@ -165,7 +165,7 @@ class TestAIToolClockErrorHandling:
 
     def test_execute_isoformat_error(self, clock_tool, mock_authorization):
         """Test handling of isoformat errors."""
-        with patch('ai.tools.ai_tool_clock.datetime') as mock_datetime:
+        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
             # Create a datetime that will cause isoformat() to fail
             mock_dt = MagicMock()
             mock_dt.isoformat.side_effect = AttributeError("No isoformat method")
@@ -179,7 +179,7 @@ class TestAIToolClockErrorHandling:
 
     def test_execute_strftime_error(self, clock_tool, mock_authorization):
         """Test handling of strftime errors."""
-        with patch('ai.tools.ai_tool_clock.datetime') as mock_datetime:
+        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
             # Create a datetime that will cause strftime() to fail
             mock_dt = MagicMock()
             mock_dt.strftime.side_effect = ValueError("Invalid format string")
@@ -192,7 +192,7 @@ class TestAIToolClockErrorHandling:
             assert "Failed to get current time: Invalid format string" in str(error)
 
 
-class TestAIToolClockParametrizedFormats:
+class TestClockAIToolParametrizedFormats:
     """Parametrized tests for different format combinations."""
 
     @pytest.mark.parametrize("format_type,expected_pattern", [
@@ -252,7 +252,7 @@ class TestAIToolClockParametrizedFormats:
         assert len(result) > 0
 
 
-class TestAIToolClockIntegration:
+class TestClockAIToolIntegration:
     """Integration tests for the clock tool."""
 
     def test_real_datetime_execution(self, clock_tool, mock_authorization):
@@ -282,7 +282,7 @@ class TestAIToolClockIntegration:
         assert results["timestamp"].isdigit()  # Timestamp is all digits
 
     def test_tool_inheritance(self, clock_tool):
-        """Test that AIToolClock properly inherits from AITool."""
+        """Test that ClockAITool properly inherits from AITool."""
 
         assert isinstance(clock_tool, AITool)
         assert hasattr(clock_tool, 'get_definition')

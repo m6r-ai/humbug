@@ -7,14 +7,14 @@ from unittest.mock import patch
 
 import pytest
 
-from ai.ai_tool_manager import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
-from ai.tools.ai_tool_calculator import AIToolCalculator, SafeMathEvaluator
+from ai_tool import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
+from ai_tool.tools.calculator_ai_tool import CalculatorAITool, SafeMathEvaluator
 
 
 @pytest.fixture
 def calculator_tool():
     """Fixture providing a calculator tool instance."""
-    return AIToolCalculator()
+    return CalculatorAITool()
 
 
 @pytest.fixture
@@ -32,7 +32,7 @@ def mock_authorization():
     return mock_auth_callback
 
 
-class TestAIToolCalculatorDefinition:
+class TestCalculatorAIToolDefinition:
     """Test the calculator tool definition."""
 
     def test_get_definition_returns_correct_structure(self, calculator_tool):
@@ -451,7 +451,7 @@ class TestSafeMathEvaluatorErrorHandling:
             safe_evaluator.evaluate("not True")
 
 
-class TestAIToolCalculatorExecution:
+class TestCalculatorAIToolExecution:
     """Test the calculator tool execution."""
 
     def test_execute_basic_arithmetic(self, calculator_tool, mock_authorization):
@@ -546,7 +546,7 @@ class TestAIToolCalculatorExecution:
             assert error.__cause__.__class__ == RuntimeError
 
 
-class TestAIToolCalculatorParametrized:
+class TestCalculatorAIToolParametrized:
     """Parametrized tests for the calculator tool."""
 
     @pytest.mark.parametrize("expression,expected", [
@@ -612,7 +612,7 @@ class TestAIToolCalculatorParametrized:
             assert 'j' in result or 'complex' in str(type(eval(result)))
 
 
-class TestAIToolCalculatorSecurity:
+class TestCalculatorAIToolSecurity:
     """Test security aspects of the calculator tool."""
 
     @pytest.mark.parametrize("malicious_expr", [
@@ -661,11 +661,11 @@ class TestAIToolCalculatorSecurity:
                 asyncio.run(calculator_tool.execute({"expression": expr}, mock_authorization))
 
 
-class TestAIToolCalculatorIntegration:
+class TestCalculatorAIToolIntegration:
     """Integration tests for the calculator tool."""
 
     def test_tool_inheritance(self, calculator_tool):
-        """Test that AIToolCalculator properly inherits from AITool."""
+        """Test that CalculatorAITool properly inherits from AITool."""
 
         assert isinstance(calculator_tool, AITool)
         assert hasattr(calculator_tool, 'get_definition')

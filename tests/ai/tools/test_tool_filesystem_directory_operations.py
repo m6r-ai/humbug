@@ -6,10 +6,10 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
+from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
 
 
-class TestAIToolFileSystemListDirectory:
+class TestFileSystemAIToolListDirectory:
     """Test the list_directory operation."""
 
     def test_list_directory_success(self, filesystem_tool, mock_authorization):
@@ -170,7 +170,7 @@ class TestAIToolFileSystemListDirectory:
             assert "Failed to list directory" in str(error)
 
 
-class TestAIToolFileSystemCreateDirectory:
+class TestFileSystemAIToolCreateDirectory:
     """Test the create_directory operation."""
 
     def test_create_directory_success(self, filesystem_tool, mock_authorization):
@@ -309,7 +309,7 @@ class TestAIToolFileSystemCreateDirectory:
             assert "Failed to create directory" in str(error)
 
 
-class TestAIToolFileSystemRemoveDirectory:
+class TestFileSystemAIToolRemoveDirectory:
     """Test the remove_directory operation."""
 
     def test_remove_directory_success(self, filesystem_tool, mock_authorization):

@@ -7,10 +7,10 @@ from unittest.mock import patch, MagicMock, mock_open
 
 import pytest
 
-from ai.ai_tool_manager import AIToolExecutionError, AIToolAuthorizationDenied
+from ai_tool import AIToolExecutionError, AIToolAuthorizationDenied
 
 
-class TestAIToolFileSystemReadFile:
+class TestFileSystemAIToolReadFile:
     """Test the read_file operation."""
 
     def test_read_file_success(self, filesystem_tool, mock_authorization):
@@ -193,7 +193,7 @@ class TestAIToolFileSystemReadFile:
             assert "Failed to read file" in str(error)
 
 
-class TestAIToolFileSystemWriteFile:
+class TestFileSystemAIToolWriteFile:
     """Test the write_file operation."""
 
     def test_write_file_success_new_file(self, filesystem_tool, mock_authorization):
@@ -388,7 +388,7 @@ class TestAIToolFileSystemWriteFile:
             assert "Failed to write file" in str(error)
 
 
-class TestAIToolFileSystemAppendFile:
+class TestFileSystemAIToolAppendFile:
     """Test the append_to_file operation."""
 
     def test_append_file_success(self, filesystem_tool, mock_authorization):

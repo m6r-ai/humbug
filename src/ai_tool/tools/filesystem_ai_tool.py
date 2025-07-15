@@ -11,7 +11,7 @@ from ai_tool import (
 )
 
 
-class AIToolFileSystem(AITool):
+class FileSystemAITool(AITool):
     """
     Comprehensive filesystem tool.
 
@@ -29,7 +29,7 @@ class AIToolFileSystem(AITool):
         """
         self._resolve_path = resolve_path
         self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
-        self._logger = logging.getLogger("AIToolFileSystem")
+        self._logger = logging.getLogger("FileSystemAITool")
 
     def get_definition(self) -> AIToolDefinition:
         """

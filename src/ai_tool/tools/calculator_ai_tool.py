@@ -256,13 +256,13 @@ class SafeMathEvaluator:
         raise ValueError(f"Undefined variable or constant: '{node.id}'")
 
 
-class AIToolCalculator(AITool):
+class CalculatorAITool(AITool):
     """Tool that performs mathematical calculations using safe AST evaluation."""
 
     def __init__(self) -> None:
         """Initialize the calculator tool."""
         self._evaluator = SafeMathEvaluator()
-        self._logger = logging.getLogger("AIToolCalculator")
+        self._logger = logging.getLogger("CalculatorAITool")
 
     def get_definition(self) -> AIToolDefinition:
         """
