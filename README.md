@@ -1,10 +1,7 @@
-# Humbug: an OS-like environment for human-AI collaboration
+# Humbug: an operating system for human-AI collaboration
 
 Humbug is a modular, extensible platform that aims to let you and your AIs work on ideas together.
-Think of it as being like an operating system for human-AI collaboration.
-
-If you know exactly what you want it has tools to let you do those things.  If you're not sure then you can let your AI
-take control and guide you through what you want to do.
+Think of it as being an operating system for human-AI collaboration.
 
 Humbug lets you work on lots of different types of problems, but it shines at supporting you build software.
 
@@ -12,50 +9,37 @@ Humbug lets you work on lots of different types of problems, but it shines at su
 
 ## Why Humbug?
 
+- **OS-like abstraction and modularity**  
+  Humbug provides OS-like concepts without trying to replace your real operating system.
+  It unifies AI and UI interactions so it's easy to add tools that can be used by an AI, by you, or both.
+  It runs on top of Windows, macOS, or Linux, and provides a unified experience on all of them.
+
 - **AI as a first-class citizen**  
   Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.
-  Compare outputs, orchestrate tools, and explore new solutions with AIs as flexible, autonomous teammates.
+  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI, so you're not tied to any one provider, can optimize for cost, and are future-proofed when you want to use something new.
+  You can seamlessly switch between models, even switching mid-conversation.
 
 - **Mindspaces: project-centric workspaces**  
   Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
   Switch between projects as easily as you switch between desktops.
 
 - **Structured context engineering with Metaphor**  
-  Go beyond ad-hoc prompts and make your intentions clear to get dramatically better results and lower operating costs.
+  By going beyond ad-hoc prompts and making your intentions clear, you can get dramatically better results and lower operating costs.
   Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
   Think of it like a shell language for AI orchestration.
 
-- **Unified interface for building**  
-  Interact through a GUI with multi-pane editing, real-time AI conversations, and rich documentation.
-  Aternatively, drop into a programmable terminal for full control.
+- **Human–AI collaboration at the core**  
+  When you're using AI, you're no longer working alone.
+  Humbug treats both humans and AIs as first-class actors.
+  All tools, including the GUI, are designed to be available for both to use, so it's faster and easier to get things done.
 
 - **Powerful, pluggable tools**  
-  Extend your LLMs with dynamic file operations, a scientific calculator, system clock access, UI orchestration, Markdown parsing, syntax highlighting, and more.
-  Humbug’s tool system makes it easy to add new capabilities for both human and AI use.
+  Extends your LLMs with dynamic file operations, a scientific calculator, system clock access, UI orchestration, Markdown parsing, syntax highlighting, and more.
+  Humbug’s tool system is flexible and robust, so it's easy to add new capabilities.
 
 - **Designed for extensibility**  
   Humbug is open-source and modular by design.
   Add new AI backends, tools, or integrations with minimal friction.
-
-![Humbug in action](docs/v0.18-explore.gif)
-
-## What sets Humbug apart?
-
-- **OS-like abstraction and modularity without the baggage**  
-  Humbug provides OS-like concepts without trying to replace your real operating system.
-  It unifies AI and UI interactions so it's easy to add tools that can be used by any AI, any user, or both.
-  It sits on top of Windows, macOS, or Linux, and provides a unified experience on all of them.
-
-- **Human–AI collaboration at the core**  
-  When you're using AI, you're no longer working alone.
-  Both humans and AIs are first-class actors in Humbug.
-  Share a mindspace, exchange ideas, and use the same tools to get work done.
-
-- **AI agnostic.**  
-  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI.
-  Seamlessly switch between models.
-  You can even switch model mid-conversation.
-  You're not tied to any one provider, can optimize for cost, and are future-proofed when you want to use something new.
 
 - **Built by bootstrapping.**
   Each version of Humbug has been built using the previous version.
@@ -69,6 +53,8 @@ Humbug lets you work on lots of different types of problems, but it shines at su
   It's designed to help with any activities where you and your AIs need to work together on a problem.
   While it has a lot of tools for software developers, it has been designed to support a much wider set of needs.
   With its extensibility it's also easy to think about adding new tools for AIs, humans, or both.
+
+![Humbug in action](docs/v0.18-explore.gif)
 
 ## Learn more
 
