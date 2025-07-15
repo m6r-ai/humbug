@@ -3,7 +3,7 @@
 Humbug is a modular, extensible platform that aims to let you and your AIs work on ideas together.
 Think of it as an operating system for human-AI collaboration.
 
-It lets you work on lots of different types of problems, but it currently shines at supporting you build software.
+It's designed to let you work on lots of different types of problems, but it currently shines at supporting you build software.
 A demonstration is that each version has been built using earlier versions of itself!
 
 ![Humbug in action](docs/v0.18-demo.gif)
@@ -26,7 +26,7 @@ A demonstration is that each version has been built using earlier versions of it
 
   By going beyond ad-hoc prompts and making your intentions clear, you can get dramatically better results and lower operating costs.
   Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
-  Think of it as a language for AI orchestration.
+  It's a language for AI orchestration.
 
 - **Human–AI collaboration at the core**  
 
@@ -37,11 +37,11 @@ A demonstration is that each version has been built using earlier versions of it
 - **Powerful, pluggable tools**  
 
   Extends your LLMs with dynamic filesystem operations, a clock, a scientific calculator, and UI orchestration.
-  Humbug’s tool system is flexible and robust, so it's easy to add new capabilities.
+  Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
   The UI supports simultaneous conversations, file editing with syntax highlights, dynamic wiki pages, terminal emulators, a system shell, and a system log.
   UI orchestration means your AI can help you work and visualise things using any of these tools too.
 
-- **Designed for extensibility**  
+- **Open and extensible**  
 
   Add new AI backends, tools, or integrations with minimal friction.
   Humbug is open-source and modular by design.
