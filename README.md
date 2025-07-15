@@ -1,19 +1,14 @@
-# Humbug: an operating system for human-AI collaboration
+# Humbug: building an operating system for human-AI collaboration
 
 Humbug is a modular, extensible platform that aims to let you and your AIs work on ideas together.
 Think of it as an operating system for human-AI collaboration.
 
-Humbug lets you work on lots of different types of problems, but it shines at supporting you build software.
+It lets you work on lots of different types of problems, but it currently shines at supporting you build software.
+A demonstration is that each version has been built using earlier versions of itself!
 
 ![Humbug in action](docs/v0.18-demo.gif)
 
 ## Why Humbug?
-
-- **OS-like abstraction and modularity**  
-
-  Humbug provides OS-like concepts without trying to replace your real operating system.
-  It unifies AI and UI interactions so it's easy to add tools that can be used by an AI, by you, or both.
-  It runs on top of Windows, macOS, or Linux, and provides a unified experience on all of them.
 
 - **AI as a first-class citizen**  
 
@@ -31,7 +26,7 @@ Humbug lets you work on lots of different types of problems, but it shines at su
 
   By going beyond ad-hoc prompts and making your intentions clear, you can get dramatically better results and lower operating costs.
   Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
-  Think of it like a shell language for AI orchestration.
+  Think of it as a language for AI orchestration.
 
 - **Human–AI collaboration at the core**  
 
@@ -41,8 +36,10 @@ Humbug lets you work on lots of different types of problems, but it shines at su
 
 - **Powerful, pluggable tools**  
 
-  Extends your LLMs with dynamic file operations, a scientific calculator, system clock access, UI orchestration, Markdown parsing, syntax highlighting, and more.
+  Extends your LLMs with dynamic filesystem operations, a clock, a scientific calculator, and UI orchestration.
   Humbug’s tool system is flexible and robust, so it's easy to add new capabilities.
+  The UI supports simultaneous conversations, file editing with syntax highlights, dynamic wiki pages, terminal emulators, a system shell, and a system log.
+  UI orchestration means your AI can help you work and visualise things using any of these tools too.
 
 - **Designed for extensibility**  
 
@@ -50,15 +47,21 @@ Humbug lets you work on lots of different types of problems, but it shines at su
   Humbug is open-source and modular by design.
   You don't need to worry about being locked into a vendor tool and can add new features if you want them.  
 
-- **Built by bootstrapping**  
+- **Bootstrapped with LLMs**  
 
   Each version of Humbug has been built using the previous version.
-  Over 80% of the code was implemented by LLMs, allowing the designers to focus on functionality and maintaining a clean architecture.
+  This allowed over 80% of the code to be implemented by LLMs.
 
-- **What you see is what you get**  
+- **OS-agnostic**  
 
-  Humbug has only 4 package dependencies other than the standard Python library.
-  Both you and your LLMs can understand almost every part from the one git repo.
+  Humbug provides OS-like concepts but doesn't try to replace your computer's operating system.
+  It runs on top of Windows, macOS, or Linux, and provides a unified experience on all of them.
+
+- **Minimal dependencies**  
+
+  Humbug follows the pattern of most operating system kernels.
+  It aims to be simple and largely self-contained.
+  The code has only 4 external package dependencies other than the standard Python library, so both you and your LLMs can understand almost every part from the one git repo.
 
 - **Not just a platform for developers**  
 
@@ -83,7 +86,7 @@ Humbug is open source and the project welcomes contributions.  If you're interes
 ## Requirements
 
 - Python 3.10 or higher
-- You will need API keys for any AI models other than Ollama
+- You will need API keys for most cloud-based LLMs, but some are available for free, and Ollama will run locally without API keys.
 - PySide6 (the GUI framework)
 - qasync (allows the GUI framework to work nicely with async Python code)
 - aiohttp (async HTTP client)
@@ -131,7 +134,6 @@ Humbug is open source and the project welcomes contributions.  If you're interes
 
 ## Navigating the code
 
-The code is designed to be modular to make it easy to understand.
 Humbug itself includes a wiki-like viewer so if you clone this git repo you can simply create a mindspace with your humbug directory as the root of the mindspace.
 Open it up and click the top-level `humbug` folder and you'll see this `README.md` file.
 Any folders with their own `README.md` will give you pointers about what's in that folder.
