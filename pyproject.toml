@@ -34,8 +34,14 @@ include = ["dast*", "humbug*"]
 
 [tool.hatch.build.targets.wheel]
 packages = [
+    "src/ai",
+    "src/ai_tool",
     "src/dast",
-    "src/humbug"
+    "src/humbug",
+    "src/markdown",
+    "src/metaphor",
+    "src/symtax",
+    "src/terminal"
 ]
 
 [tool.mypy]

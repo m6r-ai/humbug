@@ -2,6 +2,7 @@
 #
 # PyInstaller config file
 #
+import os
 from PyInstaller.utils.hooks import collect_data_files
 import certifi
 
@@ -17,7 +18,15 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=certifi_data,
-    hiddenimports=[],
+    hiddenimports=[
+        'ai',
+        'ai_tool',
+        'dast',
+        'markdown',
+        'metaphor',
+        'syntax',
+        'terminal',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

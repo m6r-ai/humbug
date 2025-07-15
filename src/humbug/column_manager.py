@@ -169,7 +169,7 @@ class ColumnManager(QWidget):
         self._set_current_tab(self._protected_tab)
         self._protected_tab = None
 
-    def num_colunns(self):
+    def num_colunns(self) -> int:
         """Get the number of columns currently in use."""
         return len(self._tab_columns)
 
