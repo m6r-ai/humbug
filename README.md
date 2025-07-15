@@ -1,14 +1,9 @@
-# Humbug: an AI-native collaborative workspace
+# Humbug: an OS-like environment for human-AI collaboration
 
-Build, reason, and create, side by side with AI.
-
-## What is Humbug?
-
-Humbug is a modular, extensible platform that augments your workflows with AI.
+Humbug is a modular, extensible platform that aims to let you and your AIs work on ideas together.
 Think of it as being like an operating system for human-AI collaboration.
-It's a workspace where you and your AI colleagues work on ideas together.
 
-If you know exactly what you want it has tools to let you do those things, but if you're not sure then you can let your AI
+If you know exactly what you want it has tools to let you do those things.  If you're not sure then you can let your AI
 take control and guide you through what you want to do.
 
 Humbug lets you work on lots of different types of problems, but it shines at supporting you build software.
