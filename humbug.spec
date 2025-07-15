@@ -15,22 +15,19 @@ certifi_data = collect_data_files("certifi")
 
 a = Analysis(
     ['src/humbug/__main__.py'],
-    pathex=[],
+    pathex=['src'],
     binaries=[],
     datas=certifi_data,
-    hiddenimports=[
-        'ai',
-        'ai_tool',
-        'dast',
-        'markdown',
-        'metaphor',
-        'syntax',
-        'terminal',
-    ],
+    hiddenimports=[],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=['build', 'dist', '*.egg-info'],
+    excludes=[
+        'build',
+        'dist',
+        '*.egg-info',
+        'markdown',  # Explicitly exclude markdown to avoid hook conflicts
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
