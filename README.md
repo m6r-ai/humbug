@@ -1,7 +1,7 @@
 # Humbug: an operating system for human-AI collaboration
 
 Humbug is a modular, extensible platform that aims to let you and your AIs work on ideas together.
-Think of it as being an operating system for human-AI collaboration.
+Think of it as an operating system for human-AI collaboration.
 
 Humbug lets you work on lots of different types of problems, but it shines at supporting you build software.
 
