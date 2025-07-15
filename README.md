@@ -10,46 +10,56 @@ Humbug lets you work on lots of different types of problems, but it shines at su
 ## Why Humbug?
 
 - **OS-like abstraction and modularity**  
+
   Humbug provides OS-like concepts without trying to replace your real operating system.
   It unifies AI and UI interactions so it's easy to add tools that can be used by an AI, by you, or both.
   It runs on top of Windows, macOS, or Linux, and provides a unified experience on all of them.
 
 - **AI as a first-class citizen**  
+
   Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.
   Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI, so you're not tied to any one provider, can optimize for cost, and are future-proofed when you want to use something new.
   You can seamlessly switch between models, even switching mid-conversation.
 
 - **Mindspaces: project-centric workspaces**  
+
   Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
   Switch between projects as easily as you switch between desktops.
 
 - **Structured context engineering with Metaphor**  
+
   By going beyond ad-hoc prompts and making your intentions clear, you can get dramatically better results and lower operating costs.
   Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
   Think of it like a shell language for AI orchestration.
 
 - **Human–AI collaboration at the core**  
+
   When you're using AI, you're no longer working alone.
   Humbug treats both humans and AIs as first-class actors.
   All tools, including the GUI, are designed to be available for both to use, so it's faster and easier to get things done.
 
 - **Powerful, pluggable tools**  
+
   Extends your LLMs with dynamic file operations, a scientific calculator, system clock access, UI orchestration, Markdown parsing, syntax highlighting, and more.
   Humbug’s tool system is flexible and robust, so it's easy to add new capabilities.
 
 - **Designed for extensibility**  
+
   Humbug is open-source and modular by design.
   Add new AI backends, tools, or integrations with minimal friction.
 
-- **Built by bootstrapping.**
+- **Built by bootstrapping**  
+
   Each version of Humbug has been built using the previous version.
   Over 80% of the code was implemented by LLMs, allowing the designers to focus on functionality and maintaining a clean architecture.
 
-- **What you see is what you get.**
+- **What you see is what you get**  
+
   Humbug has only 4 package dependencies other than the standard Python library.
   You can understand almost every part from the one git repo.
 
-- **Not just a platform for developers.**
+- **Not just a platform for developers**  
+
   It's designed to help with any activities where you and your AIs need to work together on a problem.
   While it has a lot of tools for software developers, it has been designed to support a much wider set of needs.
   With its extensibility it's also easy to think about adding new tools for AIs, humans, or both.
