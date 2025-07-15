@@ -8,8 +8,8 @@ from typing import Any, Dict, Final, TextIO, Type, cast
 from dast.ast import ASTNode
 
 from metaphor.metaphor_ast_node import (
-    MetaphorASTNode, MetaphorASTVisitor, MetaphorActionNode, MetaphorCodeNode,
-    MetaphorContextNode, MetaphorRoleNode, MetaphorRootNode, MetaphorTextNode
+    MetaphorASTNode, MetaphorASTVisitor, MetaphorASTActionNode, MetaphorASTCodeNode,
+    MetaphorASTContextNode, MetaphorASTRoleNode, MetaphorASTRootNode, MetaphorASTTextNode
 )
 
 
@@ -23,9 +23,9 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
 
     # Map node types to their keyword representations
     NODE_CLASS_MAP: Final[Dict[Type[MetaphorASTNode], str]] = {
-        MetaphorActionNode: "Action:",
-        MetaphorContextNode: "Context:",
-        MetaphorRoleNode: "Role:"
+        MetaphorASTActionNode: "Action:",
+        MetaphorASTContextNode: "Context:",
+        MetaphorASTRoleNode: "Role:"
     }
 
     def __init__(self) -> None:
@@ -65,7 +65,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
 
         return results
 
-    def visit_MetaphorRootNode(self, node: MetaphorRootNode) -> Any:  # pylint: disable=invalid-name
+    def visit_MetaphorASTRootNode(self, node: MetaphorASTRootNode) -> Any:  # pylint: disable=invalid-name
         """
         Visit the root node of the AST.
 
@@ -78,7 +78,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
         self.depth = 1
         return self.generic_visit(node)
 
-    def visit_MetaphorTextNode(self, node: MetaphorTextNode) -> Any:  # pylint: disable=invalid-name
+    def visit_MetaphorASTTextNode(self, node: MetaphorASTTextNode) -> Any:  # pylint: disable=invalid-name
         """
         Visit a text node and format its content.
 
@@ -103,7 +103,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
         self.output.write(f"{value}\n")
         return value
 
-    def visit_MetaphorCodeNode(self, node: MetaphorCodeNode) -> Any:  # pylint: disable=invalid-name
+    def visit_MetaphorASTCodeNode(self, node: MetaphorASTCodeNode) -> Any:  # pylint: disable=invalid-name
         """
         Visit a code node and format its content.
 
@@ -155,7 +155,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
 
         return results
 
-    def visit_MetaphorRoleNode(self, node: MetaphorRoleNode) -> Any:  # pylint: disable=invalid-name
+    def visit_MetaphorASTRoleNode(self, node: MetaphorASTRoleNode) -> Any:  # pylint: disable=invalid-name
         """
         Visit a role node and format its content.
 
@@ -167,7 +167,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
         """
         return self._format_block_node(node)
 
-    def visit_MetaphorContextNode(self, node: MetaphorContextNode) -> Any:  # pylint: disable=invalid-name
+    def visit_MetaphorASTContextNode(self, node: MetaphorASTContextNode) -> Any:  # pylint: disable=invalid-name
         """
         Visit a context node and format its content.
 
@@ -179,7 +179,7 @@ class MetaphorFormatVisitor(MetaphorASTVisitor):
         """
         return self._format_block_node(node)
 
-    def visit_MetaphorActionNode(self, node: MetaphorActionNode) -> Any:  # pylint: disable=invalid-name
+    def visit_MetaphorASTActionNode(self, node: MetaphorASTActionNode) -> Any:  # pylint: disable=invalid-name
         """
         Visit an action node and format its content.
 

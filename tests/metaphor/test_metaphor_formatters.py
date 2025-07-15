@@ -3,8 +3,8 @@
 import pytest
 
 from metaphor import (
-    MetaphorRootNode, MetaphorTextNode, MetaphorCodeNode,
-    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
+    MetaphorASTRootNode, MetaphorASTTextNode, MetaphorASTCodeNode,
+    MetaphorASTRoleNode, MetaphorASTContextNode, MetaphorASTActionNode,
     MetaphorASTBuilderSyntaxError, MetaphorFormatVisitor,
     format_errors
 )
@@ -12,15 +12,15 @@ from metaphor import (
 
 def test_format_ast_empty_root():
     """Test formatting an empty root node."""
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     formatter = MetaphorFormatVisitor()
     assert formatter.format(root) == ""
 
 
 def test_format_ast_single_text():
     """Test formatting a single text node."""
-    root = MetaphorRootNode()
-    text = MetaphorTextNode("Hello world")
+    root = MetaphorASTRootNode()
+    text = MetaphorASTTextNode("Hello world")
     root.add_child(text)
     formatter = MetaphorFormatVisitor()
     assert formatter.format(root) == "Hello world\n"
@@ -28,8 +28,8 @@ def test_format_ast_single_text():
 
 def test_format_ast_single_action():
     """Test formatting a single action node."""
-    root = MetaphorRootNode()
-    action = MetaphorActionNode("Test")
+    root = MetaphorASTRootNode()
+    action = MetaphorASTActionNode("Test")
     root.add_child(action)
     formatter = MetaphorFormatVisitor()
     assert formatter.format(root) == "# Action: Test\n\n"
@@ -37,11 +37,11 @@ def test_format_ast_single_action():
 
 def test_format_ast_nested_structure():
     """Test formatting a nested structure with multiple node types."""
-    root = MetaphorRootNode()
-    context = MetaphorContextNode("Main")
-    text1 = MetaphorTextNode("Context text")
-    nested_context = MetaphorContextNode("Nested")
-    text2 = MetaphorTextNode("Nested text")
+    root = MetaphorASTRootNode()
+    context = MetaphorASTContextNode("Main")
+    text1 = MetaphorASTTextNode("Context text")
+    nested_context = MetaphorASTContextNode("Nested")
+    text2 = MetaphorASTTextNode("Nested text")
 
     root.add_child(context)
     context.add_child(text1)
@@ -60,11 +60,11 @@ def test_format_ast_nested_structure():
 
 def test_format_ast_all_node_types():
     """Test formatting with all possible node types."""
-    root = MetaphorRootNode()
-    role = MetaphorRoleNode("Expert")
-    context = MetaphorContextNode("Setup")
-    action = MetaphorActionNode("")
-    text = MetaphorTextNode("Review")
+    root = MetaphorASTRootNode()
+    role = MetaphorASTRoleNode("Expert")
+    context = MetaphorASTContextNode("Setup")
+    action = MetaphorASTActionNode("")
+    text = MetaphorASTTextNode("Review")
 
     action.add_child(text)
     root.add_child(role)
@@ -144,11 +144,11 @@ def test_format_errors_empty_list():
 
 def test_format_ast_remove_blank_lines():
     """Test formatting an AST that has an unecessary blank line."""
-    root = MetaphorRootNode()
-    text1 = MetaphorTextNode("")
-    context = MetaphorContextNode("Main")
-    text2 = MetaphorTextNode("")
-    text3 = MetaphorTextNode("Context text")
+    root = MetaphorASTRootNode()
+    text1 = MetaphorASTTextNode("")
+    context = MetaphorASTContextNode("Main")
+    text2 = MetaphorASTTextNode("")
+    text3 = MetaphorASTTextNode("Context text")
 
     root.add_child(text1)
     root.add_child(context)
@@ -165,10 +165,10 @@ def test_format_ast_remove_blank_lines():
 
 def test_format_ast_with_code():
     """Test formatting AST with code blocks."""
-    root = MetaphorRootNode()
-    context = MetaphorContextNode("Code Example")
-    text = MetaphorTextNode("Here's some code:")
-    code = MetaphorCodeNode("```python\ndef hello():\n    print('Hello world')\n```")
+    root = MetaphorASTRootNode()
+    context = MetaphorASTContextNode("Code Example")
+    text = MetaphorASTTextNode("Here's some code:")
+    code = MetaphorASTCodeNode("```python\ndef hello():\n    print('Hello world')\n```")
 
     root.add_child(context)
     context.add_child(text)

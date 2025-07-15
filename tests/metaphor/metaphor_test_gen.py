@@ -11,7 +11,7 @@ import syntax.parser_imports
 # pylint: enable=unused-import
 
 from metaphor.metaphor_ast_builder import MetaphorASTBuilder
-from metaphor.metaphor_ast_node import MetaphorRootNode
+from metaphor.metaphor_ast_node import MetaphorASTRootNode
 
 from tests.metaphor.metaphor_ast_serializer import save_ast_to_json
 
@@ -42,7 +42,7 @@ def main():
             metaphor_text = f.read()
 
         ast_builder = MetaphorASTBuilder()
-        root_node = MetaphorRootNode()
+        root_node = MetaphorASTRootNode()
 
         ast_builder.build_ast(
             root_node,

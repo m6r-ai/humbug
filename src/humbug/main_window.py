@@ -15,7 +15,7 @@ from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
 from metaphor import (
-    MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorFormatVisitor, MetaphorRootNode,
+    MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorFormatVisitor, MetaphorASTRootNode,
     format_errors, format_preamble
 )
 
@@ -1113,7 +1113,7 @@ class MainWindow(QMainWindow):
 
         metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
         try:
-            syntax_tree = MetaphorRootNode()
+            syntax_tree = MetaphorASTRootNode()
             metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, [file_path])
             formatter = MetaphorFormatVisitor()
             prompt = format_preamble() + formatter.format(syntax_tree)

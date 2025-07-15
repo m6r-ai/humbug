@@ -14,12 +14,12 @@ Package initialization and exports:
 Defines AST node types for the Metaphor language:
 
 - **`MetaphorASTNode`** - Base class for all Metaphor AST nodes
-- **`MetaphorRootNode`** - Root node for Metaphor documents
-- **`MetaphorTextNode`** - Plain text content
-- **`MetaphorCodeNode`** - Code blocks with language specification
-- **`MetaphorRoleNode`** - Role definitions for AI interactions
-- **`MetaphorContextNode`** - Context blocks for AI prompts
-- **`MetaphorActionNode`** - Action blocks for AI instructions
+- **`MetaphorASTRootNode`** - Root node for Metaphor documents
+- **`MetaphorASTTextNode`** - Plain text content
+- **`MetaphorASTCodeNode`** - Code blocks with language specification
+- **`MetaphorASTRoleNode`** - Role definitions for AI interactions
+- **`MetaphorASTContextNode`** - Context blocks for AI prompts
+- **`MetaphorASTActionNode`** - Action blocks for AI instructions
 - **`MetaphorASTVisitor`** - Base visitor for traversing Metaphor ASTs
 
 ### `metaphor_ast_builder.py`

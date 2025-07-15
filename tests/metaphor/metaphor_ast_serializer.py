@@ -6,9 +6,9 @@ import json
 from typing import Dict, Any, List
 
 from metaphor.metaphor_ast_node import (
-    MetaphorASTVisitor, MetaphorASTNode, MetaphorRootNode,
-    MetaphorTextNode, MetaphorCodeNode, MetaphorRoleNode,
-    MetaphorContextNode, MetaphorActionNode
+    MetaphorASTVisitor, MetaphorASTNode, MetaphorASTRootNode,
+    MetaphorASTTextNode, MetaphorASTCodeNode, MetaphorASTRoleNode,
+    MetaphorASTContextNode, MetaphorASTActionNode
 )
 
 
@@ -34,7 +34,7 @@ class MetaphorASTSerializer(MetaphorASTVisitor):
         # This could be extended based on what metadata the Metaphor nodes contain
         pass
 
-    def visit_MetaphorRootNode(self, node: MetaphorRootNode) -> Dict[str, Any]:
+    def visit_MetaphorASTRootNode(self, node: MetaphorASTRootNode) -> Dict[str, Any]:
         """Serialize a root node."""
         result = {
             "type": "root",
@@ -49,7 +49,7 @@ class MetaphorASTSerializer(MetaphorASTVisitor):
 
         return result
 
-    def visit_MetaphorTextNode(self, node: MetaphorTextNode) -> Dict[str, Any]:
+    def visit_MetaphorASTTextNode(self, node: MetaphorASTTextNode) -> Dict[str, Any]:
         """Serialize a text node."""
         result = {
             "type": "text",
@@ -58,7 +58,7 @@ class MetaphorASTSerializer(MetaphorASTVisitor):
         self._add_source_info(result, node)
         return result
 
-    def visit_MetaphorCodeNode(self, node: MetaphorCodeNode) -> Dict[str, Any]:
+    def visit_MetaphorASTCodeNode(self, node: MetaphorASTCodeNode) -> Dict[str, Any]:
         """Serialize a code node."""
         result = {
             "type": "code",
@@ -67,7 +67,7 @@ class MetaphorASTSerializer(MetaphorASTVisitor):
         self._add_source_info(result, node)
         return result
 
-    def visit_MetaphorRoleNode(self, node: MetaphorRoleNode) -> Dict[str, Any]:
+    def visit_MetaphorASTRoleNode(self, node: MetaphorASTRoleNode) -> Dict[str, Any]:
         """Serialize a role node."""
         result = {
             "type": "role",
@@ -82,7 +82,7 @@ class MetaphorASTSerializer(MetaphorASTVisitor):
 
         return result
 
-    def visit_MetaphorContextNode(self, node: MetaphorContextNode) -> Dict[str, Any]:
+    def visit_MetaphorASTContextNode(self, node: MetaphorASTContextNode) -> Dict[str, Any]:
         """Serialize a context node."""
         result = {
             "type": "context",
@@ -97,7 +97,7 @@ class MetaphorASTSerializer(MetaphorASTVisitor):
 
         return result
 
-    def visit_MetaphorActionNode(self, node: MetaphorActionNode) -> Dict[str, Any]:
+    def visit_MetaphorASTActionNode(self, node: MetaphorASTActionNode) -> Dict[str, Any]:
         """Serialize an action node."""
         result = {
             "type": "action",

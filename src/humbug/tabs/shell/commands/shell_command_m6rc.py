@@ -9,7 +9,7 @@ from ai.ai_model import ReasoningCapability
 from syntax.lexer import Token, TokenType
 
 from metaphor.metaphor_ast_builder import MetaphorASTBuilder, MetaphorASTBuilderError
-from metaphor.metaphor_ast_node import MetaphorRootNode
+from metaphor.metaphor_ast_node import MetaphorASTRootNode
 from metaphor.metaphor_formatters import format_errors, format_preamble
 from metaphor.metaphor_format_visitor import MetaphorFormatVisitor
 from humbug.column_manager import ColumnManager
@@ -149,7 +149,7 @@ class ShellCommandM6rc(ShellCommand):
 
             metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
             try:
-                syntax_tree = MetaphorRootNode()
+                syntax_tree = MetaphorASTRootNode()
                 metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, args)
                 formatter = MetaphorFormatVisitor()
                 prompt = format_preamble() + formatter.format(syntax_tree)

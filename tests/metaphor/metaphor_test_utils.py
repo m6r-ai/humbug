@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
 from metaphor.metaphor_ast_builder import MetaphorASTBuilder
-from metaphor.metaphor_ast_node import MetaphorRootNode
+from metaphor.metaphor_ast_node import MetaphorASTRootNode
 
 from metaphor_ast_serializer import serialize_ast, load_ast_from_json
 
@@ -121,7 +121,7 @@ def parse_and_compare(
     # Load the Metaphor file and parse it
     metaphor_text = load_metaphor_file(metaphor_path)
     ast_builder = MetaphorASTBuilder()
-    root_node = MetaphorRootNode()
+    root_node = MetaphorASTRootNode()
 
     ast_builder.build_ast(
         root_node,
@@ -148,7 +148,7 @@ def parse_metaphor_text(
     search_paths: Optional[List[str]] = None,
     embed_path: str = "",
     arguments: Optional[List[str]] = None
-) -> MetaphorRootNode:
+) -> MetaphorASTRootNode:
     """
     Parse Metaphor text and return the root node.
 
@@ -169,7 +169,7 @@ def parse_metaphor_text(
         arguments = []
 
     ast_builder = MetaphorASTBuilder()
-    root_node = MetaphorRootNode()
+    root_node = MetaphorASTRootNode()
 
     ast_builder.build_ast(
         root_node,

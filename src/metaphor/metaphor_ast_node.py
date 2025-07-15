@@ -76,7 +76,7 @@ class MetaphorASTNode(ASTNode):
         return [cast(MetaphorASTNode, child) for child in self.children if isinstance(child, node_class)]
 
 
-class MetaphorRootNode(MetaphorASTNode):
+class MetaphorASTRootNode(MetaphorASTNode):
     """Root node of a Metaphor AST representing an entire document."""
 
     def __init__(self) -> None:
@@ -84,7 +84,7 @@ class MetaphorRootNode(MetaphorASTNode):
         super().__init__("")
 
 
-class MetaphorTextNode(MetaphorASTNode):
+class MetaphorASTTextNode(MetaphorASTNode):
     """Node representing text content in a Metaphor document."""
 
     def __init__(self, content: str) -> None:
@@ -97,7 +97,7 @@ class MetaphorTextNode(MetaphorASTNode):
         super().__init__(content)
 
 
-class MetaphorCodeNode(MetaphorASTNode):
+class MetaphorASTCodeNode(MetaphorASTNode):
     """Node representing a code block in a Metaphor document."""
 
     def __init__(self, content: str) -> None:
@@ -110,7 +110,7 @@ class MetaphorCodeNode(MetaphorASTNode):
         super().__init__(content)
 
 
-class MetaphorRoleNode(MetaphorASTNode):
+class MetaphorASTRoleNode(MetaphorASTNode):
     """Node representing a Role block in a Metaphor document."""
 
     def __init__(self, label: str = "") -> None:
@@ -123,7 +123,7 @@ class MetaphorRoleNode(MetaphorASTNode):
         super().__init__(label)
 
 
-class MetaphorContextNode(MetaphorASTNode):
+class MetaphorASTContextNode(MetaphorASTNode):
     """Node representing a Context block in a Metaphor document."""
 
     def __init__(self, label: str = "") -> None:
@@ -136,7 +136,7 @@ class MetaphorContextNode(MetaphorASTNode):
         super().__init__(label)
 
 
-class MetaphorActionNode(MetaphorASTNode):
+class MetaphorASTActionNode(MetaphorASTNode):
     """Node representing an Action block in a Metaphor document."""
 
     def __init__(self, label: str = "") -> None:

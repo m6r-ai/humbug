@@ -5,9 +5,9 @@ from pathlib import Path
 import pytest
 
 from metaphor import (
-    MetaphorTextNode, MetaphorCodeNode,
-    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode,
-    MetaphorASTBuilder, MetaphorFormatVisitor, MetaphorRootNode,
+    MetaphorASTTextNode, MetaphorASTCodeNode,
+    MetaphorASTRoleNode, MetaphorASTContextNode, MetaphorASTActionNode,
+    MetaphorASTBuilder, MetaphorFormatVisitor, MetaphorASTRootNode,
     MetaphorASTBuilderError
 )
 
@@ -99,12 +99,12 @@ def create_read_only_file(tmp_path):
 def test_basic_parsing(ast_builder, temp_test_files):
     """Test basic parsing of a valid file"""
     main_file = Path(temp_test_files) / "main.m6r"
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast_from_file(root, str(main_file), [])
-    assert len([node for node in root.children if isinstance(node, MetaphorTextNode)]) == 0
-    assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
-    assert len([node for node in root.children if isinstance(node, MetaphorContextNode)]) == 1
-    assert len([node for node in root.children if isinstance(node, MetaphorActionNode)]) == 1
+    assert len([node for node in root.children if isinstance(node, MetaphorASTTextNode)]) == 0
+    assert len([node for node in root.children if isinstance(node, MetaphorASTRoleNode)]) == 1
+    assert len([node for node in root.children if isinstance(node, MetaphorASTContextNode)]) == 1
+    assert len([node for node in root.children if isinstance(node, MetaphorASTActionNode)]) == 1
 
 
 def test_invalid_structure(ast_builder, tmp_path):
@@ -116,7 +116,7 @@ def test_invalid_structure(ast_builder, tmp_path):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Unexpected token" in str(exc_info.value.errors[0].message)
@@ -129,9 +129,9 @@ def test_valid_keyword_parsing(ast_builder):
         "    Description\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    roles = [node for node in root.children if isinstance(node, MetaphorRoleNode)]
+    roles = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)]
     assert len(roles) == 1
     assert roles[0].value() == "Test"
 
@@ -141,7 +141,7 @@ def test_invalid_keyword_error(ast_builder):
     input_text = "InvalidKeyword: Test\n    Text\n"
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -157,7 +157,7 @@ def test_error_location_tracking(ast_builder):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -172,9 +172,9 @@ def test_keyword_empty_value(ast_builder):
         "    Description\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
+    role = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)][0]
     assert role.value() == ""
 
 
@@ -185,9 +185,9 @@ def test_keyword_whitespace_value(ast_builder):
         "    Description\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
+    role = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)][0]
     assert role.value() == ""
 
 
@@ -201,7 +201,7 @@ def test_duplicate_role_error(ast_builder):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -218,7 +218,7 @@ def test_duplicate_context_error(ast_builder):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -235,7 +235,7 @@ def test_duplicate_action_error(ast_builder):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -249,9 +249,9 @@ def test_keyword_text_preservation(ast_builder):
         "    Text\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
+    role = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)][0]
     assert role.value() == "Test Role Description"
 
 
@@ -263,10 +263,10 @@ def test_text_content_preservation(ast_builder):
         "    Second line\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
-    texts = [node for node in role.children if isinstance(node, MetaphorTextNode)]
+    role = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)][0]
+    texts = [node for node in role.children if isinstance(node, MetaphorASTTextNode)]
     assert len(texts) == 2
     assert texts[0].value() == "First line"
     assert texts[1].value() == "Second line"
@@ -274,7 +274,7 @@ def test_text_content_preservation(ast_builder):
 
 def test_empty_input(ast_builder):
     """Test handling of empty input."""
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, "", "test.txt", [])
 
     assert len(root.children) == 0
@@ -288,12 +288,12 @@ def test_indentation_handling(ast_builder):
         "    Context: Nested\n"
         "        Nested content\n"
     )
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    context_node = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
-    nested_contexts = [node for node in context_node.children if isinstance(node, MetaphorContextNode)]
+    context_node = [node for node in root.children if isinstance(node, MetaphorASTContextNode)][0]
+    nested_contexts = [node for node in context_node.children if isinstance(node, MetaphorASTContextNode)]
     assert len(nested_contexts) == 1
-    assert len([node for node in nested_contexts[0].children if isinstance(node, MetaphorTextNode)]) == 1
+    assert len([node for node in nested_contexts[0].children if isinstance(node, MetaphorASTTextNode)]) == 1
 
 
 def test_incorrect_indentation(ast_builder):
@@ -304,7 +304,7 @@ def test_incorrect_indentation(ast_builder):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -322,11 +322,11 @@ def test_keyword_handling(ast_builder):
         "    Steps\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
-    assert len([node for node in root.children if isinstance(node, MetaphorContextNode)]) == 1
-    assert len([node for node in root.children if isinstance(node, MetaphorActionNode)]) == 1
+    assert len([node for node in root.children if isinstance(node, MetaphorASTRoleNode)]) == 1
+    assert len([node for node in root.children if isinstance(node, MetaphorASTContextNode)]) == 1
+    assert len([node for node in root.children if isinstance(node, MetaphorASTActionNode)]) == 1
 
 
 def test_fenced_code_blocks_with_blanks(ast_builder):
@@ -341,11 +341,11 @@ def test_fenced_code_blocks_with_blanks(ast_builder):
         "    After code\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    context = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
-    text_nodes = [node for node in context.children if isinstance(node, MetaphorTextNode)]
-    code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
+    context = [node for node in root.children if isinstance(node, MetaphorASTContextNode)][0]
+    text_nodes = [node for node in context.children if isinstance(node, MetaphorASTTextNode)]
+    code_nodes = [node for node in context.children if isinstance(node, MetaphorASTCodeNode)]
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value() for node in text_nodes]
@@ -368,10 +368,10 @@ def test_empty_lines(ast_builder):
         "    More text\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
-    text_nodes = [node for node in role.children if isinstance(node, MetaphorTextNode)]
+    role = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)][0]
+    text_nodes = [node for node in role.children if isinstance(node, MetaphorASTTextNode)]
     assert len(text_nodes) == 3
     assert text_nodes[0].value() == "Description"
     assert text_nodes[2].value() == "More text"
@@ -386,7 +386,7 @@ def test_tab_characters(ast_builder):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -404,10 +404,10 @@ def test_comment_lines(ast_builder):
         "    More content\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    role_node = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
-    text_nodes = [node for node in role_node.children if isinstance(node, MetaphorTextNode)]
+    role_node = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)][0]
+    text_nodes = [node for node in role_node.children if isinstance(node, MetaphorASTTextNode)]
 
     # Comments should be ignored
     assert len(text_nodes) == 2
@@ -424,7 +424,7 @@ def test_mixed_spaces_and_tab(ast_builder):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -440,10 +440,10 @@ def test_tab_in_content_block(ast_builder):
         "    Another normal line\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    role_node = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
-    text_nodes = [node for node in role_node.children if isinstance(node, MetaphorTextNode)]
+    role_node = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)][0]
+    text_nodes = [node for node in role_node.children if isinstance(node, MetaphorASTTextNode)]
     assert len(text_nodes) == 3
     assert "\t" in text_nodes[1].value()  # Tab preserved in content
 
@@ -459,14 +459,14 @@ def test_commented_keywords(ast_builder):
         "    Third line\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
     # Should only have one Role node since others are commented
-    roles = [node for node in root.children if isinstance(node, MetaphorRoleNode)]
+    roles = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)]
     assert len(roles) == 1
 
 # Should have three text lines
-    text_nodes = [node for node in roles[0].children if isinstance(node, MetaphorTextNode)]
+    text_nodes = [node for node in roles[0].children if isinstance(node, MetaphorASTTextNode)]
     assert len(text_nodes) == 3
     assert text_nodes[0].value() == "First line"
     assert text_nodes[1].value() == "Second line"
@@ -481,10 +481,10 @@ def test_python_embedding(ast_builder, setup_files):
         f"    Embed: {setup_files}/test.py\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    context = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
-    code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
+    context = [node for node in root.children if isinstance(node, MetaphorASTContextNode)][0]
+    code_nodes = [node for node in context.children if isinstance(node, MetaphorASTCodeNode)]
 
     # Find the code block
     code_text = "\n".join(node.value() for node in code_nodes)
@@ -501,10 +501,10 @@ def test_python_embedding2(ast_builder, setup_files):
         f"    Embed: {setup_files}/test.py \n"  # Trailing space should not affect parsing
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    context = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
-    code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
+    context = [node for node in root.children if isinstance(node, MetaphorASTContextNode)][0]
+    code_nodes = [node for node in context.children if isinstance(node, MetaphorASTCodeNode)]
 
     # Find the code block
     code_text = "\n".join(node.value() for node in code_nodes)
@@ -520,7 +520,7 @@ def test_multiple_file_embedding(ast_builder, setup_files):
         f"    Embed: {setup_files}/*.js\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
     formatter = MetaphorFormatVisitor()
     formatted = formatter.format(root)
@@ -538,7 +538,7 @@ def test_missing_file_handling(ast_builder, setup_files):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
 
     error = exc_info.value.errors[0]
@@ -558,7 +558,7 @@ def test_language_detection(ast_builder, setup_files):
             f"    Embed: {setup_files}/{filename}\n"
         )
 
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast(root, input_text, "test.txt", [])
         formatter = MetaphorFormatVisitor()
         formatted = formatter.format(root)
@@ -584,7 +584,7 @@ def test_recursive_embedding(tmp_path):
         f"    Embed: {tmp_path}/**/*.txt\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
     formatter = MetaphorFormatVisitor()
     formatted = formatter.format(root)
@@ -605,7 +605,7 @@ def test_file_without_extension(ast_builder, tmp_path):
         f"    Embed: {no_ext_file}\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
     formatter = MetaphorFormatVisitor()
     formatted = formatter.format(root)
@@ -624,7 +624,7 @@ def test_missing_indent_after_keyword(ast_builder, tmp_path):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected indent after keyword description" in str(exc_info.value.errors[0].message)
@@ -633,7 +633,7 @@ def test_missing_indent_after_keyword(ast_builder, tmp_path):
 def test_file_not_found(ast_builder):
     """Test handling of non-existent file"""
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, "nonexistent.m6r", [])
 
     assert any("File not found" in str(error.message) for error in exc_info.value.errors)
@@ -653,11 +653,11 @@ def test_action_fenced_code_blocks(ast_builder):
         "    After code\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    action = [node for node in root.children if isinstance(node, MetaphorActionNode)][0]
-    text_nodes = [node for node in action.children if isinstance(node, MetaphorTextNode)]
-    code_nodes = [node for node in action.children if isinstance(node, MetaphorCodeNode)]
+    action = [node for node in root.children if isinstance(node, MetaphorASTActionNode)][0]
+    text_nodes = [node for node in action.children if isinstance(node, MetaphorASTTextNode)]
+    code_nodes = [node for node in action.children if isinstance(node, MetaphorASTCodeNode)]
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value() for node in text_nodes]
@@ -684,7 +684,7 @@ def test_action_unexpected_token(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Unexpected token: Context: in 'Action' block" in str(exc_info.value.errors[0].message)
@@ -704,7 +704,7 @@ def test_action_bad_outdent(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "[Bad Outdent]" in str(exc_info.value.errors[0].message)
@@ -720,7 +720,7 @@ def test_action_missing_indent(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected indent after keyword description for 'Action' block" in str(exc_info.value.errors[0].message)
@@ -736,7 +736,7 @@ def test_action_missing_description_and_indent(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected description or indent after 'Action' keyword" in str(exc_info.value.errors[0].message)
@@ -754,7 +754,7 @@ def test_action_inner_unexpected(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Unexpected token: Role: in 'Action' block" in str(exc_info.value.errors[0].message)
@@ -773,7 +773,7 @@ def test_action_late_text(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Text must come first in an 'Action' block" in str(exc_info.value.errors[0].message)
@@ -794,7 +794,7 @@ def test_action_late_code(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Code must come first in an 'Action' block" in str(exc_info.value.errors[0].message)
@@ -811,7 +811,7 @@ def test_action_duplicate_sections(ast_builder, tmp_path):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "'Action' already defined" in str(exc_info.value.errors[0].message)
@@ -831,15 +831,15 @@ def test_context_fenced_code_blocks(ast_builder):
         "    After code\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
 
     # Get the first context node using class-based filtering
-    context = [node for node in root.children if isinstance(node, MetaphorContextNode)][0]
+    context = [node for node in root.children if isinstance(node, MetaphorASTContextNode)][0]
 
     # Get text and code nodes using class-based filtering
-    text_nodes = [node for node in context.children if isinstance(node, MetaphorTextNode)]
-    code_nodes = [node for node in context.children if isinstance(node, MetaphorCodeNode)]
+    text_nodes = [node for node in context.children if isinstance(node, MetaphorASTTextNode)]
+    code_nodes = [node for node in context.children if isinstance(node, MetaphorASTCodeNode)]
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value() for node in text_nodes]
@@ -864,7 +864,7 @@ def test_context_missing_indent(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected indent after keyword description for 'Context' block" in str(exc_info.value.errors[0].message)
@@ -880,7 +880,7 @@ def test_context_missing_description_and_indent(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected description or indent after 'Context' keyword" in str(exc_info.value.errors[0].message)
@@ -898,7 +898,7 @@ def test_context_inner_unexpected(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Unexpected token: Action: in 'Context' block" in str(exc_info.value.errors[0].message)
@@ -917,7 +917,7 @@ def test_context_late_text(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Text must come first in a 'Context' block" in str(exc_info.value.errors[0].message)
@@ -938,7 +938,7 @@ def test_context_late_code(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Code must come first in a 'Context' block" in str(exc_info.value.errors[0].message)
@@ -955,7 +955,7 @@ def test_context_duplicate_sections(ast_builder, tmp_path):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "'Context' already defined" in str(exc_info.value.errors[0].message)
@@ -975,11 +975,11 @@ def test_role_fenced_code_blocks(ast_builder):
         "    After code\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast(root, input_text, "test.txt", [])
-    role = [node for node in root.children if isinstance(node, MetaphorRoleNode)][0]
-    text_nodes = [node for node in role.children if isinstance(node, MetaphorTextNode)]
-    code_nodes = [node for node in role.children if isinstance(node, MetaphorCodeNode)]
+    role = [node for node in root.children if isinstance(node, MetaphorASTRoleNode)][0]
+    text_nodes = [node for node in role.children if isinstance(node, MetaphorASTTextNode)]
+    code_nodes = [node for node in role.children if isinstance(node, MetaphorASTCodeNode)]
 
     # Convert text nodes to list of values for easier testing
     text_values = [node.value() for node in text_nodes]
@@ -1006,7 +1006,7 @@ def test_role_unexpected_token(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Unexpected token: Action: in 'Role' block" in str(exc_info.value.errors[0].message)
@@ -1022,7 +1022,7 @@ def test_role_missing_indent(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected indent after keyword description for 'Role' block" in str(exc_info.value.errors[0].message)
@@ -1038,7 +1038,7 @@ def test_role_missing_description_and_indent(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected description or indent after 'Role' keyword" in str(exc_info.value.errors[0].message)
@@ -1056,7 +1056,7 @@ def test_role_inner_unexpected(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Unexpected token: Action: in 'Role' block" in str(exc_info.value.errors[0].message)
@@ -1075,7 +1075,7 @@ def test_role_late_text(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Text must come first in a 'Role' block" in str(exc_info.value.errors[0].message)
@@ -1096,7 +1096,7 @@ def test_role_late_code(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Code must come first in a 'Role' block" in str(exc_info.value.errors[0].message)
@@ -1113,7 +1113,7 @@ def test_role_duplicate_sections(ast_builder, tmp_path):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "'Role' already defined" in str(exc_info.value.errors[0].message)
@@ -1136,10 +1136,10 @@ def test_include_rel_path(ast_builder, tmp_path):
         "    Content\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast_from_file(root, str(main_file), [str(tmp_path)])
-    assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
-    context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
+    assert len([node for node in root.children if isinstance(node, MetaphorASTRoleNode)]) == 1
+    context_nodes = [node for node in root.children if isinstance(node, MetaphorASTContextNode)]
     assert len(context_nodes) == 1
 
     # The first child node should be the keyword text "Included"
@@ -1163,10 +1163,10 @@ def test_include_abs_path(ast_builder, tmp_path):
         "    Content\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast_from_file(root, str(main_file), [str(tmp_path)])
-    assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
-    context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
+    assert len([node for node in root.children if isinstance(node, MetaphorASTRoleNode)]) == 1
+    context_nodes = [node for node in root.children if isinstance(node, MetaphorASTContextNode)]
     assert len(context_nodes) == 1
 
     # The first child node should be the keyword text "Included"
@@ -1192,7 +1192,7 @@ def test_recursive_includes(ast_builder, tmp_path):
     )
 
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(file1), [str(tmp_path)])
 
         # Check the actual error messages in the errors list
@@ -1222,10 +1222,10 @@ def test_include_search_paths(ast_builder, tmp_path):
         "    Content\n"
     )
 
-    root = MetaphorRootNode()
+    root = MetaphorASTRootNode()
     ast_builder.build_ast_from_file(root, str(main_file), [str(empty_include_dir), str(include_dir)])
-    assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
-    assert len([node for node in root.children if isinstance(node, MetaphorContextNode)]) == 1
+    assert len([node for node in root.children if isinstance(node, MetaphorASTRoleNode)]) == 1
+    assert len([node for node in root.children if isinstance(node, MetaphorASTContextNode)]) == 1
 
 
 def test_include_missing_filename(tmp_path):
@@ -1239,7 +1239,7 @@ def test_include_missing_filename(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected file name after 'Include'" in str(exc_info.value.errors[0].message)
@@ -1249,7 +1249,7 @@ def test_file_permission_error(create_read_only_file):
     """Test handling of permission errors when reading files"""
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(create_read_only_file), [])
 
     assert "You do not have permission to access" in str(exc_info.value.errors[0].message)
@@ -1259,7 +1259,7 @@ def test_directory_error(tmp_path):
     """Test handling of IsADirectoryError"""
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(tmp_path), [])
 
     assert "Is a directory" in str(exc_info.value.errors[0].message)
@@ -1277,7 +1277,7 @@ def test_os_error(tmp_path, monkeypatch):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "OS error" in str(exc_info.value.errors[0].message)
@@ -1295,7 +1295,7 @@ def test_include_file_not_found(ast_builder, tmp_path):
 
     # This should trigger the error handling with a current_token
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(main_file), [])
 
     # Verify the error has the correct token context
@@ -1320,7 +1320,7 @@ def test_include_abs_file_not_found(ast_builder, tmp_path):
 
     # This should trigger the error handling with a current_token
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(main_file), [])
 
     # Verify the error has the correct token context
@@ -1351,17 +1351,17 @@ def test_embed_directive(ast_builder, tmp_path):
     current_dir = os.getcwd()
     os.chdir(tmp_path)
     try:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(main_file), [])
-        assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
-        context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
+        assert len([node for node in root.children if isinstance(node, MetaphorASTRoleNode)]) == 1
+        context_nodes = [node for node in root.children if isinstance(node, MetaphorASTContextNode)]
         assert len(context_nodes) == 1
 
         # The embedded content should be part of the Context block's content
         context = context_nodes[0]
         embedded_text = [
             node for node in context.children
-            if isinstance(node, MetaphorTextNode) and
+            if isinstance(node, MetaphorASTTextNode) and
             ("test.txt" in node.value() or "plaintext" in node.value())
         ]
         assert len(embedded_text) > 0
@@ -1389,19 +1389,19 @@ def test_wildcard_embed(ast_builder, tmp_path):
     current_dir = os.getcwd()
     os.chdir(tmp_path)
     try:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(main_file), [])
-        assert len([node for node in root.children if isinstance(node, MetaphorRoleNode)]) == 1
-        context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
+        assert len([node for node in root.children if isinstance(node, MetaphorASTRoleNode)]) == 1
+        context_nodes = [node for node in root.children if isinstance(node, MetaphorASTContextNode)]
         assert len(context_nodes) == 1
 
         # Check for content from both embedded files
         context = context_nodes[0]
         embedded_text = [
-            node for node in context.children if isinstance(node, MetaphorTextNode)
+            node for node in context.children if isinstance(node, MetaphorASTTextNode)
         ]
         embedded_code = [
-            node for node in context.children if isinstance(node, MetaphorCodeNode)
+            node for node in context.children if isinstance(node, MetaphorASTCodeNode)
         ]
 
         # Should find both filenames
@@ -1427,7 +1427,7 @@ def test_embed_missing_filename(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "Expected file name or wildcard match after 'Embed' keyword" in str(exc_info.value.errors[0].message)
@@ -1444,7 +1444,7 @@ def test_embed_no_matches(tmp_path):
 
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(p), [])
 
     assert "nonexistent*.txt does not match any files for 'Embed'" in str(exc_info.value.errors[0].message)
@@ -1479,17 +1479,17 @@ def test_recursive_embed(tmp_path):
     os.chdir(tmp_path)
     try:
         ast_builder = MetaphorASTBuilder()
-        root = MetaphorRootNode()
+        root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(main_file), [])
 
         # Check for content from all embedded files
-        context_nodes = [node for node in root.children if isinstance(node, MetaphorContextNode)]
+        context_nodes = [node for node in root.children if isinstance(node, MetaphorASTContextNode)]
         context = context_nodes[0]
         embedded_text = [
-            node for node in context.children if isinstance(node, MetaphorTextNode)
+            node for node in context.children if isinstance(node, MetaphorASTTextNode)
         ]
         embedded_code = [
-            node for node in context.children if isinstance(node, MetaphorCodeNode)
+            node for node in context.children if isinstance(node, MetaphorASTCodeNode)
         ]
 
         # Should find all filenames

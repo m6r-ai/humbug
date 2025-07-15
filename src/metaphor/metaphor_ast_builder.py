@@ -7,8 +7,8 @@ from metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
 from metaphor.metaphor_embed_lexer import MetaphorEmbedLexer
 from metaphor.metaphor_lexer import MetaphorLexer
 from metaphor.metaphor_ast_node import (
-    MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode,
-    MetaphorRoleNode, MetaphorContextNode, MetaphorActionNode
+    MetaphorASTNode, MetaphorASTTextNode, MetaphorASTCodeNode,
+    MetaphorASTRoleNode, MetaphorASTContextNode, MetaphorASTActionNode
 )
 
 
@@ -70,7 +70,7 @@ class MetaphorASTBuilder:
         Returns:
             True if the node or any of its descendants is a Role node
         """
-        if isinstance(node, MetaphorRoleNode):
+        if isinstance(node, MetaphorASTRoleNode):
             return True
 
         return any(self._has_role_node(cast(MetaphorASTNode, child)) for child in node.children)
@@ -85,7 +85,7 @@ class MetaphorASTBuilder:
         Returns:
             True if the node or any of its descendants is a Context node
         """
-        if isinstance(node, MetaphorContextNode):
+        if isinstance(node, MetaphorASTContextNode):
             return True
 
         return any(self._has_context_node(cast(MetaphorASTNode, child)) for child in node.children)
@@ -100,7 +100,7 @@ class MetaphorASTBuilder:
         Returns:
             True if the node or any of its descendants is an Action node
         """
-        if isinstance(node, MetaphorActionNode):
+        if isinstance(node, MetaphorASTActionNode):
             return True
 
         return any(self._has_action_node(cast(MetaphorASTNode, child)) for child in node.children)
@@ -142,7 +142,7 @@ class MetaphorASTBuilder:
             while True:
                 token = self.get_next_non_blank_token()
                 if token.type == MetaphorTokenType.ACTION:
-                    if seen_action_tree and not isinstance(parent_node, MetaphorActionNode):
+                    if seen_action_tree and not isinstance(parent_node, MetaphorASTActionNode):
                         self._record_syntax_error(token, "'Action' already defined")
 
                     parent_node.add_child(self._parse_action(token))
@@ -150,7 +150,7 @@ class MetaphorASTBuilder:
                     continue
 
                 if token.type == MetaphorTokenType.CONTEXT:
-                    if seen_context_tree and not isinstance(parent_node, MetaphorContextNode):
+                    if seen_context_tree and not isinstance(parent_node, MetaphorASTContextNode):
                         self._record_syntax_error(token, "'Context' already defined")
 
                     parent_node.add_child(self._parse_context(token))
@@ -158,7 +158,7 @@ class MetaphorASTBuilder:
                     continue
 
                 if token.type == MetaphorTokenType.ROLE:
-                    if seen_role_tree and not isinstance(parent_node, MetaphorRoleNode):
+                    if seen_role_tree and not isinstance(parent_node, MetaphorASTRoleNode):
                         self._record_syntax_error(token, "'Role' already defined")
 
                     parent_node.add_child(self._parse_role(token))
@@ -174,7 +174,7 @@ class MetaphorASTBuilder:
                 if token.type in (MetaphorTokenType.TEXT, MetaphorTokenType.CODE):
                     if parent_node.children:
                         # If our parent is processing text or code then we can add more text or code
-                        if isinstance(parent_node.children[-1], MetaphorTextNode | MetaphorCodeNode):
+                        if isinstance(parent_node.children[-1], MetaphorASTTextNode | MetaphorASTCodeNode):
                             parent_node.add_child(self._parse_text(token))
                             continue
 
@@ -183,7 +183,7 @@ class MetaphorASTBuilder:
 
                     # If our parent is an action, context or role node and has no children
                     # then we can add text or code to it.
-                    if isinstance(parent_node, MetaphorActionNode | MetaphorContextNode | MetaphorRoleNode):
+                    if isinstance(parent_node, MetaphorASTActionNode | MetaphorASTContextNode | MetaphorASTRoleNode):
                         parent_node.add_child(self._parse_text(token))
                         continue
 
@@ -320,15 +320,15 @@ class MetaphorASTBuilder:
 
         self._previously_seen_files.add(canonical_filename)
 
-    def _parse_text(self, token: MetaphorToken) -> MetaphorTextNode:
+    def _parse_text(self, token: MetaphorToken) -> MetaphorASTTextNode:
         """Parse a text block."""
-        return MetaphorTextNode(token.value)
+        return MetaphorASTTextNode(token.value)
 
-    def _parse_code(self, token: MetaphorToken) -> MetaphorCodeNode:
+    def _parse_code(self, token: MetaphorToken) -> MetaphorASTCodeNode:
         """Parse a code block."""
-        return MetaphorCodeNode(token.value)
+        return MetaphorASTCodeNode(token.value)
 
-    def _parse_action(self, token: MetaphorToken) -> MetaphorActionNode:
+    def _parse_action(self, token: MetaphorToken) -> MetaphorASTActionNode:
         """Parse an action block and construct its AST node."""
         label_name = ""
 
@@ -347,7 +347,7 @@ class MetaphorASTBuilder:
         elif init_token.type != MetaphorTokenType.INDENT:
             self._record_syntax_error(token, "Expected description or indent after 'Action' keyword")
 
-        action_node = MetaphorActionNode(label_name)
+        action_node = MetaphorASTActionNode(label_name)
 
         while True:
             token = self.get_next_token()
@@ -375,7 +375,7 @@ class MetaphorASTBuilder:
 
             self._record_syntax_error(token, f"Unexpected token: {token.value} in 'Action' block")
 
-    def _parse_context(self, token: MetaphorToken) -> MetaphorContextNode:
+    def _parse_context(self, token: MetaphorToken) -> MetaphorASTContextNode:
         """Parse a Context block."""
         label_name = ""
 
@@ -394,7 +394,7 @@ class MetaphorASTBuilder:
         elif init_token.type != MetaphorTokenType.INDENT:
             self._record_syntax_error(token, "Expected description or indent after 'Context' keyword")
 
-        context_node = MetaphorContextNode(label_name)
+        context_node = MetaphorASTContextNode(label_name)
 
         while True:
             token = self.get_next_token()
@@ -422,7 +422,7 @@ class MetaphorASTBuilder:
 
             self._record_syntax_error(token, f"Unexpected token: {token.value} in 'Context' block")
 
-    def _parse_role(self, token: MetaphorToken) -> MetaphorRoleNode:
+    def _parse_role(self, token: MetaphorToken) -> MetaphorASTRoleNode:
         """Parse a Role block."""
         label_name = ""
 
@@ -441,7 +441,7 @@ class MetaphorASTBuilder:
         elif init_token.type != MetaphorTokenType.INDENT:
             self._record_syntax_error(token, "Expected description or indent after 'Role' keyword")
 
-        role_node = MetaphorRoleNode(label_name)
+        role_node = MetaphorASTRoleNode(label_name)
 
         while True:
             token = self.get_next_token()

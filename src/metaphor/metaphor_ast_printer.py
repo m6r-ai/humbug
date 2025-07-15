@@ -7,7 +7,7 @@ from typing import List, Any, Type, cast
 from dast.ast import ASTNode
 
 from metaphor.metaphor_ast_node import (
-    MetaphorASTVisitor, MetaphorASTNode, MetaphorTextNode, MetaphorCodeNode
+    MetaphorASTVisitor, MetaphorASTNode, MetaphorASTTextNode, MetaphorASTCodeNode
 )
 
 
@@ -50,7 +50,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
 
         return results
 
-    def visit_MetaphorTextNode(self, node: MetaphorTextNode) -> str:  # pylint: disable=invalid-name
+    def visit_MetaphorASTTextNode(self, node: MetaphorASTTextNode) -> str:  # pylint: disable=invalid-name
         """
         Visit a text node and print its content.
 
@@ -64,7 +64,7 @@ class MetaphorASTPrinter(MetaphorASTVisitor):
         print(f"{self._indent()}Text: '{value}'")
         return value
 
-    def visit_MetaphorCodeNode(self, node: MetaphorCodeNode) -> str:  # pylint: disable=invalid-name
+    def visit_MetaphorASTCodeNode(self, node: MetaphorASTCodeNode) -> str:  # pylint: disable=invalid-name
         """
         Visit a code node and print a preview of its content.
 
