@@ -6,7 +6,7 @@ from typing import Dict, List
 
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
-from ai_tool.ai_tool_manager import AIToolCall
+from ai_tool import AIToolCall
 
 
 class AIStreamResponse(ABC):

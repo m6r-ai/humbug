@@ -19,7 +19,7 @@ from metaphor import (
     format_errors, format_preamble
 )
 
-from ai_tool.ai_tool_manager import AIToolManager
+from ai_tool import AIToolManager
 from ai_tool.tools.ai_tool_calculator import AIToolCalculator
 from ai_tool.tools.ai_tool_clock import AIToolClock
 from ai_tool.tools.ai_tool_filesystem import AIToolFileSystem

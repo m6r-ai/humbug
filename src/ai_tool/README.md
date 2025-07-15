@@ -1,57 +1,88 @@
-# AI Module
+# AI Tool Module
 
-This module provides a comprehensive framework for interacting with various AI backends and managing AI conversations. It includes support for multiple AI providers, conversation management, tool integration, and streaming responses.
+This module provides a comprehensive framework for creating, managing, and executing AI tools that can be called by AI models. It supports tool registration, authorization, operation validation, and provides a clean abstraction for building custom AI tools.
 
 ## Core Components
 
-### Backend Infrastructure
-- **`ai_backend.py`** - Abstract base class for all AI backends, providing common functionality like request handling, streaming responses, rate limiting, and error handling
-- **`ai_backend_settings.py`** - Configuration settings for AI backends
-- **`ai_manager.py`** - Central manager for AI operations and backend coordination
+### Tool Infrastructure
+- **`ai_tool.py`** - Abstract base class for all AI tools, providing validation logic and defining the interface for tool execution
+- **`ai_tool_manager.py`** - Singleton manager that handles tool registration, enablement, and execution coordination
+- **`ai_tool_exceptions.py`** - Custom exception classes for tool-specific error handling
 
-### Conversation Management
-- **`ai_conversation.py`** - Main conversation class that manages the flow of messages, settings, and AI interactions
-- **`ai_conversation_history.py`** - Handles conversation history storage and retrieval
-- **`ai_conversation_settings.py`** - Configuration and settings for AI conversations, including model selection and parameters
+### Tool Definition System
+- **`ai_tool_definition.py`** - Defines the structure and metadata for AI tools, including parameters and descriptions
+- **`ai_tool_parameter.py`** - Represents individual tool parameters with type information, validation rules, and documentation
+- **`ai_tool_operation_definition.py`** - Defines sub-operations within tools, specifying allowed and required parameters
 
-### Message System
-- **`ai_message.py`** - Represents individual messages in a conversation with support for different message types and metadata
-- **`ai_message_source.py`** - Defines the source types for messages (user, assistant, system, etc.)
-- **`ai_response.py`** - Represents responses from AI backends
-- **`ai_stream_response.py`** - Handles streaming responses from AI backends with incremental updates
+### Tool Execution System
+- **`ai_tool_call.py`** - Represents a tool call request from an AI model with arguments and metadata
+- **`ai_tool_result.py`** - Encapsulates the result of tool execution, including success/error states
+- **`ai_tool_config.py`** - Configuration settings for individual tools, including display names and default states
+- **`ai_tool_registered.py`** - Internal representation of registered tools with their metadata
 
-### Tool Integration
-- **`ai_tool_manager.py`** - Manages AI tools and function calling capabilities, allowing AI models to interact with external systems
-
-### Utility Components
-- **`ai_model.py`** - Defines AI model configurations and capabilities
-- **`ai_rate_limiter.py`** - Implements rate limiting for API calls to prevent quota exhaustion
-- **`ai_usage.py`** - Tracks and reports AI usage statistics
-
-## Provider Support
-
-The module includes support for multiple AI providers through dedicated subdirectories:
-
-- **`anthropic/`** - Anthropic Claude integration
-- **`deepseek/`** - DeepSeek AI integration  
-- **`google/`** - Google AI (Gemini) integration
-- **`m6r/`** - M6R AI integration
-- **`mistral/`** - Mistral AI integration
-- **`ollama/`** - Ollama local AI integration
-- **`openai/`** - OpenAI GPT integration
-- **`xai/`** - X.AI integration
-- **`tools/`** - Shared tools and utilities for AI interactions
+### Supporting Components
+- **`types.py`** - Type definitions and aliases used throughout the framework
+- **`__init__.py`** - Public API exports for backward compatibility
 
 ## Key Features
 
-- **Streaming Support**: Real-time streaming of AI responses with incremental updates
-- **Multi-Provider**: Unified interface for different AI providers
-- **Tool Calling**: Support for AI models to call external functions and tools
-- **Rate Limiting**: Built-in rate limiting to handle API quotas
-- **Error Handling**: Comprehensive error handling with retry mechanisms
-- **Conversation History**: Persistent conversation history management
-- **Flexible Configuration**: Extensive configuration options for different use cases
+- **Tool Registration**: Dynamic registration and management of AI tools with metadata
+- **Authorization System**: Built-in authorization callbacks for secure tool execution
+- **Operation Validation**: Comprehensive validation of tool arguments and operations
+- **Error Handling**: Structured exception handling with contextual information
+- **Singleton Management**: Centralized tool management through singleton pattern
+- **Flexible Configuration**: Per-tool configuration with enable/disable functionality
+- **Type Safety**: Full type hint support for better development experience
+
+## Tool Architecture
+
+### Tool Lifecycle
+1. **Definition**: Tools implement the `AITool` abstract base class
+2. **Registration**: Tools are registered with the `AIToolManager` singleton
+3. **Configuration**: Tools can be enabled/disabled and configured per-instance
+4. **Execution**: AI models call tools through `AIToolCall` objects
+5. **Authorization**: Optional authorization checks before execution
+6. **Validation**: Argument and operation validation before execution
+7. **Results**: Structured results returned via `AIToolResult` objects
+
+### Exception Hierarchy
+- **`AIToolExecutionError`** - General tool execution failures
+- **`AIToolAuthorizationDenied`** - Authorization-related failures
+- **`AIToolTimeoutError`** - Timeout-related failures
 
 ## Usage
 
-The AI module is designed to be used through the main `AIConversation` class, which coordinates all the components to provide a seamless AI interaction experience.
+The AI tool framework is designed to be used by:
+
+1. **Tool Developers**: Create custom tools by inheriting from `AITool`
+2. **AI Systems**: Register and execute tools through `AIToolManager`
+3. **Applications**: Configure and manage tool availability and permissions
+
+### Example Tool Implementation
+
+```python
+from ai_tool import AITool, AIToolDefinition, AIToolParameter
+
+class MyCustomTool(AITool):
+    def get_definition(self) -> AIToolDefinition:
+        return AIToolDefinition(
+            name="my_tool",
+            description="A custom tool example",
+            parameters=[
+                AIToolParameter(
+                    name="input",
+                    type="string",
+                    description="Input text to process",
+                    required=True
+                )
+            ]
+        )
+    
+    async def execute(self, arguments, request_authorization):
+        # Tool implementation here
+        return "Tool result"
+```
+
+## Tool Directory
+
+The `tools/` subdirectory contains concrete implementations of AI tools that can be registered and used with AI models. Each tool follows the framework's patterns and provides specific functionality for AI interactions.

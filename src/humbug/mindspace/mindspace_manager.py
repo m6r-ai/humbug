@@ -13,7 +13,7 @@ from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal
 
-from ai_tool.ai_tool_manager import AIToolManager
+from ai_tool import AIToolManager
 
 from humbug.mindspace.mindspace_directory_tracker import MindspaceDirectoryTracker
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError, MindspaceNotFoundError

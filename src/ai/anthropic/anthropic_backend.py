@@ -5,7 +5,7 @@ from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from ai.ai_message import AIMessage, AIMessageSource
 from ai.anthropic.anthropic_stream_response import AnthropicStreamResponse
-from ai_tool.ai_tool_manager import AIToolCall, AIToolResult, AIToolDefinition
+from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
 
 class AnthropicBackend(AIBackend):

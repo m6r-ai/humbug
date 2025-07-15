@@ -6,7 +6,7 @@ from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage, AIMessageSource
 from ai.deepseek.deepseek_stream_response import DeepseekStreamResponse
-from ai_tool.ai_tool_manager import AIToolCall, AIToolResult, AIToolDefinition
+from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
 
 class DeepseekBackend(AIBackend):

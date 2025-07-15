@@ -4,7 +4,7 @@ import os
 from typing import Dict, Any, List
 
 from ai.ai_conversation_settings import AIConversationSettings
-from ai_tool.ai_tool_manager import (
+from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition
 )
