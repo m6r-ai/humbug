@@ -7,8 +7,8 @@ import uuid
 
 from ai.ai_message_source import AIMessageSource
 from ai.ai_model import ReasoningCapability
-from ai.ai_tool_manager import AIToolCall, AIToolResult
 from ai.ai_usage import AIUsage
+from ai_tool.ai_tool_manager import AIToolCall, AIToolResult
 
 
 @dataclass

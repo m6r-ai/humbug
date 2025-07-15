@@ -4,7 +4,7 @@ import json
 from typing import Dict
 
 from ai.ai_stream_response import AIStreamResponse
-from ai.ai_tool_manager import AIToolCall
+from ai_tool.ai_tool_manager import AIToolCall
 
 
 class OpenAIStreamResponse(AIStreamResponse):

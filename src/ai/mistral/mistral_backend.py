@@ -6,8 +6,8 @@ from typing import Dict, List, Any
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage, AIMessageSource
-from ai.ai_tool_manager import AIToolCall, AIToolResult, AIToolDefinition
 from ai.mistral.mistral_stream_response import MistralStreamResponse
+from ai_tool.ai_tool_manager import AIToolCall, AIToolResult, AIToolDefinition
 
 
 class MistralBackend(AIBackend):

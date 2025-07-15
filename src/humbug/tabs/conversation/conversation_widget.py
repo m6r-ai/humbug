@@ -17,7 +17,7 @@ from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
 from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
-from ai.ai_tool_manager import AIToolCall
+from ai_tool.ai_tool_manager import AIToolCall
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager

@@ -13,8 +13,8 @@ from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
 from ai.ai_model import ReasoningCapability
 from ai.ai_response import AIError
-from ai.ai_tool_manager import AIToolManager, AIToolCall
 from ai.ai_usage import AIUsage
+from ai_tool.ai_tool_manager import AIToolManager, AIToolCall
 
 
 class AIConversationEvent(Enum):

@@ -5,8 +5,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, List
 
 from ai.ai_response import AIError
-from ai.ai_tool_manager import AIToolCall
 from ai.ai_usage import AIUsage
+from ai_tool.ai_tool_manager import AIToolCall
 
 
 class AIStreamResponse(ABC):

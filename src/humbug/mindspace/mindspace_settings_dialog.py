@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
-from ai.ai_tool_manager import AIToolManager
+from ai_tool.ai_tool_manager import AIToolManager
 
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings

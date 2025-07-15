@@ -19,7 +19,7 @@ from ai.ai_message import AIMessage
 from ai.ai_rate_limiter import AIRateLimiter
 from ai.ai_response import AIResponse, AIError
 from ai.ai_stream_response import AIStreamResponse
-from ai.ai_tool_manager import AIToolManager
+from ai_tool.ai_tool_manager import AIToolManager
 
 
 @dataclass

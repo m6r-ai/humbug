@@ -6,7 +6,7 @@ import math
 import operator
 from typing import Dict, Any, Callable, cast
 
-from ai.ai_tool_manager import (
+from ai_tool.ai_tool_manager import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationCallback, AIToolTimeoutError
 )

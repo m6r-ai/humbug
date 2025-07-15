@@ -9,7 +9,7 @@ from PySide6.QtCore import Signal, QPoint, QSize, Qt
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
 from ai.ai_message_source import AIMessageSource
-from ai.ai_tool_manager import AIToolCall
+from ai_tool.ai_tool_manager import AIToolCall
 from markdown.markdown_ast_node import MarkdownDocumentNode, MarkdownTextNode
 from markdown.markdown_converter import MarkdownConverter
 from syntax.programming_language import ProgrammingLanguage

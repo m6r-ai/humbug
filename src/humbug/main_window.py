@@ -19,10 +19,10 @@ from metaphor import (
     format_errors, format_preamble
 )
 
-from ai.ai_tool_manager import AIToolManager
-from ai.tools.ai_tool_calculator import AIToolCalculator
-from ai.tools.ai_tool_clock import AIToolClock
-from ai.tools.ai_tool_filesystem import AIToolFileSystem
+from ai_tool.ai_tool_manager import AIToolManager
+from ai_tool.tools.ai_tool_calculator import AIToolCalculator
+from ai_tool.tools.ai_tool_clock import AIToolClock
+from ai_tool.tools.ai_tool_filesystem import AIToolFileSystem
 
 from humbug.about_dialog import AboutDialog
 from humbug.ai_tool_system import AIToolSystem
