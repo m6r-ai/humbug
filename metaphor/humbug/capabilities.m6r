@@ -4,7 +4,7 @@ Context: Capabilities
     Navigation is done using a keyboard and mouse.
 
     Context: Version
-        This is version 0.19 of the application.
+        This is version 0.20 of the application.
 
     Context: General concepts
         The application is designed to allow a user to create and manage projects that interact with AI backend
