@@ -159,7 +159,7 @@ class SystemAITool(AITool):
                 handler=self._submit_conversation_message,
                 allowed_parameters={"tab_id", "message", "model", "temperature"},
                 required_parameters={"tab_id", "message"},
-                description="submit a message to an AI conversation (given a tab ID) and wait for the response"
+                description="submit a message to a specific AI conversation (given a tab ID for the conversation) and wait for the response"
             ),
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
