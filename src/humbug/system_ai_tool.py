@@ -498,7 +498,6 @@ class SystemAITool(AITool):
             completion_future: asyncio.Future[Dict[str, Any]] = asyncio.Future()
 
             def on_completion(result_dict: Dict[str, Any]) -> None:
-                print("Conversation completed with result:", result_dict)
                 """Handle conversation completion."""
                 if not completion_future.done():
                     completion_future.set_result(result_dict)
@@ -511,8 +510,8 @@ class SystemAITool(AITool):
                 conversation_tab.set_sub_conversation_mode(True)
 
                 # Submit the message
-                user_message = AIMessage.create(AIMessageSource.USER, message)
-                await conversation_tab.submit_message(user_message)
+                conversation_tab.set_input_text(message)
+                conversation_tab.submit()
 
                 # Wait for completion
                 result = await completion_future
@@ -521,7 +520,7 @@ class SystemAITool(AITool):
                 tab_id = conversation_tab.tab_id()
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"AI created sub-conversation (tab ID: {tab_id}) and submitted message: '{message[:50]}...'"
+                    f"AI created sub-conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'"
                 )
 
                 # Return appropriate result
@@ -755,12 +754,12 @@ class SystemAITool(AITool):
             )
             result_parts = [f"Created new conversation, tab ID: {tab_id}"]
             if model:
-                result_parts.append(f"Model: {model}")
+                result_parts.append(f"model: {model}")
 
             if temperature is not None:
-                result_parts.append(f"Temperature: {temperature}")
+                result_parts.append(f"temperature: {temperature}")
 
-            return ". ".join(result_parts)
+            return ", ".join(result_parts)
 
         except MindspaceError as e:
             raise AIToolExecutionError(

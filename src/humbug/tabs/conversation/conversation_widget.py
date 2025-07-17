@@ -101,6 +101,9 @@ class ConversationWidget(QWidget):
     # Emits when parent should be activated by user interaction
     activated = Signal()
 
+    # Emits when the conversation label should be updated
+    update_label = Signal(bool)
+
     # Emits when a submitted message has finished processing
     submit_finished = Signal(dict)
 
@@ -302,16 +305,6 @@ class ConversationWidget(QWidget):
         else:
             return {"success": False, "error": "Conversation ended unexpectedly"}
 
-    async def submit_message(self, message: AIMessage) -> None:
-        """
-        Submit a message programmatically (for sub-conversations).
-
-        Args:
-            message: The message to submit
-        """
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        await ai_conversation.submit_message(message)
-
     async def add_message(self, message: AIMessage) -> None:
         """
         Add a new message to the conversation view.
@@ -436,6 +429,7 @@ class ConversationWidget(QWidget):
 
             result = self._create_completion_result()
             self.submit_finished.emit(result)
+            self.update_label.emit(False)
 
             if self._last_submitted_message:
                 self._input.set_plain_text(self._last_submitted_message)
@@ -479,6 +473,7 @@ class ConversationWidget(QWidget):
             if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
                 msg_widget.show_tool_approval_ui(tool_call, reason, destructive)
+                self.update_label.emit(True)
                 break
 
     def _handle_tool_call_approved(self, _tool_call: AIToolCall) -> None:
@@ -610,6 +605,7 @@ class ConversationWidget(QWidget):
 
         result = self._create_completion_result()
         self.submit_finished.emit(result)
+        self.update_label.emit(False)
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""

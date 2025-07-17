@@ -80,7 +80,8 @@ class ConversationTab(TabBase):
         self._conversation_widget.forkFromIndexRequested.connect(self.forkFromIndexRequested)
         self._conversation_widget.status_updated.connect(self.update_status)
         self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
-        self._conversation_widget.submit_finished.connect(self.handle_submit_finished)
+        self._conversation_widget.submit_finished.connect(self._handle_submit_finished)
+        self._conversation_widget.update_label.connect(self._handle_update_label)
         self._conversation_widget.conversation_modified.connect(self.handle_conversation_modified)
         layout.addWidget(self._conversation_widget)
 
@@ -305,12 +306,20 @@ class ConversationTab(TabBase):
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
 
-    def handle_submit_finished(self, result: Dict[str, Any]) -> None:
+    def _handle_update_label(self, requires_user: bool) -> None:
+        """
+        Handle label updates for the conversation tab.
+
+        Args:
+            requires_user: True if user input is required, False otherwise
+        """
+        self.set_updated(True)
+
+    def _handle_submit_finished(self, result: Dict[str, Any]) -> None:
         """
         Handle when a submitted message finishes processing.
         """
         # Update the tab bar to indicate content has changed
-        self.set_updated(True)
         self.conversation_completed.emit(result)
 
     def update_status(self) -> None:
@@ -350,15 +359,6 @@ class ConversationTab(TabBase):
     def can_close_tab(self) -> bool:
         """Check if conversation can be closed."""
         return True
-
-    async def submit_message(self, message: AIMessage) -> None:
-        """
-        Submit a message programmatically (for sub-conversations).
-
-        Args:
-            message: The message to submit
-        """
-        await self._conversation_widget.submit_message(message)
 
     def set_sub_conversation_mode(self, enabled: bool) -> None:
         """
