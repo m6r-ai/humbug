@@ -5,7 +5,7 @@ from typing import List, Any, cast
 
 from dast.ast import ASTNode
 
-from markdown.markdown_ast_node import (
+from dmarkdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownASTTextNode, MarkdownASTHeadingNode, MarkdownASTInlineCodeNode,
     MarkdownASTCodeBlockNode, MarkdownASTNode, MarkdownASTTableNode, MarkdownASTTableHeaderNode,
     MarkdownASTTableBodyNode, MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,

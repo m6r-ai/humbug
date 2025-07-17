@@ -7,7 +7,7 @@ from pathlib import Path
 import difflib
 from typing import Dict, Any, List, Tuple, Optional
 
-from markdown.markdown_ast_builder import MarkdownASTBuilder
+from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 
 from markdown_ast_serializer import serialize_ast, load_ast_from_json
 

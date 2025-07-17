@@ -10,7 +10,7 @@ from syntax.parser_registry import ParserRegistry
 from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
-from markdown.markdown_ast_node import (
+from dmarkdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownASTDocumentNode, MarkdownASTTextNode, MarkdownASTLineBreakNode,
     MarkdownASTEmphasisNode, MarkdownASTBoldNode, MarkdownASTHeadingNode,
     MarkdownASTParagraphNode, MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,

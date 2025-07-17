@@ -4,7 +4,7 @@ Visitor class for serializing and comparing markdown AST structures
 from typing import Dict, Any
 import json
 
-from markdown.markdown_ast_node import (
+from dmarkdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownASTNode, MarkdownASTDocumentNode,
     MarkdownASTTextNode, MarkdownASTLineBreakNode, MarkdownASTEmphasisNode,
     MarkdownASTBoldNode, MarkdownASTHeadingNode, MarkdownASTParagraphNode,

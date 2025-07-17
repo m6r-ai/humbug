@@ -11,8 +11,8 @@ from typing import List, Tuple, cast
 from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
-from markdown.markdown_ast_builder import MarkdownASTBuilder
-from markdown.markdown_ast_node import MarkdownASTCodeBlockNode, MarkdownASTNode, MarkdownASTDocumentNode
+from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
+from dmarkdown.markdown_ast_node import MarkdownASTCodeBlockNode, MarkdownASTNode, MarkdownASTDocumentNode
 
 
 class MarkdownConverter:
