@@ -1,9 +1,12 @@
+import asyncio
 import json
 import logging
 import os
 from typing import Dict, Any, List
 
 from ai.ai_conversation_settings import AIConversationSettings
+from ai.ai_message import AIMessage
+from ai.ai_message_source import AIMessageSource
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition
@@ -12,6 +15,7 @@ from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
+from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.user.user_manager import UserManager
 
 
@@ -96,13 +100,19 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="model",
                     type="string",
-                    description="AI model to use (for new_conversation)",
+                    description="AI model to use (for new_conversation and submit_conversation_message)",
                     required=False
                 ),
                 AIToolParameter(
                     name="temperature",
                     type="number",
-                    description="Temperature setting 0.0-1.0 (for new_conversation)",
+                    description="Temperature setting 0.0-1.0 (for new_conversation and submit_conversation_message)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="message",
+                    type="string",
+                    description="Message to submit to conversation (for submit_conversation_message)",
                     required=False
                 )
             ]
@@ -143,6 +153,13 @@ class SystemAITool(AITool):
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
                 description="start a new AI conversation in a conversation tab, with optional model/temperature"
+            ),
+            "submit_conversation_message": AIToolOperationDefinition(
+                name="submit_conversation_message",
+                handler=self._submit_conversation_message,
+                allowed_parameters={"tab_id", "message", "model", "temperature"},
+                required_parameters={"tab_id", "message"},
+                description="submit a message to an AI conversation (given a tab ID) and wait for the response"
             ),
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
@@ -390,6 +407,156 @@ class SystemAITool(AITool):
             self._logger.error("Unexpected error in system operation '%s': %s", operation, str(e), exc_info=True)
             raise AIToolExecutionError(
                 f"System operation failed: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+    async def _submit_conversation_message(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """
+        Submit a message to a new AI conversation and wait for the response.
+
+        Args:
+            arguments: Dictionary containing operation parameters
+            _request_authorization: Authorization callback (unused for this operation)
+
+        Returns:
+            String result containing the AI's response
+
+        Raises:
+            AIToolExecutionError: If operation fails
+        """
+        # Extract required tab_id parameter
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
+
+        # Extract required message parameter
+        message = self._get_str_value_from_key("message", arguments)
+
+        # Extract optional parameters
+        model = arguments.get("model")
+        temperature = arguments.get("temperature")
+
+        # Validate model if provided
+        if model and not isinstance(model, str):
+            raise AIToolExecutionError(
+                "'model' must be a string",
+                "system",
+                arguments
+            )
+
+        # Validate temperature if provided
+        if temperature is not None:
+            if not isinstance(temperature, (int, float)):
+                raise AIToolExecutionError(
+                    "'temperature' must be a number",
+                    "system",
+                    arguments
+                )
+
+            if not 0.0 <= temperature <= 1.0:
+                raise AIToolExecutionError(
+                    "'temperature' must be between 0.0 and 1.0",
+                    "system",
+                    arguments
+                )
+
+        # Validate model exists if provided
+        reasoning = None
+        if model:
+            ai_backends = self._user_manager.get_ai_backends()
+            available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
+
+            if model not in available_models:
+                raise AIToolExecutionError(
+                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}",
+                    "system",
+                    arguments
+                )
+
+            # Get reasoning capability from model
+            model_config = AIConversationSettings.MODELS.get(model)
+            if model_config:
+                reasoning = model_config.reasoning_capabilities
+
+        try:
+            # Ensure conversations directory exists
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+
+            # Get sub-conversation tab
+            conversation_tab = self._column_manager.get_tab_by_id(tab_id)
+            if not isinstance(conversation_tab, ConversationTab):
+                raise AIToolExecutionError(
+                    f"Tab with ID '{tab_id}' is not a valid conversation tab",
+                    "system",
+                    arguments
+                )
+
+            # Set up completion tracking
+            completion_future: asyncio.Future[Dict[str, Any]] = asyncio.Future()
+
+            def on_completion(result_dict: Dict[str, Any]) -> None:
+                print("Conversation completed with result:", result_dict)
+                """Handle conversation completion."""
+                if not completion_future.done():
+                    completion_future.set_result(result_dict)
+
+            # Connect to completion signal
+            conversation_tab.conversation_completed.connect(on_completion)
+
+            try:
+                # Enable sub-conversation mode (disable user input)
+                conversation_tab.set_sub_conversation_mode(True)
+
+                # Submit the message
+                user_message = AIMessage.create(AIMessageSource.USER, message)
+                await conversation_tab.submit_message(user_message)
+
+                # Wait for completion
+                result = await completion_future
+
+                # Log the sub-conversation creation and completion
+                tab_id = conversation_tab.tab_id()
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"AI created sub-conversation (tab ID: {tab_id}) and submitted message: '{message[:50]}...'"
+                )
+
+                # Return appropriate result
+                if result.get("success", False):
+                    response_content = result.get("content", "")
+                    usage_info = result.get("usage")
+
+                    # Create a formatted response
+                    result_parts = [f"Sub-conversation completed successfully:\n{response_content}"]
+
+                    if usage_info:
+                        result_parts.append(f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} completion = {usage_info['total_tokens']} total")
+
+                    return "\n\n".join(result_parts)
+
+                else:
+                    error_msg = result.get("error", "Unknown error")
+                    self._logger.warning("Sub-conversation failed: %s", error_msg)
+                    return f"Sub-conversation failed: {error_msg}"
+
+            finally:
+                # Clean up signal connection
+                conversation_tab.conversation_completed.disconnect(on_completion)
+
+        except MindspaceError as e:
+            raise AIToolExecutionError(
+                f"Failed to create conversation directory: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+        except Exception as e:
+            self._logger.error("Failed to submit conversation message: %s", str(e), exc_info=True)
+            raise AIToolExecutionError(
+                f"Failed to submit conversation message: {str(e)}",
                 "system",
                 arguments
             ) from e

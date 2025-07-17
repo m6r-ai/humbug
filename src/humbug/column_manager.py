@@ -255,6 +255,22 @@ class ColumnManager(QWidget):
 
         return self._get_tab_info(tab)
 
+    def get_tab_by_id(self, tab_id: str) -> TabBase | None:
+        """
+        Get a tab by its ID.
+
+        Args:
+            tab_id: ID of the tab to retrieve
+
+        Returns:
+            The TabBase instance for the specified tab ID or None if not found
+        """
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return None
+
+        return tab
+
     def list_all_tabs(self) -> List[Dict[str, str | int | bool]]:
         """
         Get information about all currently open tabs across all columns.

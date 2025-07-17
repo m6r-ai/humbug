@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import os
-from typing import List, cast
+from typing import List, cast, Dict, Any
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QWidget
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from ai.ai_conversation_settings import AIConversationSettings
+from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
 
 from humbug.color_role import ColorRole
@@ -36,6 +37,7 @@ class ConversationTab(TabBase):
     forkRequested = Signal()
     forkFromIndexRequested = Signal(int)
     bookmarkNavigationRequested = Signal(bool)  # True for next, False for previous
+    conversation_completed = Signal(dict)  # Signal for conversation completion
 
     def __init__(
         self,
@@ -303,12 +305,13 @@ class ConversationTab(TabBase):
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
 
-    def handle_submit_finished(self) -> None:
+    def handle_submit_finished(self, result: Dict[str, Any]) -> None:
         """
         Handle when a submitted message finishes processing.
         """
         # Update the tab bar to indicate content has changed
         self.set_updated(True)
+        self.conversation_completed.emit(result)
 
     def update_status(self) -> None:
         """Update status bar with token counts and settings."""
@@ -327,6 +330,7 @@ class ConversationTab(TabBase):
             temp_display = strings.conversation_status_temperature.format(
                 temperature=settings.temperature
             )
+
         else:
             temp_display = strings.conversation_status_no_temperature
 
@@ -346,6 +350,27 @@ class ConversationTab(TabBase):
     def can_close_tab(self) -> bool:
         """Check if conversation can be closed."""
         return True
+
+    async def submit_message(self, message: AIMessage) -> None:
+        """
+        Submit a message programmatically (for sub-conversations).
+
+        Args:
+            message: The message to submit
+        """
+        await self._conversation_widget.submit_message(message)
+
+    def set_sub_conversation_mode(self, enabled: bool) -> None:
+        """
+        Enable or disable sub-conversation mode.
+
+        In sub-conversation mode, the user input is hidden to prevent
+        manual message submission.
+
+        Args:
+            enabled: True to enable sub-conversation mode, False to disable
+        """
+        self._conversation_widget.set_sub_conversation_mode(enabled)
 
     async def _delete_empty_transcript_file(self) -> None:
         """

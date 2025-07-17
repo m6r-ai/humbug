@@ -102,7 +102,7 @@ class ConversationWidget(QWidget):
     activated = Signal()
 
     # Emits when a submitted message has finished processing
-    submit_finished = Signal()
+    submit_finished = Signal(dict)
 
     # Emits when the conversation is modified by the user
     conversation_modified = Signal()
@@ -153,10 +153,13 @@ class ConversationWidget(QWidget):
         self._update_timer.timeout.connect(self._process_pending_update)
         self._pending_message = None  # Store the most recent pending message
 
-            # Widget tracking
+        # Widget tracking
         self._messages: List[ConversationMessage] = []
         self._message_with_selection: ConversationMessage | None = None
         self._is_streaming = False
+
+        # Sub-conversation mode
+        self._is_sub_conversation = False
 
         # Initialize tracking variables
         self._auto_scroll = True
@@ -249,6 +252,65 @@ class ConversationWidget(QWidget):
         self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
         self._install_activation_tracking(self._input)
         self._install_activation_tracking(self._messages_container)
+
+    def set_sub_conversation_mode(self, enabled: bool) -> None:
+        """
+        Enable or disable sub-conversation mode.
+
+        In sub-conversation mode, the user input is hidden to prevent
+        manual message submission.
+
+        Args:
+            enabled: True to enable sub-conversation mode, False to disable
+        """
+        self._is_sub_conversation = enabled
+        self._input.setVisible(not enabled)
+
+    def _create_completion_result(self) -> Dict[str, Any]:
+        """
+        Create completion result for sub-conversation.
+
+        Returns:
+            Dictionary containing completion result
+        """
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        messages = ai_conversation.get_conversation_history().get_messages()
+
+        if not messages:
+            return {"success": False, "error": "No messages in conversation"}
+
+        last_message = messages[-1]
+
+        if last_message.source == AIMessageSource.AI:
+            result = {
+                "success": True,
+                "content": last_message.content,
+                "model": last_message.model,
+            }
+            if last_message.usage:
+                result["usage"] = last_message.usage.to_dict()
+
+            return result
+
+        elif last_message.source == AIMessageSource.SYSTEM:
+            return {
+                "success": False,
+                "error": last_message.content,
+                "details": last_message.error
+            }
+
+        else:
+            return {"success": False, "error": "Conversation ended unexpectedly"}
+
+    async def submit_message(self, message: AIMessage) -> None:
+        """
+        Submit a message programmatically (for sub-conversations).
+
+        Args:
+            message: The message to submit
+        """
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        await ai_conversation.submit_message(message)
 
     async def add_message(self, message: AIMessage) -> None:
         """
@@ -370,8 +432,10 @@ class ConversationWidget(QWidget):
         if retries_exhausted:
             self._is_streaming = False
             self._input.set_streaming(False)
-            self.submit_finished.emit()
             self.status_updated.emit()
+
+            result = self._create_completion_result()
+            self.submit_finished.emit(result)
 
             if self._last_submitted_message:
                 self._input.set_plain_text(self._last_submitted_message)
@@ -542,8 +606,10 @@ class ConversationWidget(QWidget):
         if self._update_timer.isActive():
             self._update_timer.stop()
 
-        self.submit_finished.emit()
         self.status_updated.emit()
+
+        result = self._create_completion_result()
+        self.submit_finished.emit(result)
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
