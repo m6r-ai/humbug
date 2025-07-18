@@ -8,7 +8,7 @@ from typing import Dict, Any, Callable, cast
 
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
-    AIToolAuthorizationCallback, AIToolTimeoutError
+    AIToolAuthorizationCallback, AIToolTimeoutError, AIToolResult
 )
 
 
@@ -310,21 +310,28 @@ class CalculatorAITool(AITool):
         result = self._evaluator.evaluate(expression)
         return str(result)
 
-    async def execute(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback) -> str:
+    async def execute_with_continuation(
+        self,
+        arguments: Dict[str, Any],
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
         """
-        Execute the calculator tool with timeout protection.
+        Execute the calculator tool with timeout protection and continuation support.
 
         Args:
             arguments: Dictionary containing the expression to evaluate
             request_authorization: Function to call if we need to request authorization
 
         Returns:
-            String representation of the calculation result
+            AIToolResult containing the calculation result
 
         Raises:
             AIToolExecutionError: If calculation fails or expression is invalid
             AIToolTimeoutError: If calculation takes too long
         """
+        # Get the tool call ID
+        tool_call_id = arguments.get('_tool_call_id', 'unknown')
+
         expression = arguments.get("expression", "")
 
         # Validate expression is provided
@@ -364,7 +371,12 @@ class CalculatorAITool(AITool):
                 ) from e
 
             self._logger.debug("Expression evaluation successful: %s = %s", expression, result)
-            return result
+
+            return AIToolResult(
+                id=tool_call_id,
+                name="calculate",
+                content=result
+            )
 
         except AIToolTimeoutError:
             # Re-raise timeout errors

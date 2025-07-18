@@ -243,17 +243,7 @@ class AIToolManager:
             arguments_with_id = tool_call.arguments.copy()
             arguments_with_id['_tool_call_id'] = tool_call.id
 
-            # Use the new continuation-aware method if the tool supports it
-            if tool.supports_continuations():
-                result = await tool.execute_with_continuation(arguments_with_id, request_authorization)
-            else:
-                # Fall back to the old method for backward compatibility
-                result_content = await tool.execute(arguments_with_id, request_authorization)
-                result = AIToolResult(
-                    id=tool_call.id,
-                    name=tool_call.name,
-                    content=result_content
-                )
+            result = await tool.execute_with_continuation(arguments_with_id, request_authorization)
 
             self._logger.debug(
                 "Tool '%s' executed successfully with args %s",

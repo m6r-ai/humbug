@@ -41,15 +41,6 @@ class SystemAITool(AITool):
         self._user_manager = UserManager()
         self._logger = logging.getLogger("SystemAITool")
 
-    def supports_continuations(self) -> bool:
-        """
-        Check if this tool supports returning continuations.
-
-        Returns:
-            True since this tool supports continuations for child conversations
-        """
-        return True
-
     def get_definition(self) -> AIToolDefinition:
         """
         Get the tool definition.
@@ -354,25 +345,28 @@ class SystemAITool(AITool):
                 {"operation": operation, "file_path": path_str}
             ) from e
 
-    async def execute(
+    async def execute_with_continuation(
         self,
         arguments: Dict[str, Any],
         request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """
-        Execute the system operation with proper validation and authorization.
+        Execute the system operation with continuation support.
 
         Args:
             arguments: Dictionary containing operation parameters
             request_authorization: Function to call for user authorization
 
         Returns:
-            String result of the operation
+            AIToolResult containing the execution result and optional continuation
 
         Raises:
             AIToolExecutionError: If operation fails
             AIToolAuthorizationDenied: If user denies authorization
         """
+        # Get the tool call ID
+        tool_call_id = arguments.get('_tool_call_id', 'unknown')
+
         # Validate mindspace is open
         self._validate_mindspace_access()
 
@@ -407,9 +401,19 @@ class SystemAITool(AITool):
         self._logger.debug("System operation requested: %s", operation)
 
         try:
-            result = await operation_def.handler(arguments, request_authorization)
+            # Check if this is the spawn_ai_child_conversation_tab operation
+            if operation == "spawn_ai_child_conversation_tab":
+                return await self._spawn_ai_child_conversation_tab_with_continuation(arguments, request_authorization, tool_call_id)
+
+            # For all other operations, use the regular handler and wrap the result
+            content = await operation_def.handler(arguments, request_authorization)
             self._logger.info("System operation completed successfully: %s", operation)
-            return result
+
+            return AIToolResult(
+                id=tool_call_id,
+                name="system",
+                content=content
+            )
 
         except (AIToolExecutionError, AIToolAuthorizationDenied):
             # Re-raise our own errors
@@ -422,41 +426,6 @@ class SystemAITool(AITool):
                 "system",
                 arguments
             ) from e
-
-    async def execute_with_continuation(
-        self,
-        arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """
-        Execute the system operation with continuation support.
-
-        Args:
-            arguments: Dictionary containing operation parameters
-            request_authorization: Function to call for user authorization
-
-        Returns:
-            AIToolResult containing the execution result and optional continuation
-
-        Raises:
-            AIToolExecutionError: If operation fails
-            AIToolAuthorizationDenied: If user denies authorization
-        """
-        # Get the tool call ID
-        tool_call_id = arguments.get('_tool_call_id', 'unknown')
-
-        # Check if this is the spawn_ai_child_conversation_tab operation
-        operation = arguments.get("operation")
-        if operation == "spawn_ai_child_conversation_tab":
-            return await self._spawn_ai_child_conversation_tab_with_continuation(arguments, request_authorization, tool_call_id)
-
-        # For all other operations, use the regular execute method
-        content = await self.execute(arguments, request_authorization)
-        return AIToolResult(
-            id=tool_call_id,
-            name="system",
-            content=content
-        )
 
     async def _wait_for_completion(self, conversation_tab: ConversationTab, message: str) -> str:
         """
