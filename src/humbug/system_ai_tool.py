@@ -100,19 +100,19 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="model",
                     type="string",
-                    description="AI model to use (for new_conversation and submit_conversation_message)",
+                    description="AI model to use (for new_conversation and spawn_ai_child_conversation operations)",
                     required=False
                 ),
                 AIToolParameter(
                     name="temperature",
                     type="number",
-                    description="Temperature setting 0.0-1.0 (for new_conversation and submit_conversation_message)",
+                    description="Temperature setting 0.0-1.0 (for new_conversation and spawn_ai_child_conversation operations)",
                     required=False
                 ),
                 AIToolParameter(
                     name="message",
                     type="string",
-                    description="Message to submit to conversation (for submit_conversation_message)",
+                    description="Message to submit to conversation (for spawn_ai_child_conversation operation)",
                     required=False
                 )
             ]
@@ -145,21 +145,23 @@ class SystemAITool(AITool):
                 handler=self._open_conversation_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
-                description="open an existing AI conversation in a conversation tab"
+                description="open an existing conversation in a conversation tab"
             ),
             "new_conversation_tab": AIToolOperationDefinition(
                 name="new_conversation_tab",
                 handler=self._new_conversation_tab,
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
-                description="start a new AI conversation in a conversation tab, with optional model/temperature"
+                description="start a new conversation in a conversation tab, with optional model/temperature - this conversation "
+                    "cannot be used by you (the AI) to send messages, only the user can interact with it."
             ),
-            "submit_conversation_message": AIToolOperationDefinition(
-                name="submit_conversation_message",
-                handler=self._submit_conversation_message,
-                allowed_parameters={"tab_id", "message", "model", "temperature"},
-                required_parameters={"tab_id", "message"},
-                description="submit a message to a specific AI conversation (given a tab ID for the conversation) and wait for the response"
+            "spawn_ai_child_conversation_tab": AIToolOperationDefinition(
+                name="spawn_ai_child_conversation_tab",
+                handler=self._spawn_ai_child_conversation_tab,
+                allowed_parameters={"message", "model", "temperature"},
+                required_parameters={"message"},
+                description="start a new child conversation with an AI using a new prompt message - supports optional model/temperature, "
+                    "the response will be the response from the child conversation"
             ),
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
@@ -411,7 +413,7 @@ class SystemAITool(AITool):
                 arguments
             ) from e
 
-    async def _submit_conversation_message(
+    async def _spawn_ai_child_conversation_tab(
         self,
         arguments: Dict[str, Any],
         _request_authorization: AIToolAuthorizationCallback
@@ -429,9 +431,6 @@ class SystemAITool(AITool):
         Raises:
             AIToolExecutionError: If operation fails
         """
-        # Extract required tab_id parameter
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
-
         # Extract required message parameter
         message = self._get_str_value_from_key("message", arguments)
 
@@ -482,18 +481,6 @@ class SystemAITool(AITool):
                 reasoning = model_config.reasoning_capabilities
 
         try:
-            # Ensure conversations directory exists
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
-
-            # Get sub-conversation tab
-            conversation_tab = self._column_manager.get_tab_by_id(tab_id)
-            if not isinstance(conversation_tab, ConversationTab):
-                raise AIToolExecutionError(
-                    f"Tab with ID '{tab_id}' is not a valid conversation tab",
-                    "system",
-                    arguments
-                )
-
             # Set up completion tracking
             completion_future: asyncio.Future[Dict[str, Any]] = asyncio.Future()
 
@@ -502,14 +489,17 @@ class SystemAITool(AITool):
                 if not completion_future.done():
                     completion_future.set_result(result_dict)
 
-            # Connect to completion signal
-            conversation_tab.conversation_completed.connect(on_completion)
+            # Ensure conversations directory exists
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
 
+            # Create conversation
+            self._column_manager.protect_current_tab(True)
+            conversation_tab: ConversationTab | None = None
             try:
-                # Enable sub-conversation mode (disable user input)
-                conversation_tab.set_sub_conversation_mode(True)
+                conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
+                conversation_tab.conversation_completed.connect(on_completion)
 
-                # Submit the message
+                conversation_tab.set_sub_conversation_mode(True)
                 conversation_tab.set_input_text(message)
                 conversation_tab.submit()
 
@@ -520,7 +510,7 @@ class SystemAITool(AITool):
                 tab_id = conversation_tab.tab_id()
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"AI created sub-conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'"
+                    f"AI spawned child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'"
                 )
 
                 # Return appropriate result
@@ -529,7 +519,7 @@ class SystemAITool(AITool):
                     usage_info = result.get("usage")
 
                     # Create a formatted response
-                    result_parts = [f"Sub-conversation completed successfully:\n{response_content}"]
+                    result_parts = [f"Child completed successfully:\n{response_content}"]
 
                     if usage_info:
                         result_parts.append(f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} completion = {usage_info['total_tokens']} total")
@@ -542,8 +532,10 @@ class SystemAITool(AITool):
                     return f"Sub-conversation failed: {error_msg}"
 
             finally:
-                # Clean up signal connection
-                conversation_tab.conversation_completed.disconnect(on_completion)
+                self._column_manager.protect_current_tab(False)
+
+                if conversation_tab:
+                    conversation_tab.conversation_completed.disconnect(on_completion)
 
         except MindspaceError as e:
             raise AIToolExecutionError(
@@ -553,9 +545,8 @@ class SystemAITool(AITool):
             ) from e
 
         except Exception as e:
-            self._logger.error("Failed to submit conversation message: %s", str(e), exc_info=True)
             raise AIToolExecutionError(
-                f"Failed to submit conversation message: {str(e)}",
+                f"Failed to spawn child AI conversation: {str(e)}",
                 "system",
                 arguments
             ) from e
@@ -743,6 +734,7 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
+                conversation_tab.set_sub_conversation_mode(False)
 
             finally:
                 self._column_manager.protect_current_tab(False)

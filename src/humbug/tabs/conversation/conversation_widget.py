@@ -161,9 +161,6 @@ class ConversationWidget(QWidget):
         self._message_with_selection: ConversationMessage | None = None
         self._is_streaming = False
 
-        # Sub-conversation mode
-        self._is_sub_conversation = False
-
         # Initialize tracking variables
         self._auto_scroll = True
         self._last_scroll_maximum = 0
@@ -255,6 +252,17 @@ class ConversationWidget(QWidget):
         self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
         self._install_activation_tracking(self._input)
         self._install_activation_tracking(self._messages_container)
+
+        # Default to being in sub-conversation mode
+        self.set_sub_conversation_mode(True)
+
+    def sub_conversation_mode(self) -> bool:
+        """
+        Check if the conversation is in sub-conversation mode.
+
+        In sub-conversation mode, user input is hidden to prevent manual message submission.
+        """
+        return self._is_sub_conversation
 
     def set_sub_conversation_mode(self, enabled: bool) -> None:
         """
@@ -1454,6 +1462,9 @@ class ConversationWidget(QWidget):
         """
         metadata: Dict[str, Any] = {}
 
+        # Is this a conversation or a sub-conversation?
+        metadata["sub_conversation"] = self._is_sub_conversation
+
         # Store current input content
         metadata["content"] = self._input.to_plain_text()
         metadata['cursor'] = self._get_cursor_position()
@@ -1507,6 +1518,12 @@ class ConversationWidget(QWidget):
         """
         if not metadata:
             return
+
+        sub_conversation = False
+        if "sub_conversation" in metadata:
+            sub_conversation = metadata["sub_conversation"]
+
+        self.set_sub_conversation_mode(sub_conversation)
 
         # Restore input content if specified
         if "content" in metadata:

@@ -180,6 +180,7 @@ class ConversationTab(TabBase):
         # Generate new file path using fork naming convention
         new_path = self._get_fork_file_name(self._path)
         forked_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
+        forked_tab.set_sub_conversation_mode(self.sub_conversation_mode())
 
         # Get messages to include in the fork
         all_messages = self._conversation_widget.get_conversation_history().get_messages()
@@ -359,6 +360,14 @@ class ConversationTab(TabBase):
     def can_close_tab(self) -> bool:
         """Check if conversation can be closed."""
         return True
+
+    def sub_conversation_mode(self) -> bool:
+        """
+        Check if the conversation is in sub-conversation mode.
+
+        In sub-conversation mode, user input is hidden to prevent manual message submission.
+        """
+        return self._conversation_widget.sub_conversation_mode()
 
     def set_sub_conversation_mode(self, enabled: bool) -> None:
         """

@@ -1381,6 +1381,7 @@ class ColumnManager(QWidget):
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         conversation_tab = ConversationTab("", full_path, self)
+        conversation_tab.set_sub_conversation_mode(False)
         conversation_tab.forkRequested.connect(self._fork_conversation)
         conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
