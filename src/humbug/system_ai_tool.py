@@ -9,7 +9,8 @@ from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
-    AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition
+    AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
+    AIToolResult
 )
 from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
@@ -39,6 +40,15 @@ class SystemAITool(AITool):
         self._mindspace_manager = MindspaceManager()
         self._user_manager = UserManager()
         self._logger = logging.getLogger("SystemAITool")
+
+    def supports_continuations(self) -> bool:
+        """
+        Check if this tool supports returning continuations.
+
+        Returns:
+            True since this tool supports continuations for child conversations
+        """
+        return True
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -413,6 +423,211 @@ class SystemAITool(AITool):
                 arguments
             ) from e
 
+    async def execute_with_continuation(
+        self,
+        arguments: Dict[str, Any],
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """
+        Execute the system operation with continuation support.
+
+        Args:
+            arguments: Dictionary containing operation parameters
+            request_authorization: Function to call for user authorization
+
+        Returns:
+            AIToolResult containing the execution result and optional continuation
+
+        Raises:
+            AIToolExecutionError: If operation fails
+            AIToolAuthorizationDenied: If user denies authorization
+        """
+        # Get the tool call ID
+        tool_call_id = arguments.get('_tool_call_id', 'unknown')
+
+        # Check if this is the spawn_ai_child_conversation_tab operation
+        operation = arguments.get("operation")
+        if operation == "spawn_ai_child_conversation_tab":
+            return await self._spawn_ai_child_conversation_tab_with_continuation(arguments, request_authorization, tool_call_id)
+
+        # For all other operations, use the regular execute method
+        content = await self.execute(arguments, request_authorization)
+        return AIToolResult(
+            id=tool_call_id,
+            name="system",
+            content=content
+        )
+
+    async def _wait_for_completion(self, conversation_tab: ConversationTab, message: str) -> str:
+        """
+        Wait for a conversation tab to complete and return the formatted result.
+
+        Args:
+            conversation_tab: The conversation tab to wait for
+            message: The original message that was submitted
+
+        Returns:
+            Formatted result string containing the AI's response or error information
+        """
+        # Set up completion tracking
+        completion_future: asyncio.Future[Dict[str, Any]] = asyncio.Future()
+
+        def on_completion(result_dict: Dict[str, Any]) -> None:
+            """Handle conversation completion."""
+            if not completion_future.done():
+                completion_future.set_result(result_dict)
+
+        try:
+            # Connect to completion signal
+            conversation_tab.conversation_completed.connect(on_completion)
+
+            # Wait for completion
+            result = await completion_future
+
+            # Log the sub-conversation completion
+            tab_id = conversation_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Child conversation completed, tab ID: {tab_id}"
+            )
+
+            # Return appropriate result
+            if result.get("success", False):
+                response_content = result.get("content", "")
+                usage_info = result.get("usage")
+
+                # Create a formatted response
+                result_parts = [f"Child conversation completed successfully:\n{response_content}"]
+
+                if usage_info:
+                    result_parts.append(f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} completion = {usage_info['total_tokens']} total")
+
+                return "\n\n".join(result_parts)
+
+            error_msg = result.get("error", "Unknown error")
+            self._logger.warning("Child conversation failed: %s", error_msg)
+            return f"Child conversation failed: {error_msg}"
+
+        finally:
+            # Clean up signal connection
+            conversation_tab.conversation_completed.disconnect(on_completion)
+
+    async def _spawn_ai_child_conversation_tab_with_continuation(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback,
+        tool_call_id: str
+    ) -> AIToolResult:
+        """
+        Submit a message to a new AI conversation and return a continuation for waiting.
+
+        Args:
+            arguments: Dictionary containing operation parameters
+            _request_authorization: Authorization callback (unused for this operation)
+            tool_call_id: ID of the tool call
+
+        Returns:
+            AIToolResult with continuation for waiting on completion
+
+        Raises:
+            AIToolExecutionError: If operation fails
+        """
+        # Extract required message parameter
+        message = self._get_str_value_from_key("message", arguments)
+
+        # Extract optional parameters
+        model = arguments.get("model")
+        temperature = arguments.get("temperature")
+
+        # Validate model if provided
+        if model and not isinstance(model, str):
+            raise AIToolExecutionError(
+                "'model' must be a string",
+                "system",
+                arguments
+            )
+
+        # Validate temperature if provided
+        if temperature is not None:
+            if not isinstance(temperature, (int, float)):
+                raise AIToolExecutionError(
+                    "'temperature' must be a number",
+                    "system",
+                    arguments
+                )
+
+            if not 0.0 <= temperature <= 1.0:
+                raise AIToolExecutionError(
+                    "'temperature' must be between 0.0 and 1.0",
+                    "system",
+                    arguments
+                )
+
+        # Validate model exists if provided
+        reasoning = None
+        if model:
+            ai_backends = self._user_manager.get_ai_backends()
+            available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
+
+            if model not in available_models:
+                raise AIToolExecutionError(
+                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}",
+                    "system",
+                    arguments
+                )
+
+            # Get reasoning capability from model
+            model_config = AIConversationSettings.MODELS.get(model)
+            if model_config:
+                reasoning = model_config.reasoning_capabilities
+
+        try:
+            # Ensure conversations directory exists
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+
+            # Create conversation
+            self._column_manager.protect_current_tab(True)
+            conversation_tab: ConversationTab | None = None
+            try:
+                conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
+                conversation_tab.set_sub_conversation_mode(True)
+                conversation_tab.set_input_text(message)
+                conversation_tab.submit()
+
+                # Log the sub-conversation creation
+                tab_id = conversation_tab.tab_id()
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"AI spawned child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'"
+                )
+
+                # Create a continuation task that waits for completion
+                continuation_task = asyncio.create_task(self._wait_for_completion(conversation_tab, message))
+
+                return AIToolResult(
+                    id=tool_call_id,
+                    name="system",
+                    content=f"Started child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'",
+                    continuation=continuation_task
+                )
+
+            finally:
+                self._column_manager.protect_current_tab(False)
+
+        except MindspaceError as e:
+            raise AIToolExecutionError(
+                f"Failed to create conversation directory: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
+        except Exception as e:
+            raise AIToolExecutionError(
+                f"Failed to spawn child AI conversation: {str(e)}",
+                "system",
+                arguments
+            ) from e
+
     async def _spawn_ai_child_conversation_tab(
         self,
         arguments: Dict[str, Any],
@@ -481,14 +696,6 @@ class SystemAITool(AITool):
                 reasoning = model_config.reasoning_capabilities
 
         try:
-            # Set up completion tracking
-            completion_future: asyncio.Future[Dict[str, Any]] = asyncio.Future()
-
-            def on_completion(result_dict: Dict[str, Any]) -> None:
-                """Handle conversation completion."""
-                if not completion_future.done():
-                    completion_future.set_result(result_dict)
-
             # Ensure conversations directory exists
             self._mindspace_manager.ensure_mindspace_dir("conversations")
 
@@ -497,45 +704,15 @@ class SystemAITool(AITool):
             conversation_tab: ConversationTab | None = None
             try:
                 conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
-                conversation_tab.conversation_completed.connect(on_completion)
-
                 conversation_tab.set_sub_conversation_mode(True)
                 conversation_tab.set_input_text(message)
                 conversation_tab.submit()
 
-                # Wait for completion
-                result = await completion_future
-
-                # Log the sub-conversation creation and completion
-                tab_id = conversation_tab.tab_id()
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"AI spawned child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'"
-                )
-
-                # Return appropriate result
-                if result.get("success", False):
-                    response_content = result.get("content", "")
-                    usage_info = result.get("usage")
-
-                    # Create a formatted response
-                    result_parts = [f"Child completed successfully:\n{response_content}"]
-
-                    if usage_info:
-                        result_parts.append(f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} completion = {usage_info['total_tokens']} total")
-
-                    return "\n\n".join(result_parts)
-
-                else:
-                    error_msg = result.get("error", "Unknown error")
-                    self._logger.warning("Sub-conversation failed: %s", error_msg)
-                    return f"Sub-conversation failed: {error_msg}"
+                # Wait for completion and return result
+                return await self._wait_for_completion(conversation_tab, message)
 
             finally:
                 self._column_manager.protect_current_tab(False)
-
-                if conversation_tab:
-                    conversation_tab.conversation_completed.disconnect(on_completion)
 
         except MindspaceError as e:
             raise AIToolExecutionError(

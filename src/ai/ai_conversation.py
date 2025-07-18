@@ -14,7 +14,7 @@ from ai.ai_message_source import AIMessageSource
 from ai.ai_model import ReasoningCapability
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
-from ai_tool import AIToolManager, AIToolCall
+from ai_tool import AIToolManager, AIToolCall, AIToolResult
 
 
 class AIConversationEvent(Enum):
@@ -320,14 +320,17 @@ class AIConversation:
             self._pending_authorization_future = None
 
     async def _execute_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
-        """Execute tool calls directly without requiring upfront approval."""
-        self._logger.debug("Executing tool calls...")
+        """Execute tool calls with support for parallel execution via continuations."""
+        self._logger.debug("Executing tool calls with continuation support...")
 
-        # Execute all tool calls
+        # Execute all tool calls and collect results and continuations
         tool_results = []
+        continuations = []
+
         for tool_call in tool_calls:
             self._logger.debug("Executing tool call: %s", tool_call.name)
 
+            # Create and add tool call message
             tool_call_dict = tool_call.to_dict()
             content = f"""```json
 {json.dumps(tool_call_dict, indent=4)}
@@ -340,16 +343,21 @@ class AIConversation:
             )
             self._conversation.add_message(tool_call_message)
 
-            # Store the message for later completion
+            # Store the message for potential completion during authorization
             self._pending_tool_call_message = tool_call_message
 
             await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, tool_call_message)
 
+            # Execute the tool call
             tool_result = await self._tool_manager.execute_tool(
                 tool_call,
                 request_authorization=self._request_tool_authorization
             )
             tool_results.append(tool_result)
+
+            # If the tool returned a continuation, collect it
+            if tool_result.continuation:
+                continuations.append(tool_result.continuation)
 
             # If our tool didn't require authorization we need to close out the tool call message
             if self._pending_tool_call_message:
@@ -363,6 +371,7 @@ class AIConversation:
 
                 self._pending_tool_call_message = None
 
+            # Create tool result message
             tool_result_dict = tool_result.to_dict()
             content = f"""```json
 {json.dumps(tool_result_dict, indent=4)}
@@ -375,6 +384,15 @@ class AIConversation:
             )
             self._conversation.add_message(tool_result_message)
             await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
+
+        # Wait for all continuations to complete
+        if continuations:
+            self._logger.debug("Waiting for %d tool continuations to complete...", len(continuations))
+            try:
+                await asyncio.gather(*continuations)
+                self._logger.debug("All tool continuations completed successfully")
+            except Exception as e:
+                self._logger.warning("Error waiting for tool continuations: %s", str(e))
 
         # Create a specific user message with the tool results
         tool_response_message = AIMessage.create(
