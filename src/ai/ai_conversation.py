@@ -320,14 +320,13 @@ class AIConversation:
             self._pending_authorization_future = None
 
     async def _execute_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
-        """Execute tool calls in parallel."""
-        self._logger.debug("Executing %d tool calls in parallel...", len(tool_calls))
+        """Execute tool calls directly without requiring upfront approval."""
+        self._logger.debug("Executing tool calls...")
 
-        # Create tool call messages for all calls upfront
-        print(f"tool_calls: {tool_calls}")
-        tool_call_messages = []
+        # Execute all tool calls
+        tool_results = []
         for tool_call in tool_calls:
-            self._logger.debug("Preparing tool call: %s", tool_call.name)
+            self._logger.debug("Executing tool call: %s", tool_call.name)
 
             tool_call_dict = tool_call.to_dict()
             content = f"""```json
@@ -340,30 +339,30 @@ class AIConversation:
                 completed=True
             )
             self._conversation.add_message(tool_call_message)
-            tool_call_messages.append(tool_call_message)
+
+            # Store the message for later completion
+            self._pending_tool_call_message = tool_call_message
 
             await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, tool_call_message)
 
-        # Execute all tool calls in parallel
-        tool_results = await self._tool_manager.execute_tools(
-            tool_calls,
-            request_authorization=self._request_tool_authorization
-        )
+            tool_result = await self._tool_manager.execute_tool(
+                tool_call,
+                request_authorization=self._request_tool_authorization
+            )
+            tool_results.append(tool_result)
 
-        # Process results and create result messages
-        for i, (tool_call, tool_result) in enumerate(zip(tool_calls, tool_results)):
-            # Complete the tool call message if it wasn't handled by authorization
-            tool_call_message = tool_call_messages[i]
-            if tool_call_message:
+            # If our tool didn't require authorization we need to close out the tool call message
+            if self._pending_tool_call_message:
                 approved_message = self._conversation.update_message(
-                    tool_call_message.id,
-                    content=tool_call_message.content,
+                    self._pending_tool_call_message.id,
+                    content=self._pending_tool_call_message.content,
                     completed=True
                 )
                 if approved_message:
                     await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, approved_message)
 
-            # Create tool result message
+                self._pending_tool_call_message = None
+
             tool_result_dict = tool_result.to_dict()
             content = f"""```json
 {json.dumps(tool_result_dict, indent=4)}
@@ -377,7 +376,7 @@ class AIConversation:
             self._conversation.add_message(tool_result_message)
             await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
 
-        # Create a specific user message with all the tool results
+        # Create a specific user message with the tool results
         tool_response_message = AIMessage.create(
             AIMessageSource.USER,
             content="",
@@ -385,8 +384,6 @@ class AIConversation:
         )
         self._conversation.add_message(tool_response_message)
         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
-
-        self._logger.debug("Completed execution of %d tool calls", len(tool_calls))
 
         # Automatically continue the conversation with tool results
         await self._start_ai()
@@ -634,8 +631,9 @@ class AIConversation:
         self._current_reasoning_message = None
         self._current_ai_message = None
 
-        # Check for tool calls - execute them in parallel
+        # Check for tool calls - execute them directly, authorization happens during execution if needed
         if tool_calls:
+            # Execute tools directly - no upfront approval required
             await self._execute_tool_calls(tool_calls)
             return
 

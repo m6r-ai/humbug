@@ -1,6 +1,5 @@
 """Singleton manager for AI tools."""
 
-import asyncio
 import logging
 from typing import Dict, List
 
@@ -191,13 +190,13 @@ class AIToolManager:
             if self.is_tool_enabled(tool_name)
         ]
 
-    async def _execute_single_tool(
+    async def execute_tool(
         self,
         tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
-        Execute a single tool call.
+        Execute a tool call.
 
         Args:
             tool_call: The tool call to execute
@@ -283,63 +282,6 @@ class AIToolManager:
                 content="",
                 error=error_msg
             )
-
-    async def execute_tools(
-        self,
-        tool_calls: List[AIToolCall],
-        request_authorization: AIToolAuthorizationCallback
-    ) -> List[AIToolResult]:
-        """
-        Execute multiple tool calls in parallel.
-
-        Args:
-            tool_calls: List of tool calls to execute
-            request_authorization: Callback for requesting authorization
-
-        Returns:
-            List of AIToolResult objects in the same order as input tool_calls
-
-        Raises:
-            No exceptions are raised - all failures are captured in AIToolResult.error
-        """
-        if not tool_calls:
-            return []
-
-        self._logger.debug("Executing %d tool calls", len(tool_calls))
-
-        # Create tasks for all tool calls
-        tasks = [
-            self._execute_single_tool(tool_call, request_authorization)
-            for tool_call in tool_calls
-        ]
-
-        # Execute all tasks in parallel, capturing any exceptions
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-        # Convert any exceptions to error results
-        final_results = []
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                # Convert exception to error result
-                error_msg = f"Tool execution failed: {str(result)}"
-                self._logger.error(
-                    "Tool '%s' failed with exception: %s",
-                    tool_calls[i].name,
-                    str(result),
-                    exc_info=result
-                )
-                final_results.append(AIToolResult(
-                    id=tool_calls[i].id,
-                    name=tool_calls[i].name,
-                    content="",
-                    error=error_msg
-                ))
-
-            else:
-                final_results.append(result)
-
-        self._logger.debug("Completed parallel execution of %d tool calls", len(tool_calls))
-        return final_results
 
     def get_tool_names(self) -> List[str]:
         """Get names of all registered tools."""
