@@ -3,6 +3,7 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Callable, Awaitable
 
+from ai_tool.ai_tool_call import AIToolCall
 from ai_tool.ai_tool_definition import AIToolDefinition
 from ai_tool.ai_tool_operation_definition import AIToolOperationDefinition
 from ai_tool.ai_tool_exceptions import AIToolExecutionError
@@ -103,16 +104,16 @@ class AITool(ABC):
             )
 
     @abstractmethod
-    async def execute_with_continuation(
+    async def execute(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
         Execute the tool with given arguments, potentially returning a continuation.
 
         Args:
-            arguments: Dictionary of tool arguments
+            tool_call: Tool call containing arguments and metadata
             request_authorization: Callback for requesting authorization
 
         Returns:

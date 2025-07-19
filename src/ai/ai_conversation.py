@@ -391,6 +391,7 @@ class AIConversation:
             try:
                 await asyncio.gather(*continuations)
                 self._logger.debug("All tool continuations completed successfully")
+
             except Exception as e:
                 self._logger.warning("Error waiting for tool continuations: %s", str(e))
 

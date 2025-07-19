@@ -3,7 +3,7 @@ from typing import Dict, Any
 
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError, 
-    AIToolAuthorizationCallback, AIToolResult
+    AIToolAuthorizationCallback, AIToolResult, AIToolCall
 )
 
 
@@ -32,15 +32,13 @@ class ClockAITool(AITool):
             ]
         )
 
-    async def execute_with_continuation(
+    async def execute(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Execute the get current time tool."""
-        # Get the tool call ID
-        tool_call_id = arguments.get('_tool_call_id', 'unknown')
-
+        arguments = tool_call.arguments
         try:
             format_type = arguments.get("format", "iso")
 
@@ -48,15 +46,18 @@ class ClockAITool(AITool):
 
             if format_type == "iso":
                 content = now.isoformat()[:26] + "Z"
+
             elif format_type == "human":
                 content = now.strftime("%Y-%m-%d %H:%M:%S UTC")
+
             elif format_type == "timestamp":
                 content = str(int(now.timestamp()))
+
             else:
                 content = now.isoformat()[:26] + "Z"
 
             return AIToolResult(
-                id=tool_call_id,
+                id=tool_call.id,
                 name="get_current_time",
                 content=content
             )

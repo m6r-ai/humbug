@@ -8,7 +8,7 @@ from typing import Dict, Any, List, Callable, Tuple
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
-    AIToolResult
+    AIToolResult, AIToolCall
 )
 
 
@@ -250,16 +250,16 @@ class FileSystemAITool(AITool):
                 {"operation": operation, "path": path_str}
             ) from e
 
-    async def execute_with_continuation(
+    async def execute(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
         Execute the filesystem operation with proper validation and authorization.
 
         Args:
-            arguments: Dictionary containing operation parameters
+            tool_call: Tool call containing operation name and arguments
             request_authorization: Function to call for user authorization
 
         Returns:
@@ -269,10 +269,8 @@ class FileSystemAITool(AITool):
             AIToolExecutionError: If operation fails
             AIToolAuthorizationDenied: If user denies authorization
         """
-        # Get the tool call ID
-        tool_call_id = arguments.get('_tool_call_id', 'unknown')
-
         # Extract operation name
+        arguments = tool_call.arguments
         operation = arguments.get("operation")
         if not operation:
             raise AIToolExecutionError(
@@ -307,7 +305,7 @@ class FileSystemAITool(AITool):
             self._logger.info("Filesystem operation completed successfully: %s", operation)
 
             return AIToolResult(
-                id=tool_call_id,
+                id=tool_call.id,
                 name="filesystem",
                 content=result
             )

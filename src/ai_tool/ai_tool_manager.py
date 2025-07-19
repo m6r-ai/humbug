@@ -239,11 +239,7 @@ class AIToolManager:
             # Validate operation arguments before execution
             tool.validate_operation_arguments(tool_call.arguments)
 
-            # Add tool call ID to arguments for tools that need it
-            arguments_with_id = tool_call.arguments.copy()
-            arguments_with_id['_tool_call_id'] = tool_call.id
-
-            result = await tool.execute_with_continuation(arguments_with_id, request_authorization)
+            result = await tool.execute(tool_call, request_authorization)
 
             self._logger.debug(
                 "Tool '%s' executed successfully with args %s",

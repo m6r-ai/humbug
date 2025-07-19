@@ -5,12 +5,10 @@ import os
 from typing import Dict, Any, List
 
 from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_message import AIMessage
-from ai.ai_message_source import AIMessageSource
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
-    AIToolResult
+    AIToolResult, AIToolCall
 )
 from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
@@ -345,16 +343,16 @@ class SystemAITool(AITool):
                 {"operation": operation, "file_path": path_str}
             ) from e
 
-    async def execute_with_continuation(
+    async def execute(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
         Execute the system operation with continuation support.
 
         Args:
-            arguments: Dictionary containing operation parameters
+            tool_call: Tool call containing operation name and arguments
             request_authorization: Function to call for user authorization
 
         Returns:
@@ -364,13 +362,11 @@ class SystemAITool(AITool):
             AIToolExecutionError: If operation fails
             AIToolAuthorizationDenied: If user denies authorization
         """
-        # Get the tool call ID
-        tool_call_id = arguments.get('_tool_call_id', 'unknown')
-
         # Validate mindspace is open
         self._validate_mindspace_access()
 
         # Extract operation name
+        arguments = tool_call.arguments
         operation = arguments.get("operation")
         if not operation:
             raise AIToolExecutionError(
@@ -401,19 +397,7 @@ class SystemAITool(AITool):
         self._logger.debug("System operation requested: %s", operation)
 
         try:
-            # Check if this is the spawn_ai_child_conversation_tab operation
-            if operation == "spawn_ai_child_conversation_tab":
-                return await self._spawn_ai_child_conversation_tab_with_continuation(arguments, request_authorization, tool_call_id)
-
-            # For all other operations, use the regular handler and wrap the result
-            content = await operation_def.handler(arguments, request_authorization)
-            self._logger.info("System operation completed successfully: %s", operation)
-
-            return AIToolResult(
-                id=tool_call_id,
-                name="system",
-                content=content
-            )
+            return await operation_def.handler(tool_call, request_authorization)
 
         except (AIToolExecutionError, AIToolAuthorizationDenied):
             # Re-raise our own errors
@@ -481,17 +465,16 @@ class SystemAITool(AITool):
             # Clean up signal connection
             conversation_tab.conversation_completed.disconnect(on_completion)
 
-    async def _spawn_ai_child_conversation_tab_with_continuation(
+    async def _spawn_ai_child_conversation_tab(
         self,
-        arguments: Dict[str, Any],
-        _request_authorization: AIToolAuthorizationCallback,
-        tool_call_id: str
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
         Submit a message to a new AI conversation and return a continuation for waiting.
 
         Args:
-            arguments: Dictionary containing operation parameters
+            tool_call: Tool call containing operation name and arguments
             _request_authorization: Authorization callback (unused for this operation)
             tool_call_id: ID of the tool call
 
@@ -502,6 +485,7 @@ class SystemAITool(AITool):
             AIToolExecutionError: If operation fails
         """
         # Extract required message parameter
+        arguments = tool_call.arguments
         message = self._get_str_value_from_key("message", arguments)
 
         # Extract optional parameters
@@ -574,7 +558,7 @@ class SystemAITool(AITool):
                 continuation_task = asyncio.create_task(self._wait_for_completion(conversation_tab, message))
 
                 return AIToolResult(
-                    id=tool_call_id,
+                    id=tool_call.id,
                     name="system",
                     content=f"Started child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'",
                     continuation=continuation_task
@@ -597,112 +581,13 @@ class SystemAITool(AITool):
                 arguments
             ) from e
 
-    async def _spawn_ai_child_conversation_tab(
-        self,
-        arguments: Dict[str, Any],
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
-        """
-        Submit a message to a new AI conversation and wait for the response.
-
-        Args:
-            arguments: Dictionary containing operation parameters
-            _request_authorization: Authorization callback (unused for this operation)
-
-        Returns:
-            String result containing the AI's response
-
-        Raises:
-            AIToolExecutionError: If operation fails
-        """
-        # Extract required message parameter
-        message = self._get_str_value_from_key("message", arguments)
-
-        # Extract optional parameters
-        model = arguments.get("model")
-        temperature = arguments.get("temperature")
-
-        # Validate model if provided
-        if model and not isinstance(model, str):
-            raise AIToolExecutionError(
-                "'model' must be a string",
-                "system",
-                arguments
-            )
-
-        # Validate temperature if provided
-        if temperature is not None:
-            if not isinstance(temperature, (int, float)):
-                raise AIToolExecutionError(
-                    "'temperature' must be a number",
-                    "system",
-                    arguments
-                )
-
-            if not 0.0 <= temperature <= 1.0:
-                raise AIToolExecutionError(
-                    "'temperature' must be between 0.0 and 1.0",
-                    "system",
-                    arguments
-                )
-
-        # Validate model exists if provided
-        reasoning = None
-        if model:
-            ai_backends = self._user_manager.get_ai_backends()
-            available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
-
-            if model not in available_models:
-                raise AIToolExecutionError(
-                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}",
-                    "system",
-                    arguments
-                )
-
-            # Get reasoning capability from model
-            model_config = AIConversationSettings.MODELS.get(model)
-            if model_config:
-                reasoning = model_config.reasoning_capabilities
-
-        try:
-            # Ensure conversations directory exists
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
-
-            # Create conversation
-            self._column_manager.protect_current_tab(True)
-            conversation_tab: ConversationTab | None = None
-            try:
-                conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
-                conversation_tab.set_sub_conversation_mode(True)
-                conversation_tab.set_input_text(message)
-                conversation_tab.submit()
-
-                # Wait for completion and return result
-                return await self._wait_for_completion(conversation_tab, message)
-
-            finally:
-                self._column_manager.protect_current_tab(False)
-
-        except MindspaceError as e:
-            raise AIToolExecutionError(
-                f"Failed to create conversation directory: {str(e)}",
-                "system",
-                arguments
-            ) from e
-
-        except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to spawn child AI conversation: {str(e)}",
-                "system",
-                arguments
-            ) from e
-
     async def _open_editor_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Edit or create a file in an editor tab."""
+        arguments = tool_call.arguments
         file_path_arg = self._get_str_value_from_key("file_path", arguments)
         file_path = self._validate_and_resolve_path(file_path_arg, "open_editor")
 
@@ -726,7 +611,11 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI opened editor for file: '{relative_path}', tab ID: {tab_id}"
             )
-            return f"Opened editor tab for file: '{relative_path}', tab ID: {tab_id}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Opened editor tab for file: '{relative_path}', tab ID: {tab_id}"
+            )
 
         except OSError as e:
             raise AIToolExecutionError(
@@ -744,9 +633,9 @@ class SystemAITool(AITool):
 
     async def _new_terminal_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Create a new terminal tab."""
         try:
             self._column_manager.protect_current_tab(True)
@@ -761,22 +650,27 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI created new terminal, tab ID: {tab_id}"
             )
-            return f"Created new terminal, tab ID: {tab_id}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Created new terminal, tab ID: {tab_id}"
+            )
 
         except Exception as e:
             raise AIToolExecutionError(
                 f"Failed to create terminal: {str(e)}",
                 "system",
-                arguments
+                tool_call.arguments
             ) from e
 
     async def _open_conversation_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Create a new conversation tab."""
         # Get file path
+        arguments = tool_call.arguments
         file_path_arg = self._get_str_value_from_key("file_path", arguments)
         conversation_path = self._validate_and_resolve_path(file_path_arg, "open_conversation")
 
@@ -804,7 +698,11 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI opened conversation for: '{conversation_path}', tab ID: {tab_id}"
             )
-            return f"Opened conversation for: '{conversation_path}', tab ID: {tab_id}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Opened conversation for: '{conversation_path}', tab ID: {tab_id}"
+            )
 
         except MindspaceError as e:
             raise AIToolExecutionError(
@@ -822,11 +720,12 @@ class SystemAITool(AITool):
 
     async def _new_conversation_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Create a new conversation tab."""
         # Extract optional parameters
+        arguments = tool_call.arguments
         model = arguments.get("model")
         temperature = arguments.get("temperature")
 
@@ -897,7 +796,11 @@ class SystemAITool(AITool):
             if temperature is not None:
                 result_parts.append(f"temperature: {temperature}")
 
-            return ", ".join(result_parts)
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=", ".join(result_parts)
+            )
 
         except MindspaceError as e:
             raise AIToolExecutionError(
@@ -915,9 +818,9 @@ class SystemAITool(AITool):
 
     async def _show_system_shell_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Show the system shell tab."""
         try:
             self._column_manager.protect_current_tab(True)
@@ -933,20 +836,24 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI opened system shell, tab ID: {tab_id}"
             )
-            return f"Opened system shell, tab ID: {tab_id}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Opened system shell, tab ID: {tab_id}"
+            )
 
         except Exception as e:
             raise AIToolExecutionError(
                 f"Failed to show system shell: {str(e)}",
                 "system",
-                arguments
+                tool_call.arguments
             ) from e
 
     async def _show_log_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Show the system shell tab."""
         try:
             self._column_manager.protect_current_tab(True)
@@ -962,22 +869,27 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI opened mindspace log, tab ID: {tab_id}"
             )
-            return f"Opened mindspace log, tab ID: {tab_id}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Opened mindspace log, tab ID: {tab_id}"
+            )
 
         except Exception as e:
             raise AIToolExecutionError(
                 f"Failed to show system shell: {str(e)}",
                 "system",
-                arguments
+                tool_call.arguments
             ) from e
 
     async def _open_wiki_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Open wiki view for a specific location or mindspace root."""
         # Get file path (optional)
+        arguments = tool_call.arguments
         file_path_arg = arguments.get("file_path", "")
 
         if file_path_arg:
@@ -1004,7 +916,11 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI opened wiki tab for: '{location}', tab ID: {tab_id}"
             )
-            return f"Opened wiki tab for: '{location}', tab ID: {tab_id}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Opened wiki tab for: '{location}', tab ID: {tab_id}"
+            )
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -1015,10 +931,11 @@ class SystemAITool(AITool):
 
     async def _tab_info(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Get information about a specific tab by ID or the current tab."""
+        arguments = tool_call.arguments
         tab_id = arguments.get("tab_id")
 
         try:
@@ -1055,7 +972,11 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI requested info for tab ID: {tab_id}"
             )
-            return f"Tab info for ID {tab_id}:\n{json.dumps(tab_info, indent=2)}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Tab info for ID {tab_id}:\n{json.dumps(tab_info, indent=2)}"
+            )
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -1066,10 +987,11 @@ class SystemAITool(AITool):
 
     async def _close_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Close an existing tab by ID."""
+        arguments = tool_call.arguments
         tab_id = self._get_str_value_from_key("tab_id", arguments)
 
         try:
@@ -1079,7 +1001,11 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI closed tab, tab ID: {tab_id}"
             )
-            return f"Closed tab, tab ID: {tab_id}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Closed tab, tab ID: {tab_id}"
+            )
 
         except Exception as e:
             raise AIToolExecutionError(
@@ -1090,9 +1016,9 @@ class SystemAITool(AITool):
 
     async def _list_tabs(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """List all currently open tabs across all columns."""
         try:
             tab_info = self._column_manager.list_all_tabs()
@@ -1102,7 +1028,11 @@ class SystemAITool(AITool):
                     MindspaceLogLevel.INFO,
                     "AI requested tab list: no tabs currently open"
                 )
-                return "No tabs are currently open."
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="system",
+                    content="No tabs are currently open."
+                )
 
             # Format the response as a structured JSON string for easy parsing
             result = {
@@ -1115,22 +1045,26 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI requested tab list: {len(tab_info)} tabs across {result['total_columns']} columns"
             )
-
-            return f"Current tabs:\n{json.dumps(result, indent=2)}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Current tabs:\n{json.dumps(result, indent=2)}"
+            )
 
         except Exception as e:
             raise AIToolExecutionError(
                 f"Failed to list tabs: {str(e)}",
                 "system",
-                arguments
+                tool_call.arguments
             ) from e
 
     async def _move_tab(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Move a tab to a specific column."""
+        arguments = tool_call.arguments
         tab_id = self._get_str_value_from_key("tab_id", arguments)
         target_column = self._get_int_value_from_key("target_column", arguments)
 
@@ -1145,20 +1079,27 @@ class SystemAITool(AITool):
 
             # Attempt to move the tab
             success = self._column_manager.move_tab_to_column(tab_id, target_column)
-
-            if success:
+            if not success:
+                # If not successful, it means the tab was already in the target column
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"AI moved tab {tab_id} to column {target_column}"
+                    f"AI attempted to move tab {tab_id} to column {target_column} (already in target column)"
                 )
-                return f"Successfully moved tab {tab_id} to column {target_column}"
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="system",
+                    content=f"Tab {tab_id} was already in column {target_column}"
+                )
 
-            # If not successful, it means the tab was already in the target column
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI attempted to move tab {tab_id} to column {target_column} (already in target column)"
+                f"AI moved tab {tab_id} to column {target_column}"
             )
-            return f"Tab {tab_id} was already in column {target_column}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Successfully moved tab {tab_id} to column {target_column}"
+            )
 
         except ValueError as e:
             raise AIToolExecutionError(
