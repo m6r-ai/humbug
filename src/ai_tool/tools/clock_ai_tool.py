@@ -1,8 +1,7 @@
 from datetime import datetime, timezone
-from typing import Dict, Any
 
 from ai_tool import (
-    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError, 
+    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationCallback, AIToolResult, AIToolCall
 )
 

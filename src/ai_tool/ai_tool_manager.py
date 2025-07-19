@@ -1,6 +1,5 @@
 """Singleton manager for AI tools."""
 
-import asyncio
 import logging
 from typing import Dict, List
 

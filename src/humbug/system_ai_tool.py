@@ -151,15 +151,16 @@ class SystemAITool(AITool):
                 handler=self._new_conversation_tab,
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
-                description="start a new conversation in a conversation tab, with optional model/temperature - this conversation "
-                    "cannot be used by you (the AI) to send messages, only the user can interact with it."
+                description="start a new conversation in a conversation tab, with optional model/temperature "
+                    "- this conversation cannot be used by you (the AI) to send messages, only the user can interact with it."
             ),
             "spawn_ai_child_conversation_tab": AIToolOperationDefinition(
                 name="spawn_ai_child_conversation_tab",
                 handler=self._spawn_ai_child_conversation_tab,
                 allowed_parameters={"message", "model", "temperature"},
                 required_parameters={"message"},
-                description="start a new child conversation with an AI using a new prompt message - supports optional model/temperature, "
+                description="start a new child conversation with an AI using a new prompt message "
+                    "- supports optional model/temperature, "
                     "the response will be the response from the child conversation"
             ),
             "show_system_shell_tab": AIToolOperationDefinition(

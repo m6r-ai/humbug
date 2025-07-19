@@ -14,7 +14,7 @@ from ai.ai_message_source import AIMessageSource
 from ai.ai_model import ReasoningCapability
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
-from ai_tool import AIToolManager, AIToolCall, AIToolResult
+from ai_tool import AIToolManager, AIToolCall
 
 
 class AIConversationEvent(Enum):
