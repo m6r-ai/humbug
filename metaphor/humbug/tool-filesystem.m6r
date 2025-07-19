@@ -20,7 +20,6 @@ Context: Filesystem Tool
             - User Authorization: Every operation requires explicit user approval
             - Path Validation: All paths validated and resolved to prevent directory traversal
             - File Size Limits: Maximum 10MB file size for read/write operations
-            - Operation Timeouts: All operations have timeout protection
 
             Context: Authorization Requirements
                 Different operations have different authorization levels:

@@ -160,8 +160,6 @@ Context: Calculator Tool
 
             - Maximum execution time: 5 seconds
             - Prevents infinite loops and excessive computation
-            - Raises `AIToolTimeoutError` if timeout exceeded
-            - Uses `asyncio.wait_for` with thread execution
 
     Context: Usage Examples
         Context: Basic Arithmetic
