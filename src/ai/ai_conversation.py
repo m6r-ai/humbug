@@ -14,7 +14,7 @@ from ai.ai_message_source import AIMessageSource
 from ai.ai_model import ReasoningCapability
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
-from ai_tool import AIToolManager, AIToolCall
+from ai_tool import AIToolManager, AIToolCall, AIToolResult
 
 
 class AIConversationEvent(Enum):
@@ -324,7 +324,7 @@ class AIConversation:
         self._logger.debug("Executing tool calls with continuation support...")
 
         # Execute all tool calls and collect results and continuations
-        tool_results = []
+        tool_results: List[AIToolResult] = []
         continuations = []
 
         for tool_call in tool_calls:
@@ -385,15 +385,19 @@ class AIConversation:
             self._conversation.add_message(tool_result_message)
             await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
 
-        # Wait for all continuations to complete
+        # If we have continuations, wait for them to complete.  Then we update the tool results.
         if continuations:
             self._logger.debug("Waiting for %d tool continuations to complete...", len(continuations))
-            try:
-                await asyncio.gather(*continuations)
-                self._logger.debug("All tool continuations completed successfully")
+            continuation_results: List[AIToolResult] = await asyncio.gather(*continuations)
+            self._logger.debug("Tool continuations completed: %s", continuation_results)
 
-            except Exception as e:
-                self._logger.warning("Error waiting for tool continuations: %s", str(e))
+            # We need to iterate the continuation results and update the tool results
+            for continuation in continuation_results:
+                for tool_result in tool_results:
+                    if tool_result.id == continuation.id:
+                        tool_result.continuation = None
+                        tool_result.content = continuation.content
+                        break
 
         # Create a specific user message with the tool results
         tool_response_message = AIMessage.create(

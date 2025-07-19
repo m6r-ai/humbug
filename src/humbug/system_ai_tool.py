@@ -412,13 +412,13 @@ class SystemAITool(AITool):
                 arguments
             ) from e
 
-    async def _wait_for_completion(self, conversation_tab: ConversationTab, message: str) -> str:
+    async def _wait_for_completion(self, conversation_tab: ConversationTab, tool_call: AIToolCall) -> AIToolResult:
         """
         Wait for a conversation tab to complete and return the formatted result.
 
         Args:
             conversation_tab: The conversation tab to wait for
-            message: The original message that was submitted
+            tool_call: The tool call that initiated the conversation
 
         Returns:
             Formatted result string containing the AI's response or error information
@@ -446,21 +446,30 @@ class SystemAITool(AITool):
             )
 
             # Return appropriate result
-            if result.get("success", False):
-                response_content = result.get("content", "")
-                usage_info = result.get("usage")
+            success = result.get("success", False)
+            if not success:
+                error_msg = result.get("error", "Unknown error")
+                self._logger.warning("Child conversation failed: %s", error_msg)
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="system",
+                    content=f"Child conversation, tab ID: {tab_id} failed: {error_msg}"
+                )
 
-                # Create a formatted response
-                result_parts = [f"Child conversation completed successfully:\n{response_content}"]
+            response_content = result.get("content", "")
+            usage_info = result.get("usage")
 
-                if usage_info:
-                    result_parts.append(f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} completion = {usage_info['total_tokens']} total")
+            # Create a formatted response
+            result_parts = [f"Child conversation, tab ID: {tab_id} completed successfully:\n{response_content}"]
 
-                return "\n\n".join(result_parts)
+            if usage_info:
+                result_parts.append(f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} completion = {usage_info['total_tokens']} total")
 
-            error_msg = result.get("error", "Unknown error")
-            self._logger.warning("Child conversation failed: %s", error_msg)
-            return f"Child conversation failed: {error_msg}"
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content="\n\n".join(result_parts)
+            )
 
         finally:
             # Clean up signal connection
@@ -556,12 +565,12 @@ class SystemAITool(AITool):
                 )
 
                 # Create a continuation task that waits for completion
-                continuation_task = asyncio.create_task(self._wait_for_completion(conversation_tab, message))
+                continuation_task = asyncio.create_task(self._wait_for_completion(conversation_tab, tool_call))
 
                 return AIToolResult(
                     id=tool_call.id,
                     name="system",
-                    content=f"Started child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'",
+                    content=f"Spawned child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'",
                     continuation=continuation_task
                 )
 
