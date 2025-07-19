@@ -335,20 +335,12 @@ class CalculatorAITool(AITool):
         # Validate expression is provided
         if not expression:
             self._logger.error("Calculator tool called without expression argument")
-            raise AIToolExecutionError(
-                "Expression is required",
-                "calculate",
-                arguments
-            )
+            raise AIToolExecutionError("Expression is required")
 
         # Validate expression is a string
         if not isinstance(expression, str):
             self._logger.error("Calculator tool called with non-string expression: %s", type(expression).__name__)
-            raise AIToolExecutionError(
-                "Expression must be a string",
-                "calculate",
-                arguments
-            )
+            raise AIToolExecutionError("Expression must be a string")
 
         try:
             self._logger.debug("Evaluating mathematical expression: %s", expression)
@@ -361,12 +353,7 @@ class CalculatorAITool(AITool):
                 )
             except asyncio.TimeoutError as e:
                 self._logger.warning("Mathematical expression evaluation timed out: %s", expression)
-                raise AIToolTimeoutError(
-                    "Mathematical calculation timed out",
-                    "calculate",
-                    arguments,
-                    5.0
-                ) from e
+                raise AIToolTimeoutError("Mathematical calculation timed out", 5.0) from e
 
             self._logger.debug("Expression evaluation successful: %s = %s", expression, result)
 
@@ -382,32 +369,16 @@ class CalculatorAITool(AITool):
 
         except ZeroDivisionError as e:
             self._logger.warning("Division by zero in expression '%s'", expression, exc_info=True)
-            raise AIToolExecutionError(
-                "Division by zero",
-                "calculate",
-                arguments
-            ) from e
+            raise AIToolExecutionError("Division by zero") from e
 
         except ValueError as e:
             self._logger.warning("Invalid expression '%s': %s", expression, str(e), exc_info=True)
-            raise AIToolExecutionError(
-                f"Invalid mathematical expression: {str(e)}",
-                "calculate",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Invalid mathematical expression: {str(e)}") from e
 
         except OverflowError as e:
             self._logger.warning("Calculation overflow in expression '%s': %s", expression, str(e), exc_info=True)
-            raise AIToolExecutionError(
-                f"Calculation result is too large: {str(e)}",
-                "calculate",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Calculation result is too large: {str(e)}") from e
 
         except Exception as e:
             self._logger.error("Unexpected error evaluating expression '%s': %s", expression, str(e), exc_info=True)
-            raise AIToolExecutionError(
-                f"Failed to calculate expression: {str(e)}",
-                "calculate",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to calculate expression: {str(e)}") from e

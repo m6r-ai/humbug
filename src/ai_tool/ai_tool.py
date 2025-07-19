@@ -55,26 +55,16 @@ class AITool(ABC):
         # Extract operation name
         operation = arguments.get("operation")
         if not operation:
-            raise AIToolExecutionError(
-                "No 'operation' argument provided",
-                self.get_definition().name,
-                arguments
-            )
+            raise AIToolExecutionError("No 'operation' argument provided")
 
         if not isinstance(operation, str):
-            raise AIToolExecutionError(
-                "'operation' must be a string",
-                self.get_definition().name,
-                arguments
-            )
+            raise AIToolExecutionError("'operation' must be a string")
 
         # Check if operation is valid
         if operation not in operation_definitions:
             available_operations = ", ".join(sorted(operation_definitions.keys()))
             raise AIToolExecutionError(
-                f"Unsupported operation: {operation}. Available operations: {available_operations}",
-                self.get_definition().name,
-                arguments
+                f"Unsupported operation: {operation}. Available operations: {available_operations}"
             )
 
         operation_def = operation_definitions[operation]
@@ -88,9 +78,7 @@ class AITool(ABC):
         if invalid_params:
             invalid_list = ", ".join(sorted(invalid_params))
             raise AIToolExecutionError(
-                f"Parameter(s) {invalid_list} not valid for operation '{operation}'",
-                self.get_definition().name,
-                arguments
+                f"Parameter(s) {invalid_list} not valid for operation '{operation}'"
             )
 
         # Check for missing required parameters
@@ -98,9 +86,7 @@ class AITool(ABC):
         if missing_params:
             missing_list = ", ".join(sorted(missing_params))
             raise AIToolExecutionError(
-                f"Required parameter(s) {missing_list} missing for operation '{operation}'",
-                self.get_definition().name,
-                arguments
+                f"Required parameter(s) {missing_list} missing for operation '{operation}'"
             )
 
     @abstractmethod

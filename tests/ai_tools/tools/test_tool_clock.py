@@ -153,8 +153,6 @@ class TestClockAIToolErrorHandling:
 
             error = exc_info.value
             assert "Failed to get current time: System clock error" in str(error)
-            assert error.tool_name == "get_current_time"
-            assert error.arguments == {"format": "iso"}
             assert error.__cause__.__class__ == OSError
 
     def test_execute_timestamp_conversion_error(self, clock_tool, mock_authorization, make_tool_call):

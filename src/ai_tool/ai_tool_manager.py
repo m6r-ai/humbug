@@ -250,7 +250,7 @@ class AIToolManager:
 
         except AIToolAuthorizationDenied as e:
             error_msg = f"Tool authorization denied: {str(e)}"
-            self._logger.warning(
+            self._logger.info(
                 "Tool '%s' authorization denied with args %s: %s",
                 tool_call.name,
                 tool_call.arguments,

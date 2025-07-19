@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 import pytest
 
-from ai_tool import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError, AIToolCall
+from ai_tool import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
 from ai_tool.tools.calculator_ai_tool import CalculatorAITool, SafeMathEvaluator
 
 
@@ -493,7 +493,6 @@ class TestCalculatorAIToolExecution:
 
         error = exc_info.value
         assert "Expression is required" in str(error)
-        assert error.tool_name == "calculate"
 
     def test_execute_empty_expression(self, calculator_tool, mock_authorization, make_tool_call):
         """Test execution with empty expression."""
@@ -521,7 +520,6 @@ class TestCalculatorAIToolExecution:
 
         error = exc_info.value
         assert "Division by zero" in str(error)
-        assert error.tool_name == "calculate"
         assert error.__cause__.__class__ == ZeroDivisionError
 
     def test_execute_invalid_expression_error(self, calculator_tool, mock_authorization, make_tool_call):

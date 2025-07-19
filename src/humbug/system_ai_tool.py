@@ -223,9 +223,7 @@ class SystemAITool(AITool):
         """
         if not self._mindspace_manager.has_mindspace():
             raise AIToolExecutionError(
-                "No mindspace is currently open. System operations require an active mindspace.",
-                "system",
-                {}
+                "No mindspace is currently open. System operations require an active mindspace."
             )
 
     def _get_str_value_from_key(self, key: str, arguments: Dict[str, Any]) -> str:
@@ -243,19 +241,11 @@ class SystemAITool(AITool):
             AIToolExecutionError: If key is missing or value is not a string
         """
         if key not in arguments:
-            raise AIToolExecutionError(
-                f"No '{key}' argument provided",
-                "system",
-                arguments
-            )
+            raise AIToolExecutionError(f"No '{key}' argument provided")
 
         value = arguments[key]
         if not isinstance(value, str):
-            raise AIToolExecutionError(
-                f"'{key}' must be a string",
-                "system",
-                arguments
-            )
+            raise AIToolExecutionError(f"'{key}' must be a string")
 
         return value
 
@@ -274,19 +264,11 @@ class SystemAITool(AITool):
             AIToolExecutionError: If key is missing or value is not an integer
         """
         if key not in arguments:
-            raise AIToolExecutionError(
-                f"No '{key}' argument provided",
-                "system",
-                arguments
-            )
+            raise AIToolExecutionError(f"No '{key}' argument provided")
 
         value = arguments[key]
         if not isinstance(value, int):
-            raise AIToolExecutionError(
-                f"'{key}' must be an integer",
-                "system",
-                arguments
-            )
+            raise AIToolExecutionError(f"'{key}' must be an integer")
 
         return value
 
@@ -305,11 +287,7 @@ class SystemAITool(AITool):
             AIToolExecutionError: If path is invalid or outside mindspace
         """
         if not path_str:
-            raise AIToolExecutionError(
-                "Path parameter is required",
-                "system",
-                {"operation": operation, "file_path": path_str}
-            )
+            raise AIToolExecutionError("Path parameter is required")
 
         try:
             # Check if our path starts with a separator.  If it does we'll assume it's for the root of the mindspace.
@@ -322,27 +300,15 @@ class SystemAITool(AITool):
             # Verify the resolved path is still within mindspace
             relative_path = self._mindspace_manager.get_mindspace_relative_path(abs_path)
             if relative_path is None:
-                raise AIToolExecutionError(
-                    f"Path is outside mindspace boundaries: {path_str}",
-                    "system",
-                    {"operation": operation, "file_path": path_str}
-                )
+                raise AIToolExecutionError(f"Path is outside mindspace boundaries: {path_str}")
 
             return abs_path
 
         except MindspaceNotFoundError as e:
-            raise AIToolExecutionError(
-                f"Mindspace error: {str(e)}",
-                "system",
-                {"operation": operation, "file_path": path_str}
-            ) from e
+            raise AIToolExecutionError(f"Mindspace error: {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Invalid path '{path_str}': {str(e)}",
-                "system",
-                {"operation": operation, "file_path": path_str}
-            ) from e
+            raise AIToolExecutionError(f"Invalid path '{path_str}': {str(e)}") from e
 
     async def execute(
         self,
@@ -370,27 +336,17 @@ class SystemAITool(AITool):
         arguments = tool_call.arguments
         operation = arguments.get("operation")
         if not operation:
-            raise AIToolExecutionError(
-                "No 'operation' argument provided",
-                "system",
-                arguments
-            )
+            raise AIToolExecutionError("No 'operation' argument provided")
 
         if not isinstance(operation, str):
-            raise AIToolExecutionError(
-                "'operation' must be a string",
-                "system",
-                arguments
-            )
+            raise AIToolExecutionError("'operation' must be a string")
 
         # Get operation definition
         operation_definitions = self.get_operation_definitions()
         if operation not in operation_definitions:
             available_operations = ", ".join(sorted(operation_definitions.keys()))
             raise AIToolExecutionError(
-                f"Unsupported operation: {operation}. Available operations: {available_operations}",
-                "system",
-                arguments
+                f"Unsupported operation: {operation}. Available operations: {available_operations}"
             )
 
         operation_def = operation_definitions[operation]
@@ -406,11 +362,7 @@ class SystemAITool(AITool):
 
         except Exception as e:
             self._logger.error("Unexpected error in system operation '%s': %s", operation, str(e), exc_info=True)
-            raise AIToolExecutionError(
-                f"System operation failed: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"System operation failed: {str(e)}") from e
 
     async def _wait_for_completion(self, conversation_tab: ConversationTab, tool_call: AIToolCall) -> AIToolResult:
         """
@@ -504,27 +456,15 @@ class SystemAITool(AITool):
 
         # Validate model if provided
         if model and not isinstance(model, str):
-            raise AIToolExecutionError(
-                "'model' must be a string",
-                "system",
-                arguments
-            )
+            raise AIToolExecutionError("'model' must be a string")
 
         # Validate temperature if provided
         if temperature is not None:
             if not isinstance(temperature, (int, float)):
-                raise AIToolExecutionError(
-                    "'temperature' must be a number",
-                    "system",
-                    arguments
-                )
+                raise AIToolExecutionError("'temperature' must be a number")
 
             if not 0.0 <= temperature <= 1.0:
-                raise AIToolExecutionError(
-                    "'temperature' must be between 0.0 and 1.0",
-                    "system",
-                    arguments
-                )
+                raise AIToolExecutionError("'temperature' must be between 0.0 and 1.0")
 
         # Validate model exists if provided
         reasoning = None
@@ -534,9 +474,7 @@ class SystemAITool(AITool):
 
             if model not in available_models:
                 raise AIToolExecutionError(
-                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}",
-                    "system",
-                    arguments
+                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}"
                 )
 
             # Get reasoning capability from model
@@ -578,18 +516,10 @@ class SystemAITool(AITool):
                 self._column_manager.protect_current_tab(False)
 
         except MindspaceError as e:
-            raise AIToolExecutionError(
-                f"Failed to create conversation directory: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to create conversation directory: {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to spawn child AI conversation: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to spawn child AI conversation: {str(e)}") from e
 
     async def _open_editor_tab(
         self,
@@ -628,18 +558,10 @@ class SystemAITool(AITool):
             )
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to access file '{file_path_arg}': {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to access file '{file_path_arg}': {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to open file '{file_path_arg}' for editing: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to open file '{file_path_arg}' for editing: {str(e)}") from e
 
     async def _new_terminal_tab(
         self,
@@ -667,11 +589,7 @@ class SystemAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to create terminal: {str(e)}",
-                "system",
-                tool_call.arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to create terminal: {str(e)}") from e
 
     async def _open_conversation_tab(
         self,
@@ -698,9 +616,7 @@ class SystemAITool(AITool):
 
             if conversation_tab is None:
                 raise AIToolExecutionError(
-                    f"Conversation file '{file_path_arg}' does not exist or is not a valid conversation.",
-                    "system",
-                    arguments
+                    f"Conversation file '{file_path_arg}' does not exist or is not a valid conversation."
                 )
 
             tab_id = conversation_tab.tab_id()
@@ -715,18 +631,10 @@ class SystemAITool(AITool):
             )
 
         except MindspaceError as e:
-            raise AIToolExecutionError(
-                f"Failed to create conversation directory: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to create conversation directory: {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to create conversation: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
 
     async def _new_conversation_tab(
         self,
@@ -741,27 +649,15 @@ class SystemAITool(AITool):
 
         # Validate model if provided
         if model and not isinstance(model, str):
-            raise AIToolExecutionError(
-                "'model' must be a string",
-                "system",
-                arguments
-            )
+            raise AIToolExecutionError("'model' must be a string")
 
         # Validate temperature if provided
         if temperature is not None:
             if not isinstance(temperature, (int, float)):
-                raise AIToolExecutionError(
-                    "'temperature' must be a number",
-                    "system",
-                arguments
-            )
+                raise AIToolExecutionError("'temperature' must be a number")
 
             if not 0.0 <= temperature <= 1.0:
-                raise AIToolExecutionError(
-                    "'temperature' must be between 0.0 and 1.0",
-                    "system",
-                    arguments
-                )
+                raise AIToolExecutionError("'temperature' must be between 0.0 and 1.0")
 
         # Validate model exists if provided
         reasoning = None
@@ -771,9 +667,7 @@ class SystemAITool(AITool):
 
             if model not in available_models:
                 raise AIToolExecutionError(
-                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}",
-                    "system",
-                    arguments
+                    f"Model '{model}' is not available. Available models: {', '.join(available_models)}"
                 )
 
             # Get reasoning capability from model
@@ -813,18 +707,10 @@ class SystemAITool(AITool):
             )
 
         except MindspaceError as e:
-            raise AIToolExecutionError(
-                f"Failed to create conversation directory: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to create conversation directory: {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to create conversation: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
 
     async def _show_system_shell_tab(
         self,
@@ -853,11 +739,7 @@ class SystemAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to show system shell: {str(e)}",
-                "system",
-                tool_call.arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to show system shell: {str(e)}") from e
 
     async def _show_log_tab(
         self,
@@ -886,11 +768,7 @@ class SystemAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to show system shell: {str(e)}",
-                "system",
-                tool_call.arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to show system shell: {str(e)}") from e
 
     async def _open_wiki_tab(
         self,
@@ -933,11 +811,7 @@ class SystemAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to open wiki: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to open wiki: {str(e)}") from e
 
     async def _tab_info(
         self,
@@ -953,30 +827,18 @@ class SystemAITool(AITool):
             if not tab_id:
                 current_tab = self._column_manager.get_current_tab()
                 if not current_tab:
-                    raise AIToolExecutionError(
-                        "No current tab is open",
-                        "system",
-                        arguments
-                    )
+                    raise AIToolExecutionError("No current tab is open")
 
                 tab_id = current_tab.tab_id()
 
             # Validate tab_id is a string if provided
             if not isinstance(tab_id, str):
-                raise AIToolExecutionError(
-                    "'tab_id' must be a string",
-                    "system",
-                    arguments
-                )
+                raise AIToolExecutionError("'tab_id' must be a string")
 
             # Get tab info
             tab_info = self._column_manager.get_tab_info_by_id(tab_id)
             if not tab_info:
-                raise AIToolExecutionError(
-                    f"No tab found with ID: {tab_id}",
-                    "system",
-                    arguments
-                )
+                raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -989,11 +851,7 @@ class SystemAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to get tab info for ID {tab_id}: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to get tab info for ID {tab_id}: {str(e)}") from e
 
     async def _close_tab(
         self,
@@ -1018,11 +876,7 @@ class SystemAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to close tab {tab_id}: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to close tab {tab_id}: {str(e)}") from e
 
     async def _list_tabs(
         self,
@@ -1062,11 +916,7 @@ class SystemAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to list tabs: {str(e)}",
-                "system",
-                tool_call.arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to list tabs: {str(e)}") from e
 
     async def _move_tab(
         self,
@@ -1081,11 +931,7 @@ class SystemAITool(AITool):
         try:
             # Validate target column is non-negative
             if target_column < 0:
-                raise AIToolExecutionError(
-                    f"Target column must be non-negative, got {target_column}",
-                    "system",
-                    arguments
-                )
+                raise AIToolExecutionError(f"Target column must be non-negative, got {target_column}")
 
             # Attempt to move the tab
             success = self._column_manager.move_tab_to_column(tab_id, target_column)
@@ -1112,15 +958,7 @@ class SystemAITool(AITool):
             )
 
         except ValueError as e:
-            raise AIToolExecutionError(
-                str(e),
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(str(e)) from e
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to move tab {tab_id} to column {target_column}: {str(e)}",
-                "system",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to move tab {tab_id} to column {target_column}: {str(e)}") from e

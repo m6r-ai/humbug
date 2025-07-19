@@ -62,8 +62,4 @@ class ClockAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to get current time: {str(e)}",
-                "get_current_time",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Failed to get current time: {str(e)}") from e

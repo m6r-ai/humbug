@@ -196,19 +196,11 @@ class FileSystemAITool(AITool):
             AIToolExecutionError: If key is missing or value is not a string
         """
         if key not in arguments:
-            raise AIToolExecutionError(
-                f"No '{key}' argument provided",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"No '{key}' argument provided")
 
         value = arguments[key]
         if not isinstance(value, str):
-            raise AIToolExecutionError(
-                f"'{key}' must be a string",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"'{key}' must be a string")
 
         return value
 
@@ -227,28 +219,16 @@ class FileSystemAITool(AITool):
             AIToolExecutionError: If path is invalid or outside boundaries
         """
         if not path_str:
-            raise AIToolExecutionError(
-                "Path parameter is required",
-                "filesystem",
-                {"operation": operation, "path": path_str}
-            )
+            raise AIToolExecutionError("Path parameter is required")
 
         try:
             return self._resolve_path(path_str)
 
         except ValueError as e:
-            raise AIToolExecutionError(
-                f"Invalid path '{path_str}': {str(e)}",
-                "filesystem",
-                {"operation": operation, "path": path_str}
-            ) from e
+            raise AIToolExecutionError(f"Invalid path '{path_str}': {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(
-                f"Failed to resolve path '{path_str}': {str(e)}",
-                "filesystem",
-                {"operation": operation, "path": path_str}
-            ) from e
+            raise AIToolExecutionError(f"Failed to resolve path '{path_str}': {str(e)}") from e
 
     async def execute(
         self,
@@ -273,27 +253,17 @@ class FileSystemAITool(AITool):
         arguments = tool_call.arguments
         operation = arguments.get("operation")
         if not operation:
-            raise AIToolExecutionError(
-                "No 'operation' argument provided",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError("No 'operation' argument provided")
 
         if not isinstance(operation, str):
-            raise AIToolExecutionError(
-                "'operation' must be a string",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError("'operation' must be a string")
 
         # Get operation definition
         operation_definitions = self.get_operation_definitions()
         if operation not in operation_definitions:
             available_operations = ", ".join(sorted(operation_definitions.keys()))
             raise AIToolExecutionError(
-                f"Unsupported operation: {operation}. Available operations: {available_operations}",
-                "filesystem",
-                arguments
+                f"Unsupported operation: {operation}. Available operations: {available_operations}"
             )
 
         operation_def = operation_definitions[operation]
@@ -316,11 +286,7 @@ class FileSystemAITool(AITool):
 
         except Exception as e:
             self._logger.error("Unexpected error in filesystem operation '%s': %s", operation, str(e), exc_info=True)
-            raise AIToolExecutionError(
-                f"Filesystem operation failed: {str(e)}",
-                "filesystem",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Filesystem operation failed: {str(e)}") from e
 
     async def _read_file(
         self,
@@ -333,29 +299,17 @@ class FileSystemAITool(AITool):
 
         # Validate file exists and is readable
         if not path.exists():
-            raise AIToolExecutionError(
-                f"File does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"File does not exist: {arguments['path']}")
 
         if not path.is_file():
-            raise AIToolExecutionError(
-                f"Path is not a file: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
         # Check file size
         file_size = path.stat().st_size
         if file_size > self._max_file_size_bytes:
             size_mb = file_size / (1024 * 1024)
             max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(
-                f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
 
         encoding = arguments.get("encoding", "utf-8")
 
@@ -368,24 +322,14 @@ class FileSystemAITool(AITool):
 
         except UnicodeDecodeError as e:
             raise AIToolExecutionError(
-                f"Failed to decode file with encoding '{encoding}': {str(e)}. Try a different encoding.",
-                "filesystem",
-                {"path": str(path), "encoding": encoding}
+                f"Failed to decode file with encoding '{encoding}': {str(e)}. Try a different encoding."
             ) from e
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied reading file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied reading file: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to read file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
 
         return f"File: {display_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
 
@@ -407,11 +351,7 @@ class FileSystemAITool(AITool):
         if content_size > self._max_file_size_bytes:
             size_mb = content_size / (1024 * 1024)
             max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(
-                f"'content' too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"'content' too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
 
         # Build authorization context
         if path.exists():
@@ -436,11 +376,7 @@ class FileSystemAITool(AITool):
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, destructive)
         if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to write file: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolAuthorizationDenied(f"User denied permission to write file: {arguments['path']}")
 
         # Write file content
         try:
@@ -463,18 +399,10 @@ class FileSystemAITool(AITool):
             tmp_path.replace(path)
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied writing file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied writing file: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to write file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
 
         return f"File written successfully: {display_path} ({content_size:,} bytes)"
 
@@ -489,18 +417,10 @@ class FileSystemAITool(AITool):
 
         # File must exist for append
         if not path.exists():
-            raise AIToolExecutionError(
-                f"File does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"File does not exist: {arguments['path']}")
 
         if not path.is_file():
-            raise AIToolExecutionError(
-                f"Path is not a file: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
         content = self._get_str_value_from_key("content", arguments)
         encoding = arguments.get("encoding", "utf-8")
@@ -514,9 +434,7 @@ class FileSystemAITool(AITool):
             total_mb = total_size / (1024 * 1024)
             max_mb = self._max_file_size_bytes / (1024 * 1024)
             raise AIToolExecutionError(
-                f"File would be too large after append: {total_mb:.1f}MB (max: {max_mb:.1f}MB)",
-                "filesystem",
-                arguments
+                f"File would be too large after append: {total_mb:.1f}MB (max: {max_mb:.1f}MB)"
             )
 
         # Build authorization context
@@ -525,11 +443,7 @@ class FileSystemAITool(AITool):
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to append to file: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolAuthorizationDenied(f"User denied permission to append to file: {arguments['path']}")
 
         # Append to file
         try:
@@ -537,18 +451,10 @@ class FileSystemAITool(AITool):
                 f.write(content)
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied appending to file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied appending to file: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to append to file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to append to file: {str(e)}") from e
 
         return f"Content appended successfully: {display_path} (+{content_size:,} bytes)"
 
@@ -562,18 +468,10 @@ class FileSystemAITool(AITool):
         path, display_path = self._validate_and_resolve_path(path_arg, "list_directory")
 
         if not path.exists():
-            raise AIToolExecutionError(
-                f"Directory does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Directory does not exist: {arguments['path']}")
 
         if not path.is_dir():
-            raise AIToolExecutionError(
-                f"Path is not a directory: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Path is not a directory: {arguments['path']}")
 
         # List directory contents
         try:
@@ -611,18 +509,10 @@ class FileSystemAITool(AITool):
                     })
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied listing directory: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied listing directory: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to list directory: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to list directory: {str(e)}") from e
 
         result_lines = [f"Directory: {display_path}", f"Items: {len(items)}", ""]
 
@@ -648,17 +538,9 @@ class FileSystemAITool(AITool):
 
         if path.exists():
             if path.is_dir():
-                raise AIToolExecutionError(
-                    f"Directory already exists: {arguments['path']}",
-                    "filesystem",
-                    arguments
-                )
+                raise AIToolExecutionError(f"Directory already exists: {arguments['path']}")
 
-            raise AIToolExecutionError(
-                f"Path exists but is not a directory: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Path exists but is not a directory: {arguments['path']}")
 
         # Build authorization context
         context = f"Create a new directory '{display_path}'."
@@ -669,36 +551,20 @@ class FileSystemAITool(AITool):
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, False)
         if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to create directory: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolAuthorizationDenied(f"User denied permission to create directory: {arguments['path']}")
 
         # Create directory
         try:
             path.mkdir(parents=create_parents, exist_ok=False)
 
         except FileExistsError as e:
-            raise AIToolExecutionError(
-                f"Directory already exists: {str(path)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Directory already exists: {str(path)}") from e
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied creating directory: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied creating directory: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to create directory: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to create directory: {str(e)}") from e
 
         return f"Directory created successfully: {display_path}"
 
@@ -712,35 +578,21 @@ class FileSystemAITool(AITool):
         path, display_path = self._validate_and_resolve_path(path_arg, "remove_directory")
 
         if not path.exists():
-            raise AIToolExecutionError(
-                f"Directory does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Directory does not exist: {arguments['path']}")
 
         if not path.is_dir():
-            raise AIToolExecutionError(
-                f"Path is not a directory: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Path is not a directory: {arguments['path']}")
 
         # Check if directory is empty
         try:
             items = list(path.iterdir())
             if items:
                 raise AIToolExecutionError(
-                    f"Directory is not empty (contains {len(items)} items): {arguments['path']}",
-                    "filesystem",
-                    arguments
+                    f"Directory is not empty (contains {len(items)} items): {arguments['path']}"
                 )
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied checking directory contents: {str(e)}",
-                "filesystem",
-                arguments
-            ) from e
+            raise AIToolExecutionError(f"Permission denied checking directory contents: {str(e)}") from e
 
         # Build authorization context
         context = f"Remove the empty directory '{display_path}'. This directory will be permanently deleted."
@@ -748,22 +600,14 @@ class FileSystemAITool(AITool):
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to remove directory: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolAuthorizationDenied(f"User denied permission to remove directory: {arguments['path']}")
 
         # Remove directory
         try:
             path.rmdir()
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to remove directory: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to remove directory: {str(e)}") from e
 
         return f"Directory removed successfully: {display_path}"
 
@@ -777,18 +621,10 @@ class FileSystemAITool(AITool):
         path, display_path = self._validate_and_resolve_path(path_arg, "delete_file")
 
         if not path.exists():
-            raise AIToolExecutionError(
-                f"File does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"File does not exist: {arguments['path']}")
 
         if not path.is_file():
-            raise AIToolExecutionError(
-                f"Path is not a file: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
         # Build authorization context
         context = f"Delete the file '{display_path}'. This file will be permanently removed and cannot be recovered."
@@ -796,29 +632,17 @@ class FileSystemAITool(AITool):
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to delete file: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolAuthorizationDenied(f"User denied permission to delete file: {arguments['path']}")
 
         # Delete file
         try:
             path.unlink()
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied deleting file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied deleting file: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to delete file: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to delete file: {str(e)}") from e
 
         return f"File deleted successfully: {display_path}"
 
@@ -832,18 +656,10 @@ class FileSystemAITool(AITool):
         source_path, source_display_path = self._validate_and_resolve_path(path_arg, "copy_file")
 
         if not source_path.exists():
-            raise AIToolExecutionError(
-                f"Source file does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Source file does not exist: {arguments['path']}")
 
         if not source_path.is_file():
-            raise AIToolExecutionError(
-                f"Source path is not a file: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Source path is not a file: {arguments['path']}")
 
         destination_arg = self._get_str_value_from_key("destination", arguments)
         destination_path, dest_display_path = self._validate_and_resolve_path(destination_arg, "copy_file")
@@ -853,11 +669,7 @@ class FileSystemAITool(AITool):
         if source_size > self._max_file_size_bytes:
             size_mb = source_size / (1024 * 1024)
             max_mb = self._max_file_size_bytes / (1024 * 1024)
-            raise AIToolExecutionError(
-                f"Source file too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Source file too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
 
         # Build authorization context
         if destination_path.exists():
@@ -872,11 +684,7 @@ class FileSystemAITool(AITool):
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, destructive)
         if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to copy file: {arguments['path']} -> {destination_arg}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolAuthorizationDenied(f"User denied permission to copy file: {arguments['path']} -> {destination_arg}")
 
         # Copy file
         try:
@@ -887,18 +695,10 @@ class FileSystemAITool(AITool):
             shutil.copy2(source_path, destination_path)
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied copying file: {str(e)}",
-                "filesystem",
-                {"source": str(source_path), "destination": str(destination_path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied copying file: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to copy file: {str(e)}",
-                "filesystem",
-                {"source": str(source_path), "destination": str(destination_path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to copy file: {str(e)}") from e
 
         return f"File copied successfully: {source_display_path} -> {dest_display_path}"
 
@@ -912,11 +712,7 @@ class FileSystemAITool(AITool):
         source_path, source_display_path = self._validate_and_resolve_path(path_arg, "move")
 
         if not source_path.exists():
-            raise AIToolExecutionError(
-                f"Source path does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Source path does not exist: {arguments['path']}")
 
         destination_arg = self._get_str_value_from_key("destination", arguments)
         destination_path, dest_display_path = self._validate_and_resolve_path(destination_arg, "move")
@@ -941,11 +737,7 @@ class FileSystemAITool(AITool):
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, True)
         if not authorized:
-            raise AIToolAuthorizationDenied(
-                f"User denied permission to move: {arguments['path']} -> {destination_arg}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolAuthorizationDenied(f"User denied permission to move: {arguments['path']} -> {destination_arg}")
 
         # Move file or directory
         try:
@@ -956,18 +748,10 @@ class FileSystemAITool(AITool):
             source_path.rename(destination_path)
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied moving: {str(e)}",
-                "filesystem",
-                {"source": str(source_path), "destination": str(destination_path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied moving: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to move: {str(e)}",
-                "filesystem",
-                {"source": str(source_path), "destination": str(destination_path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to move: {str(e)}") from e
 
         return f"Moved successfully: {source_display_path} -> {dest_display_path}"
 
@@ -981,11 +765,7 @@ class FileSystemAITool(AITool):
         path, display_path = self._validate_and_resolve_path(path_arg, "get_info")
 
         if not path.exists():
-            raise AIToolExecutionError(
-                f"Path does not exist: {arguments['path']}",
-                "filesystem",
-                arguments
-            )
+            raise AIToolExecutionError(f"Path does not exist: {arguments['path']}")
 
         # Get file or directory information
         try:
@@ -1022,15 +802,7 @@ Modified: {modified_time}
 Permissions: {oct(stat_info.st_mode)[-3:]}"""
 
         except PermissionError as e:
-            raise AIToolExecutionError(
-                f"Permission denied getting info: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Permission denied getting info: {str(e)}") from e
 
         except OSError as e:
-            raise AIToolExecutionError(
-                f"Failed to get info: {str(e)}",
-                "filesystem",
-                {"path": str(path)}
-            ) from e
+            raise AIToolExecutionError(f"Failed to get info: {str(e)}") from e
