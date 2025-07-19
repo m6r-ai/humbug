@@ -8,7 +8,7 @@ from typing import Tuple
 import pytest
 
 from ai_tool import (
-    AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
+    AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError, AIToolCall
 )
 from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 
@@ -84,40 +84,34 @@ class TestFileSystemAIToolDefinition:
 class TestFileSystemAIToolValidation:
     """Test validation through public interface."""
 
-    def test_missing_path_parameter(self, filesystem_tool, mock_authorization):
+    def test_missing_path_parameter(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test error when path parameter is missing."""
+        tool_call = make_tool_call("filesystem", {"operation": "read_file"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file"},
-                mock_authorization
-            ))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert "No 'path' argument provided" in str(error)
 
-    def test_non_string_path_parameter(self, filesystem_tool, mock_authorization):
+    def test_non_string_path_parameter(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test error when path parameter is not a string."""
+        tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": 123})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": 123},
-                mock_authorization
-            ))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert "'path' must be a string" in str(error)
 
-    def test_empty_path_parameter(self, filesystem_tool, mock_authorization):
+    def test_empty_path_parameter(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test error when path parameter is empty."""
+        tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": ""})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": ""},
-                mock_authorization
-            ))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert "Path parameter is required" in str(error)
 
-    def test_path_outside_boundaries(self, custom_path_resolver, mock_authorization):
+    def test_path_outside_boundaries(self, custom_path_resolver, mock_authorization, make_tool_call):
         """Test error when path is outside allowed boundaries."""
         def validation_func(path: str):
             if '..' in path:
@@ -126,43 +120,41 @@ class TestFileSystemAIToolValidation:
         resolver = custom_path_resolver(validation_func=validation_func)
         filesystem_tool = FileSystemAITool(resolve_path=resolver)
 
+        tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "../../../outside/file.txt"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": "../../../outside/file.txt"},
-                mock_authorization
-            ))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert "Path is outside allowed boundaries" in str(error)
 
-    def test_path_resolver_error(self, mock_authorization):
+    def test_path_resolver_error(self, mock_authorization, make_tool_call):
         """Test error when path resolver raises an error."""
         def failing_resolver(path: str) -> Tuple[Path, str]:
             raise ValueError("Custom resolver error")
 
         filesystem_tool = FileSystemAITool(resolve_path=failing_resolver)
 
+        tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": "file.txt"},
-                mock_authorization
-            ))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert "Custom resolver error" in str(error)
 
-    def test_execute_missing_operation(self, filesystem_tool, mock_authorization):
+    def test_execute_missing_operation(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test execute without operation parameter."""
+        tool_call = make_tool_call("filesystem", {"path": "file.txt"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute({"path": "file.txt"}, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert "No 'operation' argument provided" in str(error)
 
-    def test_execute_invalid_operation(self, filesystem_tool, mock_authorization):
+    def test_execute_invalid_operation(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test execute with invalid operation."""
+        tool_call = make_tool_call("filesystem", {"operation": "invalid_op", "path": "file.txt"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute({"operation": "invalid_op", "path": "file.txt"}, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert "Unsupported operation: invalid_op" in str(error)

@@ -15,7 +15,7 @@ from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 class TestFileSystemAIToolIntegration:
     """Integration tests for the filesystem tool."""
 
-    def test_execute_read_file_success(self, filesystem_tool, mock_authorization):
+    def test_execute_read_file_success(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test execute with read_file operation."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -29,15 +29,13 @@ class TestFileSystemAIToolIntegration:
             mock_stat_result.st_size = 12
             mock_stat.return_value = mock_stat_result
 
-            result = asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": "file.txt"},
-                mock_authorization
-            ))
+            tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
+            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
-            assert "File: file.txt" in result
-            assert "test content" in result
+            assert "File: file.txt" in result.content
+            assert "test content" in result.content
 
-    def test_execute_write_file_success(self, filesystem_tool, mock_authorization):
+    def test_execute_write_file_success(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test execute with write_file operation."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
@@ -52,22 +50,18 @@ class TestFileSystemAIToolIntegration:
             mock_temp_instance.__exit__.return_value = None
             mock_temp_file.return_value = mock_temp_instance
 
-            result = asyncio.run(filesystem_tool.execute(
-                {"operation": "write_file", "path": "file.txt", "content": "test content"},
-                mock_authorization
-            ))
+            tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
+            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
-            assert "File written successfully: file.txt (12 bytes)" in result
+            assert "File written successfully: file.txt (12 bytes)" in result.content
 
-    def test_execute_unexpected_error(self, filesystem_tool, mock_authorization):
+    def test_execute_unexpected_error(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test execute with unexpected error."""
         # Patch one of the operation handlers to raise an unexpected error
         with patch.object(filesystem_tool, '_read_file', side_effect=RuntimeError("Unexpected error")):
+            tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(
-                    {"operation": "read_file", "path": "file.txt"},
-                    mock_authorization
-                ))
+                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
             error = exc_info.value
             assert "Filesystem operation failed: Unexpected error" in str(error)
@@ -77,7 +71,7 @@ class TestFileSystemAIToolIntegration:
 class TestFileSystemAIToolAuthorizationContext:
     """Test authorization context building for various operations."""
 
-    def test_authorization_context_includes_operation_details(self, filesystem_tool, mock_authorization):
+    def test_authorization_context_includes_operation_details(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test that authorization context includes relevant operation details."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
@@ -92,10 +86,8 @@ class TestFileSystemAIToolAuthorizationContext:
             mock_temp_instance.__exit__.return_value = None
             mock_temp_file.return_value = mock_temp_instance
 
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "write_file", "path": "file.txt", "content": "test content"},
-                mock_authorization
-            ))
+            tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
             # Verify authorization was called with context information
             mock_authorization.assert_called_once()
@@ -104,7 +96,7 @@ class TestFileSystemAIToolAuthorizationContext:
 
             assert "Create a new file 'file.txt' with the provided content." in context
 
-    def test_authorization_context_copy_includes_destination(self, custom_path_resolver, mock_authorization):
+    def test_authorization_context_copy_includes_destination(self, custom_path_resolver, mock_authorization, make_tool_call):
         """Test authorization context for copy operation includes destination."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -134,10 +126,8 @@ class TestFileSystemAIToolAuthorizationContext:
             mock_stat_result.st_size = 100
             mock_stat.return_value = mock_stat_result
 
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "copy_file", "path": "source.txt", "destination": "dest.txt"},
-                mock_authorization
-            ))
+            tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "source.txt", "destination": "dest.txt"})
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
             # Verify authorization was called with context information
             mock_authorization.assert_called_once()
@@ -146,7 +136,7 @@ class TestFileSystemAIToolAuthorizationContext:
 
             assert "Copy 'source.txt' to 'dest.txt'. This will create a new file at the destination." in context
 
-    def test_authorization_context_existing_file_includes_size(self, filesystem_tool, mock_authorization):
+    def test_authorization_context_existing_file_includes_size(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test authorization context includes existing file size."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -155,10 +145,8 @@ class TestFileSystemAIToolAuthorizationContext:
             mock_exists.return_value = True
             mock_is_file.return_value = True
 
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "delete_file", "path": "file.txt"},
-                mock_authorization
-            ))
+            tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
             # Verify authorization was called with context information
             mock_authorization.assert_called_once()
@@ -212,13 +200,11 @@ class TestFileSystemAIToolParametrized:
         ("", "Path parameter is required"),
         (123, "'path' must be a string"),
     ])
-    def test_invalid_path_inputs(self, filesystem_tool, mock_authorization, path_input, expected_error):
+    def test_invalid_path_inputs(self, filesystem_tool, mock_authorization, make_tool_call, path_input, expected_error):
         """Test various invalid path inputs through public interface."""
+        tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": path_input})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": path_input},
-                mock_authorization
-            ))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert expected_error in str(error)
@@ -230,13 +216,11 @@ class TestFileSystemAIToolParametrized:
         (0, "'path' must be a string"),
         (False, "'path' must be a string"),
     ])
-    def test_invalid_path_inputs_falsy_values(self, filesystem_tool, mock_authorization, falsy_value, expected_error):
+    def test_invalid_path_inputs_falsy_values(self, filesystem_tool, mock_authorization, make_tool_call, falsy_value, expected_error):
         """Test falsy path inputs and their specific error messages."""
+        tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": falsy_value})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": falsy_value},
-                mock_authorization
-            ))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert expected_error in str(error)
@@ -297,7 +281,7 @@ class TestFileSystemAIToolParametrized:
 class TestFileSystemAIToolErrorHandling:
     """Test error handling patterns across operations."""
 
-    def test_operations_requiring_destination_fail_without_it(self, filesystem_tool, mock_authorization):
+    def test_operations_requiring_destination_fail_without_it(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test that operations requiring destination fail appropriately."""
         operations_needing_destination = ["copy_file", "move"]
 
@@ -314,17 +298,15 @@ class TestFileSystemAIToolErrorHandling:
             mock_stat.return_value = mock_stat_result
 
             for operation in operations_needing_destination:
+                tool_call = make_tool_call("filesystem", {"operation": operation, "path": "source.txt"})
                 with pytest.raises(AIToolExecutionError) as exc_info:
-                    asyncio.run(filesystem_tool.execute(
-                        {"operation": operation, "path": "source.txt"},
-                        mock_authorization
-                    ))
+                    asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
                 error = exc_info.value
                 # The error message varies but should indicate missing parameter
                 assert "No 'destination' argument provided" in str(error)
 
-    def test_operations_requiring_content_fail_without_it(self, filesystem_tool, mock_authorization):
+    def test_operations_requiring_content_fail_without_it(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test that operations requiring content fail appropriately."""
         operations_needing_content = ["write_file", "append_to_file"]
 
@@ -341,11 +323,9 @@ class TestFileSystemAIToolErrorHandling:
             mock_stat.return_value = mock_stat_result
 
             for operation in operations_needing_content:
+                tool_call = make_tool_call("filesystem", {"operation": operation, "path": "file.txt"})
                 with pytest.raises(AIToolExecutionError) as exc_info:
-                    asyncio.run(filesystem_tool.execute(
-                        {"operation": operation, "path": "file.txt"},
-                        mock_authorization
-                    ))
+                    asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
                 error = exc_info.value
                 # append_to_file checks for content later, so it fails on path validation first
@@ -356,7 +336,7 @@ class TestFileSystemAIToolErrorHandling:
 class TestFileSystemAIToolPathResolverIntegration:
     """Test integration with different path resolver behaviors."""
 
-    def test_path_resolver_validation_error(self, mock_authorization):
+    def test_path_resolver_validation_error(self, mock_authorization, make_tool_call):
         """Test that path resolver validation errors are properly propagated."""
         def failing_resolver(path: str) -> Tuple[Path, str]:
             if path == "forbidden":
@@ -365,16 +345,14 @@ class TestFileSystemAIToolPathResolverIntegration:
 
         filesystem_tool = FileSystemAITool(resolve_path=failing_resolver)
 
+        tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "forbidden"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": "forbidden"},
-                mock_authorization
-            ))
+            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
         error = exc_info.value
         assert "Access to this path is forbidden" in str(error)
 
-    def test_path_resolver_custom_display_paths(self, mock_authorization):
+    def test_path_resolver_custom_display_paths(self, mock_authorization, make_tool_call):
         """Test that custom display paths from resolver are used correctly."""
         def custom_resolver(path: str) -> Tuple[Path, str]:
             # Return custom display path that's different from input
@@ -396,15 +374,13 @@ class TestFileSystemAIToolPathResolverIntegration:
             mock_stat_result.st_size = 12
             mock_stat.return_value = mock_stat_result
 
-            result = asyncio.run(filesystem_tool.execute(
-                {"operation": "read_file", "path": "file.txt"},
-                mock_authorization
-            ))
+            tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
+            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
             # Verify the custom display path is used in the result
-            assert "File: custom_prefix/file.txt" in result
+            assert "File: custom_prefix/file.txt" in result.content
 
-    def test_path_resolver_absolute_vs_relative_handling(self, mock_authorization):
+    def test_path_resolver_absolute_vs_relative_handling(self, mock_authorization, make_tool_call):
         """Test that path resolver handles both absolute and relative paths correctly."""
         def flexible_resolver(path: str) -> Tuple[Path, str]:
             if path.startswith('/'):
@@ -441,9 +417,7 @@ class TestFileSystemAIToolPathResolverIntegration:
                 mock_stat_result.st_size = 12
                 mock_stat.return_value = mock_stat_result
 
-                result = asyncio.run(filesystem_tool.execute(
-                    {"operation": "read_file", "path": input_path},
-                    mock_authorization
-                ))
+                tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": input_path})
+                result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
 
-                assert f"File: {expected_display}" in result
+                assert f"File: {expected_display}" in result.content
