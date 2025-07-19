@@ -1150,11 +1150,11 @@ class StyleManager(QObject):
         if system_size > 0:
             return system_size
 
-        if os_type.type() == QOperatingSystemVersion.OSType.MacOS:
+        if os_type.type() == QOperatingSystemVersion.OSType.MacOS:  # type: ignore
             # macOS typically uses 13pt as default
             return 13
 
-        if os_type.type() == QOperatingSystemVersion.OSType.Windows:
+        if os_type.type() == QOperatingSystemVersion.OSType.Windows:  # type: ignore
             # Windows typically uses 9pt as default
             return 9
 
