@@ -33,7 +33,7 @@ class AIConversationSettings:
             name="claude-3-7-sonnet-20250219",
             provider="anthropic",
             context_window=200000,
-            max_output_tokens=64000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
@@ -42,7 +42,7 @@ class AIConversationSettings:
             name="claude-3-7-sonnet-20250219",
             provider="anthropic",
             context_window=200000,
-            max_output_tokens=64000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
@@ -51,7 +51,7 @@ class AIConversationSettings:
             name="claude-4-sonnet-20250514",
             provider="anthropic",
             context_window=200000,
-            max_output_tokens=64000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
@@ -60,7 +60,7 @@ class AIConversationSettings:
             name="claude-4-sonnet-20250514",
             provider="anthropic",
             context_window=200000,
-            max_output_tokens=64000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
@@ -69,7 +69,7 @@ class AIConversationSettings:
             name="claude-4-opus-20250514",
             provider="anthropic",
             context_window=200000,
-            max_output_tokens=64000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
             reasoning_capabilities=ReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
@@ -78,7 +78,7 @@ class AIConversationSettings:
             name="claude-4-opus-20250514",
             provider="anthropic",
             context_window=200000,
-            max_output_tokens=64000,
+            max_output_tokens=32000,  # This is actuall 64000 but that's too much
             supports_temperature=False,
             reasoning_capabilities=ReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
