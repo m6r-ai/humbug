@@ -130,38 +130,41 @@ class SystemAITool(AITool):
                 handler=self._open_editor_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
-                description="open a file in an editor tab"
+                description="open a file in an editor tab - the editor cannot be used by you (the AI) to edit files"
             ),
             "new_terminal_tab": AIToolOperationDefinition(
                 name="new_terminal_tab",
                 handler=self._new_terminal_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="create a terminal tab for the user (you cannot run commands in this directly)"
+                description="create a terminal tab for the user - the terminal cannot be used by you (the AI) run commands"
             ),
             "open_conversation_tab": AIToolOperationDefinition(
                 name="open_conversation_tab",
                 handler=self._open_conversation_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
-                description="open an existing conversation in a conversation tab"
+                description="open an existing conversation in a conversation tab "
+                    "- the conversation cannot be used by you (the AI) to send messages"
             ),
             "new_conversation_tab": AIToolOperationDefinition(
                 name="new_conversation_tab",
                 handler=self._new_conversation_tab,
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
-                description="start a new conversation in a conversation tab, with optional model/temperature "
-                    "- this conversation cannot be used by you (the AI) to send messages, only the user can interact with it."
+                description="start a new AI conversation in a conversation tab, with optional model/temperature "
+                    "- this conversation cannot be used by you (the AI) to send messages"
             ),
             "spawn_ai_child_conversation_tab": AIToolOperationDefinition(
                 name="spawn_ai_child_conversation_tab",
                 handler=self._spawn_ai_child_conversation_tab,
                 allowed_parameters={"message", "model", "temperature"},
                 required_parameters={"message"},
-                description="start a new child conversation with an AI using a new prompt message "
-                    "- supports optional model/temperature, "
-                    "the response will be the response from the child conversation"
+                description="spawn a new child AI conversation, with optional model/temperature. "
+                    "The conversation is started with a new prompt message provided by the parent AI, "
+                    "and the reponse is the child AI's response to that message. "
+                    "The conversation is created in a new tab, but the tab and conversation close "
+                    "automatically when the child AI response has been provided to the parent AI."
             ),
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
@@ -182,7 +185,7 @@ class SystemAITool(AITool):
                 handler=self._open_wiki_tab,
                 allowed_parameters={"file_path"},
                 required_parameters=set(),
-                description="open a file/directory in a wiki tab"
+                description="open a file/directory in a wiki view tab"
             ),
             "tab_info": AIToolOperationDefinition(
                 name="tab_info",
@@ -423,8 +426,9 @@ class SystemAITool(AITool):
             )
 
         finally:
-            # Clean up signal connection
+            # Clean up signal connection and close the tab
             conversation_tab.conversation_completed.disconnect(on_completion)
+            self._column_manager.close_tab_by_id(conversation_tab.tab_id())
 
     async def _spawn_ai_child_conversation_tab(
         self,
@@ -486,34 +490,28 @@ class SystemAITool(AITool):
             self._mindspace_manager.ensure_mindspace_dir("conversations")
 
             # Create conversation
-            self._column_manager.protect_current_tab(True)
-            conversation_tab: ConversationTab | None = None
-            try:
-                current_tab = self._column_manager.get_current_tab()
-                assert isinstance(current_tab, ConversationTab), "Current tab must be a ConversationTab"
-                conversation_tab = self._column_manager.new_conversation(current_tab, model, temperature, reasoning)
-                conversation_tab.set_input_text(message)
-                conversation_tab.submit()
+            current_tab = self._column_manager.get_current_tab()
+            assert isinstance(current_tab, ConversationTab), "Current tab must be a ConversationTab"
+            conversation_tab = self._column_manager.new_conversation(current_tab, model, temperature, reasoning)
+            conversation_tab.set_input_text(message)
+            conversation_tab.submit()
 
-                # Log the sub-conversation creation
-                tab_id = conversation_tab.tab_id()
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"AI spawned child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'"
-                )
+            # Log the sub-conversation creation
+            tab_id = conversation_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI spawned child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'"
+            )
 
-                # Create a continuation task that waits for completion
-                continuation_task = asyncio.create_task(self._wait_for_completion(conversation_tab, tool_call))
+            # Create a continuation task that waits for completion
+            continuation_task = asyncio.create_task(self._wait_for_completion(conversation_tab, tool_call))
 
-                return AIToolResult(
-                    id=tool_call.id,
-                    name="system",
-                    content=f"Spawned child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'",
-                    continuation=continuation_task
-                )
-
-            finally:
-                self._column_manager.protect_current_tab(False)
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Spawned child conversation, tab ID: {tab_id}, and submitted message: '{message[:50]}...'",
+                continuation=continuation_task
+            )
 
         except MindspaceError as e:
             raise AIToolExecutionError(f"Failed to create conversation directory: {str(e)}") from e

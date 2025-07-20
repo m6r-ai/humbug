@@ -11,7 +11,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal
 
 from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
 
 from humbug.color_role import ColorRole
