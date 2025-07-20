@@ -332,9 +332,7 @@ class AIConversation:
 
             # Create and add tool call message
             tool_call_dict = tool_call.to_dict()
-            content = f"""```json
-{json.dumps(tool_call_dict, indent=4)}
-```"""
+            content = f"""```json\n{json.dumps(tool_call_dict, indent=4)}\n```"""
             tool_call_message = AIMessage.create(
                 source=AIMessageSource.TOOL_CALL,
                 content=content,
@@ -371,19 +369,18 @@ class AIConversation:
 
                 self._pending_tool_call_message = None
 
-            # Create tool result message
-            tool_result_dict = tool_result.to_dict()
-            content = f"""```json
-{json.dumps(tool_result_dict, indent=4)}
-```"""
-            tool_result_message = AIMessage.create(
-                source=AIMessageSource.TOOL_RESULT,
-                content=content,
-                tool_results=[tool_result],
-                completed=True
-            )
-            self._conversation.add_message(tool_result_message)
-            await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
+            if tool_result.continuation is None:
+                # Create tool result message
+                tool_result_dict = tool_result.to_dict()
+                content = f"""```json\n{json.dumps(tool_result_dict, indent=4)}\n```"""
+                tool_result_message = AIMessage.create(
+                    source=AIMessageSource.TOOL_RESULT,
+                    content=content,
+                    tool_results=[tool_result],
+                    completed=True
+                )
+                self._conversation.add_message(tool_result_message)
+                await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
 
         # If we have continuations, wait for them to complete.  Then we update the tool results.
         if continuations:
@@ -397,6 +394,18 @@ class AIConversation:
                     if tool_result.id == continuation.id:
                         tool_result.continuation = None
                         tool_result.content = continuation.content
+
+                        # Create tool result message
+                        tool_result_dict = tool_result.to_dict()
+                        content = f"""```json\n{json.dumps(tool_result_dict, indent=4)}\n```"""
+                        tool_result_message = AIMessage.create(
+                            source=AIMessageSource.TOOL_RESULT,
+                            content=content,
+                            tool_results=[tool_result],
+                            completed=True
+                        )
+                        self._conversation.add_message(tool_result_message)
+                        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
                         break
 
         # Create a specific user message with the tool results
