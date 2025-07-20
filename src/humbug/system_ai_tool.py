@@ -272,13 +272,12 @@ class SystemAITool(AITool):
 
         return value
 
-    def _validate_and_resolve_path(self, path_str: str, operation: str) -> str:
+    def _validate_and_resolve_path(self, path_str: str) -> str:
         """
         Validate path is within mindspace and resolve to absolute path.
 
         Args:
             path_str: String path to validate and resolve
-            operation: Operation being performed (for error context)
 
         Returns:
             Resolved absolute path within mindspace
@@ -529,7 +528,7 @@ class SystemAITool(AITool):
         """Edit or create a file in an editor tab."""
         arguments = tool_call.arguments
         file_path_arg = self._get_str_value_from_key("file_path", arguments)
-        file_path = self._validate_and_resolve_path(file_path_arg, "open_editor")
+        file_path = self._validate_and_resolve_path(file_path_arg)
 
         try:
             # Create parent directories if needed
@@ -600,7 +599,7 @@ class SystemAITool(AITool):
         # Get file path
         arguments = tool_call.arguments
         file_path_arg = self._get_str_value_from_key("file_path", arguments)
-        conversation_path = self._validate_and_resolve_path(file_path_arg, "open_conversation")
+        conversation_path = self._validate_and_resolve_path(file_path_arg)
 
         try:
             # Ensure conversations directory exists
@@ -781,7 +780,7 @@ class SystemAITool(AITool):
         file_path_arg = arguments.get("file_path", "")
 
         if file_path_arg:
-            wiki_path = self._validate_and_resolve_path(file_path_arg, "open_wiki")
+            wiki_path = self._validate_and_resolve_path(file_path_arg)
 
         else:
             # Use mindspace root if no path provided
