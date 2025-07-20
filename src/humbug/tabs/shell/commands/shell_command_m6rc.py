@@ -167,7 +167,7 @@ class ShellCommandM6rc(ShellCommand):
             self._column_manager.protect_current_tab(True)
             try:
                 self._mindspace_manager.ensure_mindspace_dir("conversations")
-                conversation_tab = self._column_manager.new_conversation(model, temperature_val, reasoning)
+                conversation_tab = self._column_manager.new_conversation(None, model, temperature_val, reasoning)
 
             except MindspaceError as e:
                 self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")

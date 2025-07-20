@@ -489,8 +489,9 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             conversation_tab: ConversationTab | None = None
             try:
-                conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
-                conversation_tab.set_sub_conversation_mode(True)
+                current_tab = self._column_manager.get_current_tab()
+                assert isinstance(current_tab, ConversationTab), "Current tab must be a ConversationTab"
+                conversation_tab = self._column_manager.new_conversation(current_tab, model, temperature, reasoning)
                 conversation_tab.set_input_text(message)
                 conversation_tab.submit()
 
@@ -681,8 +682,7 @@ class SystemAITool(AITool):
             # Create conversation
             self._column_manager.protect_current_tab(True)
             try:
-                conversation_tab = self._column_manager.new_conversation(model, temperature, reasoning)
-                conversation_tab.set_sub_conversation_mode(False)
+                conversation_tab = self._column_manager.new_conversation(None, model, temperature, reasoning)
 
             finally:
                 self._column_manager.protect_current_tab(False)
