@@ -164,7 +164,9 @@ class SystemAITool(AITool):
                     "The conversation is started with a new prompt message provided by the parent AI, "
                     "and the reponse is the child AI's response to that message. "
                     "The conversation is created in a new tab, but the tab and conversation close "
-                    "automatically when the child AI response has been provided to the parent AI."
+                    "automatically when the child AI response has been provided to the parent AI. "
+                    "Spawned conversations are ideal for sub-tasks that a parent AI can delegate and that "
+                    "need more limited context than the parent's"
             ),
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
