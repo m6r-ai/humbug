@@ -132,8 +132,8 @@ class AIConversationSettings:
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "gemini-2.5-flash-preview-05-20": AIModel(
-            name="gemini-2.5-flash-preview-05-20",
+        "gemini-2.5-flash": AIModel(
+            name="gemini-2.5-flash",
             provider="google",
             context_window=1048576,
             max_output_tokens=65536,
@@ -141,8 +141,8 @@ class AIConversationSettings:
             reasoning_capabilities=ReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "gemini-2.5-pro-preview-05-06": AIModel(
-            name="gemini-2.5-pro-preview-05-06",
+        "gemini-2.5-pro": AIModel(
+            name="gemini-2.5-pro",
             provider="google",
             context_window=1048576,
             max_output_tokens=65536,

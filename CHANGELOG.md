@@ -2,6 +2,18 @@
 
 ## v0.20 (2025-07-xx)
 
+New features:
+
+- Added support for an LLM conversation to spawn a child conversation to undertake tasks for it.
+- AI tool processing was heavily updated to support true parallel tool calling.
+- Support production gemini 2.5 pro and gemini 2.5 flash models.
+
+Bug fixes:
+
+Internal structure changes:
+
+- `markdown` was renamed to `dmarkdown` to avoid namespace issues with `pyinstaller`.
+
 ## v0.19 (2025-07-15)
 
 New features:
