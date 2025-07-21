@@ -162,13 +162,14 @@ class SystemAITool(AITool):
                 handler=self._spawn_ai_child_conversation_tab,
                 allowed_parameters={"message", "model", "temperature"},
                 required_parameters={"message"},
-                description="Spawn a new child AI conversation, with optional model/temperature. "
-                    "The conversation is started with a new prompt message provided by the parent AI, "
-                    "and the reponse is the child AI's response to that message. "
+                description="Spawn a temporary child AI conversation, with optional model/temperature. "
+                    "The conversation is started with a new prompt message provided by you (the parent AI). "
+                    "The prompt message is automatically submitted to the child AI and does not require the user to intervene. "
                     "The conversation is created in a new tab, but the tab and conversation close "
-                    "automatically when the child AI response has been provided to the parent AI. "
+                    "automatically when the child AI response has been provided to you (the parent AI). "
                     "Spawned conversations are ideal for sub-tasks that a parent AI can delegate and that "
-                    "need more limited context than the parent's"
+                    "need more limited context than the parent's. "
+                    "The operation returns the child AI's response to the prompt, or an error message if the operation fails"
             ),
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
