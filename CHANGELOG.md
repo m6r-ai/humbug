@@ -7,6 +7,7 @@ New features:
 - Added support for an LLM conversation to spawn a child conversation to undertake tasks for it.
 - AI tool processing was heavily updated to support true parallel tool calling.
 - Support production gemini 2.5 pro and gemini 2.5 flash models.
+- When navigating the mindspace tree, the delete key will now trigger file/folder deletion.
 
 Bug fixes:
 
