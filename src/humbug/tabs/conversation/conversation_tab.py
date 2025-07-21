@@ -17,12 +17,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
-from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_settings_dialog import ConversationSettingsDialog
-from humbug.tabs.conversation.conversation_transcript_error import (
-    ConversationTranscriptFormatError, ConversationTranscriptIOError
-)
-from humbug.tabs.conversation.conversation_transcript_handler import ConversationTranscriptHandler
 from humbug.tabs.conversation.conversation_widget import ConversationWidget
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
@@ -179,32 +174,8 @@ class ConversationTab(TabBase):
         # Generate new file path using fork naming convention
         new_path = self._get_fork_file_name(self._path)
         forked_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
-        forked_tab.set_sub_conversation_mode(self.sub_conversation_mode())
-
-        # Get messages to include in the fork
-        all_messages = self._conversation_widget.get_conversation_history().get_messages()
-        if message_index is None:
-            # Full conversation fork
-            forked_messages = all_messages
-
-        else:
-            # Fork up to specified index (inclusive)
-            forked_messages = all_messages[:message_index + 1]
-
-        transcript_messages = [msg.to_transcript_dict() for msg in forked_messages]
-
-        try:
-            # Write history to new transcript file
-            handler = ConversationTranscriptHandler(new_path)
-            await handler.write(transcript_messages)
-
-            # Load messages into the new tab
-            forked_tab._conversation_widget.load_message_history(forked_messages, False)
-
-            return forked_tab
-
-        except Exception as e:
-            raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
+        await self._conversation_widget.fork_conversation_from_index(forked_tab._conversation_widget, message_index)
+        return forked_tab
 
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""
@@ -240,9 +211,6 @@ class ConversationTab(TabBase):
                 tab._conversation_widget.restore_from_metadata(state.metadata)
 
             return tab
-
-        except ValueError as e:
-            raise ConversationError(f"Failed to restore conversation tab: {str(e)}") from e
 
         except Exception as e:
             raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e

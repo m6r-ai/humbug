@@ -55,6 +55,14 @@ class ConversationTranscriptHandler:
         if not os.path.exists(filename):
             self._initialize_file()
 
+    def get_path(self) -> str:
+        """Get the transcript file path.
+
+        Returns:
+            str: Full path to the transcript file
+        """
+        return self._filename
+
     def set_path(self, new_path: str) -> None:
         """Set the transcript file path.
 

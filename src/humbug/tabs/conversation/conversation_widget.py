@@ -25,6 +25,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
+from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
 from humbug.tabs.conversation.conversation_message import ConversationMessage
 from humbug.tabs.conversation.conversation_transcript_error import ConversationTranscriptError
@@ -1004,6 +1005,15 @@ class ConversationWidget(QWidget):
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
+    def path(self) -> str:
+        """
+        Get the conversation file path.
+
+        Returns:
+            str: Full path to the conversation file
+        """
+        return self._transcript_handler.get_path()
+
     def set_path(self, new_path: str) -> None:
         """
         Set the conversation file path.
@@ -1037,6 +1047,40 @@ class ConversationWidget(QWidget):
         """Set the input text."""
         self._input.set_plain_text(text)
         self._input.setFocus()
+
+    async def fork_conversation_from_index(self, target_widget: 'ConversationWidget', message_index: int | None = None) -> None:
+        """
+        Load a copy of this conversation's history into another conversation widget.
+
+        Args:
+            target_widget: Target ConversationWidget to fork into
+            message_index: Index to fork at (None for full conversation)
+
+        Raises:
+            ConversationError: If the fork operation fails
+        """
+        # Get messages to include in the fork
+        all_messages = self.get_conversation_history().get_messages()
+        if message_index is None:
+            # Full conversation fork
+            forked_messages = all_messages
+
+        else:
+            # Fork up to specified index (inclusive)
+            forked_messages = all_messages[:message_index + 1]
+
+        transcript_messages = [msg.to_transcript_dict() for msg in forked_messages]
+
+        try:
+            # Write history to new transcript file
+            handler = ConversationTranscriptHandler(target_widget.path())
+            await handler.write(transcript_messages)
+
+            # Load messages into the new tab
+            target_widget.load_message_history(forked_messages, False)
+
+        except Exception as e:
+            raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
 
     def load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool) -> None:
         """
