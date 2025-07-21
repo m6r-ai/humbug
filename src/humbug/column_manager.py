@@ -1378,11 +1378,11 @@ class ColumnManager(QWidget):
         # Generate timestamp for ID
         timestamp = datetime.now(timezone.utc)
         conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-        filename = os.path.join("conversations", f"{conversation_title}.conv")
+        prefix = "c-" if parent is not None else ""
+        filename = os.path.join("conversations", f"{prefix}{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         conversation_tab = ConversationTab("", full_path, self)
-        conversation_tab.set_sub_conversation_mode(parent is not None)
         conversation_tab.forkRequested.connect(self._fork_conversation)
         conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
@@ -1418,7 +1418,7 @@ class ColumnManager(QWidget):
             return existing_tab
 
         try:
-            conversation_tab = ConversationTab.create_from_path(abs_path, self)
+            conversation_tab = ConversationTab("", abs_path, self)
             conversation_tab.forkRequested.connect(self._fork_conversation)
             conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]

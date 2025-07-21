@@ -225,41 +225,6 @@ class ConversationTab(TabBase):
         )
 
     @classmethod
-    def create_from_path(cls, path: str, parent: QWidget | None = None) -> 'ConversationTab':
-        """
-        Create a conversation tab based on a transcript file.
-
-        Args:
-            path: Path to transcript file
-            parent: Optional parent widget
-
-        Returns:
-            Created ConversationTab instance
-
-        Raises:
-            ConversationError: If the conversation tab cannot be loaded
-        """
-        try:
-            # Read transcript
-            transcript = ConversationTranscriptHandler(path)
-            transcript_data = transcript.read()
-
-            # Create conversation tab
-            conversation_tab = cls("", path, parent)
-            conversation_tab._conversation_widget.load_message_history(transcript_data.messages, False)
-
-            return conversation_tab
-
-        except ConversationTranscriptFormatError as e:
-            raise ConversationError(f"Failed to load conversation transcript: {str(e)}") from e
-
-        except ConversationTranscriptIOError as e:
-            raise ConversationError(f"Failed to read conversation transcript: {str(e)}") from e
-
-        except Exception as e:
-            raise ConversationError(f"Failed to create conversation tab: {str(e)}") from e
-
-    @classmethod
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
 
@@ -270,12 +235,6 @@ class ConversationTab(TabBase):
 
         # Load conversation from transcript
         try:
-            transcript = ConversationTranscriptHandler(state.path)
-            transcript_data = transcript.read()
-
-            # Load the message history
-            tab._conversation_widget.load_message_history(transcript_data.messages, use_existing_ai_conversation)
-
             # Restore widget-specific state if metadata present
             if state.metadata:
                 tab._conversation_widget.restore_from_metadata(state.metadata)

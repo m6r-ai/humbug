@@ -36,6 +36,7 @@ class ConversationTranscriptData:
     """Container for transcript data and metadata."""
     messages: List[AIMessage]
     version: str
+    parent: str | None = None
 
 
 class ConversationTranscriptHandler:
@@ -72,6 +73,7 @@ class ConversationTranscriptHandler:
         metadata = {
             "metadata": {
                 "version": "0.1",
+                "parent": None
             },
             "conversation": []
         }
@@ -146,7 +148,8 @@ class ConversationTranscriptHandler:
 
         return ConversationTranscriptData(
             messages=messages,
-            version=data["metadata"]["version"]
+            version=data["metadata"]["version"],
+            parent=data["metadata"].get("parent", None)
         )
 
     async def write(self, messages: List[Dict]) -> None:

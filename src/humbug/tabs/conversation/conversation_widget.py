@@ -3,6 +3,7 @@
 import asyncio
 from dataclasses import dataclass
 import logging
+import os
 import time
 from typing import Dict, List, Tuple, Any, Set, cast
 
@@ -130,9 +131,6 @@ class ConversationWidget(QWidget):
         self._bookmarked_messages: Dict[ConversationMessage, BookmarkData] = {}
         self._current_bookmark_index: int | None = None
 
-        # Create transcript handler with provided filename
-        self._transcript_handler = ConversationTranscriptHandler(path)
-
         self._mindspace_manager = MindspaceManager()
 
         self._style_manager = StyleManager()
@@ -253,8 +251,13 @@ class ConversationWidget(QWidget):
         self._install_activation_tracking(self._input)
         self._install_activation_tracking(self._messages_container)
 
+        # Create transcript handler with provided filename, then load the transcript data
+        self._transcript_handler = ConversationTranscriptHandler(path)
+        transcript_data = self._transcript_handler.read()
+        self.load_message_history(transcript_data.messages, use_existing_ai_conversation)
+
         # Default to being in sub-conversation mode
-        self.set_sub_conversation_mode(True)
+        self.set_sub_conversation_mode(os.path.basename(path).startswith("c-"))
 
     def sub_conversation_mode(self) -> bool:
         """
@@ -428,7 +431,7 @@ class ConversationWidget(QWidget):
             message: The error that occurred
         """
         await self.add_message(message)
-        await self.write_transcript(message)
+        await self.append_message_to_transcript(message)
 
         if retries_exhausted:
             self._is_streaming = False
@@ -458,7 +461,7 @@ class ConversationWidget(QWidget):
         await self.add_message(message)
 
         # Write the tool call to the transcript
-        await self.write_transcript(message)
+        await self.append_message_to_transcript(message)
 
     async def _on_tool_approval_required(
         self,
@@ -593,7 +596,7 @@ class ConversationWidget(QWidget):
 
         # Update with the completed message immediately
         await self._update_message(message)
-        await self.write_transcript(message)
+        await self.append_message_to_transcript(message)
         self.status_updated.emit()
 
     async def _on_request_completed(self) -> None:
@@ -623,7 +626,7 @@ class ConversationWidget(QWidget):
         # Emit signal for status update
         self.status_updated.emit()
 
-    async def write_transcript(self, message: AIMessage) -> None:
+    async def append_message_to_transcript(self, message: AIMessage) -> None:
         """
         Write messages to transcript file.
 
@@ -1438,7 +1441,7 @@ class ConversationWidget(QWidget):
         loop.create_task(self.add_message(message))
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop.create_task(ai_conversation.submit_message(message))
-        loop.create_task(self.write_transcript(message))
+        loop.create_task(self.append_message_to_transcript(message))
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
