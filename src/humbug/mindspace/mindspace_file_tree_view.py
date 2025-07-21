@@ -295,6 +295,7 @@ class MindspaceFileTreeView(QTreeView):
             if current_target_path:
                 # Keep the folder open if it's an ancestor of the current target
                 should_keep_open = self._is_ancestor_path(folder_path, current_target_path)
+
                 # Also keep it open if it's the current target itself
                 should_keep_open = should_keep_open or (folder_path == current_target_path)
 
@@ -324,6 +325,7 @@ class MindspaceFileTreeView(QTreeView):
         # Only expand if it's still a directory and not already expanded
         if os.path.isdir(target_path) and not self.isExpanded(self._pending_expand_index):
             self.expand(self._pending_expand_index)
+
             # Track this folder as auto-opened
             self._auto_opened_folders.add(QPersistentModelIndex(self._pending_expand_index))
 
