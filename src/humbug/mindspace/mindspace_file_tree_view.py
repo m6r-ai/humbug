@@ -5,7 +5,7 @@ from typing import cast, Callable
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer
-from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor
+from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent
 
 
 class MindspaceFileTreeView(QTreeView):
@@ -13,8 +13,8 @@ class MindspaceFileTreeView(QTreeView):
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
-    rename_requested = Signal(QModelIndex, str)  # index, new_name
     style_updated = Signal()  # Emitted after the tree view has processed style changes
+    delete_requested = Signal()  # Emitted when delete key is pressed
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the tree view."""
@@ -525,6 +525,12 @@ class MindspaceFileTreeView(QTreeView):
         self._stop_auto_scroll()  # This will stop scrolling when drag completes
         self._close_auto_opened_folders()  # Close all auto-opened folders
         self._drag_start_pos = None
+
+    def keyPressEvent(self, event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Delete:
+            self.delete_requested.emit()
+
+        super().keyPressEvent(event)
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """Handle drag enter events."""

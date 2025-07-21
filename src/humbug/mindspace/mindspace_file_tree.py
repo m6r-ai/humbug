@@ -68,6 +68,7 @@ class MindspaceFileTree(QWidget):
         self._tree_view.setStyle(self._tree_style)
         self._tree_view.file_dropped.connect(self._handle_file_drop)
         self._tree_view.drop_target_changed.connect(self._handle_drop_target_changed)
+        self._tree_view.delete_requested.connect(self._handle_delete_requested)
 
         # Create file system model
         self._icon_provider = MindspaceFileTreeIconProvider()
@@ -909,6 +910,26 @@ class MindspaceFileTree(QWidget):
                     strings.error_deleting_file.format(str(e)),
                     [MessageBoxButton.OK]
                 )
+
+    def _handle_delete_requested(self) -> None:
+        """Handle delete request from the tree view."""
+        # Get the currently selected index
+        index = self._tree_view.currentIndex()
+        if not index.isValid():
+            return
+
+        # Map to source model to get actual file path
+        source_index = self._filter_model.mapToSource(index)
+        path = self._fs_model.filePath(source_index)
+        if not path:
+            return
+
+        # Check if it's a directory or file and call appropriate handler
+        if os.path.isdir(path):
+            self._handle_delete_folder(path)
+
+        else:
+            self._handle_delete_file(path)
 
     def set_mindspace(self, path: str) -> None:
         """Set the mindspace root directory."""
