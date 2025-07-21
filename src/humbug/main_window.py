@@ -27,6 +27,7 @@ from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
 from humbug.column_manager import ColumnManager
+from humbug.delegate_ai_tool import DelegateAITool
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -419,6 +420,7 @@ class MainWindow(QMainWindow):
             CalculatorAITool(), "Calculator: performs arithmetic, trigonometry, logarithms, and other calculations"
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
+        self._ai_tool_manager.register_tool(DelegateAITool(self._column_manager), "Delegate: delegates tasks to specialized AI instances")
         self._ai_tool_manager.register_tool(
             FileSystemAITool(self._resolve_mindspace_path), "FileSystem: handles file operations in the current mindspace"
         )

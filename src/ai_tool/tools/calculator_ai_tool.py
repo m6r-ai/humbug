@@ -274,14 +274,14 @@ class CalculatorAITool(AITool):
         return AIToolDefinition(
             name="calculate",
             description=(
-                "Mathematical expression calculator. "
-                "Supports the following operations:\n"
+                "The calculate tool lets you evaluate mathematical expressions. "
+                "It supports the following operations:\n"
                 "- Arithmetic: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power)\n"
                 "- Trigonometry: sin cos tan\n"
                 "- Logarithms: log log10 exp\n"
                 "- Other functions: sqrt abs round min max pow floor ceil\n"
                 "- Constants: pi e j (imaginary unit)\n"
-                "Supports parentheses, nested expressions, and complex numbers. "
+                "It also supports parentheses, nested expressions, and complex numbers. "
                 "Results are simplified to real numbers when imaginary part is negligible."
             ),
             parameters=[
