@@ -52,7 +52,7 @@ class SystemAITool(AITool):
         # Build description from operations
         base_description = (
             "The 'system' tool let's you (the AI) control the application user interface for the user. "
-            "It does not give you the ability to control or use these tools directly."
+            "The user interface is organized into columns, each containing tabs. "
         )
 
         # Generate operations list
@@ -130,37 +130,39 @@ class SystemAITool(AITool):
                 handler=self._open_editor_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
-                description="open a file in an editor tab - the editor cannot be used by you (the AI) to edit files"
+                description="Open a file in an editor tab for the user to browse/edit. "
+                    "You (the AI) cannot use this to edit files"
             ),
             "new_terminal_tab": AIToolOperationDefinition(
                 name="new_terminal_tab",
                 handler=self._new_terminal_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="create a terminal tab for the user - the terminal cannot be used by you (the AI) run commands"
+                description="Create a terminal tab for the user. "
+                    "You (the AI) cannot use this to run commands"
             ),
             "open_conversation_tab": AIToolOperationDefinition(
                 name="open_conversation_tab",
                 handler=self._open_conversation_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
-                description="open an existing conversation in a conversation tab "
-                    "- the conversation cannot be used by you (the AI) to send messages"
+                description="Open an existing conversation in a conversation tab for the user to browse/edit. "
+                    "You (the AI) cannot use this to send messages"
             ),
             "new_conversation_tab": AIToolOperationDefinition(
                 name="new_conversation_tab",
                 handler=self._new_conversation_tab,
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
-                description="start a new AI conversation in a conversation tab, with optional model/temperature "
-                    "- this conversation cannot be used by you (the AI) to send messages"
+                description="Create a new AI conversation tab, with optional model/temperature. "
+                    "You (the AI) cannot use this to send messages"
             ),
             "spawn_ai_child_conversation_tab": AIToolOperationDefinition(
                 name="spawn_ai_child_conversation_tab",
                 handler=self._spawn_ai_child_conversation_tab,
                 allowed_parameters={"message", "model", "temperature"},
                 required_parameters={"message"},
-                description="spawn a new child AI conversation, with optional model/temperature. "
+                description="Spawn a new child AI conversation, with optional model/temperature. "
                     "The conversation is started with a new prompt message provided by the parent AI, "
                     "and the reponse is the child AI's response to that message. "
                     "The conversation is created in a new tab, but the tab and conversation close "
@@ -173,14 +175,14 @@ class SystemAITool(AITool):
                 handler=self._show_system_shell_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="open a system shell tab"
+                description="Open a system shell tab"
             ),
             "show_log_tab": AIToolOperationDefinition(
                 name="show_log_tab",
                 handler=self._show_log_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="open the mindspace log tab"
+                description="Open the mindspace log tab"
             ),
             "open_wiki_tab": AIToolOperationDefinition(
                 name="open_wiki_tab",
@@ -194,28 +196,28 @@ class SystemAITool(AITool):
                 handler=self._tab_info,
                 allowed_parameters={"tab_id"},
                 required_parameters=set(),
-                description="get information about a tab, given its ID (if no ID then gets the current tab info)"
+                description="Get information about a tab, given its ID (if no ID then gets the current tab info)"
             ),
             "close_tab": AIToolOperationDefinition(
                 name="close_tab",
                 handler=self._close_tab,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="close an existing tab"
+                description="Close an existing tab"
             ),
             "list_tabs": AIToolOperationDefinition(
                 name="list_tabs",
                 handler=self._list_tabs,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="enumerate all currently open tabs across all columns"
+                description="Enumerate all currently open tabs across all columns"
             ),
             "move_tab": AIToolOperationDefinition(
                 name="move_tab",
                 handler=self._move_tab,
                 allowed_parameters={"tab_id", "target_column"},
                 required_parameters={"tab_id", "target_column"},
-                description="move a tab to a specific column by index - there are a maximum of 6 columns"
+                description="Move a tab to a specific column by index - there are a maximum of 6 columns"
             )
         }
 
@@ -419,7 +421,10 @@ class SystemAITool(AITool):
             result_parts = [f"Child conversation, tab ID: {tab_id} completed successfully:\n{response_content}"]
 
             if usage_info:
-                result_parts.append(f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} completion = {usage_info['total_tokens']} total")
+                result_parts.append(
+                    f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} "
+                    f"completion = {usage_info['total_tokens']} total"
+                )
 
             return AIToolResult(
                 id=tool_call.id,

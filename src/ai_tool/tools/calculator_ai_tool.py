@@ -274,8 +274,8 @@ class CalculatorAITool(AITool):
         return AIToolDefinition(
             name="calculate",
             description=(
-                "Mathematical expression evaluator. "
-                "Support the following operations:\n"
+                "Mathematical expression calculator. "
+                "Supports the following operations:\n"
                 "- Arithmetic: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power)\n"
                 "- Trigonometry: sin cos tan\n"
                 "- Logarithms: log log10 exp\n"
