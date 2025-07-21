@@ -10,6 +10,8 @@ New features:
 
 Bug fixes:
 
+- Single clicks on the mindspace tree should not cause the tree to lose focus.
+
 Internal structure changes:
 
 - `markdown` was renamed to `dmarkdown` to avoid namespace issues with `pyinstaller`.
