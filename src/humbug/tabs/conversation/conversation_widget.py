@@ -256,17 +256,7 @@ class ConversationWidget(QWidget):
         self._transcript_handler = ConversationTranscriptHandler(path)
         transcript_data = self._transcript_handler.read()
         self.load_message_history(transcript_data.messages, use_existing_ai_conversation)
-
-        # Default to being in sub-conversation mode
         self.set_sub_conversation_mode(os.path.basename(path).startswith("c-"))
-
-    def sub_conversation_mode(self) -> bool:
-        """
-        Check if the conversation is in sub-conversation mode.
-
-        In sub-conversation mode, user input is hidden to prevent manual message submission.
-        """
-        return self._is_sub_conversation
 
     def set_sub_conversation_mode(self, enabled: bool) -> None:
         """
@@ -1119,6 +1109,43 @@ class ConversationWidget(QWidget):
         self._scroll_to_bottom()
 
         self.status_updated.emit()
+
+    async def _delete_empty_transcript_file(self) -> None:
+        """
+        Delete the transcript file if the conversation doesn't have any AI messages.
+
+        A conversation is considered empty if it has no messages with source AI or REASONING.
+        """
+        try:
+            # Get all messages from the conversation
+            messages = self.get_conversation_history().get_messages()
+
+            # Check if there are any AI or REASONING messages
+            has_ai_messages = any(
+                msg.source in (AIMessageSource.AI, AIMessageSource.REASONING)
+                for msg in messages
+            )
+
+            # If there are no AI messages and the file exists, delete it
+            path = self._transcript_handler.get_path()
+            if not has_ai_messages and os.path.exists(path):
+                self._logger.info("Deleting empty conversation transcript: %s", path)
+                os.remove(path)
+
+        except Exception as e:
+            self._logger.exception("Failed to delete empty conversation transcript: %s", e)
+
+    def close_widget(self) -> None:
+        """Close the conversation."""
+        self._unregister_ai_conversation_callbacks()
+
+        # Check if this is an empty conversation (no AI responses) and delete the file if so
+        loop = asyncio.get_event_loop()
+        if not loop.is_running():
+            self._logger.warning("Could not check/delete transcript file: No running event loop")
+            return
+
+        loop.create_task(self._delete_empty_transcript_file())
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
