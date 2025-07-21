@@ -370,7 +370,11 @@ class SystemAITool(AITool):
             self._logger.error("Unexpected error in system operation '%s': %s", operation, str(e), exc_info=True)
             raise AIToolExecutionError(f"System operation failed: {str(e)}") from e
 
-    async def _wait_for_completion(self, conversation_tab: ConversationTab, tool_call: AIToolCall) -> AIToolResult:
+    async def _spawn_ai_child_conversation_tab_continuation(
+        self,
+        conversation_tab: ConversationTab,
+        tool_call: AIToolCall
+    ) -> AIToolResult:
         """
         Wait for a conversation tab to complete and return the formatted result.
 
@@ -511,7 +515,9 @@ class SystemAITool(AITool):
             )
 
             # Create a continuation task that waits for completion
-            continuation_task = asyncio.create_task(self._wait_for_completion(conversation_tab, tool_call))
+            continuation_task = asyncio.create_task(
+                self._spawn_ai_child_conversation_tab_continuation(conversation_tab, tool_call)
+            )
 
             return AIToolResult(
                 id=tool_call.id,
