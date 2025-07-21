@@ -13,6 +13,7 @@ Bug fixes:
 Internal structure changes:
 
 - `markdown` was renamed to `dmarkdown` to avoid namespace issues with `pyinstaller`.
+- The conversation tab design was reworked so all transcript operations happen within the `ConversationWidget` class.
 
 ## v0.19 (2025-07-15)
 

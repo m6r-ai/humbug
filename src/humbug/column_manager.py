@@ -1564,7 +1564,7 @@ class ColumnManager(QWidget):
             return existing_tab
 
         try:
-            wiki_tab = WikiTab.create_from_path(path_minus_anchor, self)
+            wiki_tab = WikiTab("", path_minus_anchor, self)
             wiki_tab.open_wiki_path.connect(self.handle_wiki_link)
             wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
             wiki_tab.set_ephemeral(ephemeral)

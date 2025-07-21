@@ -83,6 +83,9 @@ class WikiTab(TabBase):
         self._style_manager.style_changed.connect(self._handle_style_changed)
         self._handle_style_changed()
 
+        # Load content
+        self._wiki_content_widget.load_content()
+
     def _handle_content_refreshed(self) -> None:
         """Handle when wiki content has been refreshed due to file changes."""
         self._logger.debug("Wiki content refreshed for path: %s", self._path)
@@ -189,29 +192,6 @@ class WikiTab(TabBase):
         )
 
     @classmethod
-    def create_from_path(cls, path: str, parent: QWidget | None = None) -> 'WikiTab':
-        """
-        Create a wiki tab based on the contents at a path.
-
-        Args:
-            path: Path to wiki contents
-            parent: Optional parent widget
-
-        Returns:
-            Created WikiTab instance
-
-        Raises:
-            WikiError: If the wiki tab cannot be loaded
-        """
-        try:
-            wiki_tab = cls("", path, parent)
-            wiki_tab._wiki_content_widget.load_content()
-            return wiki_tab
-
-        except Exception as e:
-            raise WikiError(f"Failed to create wiki tab: {str(e)}") from e
-
-    @classmethod
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'WikiTab':
         """Create and restore a wiki tab from serialized state."""
         tab = cls(state.tab_id, state.path, parent)
@@ -220,9 +200,6 @@ class WikiTab(TabBase):
 
         # Load wiki content
         try:
-            # Load content
-            tab._wiki_content_widget.load_content()
-
             # Restore widget-specific state if metadata present
             if state.metadata:
                 tab._wiki_content_widget.restore_from_metadata(state.metadata)
