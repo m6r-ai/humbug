@@ -837,11 +837,24 @@ class MainWindow(QMainWindow):
         if not path:
             return
 
+        focus_widget = QApplication.focusWidget()
+
         # Are we opening a conversation or a wiki page?
         if os.path.isfile(path):
             ext = os.path.splitext(path)[1].lower()
             if ext == ".conv":
-                self._open_conversation_path(path, True)
+                conversation_tab = self._open_conversation_path(path, True)
+                if conversation_tab is None:
+                    return
+
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"User opened conversation: '{path}', tab ID: {conversation_tab.tab_id()}"
+                )
+
+                if focus_widget is not None:
+                    focus_widget.setFocus()
+
                 return
 
         wiki_tab = self._column_manager.open_wiki_page(path, True)
@@ -852,6 +865,9 @@ class MainWindow(QMainWindow):
             MindspaceLogLevel.INFO,
             f"User opened wiki page: '{path}', tab ID: {wiki_tab.tab_id()}"
         )
+
+        if focus_widget is not None:
+            focus_widget.setFocus()
 
     def _handle_file_double_click(self, path: str) -> None:
         """Handle double click from the file tree."""

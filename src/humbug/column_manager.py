@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Dict, List, cast
 
-from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget
+from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
 
 from ai.ai_conversation_settings import AIConversationSettings
@@ -166,7 +166,7 @@ class ColumnManager(QWidget):
         if not self._protected_tab:
             return
 
-        self._set_current_tab(self._protected_tab)
+        self._set_current_tab(self._protected_tab, False)
         self._protected_tab = None
 
     def num_colunns(self) -> int:
@@ -1022,22 +1022,29 @@ class ColumnManager(QWidget):
         widget = self._active_column.currentWidget()
         return cast(TabBase, widget) if widget else None
 
-    def _set_current_tab(self, tab: TabBase) -> None:
+    def _set_current_tab(self, tab: TabBase, ephemeral: bool) -> None:
         """
         Set the current active tab.
 
         Args:
             tab: The tab to make current
+            ephemeral: Whether the tab is ephemeral (temporary)
         """
         # Find which column contains the tab
         column = self._find_column_for_tab(tab)
         if column is None:
             return
 
+        # We need to set the current widget for the column to the tab, but we don't want this to
+        # change the focus widget when we do.
+        focus_widget = QApplication.focusWidget()
         column.setCurrentWidget(tab)
+        if focus_widget is not None:
+            focus_widget.setFocus()
+
         self._active_column = column
         self._update_mru_order(tab, column)
-        self._update_tabs()
+        self._update_tabs(not ephemeral)
 
     def _make_tab_permanent(self, tab: TabBase) -> None:
         """Convert an ephemeral tab to permanent."""
@@ -1312,7 +1319,7 @@ class ColumnManager(QWidget):
         """
         for tab in self._tabs.values():
             if isinstance(tab, LogTab):
-                self._set_current_tab(tab)
+                self._set_current_tab(tab, False)
                 return tab
 
         log_tab = LogTab("", self)
@@ -1330,7 +1337,7 @@ class ColumnManager(QWidget):
         """
         for tab in self._tabs.values():
             if isinstance(tab, ShellTab):
-                self._set_current_tab(tab)
+                self._set_current_tab(tab, False)
                 return tab
 
         shell_tab = ShellTab("", self)
@@ -1360,7 +1367,7 @@ class ColumnManager(QWidget):
         # Check if file is already open
         existing_tab = self._find_editor_tab_by_path(path)
         if existing_tab is not None:
-            self._set_current_tab(existing_tab)
+            self._set_current_tab(existing_tab, False)
             return existing_tab
 
         editor = EditorTab("", path, None, self)
@@ -1414,7 +1421,7 @@ class ColumnManager(QWidget):
         abs_path = self._mindspace_manager.get_absolute_path(path)
         existing_tab = self._find_conversation_tab_by_path(abs_path)
         if existing_tab:
-            self._set_current_tab(existing_tab)
+            self._set_current_tab(existing_tab, ephemeral)
             return existing_tab
 
         try:
@@ -1555,7 +1562,7 @@ class ColumnManager(QWidget):
         # Check if already open
         existing_tab = self._find_wiki_tab_by_path(path_minus_anchor)
         if existing_tab:
-            self._set_current_tab(existing_tab)
+            self._set_current_tab(existing_tab, ephemeral)
 
             # If there's an anchor, scroll to it
             if anchor:
