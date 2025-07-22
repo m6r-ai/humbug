@@ -273,12 +273,13 @@ class DelegateAITool(AITool):
             # Connect to completion signal
             conversation_tab.conversation_completed.connect(on_completion)
 
+            tab_id = conversation_tab.tab_id()
+            session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())
+
             # Wait for completion
             result = await completion_future
 
-            # Log the delegation completion
-            tab_id = conversation_tab.tab_id()
-            session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())
+            self._column_manager.close_tab_by_id(conversation_tab.tab_id())
 
             # Return appropriate result
             success = result.get("success", False)
@@ -311,8 +312,6 @@ class DelegateAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"Delegated AI task completed, tab ID: {tab_id}, session ID: {session_id}, response: {response_content[:50]}..."
             )
-
-            self._column_manager.close_tab_by_id(conversation_tab.tab_id())
 
             return AIToolResult(
                 id=tool_call.id,

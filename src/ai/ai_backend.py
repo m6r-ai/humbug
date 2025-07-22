@@ -16,7 +16,6 @@ import certifi
 
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage
-from ai.ai_rate_limiter import AIRateLimiter
 from ai.ai_response import AIResponse, AIError
 from ai.ai_stream_response import AIStreamResponse
 from ai_tool import AIToolManager
@@ -50,7 +49,6 @@ class AIBackend(ABC):
         self._uses_data = True  # Indicates that we default to normal SSE encoding
         self._max_retries = 6
         self._base_delay = 2
-        self._rate_limiter = AIRateLimiter()
         self._logger = logging.getLogger(self.__class__.__name__)
         self._tool_manager = AIToolManager()
 
@@ -113,8 +111,6 @@ class AIBackend(ABC):
         attempt = 0
         while attempt < self._max_retries:
             try:
-                await self._rate_limiter.acquire()
-
                 post_timeout = aiohttp.ClientTimeout(
                     total=None,
                     sock_connect=20,
