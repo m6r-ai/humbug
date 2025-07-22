@@ -59,8 +59,10 @@ class DelegateAITool(AITool):
                 "- to seek expert analysis from a different perspective\n"
                 "- to explore collaborative approaches to problem-solving\n"
                 "- to use a subset context for more focused reasoning\n"
-                "You must not use this tool if you have been delegated this task already."
-                "Returns the delegated AI's response to the task_prompt, or an error message if the operation fails"
+                "Important:\n"
+                "- You must not use this tool if you have been delegated this task already\n"
+                "- You must use the session_id parameter to continue a previous conversation\n"
+                "Returns: the delegated AI's response to the task_prompt, or an error message if the operation fails"
             ),
             parameters=[
                 AIToolParameter(
