@@ -49,19 +49,22 @@ class DelegateAITool(AITool):
         return AIToolDefinition(
             name="delegate_ai",
             description=(
-                "The delegate_ai tool lets you (the AI) delegate cognitive tasks to other specialized AI instances by creating "
-                "a focused AI conversation for the specified task. The delegated AI has access to tools and can engage in "
-                "multi-turn collaboration if you provide it with a session_id returned from a previous delegated conversation. "
-                "Each call creates a temporary UI tab that closes after the response is returned. Delegation is useful for many "
-                "reasons - e.g.:\n,"
-                "- to use specialized AI capabilities\n"
-                "- to parallelize problem solving\n"
-                "- to seek expert analysis from a different perspective\n"
-                "- to explore collaborative approaches to problem-solving\n"
-                "- to use a subset context for more focused reasoning\n"
+                "The delegate_ai tool lets you (the parent AI) delegate cognitive tasks to other specialized child AI instances "
+                "by creating a focused AI conversation for a specified task. The delegated AI has access to the same tools as "
+                "you and can engage in multi-turn collaboration with you if you provide it with a session_id returned from a "
+                "previous delegated conversation. Each call creates a temporary UI tab that closes after the response is "
+                "returned.\n"
+                "Delegation is useful for many reasons, such as:\n,"
+                "- To use AI capabilities from a different model, or with different settings\n"
+                "- To parallelize problem solving\n"
+                "- To seek analysis from a different perspective (you must provide the context in the task_prompt)\n"
+                "- To use a subset of your current conversation context for more focused reasoning\n"
+                "- To process a lot of context/tokens where you don't need all the context in your main conversation\n"
                 "Important:\n"
                 "- You must not use this tool if you have been delegated this task already\n"
                 "- You must use the session_id parameter to continue a previous conversation\n"
+                "- You will have to generate the task_prompt and that can be very expensive if you need to provide a lot of "
+                "context. If you need to provide something that is in the filesystem, tell the delegated AI to read it.\n"
                 "Returns: the delegated AI's response to the task_prompt, or an error message if the operation fails"
             ),
             parameters=[
@@ -363,8 +366,7 @@ class DelegateAITool(AITool):
 
             # Create or open conversation
             conversation_tab = None
-            is_new_session = conversation_path is None
-            if is_new_session:
+            if not conversation_path:
                 # Create new conversation
                 current_tab = self._column_manager.get_current_tab()
                 assert isinstance(current_tab, ConversationTab), "Current tab must be a ConversationTab"
@@ -390,7 +392,7 @@ class DelegateAITool(AITool):
 
             # Log the delegation
             tab_id = conversation_tab.tab_id()
-            session_info = "new session" if is_new_session else "continuing session"
+            session_info = "continuing session" if conversation_path else "new session"
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI delegated task ({session_info}), tab ID: {tab_id}, session ID: {session_id}, prompt: '{task_prompt[:50]}...'"

@@ -526,7 +526,7 @@ class MindspaceFileTreeView(QTreeView):
         self._close_auto_opened_folders()  # Close all auto-opened folders
         self._drag_start_pos = None
 
-    def keyPressEvent(self, event: QKeyEvent):
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         if event.key() == Qt.Key.Key_Delete:
             self.delete_requested.emit()
 

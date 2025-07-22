@@ -13,7 +13,7 @@ class ClockAITool(AITool):
         """Get the tool definition."""
         return AIToolDefinition(
             name="get_current_time",
-            description="The get_current_time tool lets you get the current date and time",
+            description="The get_current_time tool lets you (the AI) get the current date and time",
             parameters=[
                 AIToolParameter(
                     name="format",

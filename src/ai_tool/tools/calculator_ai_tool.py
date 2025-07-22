@@ -274,15 +274,24 @@ class CalculatorAITool(AITool):
         return AIToolDefinition(
             name="calculate",
             description=(
-                "The calculate tool lets you evaluate mathematical expressions. "
+                "The calculate tool lets you (the AI) evaluate mathematical expressions. "
                 "It supports the following operations:\n"
                 "- Arithmetic: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power)\n"
                 "- Trigonometry: sin cos tan\n"
                 "- Logarithms: log log10 exp\n"
                 "- Other functions: sqrt abs round min max pow floor ceil\n"
                 "- Constants: pi e j (imaginary unit)\n"
-                "It also supports parentheses, nested expressions, and complex numbers. "
-                "Results are simplified to real numbers when imaginary part is negligible."
+                "- Parentheses\n"
+                "- Nested expressions\n"
+                "- Complex numbers\n"
+                "Results are simplified to real numbers when imaginary part is negligible.\n"
+                "The tool is useful where simple 'mental arithmetic' may be a problem, such as:\n"
+                "- To generate results where accuracy is important\n"
+                "- To handle operations that require more than 2 steps\n"
+                "- To process numbers or expressions that are not commonly known\n"
+                "- To evaluate results that may generate more than a few digits\n"
+                "Important:\n"
+                "- The expression must be a valid Python mathematical expression using the allowed operators and functions"
             ),
             parameters=[
                 AIToolParameter(
