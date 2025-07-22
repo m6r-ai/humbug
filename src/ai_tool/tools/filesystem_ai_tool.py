@@ -233,6 +233,7 @@ class FileSystemAITool(AITool):
     async def execute(
         self,
         tool_call: AIToolCall,
+        requester: str,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
@@ -240,6 +241,7 @@ class FileSystemAITool(AITool):
 
         Args:
             tool_call: Tool call containing operation name and arguments
+            requester: AI model requesting the operation
             request_authorization: Function to call for user authorization
 
         Returns:

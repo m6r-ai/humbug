@@ -313,6 +313,7 @@ class CalculatorAITool(AITool):
     async def execute(
         self,
         tool_call: AIToolCall,
+        requester: str,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
@@ -320,6 +321,7 @@ class CalculatorAITool(AITool):
 
         Args:
             tool_call: Tool call containing the expression to evaluate
+            requester: AI model requesting the operation
             request_authorization: Function to call if we need to request authorization
 
         Returns:

@@ -256,24 +256,24 @@ class ConversationWidget(QWidget):
         self._transcript_handler = ConversationTranscriptHandler(path)
         transcript_data = self._transcript_handler.read()
         self.load_message_history(transcript_data.messages, use_existing_ai_conversation)
-        self.set_sub_conversation_mode(os.path.basename(path).startswith("dAI-"))
+        self.set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
 
-    def set_sub_conversation_mode(self, enabled: bool) -> None:
+    def set_delegated_conversation_mode(self, enabled: bool) -> None:
         """
-        Enable or disable sub-conversation mode.
+        Enable or disable delegated conversation mode.
 
-        In sub-conversation mode, the user input is hidden to prevent
+        In delegated conversation mode, the user input is hidden to prevent
         manual message submission.
 
         Args:
-            enabled: True to enable sub-conversation mode, False to disable
+            enabled: True to enable delegated conversation mode, False to disable
         """
-        self._is_sub_conversation = enabled
+        self._is_delegated_conversation = enabled
         self._input.setVisible(not enabled)
 
     def _create_completion_result(self) -> Dict[str, Any]:
         """
-        Create completion result for sub-conversation.
+        Create completion result for delegated conversation.
 
         Returns:
             Dictionary containing completion result
@@ -329,7 +329,9 @@ class ConversationWidget(QWidget):
         msg_widget.toolCallApproved.connect(self._handle_tool_call_approved)
         msg_widget.toolCallRejected.connect(self._handle_tool_call_rejected)
 
-        msg_widget.set_content(message.content, message.source, message.timestamp, message.model or "", message.id)
+        msg_widget.set_content(
+            message.content, message.source, message.timestamp, message.model or "", message.id, message.user_name
+        )
 
         # Add widget before input and the stretch
         self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
@@ -516,10 +518,12 @@ class ConversationWidget(QWidget):
     async def _update_message(self, message: AIMessage) -> None:
         # Find the message widget that corresponds to the updated message
         # This is a simple approach - in practice you'd want to associate message IDs with widgets
-        for i, widget in enumerate(self._messages):
+        for i, msg_widget in enumerate(self._messages):
             if (i == len(self._messages) - 1 and
                     message.source in (AIMessageSource.AI, AIMessageSource.REASONING)):
-                widget.set_content(message.content, message.source, message.timestamp, message.model or "", message.id)
+                msg_widget.set_content(
+                    message.content, message.source, message.timestamp, message.model or "", message.id, message.user_name
+                )
                 break
 
         # Scroll to bottom if auto-scrolling is enabled
@@ -1485,7 +1489,7 @@ class ConversationWidget(QWidget):
         """
         return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
 
-    def submit(self) -> None:
+    def submit(self, requester: str | None = None) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
         if not content:
@@ -1500,7 +1504,7 @@ class ConversationWidget(QWidget):
         self.status_updated.emit()
 
         sanitized_content = self._sanitize_input(content)
-        message = AIMessage.create(AIMessageSource.USER, sanitized_content)
+        message = AIMessage.create(AIMessageSource.USER, sanitized_content, user_name=requester)
 
         self._last_submitted_message = content
 
@@ -1536,8 +1540,8 @@ class ConversationWidget(QWidget):
         """
         metadata: Dict[str, Any] = {}
 
-        # Is this a conversation or a sub-conversation?
-        metadata["sub_conversation"] = self._is_sub_conversation
+        # Is this a conversation or a delegated conversation?
+        metadata["delegated_conversation"] = self._is_delegated_conversation
 
         # Store current input content
         metadata["content"] = self._input.to_plain_text()
@@ -1593,11 +1597,11 @@ class ConversationWidget(QWidget):
         if not metadata:
             return
 
-        sub_conversation = False
-        if "sub_conversation" in metadata:
-            sub_conversation = metadata["sub_conversation"]
+        delegated_conversation = False
+        if "delegated_conversation" in metadata:
+            delegated_conversation = metadata["delegated_conversation"]
 
-        self.set_sub_conversation_mode(sub_conversation)
+        self.set_delegated_conversation_mode(delegated_conversation)
 
         # Restore input content if specified
         if "content" in metadata:

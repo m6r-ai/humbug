@@ -348,6 +348,15 @@ class ConversationTab(TabBase):
         """Submit the current message."""
         self._conversation_widget.submit()
 
+    def submit_with_requester(self, requester: str) -> None:
+        """
+        Submit the current message with a specific requester.
+
+        Args:
+            requester: The AI model or user name submitting the message
+        """
+        self._conversation_widget.submit(requester)
+
     def show_find(self) -> None:
         """Show the find widget."""
         # Get selected text if any

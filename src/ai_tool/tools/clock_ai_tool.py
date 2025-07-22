@@ -34,6 +34,7 @@ class ClockAITool(AITool):
     async def execute(
         self,
         tool_call: AIToolCall,
+        requester: str,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Execute the get current time tool."""

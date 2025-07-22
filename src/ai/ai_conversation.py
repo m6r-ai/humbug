@@ -349,6 +349,7 @@ class AIConversation:
             # Execute the tool call
             tool_result = await self._tool_manager.execute_tool(
                 tool_call,
+                self._settings.model,
                 request_authorization=self._request_tool_authorization
             )
             tool_results.append(tool_result)
@@ -665,7 +666,6 @@ class AIConversation:
 
         # Check for tool calls - execute them directly, authorization happens during execution if needed
         if tool_calls:
-            # Execute tools directly - no upfront approval required
             await self._execute_tool_calls(tool_calls)
             return
 

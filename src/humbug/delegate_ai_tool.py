@@ -168,6 +168,7 @@ class DelegateAITool(AITool):
     async def execute(
         self,
         tool_call: AIToolCall,
+        requester: str,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
@@ -175,6 +176,7 @@ class DelegateAITool(AITool):
 
         Args:
             tool_call: Tool call containing task prompt and arguments
+            requester: AI model requesting the operation
             request_authorization: Function to call for user authorization
 
         Returns:
@@ -234,7 +236,7 @@ class DelegateAITool(AITool):
         self._logger.debug("AI delegation requested with task: %s", task_prompt[:100])
 
         try:
-            return await self._delegate_task(tool_call, task_prompt, conversation_path, model, temperature, reasoning)
+            return await self._delegate_task(tool_call, requester, task_prompt, conversation_path, model, temperature, reasoning)
 
         except (AIToolExecutionError, AIToolAuthorizationDenied):
             # Re-raise our own errors
@@ -323,6 +325,7 @@ class DelegateAITool(AITool):
     async def _delegate_task(
         self,
         tool_call: AIToolCall,
+        requester: str,
         task_prompt: str,
         conversation_path: str | None,
         model: str | None,
@@ -334,6 +337,7 @@ class DelegateAITool(AITool):
 
         Args:
             tool_call: Tool call containing operation name and arguments
+            requester: AI model requesting the operation
             task_prompt: The prompt to send to the delegated AI
             conversation_path: Path to existing conversation (None for new session)
             model: AI model to use (None for default)
@@ -375,7 +379,7 @@ class DelegateAITool(AITool):
 
             # Submit the task prompt
             conversation_tab.set_input_text(task_prompt)
-            conversation_tab.submit()
+            conversation_tab.submit_with_requester(requester)
 
             # Log the delegation
             tab_id = conversation_tab.tab_id()

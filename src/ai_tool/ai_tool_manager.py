@@ -193,6 +193,7 @@ class AIToolManager:
     async def execute_tool(
         self,
         tool_call: AIToolCall,
+        requester: str,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
@@ -200,6 +201,7 @@ class AIToolManager:
 
         Args:
             tool_call: The tool call to execute
+            requester: AI model requesting the tool use
             request_authorization: Callback for requesting authorization
 
         Returns:
@@ -238,7 +240,7 @@ class AIToolManager:
             # Validate operation arguments before execution
             tool.validate_operation_arguments(tool_call.arguments)
 
-            result = await tool.execute(tool_call, request_authorization)
+            result = await tool.execute(tool_call, requester, request_authorization)
 
             self._logger.debug(
                 "Tool '%s' executed successfully with args %s",

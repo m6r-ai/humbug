@@ -55,6 +55,7 @@ class ConversationMessage(QFrame):
         self._message_content = ""
         self._message_model = ""
         self._message_id: str | None = None
+        self._message_user_name: str | None = None
 
         self._style_manager = StyleManager()
 
@@ -248,7 +249,11 @@ class ConversationMessage(QFrame):
         strings = self._language_manager.strings()
         match self._message_source:
             case AIMessageSource.USER:
-                role_text = strings.role_you
+                if self._message_user_name:
+                    role_text = self._message_user_name
+
+                else:
+                    role_text = strings.role_you
 
             case AIMessageSource.AI:
                 role_text = strings.role_assistant.format(model=self._message_model)
@@ -397,7 +402,8 @@ class ConversationMessage(QFrame):
         style: AIMessageSource,
         timestamp: datetime,
         model: str,
-        message_id: str | None = None
+        message_id: str | None = None,
+        user_name: str | None = None
     ) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
@@ -414,6 +420,7 @@ class ConversationMessage(QFrame):
         self._message_content = text
         self._message_model = model
         self._message_id = message_id
+        self._message_user_name = user_name
 
         # Check if style changed - if so, we need to recreate all sections
         if style != self._current_style:
