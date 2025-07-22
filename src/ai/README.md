@@ -22,7 +22,6 @@ This module provides a comprehensive framework for interacting with various AI b
 
 ### Utility Components
 - **`ai_model.py`** - Defines AI model configurations and capabilities
-- **`ai_rate_limiter.py`** - Implements rate limiting for API calls to prevent quota exhaustion
 - **`ai_usage.py`** - Tracks and reports AI usage statistics
 
 ## Provider Support
@@ -43,7 +42,6 @@ The module includes support for multiple AI providers through dedicated subdirec
 - **Streaming Support**: Real-time streaming of AI responses with incremental updates
 - **Multi-Provider**: Unified interface for different AI providers
 - **Tool Calling**: Support for AI models to call external functions and tools
-- **Rate Limiting**: Built-in rate limiting to handle API quotas
 - **Error Handling**: Comprehensive error handling with retry mechanisms
 - **Conversation History**: Persistent conversation history management
 - **Flexible Configuration**: Extensive configuration options for different use cases
