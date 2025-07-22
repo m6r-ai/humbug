@@ -182,7 +182,7 @@ class OllamaBackend(AIBackend):
                     continue
 
                 assistant_msg = self._build_assistant_message(
-                    content=message.content,
+                    content=message.content if message.content else "...",  # Never send empty content,
                     tool_calls=message.tool_calls
                 )
                 result.append(assistant_msg)
