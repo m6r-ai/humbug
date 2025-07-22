@@ -1425,6 +1425,10 @@ class ColumnManager(QWidget):
         abs_path = self._mindspace_manager.get_absolute_path(path)
         existing_tab = self._find_conversation_tab_by_path(abs_path)
         if existing_tab:
+            if existing_tab.is_ephemeral() and not ephemeral:
+                # If the existing tab is ephemeral, convert it to permanent
+                self._make_tab_permanent(existing_tab)
+
             self._set_current_tab(existing_tab, ephemeral)
             return existing_tab
 
@@ -1566,6 +1570,10 @@ class ColumnManager(QWidget):
         # Check if already open
         existing_tab = self._find_wiki_tab_by_path(path_minus_anchor)
         if existing_tab:
+            if existing_tab.is_ephemeral() and not ephemeral:
+                # If the existing tab is ephemeral, convert it to permanent
+                self._make_tab_permanent(existing_tab)
+
             self._set_current_tab(existing_tab, ephemeral)
 
             # If there's an anchor, scroll to it
