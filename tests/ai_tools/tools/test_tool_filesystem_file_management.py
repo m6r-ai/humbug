@@ -23,7 +23,7 @@ class TestFileSystemAIToolDeleteFile:
             mock_is_file.return_value = True
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File deleted successfully: file.txt" in result.content
             mock_unlink.assert_called_once()
@@ -39,7 +39,7 @@ class TestFileSystemAIToolDeleteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "nonexistent.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "File does not exist: nonexistent.txt" in str(error)
@@ -54,7 +54,7 @@ class TestFileSystemAIToolDeleteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Path is not a file: dir" in str(error)
@@ -69,7 +69,7 @@ class TestFileSystemAIToolDeleteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization_denied))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization_denied))
 
             error = exc_info.value
             assert "User denied permission to delete file: file.txt" in str(error)
@@ -86,7 +86,7 @@ class TestFileSystemAIToolDeleteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to delete file" in str(error)
@@ -103,7 +103,7 @@ class TestFileSystemAIToolDeleteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied deleting file" in str(error)
@@ -120,7 +120,7 @@ class TestFileSystemAIToolDeleteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to delete file" in str(error)
@@ -161,7 +161,7 @@ class TestFileSystemAIToolCopyFile:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "source.txt", "destination": "dest.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File copied successfully: source.txt -> dest.txt" in result.content
             mock_copy2.assert_called_once()
@@ -194,7 +194,7 @@ class TestFileSystemAIToolCopyFile:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "source.txt", "destination": "dest.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File copied successfully: source.txt -> dest.txt" in result.content
             # Verify authorization was called with destructive=True for existing destination
@@ -209,7 +209,7 @@ class TestFileSystemAIToolCopyFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "nonexistent.txt", "destination": "dest.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Source file does not exist: nonexistent.txt" in str(error)
@@ -224,7 +224,7 @@ class TestFileSystemAIToolCopyFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "dir", "destination": "dest.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Source path is not a file: dir" in str(error)
@@ -238,7 +238,7 @@ class TestFileSystemAIToolCopyFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "source.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "No 'destination' argument provided" in str(error)
@@ -258,7 +258,7 @@ class TestFileSystemAIToolCopyFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "large.txt", "destination": "dest.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Source file too large: 11.0MB (max: 10.0MB)" in str(error)
@@ -294,7 +294,7 @@ class TestFileSystemAIToolCopyFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "source.txt", "destination": "dest.txt"})
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization_denied))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization_denied))
 
             error = exc_info.value
             assert "User denied permission to copy file: source.txt -> dest.txt" in str(error)
@@ -333,7 +333,7 @@ class TestFileSystemAIToolCopyFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "source.txt", "destination": "dest.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied copying file" in str(error)
@@ -372,7 +372,7 @@ class TestFileSystemAIToolCopyFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "source.txt", "destination": "dest.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to copy file" in str(error)
@@ -402,7 +402,7 @@ class TestFileSystemAIToolMove:
             mock_is_dir.return_value = False
 
             tool_call = make_tool_call("filesystem", {"operation": "move", "path": "source.txt", "destination": "dest.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Moved successfully: source.txt -> dest.txt" in result.content
             mock_rename.assert_called_once()
@@ -432,7 +432,7 @@ class TestFileSystemAIToolMove:
             mock_is_dir.return_value = True
 
             tool_call = make_tool_call("filesystem", {"operation": "move", "path": "source_dir", "destination": "dest_dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Moved successfully: source_dir -> dest_dir" in result.content
             mock_rename.assert_called_once()
@@ -444,7 +444,7 @@ class TestFileSystemAIToolMove:
 
             tool_call = make_tool_call("filesystem", {"operation": "move", "path": "nonexistent", "destination": "dest"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Source path does not exist: nonexistent" in str(error)
@@ -456,7 +456,7 @@ class TestFileSystemAIToolMove:
 
             tool_call = make_tool_call("filesystem", {"operation": "move", "path": "source.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "No 'destination' argument provided" in str(error)
@@ -476,7 +476,7 @@ class TestFileSystemAIToolMove:
 
             tool_call = make_tool_call("filesystem", {"operation": "move", "path": "source.txt", "destination": "dest.txt"})
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization_denied))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization_denied))
 
             error = exc_info.value
             assert "User denied permission to move: source.txt -> dest.txt" in str(error)
@@ -498,7 +498,7 @@ class TestFileSystemAIToolMove:
             mock_exists.return_value = True
 
             tool_call = make_tool_call("filesystem", {"operation": "move", "path": "source.txt", "destination": "new_dir/dest.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Moved successfully: source.txt -> new_dir/dest.txt" in result.content
             # Verify parent directory creation was attempted
@@ -523,7 +523,7 @@ class TestFileSystemAIToolMove:
 
             tool_call = make_tool_call("filesystem", {"operation": "move", "path": "source.txt", "destination": "dest.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied moving" in str(error)
@@ -547,7 +547,7 @@ class TestFileSystemAIToolMove:
 
             tool_call = make_tool_call("filesystem", {"operation": "move", "path": "source.txt", "destination": "dest.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to move" in str(error)

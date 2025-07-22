@@ -30,7 +30,7 @@ class TestFileSystemAIToolIntegration:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File: file.txt" in result.content
             assert "test content" in result.content
@@ -51,7 +51,7 @@ class TestFileSystemAIToolIntegration:
             mock_temp_file.return_value = mock_temp_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File written successfully: file.txt (12 bytes)" in result.content
 
@@ -61,7 +61,7 @@ class TestFileSystemAIToolIntegration:
         with patch.object(filesystem_tool, '_read_file', side_effect=RuntimeError("Unexpected error")):
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Filesystem operation failed: Unexpected error" in str(error)
@@ -87,7 +87,7 @@ class TestFileSystemAIToolAuthorizationContext:
             mock_temp_file.return_value = mock_temp_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             # Verify authorization was called with context information
             mock_authorization.assert_called_once()
@@ -127,7 +127,7 @@ class TestFileSystemAIToolAuthorizationContext:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "copy_file", "path": "source.txt", "destination": "dest.txt"})
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             # Verify authorization was called with context information
             mock_authorization.assert_called_once()
@@ -146,7 +146,7 @@ class TestFileSystemAIToolAuthorizationContext:
             mock_is_file.return_value = True
 
             tool_call = make_tool_call("filesystem", {"operation": "delete_file", "path": "file.txt"})
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             # Verify authorization was called with context information
             mock_authorization.assert_called_once()
@@ -197,14 +197,14 @@ class TestFileSystemAIToolParametrized:
         assert f"Maximum file size: {max_size_mb}MB" in definition.description
 
     @pytest.mark.parametrize("path_input,expected_error", [
-        ("", "Path parameter is required"),
+        ("", "path: parameter must not be empty"),
         (123, "'path' must be a string"),
     ])
     def test_invalid_path_inputs(self, filesystem_tool, mock_authorization, make_tool_call, path_input, expected_error):
         """Test various invalid path inputs through public interface."""
         tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": path_input})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
         assert expected_error in str(error)
@@ -220,7 +220,7 @@ class TestFileSystemAIToolParametrized:
         """Test falsy path inputs and their specific error messages."""
         tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": falsy_value})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
         assert expected_error in str(error)
@@ -300,7 +300,7 @@ class TestFileSystemAIToolErrorHandling:
             for operation in operations_needing_destination:
                 tool_call = make_tool_call("filesystem", {"operation": operation, "path": "source.txt"})
                 with pytest.raises(AIToolExecutionError) as exc_info:
-                    asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                    asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
                 error = exc_info.value
                 # The error message varies but should indicate missing parameter
@@ -325,7 +325,7 @@ class TestFileSystemAIToolErrorHandling:
             for operation in operations_needing_content:
                 tool_call = make_tool_call("filesystem", {"operation": operation, "path": "file.txt"})
                 with pytest.raises(AIToolExecutionError) as exc_info:
-                    asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                    asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
                 error = exc_info.value
                 # append_to_file checks for content later, so it fails on path validation first
@@ -347,7 +347,7 @@ class TestFileSystemAIToolPathResolverIntegration:
 
         tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "forbidden"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
         assert "Access to this path is forbidden" in str(error)
@@ -375,7 +375,7 @@ class TestFileSystemAIToolPathResolverIntegration:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             # Verify the custom display path is used in the result
             assert "File: custom_prefix/file.txt" in result.content
@@ -418,6 +418,6 @@ class TestFileSystemAIToolPathResolverIntegration:
                 mock_stat.return_value = mock_stat_result
 
                 tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": input_path})
-                result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
                 assert f"File: {expected_display}" in result.content

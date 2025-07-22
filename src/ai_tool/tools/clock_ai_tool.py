@@ -12,8 +12,8 @@ class ClockAITool(AITool):
     def get_definition(self) -> AIToolDefinition:
         """Get the tool definition."""
         return AIToolDefinition(
-            name="get_current_time",
-            description="The get_current_time tool lets you (the AI) get the current date and time",
+            name="clock",
+            description="The clock tool lets you (the AI) get the current date and time",
             parameters=[
                 AIToolParameter(
                     name="format",
@@ -58,7 +58,7 @@ class ClockAITool(AITool):
 
             return AIToolResult(
                 id=tool_call.id,
-                name="get_current_time",
+                name="clock",
                 content=content
             )
 

@@ -35,7 +35,7 @@ class TestFileSystemAIToolGetInfo:
             mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "file.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File: file.txt" in result.content
             assert "Type: File" in result.content
@@ -68,7 +68,7 @@ class TestFileSystemAIToolGetInfo:
             mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "README"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File: README" in result.content
             assert "Extension: None" in result.content
@@ -110,7 +110,7 @@ class TestFileSystemAIToolGetInfo:
             mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Directory: dir" in result.content
             assert "Type: Directory" in result.content
@@ -142,7 +142,7 @@ class TestFileSystemAIToolGetInfo:
             mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "empty_dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Items: 0 total (0 files, 0 directories)" in result.content
 
@@ -170,7 +170,7 @@ class TestFileSystemAIToolGetInfo:
             mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "protected_dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Items: Permission denied" in result.content
 
@@ -196,7 +196,7 @@ class TestFileSystemAIToolGetInfo:
             mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "special"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Path: special" in result.content
             assert "Type: Other (neither file nor directory)" in result.content
@@ -210,7 +210,7 @@ class TestFileSystemAIToolGetInfo:
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "nonexistent"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Path does not exist: nonexistent" in str(error)
@@ -225,7 +225,7 @@ class TestFileSystemAIToolGetInfo:
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "protected"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied getting info" in str(error)
@@ -240,7 +240,7 @@ class TestFileSystemAIToolGetInfo:
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "broken"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to get info" in str(error)
@@ -268,7 +268,7 @@ class TestFileSystemAIToolGetInfo:
             mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "large.bin"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             # Check that large numbers are formatted with commas
             assert "Size: 1,234,567,890 bytes" in result.content
@@ -304,7 +304,7 @@ class TestFileSystemAIToolGetInfo:
                 mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
                 tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "test_file"})
-                result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
                 assert f"Permissions: {expected_perms}" in result.content
 
@@ -331,7 +331,7 @@ class TestFileSystemAIToolGetInfo:
             mock_datetime.fromtimestamp.return_value = mock_datetime_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "file.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             # Verify that fromtimestamp was called with the correct timestamp
             mock_datetime.fromtimestamp.assert_called_with(1672531200.0)

@@ -28,7 +28,7 @@ class TestFileSystemAIToolReadFile:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File: file.txt" in result.content
             assert "Size: 12 bytes" in result.content
@@ -42,7 +42,7 @@ class TestFileSystemAIToolReadFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "nonexistent.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "File does not exist: nonexistent.txt" in str(error)
@@ -57,7 +57,7 @@ class TestFileSystemAIToolReadFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Path is not a file: dir" in str(error)
@@ -77,7 +77,7 @@ class TestFileSystemAIToolReadFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "large.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "File too large: 11.0MB (max: 10.0MB)" in str(error)
@@ -97,7 +97,7 @@ class TestFileSystemAIToolReadFile:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt", "encoding": "utf-16"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Encoding: utf-16" in result.content
             assert "test content" in result.content
@@ -123,7 +123,7 @@ class TestFileSystemAIToolReadFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to decode file with encoding 'utf-8'" in str(error)
@@ -147,7 +147,7 @@ class TestFileSystemAIToolReadFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied reading file" in str(error)
@@ -171,7 +171,7 @@ class TestFileSystemAIToolReadFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to read file" in str(error)
@@ -196,7 +196,7 @@ class TestFileSystemAIToolWriteFile:
             mock_temp_file.return_value = mock_temp_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File written successfully: file.txt (12 bytes)" in result.content
             # Verify authorization was called with destructive=False for new file
@@ -220,7 +220,7 @@ class TestFileSystemAIToolWriteFile:
             mock_temp_file.return_value = mock_temp_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File written successfully: file.txt (12 bytes)" in result.content
             # Verify authorization was called with destructive=True for existing file
@@ -232,7 +232,7 @@ class TestFileSystemAIToolWriteFile:
         """Test writing file without content parameter."""
         tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt"})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
         assert "No 'content' argument provided" in str(error)
@@ -241,7 +241,7 @@ class TestFileSystemAIToolWriteFile:
         """Test writing file with non-string content."""
         tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": 123})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
         assert "'content' must be a string" in str(error)
@@ -253,7 +253,7 @@ class TestFileSystemAIToolWriteFile:
 
         tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": large_content})
         with pytest.raises(AIToolExecutionError) as exc_info:
-            asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
         assert "'content' too large: 11.0MB (max: 10.0MB)" in str(error)
@@ -274,7 +274,7 @@ class TestFileSystemAIToolWriteFile:
             mock_temp_file.return_value = mock_temp_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content", "encoding": "utf-16"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File written successfully" in result.content
             # Verify the encoding was passed to NamedTemporaryFile
@@ -299,7 +299,7 @@ class TestFileSystemAIToolWriteFile:
             mock_temp_file.return_value = mock_temp_instance
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "dir/file.txt", "content": "test content", "create_parents": True})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File written successfully" in result.content
             # Verify mkdir was called with parents=True
@@ -312,7 +312,7 @@ class TestFileSystemAIToolWriteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization_denied))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization_denied))
 
             error = exc_info.value
             assert "User denied permission to write file: file.txt" in str(error)
@@ -329,7 +329,7 @@ class TestFileSystemAIToolWriteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied writing file" in str(error)
@@ -346,7 +346,7 @@ class TestFileSystemAIToolWriteFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "write_file", "path": "file.txt", "content": "test content"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to write file" in str(error)
@@ -370,7 +370,7 @@ class TestFileSystemAIToolAppendFile:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": "new content"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Content appended successfully: file.txt (+11 bytes)" in result.content
             # Verify the file was opened in append mode
@@ -383,7 +383,7 @@ class TestFileSystemAIToolAppendFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": "content"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "File does not exist: file.txt" in str(error)
@@ -398,7 +398,7 @@ class TestFileSystemAIToolAppendFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "dir", "content": "content"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Path is not a file: dir" in str(error)
@@ -421,7 +421,7 @@ class TestFileSystemAIToolAppendFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": large_content})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "File would be too large after append" in str(error)
@@ -441,7 +441,7 @@ class TestFileSystemAIToolAppendFile:
             mock_stat.return_value = mock_stat_result
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": "content", "encoding": "utf-16"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Content appended successfully" in result.content
             # Verify the encoding was passed to open
@@ -456,7 +456,7 @@ class TestFileSystemAIToolAppendFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "No 'content' argument provided" in str(error)
@@ -476,7 +476,7 @@ class TestFileSystemAIToolAppendFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": "content"})
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization_denied))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization_denied))
 
             error = exc_info.value
             assert "User denied permission to append to file: file.txt" in str(error)
@@ -500,7 +500,7 @@ class TestFileSystemAIToolAppendFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": "content"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied appending to file" in str(error)
@@ -524,7 +524,7 @@ class TestFileSystemAIToolAppendFile:
 
             tool_call = make_tool_call("filesystem", {"operation": "append_to_file", "path": "file.txt", "content": "content"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to append to file" in str(error)

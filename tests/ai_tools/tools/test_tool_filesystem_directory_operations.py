@@ -35,7 +35,7 @@ class TestFileSystemAIToolListDirectory:
             mock_iterdir.return_value = [mock_file, mock_subdir]
 
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Directory: dir" in result.content
             assert "Items: 2" in result.content
@@ -53,7 +53,7 @@ class TestFileSystemAIToolListDirectory:
             mock_iterdir.return_value = []
 
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "empty_dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Directory: empty_dir" in result.content
             assert "Items: 0" in result.content
@@ -86,7 +86,7 @@ class TestFileSystemAIToolListDirectory:
             mock_iterdir.return_value = [mock_file, mock_symlink, mock_unknown]
 
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Directory: dir" in result.content
             assert "Items: 3" in result.content
@@ -101,7 +101,7 @@ class TestFileSystemAIToolListDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Directory does not exist: dir" in str(error)
@@ -116,7 +116,7 @@ class TestFileSystemAIToolListDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Path is not a directory: file.txt" in str(error)
@@ -133,7 +133,7 @@ class TestFileSystemAIToolListDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied listing directory" in str(error)
@@ -150,7 +150,7 @@ class TestFileSystemAIToolListDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to list directory" in str(error)
@@ -167,7 +167,7 @@ class TestFileSystemAIToolCreateDirectory:
             mock_exists.return_value = False
 
             tool_call = make_tool_call("filesystem", {"operation": "create_directory", "path": "new_dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Directory created successfully: new_dir" in result.content
             # Verify mkdir was called with default create_parents=True
@@ -185,7 +185,7 @@ class TestFileSystemAIToolCreateDirectory:
             mock_exists.return_value = False
 
             tool_call = make_tool_call("filesystem", {"operation": "create_directory", "path": "new_dir", "create_parents": False})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Directory created successfully: new_dir" in result.content
             # Verify mkdir was called with create_parents=False
@@ -201,7 +201,7 @@ class TestFileSystemAIToolCreateDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "create_directory", "path": "existing_dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Directory already exists: existing_dir" in str(error)
@@ -216,7 +216,7 @@ class TestFileSystemAIToolCreateDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "create_directory", "path": "existing_file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Path exists but is not a directory: existing_file.txt" in str(error)
@@ -228,7 +228,7 @@ class TestFileSystemAIToolCreateDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "create_directory", "path": "new_dir"})
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization_denied))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization_denied))
 
             error = exc_info.value
             assert "User denied permission to create directory: new_dir" in str(error)
@@ -243,7 +243,7 @@ class TestFileSystemAIToolCreateDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "create_directory", "path": "new_dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Directory already exists" in str(error)
@@ -258,7 +258,7 @@ class TestFileSystemAIToolCreateDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "create_directory", "path": "new_dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied creating directory" in str(error)
@@ -273,7 +273,7 @@ class TestFileSystemAIToolCreateDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "create_directory", "path": "new_dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to create directory" in str(error)
@@ -294,7 +294,7 @@ class TestFileSystemAIToolRemoveDirectory:
             mock_iterdir.return_value = []  # Empty directory
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "empty_dir"})
-            result = asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+            result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "Directory removed successfully: empty_dir" in result.content
             mock_rmdir.assert_called_once()
@@ -310,7 +310,7 @@ class TestFileSystemAIToolRemoveDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "nonexistent"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Directory does not exist: nonexistent" in str(error)
@@ -325,7 +325,7 @@ class TestFileSystemAIToolRemoveDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "file.txt"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Path is not a directory: file.txt" in str(error)
@@ -346,7 +346,7 @@ class TestFileSystemAIToolRemoveDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "full_dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Directory is not empty (contains 1 items): full_dir" in str(error)
@@ -363,7 +363,7 @@ class TestFileSystemAIToolRemoveDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Permission denied checking directory contents" in str(error)
@@ -380,7 +380,7 @@ class TestFileSystemAIToolRemoveDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "empty_dir"})
             with pytest.raises(AIToolAuthorizationDenied) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization_denied))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization_denied))
 
             error = exc_info.value
             assert "User denied permission to remove directory: empty_dir" in str(error)
@@ -399,7 +399,7 @@ class TestFileSystemAIToolRemoveDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "empty_dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to remove directory" in str(error)
@@ -418,7 +418,7 @@ class TestFileSystemAIToolRemoveDirectory:
 
             tool_call = make_tool_call("filesystem", {"operation": "remove_directory", "path": "empty_dir"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(filesystem_tool.execute(tool_call, mock_authorization))
+                asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to remove directory" in str(error)

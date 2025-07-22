@@ -219,7 +219,7 @@ class FileSystemAITool(AITool):
             AIToolExecutionError: If path is invalid or outside boundaries
         """
         if not path_str:
-            raise AIToolExecutionError(f"{key}: path parameter is required")
+            raise AIToolExecutionError(f"{key}: parameter must not be empty")
 
         try:
             return self._resolve_path(path_str)

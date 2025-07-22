@@ -272,9 +272,9 @@ class CalculatorAITool(AITool):
             Tool definition with parameters and description
         """
         return AIToolDefinition(
-            name="calculate",
+            name="calculator",
             description=(
-                "The calculate tool lets you (the AI) evaluate mathematical expressions. "
+                "The calculator tool lets you (the AI) evaluate mathematical expressions. "
                 "It supports the following operations:\n"
                 "- Arithmetic: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power)\n"
                 "- Trigonometry: sin cos tan\n"
@@ -370,7 +370,7 @@ class CalculatorAITool(AITool):
 
             return AIToolResult(
                 id=tool_call.id,
-                name="calculate",
+                name="calculator",
                 content=result
             )
 

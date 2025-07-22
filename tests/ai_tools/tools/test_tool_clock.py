@@ -44,8 +44,8 @@ class TestClockAIToolDefinition:
         definition = clock_tool.get_definition()
 
         assert isinstance(definition, AIToolDefinition)
-        assert definition.name == "get_current_time"
-        assert definition.description == "Get the current date and time"
+        assert definition.name == "clock"
+        assert "The clock tool" in definition.description
         assert len(definition.parameters) == 2
 
     def test_format_parameter_definition(self, clock_tool):
@@ -78,29 +78,29 @@ class TestClockAIToolExecution:
 
     def test_execute_default_format(self, clock_tool, mock_datetime, mock_authorization, make_tool_call):
         """Test execution with default format (should be iso)."""
-        tool_call = make_tool_call("get_current_time", {})
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", {})
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         assert result.content == "2023-12-25T14:30:45.123456Z"
 
     def test_execute_iso_format_explicit(self, clock_tool, mock_datetime, mock_authorization, make_tool_call):
         """Test execution with explicit iso format."""
-        tool_call = make_tool_call("get_current_time", {"format": "iso"})
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", {"format": "iso"})
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         assert result.content == "2023-12-25T14:30:45.123456Z"
 
     def test_execute_human_format(self, clock_tool, mock_datetime, mock_authorization, make_tool_call):
         """Test execution with human format."""
-        tool_call = make_tool_call("get_current_time", {"format": "human"})
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", {"format": "human"})
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         assert result.content == "2023-12-25 14:30:45 UTC"
 
     def test_execute_timestamp_format(self, clock_tool, mock_datetime, mock_authorization, make_tool_call):
         """Test execution with timestamp format."""
-        tool_call = make_tool_call("get_current_time", {"format": "timestamp"})
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", {"format": "timestamp"})
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         # Calculate expected timestamp
         expected_timestamp = str(int(mock_datetime.timestamp()))
@@ -108,33 +108,33 @@ class TestClockAIToolExecution:
 
     def test_execute_with_timezone_parameter(self, clock_tool, mock_datetime, mock_authorization, make_tool_call):
         """Test execution with timezone parameter (currently ignored by implementation)."""
-        tool_call = make_tool_call("get_current_time", {
+        tool_call = make_tool_call("clock", {
             "format": "iso",
             "timezone": "America/New_York"
         })
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         # Current implementation ignores timezone, so should return UTC
         assert result.content == "2023-12-25T14:30:45.123456Z"
 
     def test_execute_invalid_format_falls_back_to_iso(self, clock_tool, mock_datetime, mock_authorization, make_tool_call):
         """Test execution with invalid format falls back to iso."""
-        tool_call = make_tool_call("get_current_time", {"format": "invalid"})
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", {"format": "invalid"})
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         assert result.content == "2023-12-25T14:30:45.123456Z"
 
     def test_execute_empty_arguments(self, clock_tool, mock_datetime, mock_authorization, make_tool_call):
         """Test execution with empty arguments dictionary."""
-        tool_call = make_tool_call("get_current_time", {})
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", {})
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         assert result.content == "2023-12-25T14:30:45.123456Z"
 
     def test_execute_none_format(self, clock_tool, mock_datetime, mock_authorization, make_tool_call):
         """Test execution with None format value."""
-        tool_call = make_tool_call("get_current_time", {"format": None})
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", {"format": None})
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         assert result.content == "2023-12-25T14:30:45.123456Z"
 
@@ -147,9 +147,9 @@ class TestClockAIToolErrorHandling:
         with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.side_effect = OSError("System clock error")
 
-            tool_call = make_tool_call("get_current_time", {"format": "iso"})
+            tool_call = make_tool_call("clock", {"format": "iso"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+                asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to get current time: System clock error" in str(error)
@@ -164,9 +164,9 @@ class TestClockAIToolErrorHandling:
             mock_dt.isoformat.return_value = "2023-12-25T14:30:45.123456"
             mock_datetime.now.return_value = mock_dt
 
-            tool_call = make_tool_call("get_current_time", {"format": "timestamp"})
+            tool_call = make_tool_call("clock", {"format": "timestamp"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+                asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to get current time: Invalid timestamp" in str(error)
@@ -179,9 +179,9 @@ class TestClockAIToolErrorHandling:
             mock_dt.isoformat.side_effect = AttributeError("No isoformat method")
             mock_datetime.now.return_value = mock_dt
 
-            tool_call = make_tool_call("get_current_time", {"format": "iso"})
+            tool_call = make_tool_call("clock", {"format": "iso"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+                asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to get current time: No isoformat method" in str(error)
@@ -194,9 +194,9 @@ class TestClockAIToolErrorHandling:
             mock_dt.strftime.side_effect = ValueError("Invalid format string")
             mock_datetime.now.return_value = mock_dt
 
-            tool_call = make_tool_call("get_current_time", {"format": "human"})
+            tool_call = make_tool_call("clock", {"format": "human"})
             with pytest.raises(AIToolExecutionError) as exc_info:
-                asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+                asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
             assert "Failed to get current time: Invalid format string" in str(error)
@@ -219,8 +219,8 @@ class TestClockAIToolParametrizedFormats:
         if format_type is not None:
             arguments["format"] = format_type
 
-        tool_call = make_tool_call("get_current_time", arguments)
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", arguments)
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         assert re.match(expected_pattern, result.content), f"Format {format_type} produced unexpected output: {result.content}"
 
@@ -240,9 +240,9 @@ class TestClockAIToolParametrizedFormats:
         if timezone is not None:
             arguments["timezone"] = timezone
 
-        tool_call = make_tool_call("get_current_time", arguments)
+        tool_call = make_tool_call("clock", arguments)
         # Should not raise an error regardless of timezone value
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         # Should always return UTC time (current implementation)
         assert result.content.endswith("Z")
@@ -258,8 +258,8 @@ class TestClockAIToolParametrizedFormats:
     def test_various_argument_combinations(self, clock_tool, mock_authorization, make_tool_call, arguments):
         """Test execution with various argument combinations."""
         # Should not raise exceptions for any valid argument combination
-        tool_call = make_tool_call("get_current_time", arguments)
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", arguments)
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         assert isinstance(result.content, str)
         assert len(result.content) > 0
@@ -270,8 +270,8 @@ class TestClockAIToolIntegration:
 
     def test_real_datetime_execution(self, clock_tool, mock_authorization, make_tool_call):
         """Test execution with real datetime (no mocking)."""
-        tool_call = make_tool_call("get_current_time", {"format": "iso"})
-        result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+        tool_call = make_tool_call("clock", {"format": "iso"})
+        result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
 
         # Should be a valid ISO format string
         assert isinstance(result.content, str)
@@ -288,8 +288,8 @@ class TestClockAIToolIntegration:
 
         results = {}
         for fmt in formats:
-            tool_call = make_tool_call("get_current_time", {"format": fmt})
-            result = asyncio.run(clock_tool.execute(tool_call, mock_authorization))
+            tool_call = make_tool_call("clock", {"format": fmt})
+            result = asyncio.run(clock_tool.execute(tool_call, "", mock_authorization))
             results[fmt] = result.content
 
         # All should be different formats of the same time
