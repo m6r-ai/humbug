@@ -51,8 +51,8 @@ class DelegateAITool(AITool):
             description=(
                 "The delegate_ai tool lets you (the AI) delegate cognitive tasks to other specialized AI instances by creating "
                 "a focused AI conversation for the specified task. The delegated AI has access to tools and can engage in "
-                "multi-turn collaboration when provided with a session_id to continue previous conversations. Each call "
-                "creates a temporary UI tab that closes after the response is returned. Delegation is useful for many "
+                "multi-turn collaboration if you provide it with a session_id returned from a previous delegated conversation. "
+                "Each call creates a temporary UI tab that closes after the response is returned. Delegation is useful for many "
                 "reasons - e.g.:\n,"
                 "- to use specialized AI capabilities\n"
                 "- to parallelize problem solving\n"
@@ -73,7 +73,7 @@ class DelegateAITool(AITool):
                 AIToolParameter(
                     name="session_id",
                     type="string",
-                    description="Session ID to continue a previous conversation. Omit for new sessions.",
+                    description="Session ID to continue a previous conversation. Omit to start a new session.",
                     required=False
                 ),
                 AIToolParameter(
