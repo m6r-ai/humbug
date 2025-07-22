@@ -256,7 +256,7 @@ class ConversationWidget(QWidget):
         self._transcript_handler = ConversationTranscriptHandler(path)
         transcript_data = self._transcript_handler.read()
         self.load_message_history(transcript_data.messages, use_existing_ai_conversation)
-        self.set_sub_conversation_mode(os.path.basename(path).startswith("c-"))
+        self.set_sub_conversation_mode(os.path.basename(path).startswith("dAI-"))
 
     def set_sub_conversation_mode(self, enabled: bool) -> None:
         """

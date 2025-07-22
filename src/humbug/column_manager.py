@@ -1388,7 +1388,7 @@ class ColumnManager(QWidget):
         # Generate timestamp for ID
         timestamp = datetime.now(timezone.utc)
         conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-        prefix = "c-" if parent is not None else ""
+        prefix = "dAI-" if parent is not None else ""
         conversation_title = f"{prefix}{conversation_title}"
         filename = os.path.join("conversations", f"{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)
