@@ -1389,7 +1389,8 @@ class ColumnManager(QWidget):
         timestamp = datetime.now(timezone.utc)
         conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
         prefix = "c-" if parent is not None else ""
-        filename = os.path.join("conversations", f"{prefix}{conversation_title}.conv")
+        conversation_title = f"{prefix}{conversation_title}"
+        filename = os.path.join("conversations", f"{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         conversation_tab = ConversationTab("", full_path, self)
