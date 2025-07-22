@@ -204,7 +204,7 @@ class FileSystemAITool(AITool):
 
         return value
 
-    def _validate_and_resolve_path(self, path_str: str, operation: str) -> Tuple[Path, str]:
+    def _validate_and_resolve_path(self, key: str, path_str: str) -> Tuple[Path, str]:
         """
         Validate path and resolve to absolute path with display path.
 
@@ -219,16 +219,16 @@ class FileSystemAITool(AITool):
             AIToolExecutionError: If path is invalid or outside boundaries
         """
         if not path_str:
-            raise AIToolExecutionError("Path parameter is required")
+            raise AIToolExecutionError(f"{key}: path parameter is required")
 
         try:
             return self._resolve_path(path_str)
 
         except ValueError as e:
-            raise AIToolExecutionError(f"Invalid path '{path_str}': {str(e)}") from e
+            raise AIToolExecutionError(f"{key}: invalid path '{path_str}': {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to resolve path '{path_str}': {str(e)}") from e
+            raise AIToolExecutionError(f"{key}: failed to resolve path '{path_str}': {str(e)}") from e
 
     async def execute(
         self,
@@ -297,7 +297,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Read file contents."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path, display_path = self._validate_and_resolve_path(path_arg, "read_file")
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         # Validate file exists and is readable
         if not path.exists():
@@ -342,7 +342,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Write content to file (create or overwrite)."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path, display_path = self._validate_and_resolve_path(path_arg, "write_file")
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         content = self._get_str_value_from_key("content", arguments)
         encoding = arguments.get("encoding", "utf-8")
@@ -415,7 +415,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Append content to existing file."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path, display_path = self._validate_and_resolve_path(path_arg, "append_to_file")
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         # File must exist for append
         if not path.exists():
@@ -467,7 +467,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """List directory contents."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path, display_path = self._validate_and_resolve_path(path_arg, "list_directory")
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not path.exists():
             raise AIToolExecutionError(f"Directory does not exist: {arguments['path']}")
@@ -535,7 +535,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Create directory (with parents if needed)."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path, display_path = self._validate_and_resolve_path(path_arg, "create_directory")
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
         create_parents = arguments.get("create_parents", True)
 
         if path.exists():
@@ -577,7 +577,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Remove empty directory."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path, display_path = self._validate_and_resolve_path(path_arg, "remove_directory")
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not path.exists():
             raise AIToolExecutionError(f"Directory does not exist: {arguments['path']}")
@@ -620,7 +620,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Delete file."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path, display_path = self._validate_and_resolve_path(path_arg, "delete_file")
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not path.exists():
             raise AIToolExecutionError(f"File does not exist: {arguments['path']}")
@@ -655,7 +655,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Copy file to destination."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        source_path, source_display_path = self._validate_and_resolve_path(path_arg, "copy_file")
+        source_path, source_display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not source_path.exists():
             raise AIToolExecutionError(f"Source file does not exist: {arguments['path']}")
@@ -664,7 +664,7 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Source path is not a file: {arguments['path']}")
 
         destination_arg = self._get_str_value_from_key("destination", arguments)
-        destination_path, dest_display_path = self._validate_and_resolve_path(destination_arg, "copy_file")
+        destination_path, dest_display_path = self._validate_and_resolve_path("destination", destination_arg)
 
         # Check source file size
         source_size = source_path.stat().st_size
@@ -711,13 +711,13 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Move/rename file or directory."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        source_path, source_display_path = self._validate_and_resolve_path(path_arg, "move")
+        source_path, source_display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not source_path.exists():
             raise AIToolExecutionError(f"Source path does not exist: {arguments['path']}")
 
         destination_arg = self._get_str_value_from_key("destination", arguments)
-        destination_path, dest_display_path = self._validate_and_resolve_path(destination_arg, "move")
+        destination_path, dest_display_path = self._validate_and_resolve_path("destination", destination_arg)
 
         # Build authorization context
         if source_path.is_file():
@@ -764,7 +764,7 @@ class FileSystemAITool(AITool):
     ) -> str:
         """Get detailed information about file or directory."""
         path_arg = self._get_str_value_from_key("path", arguments)
-        path, display_path = self._validate_and_resolve_path(path_arg, "get_info")
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not path.exists():
             raise AIToolExecutionError(f"Path does not exist: {arguments['path']}")

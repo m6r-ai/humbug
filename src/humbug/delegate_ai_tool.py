@@ -128,7 +128,7 @@ class DelegateAITool(AITool):
 
         return value
 
-    def _validate_and_resolve_conversation_path(self, session_id: str) -> str:
+    def _validate_and_resolve_session_id(self, session_id: str) -> str:
         """
         Validate session ID and resolve to conversation path.
 
@@ -203,7 +203,7 @@ class DelegateAITool(AITool):
             if not isinstance(session_id, str):
                 raise AIToolExecutionError("'session_id' must be a string")
 
-            conversation_path = self._validate_and_resolve_conversation_path(session_id)
+            conversation_path = self._validate_and_resolve_session_id(session_id)
 
         # Validate model if provided
         if model and not isinstance(model, str):
