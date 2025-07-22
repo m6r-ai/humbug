@@ -286,6 +286,9 @@ class ConversationWidget(QWidget):
 
         last_message = messages[-1]
 
+        if not last_message.completed:
+            return {"success": False, "error": "AI response was terminated early"}
+
         if last_message.source == AIMessageSource.AI:
             result = {
                 "success": True,
@@ -297,15 +300,14 @@ class ConversationWidget(QWidget):
 
             return result
 
-        elif last_message.source == AIMessageSource.SYSTEM:
+        if last_message.source == AIMessageSource.SYSTEM:
             return {
                 "success": False,
                 "error": last_message.content,
                 "details": last_message.error
             }
 
-        else:
-            return {"success": False, "error": "Conversation ended unexpectedly"}
+        return {"success": False, "error": "Conversation ended unexpectedly"}
 
     async def add_message(self, message: AIMessage) -> None:
         """
@@ -1141,6 +1143,11 @@ class ConversationWidget(QWidget):
 
     def close_widget(self) -> None:
         """Close the conversation."""
+        # If this is a delegated conversation, we need to ensure we notify the parent
+        if self._is_delegated_conversation and self._is_streaming:
+            result = self._create_completion_result()
+            self.submit_finished.emit(result)
+
         self._unregister_ai_conversation_callbacks()
 
         # Check if this is an empty conversation (no AI responses) and delete the file if so

@@ -311,16 +311,24 @@ class DelegateAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"Delegated AI task completed, tab ID: {tab_id}, session ID: {session_id}, response: {response_content[:50]}..."
             )
+
+            self._column_manager.close_tab_by_id(conversation_tab.tab_id())
+
             return AIToolResult(
                 id=tool_call.id,
                 name="delegate_ai",
                 content="\n\n".join(result_parts)
             )
 
-        finally:
-            # Clean up signal connection and close the tab
-            conversation_tab.conversation_completed.disconnect(on_completion)
+        except Exception as e:
+            self._logger.error("Error in AI delegation: %s", str(e), exc_info=True)
             self._column_manager.close_tab_by_id(conversation_tab.tab_id())
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="delegate_ai",
+                content="Delegated AI task failed: " + str(e)
+            )
 
     async def _delegate_task(
         self,
