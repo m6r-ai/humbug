@@ -104,7 +104,7 @@ class ConversationWidget(QWidget):
     activated = Signal()
 
     # Emits when the conversation label should be updated
-    update_label = Signal(bool)
+    update_label = Signal()
 
     # Emits when a submitted message has finished processing
     submit_finished = Signal(dict)
@@ -195,7 +195,7 @@ class ConversationWidget(QWidget):
         self._input.forkRequested.connect(self._fork_from_message)
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._handle_stop_request)
-        self._input.modified.connect(self.conversation_modified.emit)
+        self._input.modified.connect(self.conversation_modified)
 
         spacing = int(self._style_manager.message_bubble_spacing())
         self._messages_layout.setSpacing(spacing)
@@ -431,7 +431,7 @@ class ConversationWidget(QWidget):
 
             result = self._create_completion_result()
             self.submit_finished.emit(result)
-            self.update_label.emit(False)
+            self.update_label.emit()
 
             if self._last_submitted_message:
                 self._input.set_plain_text(self._last_submitted_message)
@@ -475,7 +475,7 @@ class ConversationWidget(QWidget):
             if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
                 msg_widget.show_tool_approval_ui(tool_call, reason, destructive)
-                self.update_label.emit(True)
+                self.update_label.emit()
                 break
 
     def _handle_tool_call_approved(self, _tool_call: AIToolCall) -> None:
@@ -607,7 +607,7 @@ class ConversationWidget(QWidget):
 
         result = self._create_completion_result()
         self.submit_finished.emit(result)
-        self.update_label.emit(False)
+        self.update_label.emit()
 
     def _handle_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
@@ -1601,7 +1601,9 @@ class ConversationWidget(QWidget):
 
         # Restore input content if specified
         if "content" in metadata:
-            self.set_input_text(metadata["content"])
+            content = metadata["content"]
+            if content:
+                self.set_input_text(metadata["content"])
 
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])

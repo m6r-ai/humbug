@@ -73,7 +73,7 @@ class ConversationTab(TabBase):
         self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
         self._conversation_widget.submit_finished.connect(self._handle_submit_finished)
         self._conversation_widget.update_label.connect(self._handle_update_label)
-        self._conversation_widget.conversation_modified.connect(self.handle_conversation_modified)
+        self._conversation_widget.conversation_modified.connect(self._handle_conversation_modified)
         layout.addWidget(self._conversation_widget)
 
         # Install activation tracking
@@ -90,7 +90,7 @@ class ConversationTab(TabBase):
         """Activate the tab."""
         self._conversation_widget.activate()
 
-    def handle_conversation_modified(self) -> None:
+    def _handle_conversation_modified(self) -> None:
         """Handle when the conversation is modified."""
         self._set_modified(True)
 
@@ -182,7 +182,7 @@ class ConversationTab(TabBase):
         metadata.update(self._conversation_widget.create_state_metadata(temp_state))
 
         if temp_state:
-            metadata['is_ephemeral'] = True
+            metadata['temp_state'] = True
 
         return TabState(
             type=TabType.CONVERSATION,
@@ -196,7 +196,7 @@ class ConversationTab(TabBase):
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
 
-        use_existing_ai_conversation = bool(state.metadata and state.metadata.get('is_ephemeral'))
+        use_existing_ai_conversation = bool(state.metadata and state.metadata.get('temp_state'))
         tab = cls(state.tab_id, state.path, parent, use_existing_ai_conversation)
         if state.is_ephemeral:
             tab._is_ephemeral = True
@@ -230,12 +230,9 @@ class ConversationTab(TabBase):
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
 
-    def _handle_update_label(self, requires_user: bool) -> None:
+    def _handle_update_label(self) -> None:
         """
         Handle label updates for the conversation tab.
-
-        Args:
-            requires_user: True if user input is required, False otherwise
         """
         self.set_updated(True)
 

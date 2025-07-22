@@ -861,12 +861,15 @@ class ColumnManager(QWidget):
         column = cast(ColumnWidget, sender)
         self._active_column = column
 
-        # Update MRU order for the newly selected tab
+        # Update MRU order for the newly selected tab.  Also check if we need to update focus.  We don't
+        # want to change focus if the current tab is ephemeral.
         current_tab = self.get_current_tab()
+        update_focus = True
         if current_tab:
             self._update_mru_order(current_tab, column)
+            update_focus = not current_tab.is_ephemeral()
 
-        self._update_tabs()
+        self._update_tabs(change_focus=update_focus)
 
     def _handle_tab_activated(self, tab: TabBase) -> None:
         """
