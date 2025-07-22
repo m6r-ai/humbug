@@ -143,7 +143,6 @@ class LogTab(TabBase):
 
     def close_tab(self) -> None:
         """Handle tab closing."""
-        pass
 
     def can_save(self) -> bool:
         """Check if the tab can be saved."""
@@ -167,7 +166,6 @@ class LogTab(TabBase):
 
     def undo(self) -> None:
         """Undo not supported for log tab."""
-        pass
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
@@ -175,7 +173,6 @@ class LogTab(TabBase):
 
     def redo(self) -> None:
         """Redo not supported for log tab."""
-        pass
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
@@ -183,7 +180,6 @@ class LogTab(TabBase):
 
     def cut(self) -> None:
         """Cut not supported for log tab."""
-        pass
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
@@ -199,7 +195,6 @@ class LogTab(TabBase):
 
     def paste(self) -> None:
         """Paste not supported for log tab."""
-        pass
 
     def can_submit(self) -> bool:
         """Check if message can be submitted."""
@@ -207,7 +202,6 @@ class LogTab(TabBase):
 
     def submit(self) -> None:
         """Submit not supported for log tab."""
-        pass
 
     def show_find(self) -> None:
         """Show the find widget."""
