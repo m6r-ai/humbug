@@ -12,6 +12,8 @@ New features:
 Bug fixes:
 
 - Single clicks on the mindspace tree should not cause the tree to lose focus.
+- Added missing type hints to the Windows terminal code.
+- Resolved some linter and pytest issues on Windows and MacOS.
 
 Internal structure changes:
 
