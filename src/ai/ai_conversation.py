@@ -14,7 +14,7 @@ from ai.ai_message_source import AIMessageSource
 from ai.ai_model import ReasoningCapability
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
-from ai_tool import AIToolManager, AIToolCall, AIToolResult
+from ai_tool import AIToolManager, AIToolCall, AIToolResult, AIToolAuthorizationDenied
 
 
 class AIConversationEvent(Enum):
@@ -319,6 +319,91 @@ class AIConversation:
         finally:
             self._pending_authorization_future = None
 
+    async def _execute_tool(
+        self,
+        tool_call: AIToolCall,
+    ) -> AIToolResult:
+        """
+        Execute a tool call.
+
+        Args:
+            tool_call: The tool call to execute
+
+        Returns:
+            AIToolResult containing the execution result
+        """
+        tool = self._tool_manager.get_tool(tool_call.name)
+        if tool is None:
+            error_msg = f"Unknown tool: {tool_call.name}"
+            self._logger.error(error_msg)
+            return AIToolResult(
+                id=tool_call.id,
+                name=tool_call.name,
+                content="",
+                error=error_msg
+            )
+
+        if not self._tool_manager.is_tool_enabled(tool_call.name):
+            error_msg = f"Tool is disabled: {tool_call.name}"
+            self._logger.error(error_msg)
+            return AIToolResult(
+                id=tool_call.id,
+                name=tool_call.name,
+                content="",
+                error=error_msg
+            )
+
+        try:
+            self._logger.debug(
+                "Executing tool '%s' with args %s",
+                tool_call.name,
+                tool_call.arguments
+            )
+
+            # Validate operation arguments before execution
+            tool.validate_operation_arguments(tool_call.arguments)
+
+            result = await tool.execute(tool_call, self._settings.model, self._request_tool_authorization)
+
+            self._logger.debug(
+                "Tool '%s' executed successfully with args %s",
+                tool_call.name,
+                tool_call.arguments
+            )
+
+            return result
+
+        except AIToolAuthorizationDenied as e:
+            error_msg = f"Tool authorization denied: {str(e)}"
+            self._logger.info(
+                "Tool '%s' authorization denied with args %s: %s",
+                tool_call.name,
+                tool_call.arguments,
+                str(e)
+            )
+            return AIToolResult(
+                id=tool_call.id,
+                name=tool_call.name,
+                content="",
+                error=error_msg
+            )
+
+        except Exception as e:
+            error_msg = f"Tool execution failed: {str(e)}"
+            self._logger.exception(
+                "Tool '%s' failed with args %s: %s",
+                tool_call.name,
+                tool_call.arguments,
+                str(e)
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name=tool_call.name,
+                content="",
+                error=error_msg
+            )
+
     async def _execute_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
         """Execute tool calls with support for parallel execution via continuations."""
         self._logger.debug("Executing tool calls with continuation support...")
@@ -347,11 +432,7 @@ class AIConversation:
             await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, tool_call_message)
 
             # Execute the tool call
-            tool_result = await self._tool_manager.execute_tool(
-                tool_call,
-                self._settings.model,
-                request_authorization=self._request_tool_authorization
-            )
+            tool_result = await self._execute_tool(tool_call)
             tool_results.append(tool_result)
 
             # If the tool returned a continuation, collect it

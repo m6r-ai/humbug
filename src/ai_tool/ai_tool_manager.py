@@ -3,13 +3,10 @@
 import logging
 from typing import Dict, List
 
-from ai_tool.ai_tool import AITool, AIToolAuthorizationCallback
-from ai_tool.ai_tool_call import AIToolCall
+from ai_tool.ai_tool import AITool
 from ai_tool.ai_tool_config import AIToolConfig
 from ai_tool.ai_tool_definition import AIToolDefinition
 from ai_tool.ai_tool_registered import AIToolRegistered
-from ai_tool.ai_tool_result import AIToolResult
-from ai_tool.ai_tool_exceptions import AIToolAuthorizationDenied
 
 
 class AIToolManager:
@@ -190,96 +187,18 @@ class AIToolManager:
             if self.is_tool_enabled(tool_name)
         ]
 
-    async def execute_tool(
-        self,
-        tool_call: AIToolCall,
-        requester: str,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
+    def get_tool(self, name: str) -> AITool | None:
         """
-        Execute a tool call.
+        Get a registered tool by its name.
 
         Args:
-            tool_call: The tool call to execute
-            requester: AI model requesting the tool use
-            request_authorization: Callback for requesting authorization
+            name: Name of the tool to retrieve
 
         Returns:
-            AIToolResult containing the execution result
+            The registered tool instance, or None if not found
         """
-        if tool_call.name not in self._registered_tools:
-            error_msg = f"Unknown tool: {tool_call.name}"
-            self._logger.error(error_msg)
-            return AIToolResult(
-                id=tool_call.id,
-                name=tool_call.name,
-                content="",
-                error=error_msg
-            )
-
-        if not self.is_tool_enabled(tool_call.name):
-            error_msg = f"Tool is disabled: {tool_call.name}"
-            self._logger.error(error_msg)
-            return AIToolResult(
-                id=tool_call.id,
-                name=tool_call.name,
-                content="",
-                error=error_msg
-            )
-
-        registered_tool = self._registered_tools[tool_call.name]
-        tool = registered_tool.tool
-
-        try:
-            self._logger.debug(
-                "Executing tool '%s' with args %s",
-                tool_call.name,
-                tool_call.arguments
-            )
-
-            # Validate operation arguments before execution
-            tool.validate_operation_arguments(tool_call.arguments)
-
-            result = await tool.execute(tool_call, requester, request_authorization)
-
-            self._logger.debug(
-                "Tool '%s' executed successfully with args %s",
-                tool_call.name,
-                tool_call.arguments
-            )
-
-            return result
-
-        except AIToolAuthorizationDenied as e:
-            error_msg = f"Tool authorization denied: {str(e)}"
-            self._logger.info(
-                "Tool '%s' authorization denied with args %s: %s",
-                tool_call.name,
-                tool_call.arguments,
-                str(e)
-            )
-            return AIToolResult(
-                id=tool_call.id,
-                name=tool_call.name,
-                content="",
-                error=error_msg
-            )
-
-        except Exception as e:
-            error_msg = f"Tool execution failed: {str(e)}"
-            self._logger.exception(
-                "Tool '%s' failed with args %s: %s",
-                tool_call.name,
-                tool_call.arguments,
-                str(e)
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name=tool_call.name,
-                content="",
-                error=error_msg
-            )
+        registered_tool = self._registered_tools.get(name)
+        return registered_tool.tool if registered_tool else None
 
     def get_tool_names(self) -> List[str]:
         """Get names of all registered tools."""

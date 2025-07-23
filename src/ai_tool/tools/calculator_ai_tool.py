@@ -275,29 +275,31 @@ class CalculatorAITool(AITool):
             name="calculator",
             description=(
                 "The calculator tool lets you (the AI) evaluate mathematical expressions. "
-                "It supports the following operations:\n"
-                "- Arithmetic: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power)\n"
-                "- Trigonometry: sin cos tan\n"
-                "- Logarithms: log log10 exp\n"
+                "It supports the following:\n"
+                "- Arithmetic operators: + - * / // % ** (add, subtract, multiply, divide, floor divide, modulo, power)\n"
+                "- Trigonometry functions: sin cos tan\n"
+                "- Logarithm functions: log log10 exp\n"
                 "- Other functions: sqrt abs round min max pow floor ceil\n"
                 "- Constants: pi e j (imaginary unit)\n"
                 "- Parentheses\n"
                 "- Nested expressions\n"
                 "- Complex numbers\n"
-                "Results are simplified to real numbers when imaginary part is negligible.\n"
+                "Important:\n"
+                "- Results are simplified to real numbers when imaginary part is negligible\n"
+                "- Do not use it for anything other than mathematical calculations of the types described\n"
+                "- Do not use it unless there is at least one operator or function in the expression\n"
                 "The tool is useful where simple 'mental arithmetic' may be a problem, such as:\n"
                 "- To generate results where accuracy is important\n"
                 "- To handle operations that require more than 2 steps\n"
                 "- To process numbers or expressions that are not commonly known\n"
-                "- To evaluate results that may generate more than a few digits\n"
-                "Important:\n"
-                "- The expression must be a valid Python mathematical expression using the allowed operators and functions"
+                "- To evaluate results that may generate more than a few digits"
+
             ),
             parameters=[
                 AIToolParameter(
                     name="expression",
                     type="string",
-                    description="Mathematical expression using listed operators/functions/constants",
+                    description="A valid mathematical expression using only the calculator's supported capabilities",
                     required=True
                 )
             ]

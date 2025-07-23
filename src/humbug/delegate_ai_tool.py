@@ -56,15 +56,21 @@ class DelegateAITool(AITool):
                 "returned.\n"
                 "Delegation is useful for many reasons, such as:\n,"
                 "- To use AI capabilities from a different model, or with different settings\n"
-                "- To parallelize problem solving\n"
-                "- To seek analysis from a different perspective (you must provide the context in the task_prompt)\n"
+                "- To parallelize problem solving (you must use parallel tool/function calls to do this)\n"
+                "- To seek analysis from a different perspective (you must provide the perspective in the task_prompt)\n"
                 "- To use a subset of your current conversation context for more focused reasoning\n"
                 "- To process a lot of context/tokens where you don't need all the context in your main conversation\n"
+                "- To explore multiple approaches to a problem before converging on a solution in your main conversation\n"
+                "- To give you a sounding board for ideas or to brainstorm with a different AI\n"
                 "Important:\n"
                 "- You must not use this tool if you have been delegated this task already\n"
                 "- You must use the session_id parameter to continue a previous conversation\n"
                 "- You will have to generate the task_prompt and that can be very expensive if you need to provide a lot of "
-                "context. If you need to provide something that is in the filesystem, tell the delegated AI to read it.\n"
+                "context in the task_prompt. If you need to provide something that is in the filesystem, tell the delegated "
+                "AI to read it.\n"
+                "- You have the option to provide your current conversation context to a new child AI instance. This is very "
+                "useful if your context has a lot of information that is relevant to the task, but this can also limit the "
+                "amount of new context the child AI can process."
                 "Returns: the delegated AI's response to the task_prompt, or an error message if the operation fails"
             ),
             parameters=[
@@ -78,7 +84,8 @@ class DelegateAITool(AITool):
                 AIToolParameter(
                     name="session_id",
                     type="string",
-                    description="Session ID to continue a previous conversation. Omit to start a new session.",
+                    description="Session ID to continue a previous conversation. Omit to start a new session with no context. "
+                        "Set this to `current` to create a new session with the current conversation context.",
                     required=False
                 ),
                 AIToolParameter(
