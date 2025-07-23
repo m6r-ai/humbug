@@ -1,6 +1,5 @@
 """Main window implementation for Humbug application."""
 
-import asyncio
 import json
 import logging
 import os
@@ -1186,28 +1185,10 @@ class MainWindow(QMainWindow):
             )
             return None
 
-    async def _fork_conversation_async(self) -> None:
-        """Async helper for forking."""
-        try:
-            self._column_manager.protect_current_tab(True)
-            await self._column_manager.fork_conversation()
-
-        except ConversationError as e:
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.conversation_error_title,
-                strings.error_forking_conversation.format(str(e))
-            )
-
-        finally:
-            self._column_manager.protect_current_tab(False)
-
     def _fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
         # Create task to fork conversation
-        asyncio.create_task(self._fork_conversation_async())
+        self._column_manager.fork_conversation()
 
     def _close_tab(self) -> None:
         """Close the current tab."""

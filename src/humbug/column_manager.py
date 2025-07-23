@@ -1394,7 +1394,7 @@ class ColumnManager(QWidget):
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         conversation_tab = ConversationTab("", full_path, self)
-        conversation_tab.forkRequested.connect(self._fork_conversation)
+        conversation_tab.forkRequested.connect(self.fork_conversation)
         conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
 
         # Set model based on mindspace settings
@@ -1434,7 +1434,7 @@ class ColumnManager(QWidget):
 
         try:
             conversation_tab = ConversationTab("", abs_path, self)
-            conversation_tab.forkRequested.connect(self._fork_conversation)
+            conversation_tab.forkRequested.connect(self.fork_conversation)
             conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
             conversation_tab.set_ephemeral(ephemeral)
@@ -1453,7 +1453,7 @@ class ColumnManager(QWidget):
 
         return True
 
-    async def fork_conversation(self) -> None:
+    async def fork_conversation_async(self) -> None:
         """Fork an existing conversation into a new tab."""
         conversation_tab = self.get_current_tab()
         if not isinstance(conversation_tab, ConversationTab):
@@ -1462,7 +1462,7 @@ class ColumnManager(QWidget):
         try:
             # Fork the conversation
             new_tab = await conversation_tab.fork_conversation_from_index()
-            new_tab.forkRequested.connect(self._fork_conversation)
+            new_tab.forkRequested.connect(self.fork_conversation)
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
 
@@ -1470,13 +1470,12 @@ class ColumnManager(QWidget):
             self._logger.exception("Failed to fork conversation: %s", str(e))
             raise
 
-    def _fork_conversation(self) -> None:
+    def fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
         async def fork_and_handle_errors() -> None:
             try:
                 self.protect_current_tab(True)
-                await self.fork_conversation()
-                self.protect_current_tab(False)
+                await self.fork_conversation_async()
 
             except ConversationError as e:
                 strings = self._language_manager.strings()
@@ -1487,10 +1486,13 @@ class ColumnManager(QWidget):
                     strings.error_forking_conversation.format(str(e))
                 )
 
+            finally:
+                self.protect_current_tab(False)
+
         # Create task to fork conversation
         asyncio.create_task(fork_and_handle_errors())
 
-    async def fork_conversation_from_index(self, message_index: int) -> None:
+    async def fork_conversation_from_index_async(self, message_index: int) -> None:
         """Fork an existing conversation with partial history into a new tab."""
         conversation_tab = self.get_current_tab()
         if not isinstance(conversation_tab, ConversationTab):
@@ -1499,7 +1501,7 @@ class ColumnManager(QWidget):
         try:
             # Fork the conversation
             new_tab = await conversation_tab.fork_conversation_from_index(message_index)
-            new_tab.forkRequested.connect(self._fork_conversation)
+            new_tab.forkRequested.connect(self.fork_conversation)
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
 
@@ -1512,7 +1514,7 @@ class ColumnManager(QWidget):
         async def fork_from_index_and_handle_errors() -> None:
             try:
                 self.protect_current_tab(True)
-                await self.fork_conversation_from_index(message_index)
+                await self.fork_conversation_from_index_async(message_index)
                 self.protect_current_tab(False)
 
             except ConversationError as e:
@@ -1651,7 +1653,7 @@ class ColumnManager(QWidget):
         match state.type:
             case TabType.CONVERSATION:
                 conversation_tab = ConversationTab.restore_from_state(state, self)
-                conversation_tab.forkRequested.connect(self._fork_conversation)
+                conversation_tab.forkRequested.connect(self.fork_conversation)
                 conversation_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
                 return conversation_tab
 
