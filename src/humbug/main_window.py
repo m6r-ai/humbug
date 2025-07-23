@@ -925,7 +925,6 @@ class MainWindow(QMainWindow):
         """Open file in editor tab."""
         try:
             editor_tab = self._column_manager.open_file(path)
-            self._file_tree.reveal_and_select_file(path)
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -1171,7 +1170,6 @@ class MainWindow(QMainWindow):
         """Open an existing conversation file."""
         try:
             tab = self._column_manager.open_conversation(path, ephemeral)
-            self._file_tree.reveal_and_select_file(path)
             return tab
 
         except ConversationError as e:
