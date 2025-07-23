@@ -4,7 +4,7 @@ import os
 from typing import cast, Callable
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
-from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer
+from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir
 from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent
 
 
@@ -99,7 +99,7 @@ class MindspaceFileTreeView(QTreeView):
         if not file_model:
             return None
 
-        return file_model.filePath(source_index)
+        return QDir.toNativeSeparators(file_model.filePath(source_index))
 
     def scroll_to_and_ensure_visible(self, file_path: str, callback: Callable) -> None:
         """

@@ -589,7 +589,7 @@ class MindspaceFileTree(QWidget):
         if index.isValid():
             # Map to source model to get actual file path
             source_index = self._filter_model.mapToSource(index)
-            path = self._fs_model.filePath(source_index)
+            path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
             is_dir = os.path.isdir(path)
 
             # Create actions based on item type
@@ -920,7 +920,7 @@ class MindspaceFileTree(QWidget):
 
         # Map to source model to get actual file path
         source_index = self._filter_model.mapToSource(index)
-        path = self._fs_model.filePath(source_index)
+        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
@@ -965,7 +965,7 @@ class MindspaceFileTree(QWidget):
         """Handle single-click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
-        path = self._fs_model.filePath(source_index)
+        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
@@ -975,7 +975,7 @@ class MindspaceFileTree(QWidget):
         """Handle double-click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
-        path = self._fs_model.filePath(source_index)
+        path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
