@@ -91,17 +91,17 @@ class WindowsTerminal(TerminalBase):
         super().__init__(working_directory)
 
         # Store handles
-        self._pty_handle = None
+        self._pty_handle: c_void_p | None = None
         self._process_handle = None
         self._thread_handle = None
-        self._pipe_in = None
-        self._pipe_out = None
-        self._main_fd = None
+        self._pipe_in: int | None = None
+        self._pipe_out: int | None = None
+        self._main_fd: int | None = None
 
         # Load ConPTY functions
         self._load_conpty_functions()
 
-    def _load_conpty_functions(self):
+    def _load_conpty_functions(self) -> None:
         """Load required ConPTY functions."""
         kernel32 = windll.kernel32
 
@@ -255,7 +255,7 @@ class WindowsTerminal(TerminalBase):
             self._process_id = process_info.dwProcessId
 
             # Create Windows async file handle
-            self._main_fd = msvcrt.open_osfhandle(self._pipe_out, os.O_RDWR)
+            self._main_fd = msvcrt.open_osfhandle(cast(int, self._pipe_out), os.O_RDWR)
 
             return self._process_id, self._main_fd
 
@@ -278,7 +278,7 @@ class WindowsTerminal(TerminalBase):
         self._process_id = None
         self._cleanup_handles()
 
-    def _cleanup_handles(self):
+    def _cleanup_handles(self) -> None:
         """Clean up Windows handles."""
         if self._pty_handle:
             try:
@@ -356,7 +356,7 @@ class WindowsTerminal(TerminalBase):
         try:
             data = await loop.run_in_executor(
                 None,
-                lambda: os.read(self._main_fd, size)
+                lambda: os.read(cast(int, self._main_fd), size)
             )
             return data
         except OSError as e:
