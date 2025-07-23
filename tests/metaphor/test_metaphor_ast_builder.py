@@ -80,7 +80,7 @@ def temp_test_files(tmp_path):
 
 
 @pytest.fixture
-def create_read_only_file(tmp_path):
+def create_unreadable_file(tmp_path):
     """Create a read-only file for testing permission errors"""
     p = tmp_path / "readonly.m6r"
     p.write_text(
@@ -1245,12 +1245,16 @@ def test_include_missing_filename(tmp_path):
     assert "Expected file name after 'Include'" in str(exc_info.value.errors[0].message)
 
 
-def test_file_permission_error(create_read_only_file):
+def test_file_permission_error(create_unreadable_file):
     """Test handling of permission errors when reading files"""
+    if os.name == 'nt':
+        # We can't create an unreadable file on Windows
+        return
+
     ast_builder = MetaphorASTBuilder()
     with pytest.raises(MetaphorASTBuilderError) as exc_info:
         root = MetaphorASTRootNode()
-        ast_builder.build_ast_from_file(root, str(create_read_only_file), [])
+        ast_builder.build_ast_from_file(root, str(create_unreadable_file), [])
 
     assert "You do not have permission to access" in str(exc_info.value.errors[0].message)
 
