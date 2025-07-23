@@ -177,7 +177,7 @@ class MindspaceFileModel(QSortFilterProxyModel):
             # Use the most appropriate time field based on platform
             # st_birthtime (macOS) > st_ctime (Windows/Unix) > st_mtime (fallback)
             if hasattr(stat_info, 'st_birthtime') and stat_info.st_birthtime > 0:  # type: ignore[attr-defined]
-                return stat_info.st_birthtime
+                return stat_info.st_birthtime  # type: ignore[attr-defined]
 
             if hasattr(stat_info, 'st_ctime'):  # type: ignore[attr-defined]
                 return stat_info.st_ctime
