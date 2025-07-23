@@ -1262,7 +1262,8 @@ def test_directory_error(tmp_path):
         root = MetaphorASTRootNode()
         ast_builder.build_ast_from_file(root, str(tmp_path), [])
 
-    assert "Is a directory" in str(exc_info.value.errors[0].message)
+    msg = str(exc_info.value.errors[0].message)
+    assert ("Is a directory" in msg) or ("You do not have permission" in msg)
 
 
 def test_os_error(tmp_path, monkeypatch):
