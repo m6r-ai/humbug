@@ -341,7 +341,7 @@ class ConversationWidget(QWidget):
 
         self._install_activation_tracking(msg_widget)
 
-    async def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
+    def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
         """
         Change the expansion state of a message.
 
@@ -1117,7 +1117,7 @@ class ConversationWidget(QWidget):
 
         self.status_updated.emit()
 
-    async def _delete_empty_transcript_file(self) -> None:
+    def _delete_empty_transcript_file(self) -> None:
         """
         Delete the transcript file if the conversation doesn't have any AI messages.
 
@@ -1150,14 +1150,7 @@ class ConversationWidget(QWidget):
             self.submit_finished.emit(result)
 
         self._unregister_ai_conversation_callbacks()
-
-        # Check if this is an empty conversation (no AI responses) and delete the file if so
-        loop = asyncio.get_event_loop()
-        if not loop.is_running():
-            self._logger.warning("Could not check/delete transcript file: No running event loop")
-            return
-
-        loop.create_task(self._delete_empty_transcript_file())
+        self._delete_empty_transcript_file()
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         """Handle resize events."""
@@ -1313,20 +1306,7 @@ class ConversationWidget(QWidget):
         if not isinstance(sender, ConversationMessage):
             return
 
-        # Find the index of the message in our list
-        if sender in self._messages:
-            index = self._messages.index(sender)
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(self.delete_messages_from_index(index))
-
-    async def delete_messages_from_index(self, index: int) -> None:
-        """
-        Delete the message at the specified index and all subsequent messages.
-
-        Args:
-            index: Index of the first message to delete
-        """
+        index = self._messages.index(sender)
         if index < 0 or index >= len(self._messages):
             return
 
@@ -1623,13 +1603,8 @@ class ConversationWidget(QWidget):
         # Restore message expansion states if specified
         if "message_expansion" in metadata:
             expansion_states = metadata["message_expansion"]
-
-            # Our messages list has already been queued to be added but they're not yet there.
-            # Add our expansion states updates to the same event loop so they get processed
-            # after the messages are added.
-            loop = asyncio.get_event_loop()
             for i, is_expanded in enumerate(expansion_states):
-                loop.create_task(self._change_message_expansion(i, is_expanded))
+                self._change_message_expansion(i, is_expanded)
 
         # Restore bookmarks if specified
         if 'bookmarks' in metadata:
@@ -1661,7 +1636,6 @@ class ConversationWidget(QWidget):
 
             current_unfinished_message = metadata.get("current_unfinished_message")
             if current_unfinished_message:
-                loop = asyncio.get_event_loop()
                 self._add_message(current_unfinished_message)
                 self._current_unfinished_message = current_unfinished_message
 
