@@ -345,6 +345,8 @@ class MainWindow(QMainWindow):
         # Create tab manager in splitter
         self._column_manager = ColumnManager(self)
         self._column_manager.tab_changed.connect(self._handle_tab_changed)
+        self._column_manager.fork_requested.connect(self._handle_fork_requested)
+        self._column_manager.fork_from_index_requested.connect(self._handle_fork_from_index_requested)
         self._splitter.addWidget(self._column_manager)
 
         # Set initial file tree width
@@ -1186,7 +1188,35 @@ class MainWindow(QMainWindow):
     def _fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
         # Create task to fork conversation
-        self._column_manager.fork_conversation()
+        try:
+            self._column_manager.fork_conversation_from_index(None)
+
+        except ConversationError as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.conversation_error_title,
+                strings.error_forking_conversation.format(str(e))
+            )
+
+    def _handle_fork_requested(self) -> None:
+        """Handle fork conversation requests."""
+        self._fork_conversation()
+
+    def _handle_fork_from_index_requested(self, index: int) -> None:
+        """Handle fork conversation requests from a specific index."""
+        try:
+            self._column_manager.fork_conversation_from_index(index)
+
+        except ConversationError as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.conversation_error_title,
+                strings.error_forking_conversation.format(str(e))
+            )
 
     def _close_tab(self) -> None:
         """Close the current tab."""
