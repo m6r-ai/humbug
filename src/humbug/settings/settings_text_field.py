@@ -37,13 +37,13 @@ class SettingsTextField(SettingsField):
 
         self._text_field = QLineEdit()
         self._text_field.setPlaceholderText(placeholder)
-        self._text_field.textChanged.connect(self._handle_changed)
+        self._text_field.textChanged.connect(self._on_text_changed)
 
         self._layout.addWidget(self._text_field)
         self._initial_value = self._text_field.text()
         self._on_style_changed()
 
-    def _handle_changed(self) -> None:
+    def _on_text_changed(self) -> None:
         """Handle text field changes."""
         self.value_changed.emit()
 

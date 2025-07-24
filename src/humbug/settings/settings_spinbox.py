@@ -42,13 +42,13 @@ class SettingsSpinBox(SettingsField):
         self._spin = QSpinBox()
         self._spin.setRange(min_value, max_value)
         self._spin.setSingleStep(step)
-        self._spin.valueChanged.connect(self._handle_changed)
+        self._spin.valueChanged.connect(self._on_value_changed)
 
         self._layout.addWidget(self._spin)
         self._initial_value = self._spin.value()
         self._on_style_changed()
 
-    def _handle_changed(self) -> None:
+    def _on_value_changed(self) -> None:
         """Handle spin box value changes."""
         self.value_changed.emit()
 

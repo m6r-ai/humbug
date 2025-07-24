@@ -40,7 +40,7 @@ class SettingsCombo(SettingsField):
 
         self._combo = QComboBox()
         self._combo.setView(QListView())  # For better styling
-        self._combo.currentIndexChanged.connect(self._handle_changed)
+        self._combo.currentIndexChanged.connect(self._on_current_index_changed)
 
         # Add items if provided
         self._items = items or []
@@ -53,7 +53,7 @@ class SettingsCombo(SettingsField):
         self._initial_index = self._combo.currentIndex()
         self._on_style_changed()
 
-    def _handle_changed(self) -> None:
+    def _on_current_index_changed(self) -> None:
         """Handle combo box selection changes."""
         self.value_changed.emit()
 

@@ -31,13 +31,13 @@ class SettingsCheckbox(SettingsField):
         super().__init__(label_text, parent)
 
         self._checkbox = QCheckBox()
-        self._checkbox.stateChanged.connect(self._handle_changed)
+        self._checkbox.stateChanged.connect(self._on_state_changed)
 
         self._layout.addWidget(self._checkbox)
         self._initial_value = False
         self._on_style_changed()
 
-    def _handle_changed(self) -> None:
+    def _on_state_changed(self) -> None:
         """Handle checkbox state changes."""
         self.value_changed.emit()
 

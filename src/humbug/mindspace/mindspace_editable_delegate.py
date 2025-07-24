@@ -37,9 +37,9 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
 
         # Connect to tree view's style update signal to handle zoom updates during editing
         # This ensures the tree view has processed the style change before we reposition the editor
-        self._tree_view.style_updated.connect(self._handle_tree_style_updated)
+        self._tree_view.style_updated.connect(self._on_tree_style_updated)
 
-    def _handle_tree_style_updated(self) -> None:
+    def _on_tree_style_updated(self) -> None:
         """Handle tree view style updates by repositioning active editor."""
         if self._current_editor and self._editing_index:
             # Recalculate the text rect with new zoom factor
@@ -146,8 +146,8 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         )
 
         # Connect signals
-        editor.edit_finished.connect(lambda name: self._handle_edit_finished(index, name))
-        editor.edit_cancelled.connect(self._handle_edit_cancelled)
+        editor.edit_finished.connect(lambda name: self._on_edit_finished(index, name))
+        editor.edit_cancelled.connect(self._on_edit_cancelled)
 
         # Track the current editor
         self._current_editor = editor
@@ -261,7 +261,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         except Exception:
             return False, self._language_manager.strings().error_validation_failed
 
-    def _handle_edit_finished(self, index: QModelIndex, new_name: str) -> None:
+    def _on_edit_finished(self, index: QModelIndex, new_name: str) -> None:
         """
         Handle when editing is finished.
 
@@ -272,7 +272,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
         self._cleanup_editor()
         self.edit_finished.emit(index, new_name)
 
-    def _handle_edit_cancelled(self) -> None:
+    def _on_edit_cancelled(self) -> None:
         """
         Handle when editing is cancelled.
         """

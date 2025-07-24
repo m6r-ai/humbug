@@ -119,7 +119,7 @@ class MessageBox(QDialog):
             btn.setMinimumWidth(min_button_width)
             btn.setMinimumHeight(min_button_height)
             self._button_results[btn] = button
-            btn.clicked.connect(self._handle_button)
+            btn.clicked.connect(self._on_button_clicked)
 
             # Apply recommended styling if this is our primary action button
             if button == recommended_button:
@@ -183,7 +183,7 @@ class MessageBox(QDialog):
             MessageBoxButton.DISCARD: strings.discard
         }[button]
 
-    def _handle_button(self) -> None:
+    def _on_button_clicked(self) -> None:
         """Handle button clicks."""
         button = self.sender()
         if not isinstance(button, QPushButton):
