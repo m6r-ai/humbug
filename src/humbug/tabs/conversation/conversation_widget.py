@@ -256,9 +256,9 @@ class ConversationWidget(QWidget):
         self._transcript_handler = ConversationTranscriptHandler(path)
         transcript_data = self._transcript_handler.read()
         self.load_message_history(transcript_data.messages, use_existing_ai_conversation)
-        self.set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
+        self._set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
 
-    def set_delegated_conversation_mode(self, enabled: bool) -> None:
+    def _set_delegated_conversation_mode(self, enabled: bool) -> None:
         """
         Enable or disable delegated conversation mode.
 
@@ -1607,7 +1607,7 @@ class ConversationWidget(QWidget):
         if "delegated_conversation" in metadata:
             delegated_conversation = metadata["delegated_conversation"]
 
-        self.set_delegated_conversation_mode(delegated_conversation)
+        self._set_delegated_conversation_mode(delegated_conversation)
 
         # Restore input content if specified
         if "content" in metadata:
