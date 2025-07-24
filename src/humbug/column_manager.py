@@ -587,7 +587,7 @@ class ColumnManager(QWidget):
                     self._update_tabs()
                     break
 
-    def _handle_tab_drop(self, tab_id: str, target_column: ColumnWidget, target_index: int) -> None:
+    def _on_column_widget_tab_dropped(self, tab_id: str, target_column: ColumnWidget, target_index: int) -> None:
         """
         Handle a tab being dropped into a new position.
 
@@ -621,7 +621,7 @@ class ColumnManager(QWidget):
         # Update active states
         self._update_tabs()
 
-    def _handle_path_drop(self, path: str, target_column: ColumnWidget, target_index: int) -> None:
+    def _on_column_widget_path_dropped(self, path: str, target_column: ColumnWidget, target_index: int) -> None:
         """
         Handle a file being dropped into a column.
 
@@ -715,10 +715,10 @@ class ColumnManager(QWidget):
         """Create a new tab column."""
         column_widget = ColumnWidget()
         column_widget.setMinimumWidth(200)  # Set minimum width
-        column_widget.currentChanged.connect(self._handle_tab_changed)
-        column_widget.column_activated.connect(self._handle_column_activated)
-        column_widget.tab_drop.connect(self._handle_tab_drop)
-        column_widget.path_drop.connect(self._handle_path_drop)
+        column_widget.currentChanged.connect(self._on_column_widget_current_changed)
+        column_widget.column_activated.connect(self._on_column_widget_column_activated)
+        column_widget.tab_dropped.connect(self._on_column_widget_tab_dropped)
+        column_widget.path_dropped.connect(self._on_column_widget_path_dropped)
 
         self._column_splitter.insertWidget(index, column_widget)
         self._tab_columns.insert(index, column_widget)
@@ -726,39 +726,6 @@ class ColumnManager(QWidget):
         self._column_mru_order[column_widget] = []
 
         return column_widget
-
-    def _handle_tab_merge(self, dragged_tab_id: str, target_tab_id: str) -> None:
-        """Handle merging tabs when one is dropped directly onto another."""
-        dragged_tab = self._tabs.get(dragged_tab_id)
-        target_tab = self._tabs.get(target_tab_id)
-
-        if not dragged_tab or not target_tab:
-            return
-
-        source_column = self._find_column_for_tab(dragged_tab)
-        if source_column is None:
-            return
-
-        target_column = self._find_column_for_tab(target_tab)
-        if target_column is None:
-            return
-
-        # Get the target index
-        target_index = target_column.indexOf(target_tab)
-        if target_index == -1:
-            return
-
-        # Move the tab
-        self._move_tab_between_columns(dragged_tab, source_column, target_column)
-
-        # If the source column is now empty, remove it
-        if source_column.count() == 0:
-            column_number = self._tab_columns.index(source_column)
-            self._remove_column_and_resize(column_number, source_column)
-
-        # Update states
-        self._active_column = target_column
-        self._update_tabs()
 
     def _remove_column_and_resize(self, column_number: int, column: ColumnWidget) -> None:
         """
@@ -849,7 +816,7 @@ class ColumnManager(QWidget):
 
         current_tab.activate()
 
-    def _handle_tab_changed(self, _index: int) -> None:
+    def _on_column_widget_current_changed(self, _index: int) -> None:
         """
         Handle tab selection changes.
 
@@ -891,7 +858,7 @@ class ColumnManager(QWidget):
         self._update_mru_order(tab, column)
         self._update_tabs()
 
-    def _handle_column_activated(self, column: ColumnWidget) -> None:
+    def _on_column_widget_column_activated(self, column: ColumnWidget) -> None:
         """Handle column activation."""
         if column not in self._tab_columns:
             return

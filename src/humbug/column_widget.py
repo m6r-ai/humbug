@@ -11,8 +11,8 @@ class ColumnWidget(QTabWidget):
     """Enhanced QTabWidget for use in columns with drag and drop support."""
 
     column_activated = Signal(QTabWidget)
-    tab_drop = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
-    path_drop = Signal(str, QTabWidget, int)  # path, target_column, target_index
+    tab_dropped = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
+    path_dropped = Signal(str, QTabWidget, int)  # path, target_column, target_index
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab widget."""
@@ -128,7 +128,7 @@ class ColumnWidget(QTabWidget):
                 target_index = self.count()
 
             # Emit signal with drop info for tab manager to handle
-            self.tab_drop.emit(tab_id, self, target_index)
+            self.tab_dropped.emit(tab_id, self, target_index)
             event.acceptProposedAction()
             return
 
@@ -151,7 +151,7 @@ class ColumnWidget(QTabWidget):
                 target_index = self.count()
 
             # Emit signal with path info for column manager to handle
-            self.path_drop.emit(path, self, target_index)
+            self.path_dropped.emit(path, self, target_index)
             event.acceptProposedAction()
             return
 
