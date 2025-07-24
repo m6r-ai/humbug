@@ -334,19 +334,19 @@ class MainWindow(QMainWindow):
         layout.addWidget(self._splitter)
 
         # Create and add file tree
-        self._file_tree = MindspaceFileTree(self)
-        self._file_tree.file_single_clicked.connect(self._handle_file_single_click)
-        self._file_tree.file_double_clicked.connect(self._handle_file_double_click)
-        self._file_tree.file_deleted.connect(self._handle_file_delete)
-        self._file_tree.file_renamed.connect(self._handle_file_rename)
-        self._file_tree.file_edited.connect(self._open_file_path)
-        self._splitter.addWidget(self._file_tree)
+        self._mindspace_tree = MindspaceFileTree(self)
+        self._mindspace_tree.file_single_clicked.connect(self._on_mindspace_tree_file_single_clicked)
+        self._mindspace_tree.file_double_clicked.connect(self._on_mindspace_tree_file_double_clicked)
+        self._mindspace_tree.file_deleted.connect(self._on_mindspace_tree_file_deleted)
+        self._mindspace_tree.file_renamed.connect(self._on_mindspace_tree_file_renamed)
+        self._mindspace_tree.file_edited.connect(self._on_mindspace_tree_file_edited)
+        self._splitter.addWidget(self._mindspace_tree)
 
         # Create tab manager in splitter
         self._column_manager = ColumnManager(self)
-        self._column_manager.tab_changed.connect(self._handle_tab_changed)
-        self._column_manager.fork_requested.connect(self._handle_fork_requested)
-        self._column_manager.fork_from_index_requested.connect(self._handle_fork_from_index_requested)
+        self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
+        self._column_manager.fork_requested.connect(self._on_column_manager_fork_requested)
+        self._column_manager.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
         self._splitter.addWidget(self._column_manager)
 
         # Set initial file tree width
@@ -421,7 +421,9 @@ class MainWindow(QMainWindow):
             CalculatorAITool(), "Calculator: performs arithmetic, trigonometry, logarithms, and other calculations"
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
-        self._ai_tool_manager.register_tool(DelegateAITool(self._column_manager), "Delegate: delegates tasks to specialized AI instances")
+        self._ai_tool_manager.register_tool(
+            DelegateAITool(self._column_manager), "Delegate: delegates tasks to specialized AI instances"
+        )
         self._ai_tool_manager.register_tool(
             FileSystemAITool(self._resolve_mindspace_path), "FileSystem: handles file operations in the current mindspace"
         )
@@ -618,11 +620,11 @@ class MainWindow(QMainWindow):
         """
         self._style_manager.set_color_mode(theme)
 
-    def _handle_tab_changed(self) -> None:
+    def _on_column_manager_tab_changed(self) -> None:
         """Handle tab change events."""
         path = self._column_manager.current_tab_path()
         if path:
-            self._file_tree.reveal_and_select_file(path)
+            self._mindspace_tree.reveal_and_select_file(path)
 
     def _handle_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
@@ -639,7 +641,7 @@ class MainWindow(QMainWindow):
                 if mindspace_path and os.path.exists(mindspace_path):
                     try:
                         self._mindspace_manager.open_mindspace(mindspace_path)
-                        self._file_tree.set_mindspace(mindspace_path)
+                        self._mindspace_tree.set_mindspace(mindspace_path)
                         self._restore_mindspace_state()
 
                     except MindspaceError as e:
@@ -719,7 +721,7 @@ class MainWindow(QMainWindow):
         # Open the new mindspace
         try:
             self._mindspace_manager.open_mindspace(path)
-            self._file_tree.set_mindspace(path)
+            self._mindspace_tree.set_mindspace(path)
 
         except MindspaceError as e:
             strings = self._language_manager.strings()
@@ -741,7 +743,7 @@ class MainWindow(QMainWindow):
 
         self._save_mindspace_state()
         self._close_all_tabs()
-        self._file_tree.set_mindspace("")
+        self._mindspace_tree.set_mindspace("")
         self._mindspace_manager.close_mindspace()
 
     def _save_mindspace_state(self) -> None:
@@ -774,7 +776,7 @@ class MainWindow(QMainWindow):
         try:
             restored_paths = self._column_manager.restore_state(saved_state)
             for path in restored_paths:
-                self._file_tree.reveal_and_select_file(path)
+                self._mindspace_tree.reveal_and_select_file(path)
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
@@ -826,8 +828,8 @@ class MainWindow(QMainWindow):
 
         self._column_manager.new_file()
 
-    def _handle_file_single_click(self, path: str) -> None:
-        """Handle single click from the file tree."""
+    def _on_mindspace_tree_file_single_clicked(self, path: str) -> None:
+        """Handle single click from the mindspace tree."""
         # We don't process single clicks immediately to allow for double clicks
         self._pending_single_click_path = path
         self._single_click_timer.start()
@@ -870,8 +872,8 @@ class MainWindow(QMainWindow):
         if focus_widget is not None:
             focus_widget.setFocus()
 
-    def _handle_file_double_click(self, path: str) -> None:
-        """Handle double click from the file tree."""
+    def _on_mindspace_tree_file_double_clicked(self, path: str) -> None:
+        """Handle double click from the mindspace tree."""
         # We will have started a single click timer, so stop it
         self._single_click_timer.stop()
         self._pending_single_click_path = None
@@ -889,7 +891,7 @@ class MainWindow(QMainWindow):
             f"User opened editor for file: '{path}', tab ID: {editor_tab.tab_id()}"
         )
 
-    def _handle_file_delete(self, path: str) -> None:
+    def _on_mindspace_tree_file_deleted(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.
 
         Args:
@@ -897,7 +899,7 @@ class MainWindow(QMainWindow):
         """
         self._column_manager.close_deleted_file(path)
 
-    def _handle_file_rename(self, old_path: str, new_path: str) -> None:
+    def _on_mindspace_tree_file_renamed(self, old_path: str, new_path: str) -> None:
         """Handle renaming of files.
 
         Args:
@@ -905,6 +907,10 @@ class MainWindow(QMainWindow):
             new_path: New path after renaming
         """
         self._column_manager.handle_file_rename(old_path, new_path)
+
+    def _on_mindspace_tree_file_edited(self, path: str) -> None:
+        """Handle file edited event from the mindspace tree."""
+        self._open_file_path(path)
 
     def _open_file(self) -> None:
         """Show open file dialog and create editor tab."""
@@ -945,12 +951,12 @@ class MainWindow(QMainWindow):
     def _save_file(self) -> None:
         """Save the current file."""
         path = self._column_manager.save_file()
-        self._file_tree.reveal_and_select_file(path)
+        self._mindspace_tree.reveal_and_select_file(path)
 
     def _save_file_as(self) -> None:
         """Save the current file with a new name."""
         path = self._column_manager.save_file_as()
-        self._file_tree.reveal_and_select_file(path)
+        self._mindspace_tree.reveal_and_select_file(path)
 
     def _open_wiki(self) -> None:
         """Open the wiki page in a new tab."""
@@ -1200,11 +1206,11 @@ class MainWindow(QMainWindow):
                 strings.error_forking_conversation.format(str(e))
             )
 
-    def _handle_fork_requested(self) -> None:
+    def _on_column_manager_fork_requested(self) -> None:
         """Handle fork conversation requests."""
         self._fork_conversation()
 
-    def _handle_fork_from_index_requested(self, index: int) -> None:
+    def _on_column_manager_fork_from_index_requested(self, index: int) -> None:
         """Handle fork conversation requests from a specific index."""
         try:
             self._column_manager.fork_conversation_from_index(index)
