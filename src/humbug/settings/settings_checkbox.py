@@ -35,7 +35,7 @@ class SettingsCheckbox(SettingsField):
 
         self._layout.addWidget(self._checkbox)
         self._initial_value = False
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def _handle_changed(self) -> None:
         """Handle checkbox state changes."""
@@ -62,7 +62,7 @@ class SettingsCheckbox(SettingsField):
         """Set the header label text."""
         self._label.setText(text)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update checkbox styling."""
         zoom_factor = self._style_manager.zoom_factor()
         min_height = int(18 * zoom_factor)

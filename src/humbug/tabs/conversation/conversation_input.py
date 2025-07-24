@@ -71,7 +71,7 @@ class ConversationInput(ConversationMessage):
         self._debounce_timer.setInterval(self._debounce_interval_ms)
 
         self._update_header_text()
-        self._handle_style_changed()
+        self._on_style_changed()
         self._update_submit_button_state()
 
     def set_model(self, model: str) -> None:
@@ -79,7 +79,7 @@ class ConversationInput(ConversationMessage):
         self._current_model = model
         self._update_header_text()
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Handle language change event."""
         self._update_header_text()
 
@@ -191,7 +191,7 @@ class ConversationInput(ConversationMessage):
         self._animation_frame = 0
         self._pending_message = False
         self._no_message_counter = 0
-        self._handle_style_changed()  # Restore normal styling
+        self._on_style_changed()  # Restore normal styling
 
     def _update_border_animation(self) -> None:
         """Update the border animation frame."""
@@ -257,9 +257,9 @@ class ConversationInput(ConversationMessage):
 
         return "Ctrl+J"
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle the style changing."""
-        super()._handle_style_changed()
+        super()._on_style_changed()
         self._set_role_style()
         self._update_submit_button_styling()
 

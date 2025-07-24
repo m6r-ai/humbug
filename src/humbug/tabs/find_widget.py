@@ -57,18 +57,18 @@ class FindWidget(QWidget):
         self._matches = 0
         self._current_match = 0
 
-        self._handle_language_changed()
+        self._on_language_changed()
 
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         strings = self._language_manager.strings()
         self._search_input.setPlaceholderText(strings.find_placeholder)
         self._update_match_status()
-        self._handle_style_changed()
+        self._on_style_changed()
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update styling when application style changes."""
         # Update font size
         factor = self._style_manager.zoom_factor()

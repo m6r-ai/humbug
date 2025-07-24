@@ -41,7 +41,7 @@ class UserSettingsDialog(QDialog):
         """
         super().__init__(parent)
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
         strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.user_settings)
@@ -211,10 +211,10 @@ class UserSettingsDialog(QDialog):
         self.setLayout(main_layout)
 
         # Apply consistent dialog styling
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update dialog style when the application style changes."""
         self.setStyleSheet(self._style_manager.get_dialog_stylesheet())
 
@@ -231,7 +231,7 @@ class UserSettingsDialog(QDialog):
         cast(SettingsTextField, controls["key"]).set_enabled(enabled)
         cast(SettingsTextField, controls["url"]).set_enabled(enabled)
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update all dialog texts with current language strings."""
         strings = self._language_manager.strings()
         self.setWindowTitle(strings.user_settings)

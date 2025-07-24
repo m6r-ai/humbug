@@ -35,7 +35,7 @@ class WikiMarkdownContent(WikiContentWidget):
         self._contained = contained
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Container for content sections
         self._sections_container = QWidget(self)
@@ -51,11 +51,11 @@ class WikiMarkdownContent(WikiContentWidget):
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
 
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
-        self._handle_language_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
+        self._on_language_changed()
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update text when language changes."""
 
     def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> WikiMarkdownContentSection:
@@ -193,7 +193,7 @@ class WikiMarkdownContent(WikiContentWidget):
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle the style changing."""
         factor = self._style_manager.zoom_factor()
         font = self.font()

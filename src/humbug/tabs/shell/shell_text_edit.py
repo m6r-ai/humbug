@@ -47,8 +47,8 @@ class ShellTextEdit(MinHeightTextEdit):
         self._init_colour_mode = self._style_manager.color_mode()
 
         # Calculate tab stops
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         self._highlighter: ShellCommandHighlighter | None = None
 
@@ -59,7 +59,7 @@ class ShellTextEdit(MinHeightTextEdit):
         palette.setBrush(QPalette.ColorRole.HighlightedText, QBrush(Qt.BrushStyle.NoBrush))
         self.setPalette(palette)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes from the style manager."""
         font = self.font()
         font.setFamilies(self._style_manager.monospace_font_families())

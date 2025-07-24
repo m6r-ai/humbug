@@ -100,14 +100,14 @@ class MindspaceFileTree(QWidget):
         self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Apply styling
-        self._handle_style_changed()
+        self._on_style_changed()
 
         # Track current mindspace
         self._mindspace_path: str | None = None
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
@@ -981,14 +981,14 @@ class MindspaceFileTree(QWidget):
 
         self.file_double_clicked.emit(path)
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update when the language changes."""
         if not self._mindspace_path:
             self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
-        self._handle_style_changed()
+        self._on_style_changed()
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()

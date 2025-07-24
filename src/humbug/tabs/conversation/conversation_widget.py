@@ -213,7 +213,7 @@ class ConversationWidget(QWidget):
         self._is_bookmarked = False
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Create timer for smooth scrolling
         self._scroll_timer = QTimer(self)
@@ -229,8 +229,8 @@ class ConversationWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         # Find functionality
         self._matches: List[Tuple[ConversationMessage, List[Tuple[int, int, int]]]] = []
@@ -611,7 +611,7 @@ class ConversationWidget(QWidget):
         self.submit_finished.emit(result)
         self.update_label.emit()
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update input widget streaming state text
         self._input.set_streaming(self._is_streaming)
@@ -1158,7 +1158,7 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         ai_conversation.cancel_current_tasks()
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         factor = self._style_manager.zoom_factor()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()

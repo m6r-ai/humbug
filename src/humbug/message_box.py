@@ -149,7 +149,7 @@ class MessageBox(QDialog):
         self.setLayout(layout)
 
         # Apply styling
-        self._handle_style_changed()
+        self._on_style_changed()
 
         # Store result
         self.result_button: MessageBoxButton = MessageBoxButton.OK
@@ -200,7 +200,7 @@ class MessageBox(QDialog):
 
         return super().keyPressEvent(arg__1)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update styling when application style changes."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()

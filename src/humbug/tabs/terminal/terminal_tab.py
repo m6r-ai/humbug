@@ -113,11 +113,11 @@ class TerminalTab(TabBase):
         self._terminal_widget.data_ready.connect(self._handle_data_ready)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Handle style changes
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         # Initialize process and task tracking
         self._terminal_process: TerminalBase = create_terminal(self._mindspace_manager.mindspace_path())
@@ -136,7 +136,7 @@ class TerminalTab(TabBase):
         """Activate the tab."""
         self._terminal_widget.setFocus()
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
@@ -261,7 +261,7 @@ class TerminalTab(TabBase):
         except Exception as e:
             self._logger.error("Failed to write to process: %s", str(e))
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes."""
         # Apply consistent styling to both the terminal widget and its viewport
         self.setStyleSheet(f"""

@@ -47,7 +47,7 @@ class WikiContentWidget(QFrame):
 
         # Initialize style manager
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -55,7 +55,7 @@ class WikiContentWidget(QFrame):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(0)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """
         Handle style changes.
 

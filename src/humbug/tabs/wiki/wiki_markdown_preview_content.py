@@ -42,8 +42,8 @@ class WikiMarkdownPreviewContent(WikiContentWidget):
         self._layout.addWidget(self._markdown_content)
 
         self._path: str | None = None
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
     def set_content(self, text: str, path: str | None) -> None:
         """
@@ -202,7 +202,7 @@ class WikiMarkdownPreviewContent(WikiContentWidget):
         self.set_content(content, path)
         return True
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes."""
         factor = self._style_manager.zoom_factor()
         font = self.font()

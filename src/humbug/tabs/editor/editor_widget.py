@@ -82,7 +82,7 @@ class EditorWidget(QPlainTextEdit):
         self.updateRequest.connect(self._update_line_number_area)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
         self.update_line_number_area_width()
 
         # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
@@ -94,7 +94,7 @@ class EditorWidget(QPlainTextEdit):
         self._matches: List[Tuple[int, int]] = []  # List of (start, end) positions
         self._current_match = -1
         self._last_search = ""
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
 
         # Set up activation tracking
         self._event_filter = EditorWidgetEventFilter(self)
@@ -121,7 +121,7 @@ class EditorWidget(QPlainTextEdit):
             widget: The widget lost focus
         """
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Handle language changes by updating the UI."""
         self.update_line_number_area_width()
         self.viewport().update()
@@ -528,7 +528,7 @@ class EditorWidget(QPlainTextEdit):
 
         super().keyPressEvent(event)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes affecting search highlighting."""
         self._highlight_matches()
 

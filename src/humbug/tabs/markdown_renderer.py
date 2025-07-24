@@ -56,14 +56,14 @@ class MarkdownRenderer(MarkdownASTVisitor):
         self._mindspace_manager = MindspaceManager()
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         # Table state variables
         self._current_table: QTextTable | None = None
         self._current_row: int = 0
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes."""
         # Add a pixel image resource to the document for horizontal rules.  Make the image
         # very wide so it will always fit the width of the viewport.

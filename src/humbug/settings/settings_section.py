@@ -44,13 +44,13 @@ class SettingsSection(SettingsItem):
             layout.addWidget(self._description_label)
 
         self.setLayout(layout)
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def set_label(self, text: str) -> None:
         """Set the header label text."""
         self._title_label.setText(text)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update section header styling."""
         font_size = self._style_manager.base_font_size()
         zoom_factor = self._style_manager.zoom_factor()

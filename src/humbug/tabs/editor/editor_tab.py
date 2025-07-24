@@ -51,7 +51,7 @@ class EditorTab(TabBase):
 
         self._mindspace_manager = MindspaceManager()
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Set up layout
         layout = QVBoxLayout(self)
@@ -89,8 +89,8 @@ class EditorTab(TabBase):
         self._update_programming_language(new_language)
 
         # Connect to style changes
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         self.update_status()
 
@@ -107,7 +107,7 @@ class EditorTab(TabBase):
         """Activate the tab."""
         self._editor_widget.setFocus()
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update language-specific elements."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
@@ -231,7 +231,7 @@ class EditorTab(TabBase):
             "column": cursor.columnNumber()
         }
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """
         Handle style and zoom changes.
         """

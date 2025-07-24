@@ -41,7 +41,7 @@ class SettingsDisplay(SettingsField):
         self._display.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
         self._layout.addWidget(self._display)
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def get_value(self) -> str:
         """Get the current display text."""
@@ -51,9 +51,9 @@ class SettingsDisplay(SettingsField):
         """Set the display text."""
         self._display.setText(value)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update display field styling."""
-        super()._handle_style_changed()
+        super()._on_style_changed()
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()

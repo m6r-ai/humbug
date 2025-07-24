@@ -141,8 +141,8 @@ class LogWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         # Find functionality
         self._matches: List[Tuple[LogMessage, List[Tuple[int, int]]]] = []
@@ -547,7 +547,7 @@ class LogWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         factor = self._style_manager.zoom_factor()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()

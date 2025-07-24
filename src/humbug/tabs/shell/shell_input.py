@@ -44,7 +44,7 @@ class ShellInput(ShellMessageWidget):
         self._text_area.installEventFilter(self)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._message_source = ShellMessageSource.USER  # Set default source for styling
         self._update_header_text()
@@ -124,7 +124,7 @@ class ShellInput(ShellMessageWidget):
         # Let the event continue to the target
         return super().eventFilter(watched, event)
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Handle language change event."""
         self._update_header_text()
 

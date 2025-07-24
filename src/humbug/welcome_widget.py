@@ -42,8 +42,8 @@ class WelcomeWidget(QFrame):
 
         # Get style manager and connect to changes
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """
@@ -82,7 +82,7 @@ class WelcomeWidget(QFrame):
 
         event.ignore()
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()

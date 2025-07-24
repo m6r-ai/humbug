@@ -106,7 +106,7 @@ class WikiWidget(QWidget):
         self._last_scroll_maximum = 0
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
 
         # Create layout
         content_layout = QVBoxLayout(self)
@@ -142,7 +142,7 @@ class WikiWidget(QWidget):
         self._search_highlights: Dict[WikiContentWidget, List[Tuple[int, int, int]]] = {}
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Create timer for smooth scrolling
         self._scroll_timer = QTimer(self)
@@ -164,7 +164,7 @@ class WikiWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self._handle_style_changed()
+        self._on_style_changed()
 
         # Find functionality
         self._matches: List[Tuple[WikiContentWidget, List[Tuple[int, int, int]]]] = []
@@ -182,7 +182,7 @@ class WikiWidget(QWidget):
         """Clean up file watching when widget is destroyed."""
         self._unregister_file_watching()
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update status if needed
         self.status_updated.emit()
@@ -666,7 +666,7 @@ class WikiWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_top()
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes."""
         factor = self._style_manager.zoom_factor()
         font = self.font()

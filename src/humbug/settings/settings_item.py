@@ -31,9 +31,9 @@ class SettingsItem(QWidget):
         """Initialize the settings item with consistent styling."""
         super().__init__(parent)
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update styling when application style changes."""
 
     def is_modified(self) -> bool:

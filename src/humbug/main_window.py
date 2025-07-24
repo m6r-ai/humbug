@@ -66,7 +66,7 @@ class MainWindow(QMainWindow):
         self._logger = logging.getLogger("MainWindow")
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
         strings = self._language_manager.strings()
 
         # Humbug menu actions
@@ -178,7 +178,7 @@ class MainWindow(QMainWindow):
         self._conv_settings_action.setShortcut(QKeySequence("Ctrl+Shift+,"))
         self._conv_settings_action.triggered.connect(self._show_conversation_settings_dialog)
 
-        # View menu actions - Theme menu will be created in _handle_language_changed
+        # View menu actions - Theme menu will be created in _on_language_changed
         self._theme_menu: QMenu | None = None
         self._theme_actions: Dict[ColorMode, QAction] = {}
 
@@ -360,7 +360,7 @@ class MainWindow(QMainWindow):
         self._splitter.setStretchFactor(1, 1)
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
 
         # Create a timer that fires every 50ms to keep our menu states correct
         self._menu_timer = QTimer()
@@ -391,9 +391,9 @@ class MainWindow(QMainWindow):
         self._status_bar.addPermanentWidget(self._status_right)
 
         self.setStatusBar(self._status_bar)
-        self._column_manager.status_message.connect(self._handle_status_message)
+        self._column_manager.status_message.connect(self._on_column_manager_status_message)
 
-        self._handle_language_changed()
+        self._on_language_changed()
 
         self._user_manager = UserManager()
         user_settings = self._user_manager.settings()
@@ -483,7 +483,7 @@ class MainWindow(QMainWindow):
         self._next_bookmark_action.setEnabled(column_manager.can_navigate_next_bookmark())
         self._previous_bookmark_action.setEnabled(column_manager.can_navigate_previous_bookmark())
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update UI text when language changes."""
         app = cast(QApplication, QApplication.instance())
         left_to_right = self._language_manager.left_to_right()
@@ -567,7 +567,7 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.triggered.disconnect()
         self._swap_column_right_action.triggered.connect(lambda: self._swap_column(not left_to_right))
 
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def _create_theme_menu(self) -> QMenu:
         """
@@ -629,7 +629,7 @@ class MainWindow(QMainWindow):
         if path:
             self._mindspace_tree.reveal_and_select_file(path)
 
-    def _handle_status_message(self, message: StatusMessage) -> None:
+    def _on_column_manager_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
         self._status_message_label.setText(message.text)
         if message.timeout:
@@ -989,7 +989,7 @@ class MainWindow(QMainWindow):
         """Swap the current column."""
         self._column_manager.swap_column(swap_left)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         base_font_size = style_manager.base_font_size()
@@ -1241,7 +1241,6 @@ class MainWindow(QMainWindow):
                 strings.wiki_error_title,
                 strings.could_not_open.format(path, str(e))
             )
-            return None
 
     def _on_column_manager_edit_file_requested(self, path: str) -> None:
         """Handle requests to open a file in the editor."""

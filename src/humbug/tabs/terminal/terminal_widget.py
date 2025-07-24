@@ -102,8 +102,8 @@ class TerminalWidget(QAbstractScrollArea):
         # Initialize size and connect signals
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_terminal_context_menu)
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         # Find functionality attributes
         self._matches: List[TerminalMatch] = []
@@ -126,7 +126,7 @@ class TerminalWidget(QAbstractScrollArea):
         }
         self._state.set_ansi_colors(color_map)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes."""
         # Update terminal font
         font = QFont()

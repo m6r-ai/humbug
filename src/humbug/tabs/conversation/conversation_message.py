@@ -49,7 +49,7 @@ class ConversationMessage(QFrame):
         self._logger = logging.getLogger("ConversationMessage")
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
         self._message_source: AIMessageSource | None = None
         self._message_timestamp: datetime | None = None
         self._message_content = ""
@@ -132,9 +132,9 @@ class ConversationMessage(QFrame):
         # Track current message style
         self._current_style: AIMessageSource | None = None
 
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
-        self._handle_language_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
+        self._on_language_changed()
 
         # Update expand button state
         self._update_expand_button()
@@ -152,7 +152,7 @@ class ConversationMessage(QFrame):
         if focused:
             self.setFocus()
 
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
@@ -161,7 +161,7 @@ class ConversationMessage(QFrame):
     def set_bookmarked(self, bookmarked: bool) -> None:
         """Set the bookmarked state."""
         self._is_bookmarked = bookmarked
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def is_expanded(self) -> bool:
         """Check if this message is expanded."""
@@ -212,7 +212,7 @@ class ConversationMessage(QFrame):
         # Update tooltip
         self._expand_button.setToolTip(tooltip)
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update text when language changes."""
         if self._is_input:
             return
@@ -331,7 +331,7 @@ class ConversationMessage(QFrame):
 
         self._approval_widget = self._create_tool_approval_widget(tool_call, reason, destructive)
         self._layout.addWidget(self._approval_widget)
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def _create_tool_approval_widget(self, tool_call: AIToolCall, reason: str, destructive: bool) -> QWidget:
         """Create widget for tool call approval."""
@@ -466,7 +466,7 @@ class ConversationMessage(QFrame):
 
             self._sections = []
             self._section_with_selection = None
-            self._handle_style_changed()
+            self._on_style_changed()
 
         # Extract sections directly using the markdown converter
         if not self._is_input:
@@ -617,7 +617,7 @@ class ConversationMessage(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle the style changing."""
         style_manager = self._style_manager
 

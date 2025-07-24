@@ -39,7 +39,7 @@ class WikiFileContent(WikiContentWidget):
 
         # Initialize managers
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
         self._style_manager = StyleManager()
 
         # Container for source content
@@ -100,9 +100,9 @@ class WikiFileContent(WikiContentWidget):
         self._text_area.mouseReleased.connect(self._on_mouse_released)
 
         # Apply initial styles
-        self._handle_language_changed()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._on_language_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
     def _on_edit_clicked(self) -> None:
         """Handle the edit button being clicked."""
@@ -139,7 +139,7 @@ class WikiFileContent(WikiContentWidget):
 
         self.selectionChanged.emit(has_selection)
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update text when language changes."""
         strings = self._language_manager.strings()
 
@@ -349,7 +349,7 @@ class WikiFileContent(WikiContentWidget):
 
         return actions
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes."""
         factor = self._style_manager.zoom_factor()
         font = self.font()

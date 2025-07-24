@@ -28,8 +28,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         # Calculate tab stops
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         # Track code block state
         self._has_code_block = False
@@ -41,7 +41,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
         palette.setBrush(QPalette.ColorRole.HighlightedText, QBrush(Qt.BrushStyle.NoBrush))
         self.setPalette(palette)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
         self.document().setIndentWidth(self._style_manager.get_space_width() * 4)
 

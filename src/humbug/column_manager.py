@@ -149,11 +149,11 @@ class ColumnManager(QWidget):
         self._protected_tab: TabBase | None = None
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
 
         self._current_status_tab: TabBase | None = None
 
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def protect_current_tab(self, protect: bool) -> None:
         """Set whether to protect the current tab from being overwritten."""
@@ -778,7 +778,7 @@ class ColumnManager(QWidget):
                 tab_bar.set_tab_state(tab_index, is_current, is_updated, is_active_column)
 
         # Force style refresh to show active state
-        self._handle_style_changed()
+        self._on_style_changed()
 
         # Disconnect any existing connections to avoid duplicates
         try:
@@ -1706,7 +1706,7 @@ class ColumnManager(QWidget):
 
         return restored_paths
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """
         Handle style changes from StyleManager.
         """

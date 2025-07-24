@@ -51,7 +51,7 @@ class WikiMarkdownContentSection(QFrame):
 
         self._logger = logging.getLogger("WikiMarkdownContentSection")
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._style_manager = StyleManager()
 
@@ -128,7 +128,7 @@ class WikiMarkdownContentSection(QFrame):
 
         self._init_colour_mode = self._style_manager.color_mode()
 
-        self._handle_language_changed()
+        self._on_language_changed()
 
     def text_area(self) -> MarkdownTextEdit:
         """Get the text area widget."""
@@ -159,7 +159,7 @@ class WikiMarkdownContentSection(QFrame):
             )
             self._language_header.setText(language_header)
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update text when language changes."""
         strings = self._language_manager.strings()
 

@@ -49,7 +49,7 @@ class SettingsDoubleSpinBox(SettingsField):
 
         self._layout.addWidget(self._spin)
         self._initial_value = self._spin.value()
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def _handle_changed(self) -> None:
         """Handle double spin box value changes."""
@@ -73,9 +73,9 @@ class SettingsDoubleSpinBox(SettingsField):
         self._spin.setValue(value)
         self._initial_value = value
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update double spin box styling."""
-        super()._handle_style_changed()
+        super()._on_style_changed()
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()

@@ -40,7 +40,7 @@ class LogMessage(QFrame):
         self._logger = logging.getLogger("LogMessage")
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._style_manager = StyleManager()
 
@@ -88,9 +88,9 @@ class LogMessage(QFrame):
         self._is_focused = False
         self._mouse_left_button_pressed = False
 
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
-        self._handle_language_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
+        self._on_language_changed()
 
     def message_id(self) -> str | None:
         """Get the message ID."""
@@ -109,9 +109,9 @@ class LogMessage(QFrame):
         if focused:
             self.setFocus()
 
-        self._handle_style_changed()
+        self._on_style_changed()
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update text when language changes."""
         self._update_level_text()
 
@@ -179,7 +179,7 @@ class LogMessage(QFrame):
 
         # Update the header
         self._update_level_text()
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -214,7 +214,7 @@ class LogMessage(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle the style changing"""
         factor = self._style_manager.zoom_factor()
         font = self.font()

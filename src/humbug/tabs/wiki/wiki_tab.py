@@ -74,11 +74,11 @@ class WikiTab(TabBase):
         self._wiki_content_widget.activated.connect(self.activated)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         # Load content
         self._wiki_content_widget.load_content()
@@ -143,7 +143,7 @@ class WikiTab(TabBase):
         # Use Qt's QDesktopServices to open the URL in the default browser
         QDesktopServices.openUrl(QUrl(url))
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
@@ -289,7 +289,7 @@ class WikiTab(TabBase):
         current, total = self._wiki_content_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes."""
         self.setStyleSheet(f"""
             QWidget {{

@@ -64,7 +64,7 @@ class MindspaceInlineEditor(QWidget):
         self._error_above = False  # Track if error is positioned above
 
         # Connect to style changes for zoom updates
-        self._style_manager.style_changed.connect(self._handle_style_changed)
+        self._style_manager.style_changed.connect(self._on_style_changed)
 
         # Apply initial styling with zoom
         self._apply_styling()
@@ -115,7 +115,7 @@ class MindspaceInlineEditor(QWidget):
         """
         self._editing_index = index
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style/zoom changes by updating fonts and sizes."""
         self.adjust_widget_size()
         self._apply_styling()
@@ -486,7 +486,7 @@ class MindspaceInlineEditor(QWidget):
     def cleanup_connections(self) -> None:
         """Clean up signal connections when editor is being destroyed."""
         try:
-            self._style_manager.style_changed.disconnect(self._handle_style_changed)
+            self._style_manager.style_changed.disconnect(self._on_style_changed)
 
         except (AttributeError, TypeError):
             pass  # Connection may not exist or may already be disconnected

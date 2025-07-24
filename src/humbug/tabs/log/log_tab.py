@@ -62,11 +62,11 @@ class LogTab(TabBase):
         self._log_widget.activated.connect(self.activated)
 
         self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._handle_language_changed)
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._handle_style_changed)
-        self._handle_style_changed()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
     def activate(self) -> None:
         """Activate the tab."""
@@ -76,7 +76,7 @@ class LogTab(TabBase):
         """Refresh log display."""
         self._log_widget.load_messages()
 
-    def _handle_language_changed(self) -> None:
+    def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
@@ -227,7 +227,7 @@ class LogTab(TabBase):
         current, total = self._log_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Handle style changes."""
         self.setStyleSheet(f"""
             QWidget {{

@@ -51,7 +51,7 @@ class SettingsCombo(SettingsField):
         # Add to layout
         self._layout.addWidget(self._combo)
         self._initial_index = self._combo.currentIndex()
-        self._handle_style_changed()
+        self._on_style_changed()
 
     def _handle_changed(self) -> None:
         """Handle combo box selection changes."""
@@ -103,9 +103,9 @@ class SettingsCombo(SettingsField):
         self._combo.blockSignals(False)
         self._initial_index = self._combo.currentIndex()
 
-    def _handle_style_changed(self) -> None:
+    def _on_style_changed(self) -> None:
         """Update combo box styling."""
-        super()._handle_style_changed()
+        super()._on_style_changed()
 
         # Set minimum size based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
