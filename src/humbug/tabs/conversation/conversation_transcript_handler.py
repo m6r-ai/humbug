@@ -160,7 +160,7 @@ class ConversationTranscriptHandler:
             parent=data["metadata"].get("parent", None)
         )
 
-    async def write(self, messages: List[Dict]) -> None:
+    def write(self, messages: List[Dict]) -> None:
         """
         Write messages to transcript file.
 
@@ -205,7 +205,7 @@ class ConversationTranscriptHandler:
                 details={"backup_created": os.path.exists(f"{self._filename}.backup")}
             ) from e
 
-    async def replace_messages(self, messages: List[Dict]) -> None:
+    def replace_messages(self, messages: List[Dict]) -> None:
         """
         Replace all messages in the transcript file with the provided list.
 

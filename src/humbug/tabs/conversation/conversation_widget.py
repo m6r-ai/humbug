@@ -426,7 +426,7 @@ class ConversationWidget(QWidget):
             message: The error that occurred
         """
         await self.add_message(message)
-        await self.append_message_to_transcript(message)
+        self._append_message_to_transcript(message)
 
         if retries_exhausted:
             self._is_streaming = False
@@ -456,7 +456,7 @@ class ConversationWidget(QWidget):
         await self.add_message(message)
 
         # Write the tool call to the transcript
-        await self.append_message_to_transcript(message)
+        self._append_message_to_transcript(message)
 
     async def _on_tool_approval_required(
         self,
@@ -593,7 +593,7 @@ class ConversationWidget(QWidget):
 
         # Update with the completed message immediately
         await self._update_message(message)
-        await self.append_message_to_transcript(message)
+        self._append_message_to_transcript(message)
         self.status_updated.emit()
 
     async def _on_request_completed(self) -> None:
@@ -623,7 +623,7 @@ class ConversationWidget(QWidget):
         # Emit signal for status update
         self.status_updated.emit()
 
-    async def append_message_to_transcript(self, message: AIMessage) -> None:
+    def _append_message_to_transcript(self, message: AIMessage) -> None:
         """
         Write messages to transcript file.
 
@@ -631,7 +631,7 @@ class ConversationWidget(QWidget):
             message: AIMessage to write to transcript
         """
         try:
-            await self._transcript_handler.write([message.to_transcript_dict()])
+            self._transcript_handler.write([message.to_transcript_dict()])
 
         except ConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
@@ -1070,7 +1070,7 @@ class ConversationWidget(QWidget):
         try:
             # Write history to new transcript file
             handler = ConversationTranscriptHandler(target_widget.path())
-            await handler.write(transcript_messages)
+            handler.write(transcript_messages)
 
             # Load messages into the new tab
             target_widget.load_message_history(forked_messages, False)
@@ -1362,7 +1362,7 @@ class ConversationWidget(QWidget):
         transcript_messages = [msg.to_transcript_dict() for msg in preserved_history_messages]
 
         try:
-            await self._transcript_handler.replace_messages(transcript_messages)
+            self._transcript_handler.replace_messages(transcript_messages)
 
             # Reset bookmarks and selection state
             self._bookmarked_messages = {}
@@ -1523,7 +1523,7 @@ class ConversationWidget(QWidget):
         loop.create_task(self.add_message(message))
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop.create_task(ai_conversation.submit_message(message))
-        loop.create_task(self.append_message_to_transcript(message))
+        self._append_message_to_transcript(message)
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
