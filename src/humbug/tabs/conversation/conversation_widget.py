@@ -517,16 +517,18 @@ class ConversationWidget(QWidget):
         self._auto_scroll = True
         self._scroll_to_bottom()
 
-    async def _update_message(self, message: AIMessage) -> None:
-        # Find the message widget that corresponds to the updated message
-        # This is a simple approach - in practice you'd want to associate message IDs with widgets
-        for i, msg_widget in enumerate(self._messages):
-            if (i == len(self._messages) - 1 and
-                    message.source in (AIMessageSource.AI, AIMessageSource.REASONING)):
-                msg_widget.set_content(
-                    message.content, message.source, message.timestamp, message.model or "", message.id, message.user_name
-                )
-                break
+    def _update_last_message(self, message: AIMessage) -> None:
+        # Update the last message
+        if not self._messages:
+            self._logger.warning("No messages to update with the last message.")
+            return
+
+        if message.source not in (AIMessageSource.AI, AIMessageSource.REASONING):
+            return
+
+        self._messages[-1].set_content(
+            message.content, message.source, message.timestamp, message.model or "", message.id, message.user_name
+        )
 
         # Scroll to bottom if auto-scrolling is enabled
         if self._auto_scroll:
@@ -537,7 +539,7 @@ class ConversationWidget(QWidget):
         if not self._pending_message:
             return
 
-        await self._update_message(self._pending_message)
+        self._update_last_message(self._pending_message)
         self._pending_message = None
         self._last_update_time = time.time() * 1000
 
@@ -556,7 +558,7 @@ class ConversationWidget(QWidget):
 
         # If no pending message exists, process immediately
         if self._pending_message is None:
-            await self._update_message(message_copy)
+            self._update_last_message(message_copy)
             self._last_update_time = time.time() * 1000  # Current time in ms
             return
 
@@ -592,7 +594,7 @@ class ConversationWidget(QWidget):
         self._pending_message = None
 
         # Update with the completed message immediately
-        await self._update_message(message)
+        self._update_last_message(message)
         self._append_message_to_transcript(message)
         self.status_updated.emit()
 
