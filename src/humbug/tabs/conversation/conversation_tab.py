@@ -155,7 +155,7 @@ class ConversationTab(TabBase):
             counter += 1
 
     # pylint: disable=protected-access
-    async def fork_conversation_from_index(self, message_index: int | None = None) -> 'ConversationTab':
+    def fork_conversation_from_index(self, message_index: int | None = None) -> 'ConversationTab':
         """
         Create a copy of this conversation with an option to only include selected history.
 
@@ -171,7 +171,7 @@ class ConversationTab(TabBase):
         # Generate new file path using fork naming convention
         new_path = self._get_fork_file_name(self._path)
         forked_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
-        await self._conversation_widget.fork_conversation_from_index(forked_tab._conversation_widget, message_index)
+        self._conversation_widget.fork_conversation_from_index(forked_tab._conversation_widget, message_index)
         return forked_tab
 
     def get_state(self, temp_state: bool=False) -> TabState:

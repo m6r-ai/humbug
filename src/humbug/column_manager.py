@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime, timezone
 import logging
 import os
@@ -1453,81 +1452,34 @@ class ColumnManager(QWidget):
 
         return True
 
-    async def fork_conversation_async(self) -> None:
-        """Fork an existing conversation into a new tab."""
-        conversation_tab = self.get_current_tab()
-        if not isinstance(conversation_tab, ConversationTab):
-            return
-
-        try:
-            # Fork the conversation
-            new_tab = await conversation_tab.fork_conversation_from_index()
-            new_tab.forkRequested.connect(self.fork_conversation)
-            new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
-            self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
-
-        except ConversationError as e:
-            self._logger.exception("Failed to fork conversation: %s", str(e))
-            raise
-
     def fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
-        async def fork_and_handle_errors() -> None:
-            try:
-                self.protect_current_tab(True)
-                await self.fork_conversation_async()
+        self._fork_conversation_from_index(None)
 
-            except ConversationError as e:
-                strings = self._language_manager.strings()
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.conversation_error_title,
-                    strings.error_forking_conversation.format(str(e))
-                )
-
-            finally:
-                self.protect_current_tab(False)
-
-        # Create task to fork conversation
-        asyncio.create_task(fork_and_handle_errors())
-
-    async def fork_conversation_from_index_async(self, message_index: int) -> None:
-        """Fork an existing conversation with partial history into a new tab."""
-        conversation_tab = self.get_current_tab()
-        if not isinstance(conversation_tab, ConversationTab):
-            return
-
+    def _fork_conversation_from_index(self, message_index: int | None) -> None:
+        """Create a new conversation tab with the history from an index in the current conversation."""
         try:
-            # Fork the conversation
-            new_tab = await conversation_tab.fork_conversation_from_index(message_index)
+            self.protect_current_tab(True)
+            conversation_tab = self.get_current_tab()
+            if not isinstance(conversation_tab, ConversationTab):
+                return
+
+            new_tab = conversation_tab.fork_conversation_from_index(message_index)
             new_tab.forkRequested.connect(self.fork_conversation)
             new_tab.forkFromIndexRequested.connect(self._fork_conversation_from_index)
             self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
 
         except ConversationError as e:
-            self._logger.exception("Failed to fork conversation: %s", str(e))
-            raise
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.conversation_error_title,
+                strings.error_forking_conversation.format(str(e))
+            )
 
-    def _fork_conversation_from_index(self, message_index: int) -> None:
-        """Create a new conversation tab with the history from an index in the current conversation."""
-        async def fork_from_index_and_handle_errors() -> None:
-            try:
-                self.protect_current_tab(True)
-                await self.fork_conversation_from_index_async(message_index)
-                self.protect_current_tab(False)
-
-            except ConversationError as e:
-                strings = self._language_manager.strings()
-                MessageBox.show_message(
-                    self,
-                    MessageBoxType.CRITICAL,
-                    strings.conversation_error_title,
-                    strings.error_forking_conversation.format(str(e))
-                )
-
-        # Create task to fork conversation
-        asyncio.create_task(fork_from_index_and_handle_errors())
+        finally:
+            self.protect_current_tab(False)
 
     def new_terminal(self, command: str | None = None) -> TerminalTab:
         """Create new terminal tab.

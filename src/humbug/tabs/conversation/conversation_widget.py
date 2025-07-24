@@ -1046,7 +1046,7 @@ class ConversationWidget(QWidget):
         self._input.set_plain_text(text)
         self._input.setFocus()
 
-    async def fork_conversation_from_index(self, target_widget: 'ConversationWidget', message_index: int | None = None) -> None:
+    def fork_conversation_from_index(self, target_widget: 'ConversationWidget', message_index: int | None = None) -> None:
         """
         Load a copy of this conversation's history into another conversation widget.
 
