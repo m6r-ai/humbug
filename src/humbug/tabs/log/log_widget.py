@@ -153,8 +153,8 @@ class LogWidget(QWidget):
 
         # Set up activation tracking
         self._event_filter = LogWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._handle_widget_activation)
-        self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
+        self._event_filter.widget_activated.connect(self._on_widget_activated)
+        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
         self._install_activation_tracking(self._messages_container)
 
         # Load messages when initialized
@@ -373,7 +373,7 @@ class LogWidget(QWidget):
         for child in widget.findChildren(QWidget):
             cast(QWidget, child).installEventFilter(self._event_filter)
 
-    def _handle_widget_activation(self, widget: QWidget) -> None:
+    def _on_widget_activated(self, widget: QWidget) -> None:
         """
         Handle activation of a widget, focusing the associated message.
 
@@ -401,7 +401,7 @@ class LogWidget(QWidget):
             self._focused_message_index = self._messages.index(message_widget)
             message_widget.set_focused(True)
 
-    def _handle_widget_deactivation(self, widget: QWidget) -> None:
+    def _on_widget_deactivated(self, widget: QWidget) -> None:
         """
         Handle deactivation of a widget, checking if focus is leaving the associated message.
 

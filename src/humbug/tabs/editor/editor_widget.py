@@ -98,12 +98,12 @@ class EditorWidget(QPlainTextEdit):
 
         # Set up activation tracking
         self._event_filter = EditorWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._handle_widget_activation)
-        self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
+        self._event_filter.widget_activated.connect(self._on_widget_activated)
+        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
 
         self.installEventFilter(self._event_filter)
 
-    def _handle_widget_activation(self, _widget: QWidget) -> None:
+    def _on_widget_activated(self, _widget: QWidget) -> None:
         """
         Handle activation of a widget.
 
@@ -113,7 +113,7 @@ class EditorWidget(QPlainTextEdit):
         # Emit activated signal to let the tab know this editor was clicked
         self.activated.emit()
 
-    def _handle_widget_deactivation(self, widget: QWidget) -> None:
+    def _on_widget_deactivated(self, widget: QWidget) -> None:
         """
         Handle deactivation of a widget.
 

@@ -175,8 +175,8 @@ class WikiWidget(QWidget):
 
         # Set up activation tracking
         self._event_filter = WikiWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._handle_widget_activation)
-        self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
+        self._event_filter.widget_activated.connect(self._on_widget_activated)
+        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
 
     def __del__(self) -> None:
         """Clean up file watching when widget is destroyed."""
@@ -374,7 +374,7 @@ class WikiWidget(QWidget):
         for child in widget.findChildren(QWidget):
             cast(QWidget, child).installEventFilter(self._event_filter)
 
-    def _handle_widget_activation(self, _widget: QWidget) -> None:
+    def _on_widget_activated(self, _widget: QWidget) -> None:
         """
         Handle activation of a widget.
 
@@ -384,7 +384,7 @@ class WikiWidget(QWidget):
         # Emit activated signal to let the tab know this wiki was clicked
         self.activated.emit()
 
-    def _handle_widget_deactivation(self, widget: QWidget) -> None:
+    def _on_widget_deactivated(self, widget: QWidget) -> None:
         """
         Handle deactivation of a widget.
 

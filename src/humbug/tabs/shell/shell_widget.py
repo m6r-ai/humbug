@@ -178,8 +178,8 @@ class ShellWidget(QWidget):
 
         # Set up activation tracking
         self._event_filter = ShellWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._handle_widget_activation)
-        self._event_filter.widget_deactivated.connect(self._handle_widget_deactivation)
+        self._event_filter.widget_activated.connect(self._on_widget_activated)
+        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
         self._install_activation_tracking(self._input)
         self._install_activation_tracking(self._messages_container)
 
@@ -479,7 +479,7 @@ class ShellWidget(QWidget):
         for child in widget.findChildren(QWidget):
             cast(QWidget, child).installEventFilter(self._event_filter)
 
-    def _handle_widget_activation(self, widget: QWidget) -> None:
+    def _on_widget_activated(self, widget: QWidget) -> None:
         """
         Handle activation of a widget, focusing the associated message.
 
@@ -511,7 +511,7 @@ class ShellWidget(QWidget):
         self._focused_message_index = -1
         self._input.set_focused(True)
 
-    def _handle_widget_deactivation(self, widget: QWidget) -> None:
+    def _on_widget_deactivated(self, widget: QWidget) -> None:
         """
         Handle deactivation of a widget, checking if focus is leaving the associated message.
 
