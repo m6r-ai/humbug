@@ -1,7 +1,8 @@
 import asyncio
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, cast
 
+from ai.ai_conversation import AIConversation
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_model import ReasoningCapability
 from ai_tool import (
@@ -178,7 +179,7 @@ class DelegateAITool(AITool):
     async def execute(
         self,
         tool_call: AIToolCall,
-        requester: str,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
@@ -203,17 +204,21 @@ class DelegateAITool(AITool):
         arguments = tool_call.arguments
         task_prompt = self._get_str_value_from_key("task_prompt", arguments)
 
-        session_id = arguments.get("session_id")
+        session_id_arg = arguments.get("session_id")
         model = arguments.get("model")
         temperature = arguments.get("temperature")
 
         # Validate session_id if provided
-        conversation_path = None
-        if session_id:
-            if not isinstance(session_id, str):
+        session_id = None
+        if session_id_arg:
+            if not isinstance(session_id_arg, str):
                 raise AIToolExecutionError("'session_id' must be a string")
 
-            conversation_path = self._validate_and_resolve_session_id(session_id)
+            if session_id_arg == "current":
+                session_id = "current"
+
+            else:
+                session_id = self._validate_and_resolve_session_id(session_id_arg)
 
         # Validate model if provided
         if model and not isinstance(model, str):
@@ -245,8 +250,12 @@ class DelegateAITool(AITool):
 
         self._logger.debug("AI delegation requested with task: %s", task_prompt[:100])
 
+        ai_conversation = cast(AIConversation, requester_ref)
+
         try:
-            return await self._delegate_task(tool_call, requester, task_prompt, conversation_path, model, temperature, reasoning)
+            return await self._delegate_task(
+                tool_call, ai_conversation, task_prompt, session_id, model, temperature, reasoning
+            )
 
         except (AIToolExecutionError, AIToolAuthorizationDenied):
             # Re-raise our own errors
@@ -342,24 +351,24 @@ class DelegateAITool(AITool):
     async def _delegate_task(
         self,
         tool_call: AIToolCall,
-        requester: str,
+        ai_conversation: AIConversation,
         task_prompt: str,
-        conversation_path: str | None,
+        session_id: str | None,
         model: str | None,
         temperature: float | None,
-        reasoning: ReasoningCapability | None
+        reasoning_capability: ReasoningCapability | None
     ) -> AIToolResult:
         """
         Delegate a task to an AI instance.
 
         Args:
             tool_call: Tool call containing operation name and arguments
-            requester: AI model requesting the operation
+            ai_conversation: AIConversation instance for the request
             task_prompt: The prompt to send to the delegated AI
-            conversation_path: Path to existing conversation (None for new session)
+            session_id: ID of the existing session (None for new session)
             model: AI model to use (None for default)
             temperature: Temperature setting (None for default)
-            reasoning: Reasoning capability setting
+            reasoning_capability: Reasoning capability setting
 
         Returns:
             AIToolResult with continuation for waiting on completion
@@ -373,33 +382,44 @@ class DelegateAITool(AITool):
 
             # Create or open conversation
             conversation_tab = None
-            if not conversation_path:
+            if session_id is None or session_id == "current":
                 # Create new conversation
-                current_tab = self._column_manager.get_current_tab()
-                assert isinstance(current_tab, ConversationTab), "Current tab must be a ConversationTab"
-                conversation_tab = self._column_manager.new_conversation(current_tab, model, temperature, reasoning)
+                history = ai_conversation.get_conversation_history() if session_id == "current" else None
+                conversation_tab = self._column_manager.new_conversation(
+                    True, history, model, temperature, reasoning_capability
+                )
 
             else:
                 # Open existing conversation
-                conversation_tab = self._column_manager.open_conversation(conversation_path, False)
+                conversation_tab = self._column_manager.open_conversation(session_id, False)
                 if conversation_tab is None:
                     raise AIToolExecutionError(
-                        f"Session '{conversation_path}' does not exist or is not a valid conversation."
+                        f"Session '{session_id}' does not exist or is not a valid conversation."
                     )
 
             session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())
-            if session_id is None:
-                raise AIToolExecutionError(
-                    f"Session '{conversation_path}' is outside the current mindspace boundaries."
-                )
+            assert session_id is not None, "Session ID should not be None after resolving path"
+
+            # Update conversation settings if model or temperature provided
+            conversation_settings = conversation_tab.conversation_settings()
+            if model:
+                conversation_settings.model = model
+
+            if temperature is not None:
+                conversation_settings.temperature = temperature
+
+            if reasoning_capability:
+                conversation_settings.reasoning = reasoning_capability
+
+            conversation_tab.update_conversation_settings(conversation_settings)
 
             # Submit the task prompt
             conversation_tab.set_input_text(task_prompt)
-            conversation_tab.submit_with_requester(requester)
+            conversation_tab.submit_with_requester(conversation_settings.model)
 
             # Log the delegation
             tab_id = conversation_tab.tab_id()
-            session_info = "continuing session" if conversation_path else "new session"
+            session_info = "continuing session" if session_id else "new session"
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI delegated task ({session_info}), tab ID: {tab_id}, session ID: {session_id}, prompt: '{task_prompt[:50]}...'"

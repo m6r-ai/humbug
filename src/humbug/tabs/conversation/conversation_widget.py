@@ -1040,6 +1040,26 @@ class ConversationWidget(QWidget):
         self._input.set_plain_text(text)
         self._input.setFocus()
 
+    def set_conversation_history(self, history: AIConversationHistory) -> None:
+        """
+        Set the conversation history for this widget.
+
+        Args:
+            history: AIConversationHistory object containing messages
+        """
+        messages = history.get_messages()
+        transcript_messages = [msg.to_transcript_dict() for msg in messages]
+
+        try:
+            # Write history to new transcript file
+            self._transcript_handler.replace_messages(transcript_messages)
+
+            # Load messages into the new tab
+            self.load_message_history(messages, False)
+
+        except Exception as e:
+            raise ConversationError(f"Failed to write transcript for new history: {str(e)}") from e
+
     def fork_conversation_from_index(self, target_widget: 'ConversationWidget', message_index: int | None = None) -> None:
         """
         Load a copy of this conversation's history into another conversation widget.
@@ -1471,7 +1491,13 @@ class ConversationWidget(QWidget):
         """
         return ''.join(char for char in text if char == '\n' or char == '\t' or (ord(char) >= 32 and ord(char) != 127))
 
-    def submit(self, requester: str | None = None) -> None:
+    def submit(
+        self,
+        requester: str | None = None,
+        model: str | None = None,
+        temperature: float | None = None,
+        reasoning_capability: ReasoningCapability | None = None
+    ) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
         if not content:
@@ -1485,8 +1511,22 @@ class ConversationWidget(QWidget):
         self._is_streaming = True
         self.status_updated.emit()
 
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        settings = ai_conversation.conversation_settings()
+        if model is None:
+            model = settings.model
+
+        if temperature is None:
+            temperature = settings.temperature
+
+        if reasoning_capability is None:
+            reasoning_capability = settings.reasoning
+
         sanitized_content = self._sanitize_input(content)
-        message = AIMessage.create(AIMessageSource.USER, sanitized_content, user_name=requester)
+        message = AIMessage.create(
+            AIMessageSource.USER, sanitized_content, user_name=requester,
+            model=model, temperature=temperature, reasoning_capability=reasoning_capability
+        )
 
         self._last_submitted_message = content
         self._add_message(message)
@@ -1496,7 +1536,6 @@ class ConversationWidget(QWidget):
         if not loop.is_running():
             return
 
-        ai_conversation = cast(AIConversation, self._ai_conversation)
         loop.create_task(ai_conversation.submit_message(message))
         self._append_message_to_transcript(message)
 

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Any
 
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
@@ -34,7 +35,7 @@ class ClockAITool(AITool):
     async def execute(
         self,
         tool_call: AIToolCall,
-        requester: str,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Execute the get current time tool."""

@@ -6,6 +6,7 @@ from typing import Dict, List, cast
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
 
+from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_model import ReasoningCapability
 
@@ -1348,7 +1349,8 @@ class ColumnManager(QWidget):
 
     def new_conversation(
         self,
-        parent: ConversationTab | None = None,
+        child: bool = False,
+        history: AIConversationHistory | None = None,
         model: str | None = None,
         temperature: float | None = None,
         reasoning: ReasoningCapability | None = None
@@ -1357,7 +1359,7 @@ class ColumnManager(QWidget):
         # Generate timestamp for ID
         timestamp = datetime.now(timezone.utc)
         conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
-        prefix = "dAI-" if parent is not None else ""
+        prefix = "dAI-" if child else ""
         conversation_title = f"{prefix}{conversation_title}"
         filename = os.path.join("conversations", f"{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)
@@ -1383,6 +1385,9 @@ class ColumnManager(QWidget):
             reasoning=reasoning
         )
         conversation_tab.update_conversation_settings(conversation_settings)
+        if history:
+            conversation_tab.set_conversation_history(history)
+
         self._add_tab(conversation_tab, conversation_title)
         return conversation_tab
 

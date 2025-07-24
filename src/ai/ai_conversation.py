@@ -363,7 +363,7 @@ class AIConversation:
             # Validate operation arguments before execution
             tool.validate_operation_arguments(tool_call.arguments)
 
-            result = await tool.execute(tool_call, self._settings.model, self._request_tool_authorization)
+            result = await tool.execute(tool_call, self, self._request_tool_authorization)
 
             self._logger.debug(
                 "Tool '%s' executed successfully with args %s",

@@ -93,7 +93,7 @@ class AITool(ABC):
     async def execute(
         self,
         tool_call: AIToolCall,
-        requester: str,
+        requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
@@ -101,7 +101,7 @@ class AITool(ABC):
 
         Args:
             tool_call: Tool call containing arguments and metadata
-            requester: AI model requesting the tool use
+            requester_ref: Reference to the requester (e.g., user or system)
             request_authorization: Callback for requesting authorization
 
         Returns:

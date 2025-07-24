@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
+from ai.ai_conversation_history import AIConversationHistory
 from ai.ai_conversation_settings import AIConversationSettings
 
 from humbug.color_role import ColorRole
@@ -152,6 +153,15 @@ class ConversationTab(TabBase):
 
             counter += 1
 
+    def set_conversation_history(self, history: AIConversationHistory) -> None:
+        """
+        Set the conversation history for this tab.
+
+        Args:
+            history: AIConversationHistory object containing conversation history
+        """
+        self._conversation_widget.set_conversation_history(history)
+
     # pylint: disable=protected-access
     def fork_conversation_from_index(self, message_index: int | None = None) -> 'ConversationTab':
         """
@@ -223,6 +233,10 @@ class ConversationTab(TabBase):
         """
         self._path = path
         self._conversation_widget.set_path(path)
+
+    def conversation_settings(self) -> AIConversationSettings:
+        """Get the current conversation settings."""
+        return self._conversation_widget.conversation_settings()
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
         """Update conversation settings and associated backend."""
@@ -348,7 +362,7 @@ class ConversationTab(TabBase):
 
     def submit_with_requester(self, requester: str) -> None:
         """
-        Submit the current message with a specific requester.
+        Submit the current message with a specific requester and model parameters.
 
         Args:
             requester: The AI model or user name submitting the message
