@@ -1505,8 +1505,8 @@ class ColumnManager(QWidget):
 
         try:
             wiki_tab = WikiTab("", path_minus_anchor, self)
-            wiki_tab.open_link.connect(self.handle_wiki_link)
-            wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
+            wiki_tab.open_link_requested.connect(self.handle_wiki_link)
+            wiki_tab.edit_file_requested.connect(self._edit_file_from_wiki_page)
             wiki_tab.set_ephemeral(ephemeral)
             self._add_tab(wiki_tab, os.path.basename(path_minus_anchor))
 
@@ -1591,8 +1591,8 @@ class ColumnManager(QWidget):
 
             case TabType.WIKI:
                 wiki_tab = WikiTab.restore_from_state(state, self)
-                wiki_tab.open_link.connect(self.handle_wiki_link)
-                wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
+                wiki_tab.open_link_requested.connect(self.handle_wiki_link)
+                wiki_tab.edit_file_requested.connect(self._edit_file_from_wiki_page)
                 return wiki_tab
 
         return None

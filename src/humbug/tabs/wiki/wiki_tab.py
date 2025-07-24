@@ -23,13 +23,10 @@ class WikiTab(TabBase):
     """Wiki tab for displaying wiki-like content."""
 
     # Signal to request opening a new wiki tab
-    open_link = Signal(str)
+    open_link_requested = Signal(str)
 
     # Signal to request editing a file
-    edit_file = Signal(str)
-
-    # Signal to request closing this tab (e.g., when file is deleted)
-    close_requested = Signal(str)  # tab_id
+    edit_file_requested = Signal(str)
 
     def __init__(
         self,
@@ -66,7 +63,7 @@ class WikiTab(TabBase):
         self._wiki_content_widget = WikiWidget(path, self)
         self._wiki_content_widget.status_updated.connect(self.update_status)
         self._wiki_content_widget.open_link.connect(self._handle_link)
-        self._wiki_content_widget.edit_file.connect(self.edit_file)
+        self._wiki_content_widget.edit_file.connect(self.edit_file_requested)
 
         # Connect new signals for file watching
         self._wiki_content_widget.content_refreshed.connect(self._handle_content_refreshed)
@@ -116,7 +113,7 @@ class WikiTab(TabBase):
             resolved_path = self._wiki_content_widget.resolve_link(cast(str, self._path), url)
             if resolved_path is not None:
                 # It's a local mindspace link - open in wiki tab
-                self.open_link.emit(resolved_path)
+                self.open_link_requested.emit(resolved_path)
                 return
 
             # Otherwise, it's an external link - open in browser

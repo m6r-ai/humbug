@@ -63,9 +63,6 @@ class WikiWidget(QWidget):
     # Signal to notify tab of status changes
     status_updated = Signal()
 
-    # Signal to request scrolling to a specific widget and position
-    scrollRequested = Signal(QWidget, int)
-
     # Emits when parent should be activated by user interaction
     activated = Signal()
 
