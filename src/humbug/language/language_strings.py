@@ -168,6 +168,7 @@ class LanguageStrings:
     save_changes_title: str
     confirm_delete_title: str
     file_error_title: str
+    wiki_error_title: str
 
     # Messages
     confirm_delete_message: str

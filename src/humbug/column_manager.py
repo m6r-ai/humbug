@@ -77,6 +77,8 @@ class ColumnManager(QWidget):
     tab_changed = Signal()
     fork_requested = Signal()
     fork_from_index_requested = Signal(int)
+    open_wiki_link_requested = Signal(str)
+    edit_file_requested = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab manager."""
@@ -1468,16 +1470,13 @@ class ColumnManager(QWidget):
         self._add_tab(terminal, title)
         return terminal
 
-    def handle_wiki_link(self, path: str) -> WikiTab:
-        """
-        Handle a wiki link click.
+    def _on_wiki_open_link_requested(self, path: str) -> None:
+        """Handle a wiki link click."""
+        self.open_wiki_link_requested.emit(path)
 
-        Args:
-            path: Path to the wiki page
-        Returns:
-            The opened WikiTab
-        """
-        return self.open_wiki_page(path, True)
+    def _on_wiki_edit_file_requested(self, path: str) -> None:
+        """Edit a file from a wiki page."""
+        self.edit_file_requested.emit(path)
 
     def open_wiki_page(self, path: str, ephemeral: bool) -> WikiTab:
         """Open a wiki page."""
@@ -1505,8 +1504,8 @@ class ColumnManager(QWidget):
 
         try:
             wiki_tab = WikiTab("", path_minus_anchor, self)
-            wiki_tab.open_link_requested.connect(self.handle_wiki_link)
-            wiki_tab.edit_file_requested.connect(self._edit_file_from_wiki_page)
+            wiki_tab.open_link_requested.connect(self._on_wiki_open_link_requested)
+            wiki_tab.edit_file_requested.connect(self._on_wiki_edit_file_requested)
             wiki_tab.set_ephemeral(ephemeral)
             self._add_tab(wiki_tab, os.path.basename(path_minus_anchor))
 
@@ -1519,17 +1518,6 @@ class ColumnManager(QWidget):
         except WikiError as e:
             self._logger.exception("Failed to open wiki page: %s", str(e))
             raise
-
-    def _edit_file_from_wiki_page(self, path: str) -> EditorTab:
-        """
-        Edit a file from a wiki page.
-
-        Args:
-            path: Path to the file
-        Returns:
-            The opened editor tab
-        """
-        return self.open_file(path)
 
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""
@@ -1591,8 +1579,8 @@ class ColumnManager(QWidget):
 
             case TabType.WIKI:
                 wiki_tab = WikiTab.restore_from_state(state, self)
-                wiki_tab.open_link_requested.connect(self.handle_wiki_link)
-                wiki_tab.edit_file_requested.connect(self._edit_file_from_wiki_page)
+                wiki_tab.open_link_requested.connect(self._on_wiki_open_link_requested)
+                wiki_tab.edit_file_requested.connect(self._on_wiki_edit_file_requested)
                 return wiki_tab
 
         return None

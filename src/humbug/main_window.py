@@ -50,6 +50,7 @@ from humbug.tabs.shell.commands.shell_command_m6rc import ShellCommandM6rc
 from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTerminal
 from humbug.tabs.shell.commands.shell_command_wiki import ShellCommandWiki
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
+from humbug.tabs.wiki.wiki_error import WikiError
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 from humbug.user.user_settings_dialog import UserSettingsDialog
@@ -347,6 +348,8 @@ class MainWindow(QMainWindow):
         self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
         self._column_manager.fork_requested.connect(self._on_column_manager_fork_requested)
         self._column_manager.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
+        self._column_manager.open_wiki_link_requested.connect(self._on_column_manager_open_wiki_link_requested)
+        self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
         self._splitter.addWidget(self._column_manager)
 
         # Set initial file tree width
@@ -1223,6 +1226,26 @@ class MainWindow(QMainWindow):
                 strings.conversation_error_title,
                 strings.error_forking_conversation.format(str(e))
             )
+
+    def _on_column_manager_open_wiki_link_requested(self, path: str) -> None:
+        """Handle requests to open a wiki page."""
+        try:
+            self._column_manager.open_wiki_page(path, True)
+
+        except WikiError as e:
+            self._logger.info("Error opening wiki page: %s: %s", path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.wiki_error_title,
+                strings.could_not_open.format(path, str(e))
+            )
+            return None
+
+    def _on_column_manager_edit_file_requested(self, path: str) -> None:
+        """Handle requests to open a file in the editor."""
+        self._open_file_path(path)
 
     def _close_tab(self) -> None:
         """Close the current tab."""

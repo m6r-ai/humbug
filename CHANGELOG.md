@@ -14,6 +14,7 @@ Bug fixes:
 - Single clicks on the mindspace tree should not cause the tree to lose focus.
 - Added missing type hints to the Windows terminal code.
 - Resolved some linter and pytest issues on Windows and MacOS.
+- Added missing exception handling in the Wiki link handling.
 
 Internal structure changes:
 
@@ -21,6 +22,9 @@ Internal structure changes:
 - The conversation tab design was reworked so all transcript operations happen within the `ConversationWidget` class.
 - Removed the AI rate limiter.  It never had a full view of all API uses and did not have any way to adapt to different
   AIs having different rates.
+- Refined a number of callbacks to use more consistent naming.
+- Revised the transcript handling to be synchronous rather than asynchronous as the underlying filesystem calls were
+  synchronous anyway.
 
 ## v0.19 (2025-07-15)
 

@@ -173,6 +173,7 @@ def get_english_strings() -> LanguageStrings:
         save_changes_title="Save Changes?",
         confirm_delete_title="Confirm Delete",
         file_error_title="File Error",
+        wiki_error_title="Wiki Error",
 
         # Messages
         confirm_delete_message="Are you sure you want to delete {0}?",

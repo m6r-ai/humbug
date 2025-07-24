@@ -173,6 +173,7 @@ def get_french_strings() -> LanguageStrings:
         save_changes_title="Enregistrer les modifications ?",
         confirm_delete_title="Confirmer la suppression",
         file_error_title="Erreur de fichier",
+        wiki_error_title="Erreur de Wiki",
 
         # Messages
         confirm_delete_message="Êtes-vous sûr de vouloir supprimer {0} ?",

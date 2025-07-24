@@ -173,6 +173,7 @@ def get_arabic_strings() -> LanguageStrings:
         save_changes_title="حفظ التغييرات؟",
         confirm_delete_title="تأكيد الحذف",
         file_error_title="خطأ في الملف",
+        wiki_error_title="خطأ في الويكي",
 
         # Messages
         confirm_delete_message="هل أنت متأكد من حذف {0}؟",
