@@ -26,9 +26,8 @@ from humbug.tabs.tab_type import TabType
 class ConversationTab(TabBase):
     """Unified conversation tab."""
 
-    forkRequested = Signal()
-    forkFromIndexRequested = Signal(int)
-    bookmarkNavigationRequested = Signal(bool)  # True for next, False for previous
+    fork_requested = Signal()
+    fork_from_index_requested = Signal(int)
     conversation_completed = Signal(dict)  # Signal for conversation completion
 
     def __init__(
@@ -67,10 +66,9 @@ class ConversationTab(TabBase):
         self._conversation_widget = ConversationWidget(
             path, self, use_existing_ai_conversation
         )
-        self._conversation_widget.forkRequested.connect(self.forkRequested)
-        self._conversation_widget.forkFromIndexRequested.connect(self.forkFromIndexRequested)
+        self._conversation_widget.fork_requested.connect(self.fork_requested)
+        self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index_requested)
         self._conversation_widget.status_updated.connect(self.update_status)
-        self._conversation_widget.bookmarkNavigationRequested.connect(self.bookmarkNavigationRequested)
         self._conversation_widget.submit_finished.connect(self._handle_submit_finished)
         self._conversation_widget.update_label.connect(self._handle_update_label)
         self._conversation_widget.conversation_modified.connect(self._handle_conversation_modified)

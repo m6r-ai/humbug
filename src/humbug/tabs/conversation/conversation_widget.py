@@ -91,14 +91,8 @@ class ConversationWidget(QWidget):
     status_updated = Signal()
 
     # Signals for tab to handle forking a conversation
-    forkRequested = Signal()  # Signal to fork the conversation
-    forkFromIndexRequested = Signal(int)  # Signal to fork from a specific message index
-
-    # Signal for bookmark navigation
-    bookmarkNavigationRequested = Signal(bool)  # True for next, False for previous
-
-    # Signal to request scrolling to a specific widget and position
-    scrollRequested = Signal(QWidget, int)  # Widget to scroll to, position within widget
+    fork_requested = Signal()  # Signal to fork the conversation
+    fork_from_index_requested = Signal(int)  # Signal to fork from a specific message index
 
     # Emits when parent should be activated by user interaction
     activated = Signal()
@@ -1220,7 +1214,7 @@ class ConversationWidget(QWidget):
         menu.addSeparator()
 
         fork_action = menu.addAction(strings.fork_conversation)
-        fork_action.triggered.connect(self.forkRequested)
+        fork_action.triggered.connect(self.fork_requested)
         menu.addSeparator()
 
         toggle_bookmark_action = menu.addAction(strings.bookmark_section)
@@ -1288,7 +1282,7 @@ class ConversationWidget(QWidget):
 
         if message not in self._messages:
             # For the input widget, fork at current position
-            self.forkRequested.emit()
+            self.fork_requested.emit()
             return
 
         message_index = self._messages.index(message)
@@ -1297,7 +1291,7 @@ class ConversationWidget(QWidget):
         fork_end_index = self._find_fork_end_index(message_index)
 
         # Emit signal with the end index (inclusive)
-        self.forkFromIndexRequested.emit(fork_end_index)
+        self.fork_from_index_requested.emit(fork_end_index)
 
     def _delete_from_message(self) -> None:
         """Handle request to delete conversation from a message onwards."""

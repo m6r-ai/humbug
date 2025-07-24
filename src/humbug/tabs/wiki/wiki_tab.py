@@ -23,7 +23,7 @@ class WikiTab(TabBase):
     """Wiki tab for displaying wiki-like content."""
 
     # Signal to request opening a new wiki tab
-    open_wiki_path = Signal(str)
+    open_link = Signal(str)
 
     # Signal to request editing a file
     edit_file = Signal(str)
@@ -116,7 +116,7 @@ class WikiTab(TabBase):
             resolved_path = self._wiki_content_widget.resolve_link(cast(str, self._path), url)
             if resolved_path is not None:
                 # It's a local mindspace link - open in wiki tab
-                self.open_wiki_path.emit(resolved_path)
+                self.open_link.emit(resolved_path)
                 return
 
             # Otherwise, it's an external link - open in browser

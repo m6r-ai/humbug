@@ -589,7 +589,7 @@ class MainWindow(QMainWindow):
         light_action = QAction(strings.theme_light, self)
         light_action.setCheckable(True)
         light_action.setChecked(self._style_manager.color_mode() == ColorMode.LIGHT)
-        light_action.triggered.connect(lambda: self._handle_theme_change(ColorMode.LIGHT))
+        light_action.triggered.connect(lambda: self._set_color_mode(ColorMode.LIGHT))
         theme_action_group.addAction(light_action)
         theme_menu.addAction(light_action)
         self._theme_actions[ColorMode.LIGHT] = light_action
@@ -598,7 +598,7 @@ class MainWindow(QMainWindow):
         dark_action = QAction(strings.theme_dark, self)
         dark_action.setCheckable(True)
         dark_action.setChecked(self._style_manager.color_mode() == ColorMode.DARK)
-        dark_action.triggered.connect(lambda: self._handle_theme_change(ColorMode.DARK))
+        dark_action.triggered.connect(lambda: self._set_color_mode(ColorMode.DARK))
         theme_action_group.addAction(dark_action)
         theme_menu.addAction(dark_action)
         self._theme_actions[ColorMode.DARK] = dark_action
@@ -611,9 +611,9 @@ class MainWindow(QMainWindow):
         for theme, action in self._theme_actions.items():
             action.setChecked(theme == self._style_manager.color_mode())
 
-    def _handle_theme_change(self, theme: ColorMode) -> None:
+    def _set_color_mode(self, theme: ColorMode) -> None:
         """
-        Handle theme change requests.
+        Set the color mode (theme) for the application.
 
         Args:
             theme: The new theme to apply

@@ -102,7 +102,7 @@ class ColumnManager(QWidget):
 
         # Create welcome widget
         self._welcome_widget = WelcomeWidget()
-        self._welcome_widget.path_dropped.connect(self._handle_welcome_tree_drop)
+        self._welcome_widget.path_dropped.connect(self._on_welcome_widget_path_dropped)
         self._stack.addWidget(self._welcome_widget)
 
         # Create widget to hold columns
@@ -118,7 +118,7 @@ class ColumnManager(QWidget):
         self._columns_layout.addWidget(self._column_splitter)
 
         # Connect to the splitter's moved signal
-        self._column_splitter.splitterMoved.connect(self._handle_splitter_moved)
+        self._column_splitter.splitterMoved.connect(self._on_column_splitter_splitter_moved)
 
         # Create initial column
         self._tab_columns: List[ColumnWidget] = []
@@ -423,13 +423,13 @@ class ColumnManager(QWidget):
             tool_tip = self._mindspace_manager.get_relative_path(tool_tip)
 
         data = TabData(tab, title, tool_tip)
-        data.label.close_clicked.connect(lambda: self._handle_close_clicked(data.tab_id))
-        tab.activated.connect(lambda: self._handle_tab_activated(tab))
-        tab.updated_state_changed.connect(self._handle_tab_updated)
-        tab.modified_state_changed.connect(self._handle_tab_modified)
+        data.label.close_clicked.connect(lambda: self._on_tab_label_close_clicked(data.tab_id))
+        tab.activated.connect(lambda: self._on_tab_activated(tab))
+        tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
+        tab.modified_state_changed.connect(self._on_tab_modified_state_changed)
         return data
 
-    def _handle_close_clicked(self, tab_id: str) -> None:
+    def _on_tab_label_close_clicked(self, tab_id: str) -> None:
         """
         Handle close button click on a tab label.
 
@@ -442,7 +442,7 @@ class ColumnManager(QWidget):
             f"User closed tab, tab ID: {tab_id}"
         )
 
-    def _handle_tab_updated(self, tab_id: str, is_updated: bool) -> None:
+    def _on_tab_updated_state_changed(self, tab_id: str, is_updated: bool) -> None:
         """
         Update a tab's updated state.
 
@@ -535,7 +535,7 @@ class ColumnManager(QWidget):
         tab_data = self._create_tab_data(new_tab, tab_title)
         self._add_tab_to_column(tab_data, target_column)
 
-    def _handle_welcome_tree_drop(self, path: str) -> None:
+    def _on_welcome_widget_path_dropped(self, path: str) -> None:
         """Handle mindspace tree drops when only welcome widget is visible."""
         # Create first column if it doesn't exist
         if not self._tab_columns:
@@ -557,7 +557,7 @@ class ColumnManager(QWidget):
 
         self._stack.setCurrentWidget(self._columns_widget)
 
-    def _handle_splitter_moved(self, _pos: int, _index: int) -> None:
+    def _on_column_splitter_splitter_moved(self, _pos: int, _index: int) -> None:
         """Handle splitter movement and potential column merging."""
         sizes = self._column_splitter.sizes()
         min_width = 200  # Minimum width before merging
@@ -838,7 +838,7 @@ class ColumnManager(QWidget):
 
         self._update_tabs(change_focus=update_focus)
 
-    def _handle_tab_activated(self, tab: TabBase) -> None:
+    def _on_tab_activated(self, tab: TabBase) -> None:
         """
         Handle tab activation from widget focus.
 
@@ -1023,7 +1023,7 @@ class ColumnManager(QWidget):
         if label:
             label.set_ephemeral(False)
 
-    def _handle_tab_modified(self, tab_id: str, modified: bool) -> None:
+    def _on_tab_modified_state_changed(self, tab_id: str, modified: bool) -> None:
         """
         Update a tab's modified state.
 
@@ -1361,8 +1361,8 @@ class ColumnManager(QWidget):
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         conversation_tab = ConversationTab("", full_path, self)
-        conversation_tab.forkRequested.connect(self._on_fork_conversation_requested)
-        conversation_tab.forkFromIndexRequested.connect(self._on_fork_conversation_from_index_requested)
+        conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
+        conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
 
         # Set model based on mindspace settings
         settings = cast(MindspaceSettings, self._mindspace_manager.settings())
@@ -1401,8 +1401,8 @@ class ColumnManager(QWidget):
 
         try:
             conversation_tab = ConversationTab("", abs_path, self)
-            conversation_tab.forkRequested.connect(self._on_fork_conversation_requested)
-            conversation_tab.forkFromIndexRequested.connect(self._on_fork_conversation_from_index_requested)
+            conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
+            conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
             conversation_tab.set_ephemeral(ephemeral)
             self._add_tab(conversation_tab, conversation_title)
@@ -1420,11 +1420,11 @@ class ColumnManager(QWidget):
 
         return True
 
-    def _on_fork_conversation_requested(self) -> None:
+    def _on_conversation_fork_requested(self) -> None:
         """Handle the fork conversation request signal."""
         self.fork_requested.emit()
 
-    def _on_fork_conversation_from_index_requested(self, message_index: int) -> None:
+    def _on_conversation_fork_from_index_requested(self, message_index: int) -> None:
         """Handle the fork conversation from index request signal."""
         self.fork_from_index_requested.emit(message_index)
 
@@ -1437,8 +1437,8 @@ class ColumnManager(QWidget):
                 return
 
             new_tab = conversation_tab.fork_conversation_from_index(message_index)
-            new_tab.forkRequested.connect(self._on_fork_conversation_requested)
-            new_tab.forkFromIndexRequested.connect(self._on_fork_conversation_from_index_requested)
+            new_tab.fork_requested.connect(self._on_conversation_fork_requested)
+            new_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
             self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
 
         except ConversationError as e:
@@ -1505,7 +1505,7 @@ class ColumnManager(QWidget):
 
         try:
             wiki_tab = WikiTab("", path_minus_anchor, self)
-            wiki_tab.open_wiki_path.connect(self.handle_wiki_link)
+            wiki_tab.open_link.connect(self.handle_wiki_link)
             wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
             wiki_tab.set_ephemeral(ephemeral)
             self._add_tab(wiki_tab, os.path.basename(path_minus_anchor))
@@ -1572,8 +1572,8 @@ class ColumnManager(QWidget):
         match state.type:
             case TabType.CONVERSATION:
                 conversation_tab = ConversationTab.restore_from_state(state, self)
-                conversation_tab.forkRequested.connect(self._on_fork_conversation_requested)
-                conversation_tab.forkFromIndexRequested.connect(self._on_fork_conversation_from_index_requested)
+                conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
+                conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
                 return conversation_tab
 
             case TabType.EDITOR:
@@ -1591,7 +1591,7 @@ class ColumnManager(QWidget):
 
             case TabType.WIKI:
                 wiki_tab = WikiTab.restore_from_state(state, self)
-                wiki_tab.open_wiki_path.connect(self.handle_wiki_link)
+                wiki_tab.open_link.connect(self.handle_wiki_link)
                 wiki_tab.edit_file.connect(self._edit_file_from_wiki_page)
                 return wiki_tab
 
