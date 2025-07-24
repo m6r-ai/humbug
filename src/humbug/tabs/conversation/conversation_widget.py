@@ -309,7 +309,7 @@ class ConversationWidget(QWidget):
 
         return {"success": False, "error": "Conversation ended unexpectedly"}
 
-    async def add_message(self, message: AIMessage) -> None:
+    def _add_message(self, message: AIMessage) -> None:
         """
         Add a new message to the conversation view.
 
@@ -425,7 +425,7 @@ class ConversationWidget(QWidget):
         Args:
             message: The error that occurred
         """
-        await self.add_message(message)
+        self._add_message(message)
         self._append_message_to_transcript(message)
 
         if retries_exhausted:
@@ -453,7 +453,7 @@ class ConversationWidget(QWidget):
         Args:
             message: The tool call message
         """
-        await self.add_message(message)
+        self._add_message(message)
 
         # Write the tool call to the transcript
         self._append_message_to_transcript(message)
@@ -511,7 +511,7 @@ class ConversationWidget(QWidget):
             message: The message that was added
         """
         self._current_unfinished_message = message
-        await self.add_message(message)
+        self._add_message(message)
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
@@ -1106,9 +1106,8 @@ class ConversationWidget(QWidget):
             self._input.set_model(conversation_settings.model)
 
         # Add messages to this widget.
-        loop = asyncio.get_event_loop()
         for message in messages:
-            loop.create_task(self.add_message(message))
+            self._add_message(message)
 
         # Ensure we're scrolled to the end
         self._auto_scroll = True
@@ -1514,13 +1513,13 @@ class ConversationWidget(QWidget):
         message = AIMessage.create(AIMessageSource.USER, sanitized_content, user_name=requester)
 
         self._last_submitted_message = content
+        self._add_message(message)
 
         # Submit the message to the AIConversation instance
         loop = asyncio.get_event_loop()
         if not loop.is_running():
             return
 
-        loop.create_task(self.add_message(message))
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop.create_task(ai_conversation.submit_message(message))
         self._append_message_to_transcript(message)
@@ -1661,7 +1660,7 @@ class ConversationWidget(QWidget):
             current_unfinished_message = metadata.get("current_unfinished_message")
             if current_unfinished_message:
                 loop = asyncio.get_event_loop()
-                loop.create_task(self.add_message(current_unfinished_message))
+                self._add_message(current_unfinished_message)
                 self._current_unfinished_message = current_unfinished_message
 
         else:
