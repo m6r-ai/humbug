@@ -315,7 +315,7 @@ class WikiWidget(QWidget):
         content_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(content_widget, has_selection)
         )
-        content_widget.scrollRequested.connect(self._handle_selection_scroll)
+        content_widget.scroll_requested.connect(self._on_scroll_requested)
         content_widget.mouseReleased.connect(self._stop_scroll)
         content_widget.edit_clicked.connect(self._handle_edit_clicked)
 
@@ -526,7 +526,7 @@ class WikiWidget(QWidget):
         if progress >= 1.0:
             self._smooth_scroll_timer.stop()
 
-    def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
+    def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
         viewport_pos = self._scroll_area.viewport().mapFromGlobal(mouse_pos)
 

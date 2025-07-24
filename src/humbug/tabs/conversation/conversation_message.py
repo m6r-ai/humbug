@@ -26,7 +26,7 @@ class ConversationMessage(QFrame):
     """Widget for displaying a single message in the conversation history with header."""
 
     selectionChanged = Signal(bool)
-    scrollRequested = Signal(QPoint)
+    scroll_requested = Signal(QPoint)
     mouseReleased = Signal()
     forkRequested = Signal()
     deleteRequested = Signal()
@@ -292,7 +292,7 @@ class ConversationMessage(QFrame):
         section.selectionChanged.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
-        section.scrollRequested.connect(self.scrollRequested)
+        section.scroll_requested.connect(self.scroll_requested)
         section.mouseReleased.connect(self.mouseReleased)
 
         return section

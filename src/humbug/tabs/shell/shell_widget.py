@@ -62,7 +62,7 @@ class ShellWidget(QWidget):
     status_updated = Signal()
 
     # Signal to request scrolling to a specific widget and position
-    scrollRequested = Signal(QWidget, int)  # Widget to scroll to, position within widget
+    scroll_requested = Signal(QWidget, int)  # Widget to scroll to, position within widget
 
     # Emits when parent should be activated by user interaction
     activated = Signal()
@@ -122,7 +122,7 @@ class ShellWidget(QWidget):
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
         )
         self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
-        self._input.scrollRequested.connect(self._handle_selection_scroll)
+        self._input.scroll_requested.connect(self._on_scroll_requested)
         self._input.mouseReleased.connect(self._stop_scroll)
 
         # Connect input to command handling
@@ -318,7 +318,7 @@ class ShellWidget(QWidget):
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
-        msg_widget.scrollRequested.connect(self._handle_selection_scroll)
+        msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouseReleased.connect(self._stop_scroll)
 
         # Set content using fields from ShellMessage model
@@ -358,7 +358,7 @@ class ShellWidget(QWidget):
         # Process as a command
         self._process_command(content)
 
-    def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
+    def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
         viewport_pos = self._scroll_area.viewport().mapFromGlobal(mouse_pos)
 

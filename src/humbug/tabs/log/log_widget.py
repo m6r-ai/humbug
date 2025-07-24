@@ -58,7 +58,7 @@ class LogWidget(QWidget):
     status_updated = Signal()
 
     # Signal to request scrolling to a specific widget and position
-    scrollRequested = Signal(QWidget, int)  # Widget to scroll to, position within widget
+    scroll_requested = Signal(QWidget, int)  # Widget to scroll to, position within widget
 
     # Emits when parent should be activated by user interaction
     activated = Signal()
@@ -235,7 +235,7 @@ class LogWidget(QWidget):
         msg_widget.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
-        msg_widget.scrollRequested.connect(self._handle_selection_scroll)
+        msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouseReleased.connect(self._stop_scroll)
 
         # Set content using fields from MindspaceMessage model
@@ -253,7 +253,7 @@ class LogWidget(QWidget):
 
         self._install_activation_tracking(msg_widget)
 
-    def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
+    def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
         viewport_pos = self._scroll_area.viewport().mapFromGlobal(mouse_pos)
 

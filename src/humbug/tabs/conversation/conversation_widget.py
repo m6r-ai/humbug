@@ -184,7 +184,7 @@ class ConversationWidget(QWidget):
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
         )
         self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
-        self._input.scrollRequested.connect(self._handle_selection_scroll)
+        self._input.scroll_requested.connect(self._on_scroll_requested)
         self._input.mouseReleased.connect(self._stop_scroll)
         self._input.forkRequested.connect(self._fork_from_message)
         self._input.submit_requested.connect(self.submit)
@@ -315,7 +315,7 @@ class ConversationWidget(QWidget):
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
         # Add bookmark-specific signal
-        msg_widget.scrollRequested.connect(self._handle_selection_scroll)
+        msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouseReleased.connect(self._stop_scroll)
         msg_widget.forkRequested.connect(self._fork_from_message)
         msg_widget.deleteRequested.connect(self._delete_from_message)
@@ -632,7 +632,7 @@ class ConversationWidget(QWidget):
         except ConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
 
-    def _handle_selection_scroll(self, mouse_pos: QPoint) -> None:
+    def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
         viewport_pos = self._scroll_area.viewport().mapFromGlobal(mouse_pos)
 

@@ -24,7 +24,7 @@ class LogMessage(QFrame):
     """Widget for displaying a single message in the log with header."""
 
     selectionChanged = Signal(bool)
-    scrollRequested = Signal(QPoint)
+    scroll_requested = Signal(QPoint)
     mouseReleased = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -155,7 +155,7 @@ class LogMessage(QFrame):
 
         if has_selection and self._mouse_left_button_pressed:
             # Emit global mouse position for accurate scroll calculations
-            self.scrollRequested.emit(QCursor.pos())
+            self.scroll_requested.emit(QCursor.pos())
 
         self.selectionChanged.emit(has_selection)
 

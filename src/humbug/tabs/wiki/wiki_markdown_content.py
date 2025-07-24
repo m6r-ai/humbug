@@ -73,7 +73,7 @@ class WikiMarkdownContent(WikiContentWidget):
         section.selectionChanged.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
-        section.scrollRequested.connect(self.scrollRequested)
+        section.scroll_requested.connect(self.scroll_requested)
         section.mouseReleased.connect(self.mouseReleased)
 
         # Connect to the new linkClicked signal

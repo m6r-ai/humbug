@@ -20,14 +20,14 @@ class WikiContentWidget(QFrame):
 
     Signals:
         selectionChanged: Emitted when text selection changes, with a boolean indicating if there's a selection
-        scrollRequested: Emitted when scrolling is requested, with the target position
+        scroll_requested: Emitted when scrolling is requested, with the target position
         mouseReleased: Emitted when the mouse button is released
         linkClicked: Emitted when a link is clicked, with the URL
         edit_clicked: Emitted when the edit button is clicked
     """
 
     selectionChanged = Signal(bool)
-    scrollRequested = Signal(QPoint)
+    scroll_requested = Signal(QPoint)
     mouseReleased = Signal()
     linkClicked = Signal(str)
     edit_clicked = Signal()
