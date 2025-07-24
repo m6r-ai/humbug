@@ -17,7 +17,7 @@ class ShellInput(ShellMessageWidget):
     """Widget for shell message input that matches history styling and behaves like a terminal."""
 
     # Forward text cursor signals from the input area
-    cursorPositionChanged = Signal()
+    cursor_position_changed = Signal()
     page_key_scroll_requested = Signal()
 
     command_submitted = Signal(str)
@@ -35,7 +35,7 @@ class ShellInput(ShellMessageWidget):
         self._tab_completion_active: bool = False
 
         # Connect text cursor signals
-        self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
+        self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
         self._text_area.enable_highlighter()

@@ -68,7 +68,7 @@ class EditorTab(TabBase):
 
         # Create editor
         self._editor_widget = EditorWidget()
-        self._editor_widget.textChanged.connect(self._handle_text_changed)
+        self._editor_widget.textChanged.connect(self._on_text_changed)
         self._editor_widget.cursorPositionChanged.connect(self.update_status)
         layout.addWidget(self._editor_widget)
 
@@ -310,7 +310,7 @@ class EditorTab(TabBase):
         new_language = ProgrammingLanguageUtils.from_file_extension(path)
         self._update_programming_language(new_language)
 
-    def _handle_text_changed(self) -> None:
+    def _on_text_changed(self) -> None:
         """Handle changes to editor content."""
         current_content = self._editor_widget.toPlainText()
         is_modified = current_content != self._last_save_content

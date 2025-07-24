@@ -179,7 +179,7 @@ class ConversationWidget(QWidget):
 
         # Set up the input box
         self._input = ConversationInput(self._messages_container)
-        self._input.cursorPositionChanged.connect(self._ensure_cursor_visible)
+        self._input.cursor_position_changed.connect(self._ensure_cursor_visible)
         self._input.selectionChanged.connect(
             lambda has_selection: self._handle_selection_changed(self._input, has_selection)
         )

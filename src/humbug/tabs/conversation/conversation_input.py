@@ -15,7 +15,7 @@ class ConversationInput(ConversationMessage):
     """Widget for conversation message input that matches history message styling."""
 
     # Forward text cursor signals from the input area
-    cursorPositionChanged = Signal()
+    cursor_position_changed = Signal()
     page_key_scroll_requested = Signal()
     submit_requested = Signal()
     stop_requested = Signal()
@@ -32,7 +32,7 @@ class ConversationInput(ConversationMessage):
         # Connect text cursor signals
         self._text_area = self._sections[0].text_area()
 
-        self._text_area.cursorPositionChanged.connect(self.cursorPositionChanged)
+        self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
         # Create submit button
@@ -41,7 +41,7 @@ class ConversationInput(ConversationMessage):
         self._header_layout.addWidget(self._submit_button)
 
         # Connect text changes to update button state
-        self._text_area.textChanged.connect(self._handle_text_changed)
+        self._text_area.textChanged.connect(self._on_text_changed)
 
         # Animation state for streaming border
         self._animation_frame = 0
@@ -339,7 +339,7 @@ class ConversationInput(ConversationMessage):
             }}
         """)
 
-    def _handle_text_changed(self) -> None:
+    def _on_text_changed(self) -> None:
         """Handle text changes in the input area."""
         self._update_submit_button_state()
         self.modified.emit()

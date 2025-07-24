@@ -32,7 +32,7 @@ class FindWidget(QWidget):
 
         # Create search input
         self._search_input = QLineEdit()
-        self._search_input.textChanged.connect(self._handle_text_changed)
+        self._search_input.textChanged.connect(self._on_text_changed)
         self._search_input.returnPressed.connect(self.find_next)
         layout.addWidget(self._search_input)
 
@@ -181,7 +181,7 @@ class FindWidget(QWidget):
         self._current_match = current
         self._update_match_status()
 
-    def _handle_text_changed(self) -> None:
+    def _on_text_changed(self) -> None:
         """Handle changes to search text."""
         self.find_next.emit()
 
