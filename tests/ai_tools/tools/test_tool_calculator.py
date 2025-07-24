@@ -52,7 +52,7 @@ class TestCalculatorAIToolDefinition:
         assert isinstance(expr_param, AIToolParameter)
         assert expr_param.name == "expression"
         assert expr_param.type == "string"
-        assert "Mathematical expression using listed operators" in expr_param.description
+        assert "mathematical expression using only" in expr_param.description
         assert expr_param.required is True
         assert expr_param.enum is None
 
