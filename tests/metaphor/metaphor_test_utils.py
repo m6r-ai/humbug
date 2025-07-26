@@ -8,8 +8,7 @@ import difflib
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
-from metaphor.metaphor_ast_builder import MetaphorASTBuilder
-from metaphor.metaphor_ast_node import MetaphorASTRootNode
+from metaphor import MetaphorASTBuilder, MetaphorASTRootNode
 
 from metaphor_ast_serializer import serialize_ast, load_ast_from_json
 

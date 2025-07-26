@@ -1,6 +1,6 @@
 """A parser for the Metaphor language."""
 
-from .metaphor_ast_node import (
+from metaphor.metaphor_ast_node import (
     MetaphorASTActionNode,
     MetaphorASTCodeNode,
     MetaphorASTContextNode,
@@ -10,9 +10,9 @@ from .metaphor_ast_node import (
     MetaphorASTTextNode,
     MetaphorASTVisitor
 )
-from .metaphor_ast_builder import MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorASTBuilderSyntaxError
-from .metaphor_format_visitor import MetaphorFormatVisitor
-from .metaphor_formatters import format_errors, format_preamble
+from metaphor.metaphor_ast_builder import MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorASTBuilderSyntaxError
+from metaphor.metaphor_format_visitor import MetaphorFormatVisitor
+from metaphor.metaphor_formatters import format_errors, format_preamble
 
 
 __all__ = [

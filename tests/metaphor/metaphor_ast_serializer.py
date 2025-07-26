@@ -5,7 +5,7 @@ Visitor class for serializing and comparing Metaphor AST structures.
 import json
 from typing import Dict, Any, List
 
-from metaphor.metaphor_ast_node import (
+from metaphor import (
     MetaphorASTVisitor, MetaphorASTNode, MetaphorASTRootNode,
     MetaphorASTTextNode, MetaphorASTCodeNode, MetaphorASTRoleNode,
     MetaphorASTContextNode, MetaphorASTActionNode

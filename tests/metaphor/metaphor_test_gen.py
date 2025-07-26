@@ -10,8 +10,7 @@ import sys
 import syntax.parser_imports
 # pylint: enable=unused-import
 
-from metaphor.metaphor_ast_builder import MetaphorASTBuilder
-from metaphor.metaphor_ast_node import MetaphorASTRootNode
+from metaphor import MetaphorASTBuilder, MetaphorASTRootNode
 
 from tests.metaphor.metaphor_ast_serializer import save_ast_to_json
 
