@@ -25,7 +25,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for Conversation code blocks."""
 
     # Signal emitted when code block state changes
-    codeBlockStateChanged = Signal(bool)
+    code_block_state_changed = Signal(bool)
 
     def __init__(self, parent: QTextDocument) -> None:
         """Initialize the highlighter."""
@@ -131,7 +131,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
 
             # Have we got to the end of the doc?  If yes, then emit the code block state.
             if not current_block.next().isValid():
-                self.codeBlockStateChanged.emit(seen_fence)
+                self.code_block_state_changed.emit(seen_fence)
 
         except Exception:
             self._logger.exception("highlighting exception")

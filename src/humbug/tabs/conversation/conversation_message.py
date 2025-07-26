@@ -24,7 +24,7 @@ from humbug.tabs.conversation.conversation_message_section import ConversationMe
 class ConversationMessage(QFrame):
     """Widget for displaying a single message in the conversation history with header."""
 
-    selectionChanged = Signal(bool)
+    selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
     mouseReleased = Signal()
     forkRequested = Signal()
@@ -288,7 +288,7 @@ class ConversationMessage(QFrame):
             A new ConversationMessageSection instance
         """
         section = ConversationMessageSection(self._is_input, language, self._sections_container)
-        section.selectionChanged.connect(
+        section.selection_changed.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
         section.scroll_requested.connect(self.scroll_requested)
@@ -315,7 +315,7 @@ class ConversationMessage(QFrame):
             self._section_with_selection.clear_selection()
 
         self._section_with_selection = section
-        self.selectionChanged.emit(has_selection)
+        self.selection_changed.emit(has_selection)
 
     def show_tool_approval_ui(self, tool_call: AIToolCall, reason: str, destructive: bool) -> None:
         """

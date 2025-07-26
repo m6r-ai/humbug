@@ -179,8 +179,8 @@ class ConversationWidget(QWidget):
         # Set up the input box
         self._input = ConversationInput(self._messages_container)
         self._input.cursor_position_changed.connect(self._ensure_cursor_visible)
-        self._input.selectionChanged.connect(
-            lambda has_selection: self._handle_selection_changed(self._input, has_selection)
+        self._input.selection_changed.connect(
+            lambda has_selection: self._on_selection_changed(self._input, has_selection)
         )
         self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
         self._input.scroll_requested.connect(self._on_scroll_requested)
@@ -310,8 +310,8 @@ class ConversationWidget(QWidget):
             message: The message that was added
         """
         msg_widget = ConversationMessage(self)
-        msg_widget.selectionChanged.connect(
-            lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
+        msg_widget.selection_changed.connect(
+            lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
         )
         # Add bookmark-specific signal
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
@@ -973,7 +973,7 @@ class ConversationWidget(QWidget):
         # Restore the scroll position
         self._scroll_area.verticalScrollBar().setValue(bookmark_data.scroll_position)
 
-    def _handle_selection_changed(self, message_widget: ConversationMessage, has_selection: bool) -> None:
+    def _on_selection_changed(self, message_widget: ConversationMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
         if not has_selection:
             if self._message_with_selection:

@@ -28,7 +28,7 @@ from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 class ConversationMessageSection(QFrame):
     """Widget for displaying a section of a message with markdown support."""
 
-    selectionChanged = Signal(bool)
+    selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
     mouseReleased = Signal()
 
@@ -156,7 +156,7 @@ class ConversationMessageSection(QFrame):
 
             else:
                 self._highlighter = ConversationHighlighter(self._text_area.document())
-                self._highlighter.codeBlockStateChanged.connect(self._on_code_block_state_changed)
+                self._highlighter.code_block_state_changed.connect(self._on_code_block_state_changed)
 
         else:
             self._use_markdown = False
@@ -207,7 +207,7 @@ class ConversationMessageSection(QFrame):
             # Emit global mouse position for accurate scroll calculations
             self.scroll_requested.emit(QCursor.pos())
 
-        self.selectionChanged.emit(has_selection)
+        self.selection_changed.emit(has_selection)
 
     def _on_code_block_state_changed(self, has_code_block: bool) -> None:
         """Handle changes in code block state."""
