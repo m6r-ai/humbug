@@ -82,16 +82,16 @@ class MindspaceFileTree(QWidget):
 
         # Create and set the editable delegate
         self._delegate = MindspaceEditableDelegate(self._tree_view, self._style_manager)
-        self._delegate.edit_finished.connect(self._handle_inline_edit_finished)
-        self._delegate.edit_cancelled.connect(self._handle_inline_edit_cancelled)
+        self._delegate.edit_finished.connect(self._on_delegate_edit_finished)
+        self._delegate.edit_cancelled.connect(self._on_delegate_edit_cancelled)
         self._tree_view.setItemDelegate(self._delegate)
 
         # Set model on tree view
         self._tree_view.setModel(self._filter_model)
 
         # Connect signals
-        self._tree_view.clicked.connect(self._handle_single_click)
-        self._tree_view.doubleClicked.connect(self._handle_double_click)
+        self._tree_view.clicked.connect(self._on_tree_single_clicked)
+        self._tree_view.doubleClicked.connect(self._on_tree_double_clicked)
 
         # Add to layout
         layout.addWidget(self._tree_view)
@@ -196,7 +196,7 @@ class MindspaceFileTree(QWidget):
             self._logger.error("Failed to move '%s' to '%s': %s", source_path, destination_path, str(e))
             raise
 
-    def _handle_inline_edit_finished(self, index: QModelIndex, new_name: str) -> None:
+    def _on_delegate_edit_finished(self, index: QModelIndex, new_name: str) -> None:
         """
         Handle when inline editing is finished.
 
@@ -223,7 +223,7 @@ class MindspaceFileTree(QWidget):
                 str(e)
             )
 
-    def _handle_inline_edit_cancelled(self) -> None:
+    def _on_delegate_edit_cancelled(self) -> None:
         """
         Handle when inline editing is cancelled.
         """
@@ -961,7 +961,7 @@ class MindspaceFileTree(QWidget):
         # Auto-expand first level after a short delay
         self._expansion_timer.start()
 
-    def _handle_single_click(self, index: QModelIndex) -> None:
+    def _on_tree_single_clicked(self, index: QModelIndex) -> None:
         """Handle single-click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
@@ -971,7 +971,7 @@ class MindspaceFileTree(QWidget):
 
         self.file_single_clicked.emit(path)
 
-    def _handle_double_click(self, index: QModelIndex) -> None:
+    def _on_tree_double_clicked(self, index: QModelIndex) -> None:
         """Handle double-click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
