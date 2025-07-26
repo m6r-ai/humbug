@@ -132,7 +132,7 @@ class WikiFileContent(WikiContentWidget):
             # Emit global mouse position for accurate scroll calculations
             self.scroll_requested.emit(QCursor.pos())
 
-        self.selectionChanged.emit(has_selection)
+        self.selection_changed.emit(has_selection)
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""

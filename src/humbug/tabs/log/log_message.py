@@ -23,7 +23,7 @@ from humbug.tabs.log.log_text_edit import LogTextEdit
 class LogMessage(QFrame):
     """Widget for displaying a single message in the log with header."""
 
-    selectionChanged = Signal(bool)
+    selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
     mouse_released = Signal()
 
@@ -157,7 +157,7 @@ class LogMessage(QFrame):
             # Emit global mouse position for accurate scroll calculations
             self.scroll_requested.emit(QCursor.pos())
 
-        self.selectionChanged.emit(has_selection)
+        self.selection_changed.emit(has_selection)
 
     def set_content(self, text: str, level: MindspaceLogLevel, timestamp: datetime, message_id: str) -> None:
         """

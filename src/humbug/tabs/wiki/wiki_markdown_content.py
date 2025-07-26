@@ -68,8 +68,8 @@ class WikiMarkdownContent(WikiContentWidget):
         """
         is_input = False  # Wiki sections are never input
         section = WikiMarkdownContentSection(is_input, language, self._sections_container)
-        section.selectionChanged.connect(
-            lambda has_selection: self._handle_section_selection_changed(section, has_selection)
+        section.selection_changed.connect(
+            lambda has_selection: self._on_section_selection_changed(section, has_selection)
         )
         section.scroll_requested.connect(self.scroll_requested)
         section.mouse_released.connect(self.mouse_released)
@@ -87,7 +87,7 @@ class WikiMarkdownContent(WikiContentWidget):
         # Forward the signal with the URL
         self.link_clicked.emit(url)
 
-    def _handle_section_selection_changed(self, section: WikiMarkdownContentSection, has_selection: bool) -> None:
+    def _on_section_selection_changed(self, section: WikiMarkdownContentSection, has_selection: bool) -> None:
         """
         Handle selection changes in a section widget.
 
@@ -105,7 +105,7 @@ class WikiMarkdownContent(WikiContentWidget):
             self._section_with_selection.clear_selection()
 
         self._section_with_selection = section
-        self.selectionChanged.emit(has_selection)
+        self.selection_changed.emit(has_selection)
 
     def set_content(self, text: str, path: str | None) -> None:
         """

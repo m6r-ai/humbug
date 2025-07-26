@@ -35,7 +35,7 @@ class WikiMarkdownPreviewContent(WikiContentWidget):
 
         # Create the actual markdown content widget
         self._markdown_content = WikiMarkdownContent(self, True)
-        self._markdown_content.selectionChanged.connect(self.selectionChanged)
+        self._markdown_content.selection_changed.connect(self.selection_changed)
         self._markdown_content.scroll_requested.connect(self.scroll_requested)
         self._markdown_content.mouse_released.connect(self.mouse_released)
         self._markdown_content.link_clicked.connect(self.link_clicked)

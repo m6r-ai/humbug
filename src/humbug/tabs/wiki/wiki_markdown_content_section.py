@@ -22,7 +22,7 @@ from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 class WikiMarkdownContentSection(QFrame):
     """Widget for displaying a section of wiki content with markdown support."""
 
-    selectionChanged = Signal(bool)
+    selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
     mouse_released = Signal()
     link_clicked = Signal(str)
@@ -221,7 +221,7 @@ class WikiMarkdownContentSection(QFrame):
             # Emit global mouse position for accurate scroll calculations
             self.scroll_requested.emit(QCursor.pos())
 
-        self.selectionChanged.emit(has_selection)
+        self.selection_changed.emit(has_selection)
 
     def set_content(self, content: MarkdownASTNode) -> None:
         """

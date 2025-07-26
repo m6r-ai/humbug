@@ -232,8 +232,8 @@ class LogWidget(QWidget):
     def _add_log_message(self, message: MindspaceMessage) -> None:
         """Add a message from the mindspace message log."""
         msg_widget = LogMessage(self)
-        msg_widget.selectionChanged.connect(
-            lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
+        msg_widget.selection_changed.connect(
+            lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
         )
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
@@ -521,7 +521,7 @@ class LogWidget(QWidget):
             (self._focused_message_index == -1 or self._focused_message_index > 0)
         )
 
-    def _handle_selection_changed(self, message_widget: LogMessage, has_selection: bool) -> None:
+    def _on_selection_changed(self, message_widget: LogMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
         if not has_selection:
             if self._message_with_selection:

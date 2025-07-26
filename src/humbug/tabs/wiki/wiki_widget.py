@@ -312,8 +312,8 @@ class WikiWidget(QWidget):
             self._logger.warning("Unknown content type: %s, defaulting to markdown", content_type)
             content_widget = WikiMarkdownContent(self)
 
-        content_widget.selectionChanged.connect(
-            lambda has_selection: self._handle_selection_changed(content_widget, has_selection)
+        content_widget.selection_changed.connect(
+            lambda has_selection: self._on_selection_changed(content_widget, has_selection)
         )
         content_widget.scroll_requested.connect(self._on_scroll_requested)
         content_widget.mouse_released.connect(self._stop_scroll)
@@ -574,13 +574,14 @@ class WikiWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
-    def _handle_selection_changed(self, content_widget: WikiContentWidget, has_selection: bool) -> None:
+    def _on_selection_changed(self, content_widget: WikiContentWidget, has_selection: bool) -> None:
         """Handle selection changes in content widgets."""
         if not has_selection:
             if self._content_with_selection:
                 content = self._content_with_selection
                 self._content_with_selection = None
                 content.clear_selection()
+
             return
 
         if self._content_with_selection and self._content_with_selection != content_widget:
