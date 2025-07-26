@@ -998,7 +998,8 @@ class MarkdownRenderer(MarkdownASTVisitor):
         if ((isinstance(node.parent, MarkdownASTTableHeaderNode) and
                 node is node.parent.children[-1] and
                 not any(
-                    isinstance(sibling, MarkdownASTTableBodyNode) for sibling in cast(MarkdownASTTableNode, node.parent.parent).children
+                    isinstance(sibling, MarkdownASTTableBodyNode)
+                    for sibling in cast(MarkdownASTTableNode, node.parent.parent).children
                 )
             ) or
             (isinstance(node.parent, MarkdownASTTableBodyNode) and node is node.parent.children[-1])
