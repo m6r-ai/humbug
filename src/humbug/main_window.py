@@ -375,20 +375,10 @@ class MainWindow(QMainWindow):
         self._single_click_timer.setInterval(QApplication.doubleClickInterval())
         self._pending_single_click_path: str | None = None
 
-        # Create status bar with left and right widgets
+        # Create status bar
         self._status_bar = QStatusBar()
-        self._status_left = QWidget()
-        self._status_right = QWidget()
-
-        # Set up left widget (empty for now)
-        self._status_bar.addWidget(self._status_left, 1)
-
-        # Set up right widget for status messages
-        self._status_right_layout = QVBoxLayout(self._status_right)
-        self._status_right_layout.setContentsMargins(0, 0, 0, 0)
         self._status_message_label = QLabel()
-        self._status_right_layout.addWidget(self._status_message_label)
-        self._status_bar.addPermanentWidget(self._status_right)
+        self._status_bar.addPermanentWidget(self._status_message_label)
 
         self.setStatusBar(self._status_bar)
         self._column_manager.status_message.connect(self._on_column_manager_status_message)
