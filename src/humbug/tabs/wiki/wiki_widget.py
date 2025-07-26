@@ -316,7 +316,7 @@ class WikiWidget(QWidget):
             lambda has_selection: self._handle_selection_changed(content_widget, has_selection)
         )
         content_widget.scroll_requested.connect(self._on_scroll_requested)
-        content_widget.mouseReleased.connect(self._stop_scroll)
+        content_widget.mouse_released.connect(self._stop_scroll)
         content_widget.edit_clicked.connect(self._on_edit_clicked)
         content_widget.link_clicked.connect(self._on_link_clicked)
 

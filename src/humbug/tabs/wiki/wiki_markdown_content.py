@@ -72,7 +72,7 @@ class WikiMarkdownContent(WikiContentWidget):
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
         section.scroll_requested.connect(self.scroll_requested)
-        section.mouseReleased.connect(self.mouseReleased)
+        section.mouse_released.connect(self.mouse_released)
         section.link_clicked.connect(self._on_link_clicked)
 
         return section

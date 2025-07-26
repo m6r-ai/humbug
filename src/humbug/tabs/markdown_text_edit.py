@@ -18,8 +18,8 @@ from humbug.style_manager import StyleManager
 class MarkdownTextEdit(MinHeightTextEdit):
     """MinHeightTextEdit that displays Markdown."""
 
-    mousePressed = Signal(QMouseEvent)
-    mouseReleased = Signal(QMouseEvent)
+    mouse_pressed = Signal(QMouseEvent)
+    mouse_released = Signal(QMouseEvent)
     link_clicked = Signal(str)
     page_key_scroll_requested = Signal()
 
@@ -47,7 +47,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
-        self.mousePressed.emit(e)
+        self.mouse_pressed.emit(e)
 
         # Check for link clicks
         anchor = self.anchorAt(e.pos())
@@ -62,7 +62,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
     def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse release events to parent."""
         super().mouseReleaseEvent(e)
-        self.mouseReleased.emit(e)
+        self.mouse_released.emit(e)
 
     def set_has_code_block(self, has_code: bool) -> None:
         """Update word wrap mode based on whether content contains code blocks."""

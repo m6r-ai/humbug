@@ -91,8 +91,8 @@ class WikiFileContent(WikiContentWidget):
 
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
-        self._text_area.mousePressed.connect(self._on_mouse_pressed)
-        self._text_area.mouseReleased.connect(self._on_mouse_released)
+        self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
+        self._text_area.mouse_released.connect(self._on_mouse_released)
 
         # Apply initial styles
         self._on_language_changed()
@@ -121,7 +121,7 @@ class WikiFileContent(WikiContentWidget):
             _event: Mouse event
         """
         self._mouse_left_button_pressed = False
-        self.mouseReleased.emit()
+        self.mouse_released.emit()
 
     def _on_selection_changed(self) -> None:
         """Handle selection changes in the text area."""

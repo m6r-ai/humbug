@@ -16,8 +16,8 @@ from humbug.tabs.shell.shell_command_highlighter import ShellCommandHighlighter
 class ShellTextEdit(MinHeightTextEdit):
     """Text edit widget that handles shell commands and responses."""
 
-    mousePressed = Signal(QMouseEvent)
-    mouseReleased = Signal(QMouseEvent)
+    mouse_pressed = Signal(QMouseEvent)
+    mouse_released = Signal(QMouseEvent)
     page_key_scroll_requested = Signal()
 
     def __init__(self, is_input: bool, parent: QWidget | None = None) -> None:
@@ -78,12 +78,12 @@ class ShellTextEdit(MinHeightTextEdit):
     def mousePressEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
         super().mousePressEvent(e)
-        self.mousePressed.emit(e)
+        self.mouse_pressed.emit(e)
 
     def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse release events to parent."""
         super().mouseReleaseEvent(e)
-        self.mouseReleased.emit(e)
+        self.mouse_released.emit(e)
 
     def wheelEvent(self, e: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""

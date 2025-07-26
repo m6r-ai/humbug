@@ -236,7 +236,7 @@ class LogWidget(QWidget):
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
-        msg_widget.mouseReleased.connect(self._stop_scroll)
+        msg_widget.mouse_released.connect(self._stop_scroll)
 
         # Set content using fields from MindspaceMessage model
         msg_widget.set_content(

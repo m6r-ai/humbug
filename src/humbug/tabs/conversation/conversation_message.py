@@ -26,7 +26,7 @@ class ConversationMessage(QFrame):
 
     selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
-    mouseReleased = Signal()
+    mouse_released = Signal()
     fork_requested = Signal()
     delete_requested = Signal()
     expand_requested = Signal(bool)
@@ -292,7 +292,7 @@ class ConversationMessage(QFrame):
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
         section.scroll_requested.connect(self.scroll_requested)
-        section.mouseReleased.connect(self.mouseReleased)
+        section.mouse_released.connect(self.mouse_released)
 
         return section
 

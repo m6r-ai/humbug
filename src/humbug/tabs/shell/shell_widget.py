@@ -123,7 +123,7 @@ class ShellWidget(QWidget):
         )
         self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
         self._input.scroll_requested.connect(self._on_scroll_requested)
-        self._input.mouseReleased.connect(self._stop_scroll)
+        self._input.mouse_released.connect(self._stop_scroll)
 
         # Connect input to command handling
         self._input.command_submitted.connect(self._process_command)
@@ -319,7 +319,7 @@ class ShellWidget(QWidget):
             lambda has_selection: self._handle_selection_changed(msg_widget, has_selection)
         )
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
-        msg_widget.mouseReleased.connect(self._stop_scroll)
+        msg_widget.mouse_released.connect(self._stop_scroll)
 
         # Set content using fields from ShellMessage model
         msg_widget.set_content(

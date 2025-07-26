@@ -30,7 +30,7 @@ class ConversationMessageSection(QFrame):
 
     selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
-    mouseReleased = Signal()
+    mouse_released = Signal()
 
     def __init__(
         self,
@@ -124,8 +124,8 @@ class ConversationMessageSection(QFrame):
 
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
-        self._text_area.mousePressed.connect(self._on_mouse_pressed)
-        self._text_area.mouseReleased.connect(self._on_mouse_released)
+        self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
+        self._text_area.mouse_released.connect(self._on_mouse_released)
 
         # Add conversation highlighter
         self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
@@ -196,7 +196,7 @@ class ConversationMessageSection(QFrame):
     def _on_mouse_released(self, _event: QMouseEvent) -> None:
         """Handle mouse release from text area."""
         self._mouse_left_button_pressed = False
-        self.mouseReleased.emit()
+        self.mouse_released.emit()
 
     def _on_selection_changed(self) -> None:
         """Handle selection changes in the text area."""

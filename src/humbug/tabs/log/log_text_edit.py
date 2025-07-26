@@ -13,8 +13,8 @@ from humbug.style_manager import StyleManager
 class LogTextEdit(MinHeightTextEdit):
     """Text edit widget used for log messages."""
 
-    mousePressed = Signal(QMouseEvent)
-    mouseReleased = Signal(QMouseEvent)
+    mouse_pressed = Signal(QMouseEvent)
+    mouse_released = Signal(QMouseEvent)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
@@ -59,12 +59,12 @@ class LogTextEdit(MinHeightTextEdit):
     def mousePressEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
         super().mousePressEvent(e)
-        self.mousePressed.emit(e)
+        self.mouse_pressed.emit(e)
 
     def mouseReleaseEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse release events to parent."""
         super().mouseReleaseEvent(e)
-        self.mouseReleased.emit(e)
+        self.mouse_released.emit(e)
 
     def wheelEvent(self, e: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""

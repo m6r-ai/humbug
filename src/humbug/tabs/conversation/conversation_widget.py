@@ -184,7 +184,7 @@ class ConversationWidget(QWidget):
         )
         self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
         self._input.scroll_requested.connect(self._on_scroll_requested)
-        self._input.mouseReleased.connect(self._stop_scroll)
+        self._input.mouse_released.connect(self._stop_scroll)
         self._input.fork_requested.connect(self._fork_from_message)
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._handle_stop_request)
@@ -315,7 +315,7 @@ class ConversationWidget(QWidget):
         )
         # Add bookmark-specific signal
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
-        msg_widget.mouseReleased.connect(self._stop_scroll)
+        msg_widget.mouse_released.connect(self._stop_scroll)
         msg_widget.fork_requested.connect(self._fork_from_message)
         msg_widget.delete_requested.connect(self._on_delete_from_message)
         msg_widget.expand_requested.connect(self._on_message_expanded)
