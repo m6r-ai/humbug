@@ -8,7 +8,7 @@ import argparse
 import syntax.parser_imports
 # pylint: enable=unused-import
 
-from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
+from dmarkdown import MarkdownASTBuilder
 
 from tests.markdown.markdown_ast_serializer import save_ast_to_json
 
