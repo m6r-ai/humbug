@@ -6,9 +6,7 @@ from typing import Dict, List, cast
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
 
-from ai.ai_conversation_history import AIConversationHistory
-from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_model import ReasoningCapability
+from ai import AIConversationHistory, AIConversationSettings, ReasoningCapability
 
 from humbug.color_role import ColorRole
 from humbug.column_splitter import ColumnSplitter

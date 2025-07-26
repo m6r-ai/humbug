@@ -9,8 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from ai.ai_conversation_history import AIConversationHistory
-from ai.ai_conversation_settings import AIConversationSettings
+from ai import AIConversationHistory, AIConversationSettings
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager

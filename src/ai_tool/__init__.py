@@ -1,6 +1,5 @@
 """AI tool calling framework."""
 
-# Re-export all classes for backward compatibility
 from ai_tool.ai_tool import AITool, AIToolAuthorizationCallback
 from ai_tool.ai_tool_call import AIToolCall
 from ai_tool.ai_tool_config import AIToolConfig

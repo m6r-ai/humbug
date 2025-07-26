@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Signal, QPoint, QSize, Qt
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
-from ai.ai_message_source import AIMessageSource
+from ai import AIMessageSource
 from ai_tool import AIToolCall
 from dmarkdown.markdown_ast_node import MarkdownASTDocumentNode, MarkdownASTTextNode
 from dmarkdown.markdown_converter import MarkdownConverter

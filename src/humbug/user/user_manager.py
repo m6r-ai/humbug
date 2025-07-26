@@ -8,9 +8,7 @@ from typing import Dict, cast
 
 from PySide6.QtCore import QObject, Signal
 
-from ai.ai_backend import AIBackend
-from ai.ai_backend_settings import AIBackendSettings
-from ai.ai_manager import AIManager
+from ai import AIBackend, AIBackendSettings, AIManager
 
 from humbug.user.user_settings import UserSettings
 

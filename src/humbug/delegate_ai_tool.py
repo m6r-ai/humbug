@@ -2,14 +2,13 @@ import asyncio
 import logging
 from typing import Dict, Any, cast
 
-from ai.ai_conversation import AIConversation
-from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_model import ReasoningCapability
+from ai import AIConversation, AIConversationSettings, ReasoningCapability
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
     AIToolResult, AIToolCall
 )
+
 from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager

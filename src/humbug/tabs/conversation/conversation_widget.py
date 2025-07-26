@@ -13,11 +13,10 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QEvent, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
 
-from ai.ai_conversation import AIConversation, AIConversationEvent
-from ai.ai_conversation_history import AIConversationHistory
-from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
-from ai.ai_message import AIMessage
-from ai.ai_message_source import AIMessageSource
+from ai import (
+    AIConversation, AIConversationEvent, AIConversationHistory,
+    AIConversationSettings, ReasoningCapability, AIMessage, AIMessageSource
+)
 from ai_tool import AIToolCall
 
 from humbug.color_role import ColorRole

@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Dict, Any, List
 
-from ai.ai_conversation_settings import AIConversationSettings
+from ai import AIConversationSettings
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,

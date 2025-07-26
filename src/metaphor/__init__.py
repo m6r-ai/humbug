@@ -1,6 +1,5 @@
 """An embedded compiler for the Metaphor language."""
 
-# Export main classes so users can import directly from metaphor
 from .metaphor_ast_node import (
     MetaphorASTNode, MetaphorASTRootNode, MetaphorASTTextNode,
     MetaphorASTCodeNode, MetaphorASTRoleNode, MetaphorASTContextNode, MetaphorASTActionNode,

@@ -13,8 +13,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from ai.ai_backend_settings import AIBackendSettings
-from ai.ai_manager import AIManager
+from ai import AIBackendSettings, AIManager
 
 from humbug.language.language_code import LanguageCode
 from humbug.language.language_manager import LanguageManager

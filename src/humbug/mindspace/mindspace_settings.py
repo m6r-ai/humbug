@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import json
 from typing import Dict
 
-from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
+from ai import AIConversationSettings, ReasoningCapability
 from ai_tool import AIToolManager
 
 

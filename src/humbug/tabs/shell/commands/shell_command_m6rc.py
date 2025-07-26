@@ -4,8 +4,7 @@ import logging
 import os
 from typing import Dict, List
 
-from ai.ai_conversation_settings import AIConversationSettings
-from ai.ai_model import ReasoningCapability
+from ai import AIConversationSettings, ReasoningCapability
 from syntax.lexer import Token, TokenType
 
 from metaphor.metaphor_ast_builder import MetaphorASTBuilder, MetaphorASTBuilderError
