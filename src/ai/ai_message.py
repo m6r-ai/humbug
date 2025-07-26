@@ -6,7 +6,7 @@ from typing import Dict, List
 import uuid
 
 from ai.ai_message_source import AIMessageSource
-from ai.ai_model import ReasoningCapability
+from ai.ai_model import AIReasoningCapability
 from ai.ai_usage import AIUsage
 from ai_tool import AIToolCall, AIToolResult
 
@@ -27,7 +27,7 @@ class AIMessage:
     error: Dict | None = None
     model: str | None = None
     temperature: float | None = None
-    reasoning_capability: ReasoningCapability | None = None
+    reasoning_capability: AIReasoningCapability | None = None
     completed: bool = True
     tool_calls: List[AIToolCall] | None = None
     tool_results: List[AIToolResult] | None = None
@@ -55,7 +55,7 @@ class AIMessage:
         error: Dict | None = None,
         model: str | None = None,
         temperature: float | None = None,
-        reasoning_capability: ReasoningCapability | None = None,
+        reasoning_capability: AIReasoningCapability | None = None,
         completed: bool = True,
         timestamp: datetime | None = None,
         tool_calls: List[AIToolCall] | None = None,
@@ -202,7 +202,7 @@ class AIMessage:
         if data.get("reasoning_capability"):
             try:
                 reasoning_value = data["reasoning_capability"]
-                reasoning_capability = ReasoningCapability(reasoning_value)
+                reasoning_capability = AIReasoningCapability(reasoning_value)
 
             except ValueError as e:
                 raise ValueError(f"Invalid reasoning capability: {data['reasoning_capability']}") from e

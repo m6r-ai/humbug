@@ -2,7 +2,7 @@ from dataclasses import dataclass
 import json
 from typing import Dict
 
-from ai import AIConversationSettings, ReasoningCapability
+from ai import AIConversationSettings, AIReasoningCapability
 from ai_tool import AIToolManager
 
 
@@ -16,7 +16,7 @@ class MindspaceSettings:
     enabled_tools: Dict[str, bool]
     model: str = AIConversationSettings.get_default_model({})  # Will be overridden with actual backends
     temperature: float = 0.7  # Default temperature
-    reasoning: ReasoningCapability = ReasoningCapability.NO_REASONING
+    reasoning: AIReasoningCapability = AIReasoningCapability.NO_REASONING
     use_soft_tabs: bool = True
     tab_size: int = 4
     auto_backup: bool = False  # Default to off
@@ -36,7 +36,7 @@ class MindspaceSettings:
 
             # Handle reasoning bitflag from JSON
             reasoning_value = conversation.get("reasoning", default_reasoning.value)
-            reasoning = ReasoningCapability(reasoning_value)
+            reasoning = AIReasoningCapability(reasoning_value)
 
             # Handle enabled tools - start with defaults and override with saved values
             tool_manager = AIToolManager()

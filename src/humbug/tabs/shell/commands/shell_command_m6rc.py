@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Dict, List
 
-from ai import AIConversationSettings, ReasoningCapability
+from ai import AIConversationSettings, AIReasoningCapability
 from syntax.lexer import Token, TokenType
 
 from metaphor.metaphor_ast_builder import MetaphorASTBuilder, MetaphorASTBuilderError
@@ -128,7 +128,7 @@ class ShellCommandM6rc(ShellCommand):
         # Check if should auto-submit
         should_submit = "--submit" in options or "-j" in options
 
-        reasoning: ReasoningCapability | None = None
+        reasoning: AIReasoningCapability | None = None
         if model:
             model_config = AIConversationSettings.MODELS.get(model)
             if model_config:

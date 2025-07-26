@@ -3,7 +3,7 @@
 import logging
 from typing import List, Dict
 
-from ai import AIConversationSettings, ReasoningCapability
+from ai import AIConversationSettings, AIReasoningCapability
 from syntax.lexer import Token, TokenType
 
 from humbug.column_manager import ColumnManager
@@ -104,7 +104,7 @@ class ShellCommandConversation(ShellCommand):
                 )
                 return False
 
-        reasoning: ReasoningCapability | None = None
+        reasoning: AIReasoningCapability | None = None
         if model:
             model_config = AIConversationSettings.MODELS.get(model)
             if model_config:

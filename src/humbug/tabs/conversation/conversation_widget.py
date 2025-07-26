@@ -15,7 +15,7 @@ from PySide6.QtGui import QCursor, QResizeEvent
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
-    AIConversationSettings, ReasoningCapability, AIMessage, AIMessageSource
+    AIConversationSettings, AIReasoningCapability, AIMessage, AIMessageSource
 )
 from ai_tool import AIToolCall
 
@@ -1495,7 +1495,7 @@ class ConversationWidget(QWidget):
         requester: str | None = None,
         model: str | None = None,
         temperature: float | None = None,
-        reasoning_capability: ReasoningCapability | None = None
+        reasoning_capability: AIReasoningCapability | None = None
     ) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
@@ -1677,7 +1677,7 @@ class ConversationWidget(QWidget):
                 settings = AIConversationSettings(
                     model=metadata["settings"].get("model"),
                     temperature=metadata["settings"].get("temperature"),
-                    reasoning=ReasoningCapability(metadata["settings"].get("reasoning", ReasoningCapability.NO_REASONING.value))
+                    reasoning=AIReasoningCapability(metadata["settings"].get("reasoning", AIReasoningCapability.NO_REASONING.value))
                 )
                 self.update_conversation_settings(settings)
 

@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, Any, cast
 
-from ai import AIConversation, AIConversationSettings, ReasoningCapability
+from ai import AIConversation, AIConversationSettings, AIReasoningCapability
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
@@ -355,7 +355,7 @@ class DelegateAITool(AITool):
         session_id: str | None,
         model: str | None,
         temperature: float | None,
-        reasoning_capability: ReasoningCapability | None
+        reasoning_capability: AIReasoningCapability | None
     ) -> AIToolResult:
         """
         Delegate a task to an AI instance.

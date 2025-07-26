@@ -6,7 +6,7 @@ from typing import Dict, List, cast
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
 
-from ai import AIConversationHistory, AIConversationSettings, ReasoningCapability
+from ai import AIConversationHistory, AIConversationSettings, AIReasoningCapability
 
 from humbug.color_role import ColorRole
 from humbug.column_splitter import ColumnSplitter
@@ -1351,7 +1351,7 @@ class ColumnManager(QWidget):
         history: AIConversationHistory | None = None,
         model: str | None = None,
         temperature: float | None = None,
-        reasoning: ReasoningCapability | None = None
+        reasoning: AIReasoningCapability | None = None
     ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID

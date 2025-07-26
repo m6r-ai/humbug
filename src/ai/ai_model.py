@@ -3,7 +3,7 @@
 from enum import Flag, auto
 
 
-class ReasoningCapability(Flag):
+class AIReasoningCapability(Flag):
     """Flag enum for reasoning capabilities supported by models."""
 
     NO_REASONING = auto()
@@ -29,7 +29,7 @@ class AIModel:
         context_window: int,
         max_output_tokens: int,
         supports_temperature: bool,
-        reasoning_capabilities: ReasoningCapability,
+        reasoning_capabilities: AIReasoningCapability,
         tool_capabilities: ToolCapability = ToolCapability.NO_TOOLS
     ):
         """

@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 from ai.ai_backend import AIBackend, RequestConfig
 from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_message import AIMessage, AIMessageSource
-from ai.ai_model import ReasoningCapability
+from ai.ai_model import AIReasoningCapability
 from ai.ollama.ollama_stream_response import OllamaStreamResponse
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
@@ -251,7 +251,7 @@ class OllamaBackend(AIBackend):
             }
         }
 
-        thinking: bool = (settings.reasoning & ReasoningCapability.VISIBLE_REASONING) == ReasoningCapability.VISIBLE_REASONING
+        thinking: bool = (settings.reasoning & AIReasoningCapability.VISIBLE_REASONING) == AIReasoningCapability.VISIBLE_REASONING
         data["think"] = thinking
 
         # Add tools if supported

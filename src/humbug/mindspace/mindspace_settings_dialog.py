@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from ai import AIConversationSettings, ReasoningCapability
+from ai import AIConversationSettings, AIReasoningCapability
 from ai_tool import AIToolManager
 
 from humbug.language.language_manager import LanguageManager
@@ -205,16 +205,16 @@ class MindspaceSettingsDialog(QDialog):
         items = []
 
         # Add NO_REASONING if supported
-        if capabilities & ReasoningCapability.NO_REASONING:
-            items.append((strings.settings_no_reasoning, ReasoningCapability.NO_REASONING))
+        if capabilities & AIReasoningCapability.NO_REASONING:
+            items.append((strings.settings_no_reasoning, AIReasoningCapability.NO_REASONING))
 
         # Add HIDDEN_REASONING if supported
-        if capabilities & ReasoningCapability.HIDDEN_REASONING:
-            items.append((strings.settings_hidden_reasoning, ReasoningCapability.HIDDEN_REASONING))
+        if capabilities & AIReasoningCapability.HIDDEN_REASONING:
+            items.append((strings.settings_hidden_reasoning, AIReasoningCapability.HIDDEN_REASONING))
 
         # Add VISIBLE_REASONING if supported
-        if capabilities & ReasoningCapability.VISIBLE_REASONING:
-            items.append((strings.settings_visible_reasoning, ReasoningCapability.VISIBLE_REASONING))
+        if capabilities & AIReasoningCapability.VISIBLE_REASONING:
+            items.append((strings.settings_visible_reasoning, AIReasoningCapability.VISIBLE_REASONING))
 
         # Update the combo box items
         self._reasoning_combo.set_items(items)

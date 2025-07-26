@@ -2,7 +2,7 @@
 from typing import Dict, List, Any
 
 from ai.ai_backend import AIBackend, RequestConfig
-from ai.ai_conversation_settings import AIConversationSettings, ReasoningCapability
+from ai.ai_conversation_settings import AIConversationSettings, AIReasoningCapability
 from ai.ai_message import AIMessage, AIMessageSource
 from ai.anthropic.anthropic_stream_response import AnthropicStreamResponse
 from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
@@ -266,7 +266,7 @@ class AnthropicBackend(AIBackend):
 
         # Add thinking configuration if VISIBLE_REASONING is enabled.  Set budget at 90% of the maximum token count.
         thinking = False
-        if (settings.reasoning & ReasoningCapability.VISIBLE_REASONING) == ReasoningCapability.VISIBLE_REASONING:
+        if (settings.reasoning & AIReasoningCapability.VISIBLE_REASONING) == AIReasoningCapability.VISIBLE_REASONING:
             thinking = True
             data["thinking"] = {
                 "type": "enabled",

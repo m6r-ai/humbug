@@ -11,7 +11,7 @@ from ai.ai_conversation_settings import AIConversationSettings
 from ai.ai_manager import AIManager
 from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
-from ai.ai_model import ReasoningCapability
+from ai.ai_model import AIReasoningCapability
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
 from ai_tool import AIToolManager, AIToolCall, AIToolResult, AIToolAuthorizationDenied
@@ -155,7 +155,7 @@ class AIConversation:
 
             # Update settings if AI message
             if message.source == AIMessageSource.AI:
-                reasoning = message.reasoning_capability if message.reasoning_capability else ReasoningCapability.NO_REASONING
+                reasoning = message.reasoning_capability if message.reasoning_capability else AIReasoningCapability.NO_REASONING
                 if message.model:
                     self.update_conversation_settings(AIConversationSettings(
                         model=message.model,
