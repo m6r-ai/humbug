@@ -4,9 +4,7 @@ Serializer for syntax parser tokens and parser state for test comparison.
 import json
 from typing import List, Dict, Any, Optional
 
-from syntax.lexer import Token
-from syntax.parser import ParserState
-from syntax.programming_language import ProgrammingLanguage
+from syntax import Token, ParserState, ProgrammingLanguage
 
 
 def serialize_token(token: Token) -> Dict[str, Any]:

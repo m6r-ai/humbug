@@ -6,7 +6,7 @@ This lexer handles command syntax including command names, options, and argument
 
 from typing import Callable, Set
 
-from syntax.lexer import Lexer, LexerState, Token, TokenType
+from syntax import Lexer, LexerState, Token, TokenType
 
 
 class ShellCommandLexer(Lexer):

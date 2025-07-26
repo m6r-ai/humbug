@@ -8,9 +8,7 @@ from pathlib import Path
 # Import all parsers to ensure they are registered
 import syntax.parser_imports
 
-from syntax.parser_registry import ParserRegistry
-from syntax.programming_language import ProgrammingLanguage
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax import ParserRegistry, ProgrammingLanguage, ProgrammingLanguageUtils
 
 from syntax_test_utils import (
     find_test_files,

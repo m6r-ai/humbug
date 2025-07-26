@@ -4,7 +4,7 @@ import logging
 from typing import List, Dict
 
 from ai import AIConversationSettings, AIReasoningCapability
-from syntax.lexer import Token, TokenType
+from syntax import Token, TokenType
 
 from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_error import MindspaceError

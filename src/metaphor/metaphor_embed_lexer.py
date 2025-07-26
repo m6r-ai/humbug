@@ -1,6 +1,6 @@
 from typing import List
 
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax import ProgrammingLanguageUtils
 
 from metaphor.metaphor_token import MetaphorToken, MetaphorTokenType
 

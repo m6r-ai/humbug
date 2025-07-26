@@ -8,7 +8,7 @@ from ai import AIConversationSettings, AIReasoningCapability
 from metaphor import (
     MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorASTRootNode, format_errors, format_preamble, MetaphorFormatVisitor
 )
-from syntax.lexer import Token, TokenType
+from syntax import Token, TokenType
 
 from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_error import MindspaceError

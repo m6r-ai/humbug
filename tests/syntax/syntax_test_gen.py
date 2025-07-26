@@ -4,8 +4,7 @@ Utility script to generate test fixtures from source code files using the parser
 """
 import argparse
 
-from syntax.parser_registry import ParserRegistry
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax import ParserRegistry, ProgrammingLanguageUtils
 
 # pylint: disable=unused-import
 import syntax.parser_imports

@@ -2,7 +2,7 @@
 
 from typing import List
 
-from syntax.lexer import Token, TokenType
+from syntax import Token, TokenType
 
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry

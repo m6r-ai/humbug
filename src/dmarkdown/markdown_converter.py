@@ -8,8 +8,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 import logging
 from typing import List, Tuple, cast
 
-from syntax.programming_language import ProgrammingLanguage
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 from dmarkdown.markdown_ast_node import MarkdownASTCodeBlockNode, MarkdownASTNode, MarkdownASTDocumentNode

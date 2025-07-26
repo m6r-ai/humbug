@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Dict, List
 
-from syntax.lexer import Token, TokenType
+from syntax import Token, TokenType
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.shell.shell_history_manager import ShellHistoryManager

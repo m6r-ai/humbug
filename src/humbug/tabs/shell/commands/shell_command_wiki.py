@@ -4,7 +4,7 @@ import logging
 import os
 from typing import List
 
-from syntax.lexer import Token, TokenType
+from syntax import Token, TokenType
 
 from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_manager import MindspaceManager

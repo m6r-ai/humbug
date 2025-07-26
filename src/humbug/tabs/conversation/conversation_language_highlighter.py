@@ -3,13 +3,9 @@
 import logging
 from typing import cast
 
-from PySide6.QtGui import (
-    QSyntaxHighlighter, QTextDocument, QTextBlockUserData
-)
-from syntax.lexer import TokenType
-from syntax.programming_language import ProgrammingLanguage
-from syntax.parser import ParserState
-from syntax.parser_registry import ParserRegistry
+from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
+
+from syntax import TokenType, ProgrammingLanguage, ParserState, ParserRegistry
 
 from humbug.style_manager import StyleManager
 

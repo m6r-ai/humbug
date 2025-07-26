@@ -3,17 +3,12 @@
 import logging
 from typing import List, Tuple, cast
 
-from PySide6.QtWidgets import (
-    QVBoxLayout, QFrame, QLabel, QHBoxLayout, QWidget
-)
+from PySide6.QtWidgets import QVBoxLayout, QFrame, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent
-from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
-)
+from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
 
 from dmarkdown import MarkdownASTNode, MarkdownASTTextNode
-from syntax.programming_language import ProgrammingLanguage
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager

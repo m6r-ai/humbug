@@ -6,9 +6,7 @@ import logging
 import re
 from typing import Dict, List, Tuple, Any, cast
 
-from syntax.parser_registry import ParserRegistry
-from syntax.programming_language import ProgrammingLanguage
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax import ParserRegistry, ProgrammingLanguage, ProgrammingLanguageUtils
 
 from dmarkdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownASTDocumentNode, MarkdownASTTextNode, MarkdownASTLineBreakNode,

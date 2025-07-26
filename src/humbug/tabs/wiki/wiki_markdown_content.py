@@ -3,14 +3,12 @@
 import logging
 from typing import Dict, List, Tuple, Callable
 
-from PySide6.QtWidgets import (
-    QVBoxLayout, QWidget
-)
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor
 
 from dmarkdown import MarkdownConverter
-from syntax.programming_language import ProgrammingLanguage
+from syntax import ProgrammingLanguage
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager

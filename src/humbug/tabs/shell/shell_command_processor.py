@@ -4,7 +4,7 @@ import logging
 import os
 from typing import List
 
-from syntax.lexer import TokenType, Token
+from syntax import TokenType, Token
 
 from humbug.tabs.shell.shell_command_completion_result import ShellCommandCompletionResult
 from humbug.tabs.shell.shell_command_parser import ShellCommandParser

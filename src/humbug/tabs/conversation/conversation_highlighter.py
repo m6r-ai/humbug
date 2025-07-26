@@ -6,9 +6,8 @@ from typing import cast
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 from PySide6.QtCore import Signal
 
-from syntax.lexer import TokenType
+from syntax import TokenType, ProgrammingLanguage
 from syntax.markdown.markdown_parser import MarkdownParser, MarkdownParserState
-from syntax.programming_language import ProgrammingLanguage
 
 from humbug.style_manager import StyleManager
 

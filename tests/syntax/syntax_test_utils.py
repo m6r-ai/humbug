@@ -7,8 +7,7 @@ import difflib
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
-from syntax.parser_registry import ParserRegistry
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax import ParserRegistry, ProgrammingLanguageUtils
 
 from syntax_test_serializer import serialize_tokens_and_state, load_tokens_from_json
 

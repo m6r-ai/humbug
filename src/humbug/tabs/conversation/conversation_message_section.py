@@ -13,8 +13,7 @@ from PySide6.QtGui import (
 )
 
 from dmarkdown import MarkdownASTNode, MarkdownASTTextNode
-from syntax.programming_language import ProgrammingLanguage
-from syntax.programming_language_utils import ProgrammingLanguageUtils
+from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager

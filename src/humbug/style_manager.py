@@ -10,11 +10,9 @@ from pathlib import Path
 from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
-from PySide6.QtGui import (
-    QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap
-)
+from PySide6.QtGui import QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap
 
-from syntax.lexer import TokenType
+from syntax import TokenType
 
 from humbug.color_role import ColorRole
 

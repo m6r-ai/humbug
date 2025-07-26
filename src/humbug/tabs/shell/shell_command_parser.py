@@ -4,8 +4,7 @@ System shell command parser
 This module implements a parser for command lines, extending the functionality of the base parser.
 """
 
-from syntax.lexer import TokenType
-from syntax.parser import Parser, ParserState
+from syntax import TokenType, Parser, ParserState
 
 from humbug.tabs.shell.shell_command_lexer import ShellCommandLexer
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
