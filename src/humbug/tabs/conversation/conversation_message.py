@@ -27,9 +27,9 @@ class ConversationMessage(QFrame):
     selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
     mouseReleased = Signal()
-    forkRequested = Signal()
-    deleteRequested = Signal()
-    expandRequested = Signal(bool)
+    fork_requested = Signal()
+    delete_requested = Signal()
+    expand_requested = Signal(bool)
     tool_call_approved = Signal(AIToolCall)
     tool_call_rejected = Signal(str)   # rejection reason
 
@@ -183,7 +183,7 @@ class ConversationMessage(QFrame):
     def _toggle_expanded(self) -> None:
         """Toggle the expanded state of this message."""
         self.set_expanded(not self._is_expanded)
-        self.expandRequested.emit(self._is_expanded)
+        self.expand_requested.emit(self._is_expanded)
 
     def _update_expand_button(self) -> None:
         """Update the expand button icon and tooltip based on current state."""
@@ -564,7 +564,7 @@ class ConversationMessage(QFrame):
 
     def _fork_message(self) -> None:
         """Fork the conversation at this message."""
-        self.forkRequested.emit()
+        self.fork_requested.emit()
 
     def _delete_message(self) -> None:
         """Delete this message from the conversation."""
@@ -583,7 +583,7 @@ class ConversationMessage(QFrame):
         if result != MessageBoxButton.YES:
             return
 
-        self.deleteRequested.emit()
+        self.delete_requested.emit()
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""

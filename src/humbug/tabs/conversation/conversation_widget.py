@@ -185,7 +185,7 @@ class ConversationWidget(QWidget):
         self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
         self._input.scroll_requested.connect(self._on_scroll_requested)
         self._input.mouseReleased.connect(self._stop_scroll)
-        self._input.forkRequested.connect(self._fork_from_message)
+        self._input.fork_requested.connect(self._fork_from_message)
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._handle_stop_request)
         self._input.modified.connect(self.conversation_modified)
@@ -316,9 +316,9 @@ class ConversationWidget(QWidget):
         # Add bookmark-specific signal
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouseReleased.connect(self._stop_scroll)
-        msg_widget.forkRequested.connect(self._fork_from_message)
-        msg_widget.deleteRequested.connect(self._delete_from_message)
-        msg_widget.expandRequested.connect(self._on_message_expanded)
+        msg_widget.fork_requested.connect(self._fork_from_message)
+        msg_widget.delete_requested.connect(self._on_delete_from_message)
+        msg_widget.expand_requested.connect(self._on_message_expanded)
 
         # Connect tool approval signals
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
@@ -1312,7 +1312,7 @@ class ConversationWidget(QWidget):
         # Emit signal with the end index (inclusive)
         self.fork_from_index_requested.emit(fork_end_index)
 
-    def _delete_from_message(self) -> None:
+    def _on_delete_from_message(self) -> None:
         """Handle request to delete conversation from a message onwards."""
         # Identify which message widget triggered the request
         sender = self.sender()
