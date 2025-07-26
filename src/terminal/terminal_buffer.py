@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 from typing import List, Tuple, Set
 
-from terminal.terminal_line import CharacterAttributes, TerminalLine
+from terminal.terminal_line import TerminalCharacterAttributes, TerminalLine
 
 
 @dataclass
@@ -20,7 +20,7 @@ class CursorState:
 @dataclass
 class AttributeState:
     """Character attribute state."""
-    current: CharacterAttributes = CharacterAttributes.NONE
+    current: TerminalCharacterAttributes = TerminalCharacterAttributes.NONE
     foreground: int | None = None
     background: int | None = None
 
@@ -257,7 +257,7 @@ class TerminalBuffer:
                 line.set_character(
                     col,
                     char_data['char'],
-                    CharacterAttributes(char_data['attributes']),
+                    TerminalCharacterAttributes(char_data['attributes']),
                     char_data['fg_color'],
                     char_data['bg_color']
                 )
@@ -275,7 +275,7 @@ class TerminalBuffer:
 
         # Restore other state components
         self.attributes = AttributeState(
-            current=CharacterAttributes(state.attributes['current']),
+            current=TerminalCharacterAttributes(state.attributes['current']),
             foreground=state.attributes['foreground'],
             background=state.attributes['background']
         )
@@ -302,8 +302,8 @@ class TerminalBuffer:
         line = TerminalLine(cols)
         # Fill line with spaces using default attributes
 
-        fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
-        bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+        fg = self.attributes.foreground if self.attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
+        bg = self.attributes.background if self.attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
         for i in range(cols):
             line.set_character(i, ' ', self.attributes.current, fg, bg)
 
@@ -341,8 +341,8 @@ class TerminalBuffer:
         # Create new lines with new width
         new_lines = []
 
-        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
-        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+        default_fg = self.attributes.foreground if self.attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
 
         # Copy content from old lines
         for old_line in self.lines:
@@ -455,8 +455,8 @@ class TerminalBuffer:
             end_row: Ending row
             end_col: Ending column
         """
-        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
-        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+        default_fg = self.attributes.foreground if self.attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
 
         for row in range(start_row, end_row + 1):
             line_index = len(self.lines) - self.rows + row
@@ -526,8 +526,8 @@ class TerminalBuffer:
         Args:
             count: Number of characters to insert
         """
-        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
-        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+        default_fg = self.attributes.foreground if self.attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
 
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         cursor_col = self.cursor.col
@@ -551,8 +551,8 @@ class TerminalBuffer:
         Args:
             count: Number of characters to delete
         """
-        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
-        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+        default_fg = self.attributes.foreground if self.attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
 
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         cursor_col = self.cursor.col
@@ -574,8 +574,8 @@ class TerminalBuffer:
         Args:
             count: Number of characters to erase
         """
-        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
-        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+        default_fg = self.attributes.foreground if self.attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
 
         cursor_row = self.cursor.row if not self.modes.origin else self.cursor.row + self.scroll_region.top
         cursor_col = self.cursor.col
@@ -762,8 +762,8 @@ class TerminalBuffer:
 
     def decaln(self) -> None:
         """Display the DECALN screen alignment pattern."""
-        default_fg = self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None
-        default_bg = self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+        default_fg = self.attributes.foreground if self.attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None
+        default_bg = self.attributes.background if self.attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
 
         for r in range(self.rows):
             line_index = len(self.lines) - self.rows + r
@@ -833,8 +833,8 @@ class TerminalBuffer:
                     self.cursor.col,
                     char,
                     self.attributes.current,
-                    self.attributes.foreground if self.attributes.current & CharacterAttributes.CUSTOM_FG else None,
-                    self.attributes.background if self.attributes.current & CharacterAttributes.CUSTOM_BG else None
+                    self.attributes.foreground if self.attributes.current & TerminalCharacterAttributes.CUSTOM_FG else None,
+                    self.attributes.background if self.attributes.current & TerminalCharacterAttributes.CUSTOM_BG else None
                 )
 
                 # Update cursor position and handle wrapping
@@ -851,7 +851,7 @@ class TerminalBuffer:
         """Determine if there are any blinking characters on-screen."""
         for line in self.lines[-self.rows:]:
             for col in range(self.cols):
-                if line.get_character(col)[1] & CharacterAttributes.BLINK:
+                if line.get_character(col)[1] & TerminalCharacterAttributes.BLINK:
                     return True
 
         return False

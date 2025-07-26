@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, Tuple, Any
 
-from terminal.terminal_buffer import TerminalBuffer, CharacterAttributes
+from terminal.terminal_buffer import TerminalBuffer, TerminalCharacterAttributes
 
 
 @dataclass
@@ -502,106 +502,106 @@ class TerminalState:
             param = params[i]
 
             if param == 0:  # Reset
-                buffer.attributes.current = CharacterAttributes.NONE
+                buffer.attributes.current = TerminalCharacterAttributes.NONE
                 buffer.attributes.foreground = None
                 buffer.attributes.background = None
 
             elif param == 1:  # Bold
-                buffer.attributes.current |= CharacterAttributes.BOLD
+                buffer.attributes.current |= TerminalCharacterAttributes.BOLD
 
             elif param == 2:  # Dim
-                buffer.attributes.current |= CharacterAttributes.DIM
+                buffer.attributes.current |= TerminalCharacterAttributes.DIM
 
             elif param == 3:  # Italic
-                buffer.attributes.current |= CharacterAttributes.ITALIC
+                buffer.attributes.current |= TerminalCharacterAttributes.ITALIC
 
             elif param == 4:  # Underline
-                buffer.attributes.current |= CharacterAttributes.UNDERLINE
+                buffer.attributes.current |= TerminalCharacterAttributes.UNDERLINE
 
             elif param == 5:  # Blink
-                buffer.attributes.current |= CharacterAttributes.BLINK
+                buffer.attributes.current |= TerminalCharacterAttributes.BLINK
 
             elif param == 7:  # Inverse
-                buffer.attributes.current |= CharacterAttributes.INVERSE
+                buffer.attributes.current |= TerminalCharacterAttributes.INVERSE
 
             elif param == 8:  # Hidden
-                buffer.attributes.current |= CharacterAttributes.HIDDEN
+                buffer.attributes.current |= TerminalCharacterAttributes.HIDDEN
 
             elif param == 9:  # Strike
-                buffer.attributes.current |= CharacterAttributes.STRIKE
+                buffer.attributes.current |= TerminalCharacterAttributes.STRIKE
 
             elif param == 21:  # Normal intensity (not bold)
-                buffer.attributes.current &= ~CharacterAttributes.BOLD
+                buffer.attributes.current &= ~TerminalCharacterAttributes.BOLD
 
             elif param == 22:  # Normal intensity (not bold and not dim)
-                buffer.attributes.current &= ~(CharacterAttributes.BOLD | CharacterAttributes.DIM)
+                buffer.attributes.current &= ~(TerminalCharacterAttributes.BOLD | TerminalCharacterAttributes.DIM)
 
             elif param == 23:  # Not italic
-                buffer.attributes.current &= ~CharacterAttributes.ITALIC
+                buffer.attributes.current &= ~TerminalCharacterAttributes.ITALIC
 
             elif param == 24:  # Not underlined
-                buffer.attributes.current &= ~CharacterAttributes.UNDERLINE
+                buffer.attributes.current &= ~TerminalCharacterAttributes.UNDERLINE
 
             elif param == 25:  # Not blinking
-                buffer.attributes.current &= ~CharacterAttributes.BLINK
+                buffer.attributes.current &= ~TerminalCharacterAttributes.BLINK
 
             elif param == 27:  # Not inverse
-                buffer.attributes.current &= ~CharacterAttributes.INVERSE
+                buffer.attributes.current &= ~TerminalCharacterAttributes.INVERSE
 
             elif param == 28:  # Not hidden
-                buffer.attributes.current &= ~CharacterAttributes.HIDDEN
+                buffer.attributes.current &= ~TerminalCharacterAttributes.HIDDEN
 
             elif param == 29:  # Not strike
-                buffer.attributes.current &= ~CharacterAttributes.STRIKE
+                buffer.attributes.current &= ~TerminalCharacterAttributes.STRIKE
 
             elif 30 <= param <= 37:  # Standard foreground color
-                buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
+                buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
                 buffer.attributes.foreground = self._ansi_colors[param - 30]
 
             elif param == 38:  # Extended foreground color
                 if i + 2 < len(params):
                     if params[i + 1] == 5:  # 256 colors
                         color_index = params[i + 2]
-                        buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
+                        buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
                         buffer.attributes.foreground = self._xterm_to_rgb(color_index)
                         i += 2
                     elif params[i + 1] == 2 and i + 4 < len(params):  # RGB
                         r, g, b = params[i + 2:i + 5]
-                        buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
+                        buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
                         buffer.attributes.foreground = (r << 16) | (g << 8) | b
                         i += 4
 
             elif param == 39:  # Default foreground color
-                buffer.attributes.current &= ~CharacterAttributes.CUSTOM_FG
+                buffer.attributes.current &= ~TerminalCharacterAttributes.CUSTOM_FG
                 buffer.attributes.foreground = None
 
             elif 40 <= param <= 47:  # Standard background color
-                buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
+                buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
                 buffer.attributes.background = self._ansi_colors[param - 40]
 
             elif param == 48:  # Extended background color
                 if i + 2 < len(params):
                     if params[i + 1] == 5:  # 256 colors
                         color_index = params[i + 2]
-                        buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
+                        buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
                         buffer.attributes.background = self._xterm_to_rgb(color_index)
                         i += 2
                     elif params[i + 1] == 2 and i + 4 < len(params):  # RGB
                         r, g, b = params[i + 2:i + 5]
-                        buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
+                        buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
                         buffer.attributes.background = (r << 16) | (g << 8) | b
                         i += 4
 
             elif param == 49:  # Default background color
-                buffer.attributes.current &= ~CharacterAttributes.CUSTOM_BG
+                buffer.attributes.current &= ~TerminalCharacterAttributes.CUSTOM_BG
                 buffer.attributes.background = None
 
             elif 90 <= param <= 97:  # Bright foreground colors
-                buffer.attributes.current |= CharacterAttributes.CUSTOM_FG
+                buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
                 buffer.attributes.foreground = self._ansi_colors[param - 90 + 8]  # Map to bright color indices
 
             elif 100 <= param <= 107:  # Bright background colors
-                buffer.attributes.current |= CharacterAttributes.CUSTOM_BG
+                buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
                 buffer.attributes.background = self._ansi_colors[param - 100 + 8]  # Map to bright color indices
 
             else:

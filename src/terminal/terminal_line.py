@@ -5,7 +5,7 @@ from enum import Flag, auto
 from typing import Tuple
 
 
-class CharacterAttributes(Flag):
+class TerminalCharacterAttributes(Flag):
     """Bit flags for character attributes."""
     NONE = 0
     BOLD = auto()
@@ -36,7 +36,7 @@ class TerminalLine:
         self,
         index: int,
         char: str,
-        attributes: CharacterAttributes,
+        attributes: TerminalCharacterAttributes,
         fg_color: int | None,
         bg_color: int | None
     ) -> None:
@@ -48,13 +48,13 @@ class TerminalLine:
             self.data[base + 2] = fg_color if fg_color is not None else 0
             self.data[base + 3] = bg_color if bg_color is not None else 0
 
-    def get_character(self, index: int) -> Tuple[str, CharacterAttributes, int | None, int | None]:
+    def get_character(self, index: int) -> Tuple[str, TerminalCharacterAttributes, int | None, int | None]:
         """Get character and attributes at position."""
         if 0 <= index < self.width:
             base = index * 4
             char = chr(self.data[base])
-            attributes = CharacterAttributes(self.data[base + 1])
+            attributes = TerminalCharacterAttributes(self.data[base + 1])
             fg_color = self.data[base + 2] if self.data[base + 2] != 0 else None
             bg_color = self.data[base + 3] if self.data[base + 3] != 0 else None
             return (char, attributes, fg_color, bg_color)
-        return (' ', CharacterAttributes.NONE, None, None)
+        return (' ', TerminalCharacterAttributes.NONE, None, None)

@@ -12,7 +12,7 @@ from PySide6.QtGui import (
     QGuiApplication, QWheelEvent, QFont
 )
 
-from terminal.terminal_buffer import CharacterAttributes, TerminalBuffer
+from terminal.terminal_buffer import TerminalCharacterAttributes, TerminalBuffer
 from terminal.terminal_state import TerminalState
 
 from humbug.color_role import ColorRole
@@ -639,26 +639,26 @@ class TerminalWidget(QAbstractScrollArea):
         # Pre-create common font variants
         base_font = painter.font()
         font_variants = {
-            CharacterAttributes.NONE: self._create_font_variant(base_font),
-            CharacterAttributes.BOLD: self._create_font_variant(base_font, bold=True),
-            CharacterAttributes.ITALIC: self._create_font_variant(base_font, italic=True),
-            CharacterAttributes.UNDERLINE: self._create_font_variant(base_font, underline=True),
-            CharacterAttributes.STRIKE: self._create_font_variant(base_font, strike=True),
-            CharacterAttributes.BOLD | CharacterAttributes.ITALIC:
+            TerminalCharacterAttributes.NONE: self._create_font_variant(base_font),
+            TerminalCharacterAttributes.BOLD: self._create_font_variant(base_font, bold=True),
+            TerminalCharacterAttributes.ITALIC: self._create_font_variant(base_font, italic=True),
+            TerminalCharacterAttributes.UNDERLINE: self._create_font_variant(base_font, underline=True),
+            TerminalCharacterAttributes.STRIKE: self._create_font_variant(base_font, strike=True),
+            TerminalCharacterAttributes.BOLD | TerminalCharacterAttributes.ITALIC:
                 self._create_font_variant(base_font, bold=True, italic=True),
-            CharacterAttributes.BOLD | CharacterAttributes.UNDERLINE:
+            TerminalCharacterAttributes.BOLD | TerminalCharacterAttributes.UNDERLINE:
                 self._create_font_variant(base_font, bold=True, underline=True),
-            CharacterAttributes.BOLD | CharacterAttributes.STRIKE:
+            TerminalCharacterAttributes.BOLD | TerminalCharacterAttributes.STRIKE:
                 self._create_font_variant(base_font, bold=True, strike=True),
-            CharacterAttributes.ITALIC | CharacterAttributes.UNDERLINE:
+            TerminalCharacterAttributes.ITALIC | TerminalCharacterAttributes.UNDERLINE:
                 self._create_font_variant(base_font, italic=True, underline=True),
-            CharacterAttributes.ITALIC | CharacterAttributes.STRIKE:
+            TerminalCharacterAttributes.ITALIC | TerminalCharacterAttributes.STRIKE:
                 self._create_font_variant(base_font, italic=True, strike=True),
-            CharacterAttributes.UNDERLINE | CharacterAttributes.STRIKE:
+            TerminalCharacterAttributes.UNDERLINE | TerminalCharacterAttributes.STRIKE:
                 self._create_font_variant(base_font, underline=True, strike=True),
-            CharacterAttributes.BOLD | CharacterAttributes.ITALIC | CharacterAttributes.UNDERLINE:
+            TerminalCharacterAttributes.BOLD | TerminalCharacterAttributes.ITALIC | TerminalCharacterAttributes.UNDERLINE:
                 self._create_font_variant(base_font, bold=True, italic=True, underline=True),
-            CharacterAttributes.BOLD | CharacterAttributes.ITALIC | CharacterAttributes.STRIKE:
+            TerminalCharacterAttributes.BOLD | TerminalCharacterAttributes.ITALIC | TerminalCharacterAttributes.STRIKE:
                 self._create_font_variant(base_font, bold=True, italic=True, strike=True),
         }
 
@@ -673,7 +673,7 @@ class TerminalWidget(QAbstractScrollArea):
             line = buffer.lines[line_index]
             current_run_start_col = start_col
             current_text = ""
-            current_attrs = CharacterAttributes.NONE
+            current_attrs = TerminalCharacterAttributes.NONE
             current_colors: Tuple[int | None, int | None] = (None, None)
 
             for col in range(start_col, end_col):
@@ -758,7 +758,7 @@ class TerminalWidget(QAbstractScrollArea):
         start_col: int,
         y: float,
         text: str,
-        attrs: CharacterAttributes,
+        attrs: TerminalCharacterAttributes,
         colors: tuple,
         default_fg: QColor,
         default_bg: QColor,
@@ -777,46 +777,46 @@ class TerminalWidget(QAbstractScrollArea):
         # Set up colors
         fg_color, bg_color = colors
         fg = (QColor(fg_color) if fg_color is not None and
-            (attrs & CharacterAttributes.CUSTOM_FG) else default_fg)
+            (attrs & TerminalCharacterAttributes.CUSTOM_FG) else default_fg)
         bg = (QColor(bg_color) if bg_color is not None and
-            (attrs & CharacterAttributes.CUSTOM_BG) else default_bg)
+            (attrs & TerminalCharacterAttributes.CUSTOM_BG) else default_bg)
 
         # Handle inverse video and screen reverse mode
-        if attrs & CharacterAttributes.INVERSE:
+        if attrs & TerminalCharacterAttributes.INVERSE:
             fg, bg = bg, fg
 
         if self._state.screen_reverse_mode():
             fg, bg = bg, fg
 
         # Handle hidden text
-        if attrs & CharacterAttributes.HIDDEN:
+        if attrs & TerminalCharacterAttributes.HIDDEN:
             fg = bg
 
         # Set font based on attributes
-        font_key = CharacterAttributes.NONE
-        if attrs & CharacterAttributes.BOLD:
-            font_key |= CharacterAttributes.BOLD
+        font_key = TerminalCharacterAttributes.NONE
+        if attrs & TerminalCharacterAttributes.BOLD:
+            font_key |= TerminalCharacterAttributes.BOLD
 
-        if attrs & CharacterAttributes.ITALIC:
-            font_key |= CharacterAttributes.ITALIC
+        if attrs & TerminalCharacterAttributes.ITALIC:
+            font_key |= TerminalCharacterAttributes.ITALIC
 
-        if attrs & CharacterAttributes.UNDERLINE:
-            font_key |= CharacterAttributes.UNDERLINE
+        if attrs & TerminalCharacterAttributes.UNDERLINE:
+            font_key |= TerminalCharacterAttributes.UNDERLINE
 
-        if attrs & CharacterAttributes.STRIKE:
-            font_key |= CharacterAttributes.STRIKE
+        if attrs & TerminalCharacterAttributes.STRIKE:
+            font_key |= TerminalCharacterAttributes.STRIKE
 
         painter.setFont(font_variants.get(font_key, painter.font()))
 
         # Handle dim text
-        if attrs & CharacterAttributes.DIM:
+        if attrs & TerminalCharacterAttributes.DIM:
             fg.setAlpha(128)
 
         # Calculate start x position
         x_start = start_col * self._char_width
 
         # If no highlights or blinking chars, draw entire run at once
-        if not highlights and not attrs & CharacterAttributes.BLINK:
+        if not highlights and not attrs & TerminalCharacterAttributes.BLINK:
             width = len(text) * self._char_width
 
             # Draw background - use precise width calculation
@@ -826,7 +826,7 @@ class TerminalWidget(QAbstractScrollArea):
             )
 
             # Draw text
-            if not (attrs & CharacterAttributes.BLINK and self._blink_state):
+            if not (attrs & TerminalCharacterAttributes.BLINK and self._blink_state):
                 painter.setPen(fg)
                 painter.drawText(
                     QPointF(x_start, y + self._char_ascent),
@@ -876,7 +876,7 @@ class TerminalWidget(QAbstractScrollArea):
                     )
 
                     # Draw text if not blinking or in visible state
-                    if not (attrs & CharacterAttributes.BLINK and self._blink_state):
+                    if not (attrs & TerminalCharacterAttributes.BLINK and self._blink_state):
                         painter.setPen(fg)
                         batch_text = text[current_batch_start:current_batch_start + current_batch_len]
                         painter.drawText(
@@ -892,7 +892,7 @@ class TerminalWidget(QAbstractScrollArea):
                         char_bg
                     )
 
-                    if not (attrs & CharacterAttributes.BLINK and self._blink_state):
+                    if not (attrs & TerminalCharacterAttributes.BLINK and self._blink_state):
                         painter.setPen(fg)
                         painter.drawText(
                             QPointF(x_start + (i * self._char_width), y + self._char_ascent),
