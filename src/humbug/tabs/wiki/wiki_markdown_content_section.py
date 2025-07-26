@@ -25,7 +25,7 @@ class WikiMarkdownContentSection(QFrame):
     selectionChanged = Signal(bool)
     scroll_requested = Signal(QPoint)
     mouseReleased = Signal()
-    linkClicked = Signal(str)
+    link_clicked = Signal(str)
 
     def __init__(
         self,
@@ -109,7 +109,7 @@ class WikiMarkdownContentSection(QFrame):
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mousePressed.connect(self._on_mouse_pressed)
         self._text_area.mouseReleased.connect(self._on_mouse_released)
-        self._text_area.linkClicked.connect(self.linkClicked)
+        self._text_area.link_clicked.connect(self.link_clicked)
 
         # Add mouse move tracking for cursor changes on links
         self._text_area.viewport().setMouseTracking(True)

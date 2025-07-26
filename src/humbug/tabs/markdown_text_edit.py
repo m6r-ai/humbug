@@ -20,7 +20,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
     mousePressed = Signal(QMouseEvent)
     mouseReleased = Signal(QMouseEvent)
-    linkClicked = Signal(str)
+    link_clicked = Signal(str)
     page_key_scroll_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -52,7 +52,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
         # Check for link clicks
         anchor = self.anchorAt(e.pos())
         if anchor and e.button() == Qt.MouseButton.LeftButton:
-            self.linkClicked.emit(anchor)
+            self.link_clicked.emit(anchor)
             e.accept()
             return
 

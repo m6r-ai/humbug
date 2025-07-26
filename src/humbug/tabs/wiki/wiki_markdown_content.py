@@ -73,13 +73,11 @@ class WikiMarkdownContent(WikiContentWidget):
         )
         section.scroll_requested.connect(self.scroll_requested)
         section.mouseReleased.connect(self.mouseReleased)
-
-        # Connect to the new linkClicked signal
-        section.linkClicked.connect(self._handle_link_clicked)
+        section.link_clicked.connect(self._on_link_clicked)
 
         return section
 
-    def _handle_link_clicked(self, url: str) -> None:
+    def _on_link_clicked(self, url: str) -> None:
         """
         Handle link clicks from a section and forward them.
 
@@ -87,7 +85,7 @@ class WikiMarkdownContent(WikiContentWidget):
             url: The URL that was clicked
         """
         # Forward the signal with the URL
-        self.linkClicked.emit(url)
+        self.link_clicked.emit(url)
 
     def _handle_section_selection_changed(self, section: WikiMarkdownContentSection, has_selection: bool) -> None:
         """

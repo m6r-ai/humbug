@@ -38,7 +38,7 @@ class WikiMarkdownPreviewContent(WikiContentWidget):
         self._markdown_content.selectionChanged.connect(self.selectionChanged)
         self._markdown_content.scroll_requested.connect(self.scroll_requested)
         self._markdown_content.mouseReleased.connect(self.mouseReleased)
-        self._markdown_content.linkClicked.connect(self.linkClicked)
+        self._markdown_content.link_clicked.connect(self.link_clicked)
         self._layout.addWidget(self._markdown_content)
 
         self._path: str | None = None

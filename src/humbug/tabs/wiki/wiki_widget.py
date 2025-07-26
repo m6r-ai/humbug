@@ -317,10 +317,8 @@ class WikiWidget(QWidget):
         )
         content_widget.scroll_requested.connect(self._on_scroll_requested)
         content_widget.mouseReleased.connect(self._stop_scroll)
-        content_widget.edit_clicked.connect(self._handle_edit_clicked)
-
-        # Connect to the new linkClicked signal
-        content_widget.linkClicked.connect(self._handle_link_clicked)
+        content_widget.edit_clicked.connect(self._on_edit_clicked)
+        content_widget.link_clicked.connect(self._on_link_clicked)
 
         content_widget.set_content(content, self._path)
 
@@ -332,8 +330,7 @@ class WikiWidget(QWidget):
 
         return content_widget
 
-    # Add a handler for the edit_clicked signal:
-    def _handle_edit_clicked(self) -> None:
+    def _on_edit_clicked(self) -> None:
         """Handle edit button clicks from content blocks."""
         # Activate this widget
         self.activated.emit()
@@ -341,7 +338,7 @@ class WikiWidget(QWidget):
         # Emit the edit_file signal
         self.edit_file.emit(self._path)
 
-    def _handle_link_clicked(self, url: str) -> None:
+    def _on_link_clicked(self, url: str) -> None:
         """
         Handle link clicks from content blocks.
 
