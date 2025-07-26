@@ -5,12 +5,11 @@ import os
 from typing import Dict, List
 
 from ai import AIConversationSettings, AIReasoningCapability
+from metaphor import (
+    MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorASTRootNode, format_errors, format_preamble, MetaphorFormatVisitor
+)
 from syntax.lexer import Token, TokenType
 
-from metaphor.metaphor_ast_builder import MetaphorASTBuilder, MetaphorASTBuilderError
-from metaphor.metaphor_ast_node import MetaphorASTRootNode
-from metaphor.metaphor_formatters import format_errors, format_preamble
-from metaphor.metaphor_format_visitor import MetaphorFormatVisitor
 from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.mindspace.mindspace_manager import MindspaceManager
