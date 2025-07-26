@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v0.20 (2025-07-xx)
+## v0.20 (2025-07-26)
 
 New features:
 
@@ -25,6 +25,9 @@ Internal structure changes:
 - Refined a number of callbacks to use more consistent naming.
 - Revised the transcript handling to be synchronous rather than asynchronous as the underlying filesystem calls were
   synchronous anyway.
+- Reworked naming of all signals to be snake_case, and of all signal handlers to use `_on` as a naming prefix rather than
+  `_handle`.
+- Internal package files now all now have useful `__init__.py` files.
 
 ## v0.19 (2025-07-15)
 
