@@ -6,8 +6,7 @@ from typing import Any, Coroutine, Dict, Set
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-from terminal.terminal_base import TerminalBase
-from terminal.terminal_factory import create_terminal
+from terminal import TerminalBase, create_terminal
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager

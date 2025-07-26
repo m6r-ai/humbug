@@ -12,8 +12,7 @@ from PySide6.QtGui import (
     QGuiApplication, QWheelEvent, QFont
 )
 
-from terminal.terminal_buffer import TerminalCharacterAttributes, TerminalBuffer
-from terminal.terminal_state import TerminalState
+from terminal import TerminalCharacterAttributes, TerminalBuffer, TerminalState
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
