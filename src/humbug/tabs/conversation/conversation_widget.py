@@ -185,7 +185,7 @@ class ConversationWidget(QWidget):
         self._input.page_key_scroll_requested.connect(self._on_page_key_scroll_requested)
         self._input.scroll_requested.connect(self._on_scroll_requested)
         self._input.mouse_released.connect(self._stop_scroll)
-        self._input.fork_requested.connect(self._fork_from_message)
+        self._input.fork_requested.connect(self._on_message_fork_requested)
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.modified.connect(self.conversation_modified)
@@ -316,9 +316,9 @@ class ConversationWidget(QWidget):
         # Add bookmark-specific signal
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
-        msg_widget.fork_requested.connect(self._fork_from_message)
-        msg_widget.delete_requested.connect(self._on_delete_from_message)
-        msg_widget.expand_requested.connect(self._on_message_expanded)
+        msg_widget.fork_requested.connect(self._on_message_fork_requested)
+        msg_widget.delete_requested.connect(self._on_message_delete_requested)
+        msg_widget.expand_requested.connect(self._on_message_expand_requested)
 
         # Connect tool approval signals
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
@@ -487,7 +487,7 @@ class ConversationWidget(QWidget):
         loop = asyncio.get_event_loop()
         loop.create_task(ai_conversation.reject_pending_tool_calls(reason))
 
-    def _on_message_expanded(self, expanded: bool) -> None:
+    def _on_message_expand_requested(self, expanded: bool) -> None:
         """
         Handle the change in scroll behaviour when a message is expanded or collapsed.
         Args:
@@ -1059,40 +1059,6 @@ class ConversationWidget(QWidget):
         except Exception as e:
             raise ConversationError(f"Failed to write transcript for new history: {str(e)}") from e
 
-    def fork_conversation_from_index(self, target_widget: 'ConversationWidget', message_index: int | None = None) -> None:
-        """
-        Load a copy of this conversation's history into another conversation widget.
-
-        Args:
-            target_widget: Target ConversationWidget to fork into
-            message_index: Index to fork at (None for full conversation)
-
-        Raises:
-            ConversationError: If the fork operation fails
-        """
-        # Get messages to include in the fork
-        all_messages = self.get_conversation_history().get_messages()
-        if message_index is None:
-            # Full conversation fork
-            forked_messages = all_messages
-
-        else:
-            # Fork up to specified index (inclusive)
-            forked_messages = all_messages[:message_index + 1]
-
-        transcript_messages = [msg.to_transcript_dict() for msg in forked_messages]
-
-        try:
-            # Write history to new transcript file
-            handler = ConversationTranscriptHandler(target_widget.path())
-            handler.write(transcript_messages)
-
-            # Load messages into the new tab
-            target_widget.load_message_history(forked_messages, False)
-
-        except Exception as e:
-            raise ConversationError(f"Failed to write transcript for forked conversation: {str(e)}") from e
-
     def load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool) -> None:
         """
         Load existing message history from transcript.
@@ -1287,7 +1253,7 @@ class ConversationWidget(QWidget):
         # (current_index - 1 because we stopped at the first visible message)
         return current_index - 1
 
-    def _fork_from_message(self) -> None:
+    def _on_message_fork_requested(self) -> None:
         """
         Fork the conversation from the specified message.
 
@@ -1312,7 +1278,7 @@ class ConversationWidget(QWidget):
         # Emit signal with the end index (inclusive)
         self.fork_from_index_requested.emit(fork_end_index)
 
-    def _on_delete_from_message(self) -> None:
+    def _on_message_delete_requested(self) -> None:
         """Handle request to delete conversation from a message onwards."""
         # Identify which message widget triggered the request
         sender = self.sender()

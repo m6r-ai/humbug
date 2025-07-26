@@ -1433,6 +1433,56 @@ class ColumnManager(QWidget):
         """Handle the fork conversation from index request signal."""
         self.fork_from_index_requested.emit(message_index)
 
+    def _get_fork_file_name(self, original_path: str) -> str:
+        """
+        Generate a unique fork name based on the original conversation file.
+
+        Args:
+            original_path: Path to the original conversation file
+
+        Returns:
+            New filename with " - fork" suffix that doesn't conflict
+        """
+        parent_path = os.path.dirname(original_path)
+        original_filename = os.path.basename(original_path)
+
+        # Split filename and extension (.conv)
+        name, ext = os.path.splitext(original_filename)
+
+        # Check if the name already ends with " - fork" or " - fork (n)"
+        fork_suffix = " - fork"
+        if name.endswith(fork_suffix):
+            # Remove the existing " - fork" suffix to get the base name
+            base_name = name[:-len(fork_suffix)]
+
+        elif " - fork (" in name and name.endswith(")"):
+            # Handle case like "filename - fork (2)" - extract base name
+            fork_index = name.rfind(" - fork (")
+            if fork_index != -1:
+                base_name = name[:fork_index]
+
+            else:
+                base_name = name
+
+        else:
+            # No existing fork suffix
+            base_name = name
+
+        # Generate unique fork name
+        counter = 1
+        while True:
+            if counter == 1:
+                candidate_name = f"{base_name}{fork_suffix}{ext}"
+
+            else:
+                candidate_name = f"{base_name}{fork_suffix} ({counter}){ext}"
+
+            full_path = os.path.join(parent_path, candidate_name)
+            if not os.path.exists(full_path):
+                return full_path
+
+            counter += 1
+
     def fork_conversation_from_index(self, message_index: int | None) -> None:
         """Create a new conversation tab with the history from an index in the current conversation."""
         try:
@@ -1441,7 +1491,21 @@ class ColumnManager(QWidget):
             if not isinstance(conversation_tab, ConversationTab):
                 return
 
-            new_tab = conversation_tab.fork_conversation_from_index(message_index)
+            # Generate new file path using fork naming convention
+            new_path = self._get_fork_file_name(conversation_tab.path())
+            new_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
+            all_messages = conversation_tab.conversation_history().get_messages()
+            if message_index is None:
+                # Full conversation fork
+                forked_messages = all_messages
+
+            else:
+                # Fork up to specified index (inclusive)
+                forked_messages = all_messages[:message_index + 1]
+
+            new_history = AIConversationHistory(forked_messages)
+            new_tab.set_conversation_history(new_history)
+
             new_tab.fork_requested.connect(self._on_conversation_fork_requested)
             new_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
             self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])

@@ -1,8 +1,7 @@
 """Unified conversation tab implementation."""
 
 import logging
-import os
-from typing import cast, Dict, Any
+from typing import Dict, Any
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QWidget
@@ -102,55 +101,9 @@ class ConversationTab(TabBase):
         # Update status bar
         self.update_status()
 
-    def _get_fork_file_name(self, original_path: str) -> str:
-        """
-        Generate a unique fork name based on the original conversation file.
-
-        Args:
-            original_path: Path to the original conversation file
-
-        Returns:
-            New filename with " - fork" suffix that doesn't conflict
-        """
-        parent_path = os.path.dirname(original_path)
-        original_filename = os.path.basename(original_path)
-
-        # Split filename and extension (.conv)
-        name, ext = os.path.splitext(original_filename)
-
-        # Check if the name already ends with " - fork" or " - fork (n)"
-        fork_suffix = " - fork"
-        if name.endswith(fork_suffix):
-            # Remove the existing " - fork" suffix to get the base name
-            base_name = name[:-len(fork_suffix)]
-
-        elif " - fork (" in name and name.endswith(")"):
-            # Handle case like "filename - fork (2)" - extract base name
-            fork_index = name.rfind(" - fork (")
-            if fork_index != -1:
-                base_name = name[:fork_index]
-
-            else:
-                base_name = name
-
-        else:
-            # No existing fork suffix
-            base_name = name
-
-        # Generate unique fork name
-        counter = 1
-        while True:
-            if counter == 1:
-                candidate_name = f"{base_name}{fork_suffix}{ext}"
-
-            else:
-                candidate_name = f"{base_name}{fork_suffix} ({counter}){ext}"
-
-            full_path = os.path.join(parent_path, candidate_name)
-            if not os.path.exists(full_path):
-                return full_path
-
-            counter += 1
+    def conversation_history(self) -> AIConversationHistory:
+        """Get the conversation history."""
+        return self._conversation_widget.get_conversation_history()
 
     def set_conversation_history(self, history: AIConversationHistory) -> None:
         """
@@ -160,26 +113,6 @@ class ConversationTab(TabBase):
             history: AIConversationHistory object containing conversation history
         """
         self._conversation_widget.set_conversation_history(history)
-
-    # pylint: disable=protected-access
-    def fork_conversation_from_index(self, message_index: int | None = None) -> 'ConversationTab':
-        """
-        Create a copy of this conversation with an option to only include selected history.
-
-        Args:
-            message_index: Index to fork at (None for full conversation)
-
-        Returns:
-            New ConversationTab with forked history
-
-        Raises:
-            ConversationError: If the fork operation fails
-        """
-        # Generate new file path using fork naming convention
-        new_path = self._get_fork_file_name(self._path)
-        forked_tab = ConversationTab("", new_path, cast(QWidget, self.parent()))
-        self._conversation_widget.fork_conversation_from_index(forked_tab._conversation_widget, message_index)
-        return forked_tab
 
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""

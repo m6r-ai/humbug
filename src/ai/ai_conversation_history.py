@@ -9,9 +9,9 @@ from ai.ai_usage import AIUsage
 class AIConversationHistory:
     """Manages the conversation history and state."""
 
-    def __init__(self) -> None:
+    def __init__(self, messages: List[AIMessage] | None = None) -> None:
         """Initialize empty conversation history."""
-        self._messages: List[AIMessage] = []
+        self._messages: List[AIMessage] = messages if messages is not None else []
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
 
     def clear(self) -> None:
