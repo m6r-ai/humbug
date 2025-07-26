@@ -3,7 +3,7 @@ Visitor class to print markdown AST structures for debugging
 """
 from typing import List, Any, cast
 
-from dast.ast import ASTNode
+from dast import ASTNode
 
 from dmarkdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownASTTextNode, MarkdownASTHeadingNode, MarkdownASTInlineCodeNode,

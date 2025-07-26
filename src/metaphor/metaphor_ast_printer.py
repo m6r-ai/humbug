@@ -4,7 +4,7 @@ Visitor class to print Metaphor AST structures for debugging
 
 from typing import List, Any, Type, cast
 
-from dast.ast import ASTNode
+from dast import ASTNode
 
 from metaphor.metaphor_ast_node import (
     MetaphorASTVisitor, MetaphorASTNode, MetaphorASTTextNode, MetaphorASTCodeNode

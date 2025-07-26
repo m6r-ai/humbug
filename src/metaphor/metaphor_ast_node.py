@@ -5,7 +5,7 @@ of a Metaphor document.
 
 from typing import List, Any, cast
 
-from dast.ast import ASTNode, ASTVisitor
+from dast import ASTNode, ASTVisitor
 
 
 class MetaphorASTNode(ASTNode):

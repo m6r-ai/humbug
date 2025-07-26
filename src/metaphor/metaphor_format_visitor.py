@@ -5,7 +5,7 @@ Format visitor implementation for Metaphor AST.
 import io
 from typing import Any, Dict, Final, TextIO, Type, cast
 
-from dast.ast import ASTNode
+from dast import ASTNode
 
 from metaphor.metaphor_ast_node import (
     MetaphorASTNode, MetaphorASTVisitor, MetaphorASTActionNode, MetaphorASTCodeNode,
