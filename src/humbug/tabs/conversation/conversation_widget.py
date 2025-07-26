@@ -321,8 +321,8 @@ class ConversationWidget(QWidget):
         msg_widget.expandRequested.connect(self._on_message_expanded)
 
         # Connect tool approval signals
-        msg_widget.toolCallApproved.connect(self._handle_tool_call_approved)
-        msg_widget.toolCallRejected.connect(self._handle_tool_call_rejected)
+        msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
+        msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
 
         msg_widget.set_content(
             message.content, message.source, message.timestamp, message.model or "", message.id, message.user_name
@@ -475,13 +475,13 @@ class ConversationWidget(QWidget):
                 self.update_label.emit()
                 break
 
-    def _handle_tool_call_approved(self, _tool_call: AIToolCall) -> None:
+    def _on_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
         loop.create_task(ai_conversation.approve_pending_tool_calls())
 
-    def _handle_tool_call_rejected(self, reason: str) -> None:
+    def _on_tool_call_rejected(self, reason: str) -> None:
         """Handle user rejection of tool calls."""
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()

@@ -30,8 +30,8 @@ class ConversationMessage(QFrame):
     forkRequested = Signal()
     deleteRequested = Signal()
     expandRequested = Signal(bool)
-    toolCallApproved = Signal(AIToolCall)
-    toolCallRejected = Signal(str)   # rejection reason
+    tool_call_approved = Signal(AIToolCall)
+    tool_call_rejected = Signal(str)   # rejection reason
 
     def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
         """
@@ -378,12 +378,12 @@ class ConversationMessage(QFrame):
 
     def _approve_tool_call(self, tool_call: AIToolCall) -> None:
         """Handle tool call approval."""
-        self.toolCallApproved.emit(tool_call)
+        self.tool_call_approved.emit(tool_call)
         self._remove_approval_widget()
 
     def _reject_tool_call(self) -> None:
         """Handle tool call rejection."""
-        self.toolCallRejected.emit("Tool call was rejected by the user")
+        self.tool_call_rejected.emit("Tool call was rejected by the user")
         self._remove_approval_widget()
 
     def _remove_approval_widget(self) -> None:
