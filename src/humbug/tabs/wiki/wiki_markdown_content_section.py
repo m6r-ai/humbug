@@ -11,7 +11,7 @@ from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
 )
 
-from dmarkdown.markdown_ast_node import MarkdownASTNode, MarkdownASTTextNode
+from dmarkdown import MarkdownASTNode, MarkdownASTTextNode
 from syntax.programming_language import ProgrammingLanguage
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 

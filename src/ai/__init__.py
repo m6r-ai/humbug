@@ -10,6 +10,7 @@ from ai.ai_message import AIMessage
 from ai.ai_message_source import AIMessageSource
 from ai.ai_model import AIReasoningCapability
 
+
 __all__ = [
     "AIBackend",
     "AIBackendSettings",

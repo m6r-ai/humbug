@@ -14,7 +14,7 @@ from PySide6.QtGui import (
     QTextTableFormat, QTextFrameFormat, QTextLength, QImage, QTextImageFormat
 )
 
-from dmarkdown.markdown_ast_node import (
+from dmarkdown import (
     MarkdownASTVisitor, MarkdownASTDocumentNode, MarkdownASTParagraphNode, MarkdownASTHeadingNode,
     MarkdownASTTextNode, MarkdownASTBoldNode, MarkdownASTEmphasisNode, MarkdownASTInlineCodeNode,
     MarkdownASTCodeBlockNode, MarkdownASTListItemNode, MarkdownASTOrderedListNode,

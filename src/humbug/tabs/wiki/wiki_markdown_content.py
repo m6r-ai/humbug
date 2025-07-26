@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor
 
-from dmarkdown.markdown_converter import MarkdownConverter
+from dmarkdown import MarkdownConverter
 from syntax.programming_language import ProgrammingLanguage
 
 from humbug.color_role import ColorRole
