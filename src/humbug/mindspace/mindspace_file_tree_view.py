@@ -29,14 +29,14 @@ class MindspaceFileTreeView(QTreeView):
         # Auto-expand timer for drag operations
         self._auto_expand_timer = QTimer()
         self._auto_expand_timer.setSingleShot(True)
-        self._auto_expand_timer.timeout.connect(self._handle_auto_expand_timeout)
+        self._auto_expand_timer.timeout.connect(self._on_auto_expand_timeout)
         self._auto_expand_timer.setInterval(500)  # 0.5 seconds
         self._pending_expand_index: QModelIndex | None = None
         self._auto_opened_folders: set[QPersistentModelIndex] = set()
 
         # Auto-scroll timer for drag operations
         self._auto_scroll_timer = QTimer()
-        self._auto_scroll_timer.timeout.connect(self._handle_auto_scroll_timeout)
+        self._auto_scroll_timer.timeout.connect(self._on_auto_scroll_timeout)
         self._auto_scroll_timer.setInterval(50)  # 50ms for smooth scrolling
         self._scroll_direction: int = 0  # -1 for up, 1 for down, 0 for no scroll
         self._scroll_speed: int = 0  # Pixels to scroll per timer interval
@@ -312,7 +312,7 @@ class MindspaceFileTreeView(QTreeView):
         """Clear the set of auto-opened folders without closing them."""
         self._auto_opened_folders.clear()
 
-    def _handle_auto_expand_timeout(self) -> None:
+    def _on_auto_expand_timeout(self) -> None:
         """Handle auto-expand timer timeout by expanding the pending folder."""
         if not self._pending_expand_index or not self._pending_expand_index.isValid():
             return
@@ -432,7 +432,7 @@ class MindspaceFileTreeView(QTreeView):
         self._scroll_direction = 0
         self._scroll_speed = 0
 
-    def _handle_auto_scroll_timeout(self) -> None:
+    def _on_auto_scroll_timeout(self) -> None:
         """Handle auto-scroll timer timeout by scrolling the viewport."""
         # Update scroll direction and speed based on current global mouse position
         global_pos = QCursor.pos()

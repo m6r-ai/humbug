@@ -173,7 +173,7 @@ class UserSettingsDialog(QDialog):
         self._settings_container.add_stretch()
 
         # Connect value changed signal
-        self._settings_container.value_changed.connect(self._handle_value_change)
+        self._settings_container.value_changed.connect(self._on_value_change)
 
         # Set the scroll content
         scroll_area.setWidget(self._settings_container)
@@ -186,11 +186,11 @@ class UserSettingsDialog(QDialog):
         button_layout.addStretch()
 
         self.ok_button = QPushButton(strings.ok)
-        self.ok_button.clicked.connect(self._handle_ok)
+        self.ok_button.clicked.connect(self._on_ok_clicked)
         self.ok_button.setProperty("recommended", True)
 
         self.apply_button = QPushButton(strings.apply)
-        self.apply_button.clicked.connect(self._handle_apply)
+        self.apply_button.clicked.connect(self._on_apply_clicked)
 
         self.cancel_button = QPushButton(strings.cancel)
         self.cancel_button.clicked.connect(self.reject)
@@ -293,7 +293,7 @@ class UserSettingsDialog(QDialog):
         # Adjust dialog size to fit new content
         self.adjustSize()
 
-    def _handle_value_change(self) -> None:
+    def _on_value_change(self) -> None:
         """Handle changes to any settings value."""
         if not self._current_settings:
             return
@@ -372,7 +372,7 @@ class UserSettingsDialog(QDialog):
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
-    def _handle_apply(self) -> None:
+    def _on_apply_clicked(self) -> None:
         """Handle Apply button click."""
         settings = self.get_settings()
         self._current_settings = settings
@@ -380,9 +380,9 @@ class UserSettingsDialog(QDialog):
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
-    def _handle_ok(self) -> None:
+    def _on_ok_clicked(self) -> None:
         """Handle OK button click."""
-        self._handle_apply()
+        self._on_apply_clicked()
         self.accept()
 
     def reject(self) -> None:

@@ -62,11 +62,11 @@ class WikiTab(TabBase):
         # Create wiki content widget
         self._wiki_content_widget = WikiWidget(path, self)
         self._wiki_content_widget.status_updated.connect(self.update_status)
-        self._wiki_content_widget.open_link.connect(self._handle_link)
+        self._wiki_content_widget.open_link.connect(self._on_open_link)
         self._wiki_content_widget.edit_file.connect(self.edit_file_requested)
 
         # Connect new signals for file watching
-        self._wiki_content_widget.content_refreshed.connect(self._handle_content_refreshed)
+        self._wiki_content_widget.content_refreshed.connect(self._on_content_refreshed)
 
         layout.addWidget(self._wiki_content_widget)
 
@@ -83,7 +83,7 @@ class WikiTab(TabBase):
         # Load content
         self._wiki_content_widget.load_content()
 
-    def _handle_content_refreshed(self) -> None:
+    def _on_content_refreshed(self) -> None:
         """Handle when wiki content has been refreshed due to file changes."""
         self._logger.debug("Wiki content refreshed for path: %s", self._path)
         self.set_updated(True)
@@ -99,7 +99,7 @@ class WikiTab(TabBase):
         # Delegate to the wiki content widget
         self._wiki_content_widget.scroll_to_target(anchor)
 
-    def _handle_link(self, url: str) -> None:
+    def _on_open_link(self, url: str) -> None:
         """
         Handle opening links.
 

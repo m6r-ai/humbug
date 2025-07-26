@@ -43,7 +43,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Set up scrollbar behavior
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.verticalScrollBar().valueChanged.connect(self._handle_scroll)
+        self.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.setViewportMargins(4, 4, 4, 4)
@@ -168,7 +168,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._update_scrollbar()
         self.size_changed.emit()
 
-    def _handle_scroll(self, _value: int) -> None:
+    def _on_scroll_value_changed(self, _value: int) -> None:
         """Handle scrollbar value changes."""
         self.viewport().update()
 

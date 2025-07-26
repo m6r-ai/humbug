@@ -121,13 +121,13 @@ class ShellWidget(QWidget):
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
         )
-        self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
+        self._input.page_key_scroll_requested.connect(self._on_page_key_scroll_requested)
         self._input.scroll_requested.connect(self._on_scroll_requested)
         self._input.mouse_released.connect(self._stop_scroll)
 
         # Connect input to command handling
         self._input.command_submitted.connect(self._process_command)
-        self._input.tab_completion_requested.connect(self._handle_tab_completion)
+        self._input.tab_completion_requested.connect(self._on_tab_completion_requested)
 
         # Create command processor
         self._command_processor = ShellCommandProcessor()
@@ -186,7 +186,7 @@ class ShellWidget(QWidget):
         # Load shell messages when initialized
         self.load_messages()
 
-    def _handle_tab_completion(
+    def _on_tab_completion_requested(
         self,
         current_text: str,
         is_continuation: bool,
@@ -661,7 +661,7 @@ class ShellWidget(QWidget):
         """Check if any message has selected text."""
         return self._message_with_selection is not None and self._message_with_selection.has_selection()
 
-    def _handle_edit_page_scroll(self) -> None:
+    def _on_page_key_scroll_requested(self) -> None:
         """
         Handle page up/down scroll requests.
         """

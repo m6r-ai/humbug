@@ -133,9 +133,9 @@ class MindspaceSettingsDialog(QDialog):
         self._settings_container.add_stretch()
 
         # Connect change handlers
-        self._auto_backup_check.value_changed.connect(self._handle_auto_backup_change)
-        self._model_combo.value_changed.connect(self._handle_model_change)
-        self._settings_container.value_changed.connect(self._handle_value_change)
+        self._auto_backup_check.value_changed.connect(self._on_auto_backup_check_value_change)
+        self._model_combo.value_changed.connect(self._on_model_value_changed)
+        self._settings_container.value_changed.connect(self._on_settings_value_changed)
 
         # Get AI backends for model options
         self._user_manager = UserManager()
@@ -151,11 +151,11 @@ class MindspaceSettingsDialog(QDialog):
         button_layout.addStretch()
 
         self.ok_button = QPushButton(strings.ok)
-        self.ok_button.clicked.connect(self._handle_ok)
+        self.ok_button.clicked.connect(self._on_ok_clicked)
         self.ok_button.setProperty("recommended", True)
 
         self.apply_button = QPushButton(strings.apply)
-        self.apply_button.clicked.connect(self._handle_apply)
+        self.apply_button.clicked.connect(self._on_apply_clicked)
 
         self.cancel_button = QPushButton(strings.cancel)
         self.cancel_button.clicked.connect(self.reject)
@@ -185,12 +185,12 @@ class MindspaceSettingsDialog(QDialog):
             self._tool_checkboxes[config.name] = checkbox
             self._settings_container.add_setting(checkbox)
 
-    def _handle_auto_backup_change(self) -> None:
+    def _on_auto_backup_check_value_change(self) -> None:
         """Handle changes to auto backup checkbox."""
         auto_backup_checked = self._auto_backup_check.get_value()
         self._backup_interval_spin.set_enabled(auto_backup_checked)
 
-    def _handle_model_change(self) -> None:
+    def _on_model_value_changed(self) -> None:
         """Handle model selection changes."""
         current_model = self._model_combo.get_text()
         self._update_model_capabilities(current_model)
@@ -231,7 +231,7 @@ class MindspaceSettingsDialog(QDialog):
         supports_temp = AIConversationSettings.supports_temperature(model)
         self._temp_spin.set_enabled(supports_temp)
 
-    def _handle_value_change(self) -> None:
+    def _on_settings_value_changed(self) -> None:
         """Handle changes to any setting value."""
         if not self._current_settings:
             return
@@ -302,7 +302,7 @@ class MindspaceSettingsDialog(QDialog):
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
-    def _handle_apply(self) -> None:
+    def _on_apply_clicked(self) -> None:
         """Handle Apply button click."""
         settings = self.get_settings()
         self._current_settings = settings
@@ -314,9 +314,9 @@ class MindspaceSettingsDialog(QDialog):
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
-    def _handle_ok(self) -> None:
+    def _on_ok_clicked(self) -> None:
         """Handle OK button click."""
-        self._handle_apply()
+        self._on_apply_clicked()
         self.accept()
 
     def reject(self) -> None:

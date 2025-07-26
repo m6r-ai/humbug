@@ -66,9 +66,9 @@ class MindspaceFileTree(QWidget):
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
         self._tree_style = MindspaceFileTreeStyle()
         self._tree_view.setStyle(self._tree_style)
-        self._tree_view.file_dropped.connect(self._handle_file_drop)
-        self._tree_view.drop_target_changed.connect(self._handle_drop_target_changed)
-        self._tree_view.delete_requested.connect(self._handle_delete_requested)
+        self._tree_view.file_dropped.connect(self._on_file_dropped)
+        self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
+        self._tree_view.delete_requested.connect(self._on_delete_requested)
 
         # Create file system model
         self._icon_provider = MindspaceFileTreeIconProvider()
@@ -122,7 +122,7 @@ class MindspaceFileTree(QWidget):
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
 
-    def _handle_drop_target_changed(self) -> None:
+    def _on_drop_target_changed(self) -> None:
         """
         Handle changes to the drop target in the tree view.
         """
@@ -130,7 +130,7 @@ class MindspaceFileTree(QWidget):
         # This ensures both the old drop target and new drop target are repainted
         self._tree_view.viewport().update()
 
-    def _handle_file_drop(self, source_path: str, target_path: str) -> None:
+    def _on_file_dropped(self, source_path: str, target_path: str) -> None:
         """
         Handle a file/folder drop operation.
 
@@ -911,7 +911,7 @@ class MindspaceFileTree(QWidget):
                     [MessageBoxButton.OK]
                 )
 
-    def _handle_delete_requested(self) -> None:
+    def _on_delete_requested(self) -> None:
         """Handle delete request from the tree view."""
         # Get the currently selected index
         index = self._tree_view.currentIndex()

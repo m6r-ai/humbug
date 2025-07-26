@@ -109,7 +109,7 @@ class TerminalTab(TabBase):
         layout.addWidget(self._terminal_widget)
 
         # Connect signals
-        self._terminal_widget.data_ready.connect(self._handle_data_ready)
+        self._terminal_widget.data_ready.connect(self._on_data_ready)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -125,7 +125,7 @@ class TerminalTab(TabBase):
         self._transferring = False
 
         # Initialize window size handling
-        self._terminal_widget.size_changed.connect(self._handle_terminal_resize)
+        self._terminal_widget.size_changed.connect(self._on_terminal_size_changed)
 
         # Start local shell process
         if start_process:
@@ -145,7 +145,7 @@ class TerminalTab(TabBase):
         # Update status bar
         self.update_status()
 
-    def _handle_terminal_resize(self) -> None:
+    def _on_terminal_size_changed(self) -> None:
         """Handle terminal window resize events."""
         rows, cols = self._terminal_widget.get_terminal_size()
         self._terminal_process.update_window_size(rows, cols)
@@ -251,7 +251,7 @@ class TerminalTab(TabBase):
                 except Exception as e:
                     self._logger.debug("Could not write completion message: %s", e)
 
-    def _handle_data_ready(self, data: bytes) -> None:
+    def _on_data_ready(self, data: bytes) -> None:
         """Handle data from terminal."""
         try:
             if self._running:

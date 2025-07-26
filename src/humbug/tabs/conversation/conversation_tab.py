@@ -69,9 +69,9 @@ class ConversationTab(TabBase):
         self._conversation_widget.fork_requested.connect(self.fork_requested)
         self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index_requested)
         self._conversation_widget.status_updated.connect(self.update_status)
-        self._conversation_widget.submit_finished.connect(self._handle_submit_finished)
-        self._conversation_widget.update_label.connect(self._handle_update_label)
-        self._conversation_widget.conversation_modified.connect(self._handle_conversation_modified)
+        self._conversation_widget.submit_finished.connect(self._on_submit_finished)
+        self._conversation_widget.update_label.connect(self._on_update_label)
+        self._conversation_widget.conversation_modified.connect(self._on_conversation_modified)
         layout.addWidget(self._conversation_widget)
 
         # Install activation tracking
@@ -88,7 +88,7 @@ class ConversationTab(TabBase):
         """Activate the tab."""
         self._conversation_widget.activate()
 
-    def _handle_conversation_modified(self) -> None:
+    def _on_conversation_modified(self) -> None:
         """Handle when the conversation is modified."""
         self._set_modified(True)
 
@@ -241,13 +241,13 @@ class ConversationTab(TabBase):
         """Update conversation settings and associated backend."""
         self._conversation_widget.update_conversation_settings(new_settings)
 
-    def _handle_update_label(self) -> None:
+    def _on_update_label(self) -> None:
         """
         Handle label updates for the conversation tab.
         """
         self.set_updated(True)
 
-    def _handle_submit_finished(self, result: Dict[str, Any]) -> None:
+    def _on_submit_finished(self, result: Dict[str, Any]) -> None:
         """
         Handle when a submitted message finishes processing.
         """

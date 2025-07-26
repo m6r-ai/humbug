@@ -100,7 +100,7 @@ class EditorTab(TabBase):
                 self.update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
 
         # Connect to mindspace settings changes
-        self._mindspace_manager.settings_changed.connect(self._handle_mindspace_settings_changed)
+        self._mindspace_manager.settings_changed.connect(self._on_mindspace_settings_changed)
 
     def activate(self) -> None:
         """Activate the tab."""
@@ -116,7 +116,7 @@ class EditorTab(TabBase):
         # Update status bar with translated terms
         self.update_status()
 
-    def _handle_mindspace_settings_changed(self) -> None:
+    def _on_mindspace_settings_changed(self) -> None:
         """Handle mindspace settings changes."""
         if self._mindspace_manager.has_mindspace():
             settings = cast(MindspaceSettings, self._mindspace_manager.settings())

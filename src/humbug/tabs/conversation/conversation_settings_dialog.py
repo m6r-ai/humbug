@@ -88,8 +88,8 @@ class ConversationSettingsDialog(QDialog):
         self._settings_container.add_stretch()
 
         # Connect change handlers
-        self._model_combo.value_changed.connect(self._handle_model_change)
-        self._settings_container.value_changed.connect(self._handle_value_change)
+        self._model_combo.value_changed.connect(self._on_model_value_changed)
+        self._settings_container.value_changed.connect(self._on_settings_value_changed)
 
         # Set the scroll content
         scroll_area.setWidget(self._settings_container)
@@ -102,11 +102,11 @@ class ConversationSettingsDialog(QDialog):
         button_layout.addStretch()
 
         self.ok_button = QPushButton(strings.ok)
-        self.ok_button.clicked.connect(self._handle_ok)
+        self.ok_button.clicked.connect(self._on_ok_clicked)
         self.ok_button.setProperty("recommended", True)
 
         self.apply_button = QPushButton(strings.apply)
-        self.apply_button.clicked.connect(self._handle_apply)
+        self.apply_button.clicked.connect(self._on_apply_clicked)
 
         self.cancel_button = QPushButton(strings.cancel)
         self.cancel_button.clicked.connect(self.reject)
@@ -128,7 +128,7 @@ class ConversationSettingsDialog(QDialog):
         # Apply consistent dialog styling
         self.setStyleSheet(style_manager.get_dialog_stylesheet())
 
-    def _handle_model_change(self) -> None:
+    def _on_model_value_changed(self) -> None:
         """Handle model selection changes."""
         current_model = self._model_combo.get_text()
         self._update_model_displays(current_model)
@@ -182,7 +182,7 @@ class ConversationSettingsDialog(QDialog):
             f"{limits['max_output_tokens']:,} {strings.settings_tokens_label}"
         )
 
-    def _handle_value_change(self) -> None:
+    def _on_settings_value_changed(self) -> None:
         """Handle changes to any setting value."""
         if not self._current_settings:
             return
@@ -232,7 +232,7 @@ class ConversationSettingsDialog(QDialog):
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
-    def _handle_apply(self) -> None:
+    def _on_apply_clicked(self) -> None:
         """Handle Apply button click."""
         settings = self.get_settings()
         self._current_settings = settings
@@ -240,9 +240,9 @@ class ConversationSettingsDialog(QDialog):
         self._settings_container.reset_modified_state()
         self.apply_button.setEnabled(False)
 
-    def _handle_ok(self) -> None:
+    def _on_ok_clicked(self) -> None:
         """Handle OK button click."""
-        self._handle_apply()
+        self._on_apply_clicked()
         self.accept()
 
     def reject(self) -> None:

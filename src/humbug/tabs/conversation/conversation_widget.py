@@ -182,12 +182,12 @@ class ConversationWidget(QWidget):
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
         )
-        self._input.page_key_scroll_requested.connect(self._handle_edit_page_scroll)
+        self._input.page_key_scroll_requested.connect(self._on_page_key_scroll_requested)
         self._input.scroll_requested.connect(self._on_scroll_requested)
         self._input.mouse_released.connect(self._stop_scroll)
         self._input.fork_requested.connect(self._fork_from_message)
         self._input.submit_requested.connect(self.submit)
-        self._input.stop_requested.connect(self._handle_stop_request)
+        self._input.stop_requested.connect(self._on_stop_requested)
         self._input.modified.connect(self.conversation_modified)
 
         spacing = int(self._style_manager.message_bubble_spacing())
@@ -1014,7 +1014,7 @@ class ConversationWidget(QWidget):
         """
         self._transcript_handler.set_path(new_path)
 
-    def _handle_edit_page_scroll(self) -> None:
+    def _on_page_key_scroll_requested(self) -> None:
         """
         Handle page up/down scroll requests.
         """
@@ -1542,7 +1542,7 @@ class ConversationWidget(QWidget):
         self._auto_scroll = True
         self._scroll_to_bottom()
 
-    def _handle_stop_request(self) -> None:
+    def _on_stop_requested(self) -> None:
         """Handle stop request from input widget."""
         self.cancel_current_tasks()
 
