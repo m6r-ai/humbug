@@ -30,7 +30,7 @@ class WelcomeWidget(QFrame):
         layout.addSpacing(20)  # Space between icon and title
 
         # Application name
-        self._title_label = QLabel("Humbug v0.20")
+        self._title_label = QLabel("Humbug v0.21")
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
 
         # Add widgets to layout
