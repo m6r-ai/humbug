@@ -6,7 +6,7 @@ from typing import cast
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 from PySide6.QtCore import Signal
 
-from syntax import TokenType, ProgrammingLanguage
+from syntax import TokenType, ProgrammingLanguage, ParserState
 from syntax.markdown.markdown_parser import MarkdownParser, MarkdownParserState
 
 from humbug.style_manager import StyleManager
@@ -18,7 +18,7 @@ class ConversationHighlighterBlockData(QTextBlockUserData):
         super().__init__()
         self.seen_fence = False
         self.fence_depth = 0
-        self.parser_state: MarkdownParserState | None = None
+        self.parser_state: ParserState | None = None
 
 
 class ConversationHighlighter(QSyntaxHighlighter):
@@ -54,18 +54,19 @@ class ConversationHighlighter(QSyntaxHighlighter):
                     seen_fence = prev_block_data.seen_fence
 
             language = ProgrammingLanguage.UNKNOWN
-            contination_state = -1
+            continuation_state = -1
             current_fence_depth = 0
             current_block_data = cast(ConversationHighlighterBlockData, current_block.userData())
             if current_block_data is not None:
                 current_fence_depth = current_block_data.fence_depth
                 current_parser_data = current_block_data.parser_state
                 if current_parser_data is not None:
+                    assert isinstance(current_parser_data, MarkdownParserState), "Parser state should be MarkdownParserState"
                     language = current_parser_data.language
-                    contination_state = current_parser_data.continuation_state
+                    continuation_state = current_parser_data.continuation_state
 
             parser = MarkdownParser()
-            parser_state: MarkdownParserState = parser.parse(prev_parser_state, text)
+            parser_state: ParserState | None = parser.parse(prev_parser_state, text)
 
             in_code_block = False
 
@@ -117,11 +118,13 @@ class ConversationHighlighter(QSyntaxHighlighter):
                 self.setFormat(token.start, len(token.value), style_manager.get_proportional_highlight(token.type))
 
             # Check if we need to rehighlight everything from this block onwards.
-            if ((contination_state != parser_state.continuation_state) or
-                    (current_fence_depth != fence_depth) or
-                    (language != parser_state.language)):
-                # It doesn't matter what we set this to, it just needs to be different to what it was before
-                self.setCurrentBlockState(self.currentBlockState() + 1)
+            if parser_state is not None:
+                assert isinstance(parser_state, MarkdownParserState), "Parser state should be MarkdownParserState"
+                if ((continuation_state != parser_state.continuation_state) or
+                        (current_fence_depth != fence_depth) or
+                        (language != parser_state.language)):
+                    # It doesn't matter what we set this to, it just needs to be different to what it was before
+                    self.setCurrentBlockState(self.currentBlockState() + 1)
 
             block_data = ConversationHighlighterBlockData()
             block_data.parser_state = parser_state
