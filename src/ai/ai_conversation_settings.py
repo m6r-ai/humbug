@@ -329,15 +329,6 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "o1-mini": AIModel(
-            name="o1-mini",
-            provider="openai",
-            context_window=128000,
-            max_output_tokens=65536,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
         "o3": AIModel(
             name="o3",
             provider="openai",
