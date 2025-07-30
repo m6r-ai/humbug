@@ -33,42 +33,6 @@ from humbug.tabs.wiki.wiki_tab import WikiTab
 from humbug.welcome_widget import WelcomeWidget
 
 
-class TabData:
-    """Encapsulates data related to a tab."""
-    def __init__(self, tab: TabBase, title: str, tool_tip: str) -> None:
-        """
-        Initialize tab data.
-
-        Args:
-            tab: The tab widget
-            title: Initial title for the tab
-            tool_tip: Tooltip text for the tab
-            ephemeral: Whether the tab is ephemeral (temporary)
-        """
-        icon = ""
-        if isinstance(tab, ConversationTab):
-            icon = "conversation"
-
-        elif isinstance(tab, EditorTab):
-            icon = "editor"
-
-        elif isinstance(tab, LogTab):
-            icon = "log"
-
-        elif isinstance(tab, ShellTab):
-            icon = "shell"
-
-        elif isinstance(tab, TerminalTab):
-            icon = "terminal"
-
-        elif isinstance(tab, WikiTab):
-            icon = "wiki"
-
-        self.tab = tab
-        self.tab_id = tab.tab_id()
-        self.label = TabLabel(self.tab_id, icon, title, tool_tip)
-
-
 class ColumnManager(QWidget):
     """Manages multiple tabs across multiple columns."""
 
@@ -408,28 +372,6 @@ class ColumnManager(QWidget):
                 self.close_tab_by_id(tab.tab_id(), force_close=True)
                 break  # Only one ephemeral tab per column
 
-    def _create_tab_data(self, tab: TabBase, title: str) -> TabData:
-        """
-        Create TabData instance and connect signals.
-
-        Args:
-            tab: The tab widget to add
-            title: Initial title for the tab
-
-        Returns:
-            TabData instance for the tab
-        """
-        tool_tip = tab.path()
-        if tool_tip:
-            tool_tip = self._mindspace_manager.get_relative_path(tool_tip)
-
-        data = TabData(tab, title, tool_tip)
-        data.label.close_clicked.connect(lambda: self._on_tab_label_close_clicked(data.tab_id))
-        tab.activated.connect(lambda: self._on_tab_activated(tab))
-        tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
-        tab.modified_state_changed.connect(self._on_tab_modified_state_changed)
-        return data
-
     def _on_tab_label_close_clicked(self, tab_id: str) -> None:
         """
         Handle close button click on a tab label.
@@ -479,27 +421,58 @@ class ColumnManager(QWidget):
         tab_label.deleteLater()
         tab.deleteLater()
 
-    def _add_tab_to_column(self, tab_data: TabData, column: ColumnWidget) -> None:
+    def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
         Add a tab to a column and set up associated data.
 
         Args:
-            tab_data: TabData instance
+            tab: Tab widget to add
+            title: Initial title for the tab
             column: Target column
         """
-        self._tabs[tab_data.tab_id] = tab_data.tab
-        self._tab_labels[tab_data.tab_id] = tab_data.label
+        tool_tip = tab.path()
+        if tool_tip:
+            tool_tip = self._mindspace_manager.get_relative_path(tool_tip)
+
+        icon = ""
+        if isinstance(tab, ConversationTab):
+            icon = "conversation"
+
+        elif isinstance(tab, EditorTab):
+            icon = "editor"
+
+        elif isinstance(tab, LogTab):
+            icon = "log"
+
+        elif isinstance(tab, ShellTab):
+            icon = "shell"
+
+        elif isinstance(tab, TerminalTab):
+            icon = "terminal"
+
+        elif isinstance(tab, WikiTab):
+            icon = "wiki"
+
+        tab_id = tab.tab_id()
+        label = TabLabel(tab_id, icon, title, tool_tip)
+        label.close_clicked.connect(lambda: self._on_tab_label_close_clicked(tab_id))
+        tab.activated.connect(lambda: self._on_tab_activated(tab))
+        tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
+        tab.modified_state_changed.connect(self._on_tab_modified_state_changed)
+
+        self._tabs[tab_id] = tab
+        self._tab_labels[tab_id] = label
 
         # Set ephemeral state on label if tab is ephemeral
-        if tab_data.tab.is_ephemeral():
-            tab_data.label.set_ephemeral(True)
+        if tab.is_ephemeral():
+            label.set_ephemeral(True)
 
-        index = column.addTab(tab_data.tab, "")
-        column.tabBar().setTabButton(index, QTabBar.ButtonPosition.LeftSide, tab_data.label)
-        column.setCurrentWidget(tab_data.tab)
+        index = column.addTab(tab, "")
+        column.tabBar().setTabButton(index, QTabBar.ButtonPosition.LeftSide, label)
+        column.setCurrentWidget(tab)
 
         # Update MRU order for the new tab
-        self._update_mru_order(tab_data.tab, column)
+        self._update_mru_order(tab, column)
 
     def _move_tab_between_columns(
         self,
@@ -533,8 +506,7 @@ class ColumnManager(QWidget):
         if not new_tab:
             return
 
-        tab_data = self._create_tab_data(new_tab, tab_title)
-        self._add_tab_to_column(tab_data, target_column)
+        self._add_tab_to_column(new_tab, tab_title, target_column)
 
     def _on_welcome_widget_path_dropped(self, path: str) -> None:
         """Handle mindspace tree drops when only welcome widget is visible."""
@@ -911,18 +883,16 @@ class ColumnManager(QWidget):
             tab: The tab widget to add
             title: Initial title for the tab
         """
-        # Determine target column
         target_column = self._get_target_column_for_new_tab()
-
-        tab_data = self._create_tab_data(tab, title)
-        self._add_tab_to_column(tab_data, target_column)
+        self._add_tab_to_column(tab, title, target_column)
 
         # Close any ephemeral tab in target column because we've just added a new one
         self._close_ephemeral_tab_in_column(target_column, tab)
 
         # Set initial state
         if len(self._tabs) == 1:  # If this is the first tab
-            tab_data.label.set_current(True, True)
+            label = self._tab_labels[tab.tab_id()]
+            label.set_current(True, True)
             self._stack.setCurrentWidget(self._columns_widget)
 
     def close_tab_by_id(self, tab_id: str, force_close: bool=False) -> None:
