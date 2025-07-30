@@ -248,7 +248,7 @@ class ConversationWidget(QWidget):
         # Create transcript handler with provided filename, then load the transcript data
         self._transcript_handler = ConversationTranscriptHandler(path)
         transcript_data = self._transcript_handler.read()
-        self.load_message_history(transcript_data.messages, use_existing_ai_conversation)
+        self._load_message_history(transcript_data.messages, use_existing_ai_conversation)
         self._set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
 
     def _set_delegated_conversation_mode(self, enabled: bool) -> None:
@@ -1052,12 +1052,12 @@ class ConversationWidget(QWidget):
             self._transcript_handler.replace_messages(transcript_messages)
 
             # Load messages into the new tab
-            self.load_message_history(messages, False)
+            self._load_message_history(messages, False)
 
         except Exception as e:
             raise ConversationError(f"Failed to write transcript for new history: {str(e)}") from e
 
-    def load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool) -> None:
+    def _load_message_history(self, messages: List[AIMessage], reuse_ai_conversation: bool) -> None:
         """
         Load existing message history from transcript.
 
