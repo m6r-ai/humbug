@@ -313,14 +313,12 @@ class ConversationWidget(QWidget):
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
         )
-        # Add bookmark-specific signal
+
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
         msg_widget.fork_requested.connect(self._on_message_fork_requested)
         msg_widget.delete_requested.connect(self._on_message_delete_requested)
         msg_widget.expand_requested.connect(self._on_message_expand_requested)
-
-        # Connect tool approval signals
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
 
