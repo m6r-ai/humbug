@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
@@ -31,7 +31,7 @@ class ConversationMessage(QFrame):
     delete_requested = Signal()
     expand_requested = Signal(bool)
     tool_call_approved = Signal(AIToolCall)
-    tool_call_rejected = Signal(str)   # rejection reason
+    tool_call_rejected = Signal(str)
 
     def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
         """
@@ -43,6 +43,10 @@ class ConversationMessage(QFrame):
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
+
+        # Set object name for QSS targeting
+        self.setObjectName("conversationMessage")
+
         self._is_input = is_input
 
         self._logger = logging.getLogger("ConversationMessage")
@@ -115,6 +119,10 @@ class ConversationMessage(QFrame):
 
         # Expanded state - default to True, will be updated in set_content based on message type
         self._is_expanded = True
+
+        # Track section style types for shared stylesheet
+        self._section_style_types: Set[str] = set()
+        self._shared_stylesheet_applied = False
 
         # If this is an input widget then create the input section
         if is_input:
@@ -288,6 +296,10 @@ class ConversationMessage(QFrame):
             A new ConversationMessageSection instance
         """
         section = ConversationMessageSection(self._is_input, language, self._sections_container)
+
+        # Set object name for QSS targeting
+        section.setObjectName("messageSection")
+
         section.selection_changed.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
@@ -395,6 +407,203 @@ class ConversationMessage(QFrame):
             self._approve_button = None
             self._reject_button = None
 
+    def _determine_section_style_class(self, message_style: AIMessageSource, language: ProgrammingLanguage | None) -> str:
+        """Determine the QSS style class for a section."""
+        # Determine if this is a user message (dark background) or AI message (light background)
+        is_user_message = message_style == AIMessageSource.USER
+
+        if language is not None:
+            # Code block
+            return "code-dark" if is_user_message else "code-light"
+
+        # Text section
+        return "text-dark" if is_user_message else "text-light"
+
+    def _apply_section_styling(self, section: ConversationMessageSection, message_style: AIMessageSource, language: ProgrammingLanguage | None) -> None:
+        """Apply styling to a section by setting its QSS class property."""
+        # Apply font directly (easier than QSS)
+        factor = self._style_manager.zoom_factor()
+        font = self.font()
+        base_font_size = self._style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * factor)
+
+        # TODO: rename this method
+        section.apply_style(font)
+
+        # Determine style class
+        style_class = self._determine_section_style_class(message_style, language)
+
+        # Set property that QSS will match against
+        section.setProperty("sectionStyle", style_class)
+
+        # Track style types for shared stylesheet
+        self._section_style_types.add(style_class)
+
+        section.setFont(font)
+        if hasattr(section, '_text_area'):
+            section._text_area.setFont(font)
+
+    def _build_shared_stylesheet(self) -> str:
+        """Build the shared stylesheet for all sections in this message."""
+        # Get colors
+        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        language_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
+        light_bg = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+        dark_bg = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
+        code_bg = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        text_selected = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
+        button_hover = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
+        button_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
+        scrollbar_bg = self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)
+        scrollbar_handle = self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)
+        border_radius = int(self._style_manager.message_bubble_spacing() / 2)
+
+        qss_rules = []
+
+        # Only include QSS for style types we actually use
+        if "text-light" in self._section_style_types:
+            qss_rules.append(f"""
+                QFrame#messageSection[sectionStyle="text-light"] {{
+                    background-color: {light_bg};
+                    margin: 0;
+                    border-radius: {border_radius}px;
+                    border: 0;
+                }}
+            """)
+
+        if "text-dark" in self._section_style_types:
+            qss_rules.append(f"""
+                QFrame#messageSection[sectionStyle="text-dark"] {{
+                    background-color: {dark_bg};
+                    margin: 0;
+                    border-radius: {border_radius}px;
+                    border: 0;
+                }}
+            """)
+
+        if "code-light" in self._section_style_types:
+            qss_rules.append(f"""
+                QFrame#messageSection[sectionStyle="code-light"] {{
+                    background-color: {code_bg};
+                    margin: 0;
+                    border-radius: {border_radius}px;
+                    border: 0;
+                }}
+            """)
+
+        if "code-dark" in self._section_style_types:
+            qss_rules.append(f"""
+                QFrame#messageSection[sectionStyle="code-dark"] {{
+                    background-color: {code_bg};
+                    margin: 0;
+                    border-radius: {border_radius}px;
+                    border: 0;
+                }}
+            """)
+
+        # Child widget styles - target children of messageSection specifically
+        qss_rules.append(f"""
+            /* Text areas within message sections */
+            QFrame#messageSection QTextEdit {{
+                color: {text_color};
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+                selection-background-color: {text_selected};
+            }}
+
+            /* Labels (language headers) within message sections */
+            QFrame#messageSection QLabel {{
+                color: {language_color};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            /* Header containers within message sections */
+            QFrame#messageSection QWidget {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            /* Buttons within message sections */
+            QFrame#messageSection QToolButton {{
+                background-color: transparent;
+                color: {text_color};
+                border: none;
+                padding: 0px;
+            }}
+
+            QFrame#messageSection QToolButton:hover {{
+                background-color: {button_hover};
+            }}
+
+            QFrame#messageSection QToolButton:pressed {{
+                background-color: {button_pressed};
+            }}
+
+            /* Scrollbars within message sections */
+            QFrame#messageSection QScrollBar:horizontal {{
+                height: 12px;
+                background: {scrollbar_bg};
+            }}
+
+            QFrame#messageSection QScrollBar::handle:horizontal {{
+                background: {scrollbar_handle};
+                min-width: 20px;
+            }}
+
+            QFrame#messageSection QScrollBar::add-page:horizontal, QFrame#messageSection QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+
+            QFrame#messageSection QScrollBar::add-line:horizontal, QFrame#messageSection QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """)
+
+        return "\n".join(qss_rules)
+
+    def _apply_shared_stylesheet(self) -> None:
+        """Apply the shared stylesheet to this message."""
+        if self._shared_stylesheet_applied:
+            return
+
+        shared_stylesheet = self._build_shared_stylesheet()
+
+        # Get message frame styling
+        current_style = self._message_source or AIMessageSource.USER
+        background_color = self._style_manager.get_color_str(
+            ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+        )
+
+        # Determine border color based on state
+        border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
+                 ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else \
+                 ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+
+        # Message frame border styling - target the specific conversationMessage object
+        message_frame_style = f"""
+            QFrame#conversationMessage {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
+                border: 2px solid {self._style_manager.get_color_str(border)};
+            }}
+            QFrame#conversationMessage QWidget {{
+                background-color: {background_color};
+            }}
+        """
+
+        # Combine shared stylesheet with message frame styling
+        combined_stylesheet = message_frame_style + "\n" + shared_stylesheet
+        self.setStyleSheet(combined_stylesheet)
+        self._shared_stylesheet_applied = True
+
+        print(f"Applied shared stylesheet to message (covers {len(self._section_style_types)} section types: {self._section_style_types})")
+
     def set_content(
         self,
         text: str,
@@ -413,6 +622,7 @@ class ConversationMessage(QFrame):
             timestamp: datetime object for the message timestamp
             model: Model name for the message
             message_id: Optional message ID for tracking
+            user_name: Optional user name for the message
         """
         self._message_source = style
         self._message_timestamp = timestamp
@@ -465,6 +675,8 @@ class ConversationMessage(QFrame):
 
             self._sections = []
             self._section_with_selection = None
+            self._section_style_types.clear()
+            self._shared_stylesheet_applied = False
             self._on_style_changed()
 
         # Extract sections directly using the markdown converter
@@ -486,19 +698,8 @@ class ConversationMessage(QFrame):
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
 
-                text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-                background_color = self._style_manager.get_color_str(
-                    ColorRole.MESSAGE_USER_BACKGROUND if style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
-                )
-                color = (
-                    self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY) if language is not None
-                    else background_color
-                )
-                factor = self._style_manager.zoom_factor()
-                font = self.font()
-                base_font_size = self._style_manager.base_font_size()
-                font.setPointSizeF(base_font_size * factor)
-                section.apply_style(text_color, color, font)
+                # Apply styling directly (no apply_style method call)
+                self._apply_section_styling(section, style, language)
                 section.set_content(node)
                 continue
 
@@ -515,6 +716,9 @@ class ConversationMessage(QFrame):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
+
+        # Apply shared stylesheet once after all sections are created
+        self._apply_shared_stylesheet()
 
         # Show the message if it has text
         if text:
@@ -641,7 +845,11 @@ class ConversationMessage(QFrame):
         background_color = style_manager.get_color_str(
             ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
         )
-        text_color = style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+
+        # Update shared stylesheet if already applied (for theme changes)
+        if self._shared_stylesheet_applied:
+            self._shared_stylesheet_applied = False  # Force regeneration
+            self._apply_shared_stylesheet()
 
         # Role label styling (bold)
         self._role_label.setFont(font)
@@ -703,7 +911,7 @@ class ConversationMessage(QFrame):
             self._delete_message_button.setIconSize(icon_size)
             self._delete_message_button.setStyleSheet(button_style)
 
-        # Button styling for message action buttons
+        # Button styling for expand button
         expand_button_style = f"""
             QToolButton {{
                 background-color: {background_color};
@@ -733,9 +941,7 @@ class ConversationMessage(QFrame):
 
         # Apply styling to all sections
         for section in self._sections:
-            language = section.language()
-            color = style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY) if language is not None else background_color
-            section.apply_style(text_color, color, font)
+            section.apply_style(font)
 
         # Style approval buttons if present
         if self._approve_button:
@@ -801,23 +1007,6 @@ class ConversationMessage(QFrame):
                     margin: 0;
                 }}
             """)
-
-        # Determine border color based on state (focused takes precedence over bookmarked)
-        border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
-                 ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else \
-                 ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {background_color};
-            }}
-            QFrame {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {int(style_manager.message_bubble_spacing())}px;
-                border: 2px solid {style_manager.get_color_str(border)}
-            }}
-        """)
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """
