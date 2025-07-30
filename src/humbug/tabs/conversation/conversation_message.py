@@ -516,9 +516,8 @@ class ConversationMessage(QFrame):
             self._sections_layout.removeWidget(section)
             section.deleteLater()
 
-        # Show the message if it has text and is one of the valid styles
-        if text and style in (AIMessageSource.AI, AIMessageSource.REASONING, AIMessageSource.SYSTEM,
-                                AIMessageSource.USER, AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT):
+        # Show the message if it has text
+        if text:
             self.setVisible(True)
 
     def message_id(self) -> str | None:
