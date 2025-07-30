@@ -60,6 +60,7 @@ def cleanup_old_logs(log_dir: str, max_logs: int) -> None:
     while len(log_files) > max_logs:
         try:
             os.remove(log_files.pop(0))  # Remove oldest file
+
         except OSError:
             pass  # Ignore errors removing old logs
 
