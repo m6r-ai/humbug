@@ -2,7 +2,7 @@
 
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
@@ -221,22 +221,6 @@ class LogMessage(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _get_color_palette(self) -> Dict[str, str]:
-        """Get all colors needed for styling in one place."""
-        style_manager = self._style_manager
-        return {
-            'text_primary': style_manager.get_color_str(ColorRole.TEXT_PRIMARY),
-            'text_selected': style_manager.get_color_str(ColorRole.TEXT_SELECTED),
-            'background': style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND),
-            'scrollbar_bg': style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND),
-            'scrollbar_handle': style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE),
-            'message_focused': style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED),
-            'level_trace': style_manager.get_color_str(ColorRole.MESSAGE_TRACE),
-            'level_info': style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION),
-            'level_warn': style_manager.get_color_str(ColorRole.MESSAGE_WARNING),
-            'level_error': style_manager.get_color_str(ColorRole.MESSAGE_ERROR),
-        }
-
     def _get_border_color(self) -> str:
         """Get the border color based on current state."""
         if self._is_focused and self.hasFocus():
@@ -244,21 +228,22 @@ class LogMessage(QFrame):
 
         return self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
 
-    def _build_message_frame_styles(self, colors: Dict[str, str]) -> str:
+    def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
+        style_manager = self._style_manager
         border_color = self._get_border_color()
-        border_radius = int(self._style_manager.message_bubble_spacing())
+        border_radius = int(style_manager.message_bubble_spacing())
 
         return f"""
             QFrame#logMessage {{
-                background-color: {colors['background']};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {border_color};
             }}
 
             QWidget#logHeader {{
-                background-color: {colors['background']};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 border: none;
                 border-radius: 0;
                 padding: 0;
@@ -266,53 +251,55 @@ class LogMessage(QFrame):
             }}
         """
 
-    def _build_header_styles(self, colors: Dict[str, str]) -> str:
+    def _build_header_styles(self) -> str:
         """Build styles for the header area and level label."""
+        style_manager = self._style_manager
         return f"""
             QLabel#levelLabel {{
-                color: {colors['text_primary']};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
                 padding: 0;
-                background-color: {colors['background']};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             QLabel#levelLabel[logLevel="trace"] {{
-                color: {colors['level_trace']};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_TRACE)};
             }}
 
             QLabel#levelLabel[logLevel="info"] {{
-                color: {colors['level_info']};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION)};
             }}
 
             QLabel#levelLabel[logLevel="warn"] {{
-                color: {colors['level_warn']};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
             }}
 
             QLabel#levelLabel[logLevel="error"] {{
-                color: {colors['level_error']};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
             }}
         """
 
-    def _build_text_area_styles(self, colors: Dict[str, str]) -> str:
+    def _build_text_area_styles(self) -> str:
         """Build styles for the text area and scrollbars."""
+        style_manager = self._style_manager
         return f"""
             QTextEdit#logTextArea {{
-                color: {colors['text_primary']};
-                selection-background-color: {colors['text_selected']};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
                 border-radius: 0;
                 padding: 0;
                 margin: 0;
-                background-color: {colors['background']};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             QTextEdit#logTextArea QScrollBar:horizontal {{
                 height: 12px;
-                background: {colors['scrollbar_bg']};
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
 
             QTextEdit#logTextArea QScrollBar::handle:horizontal {{
-                background: {colors['scrollbar_handle']};
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
 
@@ -329,14 +316,11 @@ class LogMessage(QFrame):
 
     def _apply_shared_stylesheet(self) -> None:
         """Apply the shared stylesheet to this message."""
-        # Calculate all colors once
-        colors = self._get_color_palette()
-
         # Build sections: message frame, header, text area
         stylesheet_parts = [
-            self._build_message_frame_styles(colors),
-            self._build_header_styles(colors),
-            self._build_text_area_styles(colors)
+            self._build_message_frame_styles(),
+            self._build_header_styles(),
+            self._build_text_area_styles()
         ]
 
         shared_stylesheet = "\n".join(stylesheet_parts)
