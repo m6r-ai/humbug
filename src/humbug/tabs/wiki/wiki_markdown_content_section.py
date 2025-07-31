@@ -66,12 +66,14 @@ class WikiMarkdownContentSection(QFrame):
 
             # Create a container for header (language label only, no buttons)
             self._header_container = QWidget()
+            self._header_container.setObjectName("headerContainer")
             self._header_layout = QHBoxLayout(self._header_container)
             self._header_layout.setContentsMargins(0, 0, 0, 0)
             self._header_layout.setSpacing(4)
 
             # Add language label on the left
             self._language_header = QLabel()
+            self._language_header.setObjectName("languageHeader")
             self._language_header.setIndent(0)
             self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._header_layout.addWidget(self._language_header)
@@ -273,6 +275,26 @@ class WikiMarkdownContentSection(QFrame):
         """Check if this section contains a code block."""
         return self._text_area.has_code_block()
 
+    def apply_font(self, font: QFont) -> None:
+        """
+        Apply font to this section.
+
+        Args:
+            font: Font to apply
+        """
+        self._text_area.setFont(font)
+        if self._language_header:
+            self._language_header.setFont(font)
+
+        # Re-render markdown content if needed and color mode changed
+        if self._style_manager.color_mode() != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode()
+            if self._highlighter:
+                self._highlighter.rehighlight()
+
+            elif self._content_node:
+                self._renderer.visit(self._content_node)
+
     def find_text(self, text: str) -> List[Tuple[int, int]]:
         """
         Find all instances of text in this section.
@@ -389,81 +411,3 @@ class WikiMarkdownContentSection(QFrame):
         local_pos = self._text_area.mapTo(self, cursor_rect.topLeft())
 
         return local_pos
-
-    def apply_style(self, text_color: str, background_color: str, font: QFont) -> None:
-        """
-        Apply styling to this section.
-
-        Args:
-            text_color: Color string for text
-            background_color: Color string for background
-            font: Font to use
-        """
-        # Style the frame
-        self.setStyleSheet(f"""
-            QFrame {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
-                border: 0;
-            }}
-        """)
-
-        self._text_area.setFont(font)
-        self._text_area.setStyleSheet(f"""
-            QTextEdit {{
-                color: {text_color};
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-                background-color: {background_color};
-            }}
-            QScrollBar:horizontal {{
-                height: 12px;
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            QScrollBar::handle:horizontal {{
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
-        """)
-
-        # Style the language header container if present
-        if self._header_container:
-            self._header_container.setStyleSheet(f"""
-                QWidget {{
-                    background-color: {background_color};
-                    margin: 0;
-                    padding: 0;
-                }}
-            """)
-
-        # Style the language header if present, or the inline code style if it's not
-        if self._language_header:
-            label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
-            self._language_header.setFont(font)
-            self._language_header.setStyleSheet(f"""
-                QLabel {{
-                    color: {label_color};
-                    background-color: {background_color};
-                    margin: 0;
-                    padding: 0;
-                }}
-            """)
-        else:
-            if self._content_node:
-                self._renderer.visit(self._content_node)
-
-        # If we changed colour mode then re-highlight
-        if self._style_manager.color_mode() != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode()
-            if self._highlighter:
-                self._highlighter.rehighlight()

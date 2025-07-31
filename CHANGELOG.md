@@ -8,6 +8,11 @@ Bug fixes:
   have the UI attempt to navigate messages that were not visible.
 - Performance of loading large and complex conversations could be very slow.  This is now faster!
 
+Internal structure changes:
+
+- Various tab types (conversation, log, shell, wiki) use a message structure inside a container widget.  Unified the
+  Qt style sheet (QSS) handling for each message type to improve performance and unify styling in a single style sheet.
+
 ## v0.20 (2025-07-26)
 
 New features:

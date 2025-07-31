@@ -28,6 +28,10 @@ class WikiMarkdownContent(WikiContentWidget):
             contained: Whether this content is contained within another widget
         """
         super().__init__(parent)
+
+        # Set object name for QSS targeting
+        self.setObjectName("wikiMarkdownContent")
+
         self._logger = logging.getLogger("WikiMarkdownContent")
         self._content = ""
         self._contained = contained
@@ -37,6 +41,7 @@ class WikiMarkdownContent(WikiContentWidget):
 
         # Container for content sections
         self._sections_container = QWidget(self)
+        self._sections_container.setObjectName("sectionsContainer")
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
         self._sections_layout.setSpacing(15)
@@ -48,6 +53,8 @@ class WikiMarkdownContent(WikiContentWidget):
 
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
+
+        self.setProperty("contained", contained)
 
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
@@ -68,6 +75,12 @@ class WikiMarkdownContent(WikiContentWidget):
         """
         is_input = False  # Wiki sections are never input
         section = WikiMarkdownContentSection(is_input, language, self._sections_container)
+        section.setObjectName("wikiSection")
+
+        section_type = "code" if language is not None else "text"
+        section.setProperty("sectionType", section_type)
+        section.setProperty("contained", self._contained)
+
         section.selection_changed.connect(
             lambda has_selection: self._on_section_selection_changed(section, has_selection)
         )
@@ -128,23 +141,12 @@ class WikiMarkdownContent(WikiContentWidget):
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
 
-                text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-                if self._contained:
-                    tab_background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-                    background_color = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
-
-                else:
-                    tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
-                    background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-
-                color = (
-                    tab_background_color if language is None else background_color
-                )
+                # Apply font and set content
                 factor = self._style_manager.zoom_factor()
                 font = self.font()
                 base_font_size = self._style_manager.base_font_size()
                 font.setPointSizeF(base_font_size * factor)
-                section.apply_style(text_color, color, font)
+                section.apply_font(font)
                 section.set_content(node)
                 continue
 
@@ -154,6 +156,11 @@ class WikiMarkdownContent(WikiContentWidget):
                 if language != section.language():
                     section.set_language(language)
 
+                    # Update section type property
+                    section_type = "code" if language is not None else "text"
+                    section.setProperty("sectionType", section_type)
+                    section.setProperty("contained", self._contained)
+
                 section.set_content(node)
 
         # Remove any extra sections
@@ -161,6 +168,9 @@ class WikiMarkdownContent(WikiContentWidget):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
+
+        # Apply stylesheet after content changes
+        self._apply_shared_stylesheet()
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -189,6 +199,138 @@ class WikiMarkdownContent(WikiContentWidget):
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
 
+    def _get_color_palette(self) -> Dict[str, str]:
+        """Get all colors needed for styling in one place."""
+        style_manager = self._style_manager
+        return {
+            'text_primary': style_manager.get_color_str(ColorRole.TEXT_PRIMARY),
+            'text_selected': style_manager.get_color_str(ColorRole.TEXT_SELECTED),
+            'language_color': style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE),
+            'scrollbar_bg': style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND),
+            'scrollbar_handle': style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE),
+            # Container backgrounds
+            'container_normal': style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE),
+            'container_contained': style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND),
+            # Section backgrounds - 3 different combinations
+            'text_normal': style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE),
+            'text_contained': style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND),
+            'code_normal': style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND),
+            'code_contained': style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY),
+        }
+
+    def _build_container_styles(self, colors: Dict[str, str]) -> str:
+        """Build styles for the main container."""
+        return f"""
+            QWidget#wikiMarkdownContent {{
+                background-color: {colors['container_normal']};
+            }}
+
+            QWidget#wikiMarkdownContent[contained="true"] {{
+                background-color: {colors['container_contained']};
+            }}
+
+            QWidget#sectionsContainer {{
+                background-color: transparent;
+                border: none;
+                margin: 0;
+                padding: 0;
+            }}
+        """
+
+    def _build_header_styles(self, colors: Dict[str, str]) -> str:
+        """Build styles for language headers within sections."""
+        return f"""
+            QFrame#wikiSection QLabel#languageHeader {{
+                color: {colors['language_color']};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+        """
+
+    def _build_section_styles(self, colors: Dict[str, str]) -> str:
+        """Build styles for wiki sections with all 3 background combinations."""
+        border_radius = int(self._style_manager.message_bubble_spacing())
+
+        return f"""
+            /* Default section styling */
+            QFrame#wikiSection {{
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+
+            /* Text sections - normal (not contained) */
+            QFrame#wikiSection[sectionType="text"][contained="false"] {{
+                background-color: {colors['text_normal']};
+            }}
+
+            /* Text sections - contained */
+            QFrame#wikiSection[sectionType="text"][contained="true"] {{
+                background-color: {colors['text_contained']};
+            }}
+
+            /* Code sections - normal (not contained) */
+            QFrame#wikiSection[sectionType="code"][contained="false"] {{
+                background-color: {colors['code_normal']};
+            }}
+
+            /* Code sections - contained */
+            QFrame#wikiSection[sectionType="code"][contained="true"] {{
+                background-color: {colors['code_contained']};
+            }}
+
+            /* Text areas within sections */
+            QFrame#wikiSection QTextEdit {{
+                color: {colors['text_primary']};
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+                selection-background-color: {colors['text_selected']};
+            }}
+
+            /* Header containers within sections */
+            QFrame#wikiSection QWidget#headerContainer {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            /* Scrollbars within sections */
+            QFrame#wikiSection QScrollBar:horizontal {{
+                height: 12px;
+                background: {colors['scrollbar_bg']};
+            }}
+            QFrame#wikiSection QScrollBar::handle:horizontal {{
+                background: {colors['scrollbar_handle']};
+                min-width: 20px;
+            }}
+            QFrame#wikiSection QScrollBar::add-page:horizontal,
+            QFrame#wikiSection QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+            QFrame#wikiSection QScrollBar::add-line:horizontal,
+            QFrame#wikiSection QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """
+
+    def _apply_shared_stylesheet(self) -> None:
+        """Apply the shared stylesheet to this content widget and all sections."""
+        # Calculate all colors once
+        colors = self._get_color_palette()
+
+        # Build sections: container, sections, headers
+        stylesheet_parts = [
+            self._build_container_styles(colors),
+            self._build_header_styles(colors),
+            self._build_section_styles(colors)
+        ]
+
+        shared_stylesheet = "\n".join(stylesheet_parts)
+        self.setStyleSheet(shared_stylesheet)
+
     def _on_style_changed(self) -> None:
         """Handle the style changing."""
         factor = self._style_manager.zoom_factor()
@@ -197,26 +339,11 @@ class WikiMarkdownContent(WikiContentWidget):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        if self._contained:
-            tab_background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-            background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
-
-        else:
-            tab_background_color = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
-            background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-
-        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {tab_background_color};
-            }}
-        """)
-        # Apply styling to all sections
+        # Apply fonts to all sections
         for section in self._sections:
-            language = section.language()
-            color = tab_background_color if language is None else background_color
-            section.apply_style(text_color, color, font)
+            section.apply_font(font)
+
+        self._apply_shared_stylesheet()
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """
