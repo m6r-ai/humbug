@@ -27,11 +27,22 @@ class LogMessage(QFrame):
     scroll_requested = Signal(QPoint)
     mouse_released = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        text: str,
+        level: MindspaceLogLevel,
+        timestamp: datetime,
+        message_id: str,
+        parent: QWidget | None = None
+    ) -> None:
         """
         Initialize the log message widget.
 
         Args:
+            text: The message text content
+            level: The log level of the message
+            timestamp: datetime object for the message timestamp
+            message_id: Unique identifier for the message
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -46,12 +57,6 @@ class LogMessage(QFrame):
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._style_manager = StyleManager()
-
-        # Will store the actual message source
-        self._message_id: str | None = None
-        self._message_level: MindspaceLogLevel | None = None
-        self._message_timestamp: datetime | None = None
-        self._message_content = ""
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -93,6 +98,24 @@ class LogMessage(QFrame):
 
         self._is_focused = False
         self._mouse_left_button_pressed = False
+
+        self._message_id = message_id
+        self._message_level = level
+        self._message_timestamp = timestamp
+        self._message_content = text
+
+        # Set log level property for QSS targeting
+        level_name = {
+            MindspaceLogLevel.TRACE: "trace",
+            MindspaceLogLevel.INFO: "info",
+            MindspaceLogLevel.WARN: "warn",
+            MindspaceLogLevel.ERROR: "error"
+        }.get(level, "error")
+
+        self._level_label.setProperty("logLevel", level_name)
+
+        # Set the content in the text area
+        self._text_area.set_text(text)
 
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
@@ -164,38 +187,6 @@ class LogMessage(QFrame):
             self.scroll_requested.emit(QCursor.pos())
 
         self.selection_changed.emit(has_selection)
-
-    def set_content(self, text: str, level: MindspaceLogLevel, timestamp: datetime, message_id: str) -> None:
-        """
-        Set content with style.
-
-        Args:
-            text: The message text content
-            level: The log level of the message
-            timestamp: datetime object for the message timestamp
-            message_id: Unique identifier for the message
-        """
-        self._message_id = message_id
-        self._message_level = level
-        self._message_timestamp = timestamp
-        self._message_content = text
-
-        # Set log level property for QSS targeting
-        level_name = {
-            MindspaceLogLevel.TRACE: "trace",
-            MindspaceLogLevel.INFO: "info",
-            MindspaceLogLevel.WARN: "warn",
-            MindspaceLogLevel.ERROR: "error"
-        }.get(level, "error")
-
-        self._level_label.setProperty("logLevel", level_name)
-
-        # Set the content in the text area
-        self._text_area.set_text(text)
-
-        # Update the header
-        self._update_level_text()
-        self._apply_shared_stylesheet()
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""

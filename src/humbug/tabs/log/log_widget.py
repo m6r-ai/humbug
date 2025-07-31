@@ -231,20 +231,18 @@ class LogWidget(QWidget):
 
     def _add_log_message(self, message: MindspaceMessage) -> None:
         """Add a message from the mindspace message log."""
-        msg_widget = LogMessage(self)
+        msg_widget = LogMessage(
+            message.content,
+            message.level,
+            message.timestamp,
+            message.message_id,
+            self
+        )
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
         )
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
-
-        # Set content using fields from MindspaceMessage model
-        msg_widget.set_content(
-            message.content,
-            message.level,
-            message.timestamp,
-            message.message_id
-        )
 
         # Add widget before the stretch
         count = self._messages_layout.count()
