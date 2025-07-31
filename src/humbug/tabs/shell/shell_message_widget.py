@@ -2,7 +2,7 @@
 
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple
+from typing import List, Tuple
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QTextEdit
@@ -234,22 +234,6 @@ class ShellMessageWidget(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _get_color_palette(self) -> Dict[str, str]:
-        """Get all colors needed for styling in one place."""
-        style_manager = self._style_manager
-        return {
-            'text_primary': style_manager.get_color_str(ColorRole.TEXT_PRIMARY),
-            'text_selected': style_manager.get_color_str(ColorRole.TEXT_SELECTED),
-            'background': style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND),
-            'user_background': style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND),
-            'scrollbar_bg': style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND),
-            'scrollbar_handle': style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE),
-            'message_focused': style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED),
-            'source_user': style_manager.get_color_str(ColorRole.MESSAGE_USER),
-            'source_success': style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS),
-            'source_error': style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR),
-        }
-
     def _get_background_color(self) -> str:
         """Get the background color for the current message source."""
         current_source = self._message_source or ShellMessageSource.USER
@@ -282,8 +266,9 @@ class ShellMessageWidget(QFrame):
         role = role_colours.get(current_source, ColorRole.MESSAGE_USER)
         return self._style_manager.get_color_str(role)
 
-    def _build_message_frame_styles(self, colors: Dict[str, str]) -> str:
+    def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
+        style_manager = self._style_manager
         background_color = self._get_background_color()
         border_color = self._get_border_color()
         border_radius = int(self._style_manager.message_bubble_spacing())
@@ -296,13 +281,13 @@ class ShellMessageWidget(QFrame):
                 border: 2px solid {border_color};
             }}
             QFrame#shellMessage[messageSource="user"] {{
-                background-color: {colors['user_background']};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
             QFrame#shellMessage[messageSource="success"] {{
-                background-color: {colors['background']};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
             QFrame#shellMessage[messageSource="error"] {{
-                background-color: {colors['background']};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             QWidget#shellHeader {{
@@ -314,36 +299,38 @@ class ShellMessageWidget(QFrame):
             }}
         """
 
-    def _build_header_styles(self, colors: Dict[str, str]) -> str:
+    def _build_header_styles(self) -> str:
         """Build styles for the header area and role label."""
+        style_manager = self._style_manager
         background_color = self._get_background_color()
 
         return f"""
             QLabel#roleLabel {{
-                color: {colors['text_primary']};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
                 padding: 0;
                 background-color: {background_color};
             }}
             QLabel#roleLabel[messageSource="user"] {{
-                color: {colors['source_user']};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
             }}
             QLabel#roleLabel[messageSource="success"] {{
-                color: {colors['source_success']};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS)};
             }}
             QLabel#roleLabel[messageSource="error"] {{
-                color: {colors['source_error']};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
         """
 
-    def _build_text_area_styles(self, colors: Dict[str, str]) -> str:
+    def _build_text_area_styles(self) -> str:
         """Build styles for the text area and scrollbars."""
+        style_manager = self._style_manager
         background_color = self._get_background_color()
 
         return f"""
             QTextEdit#shellTextArea {{
-                color: {colors['text_primary']};
-                selection-background-color: {colors['text_selected']};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
                 border-radius: 0;
                 padding: 0;
@@ -353,10 +340,10 @@ class ShellMessageWidget(QFrame):
 
             QTextEdit#shellTextArea QScrollBar:horizontal {{
                 height: 12px;
-                background: {colors['scrollbar_bg']};
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
             QTextEdit#shellTextArea QScrollBar::handle:horizontal {{
-                background: {colors['scrollbar_handle']};
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
             QTextEdit#shellTextArea QScrollBar::add-page:horizontal,
@@ -371,14 +358,11 @@ class ShellMessageWidget(QFrame):
 
     def _apply_shared_stylesheet(self) -> None:
         """Apply the shared stylesheet to this message."""
-        # Calculate all colors once
-        colors = self._get_color_palette()
-
         # Build sections: message frame, header, text area
         stylesheet_parts = [
-            self._build_message_frame_styles(colors),
-            self._build_header_styles(colors),
-            self._build_text_area_styles(colors)
+            self._build_message_frame_styles(),
+            self._build_header_styles(),
+            self._build_text_area_styles()
         ]
 
         shared_stylesheet = "\n".join(stylesheet_parts)
