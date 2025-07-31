@@ -230,7 +230,7 @@ class ConversationInput(ConversationMessage):
         # Return as hex color
         return f"#{rgb_value:02x}{rgb_value:02x}{rgb_value:02x}"
 
-    def _build_message_frame_styles(self, colors: Dict[str, str]) -> str:
+    def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
         background_color = self._get_background_color()
         border_color = self._get_border_color()
