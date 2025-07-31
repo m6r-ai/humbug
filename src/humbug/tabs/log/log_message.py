@@ -2,7 +2,7 @@
 
 from datetime import datetime
 import logging
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
@@ -37,6 +37,9 @@ class LogMessage(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
+        # Set object name for QSS targeting
+        self.setObjectName("logMessage")
+
         self._logger = logging.getLogger("LogMessage")
 
         self._language_manager = LanguageManager()
@@ -59,12 +62,14 @@ class LogMessage(QFrame):
 
         # Create header area with horizontal layout
         self._header = QWidget(self)
+        self._header.setObjectName("logHeader")
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(4)
 
         # Create role and timestamp labels
         self._level_label = QLabel(self)
+        self._level_label.setObjectName("levelLabel")
         self._level_label.setIndent(0)
         self._header_layout.addWidget(self._level_label)
         self._header_layout.addStretch()
@@ -74,6 +79,7 @@ class LogMessage(QFrame):
 
         # Create text area
         self._text_area = LogTextEdit(self)
+        self._text_area.setObjectName("logTextArea")
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -109,7 +115,7 @@ class LogMessage(QFrame):
         if focused:
             self.setFocus()
 
-        self._on_style_changed()
+        self._apply_shared_stylesheet()
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
@@ -174,12 +180,22 @@ class LogMessage(QFrame):
         self._message_timestamp = timestamp
         self._message_content = text
 
+        # Set log level property for QSS targeting
+        level_name = {
+            MindspaceLogLevel.TRACE: "trace",
+            MindspaceLogLevel.INFO: "info",
+            MindspaceLogLevel.WARN: "warn",
+            MindspaceLogLevel.ERROR: "error"
+        }.get(level, "error")
+
+        self._level_label.setProperty("logLevel", level_name)
+
         # Set the content in the text area
         self._text_area.set_text(text)
 
         # Update the header
         self._update_level_text()
-        self._on_style_changed()
+        self._apply_shared_stylesheet()
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -214,6 +230,127 @@ class LogMessage(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
+    def _get_color_palette(self) -> Dict[str, str]:
+        """Get all colors needed for styling in one place."""
+        style_manager = self._style_manager
+        return {
+            'text_primary': style_manager.get_color_str(ColorRole.TEXT_PRIMARY),
+            'text_selected': style_manager.get_color_str(ColorRole.TEXT_SELECTED),
+            'background': style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND),
+            'scrollbar_bg': style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND),
+            'scrollbar_handle': style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE),
+            'message_focused': style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED),
+            'level_trace': style_manager.get_color_str(ColorRole.MESSAGE_TRACE),
+            'level_info': style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION),
+            'level_warn': style_manager.get_color_str(ColorRole.MESSAGE_WARNING),
+            'level_error': style_manager.get_color_str(ColorRole.MESSAGE_ERROR),
+        }
+
+    def _get_border_color(self) -> str:
+        """Get the border color based on current state."""
+        if self._is_focused and self.hasFocus():
+            return self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
+
+        return self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+
+    def _build_message_frame_styles(self, colors: Dict[str, str]) -> str:
+        """Build styles for the main message frame."""
+        border_color = self._get_border_color()
+        border_radius = int(self._style_manager.message_bubble_spacing())
+
+        return f"""
+            QFrame#logMessage {{
+                background-color: {colors['background']};
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 2px solid {border_color};
+            }}
+
+            QWidget#logHeader {{
+                background-color: {colors['background']};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+        """
+
+    def _build_header_styles(self, colors: Dict[str, str]) -> str:
+        """Build styles for the header area and level label."""
+        return f"""
+            QLabel#levelLabel {{
+                color: {colors['text_primary']};
+                margin: 0;
+                padding: 0;
+                background-color: {colors['background']};
+            }}
+
+            QLabel#levelLabel[logLevel="trace"] {{
+                color: {colors['level_trace']};
+            }}
+
+            QLabel#levelLabel[logLevel="info"] {{
+                color: {colors['level_info']};
+            }}
+
+            QLabel#levelLabel[logLevel="warn"] {{
+                color: {colors['level_warn']};
+            }}
+
+            QLabel#levelLabel[logLevel="error"] {{
+                color: {colors['level_error']};
+            }}
+        """
+
+    def _build_text_area_styles(self, colors: Dict[str, str]) -> str:
+        """Build styles for the text area and scrollbars."""
+        return f"""
+            QTextEdit#logTextArea {{
+                color: {colors['text_primary']};
+                selection-background-color: {colors['text_selected']};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: {colors['background']};
+            }}
+
+            QTextEdit#logTextArea QScrollBar:horizontal {{
+                height: 12px;
+                background: {colors['scrollbar_bg']};
+            }}
+
+            QTextEdit#logTextArea QScrollBar::handle:horizontal {{
+                background: {colors['scrollbar_handle']};
+                min-width: 20px;
+            }}
+
+            QTextEdit#logTextArea QScrollBar::add-page:horizontal,
+            QTextEdit#logTextArea QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+
+            QTextEdit#logTextArea QScrollBar::add-line:horizontal,
+            QTextEdit#logTextArea QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """
+
+    def _apply_shared_stylesheet(self) -> None:
+        """Apply the shared stylesheet to this message."""
+        # Calculate all colors once
+        colors = self._get_color_palette()
+
+        # Build sections: message frame, header, text area
+        stylesheet_parts = [
+            self._build_message_frame_styles(colors),
+            self._build_header_styles(colors),
+            self._build_text_area_styles(colors)
+        ]
+
+        shared_stylesheet = "\n".join(stylesheet_parts)
+        self.setStyleSheet(shared_stylesheet)
+
     def _on_style_changed(self) -> None:
         """Handle the style changing"""
         factor = self._style_manager.zoom_factor()
@@ -222,83 +359,10 @@ class LogMessage(QFrame):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        # Map message types to role colors
-        role_colours = {
-            MindspaceLogLevel.TRACE: ColorRole.MESSAGE_TRACE,
-            MindspaceLogLevel.INFO: ColorRole.MESSAGE_INFORMATION,
-            MindspaceLogLevel.WARN: ColorRole.MESSAGE_WARNING,
-            MindspaceLogLevel.ERROR: ColorRole.MESSAGE_ERROR,
-        }
-
-        current_style = self._message_level or MindspaceLogLevel.ERROR
-        role = role_colours[current_style]
-        label_color = self._style_manager.get_color_str(role)
-        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-
-        # Role label styling (bold)
+        # Apply font to components
         self._level_label.setFont(font)
-        self._level_label.setStyleSheet(f"""
-            QLabel {{
-                color: {label_color};
-                margin: 0;
-                padding: 0;
-                background-color: {background_color};
-            }}
-        """)
 
-        # Header widget styling
-        self._header.setStyleSheet(f"""
-            QWidget {{
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-                background-color: {background_color};
-            }}
-        """)
-
-        # Apply styling to text area
-        self._text_area.setStyleSheet(f"""
-            QTextEdit {{
-                color: {text_color};
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-                background-color: {background_color};
-            }}
-            QScrollBar:horizontal {{
-                height: 12px;
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            QScrollBar::handle:horizontal {{
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
-        """)
-
-        # Determine border color based on state
-        border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else ColorRole.MESSAGE_BACKGROUND
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {background_color};
-            }}
-            QFrame {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
-                border: 2px solid {self._style_manager.get_color_str(border)}
-            }}
-        """)
+        self._apply_shared_stylesheet()
 
     def find_text(self, text: str) -> List[Tuple[int, int]]:
         """
