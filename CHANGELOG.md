@@ -2,6 +2,12 @@
 
 ## v0.21 (2025-07-xx)
 
+Bug fixes:
+
+- Navigating between messsages in a conversation could be very slow, and the recent changes involving tool use could
+  have the UI attempt to navigate messages that were not visible.
+- Performance of loading large and complex conversations could be very slow.  This is now faster!
+
 ## v0.20 (2025-07-26)
 
 New features:

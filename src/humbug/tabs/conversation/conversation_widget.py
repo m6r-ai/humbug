@@ -742,7 +742,7 @@ class ConversationWidget(QWidget):
         scrollbar.setValue(scrollbar.maximum())
 
     def activate(self) -> None:
-        """Activate the shell widget."""
+        """Activate the conversation widget."""
         # If we have a focus message then focus it
         if self._focused_message_index != -1:
             self._messages[self._focused_message_index].set_focused(True)
@@ -834,44 +834,107 @@ class ConversationWidget(QWidget):
 
         return None
 
+    def _find_next_visible_message(self, start_index: int) -> int:
+        """
+        Find the next visible message starting from start_index + 1.
+
+        Args:
+            start_index: Index to start searching from (exclusive)
+
+        Returns:
+            Index of next visible message, or -1 if none found
+        """
+        for i in range(start_index + 1, len(self._messages)):
+            if self._messages[i].isVisible():
+                return i
+
+        return -1
+
+    def _find_previous_visible_message(self, start_index: int) -> int:
+        """
+        Find the previous visible message starting from start_index - 1.
+
+        Args:
+            start_index: Index to start searching from (exclusive)
+
+        Returns:
+            Index of previous visible message, or -1 if none found
+        """
+        for i in range(start_index - 1, -1, -1):
+            if self._messages[i].isVisible():
+                return i
+
+        return -1
+
+    def _find_last_visible_message(self) -> int:
+        """
+        Find the index of the last visible message.
+
+        Returns:
+            Index of last visible message, or -1 if none found
+        """
+        for i in range(len(self._messages) - 1, -1, -1):
+            if self._messages[i].isVisible():
+                return i
+
+        return -1
+
+    def _find_first_visible_message(self) -> int:
+        """
+        Find the index of the first visible message.
+
+        Returns:
+            Index of first visible message, or -1 if none found
+        """
+        for i, message in enumerate(self._messages):
+            if message.isVisible():
+                return i
+
+        return -1
+
     def navigate_to_next_message(self) -> bool:
-        """Navigate to the next message or input box if possible."""
-        # If input box is focused, do nothing
+        """Navigate to the next visible message or input box if possible."""
+        # If input box is focused, can't navigate further forward
         if self._focused_message_index == -1:
             return False
 
-        # If we're at the last message, move to input box
-        if self._focused_message_index == len(self._messages) - 1:
+        # Find the next visible message
+        next_visible_index = self._find_next_visible_message(self._focused_message_index)
+        if next_visible_index != -1:
+            # Move to next visible message
+            self._messages[self._focused_message_index].set_focused(False)
+            self._focused_message_index = next_visible_index
+            self._focus_message()
+            return True
+
+        # No more visible messages - try to move to input if it's visible
+        if self._input.isVisible():
             self._messages[self._focused_message_index].set_focused(False)
             self._focused_message_index = -1
             self._focus_message()
             return True
 
-        # Otherwise move to next message
-        if self._focused_message_index < len(self._messages) - 1:
-            self._messages[self._focused_message_index].set_focused(False)
-            self._focused_message_index += 1
-            self._focus_message()
-            return True
-
+        # Input is not visible, can't navigate further
         return False
 
     def navigate_to_previous_message(self) -> bool:
-        """Navigate to the previous message if possible."""
-        # If input box is focused, move to the last message
+        """Navigate to the previous visible message if possible."""
+        # If input box is focused, move to the last visible message
         if self._focused_message_index == -1:
-            if self._messages:
+            last_visible_index = self._find_last_visible_message()
+            if last_visible_index != -1:
                 self._input.set_focused(False)
-                self._focused_message_index = len(self._messages) - 1
+                self._focused_message_index = last_visible_index
                 self._focus_message()
                 return True
-
             return False
 
-        # Otherwise move to previous message if possible
-        if self._focused_message_index > 0:
+        # Find the previous visible message
+        prev_visible_index = self._find_previous_visible_message(self._focused_message_index)
+        if prev_visible_index != -1:
+            # Move to previous visible message
             self._messages[self._focused_message_index].set_focused(False)
-            self._focused_message_index -= 1
+            self._focused_message_index = prev_visible_index
             self._focus_message()
             return True
 
@@ -913,15 +976,24 @@ class ConversationWidget(QWidget):
                 self._scroll_area.verticalScrollBar().setValue(message_pos.y() + message.height() - viewport_height + 10)
 
     def can_navigate_next_message(self) -> bool:
-        """Check if navigation to next message is possible."""
-        return not self._input.hasFocus()
+        """Check if navigation to next visible message is possible."""
+        # If input is focused, can't navigate further forward
+        if self._focused_message_index == -1:
+            return False
+
+        # If on a message, check if there are visible messages after current position
+        # or if input is visible (can move to input)
+        next_visible_index = self._find_next_visible_message(self._focused_message_index)
+        return next_visible_index != -1 or self._input.isVisible()
 
     def can_navigate_previous_message(self) -> bool:
-        """Check if navigation to previous message is possible."""
-        return (
-            self._input.hasFocus() or
-            (0 <= self._focused_message_index < len(self._messages) and self._focused_message_index > 0)
-        )
+        """Check if navigation to previous visible message is possible."""
+        # If input is focused, check if there are any visible messages to go back to
+        if self._focused_message_index == -1:
+            return self._find_last_visible_message() != -1
+
+        # If on a message, check if there are visible messages before current position
+        return self._find_previous_visible_message(self._focused_message_index) != -1
 
     def _toggle_message_bookmark(self, message_widget: ConversationMessage) -> None:
         """Toggle bookmark status for a message."""
@@ -1330,6 +1402,10 @@ class ConversationWidget(QWidget):
             # Scroll to bottom
             self._auto_scroll = True
             self._scroll_to_bottom()
+
+            # Put the focus back to the input
+            self._focused_message_index = -1
+            self._input.set_focused(True)
 
         except Exception as e:
             self._logger.error("Failed to update transcript after deletion: %s", str(e))

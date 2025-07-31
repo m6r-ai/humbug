@@ -196,6 +196,8 @@ class ConversationMessage(QFrame):
 
     def set_focused(self, focused: bool) -> None:
         """Set the focused state of this message."""
+        assert self.isVisible(), "Focused message must be visible"
+
         if self._is_focused == focused:
             return
 
