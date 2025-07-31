@@ -143,7 +143,8 @@ class ShellInput(ShellMessageWidget):
         submit_key = self._get_submit_key_text()
 
         self._role_label.setText(strings.command_prompt.format(key=submit_key))
-        self._set_role_style()
+        # Trigger stylesheet application to ensure proper styling
+        self._apply_shared_stylesheet()
 
     def _insert_from_mime_data(self, source: QMimeData) -> None:
         """Override default paste behavior to insert only plain text."""
