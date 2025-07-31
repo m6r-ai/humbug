@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple, Set
+from typing import Dict, List, Tuple
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
@@ -33,11 +33,25 @@ class ConversationMessage(QFrame):
     tool_call_approved = Signal(AIToolCall)
     tool_call_rejected = Signal(str)
 
-    def __init__(self, parent: QWidget | None = None, is_input: bool = False) -> None:
+    def __init__(
+        self,
+        style: AIMessageSource,
+        timestamp: datetime | None = None,
+        model: str | None = None,
+        message_id: str | None = None,
+        user_name: str | None = None,
+        parent: QWidget | None = None,
+        is_input: bool = False
+    ) -> None:
         """
         Initialize the message widget.
 
         Args:
+            style: The style type ('user', 'ai', 'system', or 'error')
+            timestamp: datetime object for the message timestamp
+            model: Model name for the message
+            message_id: Optional message ID for tracking
+            user_name: Optional user name for the message
             parent: Optional parent widget
             is_input: Whether this is an input widget (affects styling)
         """
@@ -53,12 +67,12 @@ class ConversationMessage(QFrame):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
-        self._message_source: AIMessageSource | None = None
-        self._message_timestamp: datetime | None = None
+        self._message_source = style
         self._message_content = ""
-        self._message_model = ""
-        self._message_id: str | None = None
-        self._message_user_name: str | None = None
+        self._message_timestamp = timestamp
+        self._message_model = model
+        self._message_id = message_id
+        self._message_user_name = user_name
 
         self._style_manager = StyleManager()
 
@@ -124,8 +138,6 @@ class ConversationMessage(QFrame):
         # Expanded state - default to True, will be updated in set_content based on message type
         self._is_expanded = True
 
-        # Track section style types for shared stylesheet
-        self._section_style_types: Set[str] = set()
         self._shared_stylesheet_applied = False
 
         # If this is an input widget then create the input section
@@ -133,6 +145,7 @@ class ConversationMessage(QFrame):
             section = self._create_section_widget()
             self._sections.append(section)
             self._sections_layout.addWidget(section)
+            self._apply_section_styling(section, self._message_source, None)
 
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
@@ -140,15 +153,45 @@ class ConversationMessage(QFrame):
         self._is_focused = False
         self._is_bookmarked = False
 
-        # Track current message style
-        self._current_style: AIMessageSource | None = None
-
         self._style_manager.style_changed.connect(self._on_style_changed)
-#        self._on_style_changed()
         self._on_language_changed()
 
-        # Update expand button state
-        self._update_expand_button()
+        # Add fork button only for AI messages
+        if style == AIMessageSource.AI:
+            strings = self._language_manager.strings()
+            self._fork_message_button = QToolButton(self)
+            self._fork_message_button.setObjectName("forkButton")
+            self._fork_message_button.clicked.connect(self._fork_message)
+            self._fork_message_button.setToolTip(strings.tooltip_fork_message)
+            self._header_layout.addWidget(self._fork_message_button)
+
+        # Add delete button only for user messages
+        elif style == AIMessageSource.USER and not self._is_input:
+            strings = self._language_manager.strings()
+            self._delete_message_button = QToolButton(self)
+            self._delete_message_button.setObjectName("deleteButton")
+            self._delete_message_button.clicked.connect(self._delete_message)
+            self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
+            self._header_layout.addWidget(self._delete_message_button)
+
+        # We have copy and save buttons for several message sources
+        if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
+            self._copy_message_button = QToolButton(self)
+            self._copy_message_button.setObjectName("copyButton")
+            self._copy_message_button.clicked.connect(self._copy_message)
+            self._header_layout.addWidget(self._copy_message_button)
+
+            self._save_message_button = QToolButton(self)
+            self._save_message_button.setObjectName("saveButton")
+            self._save_message_button.clicked.connect(self._save_message)
+            self._header_layout.addWidget(self._save_message_button)
+
+        # Set default expanded state based on message type
+        # Tool calls and tool results should be collapsed by default
+        default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
+        self.set_expanded(default_expanded)
+
+        self._on_style_changed()
 
     def is_focused(self) -> bool:
         """Check if this message is focused."""
@@ -429,6 +472,12 @@ class ConversationMessage(QFrame):
 
     def _apply_section_styling(self, section: ConversationMessageSection, message_style: AIMessageSource, language: ProgrammingLanguage | None) -> None:
         """Apply styling to a section by setting its QSS class property."""
+        # Determine style class
+        style_class = self._determine_section_style_class(message_style, language)
+
+        # Set property that QSS will match against
+        section.setProperty("sectionStyle", style_class)
+
         # Apply font directly (easier than QSS)
         factor = self._style_manager.zoom_factor()
         font = self.font()
@@ -436,15 +485,6 @@ class ConversationMessage(QFrame):
         font.setPointSizeF(base_font_size * factor)
 
         section.apply_style(font)
-
-        # Determine style class
-        style_class = self._determine_section_style_class(message_style, language)
-
-        # Set property that QSS will match against
-        section.setProperty("sectionStyle", style_class)
-
-        # Track style types for shared stylesheet
-        self._section_style_types.add(style_class)
 
         section.setFont(font)
         if hasattr(section, '_text_area'):
@@ -504,13 +544,14 @@ class ConversationMessage(QFrame):
         """Get the border color based on current state."""
         if self._is_focused and self.hasFocus():
             return self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
-        elif self._is_bookmarked:
+
+        if self._is_bookmarked:
             return self._style_manager.get_color_str(ColorRole.MESSAGE_BOOKMARK)
-        else:
-            current_style = self._message_source or AIMessageSource.USER
-            return self._style_manager.get_color_str(
-                ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
-            )
+
+        current_style = self._message_source or AIMessageSource.USER
+        return self._style_manager.get_color_str(
+            ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+        )
 
     def _build_message_frame_styles(self, colors: Dict[str, str]) -> str:
         """Build styles for the main message frame."""
@@ -567,7 +608,6 @@ class ConversationMessage(QFrame):
                 margin: 0px;
             }}
 
-            QToolButton#expandButton:hover,
             QToolButton#copyButton:hover,
             QToolButton#saveButton:hover,
             QToolButton#forkButton:hover,
@@ -575,7 +615,6 @@ class ConversationMessage(QFrame):
                 background-color: {colors['button_hover']};
             }}
 
-            QToolButton#expandButton:pressed,
             QToolButton#copyButton:pressed,
             QToolButton#saveButton:pressed,
             QToolButton#forkButton:pressed,
@@ -584,51 +623,101 @@ class ConversationMessage(QFrame):
             }}
         """
 
+    def _build_approval_styles(self, colors: Dict[str, str]) -> str:
+        """Build styles for tool approval widgets."""
+        return f"""
+            QTextEdit#approvalTextEdit {{
+                color: {colors['text_primary']};
+                border: none;
+                border-radius: 0px;
+                padding: 0;
+                margin: 0;
+            }}
+
+            QPushButton#approveButton,
+            QPushButton#rejectButton {{
+                background-color: {colors['button_secondary_bg']};
+                color: {colors['text_primary']};
+                border-radius: 4px;
+            }}
+
+            QPushButton#approveButton:hover,
+            QPushButton#rejectButton:hover {{
+                background-color: {colors['button_secondary_hover']};
+            }}
+
+            QPushButton#approveButton:pressed,
+            QPushButton#rejectButton:pressed {{
+                background-color: {colors['button_secondary_pressed']};
+            }}
+
+            QPushButton#approveButton[recommended="true"] {{
+                background-color: {colors['button_recommended_bg']};
+                color: {colors['text_recommended']};
+            }}
+
+            QPushButton#approveButton[recommended="true"]:hover {{
+                background-color: {colors['button_recommended_hover']};
+            }}
+
+            QPushButton#approveButton[recommended="true"]:pressed {{
+                background-color: {colors['button_recommended_pressed']};
+            }}
+
+            QPushButton#approveButton[recommended="false"] {{
+                background-color: {colors['button_destructive_bg']};
+                color: {colors['text_recommended']};
+            }}
+
+            QPushButton#approveButton[recommended="false"]:hover {{
+                background-color: {colors['button_destructive_hover']};
+            }}
+
+            QPushButton#approveButton[recommended="false"]:pressed {{
+                background-color: {colors['button_destructive_pressed']};
+            }}
+        """
+
     def _build_section_styles(self, colors: Dict[str, str]) -> str:
         """Build styles for message sections."""
         border_radius = int(self._style_manager.message_bubble_spacing() / 2)
         qss_rules = []
 
-        # Only include QSS for style types we actually use
-        if "text-system" in self._section_style_types:
-            qss_rules.append(f"""
-                QFrame#messageSection[sectionStyle="text-system"] {{
-                    background-color: {colors['light_bg']};
-                    margin: 0;
-                    border-radius: {border_radius}px;
-                    border: 0;
-                }}
-            """)
+        qss_rules.append(f"""
+            QFrame#messageSection[sectionStyle="text-system"] {{
+                background-color: {colors['light_bg']};
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+        """)
 
-        if "text-user" in self._section_style_types:
-            qss_rules.append(f"""
-                QFrame#messageSection[sectionStyle="text-user"] {{
-                    background-color: {colors['dark_bg']};
-                    margin: 0;
-                    border-radius: {border_radius}px;
-                    border: 0;
-                }}
-            """)
+        qss_rules.append(f"""
+            QFrame#messageSection[sectionStyle="text-user"] {{
+                background-color: {colors['dark_bg']};
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+        """)
 
-        if "code-system" in self._section_style_types:
-            qss_rules.append(f"""
-                QFrame#messageSection[sectionStyle="code-system"] {{
-                    background-color: {colors['code_bg']};
-                    margin: 0;
-                    border-radius: {border_radius}px;
-                    border: 0;
-                }}
-            """)
+        qss_rules.append(f"""
+            QFrame#messageSection[sectionStyle="code-system"] {{
+                background-color: {colors['code_bg']};
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+        """)
 
-        if "code-user" in self._section_style_types:
-            qss_rules.append(f"""
-                QFrame#messageSection[sectionStyle="code-user"] {{
-                    background-color: {colors['code_bg']};
-                    margin: 0;
-                    border-radius: {border_radius}px;
-                    border: 0;
-                }}
-            """)
+        qss_rules.append(f"""
+            QFrame#messageSection[sectionStyle="code-user"] {{
+                background-color: {colors['code_bg']};
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+        """)
 
         # Child widget styles - target children of messageSection specifically
         qss_rules.append(f"""
@@ -690,65 +779,10 @@ class ConversationMessage(QFrame):
 
         return "\n".join(qss_rules)
 
-    def _build_approval_styles(self, colors: Dict[str, str]) -> str:
-        """Build styles for tool approval widgets."""
-        return f"""
-            QTextEdit#approvalTextEdit {{
-                color: {colors['text_primary']};
-                border: none;
-                border-radius: 0px;
-                padding: 0;
-                margin: 0;
-            }}
-
-            QPushButton#approveButton,
-            QPushButton#rejectButton {{
-                background-color: {colors['button_secondary_bg']};
-                color: {colors['text_primary']};
-                border-radius: 4px;
-            }}
-
-            QPushButton#approveButton:hover,
-            QPushButton#rejectButton:hover {{
-                background-color: {colors['button_secondary_hover']};
-            }}
-
-            QPushButton#approveButton:pressed,
-            QPushButton#rejectButton:pressed {{
-                background-color: {colors['button_secondary_pressed']};
-            }}
-
-            QPushButton#approveButton[recommended="true"] {{
-                background-color: {colors['button_recommended_bg']};
-                color: {colors['text_recommended']};
-            }}
-
-            QPushButton#approveButton[recommended="true"]:hover {{
-                background-color: {colors['button_recommended_hover']};
-            }}
-
-            QPushButton#approveButton[recommended="true"]:pressed {{
-                background-color: {colors['button_recommended_pressed']};
-            }}
-
-            QPushButton#approveButton[recommended="false"] {{
-                background-color: {colors['button_destructive_bg']};
-                color: {colors['text_recommended']};
-            }}
-
-            QPushButton#approveButton[recommended="false"]:hover {{
-                background-color: {colors['button_destructive_hover']};
-            }}
-
-            QPushButton#approveButton[recommended="false"]:pressed {{
-                background-color: {colors['button_destructive_pressed']};
-            }}
-        """
-
     def _apply_shared_stylesheet(self) -> None:
         """Apply the shared stylesheet to this message."""
-        if self._shared_stylesheet_applied:
-            return
+#        if self._shared_stylesheet_applied:
+#            return
 
         # Calculate all colors once
         colors = self._get_color_palette()
@@ -763,88 +797,17 @@ class ConversationMessage(QFrame):
         ]
 
         shared_stylesheet = "\n".join(stylesheet_parts)
-        print(f"Applying shared stylesheet: {self}")
         self.setStyleSheet(shared_stylesheet)
         self._shared_stylesheet_applied = True
 
-    def set_content(
-        self,
-        text: str,
-        style: AIMessageSource,
-        timestamp: datetime,
-        model: str,
-        message_id: str | None = None,
-        user_name: str | None = None
-    ) -> None:
+    def set_content(self, text: str) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
 
         Args:
             text: The message text content
-            style: The style type ('user', 'ai', 'system', or 'error')
-            timestamp: datetime object for the message timestamp
-            model: Model name for the message
-            message_id: Optional message ID for tracking
-            user_name: Optional user name for the message
         """
-        self._message_source = style
-        self._message_timestamp = timestamp
         self._message_content = text
-        self._message_model = model
-        self._message_id = message_id
-        self._message_user_name = user_name
-
-        # Check if style changed - if so, we need to recreate all sections
-        if style != self._current_style:
-            # Add fork button only for AI messages
-            if style == AIMessageSource.AI:
-                strings = self._language_manager.strings()
-                self._fork_message_button = QToolButton(self)
-                self._fork_message_button.setObjectName("forkButton")
-                self._fork_message_button.clicked.connect(self._fork_message)
-                self._fork_message_button.setToolTip(strings.tooltip_fork_message)
-                self._header_layout.addWidget(self._fork_message_button)
-
-            # Add delete button only for user messages
-            elif style == AIMessageSource.USER and not self._is_input:
-                strings = self._language_manager.strings()
-                self._delete_message_button = QToolButton(self)
-                self._delete_message_button.setObjectName("deleteButton")
-                self._delete_message_button.clicked.connect(self._delete_message)
-                self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
-                self._header_layout.addWidget(self._delete_message_button)
-
-            # We have copy and save buttons for several message sources
-            if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
-                self._copy_message_button = QToolButton(self)
-                self._copy_message_button.setObjectName("copyButton")
-                self._copy_message_button.clicked.connect(self._copy_message)
-                self._header_layout.addWidget(self._copy_message_button)
-
-                self._save_message_button = QToolButton(self)
-                self._save_message_button.setObjectName("saveButton")
-                self._save_message_button.clicked.connect(self._save_message)
-                self._header_layout.addWidget(self._save_message_button)
-
-            # Set default expanded state based on message type
-            # Tool calls and tool results should be collapsed by default
-            default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
-            self.set_expanded(default_expanded)
-
-            # Update header text with proper role
-            self._update_role_text()
-            self._current_style = style
-
-            # Clear existing sections
-            for section in self._sections:
-                self._sections_layout.removeWidget(section)
-                section.deleteLater()
-
-            self._sections = []
-            self._section_with_selection = None
-            self._section_style_types.clear()
-            self._shared_stylesheet_applied = False
-            self._on_style_changed()
 
         # Extract sections directly using the markdown converter
         if not self._is_input:
@@ -865,8 +828,8 @@ class ConversationMessage(QFrame):
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
 
-                # Apply styling directly (no apply_style method call)
-                self._apply_section_styling(section, style, language)
+                # Apply styling directly
+                self._apply_section_styling(section, self._message_source, language)
                 section.set_content(node)
                 continue
 
@@ -883,9 +846,6 @@ class ConversationMessage(QFrame):
             section = self._sections.pop()
             self._sections_layout.removeWidget(section)
             section.deleteLater()
-
-        # Apply shared stylesheet once after all sections are created
-        self._apply_shared_stylesheet()
 
         # Show the message if it has text
         if text:

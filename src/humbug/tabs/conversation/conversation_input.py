@@ -7,6 +7,8 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize, QTimer
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
 from PySide6.QtWidgets import QWidget, QToolButton
 
+from ai import AIMessageSource
+
 from humbug.color_role import ColorRole
 from humbug.tabs.conversation.conversation_message import ConversationMessage
 
@@ -21,13 +23,13 @@ class ConversationInput(ConversationMessage):
     stop_requested = Signal()
     modified = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
         self._is_streaming = False
         self._current_model = ""
         self._submit_button: QToolButton | None = None
 
-        super().__init__(parent, is_input=True)
+        super().__init__(style, parent=parent, is_input=True)
 
         # Connect text cursor signals
         self._text_area = self._sections[0].text_area()
@@ -228,27 +230,40 @@ class ConversationInput(ConversationMessage):
         # Return as hex color
         return f"#{rgb_value:02x}{rgb_value:02x}{rgb_value:02x}"
 
+    def _build_message_frame_styles(self, colors: Dict[str, str]) -> str:
+        """Build styles for the main message frame."""
+        background_color = self._get_background_color()
+        border_color = self._get_border_color()
+        if self._is_streaming:
+            # Use animated border color if streaming
+            border_color = self._get_fade_color()
+
+        border_radius = int(self._style_manager.message_bubble_spacing())
+
+        return f"""
+            QFrame#conversationMessage {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 2px solid {border_color};
+            }}
+
+            QWidget#messageHeader,
+            QWidget#sectionsContainer {{
+                background-color: {background_color};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+        """
+
     def _update_border_style(self) -> None:
         """Update the border style with the current animation color."""
         if not self._is_streaming:
             return
 
-        # Get the current border color from the fade animation
-        border_color = self._get_fade_color()
-        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
-
-        # Apply animated border styling
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {background_color};
-            }}
-            QFrame {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
-                border: 2px solid {border_color};
-            }}
-        """)
+        self._apply_shared_stylesheet()
 
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""

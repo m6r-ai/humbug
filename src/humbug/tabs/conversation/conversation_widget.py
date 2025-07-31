@@ -177,7 +177,7 @@ class ConversationWidget(QWidget):
         self._messages_container.setLayout(self._messages_layout)
 
         # Set up the input box
-        self._input = ConversationInput(self._messages_container)
+        self._input = ConversationInput(AIMessageSource.USER, self._messages_container)
         self._input.cursor_position_changed.connect(self._ensure_cursor_visible)
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
@@ -309,11 +309,12 @@ class ConversationWidget(QWidget):
         Args:
             message: The message that was added
         """
-        msg_widget = ConversationMessage(self)
+        msg_widget = ConversationMessage(
+            message.source, message.timestamp, message.model or "", message.id, message.user_name, self
+        )
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
         )
-
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
         msg_widget.fork_requested.connect(self._on_message_fork_requested)
@@ -322,9 +323,7 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
 
-        msg_widget.set_content(
-            message.content, message.source, message.timestamp, message.model or "", message.id, message.user_name
-        )
+        msg_widget.set_content(message.content)
 
         # Add widget before input and the stretch
         self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
@@ -517,9 +516,7 @@ class ConversationWidget(QWidget):
         if message.source not in (AIMessageSource.AI, AIMessageSource.REASONING):
             return
 
-        self._messages[-1].set_content(
-            message.content, message.source, message.timestamp, message.model or "", message.id, message.user_name
-        )
+        self._messages[-1].set_content(message.content)
 
         # Scroll to bottom if auto-scrolling is enabled
         if self._auto_scroll:
