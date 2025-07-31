@@ -138,8 +138,6 @@ class ConversationMessage(QFrame):
         # Expanded state - default to True, will be updated in set_content based on message type
         self._is_expanded = True
 
-        self._shared_stylesheet_applied = False
-
         # If this is an input widget then create the input section
         if is_input:
             section = self._create_section_widget()
@@ -206,7 +204,7 @@ class ConversationMessage(QFrame):
         if focused:
             self.setFocus()
 
-        self._on_style_changed()
+        self._apply_shared_stylesheet()
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
@@ -215,7 +213,7 @@ class ConversationMessage(QFrame):
     def set_bookmarked(self, bookmarked: bool) -> None:
         """Set the bookmarked state."""
         self._is_bookmarked = bookmarked
-        self._on_style_changed()
+        self._apply_shared_stylesheet()
 
     def is_expanded(self) -> bool:
         """Check if this message is expanded."""
@@ -389,7 +387,7 @@ class ConversationMessage(QFrame):
 
         self._approval_widget = self._create_tool_approval_widget(tool_call, reason, destructive)
         self._layout.addWidget(self._approval_widget)
-        self._on_style_changed()
+#        self._apply_shared_stylesheet
 
     def _create_tool_approval_widget(self, tool_call: AIToolCall, reason: str, destructive: bool) -> QWidget:
         """Create widget for tool call approval."""
@@ -470,7 +468,12 @@ class ConversationMessage(QFrame):
         # Text section
         return "text-user" if is_user_message else "text-system"
 
-    def _apply_section_styling(self, section: ConversationMessageSection, message_style: AIMessageSource, language: ProgrammingLanguage | None) -> None:
+    def _apply_section_styling(
+        self,
+        section: ConversationMessageSection,
+        message_style: AIMessageSource,
+        language: ProgrammingLanguage | None
+    ) -> None:
         """Apply styling to a section by setting its QSS class property."""
         # Determine style class
         style_class = self._determine_section_style_class(message_style, language)
@@ -625,9 +628,16 @@ class ConversationMessage(QFrame):
 
     def _build_approval_styles(self, colors: Dict[str, str]) -> str:
         """Build styles for tool approval widgets."""
+        background_color = self._get_background_color()
+
         return f"""
+            QWidget#approvalWidget {{
+                background-color: {background_color};
+            }}
+
             QTextEdit#approvalTextEdit {{
                 color: {colors['text_primary']};
+                background-color: {background_color};
                 border: none;
                 border-radius: 0px;
                 padding: 0;
@@ -681,46 +691,32 @@ class ConversationMessage(QFrame):
     def _build_section_styles(self, colors: Dict[str, str]) -> str:
         """Build styles for message sections."""
         border_radius = int(self._style_manager.message_bubble_spacing() / 2)
-        qss_rules = []
-
-        qss_rules.append(f"""
+        return f"""
             QFrame#messageSection[sectionStyle="text-system"] {{
                 background-color: {colors['light_bg']};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-        """)
-
-        qss_rules.append(f"""
             QFrame#messageSection[sectionStyle="text-user"] {{
                 background-color: {colors['dark_bg']};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-        """)
-
-        qss_rules.append(f"""
             QFrame#messageSection[sectionStyle="code-system"] {{
                 background-color: {colors['code_bg']};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-        """)
-
-        qss_rules.append(f"""
             QFrame#messageSection[sectionStyle="code-user"] {{
                 background-color: {colors['code_bg']};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-        """)
 
-        # Child widget styles - target children of messageSection specifically
-        qss_rules.append(f"""
             /* Text areas within message sections */
             QFrame#messageSection QTextEdit {{
                 color: {colors['text_primary']};
@@ -775,15 +771,10 @@ class ConversationMessage(QFrame):
             QFrame#messageSection QScrollBar::add-line:horizontal, QFrame#messageSection QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
-        """)
-
-        return "\n".join(qss_rules)
+        """
 
     def _apply_shared_stylesheet(self) -> None:
         """Apply the shared stylesheet to this message."""
-#        if self._shared_stylesheet_applied:
-#            return
-
         # Calculate all colors once
         colors = self._get_color_palette()
 
@@ -798,7 +789,6 @@ class ConversationMessage(QFrame):
 
         shared_stylesheet = "\n".join(stylesheet_parts)
         self.setStyleSheet(shared_stylesheet)
-        self._shared_stylesheet_applied = True
 
     def set_content(self, text: str) -> None:
         """
@@ -1004,8 +994,6 @@ class ConversationMessage(QFrame):
         for section in self._sections:
             section.apply_style(font)
 
-        # Force stylesheet regeneration on style changes
-        self._shared_stylesheet_applied = False
         self._apply_shared_stylesheet()
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
