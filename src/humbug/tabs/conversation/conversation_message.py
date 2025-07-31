@@ -340,8 +340,6 @@ class ConversationMessage(QFrame):
             A new ConversationMessageSection instance
         """
         section = ConversationMessageSection(self._is_input, language, self._sections_container)
-
-        # Set object name for QSS targeting
         section.setObjectName("messageSection")
 
         section.selection_changed.connect(
@@ -349,7 +347,26 @@ class ConversationMessage(QFrame):
         )
         section.scroll_requested.connect(self.scroll_requested)
         section.mouse_released.connect(self.mouse_released)
-        self._apply_section_styling(section, self._message_source, language)
+
+        # Determine style class
+        is_user_message = self._message_source == AIMessageSource.USER
+        if language is not None:
+            # Code block
+            style_class = "code-user" if is_user_message else "code-system"
+
+        else:
+            # Text section
+            style_class = "text-user" if is_user_message else "text-system"
+
+        # Set property that QSS will match against
+        section.setProperty("sectionStyle", style_class)
+
+        factor = self._style_manager.zoom_factor()
+        font = self.font()
+        base_font_size = self._style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * factor)
+
+        section.apply_style(font)
 
         return section
 
@@ -455,39 +472,6 @@ class ConversationMessage(QFrame):
             self._approval_widget = None
             self._approve_button = None
             self._reject_button = None
-
-    def _determine_section_style_class(self, message_style: AIMessageSource, language: ProgrammingLanguage | None) -> str:
-        """Determine the QSS style class for a section."""
-        # Determine if this is a user message or a system message
-        is_user_message = message_style == AIMessageSource.USER
-
-        if language is not None:
-            # Code block
-            return "code-user" if is_user_message else "code-system"
-
-        # Text section
-        return "text-user" if is_user_message else "text-system"
-
-    def _apply_section_styling(
-        self,
-        section: ConversationMessageSection,
-        message_style: AIMessageSource,
-        language: ProgrammingLanguage | None
-    ) -> None:
-        """Apply styling to a section by setting its QSS class property."""
-        # Determine style class
-        style_class = self._determine_section_style_class(message_style, language)
-
-        # Set property that QSS will match against
-        section.setProperty("sectionStyle", style_class)
-
-        # Apply font directly (easier than QSS)
-        factor = self._style_manager.zoom_factor()
-        font = self.font()
-        base_font_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
-
-        section.apply_style(font)
 
     def _get_color_palette(self) -> Dict[str, str]:
         """Get all colors needed for styling in one place."""
