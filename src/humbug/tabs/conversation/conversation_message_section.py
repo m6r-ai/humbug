@@ -414,40 +414,7 @@ class ConversationMessageSection(QFrame):
 
         return local_pos
 
-    def apply_style(self, font: QFont) -> None:
-        """
-        Apply styling to this section.
-        """
-        self._text_area.setFont(font)
-
-        # Style the language header if present, or the inline code style if it's not
-        if not self._language_header:
-            if self._content_node:
-                self._renderer.visit(self._content_node)
-
-        icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
-        icon_size = QSize(icon_scaled_size, icon_scaled_size)
-
-        if self._copy_button:
-            self._copy_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("copy"), icon_base_size
-            )))
-            self._copy_button.setIconSize(icon_size)
-
-        if self._save_as_button:
-            self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("save"), icon_base_size
-            )))
-            self._save_as_button.setIconSize(icon_size)
-
-        # If we changed colour mode then re-highlight
-        if self._style_manager.color_mode() != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode()
-            if self._highlighter:
-                self._highlighter.rehighlight()
-
-    def apply_style1(self, text_color: str, background_color: str, font: QFont) -> None:
+    def apply_style(self, text_color: str, background_color: str, font: QFont) -> None:
         """
         Apply styling to this section.
 
