@@ -632,12 +632,10 @@ class ConversationMessage(QFrame):
                 color: {colors['text_primary']};
                 border-radius: 4px;
             }}
-
             QPushButton#approveButton:hover,
             QPushButton#rejectButton:hover {{
                 background-color: {colors['button_secondary_hover']};
             }}
-
             QPushButton#approveButton:pressed,
             QPushButton#rejectButton:pressed {{
                 background-color: {colors['button_secondary_pressed']};
@@ -647,24 +645,19 @@ class ConversationMessage(QFrame):
                 background-color: {colors['button_recommended_bg']};
                 color: {colors['text_recommended']};
             }}
-
             QPushButton#approveButton[recommended="true"]:hover {{
                 background-color: {colors['button_recommended_hover']};
             }}
-
             QPushButton#approveButton[recommended="true"]:pressed {{
                 background-color: {colors['button_recommended_pressed']};
             }}
-
             QPushButton#approveButton[recommended="false"] {{
                 background-color: {colors['button_destructive_bg']};
                 color: {colors['text_recommended']};
             }}
-
             QPushButton#approveButton[recommended="false"]:hover {{
                 background-color: {colors['button_destructive_hover']};
             }}
-
             QPushButton#approveButton[recommended="false"]:pressed {{
                 background-color: {colors['button_destructive_pressed']};
             }}
