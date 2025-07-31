@@ -409,15 +409,15 @@ class ConversationMessage(QFrame):
 
     def _determine_section_style_class(self, message_style: AIMessageSource, language: ProgrammingLanguage | None) -> str:
         """Determine the QSS style class for a section."""
-        # Determine if this is a user message or a system message
+        # Determine if this is a user message (dark background) or AI message (light background)
         is_user_message = message_style == AIMessageSource.USER
 
         if language is not None:
             # Code block
-            return "code-user" if is_user_message else "code-system"
+            return "code-dark" if is_user_message else "code-light"
 
         # Text section
-        return "text-user" if is_user_message else "text-system"
+        return "text-dark" if is_user_message else "text-light"
 
     def _apply_section_styling(self, section: ConversationMessageSection, message_style: AIMessageSource, language: ProgrammingLanguage | None) -> None:
         """Apply styling to a section by setting its QSS class property."""
@@ -427,6 +427,7 @@ class ConversationMessage(QFrame):
         base_font_size = self._style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
 
+        # TODO: rename this method
         section.apply_style(font)
 
         # Determine style class
@@ -460,9 +461,9 @@ class ConversationMessage(QFrame):
         qss_rules = []
 
         # Only include QSS for style types we actually use
-        if "text-system" in self._section_style_types:
+        if "text-light" in self._section_style_types:
             qss_rules.append(f"""
-                QFrame#messageSection[sectionStyle="text-system"] {{
+                QFrame#messageSection[sectionStyle="text-light"] {{
                     background-color: {light_bg};
                     margin: 0;
                     border-radius: {border_radius}px;
@@ -470,9 +471,9 @@ class ConversationMessage(QFrame):
                 }}
             """)
 
-        if "text-user" in self._section_style_types:
+        if "text-dark" in self._section_style_types:
             qss_rules.append(f"""
-                QFrame#messageSection[sectionStyle="text-user"] {{
+                QFrame#messageSection[sectionStyle="text-dark"] {{
                     background-color: {dark_bg};
                     margin: 0;
                     border-radius: {border_radius}px;
@@ -480,9 +481,9 @@ class ConversationMessage(QFrame):
                 }}
             """)
 
-        if "code-system" in self._section_style_types:
+        if "code-light" in self._section_style_types:
             qss_rules.append(f"""
-                QFrame#messageSection[sectionStyle="code-system"] {{
+                QFrame#messageSection[sectionStyle="code-light"] {{
                     background-color: {code_bg};
                     margin: 0;
                     border-radius: {border_radius}px;
@@ -490,9 +491,9 @@ class ConversationMessage(QFrame):
                 }}
             """)
 
-        if "code-user" in self._section_style_types:
+        if "code-dark" in self._section_style_types:
             qss_rules.append(f"""
-                QFrame#messageSection[sectionStyle="code-user"] {{
+                QFrame#messageSection[sectionStyle="code-dark"] {{
                     background-color: {code_bg};
                     margin: 0;
                     border-radius: {border_radius}px;
@@ -534,9 +535,11 @@ class ConversationMessage(QFrame):
                 border: none;
                 padding: 0px;
             }}
+
             QFrame#messageSection QToolButton:hover {{
                 background-color: {button_hover};
             }}
+
             QFrame#messageSection QToolButton:pressed {{
                 background-color: {button_pressed};
             }}
@@ -546,13 +549,16 @@ class ConversationMessage(QFrame):
                 height: 12px;
                 background: {scrollbar_bg};
             }}
+
             QFrame#messageSection QScrollBar::handle:horizontal {{
                 background: {scrollbar_handle};
                 min-width: 20px;
             }}
+
             QFrame#messageSection QScrollBar::add-page:horizontal, QFrame#messageSection QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
+
             QFrame#messageSection QScrollBar::add-line:horizontal, QFrame#messageSection QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
@@ -595,6 +601,8 @@ class ConversationMessage(QFrame):
         combined_stylesheet = message_frame_style + "\n" + shared_stylesheet
         self.setStyleSheet(combined_stylesheet)
         self._shared_stylesheet_applied = True
+
+        print(f"Applied shared stylesheet to message (covers {len(self._section_style_types)} section types: {self._section_style_types})")
 
     def set_content(
         self,

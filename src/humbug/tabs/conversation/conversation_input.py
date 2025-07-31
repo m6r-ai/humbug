@@ -7,7 +7,6 @@ from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize, QTimer
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
 from PySide6.QtWidgets import QWidget, QToolButton
 
-from ai import AIMessageSource
 from humbug.color_role import ColorRole
 from humbug.tabs.conversation.conversation_message import ConversationMessage
 
@@ -29,19 +28,6 @@ class ConversationInput(ConversationMessage):
         self._submit_button: QToolButton | None = None
 
         super().__init__(parent, is_input=True)
-
-        # Initialize input-specific styling - this ensures proper background color from the start
-        # Set the message source to USER for proper styling
-        self._message_source = AIMessageSource.USER
-        self._current_style = AIMessageSource.USER
-
-        # Apply section styling to the input section
-        if self._sections:
-            section = self._sections[0]
-            self._apply_section_styling(section, AIMessageSource.USER, None)
-
-        # Apply the shared stylesheet
-        self._apply_shared_stylesheet()
 
         # Connect text cursor signals
         self._text_area = self._sections[0].text_area()
@@ -251,25 +237,18 @@ class ConversationInput(ConversationMessage):
         border_color = self._get_fade_color()
         background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
 
-        # Build the animated border styling using the new shared stylesheet approach
-        shared_stylesheet = self._build_shared_stylesheet()
-
-        # Message frame border styling with animation
-        message_frame_style = f"""
-            QFrame#conversationMessage {{
+        # Apply animated border styling
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {background_color};
+            }}
+            QFrame {{
                 background-color: {background_color};
                 margin: 0;
                 border-radius: {int(self._style_manager.message_bubble_spacing())}px;
                 border: 2px solid {border_color};
             }}
-            QFrame#conversationMessage QWidget {{
-                background-color: {background_color};
-            }}
-        """
-
-        # Combine animated message frame styling with shared stylesheet
-        combined_stylesheet = message_frame_style + "\n" + shared_stylesheet
-        self.setStyleSheet(combined_stylesheet)
+        """)
 
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
@@ -280,11 +259,8 @@ class ConversationInput(ConversationMessage):
 
     def _on_style_changed(self) -> None:
         """Handle the style changing."""
-        # Call parent implementation first to handle basic styling
         super()._on_style_changed()
-
-        # Update input-specific styling
-        self._update_header_text()
+        self._set_role_style()
         self._update_submit_button_styling()
 
         # If we're streaming, apply the animated border instead of normal styling
@@ -347,24 +323,19 @@ class ConversationInput(ConversationMessage):
             submit_key = self._get_submit_key_text()
             self._role_label.setText(strings.input_prompt.format(model=self._current_model, key=submit_key))
 
-        # Apply role label styling using the parent's approach
+        self._set_role_style()
+
+    def _set_role_style(self) -> None:
+        """Set the role label color."""
         colour = ColorRole.MESSAGE_STREAMING if self._is_streaming else ColorRole.MESSAGE_USER
-        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
-        label_color = self._style_manager.get_color_str(colour)
 
-        # Use the same font and styling approach as the parent class
-        factor = self._style_manager.zoom_factor()
-        font = self.font()
-        base_font_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
-
-        self._role_label.setFont(font)
+        # WARNING: This needs to stay in sync with ConversationMessage
         self._role_label.setStyleSheet(f"""
             QLabel {{
-                color: {label_color};
+                color: {self._style_manager.get_color_str(colour)};
                 margin: 0;
                 padding: 0;
-                background-color: {background_color};
+                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
         """)
 

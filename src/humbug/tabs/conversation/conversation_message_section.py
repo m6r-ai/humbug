@@ -446,3 +446,114 @@ class ConversationMessageSection(QFrame):
             self._init_colour_mode = self._style_manager.color_mode()
             if self._highlighter:
                 self._highlighter.rehighlight()
+
+    def apply_style1(self, text_color: str, background_color: str, font: QFont) -> None:
+        """
+        Apply styling to this section.
+
+        Args:
+            text_color: Color string for text
+            background_color: Color string for background
+            font: Font to use
+        """
+        # Style the frame
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: {int(self._style_manager.message_bubble_spacing() / 2)}px;
+                border: 0;
+            }}
+        """)
+
+        self._text_area.setFont(font)
+        self._text_area.setStyleSheet(f"""
+            QTextEdit {{
+                color: {text_color};
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: {background_color};
+            }}
+            QScrollBar:horizontal {{
+                height: 12px;
+                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            QScrollBar::handle:horizontal {{
+                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """)
+
+        # Style the language header container if present
+        if self._header_container:
+            self._header_container.setStyleSheet(f"""
+                QWidget {{
+                    background-color: {background_color};
+                    margin: 0;
+                    padding: 0;
+                }}
+            """)
+
+        # Style the language header if present, or the inline code style if it's not
+        if self._language_header:
+            label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
+            self._language_header.setFont(font)
+            self._language_header.setStyleSheet(f"""
+                QLabel {{
+                    color: {label_color};
+                    background-color: {background_color};
+                    margin: 0;
+                    padding: 0;
+                }}
+            """)
+        else:
+            if self._content_node:
+                self._renderer.visit(self._content_node)
+
+        button_style = f"""
+            QToolButton {{
+                background-color: {background_color};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 0px;
+            }}
+            QToolButton:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QToolButton:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+        """
+
+        icon_base_size = 14
+        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+
+        if self._copy_button:
+            self._copy_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("copy"), icon_base_size
+            )))
+            self._copy_button.setIconSize(icon_size)
+            self._copy_button.setStyleSheet(button_style)
+
+        if self._save_as_button:
+            self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("save"), icon_base_size
+            )))
+            self._save_as_button.setIconSize(icon_size)
+            self._save_as_button.setStyleSheet(button_style)
+
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode() != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode()
+            if self._highlighter:
+                self._highlighter.rehighlight()
