@@ -143,7 +143,6 @@ class ConversationMessage(QFrame):
             section = self._create_section_widget()
             self._sections.append(section)
             self._sections_layout.addWidget(section)
-            self._apply_section_styling(section, self._message_source, None)
 
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
@@ -350,6 +349,7 @@ class ConversationMessage(QFrame):
         )
         section.scroll_requested.connect(self.scroll_requested)
         section.mouse_released.connect(self.mouse_released)
+        self._apply_section_styling(section, self._message_source, language)
 
         return section
 
@@ -488,10 +488,6 @@ class ConversationMessage(QFrame):
         font.setPointSizeF(base_font_size * factor)
 
         section.apply_style(font)
-
-        section.setFont(font)
-        if hasattr(section, '_text_area'):
-            section._text_area.setFont(font)
 
     def _get_color_palette(self) -> Dict[str, str]:
         """Get all colors needed for styling in one place."""
@@ -818,8 +814,6 @@ class ConversationMessage(QFrame):
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
 
-                # Apply styling directly
-                self._apply_section_styling(section, self._message_source, language)
                 section.set_content(node)
                 continue
 

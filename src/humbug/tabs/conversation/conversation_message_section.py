@@ -418,6 +418,7 @@ class ConversationMessageSection(QFrame):
         """
         Apply styling to this section.
         """
+        self.setFont(font)
         self._text_area.setFont(font)
 
         # Style the language header if present, or the inline code style if it's not
