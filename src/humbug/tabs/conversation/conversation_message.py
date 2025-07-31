@@ -74,7 +74,6 @@ class ConversationMessage(QFrame):
 
         # Create header area with horizontal layout
         self._header = QWidget(self)
-        self._header.setObjectName("messageHeader")
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(4)
@@ -84,13 +83,11 @@ class ConversationMessage(QFrame):
 
         if not is_input:
             self._expand_button = QToolButton(self)
-            self._expand_button.setObjectName("expandButton")
             self._expand_button.clicked.connect(self._toggle_expanded)
             self._header_layout.addWidget(self._expand_button)
 
         # Create role and timestamp labels
         self._role_label = QLabel(self)
-        self._role_label.setObjectName("roleLabel")
         self._role_label.setIndent(0)
         self._header_layout.addWidget(self._role_label)
         self._header_layout.addStretch()
@@ -105,7 +102,6 @@ class ConversationMessage(QFrame):
 
         # Container for message sections
         self._sections_container = QWidget(self)
-        self._sections_container.setObjectName("sectionsContainer")
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
         self._sections_layout.setSpacing(15)
@@ -144,7 +140,7 @@ class ConversationMessage(QFrame):
         self._current_style: AIMessageSource | None = None
 
         self._style_manager.style_changed.connect(self._on_style_changed)
-#        self._on_style_changed()
+        self._on_style_changed()
         self._on_language_changed()
 
         # Update expand button state
@@ -351,14 +347,12 @@ class ConversationMessage(QFrame):
     def _create_tool_approval_widget(self, tool_call: AIToolCall, reason: str, destructive: bool) -> QWidget:
         """Create widget for tool call approval."""
         approval_widget = QWidget()
-        approval_widget.setObjectName("approvalWidget")
         layout = QVBoxLayout(approval_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         strings = self._language_manager.strings()
 
         self._text_edit = MinHeightTextEdit()
-        self._text_edit.setObjectName("approvalTextEdit")
         self._text_edit.set_text(reason)
         self._text_edit.setReadOnly(True)
         layout.addWidget(self._text_edit)
@@ -373,7 +367,6 @@ class ConversationMessage(QFrame):
         min_button_width = int(180 * zoom_factor)
 
         self._approve_button = QPushButton(strings.approve_tool_call)
-        self._approve_button.setObjectName("approveButton")
         self._approve_button.clicked.connect(lambda: self._approve_tool_call(tool_call))
         self._approve_button.setMinimumWidth(min_button_width)
         self._approve_button.setMinimumHeight(min_button_height)
@@ -381,7 +374,6 @@ class ConversationMessage(QFrame):
         self._approve_button.setContentsMargins(8, 8, 8, 8)
 
         self._reject_button = QPushButton(strings.reject_tool_call)
-        self._reject_button.setObjectName("rejectButton")
         self._reject_button.clicked.connect(self._reject_tool_call)
         self._reject_button.setMinimumWidth(min_button_width)
         self._reject_button.setMinimumHeight(min_button_height)
@@ -450,150 +442,28 @@ class ConversationMessage(QFrame):
         if hasattr(section, '_text_area'):
             section._text_area.setFont(font)
 
-    def _get_color_palette(self) -> Dict[str, str]:
-        """Get all colors needed for styling in one place."""
-        style_manager = self._style_manager
-        return {
-            'text_primary': style_manager.get_color_str(ColorRole.TEXT_PRIMARY),
-            'text_selected': style_manager.get_color_str(ColorRole.TEXT_SELECTED),
-            'text_recommended': style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED),
-            'language_color': style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE),
-            'light_bg': style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND),
-            'dark_bg': style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND),
-            'code_bg': style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY),
-            'button_hover': style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER),
-            'button_pressed': style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED),
-            'button_secondary_bg': style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND),
-            'button_secondary_hover': style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER),
-            'button_secondary_pressed': style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED),
-            'button_recommended_bg': style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED),
-            'button_recommended_hover': style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER),
-            'button_recommended_pressed': style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED),
-            'button_destructive_bg': style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE),
-            'button_destructive_hover': style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER),
-            'button_destructive_pressed': style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED),
-            'scrollbar_bg': style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND),
-            'scrollbar_handle': style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE),
-            'message_focused': style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED),
-            'message_bookmark': style_manager.get_color_str(ColorRole.MESSAGE_BOOKMARK),
-        }
-
-    def _get_role_color(self) -> str:
-        """Get the role color for the current message type."""
-        role_colours = {
-            AIMessageSource.USER: ColorRole.MESSAGE_USER,
-            AIMessageSource.AI: ColorRole.MESSAGE_AI,
-            AIMessageSource.REASONING: ColorRole.MESSAGE_REASONING,
-            AIMessageSource.TOOL_CALL: ColorRole.MESSAGE_TOOL_CALL,
-            AIMessageSource.TOOL_RESULT: ColorRole.MESSAGE_TOOL_RESULT,
-            AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM_ERROR
-        }
-
-        current_style = self._message_source or AIMessageSource.USER
-        role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
-        return self._style_manager.get_color_str(role)
-
-    def _get_background_color(self) -> str:
-        """Get the background color for the current message type."""
-        current_style = self._message_source or AIMessageSource.USER
-        return self._style_manager.get_color_str(
-            ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
-        )
-
-    def _get_border_color(self) -> str:
-        """Get the border color based on current state."""
-        if self._is_focused and self.hasFocus():
-            return self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
-        elif self._is_bookmarked:
-            return self._style_manager.get_color_str(ColorRole.MESSAGE_BOOKMARK)
-        else:
-            current_style = self._message_source or AIMessageSource.USER
-            return self._style_manager.get_color_str(
-                ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
-            )
-
-    def _build_message_frame_styles(self, colors: Dict[str, str]) -> str:
-        """Build styles for the main message frame."""
-        background_color = self._get_background_color()
-        border_color = self._get_border_color()
-        border_radius = int(self._style_manager.message_bubble_spacing())
-
-        return f"""
-            QFrame#conversationMessage {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {border_radius}px;
-                border: 2px solid {border_color};
-            }}
-
-            QWidget#messageHeader,
-            QWidget#sectionsContainer {{
-                background-color: {background_color};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-            }}
-        """
-
-    def _build_header_styles(self, colors: Dict[str, str]) -> str:
-        """Build styles for the header area."""
-        role_color = self._get_role_color()
-        background_color = self._get_background_color()
-
-        return f"""
-            QLabel#roleLabel {{
-                color: {role_color};
-                margin: 0;
-                padding: 0;
-                background-color: {background_color};
-            }}
-        """
-
-    def _build_button_styles(self, colors: Dict[str, str]) -> str:
-        """Build styles for all buttons in the message."""
-        background_color = self._get_background_color()
-
-        return f"""
-            QToolButton#expandButton,
-            QToolButton#copyButton,
-            QToolButton#saveButton,
-            QToolButton#forkButton,
-            QToolButton#deleteButton {{
-                background-color: {background_color};
-                color: {colors['text_primary']};
-                border: none;
-                padding: 0px;
-                margin: 0px;
-            }}
-
-            QToolButton#expandButton:hover,
-            QToolButton#copyButton:hover,
-            QToolButton#saveButton:hover,
-            QToolButton#forkButton:hover,
-            QToolButton#deleteButton:hover {{
-                background-color: {colors['button_hover']};
-            }}
-
-            QToolButton#expandButton:pressed,
-            QToolButton#copyButton:pressed,
-            QToolButton#saveButton:pressed,
-            QToolButton#forkButton:pressed,
-            QToolButton#deleteButton:pressed {{
-                background-color: {colors['button_pressed']};
-            }}
-        """
-
-    def _build_section_styles(self, colors: Dict[str, str]) -> str:
-        """Build styles for message sections."""
+    def _build_shared_stylesheet(self) -> str:
+        """Build the shared stylesheet for all sections in this message."""
+        # Get colors
+        text_color = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        language_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
+        light_bg = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
+        dark_bg = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
+        code_bg = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        text_selected = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
+        button_hover = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
+        button_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
+        scrollbar_bg = self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)
+        scrollbar_handle = self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)
         border_radius = int(self._style_manager.message_bubble_spacing() / 2)
+
         qss_rules = []
 
         # Only include QSS for style types we actually use
         if "text-system" in self._section_style_types:
             qss_rules.append(f"""
                 QFrame#messageSection[sectionStyle="text-system"] {{
-                    background-color: {colors['light_bg']};
+                    background-color: {light_bg};
                     margin: 0;
                     border-radius: {border_radius}px;
                     border: 0;
@@ -603,7 +473,7 @@ class ConversationMessage(QFrame):
         if "text-user" in self._section_style_types:
             qss_rules.append(f"""
                 QFrame#messageSection[sectionStyle="text-user"] {{
-                    background-color: {colors['dark_bg']};
+                    background-color: {dark_bg};
                     margin: 0;
                     border-radius: {border_radius}px;
                     border: 0;
@@ -613,7 +483,7 @@ class ConversationMessage(QFrame):
         if "code-system" in self._section_style_types:
             qss_rules.append(f"""
                 QFrame#messageSection[sectionStyle="code-system"] {{
-                    background-color: {colors['code_bg']};
+                    background-color: {code_bg};
                     margin: 0;
                     border-radius: {border_radius}px;
                     border: 0;
@@ -623,7 +493,7 @@ class ConversationMessage(QFrame):
         if "code-user" in self._section_style_types:
             qss_rules.append(f"""
                 QFrame#messageSection[sectionStyle="code-user"] {{
-                    background-color: {colors['code_bg']};
+                    background-color: {code_bg};
                     margin: 0;
                     border-radius: {border_radius}px;
                     border: 0;
@@ -634,17 +504,17 @@ class ConversationMessage(QFrame):
         qss_rules.append(f"""
             /* Text areas within message sections */
             QFrame#messageSection QTextEdit {{
-                color: {colors['text_primary']};
+                color: {text_color};
                 background-color: transparent;
                 border: none;
                 padding: 0;
                 margin: 0;
-                selection-background-color: {colors['text_selected']};
+                selection-background-color: {text_selected};
             }}
 
             /* Labels (language headers) within message sections */
             QFrame#messageSection QLabel {{
-                color: {colors['language_color']};
+                color: {language_color};
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
@@ -660,24 +530,24 @@ class ConversationMessage(QFrame):
             /* Buttons within message sections */
             QFrame#messageSection QToolButton {{
                 background-color: transparent;
-                color: {colors['text_primary']};
+                color: {text_color};
                 border: none;
                 padding: 0px;
             }}
             QFrame#messageSection QToolButton:hover {{
-                background-color: {colors['button_hover']};
+                background-color: {button_hover};
             }}
             QFrame#messageSection QToolButton:pressed {{
-                background-color: {colors['button_pressed']};
+                background-color: {button_pressed};
             }}
 
             /* Scrollbars within message sections */
             QFrame#messageSection QScrollBar:horizontal {{
                 height: 12px;
-                background: {colors['scrollbar_bg']};
+                background: {scrollbar_bg};
             }}
             QFrame#messageSection QScrollBar::handle:horizontal {{
-                background: {colors['scrollbar_handle']};
+                background: {scrollbar_handle};
                 min-width: 20px;
             }}
             QFrame#messageSection QScrollBar::add-page:horizontal, QFrame#messageSection QScrollBar::sub-page:horizontal {{
@@ -690,81 +560,40 @@ class ConversationMessage(QFrame):
 
         return "\n".join(qss_rules)
 
-    def _build_approval_styles(self, colors: Dict[str, str]) -> str:
-        """Build styles for tool approval widgets."""
-        return f"""
-            QTextEdit#approvalTextEdit {{
-                color: {colors['text_primary']};
-                border: none;
-                border-radius: 0px;
-                padding: 0;
-                margin: 0;
-            }}
-
-            QPushButton#approveButton,
-            QPushButton#rejectButton {{
-                background-color: {colors['button_secondary_bg']};
-                color: {colors['text_primary']};
-                border-radius: 4px;
-            }}
-
-            QPushButton#approveButton:hover,
-            QPushButton#rejectButton:hover {{
-                background-color: {colors['button_secondary_hover']};
-            }}
-
-            QPushButton#approveButton:pressed,
-            QPushButton#rejectButton:pressed {{
-                background-color: {colors['button_secondary_pressed']};
-            }}
-
-            QPushButton#approveButton[recommended="true"] {{
-                background-color: {colors['button_recommended_bg']};
-                color: {colors['text_recommended']};
-            }}
-
-            QPushButton#approveButton[recommended="true"]:hover {{
-                background-color: {colors['button_recommended_hover']};
-            }}
-
-            QPushButton#approveButton[recommended="true"]:pressed {{
-                background-color: {colors['button_recommended_pressed']};
-            }}
-
-            QPushButton#approveButton[recommended="false"] {{
-                background-color: {colors['button_destructive_bg']};
-                color: {colors['text_recommended']};
-            }}
-
-            QPushButton#approveButton[recommended="false"]:hover {{
-                background-color: {colors['button_destructive_hover']};
-            }}
-
-            QPushButton#approveButton[recommended="false"]:pressed {{
-                background-color: {colors['button_destructive_pressed']};
-            }}
-        """
-
     def _apply_shared_stylesheet(self) -> None:
         """Apply the shared stylesheet to this message."""
         if self._shared_stylesheet_applied:
             return
 
-        # Calculate all colors once
-        colors = self._get_color_palette()
+        shared_stylesheet = self._build_shared_stylesheet()
 
-        # Build sections: message frame, header, buttons, sections, approval UI
-        stylesheet_parts = [
-            self._build_message_frame_styles(colors),
-            self._build_header_styles(colors),
-            self._build_button_styles(colors),
-            self._build_approval_styles(colors),
-            self._build_section_styles(colors)
-        ]
+        # Get message frame styling
+        current_style = self._message_source or AIMessageSource.USER
+        background_color = self._style_manager.get_color_str(
+            ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+        )
 
-        shared_stylesheet = "\n".join(stylesheet_parts)
-        print(f"Applying shared stylesheet: {self}")
-        self.setStyleSheet(shared_stylesheet)
+        # Determine border color based on state
+        border = ColorRole.MESSAGE_FOCUSED if self._is_focused and self.hasFocus() else \
+                 ColorRole.MESSAGE_BOOKMARK if self._is_bookmarked else \
+                 ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+
+        # Message frame border styling - target the specific conversationMessage object
+        message_frame_style = f"""
+            QFrame#conversationMessage {{
+                background-color: {background_color};
+                margin: 0;
+                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
+                border: 2px solid {self._style_manager.get_color_str(border)};
+            }}
+            QFrame#conversationMessage QWidget {{
+                background-color: {background_color};
+            }}
+        """
+
+        # Combine shared stylesheet with message frame styling
+        combined_stylesheet = message_frame_style + "\n" + shared_stylesheet
+        self.setStyleSheet(combined_stylesheet)
         self._shared_stylesheet_applied = True
 
     def set_content(
@@ -800,7 +629,6 @@ class ConversationMessage(QFrame):
             if style == AIMessageSource.AI:
                 strings = self._language_manager.strings()
                 self._fork_message_button = QToolButton(self)
-                self._fork_message_button.setObjectName("forkButton")
                 self._fork_message_button.clicked.connect(self._fork_message)
                 self._fork_message_button.setToolTip(strings.tooltip_fork_message)
                 self._header_layout.addWidget(self._fork_message_button)
@@ -809,7 +637,6 @@ class ConversationMessage(QFrame):
             elif style == AIMessageSource.USER and not self._is_input:
                 strings = self._language_manager.strings()
                 self._delete_message_button = QToolButton(self)
-                self._delete_message_button.setObjectName("deleteButton")
                 self._delete_message_button.clicked.connect(self._delete_message)
                 self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
                 self._header_layout.addWidget(self._delete_message_button)
@@ -817,12 +644,10 @@ class ConversationMessage(QFrame):
             # We have copy and save buttons for several message sources
             if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
                 self._copy_message_button = QToolButton(self)
-                self._copy_message_button.setObjectName("copyButton")
                 self._copy_message_button.clicked.connect(self._copy_message)
                 self._header_layout.addWidget(self._copy_message_button)
 
                 self._save_message_button = QToolButton(self)
-                self._save_message_button.setObjectName("saveButton")
                 self._save_message_button.clicked.connect(self._save_message)
                 self._header_layout.addWidget(self._save_message_button)
 
@@ -996,7 +821,56 @@ class ConversationMessage(QFrame):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        # Set icons and sizes for buttons
+        # Map message types to role colors
+        role_colours = {
+            AIMessageSource.USER: ColorRole.MESSAGE_USER,
+            AIMessageSource.AI: ColorRole.MESSAGE_AI,
+            AIMessageSource.REASONING: ColorRole.MESSAGE_REASONING,
+            AIMessageSource.TOOL_CALL: ColorRole.MESSAGE_TOOL_CALL,
+            AIMessageSource.TOOL_RESULT: ColorRole.MESSAGE_TOOL_RESULT,
+            AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM_ERROR
+        }
+
+        current_style = self._message_source or AIMessageSource.USER
+        role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
+        label_color = style_manager.get_color_str(role)
+        background_color = style_manager.get_color_str(
+            ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+        )
+
+        # Update shared stylesheet if already applied (for theme changes)
+        if self._shared_stylesheet_applied:
+            self._shared_stylesheet_applied = False  # Force regeneration
+            self._apply_shared_stylesheet()
+
+        # Role label styling (bold)
+        self._role_label.setFont(font)
+        self._role_label.setStyleSheet(f"""
+            QLabel {{
+                color: {label_color};
+                margin: 0;
+                padding: 0;
+                background-color: {background_color};
+            }}
+        """)
+
+        # Button styling for message action buttons
+        button_style = f"""
+            QToolButton {{
+                background-color: {background_color};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 0px;
+            }}
+            QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QToolButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+        """
+
+        # Apply icon and styling to copy and save buttons
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
@@ -1006,47 +880,125 @@ class ConversationMessage(QFrame):
                 style_manager.get_icon_path("copy"), icon_base_size
             )))
             self._copy_message_button.setIconSize(icon_size)
+            self._copy_message_button.setStyleSheet(button_style)
 
         if self._save_message_button:
             self._save_message_button.setIcon(QIcon(style_manager.scale_icon(
                 style_manager.get_icon_path("save"), icon_base_size
             )))
             self._save_message_button.setIconSize(icon_size)
+            self._save_message_button.setStyleSheet(button_style)
 
         if self._fork_message_button:
             self._fork_message_button.setIcon(QIcon(style_manager.scale_icon(
                 style_manager.get_icon_path("fork"), icon_base_size
             )))
             self._fork_message_button.setIconSize(icon_size)
+            self._fork_message_button.setStyleSheet(button_style)
 
         if self._delete_message_button:
             self._delete_message_button.setIcon(QIcon(style_manager.scale_icon(
                 style_manager.get_icon_path("delete"), icon_base_size
             )))
             self._delete_message_button.setIconSize(icon_size)
+            self._delete_message_button.setStyleSheet(button_style)
+
+        # Button styling for expand button
+        expand_button_style = f"""
+            QToolButton {{
+                background-color: {background_color};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                margin: 0px;
+                padding: 0px;
+            }}
+        """
 
         if self._expand_button:
             self._expand_button.setIconSize(icon_size)
+            self._expand_button.setStyleSheet(expand_button_style)
             # Update the expand button icon and tooltip
             self._update_expand_button()
 
-        # Apply fonts to approval buttons if present
-        if self._approve_button:
-            self._approve_button.setFont(font)
-
-        if self._reject_button:
-            self._reject_button.setFont(font)
-
-        if self._text_edit:
-            self._text_edit.setFont(font)
+        # Header widget styling
+        self._header.setStyleSheet(f"""
+            QWidget {{
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: {background_color};
+            }}
+        """)
 
         # Apply styling to all sections
         for section in self._sections:
             section.apply_style(font)
 
-        # Force stylesheet regeneration on style changes
-        self._shared_stylesheet_applied = False
-        self._apply_shared_stylesheet()
+        # Style approval buttons if present
+        if self._approve_button:
+            self._approve_button.setFont(font)
+            self._approve_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+                }}
+                QPushButton:pressed {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                }}
+                QPushButton[recommended="true"] {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                }}
+                QPushButton[recommended="true"]:hover {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+                }}
+                QPushButton[recommended="true"]:pressed {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+                }}
+                QPushButton[recommended="false"] {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                }}
+                QPushButton[recommended="false"]:hover {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+                }}
+                QPushButton[recommended="false"]:pressed {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+                }}
+            """)
+
+        if self._reject_button:
+            self._reject_button.setFont(font)
+            self._reject_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                    color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    border-radius: 4px;
+                }}
+                QPushButton:hover {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+                }}
+                QPushButton:pressed {{
+                    background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                }}
+            """)
+
+        if self._text_edit:
+            self._text_edit.setFont(font)
+            self._text_edit.setStyleSheet(f"""
+                QTextEdit {{
+                    color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                    border: none;
+                    border-radius: 0x;
+                    padding: 0;
+                    margin: 0;
+                }}
+            """)
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """
