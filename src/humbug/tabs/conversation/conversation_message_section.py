@@ -127,8 +127,9 @@ class ConversationMessageSection(QFrame):
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
 
-        # Add conversation highlighter
+        # Add conversation highlighter - use lazy creation for expensive language highlighters
         self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
+        self._needs_highlighting = False
         self.set_language(language)
 
         self._mouse_left_button_pressed = False
@@ -153,16 +154,18 @@ class ConversationMessageSection(QFrame):
             self._use_markdown = not self._is_input
             if self._use_markdown:
                 self._highlighter = None
+                self._needs_highlighting = False
 
             else:
                 self._highlighter = ConversationHighlighter(self._text_area.document())
                 self._highlighter.code_block_state_changed.connect(self._on_code_block_state_changed)
+                self._needs_highlighting = False
 
         else:
             self._use_markdown = False
-            highlighter = ConversationLanguageHighlighter(self._text_area.document())
-            highlighter.set_language(language)
-            self._highlighter = highlighter
+            # Defer creation of expensive language highlighter until section becomes visible
+            self._highlighter = None
+            self._needs_highlighting = True
             self._text_area.set_has_code_block(True)
 
         strings = self._language_manager.strings()
@@ -171,6 +174,14 @@ class ConversationMessageSection(QFrame):
                 language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
             )
             self._language_header.setText(language_header)
+
+    def ensure_highlighting(self) -> None:
+        """Create highlighter if needed - called when section becomes visible."""
+        if self._needs_highlighting and self._highlighter is None:
+            highlighter = ConversationLanguageHighlighter(self._text_area.document())
+            highlighter.set_language(cast(ProgrammingLanguage, self._language))
+            self._highlighter = highlighter
+            self._needs_highlighting = False
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""

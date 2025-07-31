@@ -372,6 +372,11 @@ class ConversationMessage(QFrame):
 
         return section
 
+    def ensure_sections_highlighted(self) -> None:
+        """Ensure all sections in this message have highlighting if needed."""
+        for section in self._sections:
+            section.ensure_highlighting()
+
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
         """
         Handle selection changes in a section widget.

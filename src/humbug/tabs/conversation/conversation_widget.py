@@ -10,7 +10,7 @@ from typing import Dict, List, Tuple, Any, Set, cast
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QEvent, QObject
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QEvent, QObject, QRect
 from PySide6.QtGui import QCursor, QResizeEvent
 
 from ai import (
@@ -156,6 +156,12 @@ class ConversationWidget(QWidget):
         # Initialize tracking variables
         self._auto_scroll = True
         self._last_scroll_maximum = 0
+
+        # Layout stabilization tracking for initial lazy highlighting
+        self._initial_layout_complete = False
+        self._layout_stabilization_timer = QTimer(self)
+        self._layout_stabilization_timer.setSingleShot(True)
+        self._layout_stabilization_timer.timeout.connect(self._on_initial_layout_stabilized)
 
         # Create layout
         conversation_layout = QVBoxLayout(self)
@@ -344,6 +350,31 @@ class ConversationWidget(QWidget):
 
         self._messages[message_index].set_expanded(expanded)
 
+    def _ensure_visible_sections_highlighted(self) -> None:
+        """Ensure all visible code sections have highlighters created."""
+        viewport = self._scroll_area.viewport()
+        viewport_rect = viewport.rect()
+        scroll_offset = self._scroll_area.verticalScrollBar().value()
+
+        for message in self._messages:
+            if not message.isVisible():
+                continue
+
+            # Get message position relative to scroll area content
+            message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
+            message_rect = QRect(message_pos, message.size())
+
+            # Adjust for scroll position
+            visible_rect = QRect(0, scroll_offset, viewport_rect.width(), viewport_rect.height())
+
+            if message_rect.intersects(visible_rect):
+                message.ensure_sections_highlighted()
+
+    def _on_initial_layout_stabilized(self) -> None:
+        """Handle the initial layout stabilization - do the first visibility check."""
+        self._initial_layout_complete = True
+        self._ensure_visible_sections_highlighted()
+
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all callbacks from the AIConversation object."""
         ai_conversation = cast(AIConversation, self._ai_conversation)
@@ -492,6 +523,10 @@ class ConversationWidget(QWidget):
         """
         if expanded:
             self._auto_scroll = False
+
+            # When a message is expanded, ensure its sections are highlighted if layout is complete
+            if self._initial_layout_complete:
+                self._ensure_visible_sections_highlighted()
 
     async def _on_message_added(self, message: AIMessage) -> None:
         """
@@ -716,6 +751,10 @@ class ConversationWidget(QWidget):
         # If user scrolls to bottom, re-enable auto-scroll
         if at_bottom:
             self._auto_scroll = True
+
+        # Check for newly visible sections that need highlighting (only after initial layout is complete)
+        if self._initial_layout_complete:
+            self._ensure_visible_sections_highlighted()
 
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
@@ -1199,11 +1238,27 @@ class ConversationWidget(QWidget):
         self._delete_empty_transcript_file()
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        """Handle resize events."""
+        """Handle resize events to detect layout stabilization and trigger lazy highlighting."""
         super().resizeEvent(event)
 
         if self._auto_scroll:
             self._scroll_to_bottom()
+
+        # If initial layout is not yet complete, reset the stabilization timer
+        if not self._initial_layout_complete:
+            # Reset the timer each time we get a resize during initial loading
+            self._layout_stabilization_timer.start(100)  # 100ms delay after last resize
+
+        else:
+            # After initial layout is complete, check for visibility changes after resize
+            self._ensure_visible_sections_highlighted()
+
+    def showEvent(self, event) -> None:
+        """Ensure visible sections are highlighted when widget becomes visible."""
+        super().showEvent(event)
+        # Only check visibility if initial layout is complete
+        if self._initial_layout_complete:
+            self._ensure_visible_sections_highlighted()
 
     def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""
