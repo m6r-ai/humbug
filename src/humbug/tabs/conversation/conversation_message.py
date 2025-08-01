@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt
+from PySide6.QtCore import Signal, QPoint, QSize, Qt, QRect
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
 from ai import AIMessageSource
@@ -372,10 +372,25 @@ class ConversationMessage(QFrame):
 
         return section
 
-    def ensure_sections_highlighted(self) -> None:
-        """Ensure all sections in this message have highlighting if needed."""
+    def ensure_visible_sections_highlighted(self, viewport_rect: QRect, scroll_container: QWidget) -> None:
+        """
+        Ensure all visible sections in this message have highlighters created.
+
+        Args:
+            viewport_rect: The visible viewport rectangle in scroll container coordinates
+            scroll_container: The scroll container widget for coordinate mapping
+        """
         for section in self._sections:
-            section.ensure_highlighting()
+            if not section.isVisible():
+                continue
+
+            # Get section position relative to scroll container
+            section_pos = section.mapTo(scroll_container, QPoint(0, 0))
+            section_rect = QRect(section_pos, section.size())
+
+            # Only create highlighter if section intersects with viewport
+            if section_rect.intersects(viewport_rect):
+                section.ensure_highlighting()
 
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
         """

@@ -157,7 +157,8 @@ class ConversationWidget(QWidget):
         self._auto_scroll = True
         self._last_scroll_maximum = 0
 
-        # Layout stabilization tracking for initial lazy highlighting
+        # Layout stabilization tracking for lazy syntax highlighting.  We don't have a signal for when
+        # the layout has finalized so we watch resize events and wait for them to stop firing.
         self._initial_layout_complete = False
         self._layout_stabilization_timer = QTimer(self)
         self._layout_stabilization_timer.setSingleShot(True)
@@ -356,6 +357,9 @@ class ConversationWidget(QWidget):
         viewport_rect = viewport.rect()
         scroll_offset = self._scroll_area.verticalScrollBar().value()
 
+        # Create viewport rect in scroll area content coordinates
+        visible_rect = QRect(0, scroll_offset, viewport_rect.width(), viewport_rect.height())
+
         for message in self._messages:
             if not message.isVisible():
                 continue
@@ -364,11 +368,9 @@ class ConversationWidget(QWidget):
             message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
             message_rect = QRect(message_pos, message.size())
 
-            # Adjust for scroll position
-            visible_rect = QRect(0, scroll_offset, viewport_rect.width(), viewport_rect.height())
-
+            # Only check sections if message intersects with viewport
             if message_rect.intersects(visible_rect):
-                message.ensure_sections_highlighted()
+                message.ensure_visible_sections_highlighted(visible_rect, self._messages_container)
 
     def _on_initial_layout_stabilized(self) -> None:
         """Handle the initial layout stabilization - do the first visibility check."""
@@ -1256,6 +1258,7 @@ class ConversationWidget(QWidget):
     def showEvent(self, event) -> None:
         """Ensure visible sections are highlighted when widget becomes visible."""
         super().showEvent(event)
+
         # Only check visibility if initial layout is complete
         if self._initial_layout_complete:
             self._ensure_visible_sections_highlighted()
