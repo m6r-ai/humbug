@@ -78,7 +78,9 @@ class ConversationMessage(QFrame):
 
         self._style_manager = StyleManager()
 
+        self._message_rendered = True
         if not is_input and not content:
+            self._message_rendered = False
             self.setVisible(False)
 
         # Create layout
@@ -166,6 +168,10 @@ class ConversationMessage(QFrame):
 
         if content:
             self.set_content(content)
+
+    def is_rendered(self) -> bool:
+        """Check if the message will be rendered."""
+        return self._message_rendered
 
     def is_focused(self) -> bool:
         """Check if this message is focused."""
@@ -822,6 +828,7 @@ class ConversationMessage(QFrame):
 
         # Show the message if it has text
         if text:
+            self._message_rendered = True
             self.setVisible(True)
 
     def message_id(self) -> str | None:

@@ -359,7 +359,7 @@ class ConversationWidget(QWidget):
         visible_rect = QRect(0, scroll_offset, viewport_rect.width(), viewport_rect.height())
 
         for message in self._messages:
-            if not message.isVisible():
+            if not message.is_rendered():
                 continue
 
             # Get message position relative to scroll area content
@@ -779,6 +779,7 @@ class ConversationWidget(QWidget):
         """Scroll to the bottom of the content."""
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
+        self._lazy_update_visible_sections()
 
     def activate(self) -> None:
         """Activate the conversation widget."""
