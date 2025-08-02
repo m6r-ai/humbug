@@ -748,8 +748,10 @@ class ColumnManager(QWidget):
                 tab_bar = cast(TabBar, column.tabBar())
                 tab_bar.set_tab_state(tab_index, is_current, is_updated, is_active_column)
 
-        # Force style refresh to show active state
-        self._on_style_changed()
+        # Trigger repaint of the tab bar to show updated colors
+        for column in self._tab_columns:
+            if isinstance(column.tabBar(), TabBar):
+                column.tabBar().update()
 
         # Disconnect any existing connections to avoid duplicates
         try:
@@ -1747,42 +1749,42 @@ class ColumnManager(QWidget):
         """
         Handle style changes from StyleManager.
         """
-        # Apply simplified stylesheet since custom painting handles backgrounds
-        for column in self._tab_columns:
-            style = f"""
-                QTabBar {{
-                    border: none;
-                    margin: 0px;
-                    background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-                }}
-                QTabBar::tab {{
-                    border: none;
-                    margin: 1px;
-                    padding: 0px;
-                }}
-                QTabBar::scroller {{
-                    width: 20px;
-                }}
-                QTabBar QToolButton {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                    border: none;
-                }}
-                QTabBar QToolButton::right-arrow {{
-                    image: url({self._style_manager.get_icon_path('arrow-right')});
-                    width: 12px;
-                    height: 12px;
-                }}
-                QTabBar QToolButton::left-arrow {{
-                    image: url({self._style_manager.get_icon_path('arrow-left')});
-                    width: 12px;
-                    height: 12px;
-                }}
-            """
-            column.setStyleSheet(style)
+        style = f"""
+            QSplitter::handle {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+                margin: 0;
+                width: 1px;
+            }}
 
-            # Trigger repaint of the tab bar to show updated colors
-            if isinstance(column.tabBar(), TabBar):
-                column.tabBar().update()
+            QTabBar {{
+                border: none;
+                margin: 0px;
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+            QTabBar::tab {{
+                border: none;
+                margin: 1px;
+                padding: 0px;
+            }}
+            QTabBar::scroller {{
+                width: 20px;
+            }}
+            QTabBar QToolButton {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
+                border: none;
+            }}
+            QTabBar QToolButton::right-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-right')});
+                width: 12px;
+                height: 12px;
+            }}
+            QTabBar QToolButton::left-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-left')});
+                width: 12px;
+                height: 12px;
+            }}
+        """
+        self.setStyleSheet(style)
 
         # Update all tab labels, setting active state only for the current active tab.
         for tab_id, label in self._tab_labels.items():
@@ -1793,13 +1795,10 @@ class ColumnManager(QWidget):
 
             label.handle_style_changed()
 
-        self._column_splitter.setStyleSheet(f"""
-            QSplitter::handle {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
-                margin: 0;
-                width: 1px;
-            }}
-        """)
+        # Trigger repaint of the tab bar to show updated colors
+        for column in self._tab_columns:
+            if isinstance(column.tabBar(), TabBar):
+                column.tabBar().update()
 
     def can_undo(self) -> bool:
         """Check if the last action can be undone."""
