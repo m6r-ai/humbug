@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout,
     QToolButton, QFileDialog, QWidget
 )
-from PySide6.QtCore import Signal, Qt, QPoint, QSize
+from PySide6.QtCore import Signal, Qt, QPoint, QSize, QObject
 from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor, QFont
 )
@@ -86,16 +86,6 @@ class ConversationMessageSection(QFrame):
             # Add stretch to push buttons to the right
             self._header_layout.addStretch()
 
-            # Add Copy button with icon
-            self._copy_button = QToolButton()
-            self._copy_button.clicked.connect(self._copy_all_content)
-            self._header_layout.addWidget(self._copy_button)
-
-            # Add Save As button with icon
-            self._save_as_button = QToolButton()
-            self._save_as_button.clicked.connect(self._save_as)
-            self._header_layout.addWidget(self._save_as_button)
-
             # Add header container to main layout
             self._layout.addWidget(self._header_container)
 
@@ -127,9 +117,9 @@ class ConversationMessageSection(QFrame):
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
 
-        # Add conversation highlighter - use lazy creation for expensive language highlighters
         self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
-        self._needs_highlighting = False
+
+        self._needs_lazy_update = False
         self.set_language(language)
 
         self._mouse_left_button_pressed = False
@@ -154,18 +144,18 @@ class ConversationMessageSection(QFrame):
             self._use_markdown = not self._is_input
             if self._use_markdown:
                 self._highlighter = None
-                self._needs_highlighting = False
+                self._needs_lazy_update = False
 
             else:
                 self._highlighter = ConversationHighlighter(self._text_area.document())
                 self._highlighter.code_block_state_changed.connect(self._on_code_block_state_changed)
-                self._needs_highlighting = False
+                self._needs_lazy_update = False
 
         else:
             self._use_markdown = False
             # Defer creation of expensive language highlighter until section becomes visible
             self._highlighter = None
-            self._needs_highlighting = True
+            self._needs_lazy_update = True
             self._text_area.set_has_code_block(True)
 
         strings = self._language_manager.strings()
@@ -175,13 +165,37 @@ class ConversationMessageSection(QFrame):
             )
             self._language_header.setText(language_header)
 
-    def ensure_highlighting(self) -> None:
-        """Create highlighter if needed - called when section becomes visible."""
-        if self._needs_highlighting and self._highlighter is None:
+    def lazy_update(self, event_filter: QObject) -> None:
+        """Lazy update - called when section becomes visible."""
+        if not self._needs_lazy_update:
+            return
+
+        self._needs_lazy_update = False
+
+        if self._language is not None:
+            if not self._copy_button and not self._save_as_button:
+                strings = self._language_manager.strings()
+
+                # Add Copy button with icon
+                self._copy_button = QToolButton()
+                self._copy_button.clicked.connect(self._copy_all_content)
+                self._copy_button.setToolTip(strings.tooltip_copy_contents)
+                self._copy_button.installEventFilter(event_filter)
+                self._header_layout.addWidget(self._copy_button)
+
+                # Add Save As button with icon
+                self._save_as_button = QToolButton()
+                self._save_as_button.clicked.connect(self._save_as)
+                self._save_as_button.setToolTip(strings.tooltip_save_contents)
+                self._save_as_button.installEventFilter(event_filter)
+                self._header_layout.addWidget(self._save_as_button)
+
+                self._apply_button_style()
+
+        if self._highlighter is None:
             highlighter = ConversationLanguageHighlighter(self._text_area.document())
             highlighter.set_language(cast(ProgrammingLanguage, self._language))
             self._highlighter = highlighter
-            self._needs_highlighting = False
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
@@ -425,18 +439,8 @@ class ConversationMessageSection(QFrame):
 
         return local_pos
 
-    def apply_style(self, font: QFont) -> None:
-        """
-        Apply styling to this section.
-        """
-        self.setFont(font)
-        self._text_area.setFont(font)
-
-        # Style the language header if present, or the inline code style if it's not
-        if not self._language_header:
-            if self._content_node:
-                self._renderer.visit(self._content_node)
-
+    def _apply_button_style(self) -> None:
+        """ Apply styles to the copy and save buttons."""
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
@@ -452,6 +456,20 @@ class ConversationMessageSection(QFrame):
                 self._style_manager.get_icon_path("save"), icon_base_size
             )))
             self._save_as_button.setIconSize(icon_size)
+
+    def apply_style(self, font: QFont) -> None:
+        """
+        Apply styling to this section.
+        """
+        self.setFont(font)
+        self._text_area.setFont(font)
+
+        self._apply_button_style()
+
+        # Style the language header if present, or the inline code style if it's not
+        if not self._language_header:
+            if self._content_node:
+                self._renderer.visit(self._content_node)
 
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode() != self._init_colour_mode:

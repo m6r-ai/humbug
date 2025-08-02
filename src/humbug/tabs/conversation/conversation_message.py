@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QRect
+from PySide6.QtCore import Signal, QPoint, QSize, Qt, QRect, QObject
 from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
 
 from ai import AIMessageSource
@@ -153,35 +153,7 @@ class ConversationMessage(QFrame):
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_language_changed()
 
-        # Add fork button only for AI messages
-        if style == AIMessageSource.AI:
-            strings = self._language_manager.strings()
-            self._fork_message_button = QToolButton(self)
-            self._fork_message_button.setObjectName("forkButton")
-            self._fork_message_button.clicked.connect(self._fork_message)
-            self._fork_message_button.setToolTip(strings.tooltip_fork_message)
-            self._header_layout.addWidget(self._fork_message_button)
-
-        # Add delete button only for user messages
-        elif style == AIMessageSource.USER and not self._is_input:
-            strings = self._language_manager.strings()
-            self._delete_message_button = QToolButton(self)
-            self._delete_message_button.setObjectName("deleteButton")
-            self._delete_message_button.clicked.connect(self._delete_message)
-            self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
-            self._header_layout.addWidget(self._delete_message_button)
-
-        # We have copy and save buttons for several message sources
-        if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
-            self._copy_message_button = QToolButton(self)
-            self._copy_message_button.setObjectName("copyButton")
-            self._copy_message_button.clicked.connect(self._copy_message)
-            self._header_layout.addWidget(self._copy_message_button)
-
-            self._save_message_button = QToolButton(self)
-            self._save_message_button.setObjectName("saveButton")
-            self._save_message_button.clicked.connect(self._save_message)
-            self._header_layout.addWidget(self._save_message_button)
+        self._needs_lazy_update = True
 
         # Set default expanded state based on message type
         # Tool calls and tool results should be collapsed by default
@@ -372,14 +344,15 @@ class ConversationMessage(QFrame):
 
         return section
 
-    def ensure_visible_sections_highlighted(self, viewport_rect: QRect, scroll_container: QWidget) -> None:
+    def lazy_update(self, viewport_rect: QRect, scroll_container: QWidget, event_filter: QObject) -> None:
         """
-        Ensure all visible sections in this message have highlighters created.
+        Handle lazy updates for sections based on viewport visibility.
 
         Args:
             viewport_rect: The visible viewport rectangle in scroll container coordinates
             scroll_container: The scroll container widget for coordinate mapping
         """
+        # Cascade lazy updates to all sections
         for section in self._sections:
             if not section.isVisible():
                 continue
@@ -390,7 +363,49 @@ class ConversationMessage(QFrame):
 
             # Only create highlighter if section intersects with viewport
             if section_rect.intersects(viewport_rect):
-                section.ensure_highlighting()
+                section.lazy_update(event_filter)
+
+        if not self._needs_lazy_update:
+            return
+
+        self._needs_lazy_update = False
+
+        # Add fork button only for AI messages
+        style = self._message_source
+        if style == AIMessageSource.AI:
+            strings = self._language_manager.strings()
+            self._fork_message_button = QToolButton(self)
+            self._fork_message_button.setObjectName("forkButton")
+            self._fork_message_button.clicked.connect(self._fork_message)
+            self._fork_message_button.setToolTip(strings.tooltip_fork_message)
+            self._fork_message_button.installEventFilter(event_filter)
+            self._header_layout.addWidget(self._fork_message_button)
+
+        # Add delete button only for user messages
+        elif style == AIMessageSource.USER and not self._is_input:
+            strings = self._language_manager.strings()
+            self._delete_message_button = QToolButton(self)
+            self._delete_message_button.setObjectName("deleteButton")
+            self._delete_message_button.clicked.connect(self._delete_message)
+            self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
+            self._delete_message_button.installEventFilter(event_filter)
+            self._header_layout.addWidget(self._delete_message_button)
+
+        # We have copy and save buttons for several message sources
+        if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
+            self._copy_message_button = QToolButton(self)
+            self._copy_message_button.setObjectName("copyButton")
+            self._copy_message_button.clicked.connect(self._copy_message)
+            self._copy_message_button.installEventFilter(event_filter)
+            self._header_layout.addWidget(self._copy_message_button)
+
+            self._save_message_button = QToolButton(self)
+            self._save_message_button.setObjectName("saveButton")
+            self._save_message_button.clicked.connect(self._save_message)
+            self._save_message_button.installEventFilter(event_filter)
+            self._header_layout.addWidget(self._save_message_button)
+
+        self._apply_button_style()
 
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
         """
@@ -900,15 +915,9 @@ class ConversationMessage(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _on_style_changed(self) -> None:
-        """Handle the style changing."""
+    def _apply_button_style(self) -> None:
+        """Apply the current style to all buttons."""
         style_manager = self._style_manager
-
-        factor = style_manager.zoom_factor()
-        font = self.font()
-        base_font_size = style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
-        self.setFont(font)
 
         # Set icons and sizes for buttons
         icon_base_size = 14
@@ -943,6 +952,19 @@ class ConversationMessage(QFrame):
             self._expand_button.setIconSize(icon_size)
             # Update the expand button icon and tooltip
             self._update_expand_button()
+
+
+    def _on_style_changed(self) -> None:
+        """Handle the style changing."""
+        style_manager = self._style_manager
+
+        factor = style_manager.zoom_factor()
+        font = self.font()
+        base_font_size = style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * factor)
+        self.setFont(font)
+
+        self._apply_button_style()
 
         # Apply fonts to approval buttons if present
         if self._approve_button:

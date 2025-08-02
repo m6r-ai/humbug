@@ -6,7 +6,7 @@ Bug fixes:
 
 - Navigating between messsages in a conversation could be very slow, and the recent changes involving tool use could
   have the UI attempt to navigate messages that were not visible.
-- Performance of loading large and complex conversations could be very slow.  This is now faster!
+- Loading large and complex conversations could be very slow.  Optimized this by adding lazy updates to the UI.
 
 Internal structure changes:
 

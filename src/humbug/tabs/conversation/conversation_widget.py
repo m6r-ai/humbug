@@ -351,7 +351,7 @@ class ConversationWidget(QWidget):
 
         self._messages[message_index].set_expanded(expanded)
 
-    def _ensure_visible_sections_highlighted(self) -> None:
+    def _lazy_update_visible_sections(self) -> None:
         """Ensure all visible code sections have highlighters created."""
         viewport = self._scroll_area.viewport()
         viewport_rect = viewport.rect()
@@ -370,12 +370,12 @@ class ConversationWidget(QWidget):
 
             # Only check sections if message intersects with viewport
             if message_rect.intersects(visible_rect):
-                message.ensure_visible_sections_highlighted(visible_rect, self._messages_container)
+                message.lazy_update(visible_rect, self._messages_container, self._event_filter)
 
     def _on_initial_layout_stabilized(self) -> None:
         """Handle the initial layout stabilization - do the first visibility check."""
         self._initial_layout_complete = True
-        self._ensure_visible_sections_highlighted()
+        self._lazy_update_visible_sections()
 
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all callbacks from the AIConversation object."""
@@ -528,7 +528,7 @@ class ConversationWidget(QWidget):
 
             # When a message is expanded, ensure its sections are highlighted if layout is complete
             if self._initial_layout_complete:
-                self._ensure_visible_sections_highlighted()
+                self._lazy_update_visible_sections()
 
     async def _on_message_added(self, message: AIMessage) -> None:
         """
@@ -756,7 +756,7 @@ class ConversationWidget(QWidget):
 
         # Check for newly visible sections that need highlighting (only after initial layout is complete)
         if self._initial_layout_complete:
-            self._ensure_visible_sections_highlighted()
+            self._lazy_update_visible_sections()
 
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
@@ -1240,7 +1240,7 @@ class ConversationWidget(QWidget):
         self._delete_empty_transcript_file()
 
     def resizeEvent(self, event: QResizeEvent) -> None:
-        """Handle resize events to detect layout stabilization and trigger lazy highlighting."""
+        """Handle resize events to detect layout stabilization and trigger lazy updating."""
         super().resizeEvent(event)
 
         if self._auto_scroll:
@@ -1253,7 +1253,7 @@ class ConversationWidget(QWidget):
 
         else:
             # After initial layout is complete, check for visibility changes after resize
-            self._ensure_visible_sections_highlighted()
+            self._lazy_update_visible_sections()
 
     def showEvent(self, event) -> None:
         """Ensure visible sections are highlighted when widget becomes visible."""
@@ -1261,7 +1261,7 @@ class ConversationWidget(QWidget):
 
         # Only check visibility if initial layout is complete
         if self._initial_layout_complete:
-            self._ensure_visible_sections_highlighted()
+            self._lazy_update_visible_sections()
 
     def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""
