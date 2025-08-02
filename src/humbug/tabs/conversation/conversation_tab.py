@@ -48,6 +48,10 @@ class ConversationTab(TabBase):
         self._logger = logging.getLogger("ConversationTab")
         self._path = path
 
+        self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
+
         # Create layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -78,10 +82,6 @@ class ConversationTab(TabBase):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
-
-        self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
 
     def activate(self) -> None:
         """Activate the tab."""

@@ -40,6 +40,7 @@ class ConversationMessage(QFrame):
         model: str | None = None,
         message_id: str | None = None,
         user_name: str | None = None,
+        content: str | None = None,
         parent: QWidget | None = None,
         is_input: bool = False
     ) -> None:
@@ -52,6 +53,7 @@ class ConversationMessage(QFrame):
             model: Model name for the message
             message_id: Optional message ID for tracking
             user_name: Optional user name for the message
+            content: Optional initial content for the message
             parent: Optional parent widget
             is_input: Whether this is an input widget (affects styling)
         """
@@ -76,7 +78,7 @@ class ConversationMessage(QFrame):
 
         self._style_manager = StyleManager()
 
-        if not is_input:
+        if not is_input and not content:
             self.setVisible(False)
 
         # Create layout
@@ -159,6 +161,9 @@ class ConversationMessage(QFrame):
         # Tool calls and tool results should be collapsed by default
         default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
         self.set_expanded(default_expanded)
+
+        if content:
+            self.set_content(content)
 
         self._on_style_changed()
 
@@ -441,7 +446,6 @@ class ConversationMessage(QFrame):
 
         self._approval_widget = self._create_tool_approval_widget(tool_call, reason, destructive)
         self._layout.addWidget(self._approval_widget)
-#        self._apply_shared_stylesheet
 
     def _create_tool_approval_widget(self, tool_call: AIToolCall, reason: str, destructive: bool) -> QWidget:
         """Create widget for tool call approval."""

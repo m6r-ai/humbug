@@ -885,17 +885,15 @@ class ColumnManager(QWidget):
             tab: The tab widget to add
             title: Initial title for the tab
         """
+        if len(self._tabs) == 0:
+            # If no tabs exist, we need to switch to the columns widget
+            self._stack.setCurrentWidget(self._columns_widget)
+
         target_column = self._get_target_column_for_new_tab()
         self._add_tab_to_column(tab, title, target_column)
 
         # Close any ephemeral tab in target column because we've just added a new one
         self._close_ephemeral_tab_in_column(target_column, tab)
-
-        # Set initial state
-        if len(self._tabs) == 1:  # If this is the first tab
-            label = self._tab_labels[tab.tab_id()]
-            label.set_current(True, True)
-            self._stack.setCurrentWidget(self._columns_widget)
 
     def close_tab_by_id(self, tab_id: str, force_close: bool=False) -> None:
         """

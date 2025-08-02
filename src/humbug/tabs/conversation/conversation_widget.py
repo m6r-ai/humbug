@@ -317,7 +317,7 @@ class ConversationWidget(QWidget):
             message: The message that was added
         """
         msg_widget = ConversationMessage(
-            message.source, message.timestamp, message.model or "", message.id, message.user_name, self
+            message.source, message.timestamp, message.model or "", message.id, message.user_name, message.content, self
         )
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
@@ -329,8 +329,6 @@ class ConversationWidget(QWidget):
         msg_widget.expand_requested.connect(self._on_message_expand_requested)
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
-
-        msg_widget.set_content(message.content)
 
         # Add widget before input and the stretch
         self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
