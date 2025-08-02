@@ -41,6 +41,8 @@ class MarkdownTextEdit(MinHeightTextEdit):
         palette.setBrush(QPalette.ColorRole.HighlightedText, QBrush(Qt.BrushStyle.NoBrush))
         self.setPalette(palette)
 
+        self._original_font = self.font()
+
     def _on_style_changed(self) -> None:
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
         self.document().setIndentWidth(self._style_manager.get_space_width() * 4)
@@ -73,10 +75,14 @@ class MarkdownTextEdit(MinHeightTextEdit):
         if has_code:
             self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+            font = self._original_font
+            font.setFamilies(self._style_manager.monospace_font_families())
+            self.setFont(font)
 
         else:
             self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self.setFont(self._original_font)
 
         # Force layout update
         self._on_content_changed()
