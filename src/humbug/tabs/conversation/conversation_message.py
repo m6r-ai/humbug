@@ -162,10 +162,10 @@ class ConversationMessage(QFrame):
         default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
         self.set_expanded(default_expanded)
 
+        self._on_style_changed()
+
         if content:
             self.set_content(content)
-
-        self._on_style_changed()
 
     def is_focused(self) -> bool:
         """Check if this message is focused."""
