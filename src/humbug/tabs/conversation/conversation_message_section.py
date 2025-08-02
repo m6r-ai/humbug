@@ -78,7 +78,7 @@ class ConversationMessageSection(QFrame):
             self._header_layout.setSpacing(4)
 
             # Add language label on the left
-            self._language_header = QLabel()
+            self._language_header = QLabel(self._header_container)
             self._language_header.setIndent(0)
             self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._header_layout.addWidget(self._language_header)
@@ -95,7 +95,7 @@ class ConversationMessageSection(QFrame):
         self._use_markdown = not is_input and language is None
 
         # Create text area
-        self._text_area = MarkdownTextEdit()
+        self._text_area = MarkdownTextEdit(self)
         self._text_area.setAcceptRichText(self._use_markdown)
         self._text_area.setReadOnly(not is_input)
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)

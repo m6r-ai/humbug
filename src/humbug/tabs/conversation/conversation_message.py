@@ -101,13 +101,13 @@ class ConversationMessage(QFrame):
         self._expand_button: QToolButton | None = None
 
         if not is_input:
-            self._expand_button = QToolButton(self)
+            self._expand_button = QToolButton(self._header)
             self._expand_button.setObjectName("expandButton")
             self._expand_button.clicked.connect(self._toggle_expanded)
             self._header_layout.addWidget(self._expand_button)
 
         # Create role and timestamp labels
-        self._role_label = QLabel(self)
+        self._role_label = QLabel(self._header)
         self._role_label.setObjectName("roleLabel")
         self._role_label.setIndent(0)
         self._header_layout.addWidget(self._role_label)
