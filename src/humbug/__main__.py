@@ -95,7 +95,7 @@ class HumbugApplication(QApplication):
         event_type = arg__2.type()
         receiver_name = arg__1.objectName()
         start = time.monotonic()
-        ret = QApplication.notify(self, arg__1, arg__2)
+        ret = super().notify(arg__1, arg__2)
         end = time.monotonic()
         elapsed_time = (end - start) * 1000
         if elapsed_time > 20:
