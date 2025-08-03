@@ -101,6 +101,11 @@ class ConversationMessageSection(QFrame):
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
+        if language is not None:
+            font = self._text_area.font()
+            font.setFamilies(self._style_manager.monospace_font_families())
+            self._text_area.setFont(font)
+
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
@@ -462,6 +467,11 @@ class ConversationMessageSection(QFrame):
         Apply styling to this section.
         """
         self.setFont(font)
+
+        if self._language is not None:
+            font = self._text_area.font()
+            font.setFamilies(self._style_manager.monospace_font_families())
+
         self._text_area.setFont(font)
 
         self._apply_button_style()
