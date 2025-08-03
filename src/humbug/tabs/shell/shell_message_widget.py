@@ -189,8 +189,8 @@ class ShellMessageWidget(QFrame):
             ShellMessageSource.ERROR: "error"
         }.get(source, "user")
 
-        self._role_label.setProperty("messageSource", source_name)
-        self.setProperty("messageSource", source_name)
+        self._role_label.setProperty("message_source", source_name)
+        self.setProperty("message_source", source_name)
 
         # Set the content in the text area
         self._text_area.set_text(text)
@@ -234,15 +234,6 @@ class ShellMessageWidget(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _get_background_color(self) -> str:
-        """Get the background color for the current message source."""
-        current_source = self._message_source or ShellMessageSource.USER
-        if current_source == ShellMessageSource.USER:
-            return self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
-
-
-        return self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-
     def _get_border_color(self) -> str:
         """Get the border color based on current state."""
         if self._is_focused and self.hasFocus():
@@ -269,29 +260,27 @@ class ShellMessageWidget(QFrame):
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
-        background_color = self._get_background_color()
         border_color = self._get_border_color()
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
             QFrame#ShellMessageWidget {{
-                background-color: {background_color};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {border_color};
             }}
-            QFrame#ShellMessageWidget[messageSource="user"] {{
+            QFrame#ShellMessageWidget[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
-            QFrame#ShellMessageWidget[messageSource="success"] {{
+            QFrame#ShellMessageWidget[message_source="success"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
-            QFrame#ShellMessageWidget[messageSource="error"] {{
+            QFrame#ShellMessageWidget[message_source="error"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             #ShellMessageWidget QWidget#_header {{
-                background-color: {background_color};
+                background-color: transparent;
                 border: none;
                 border-radius: 0;
                 padding: 0;
@@ -302,22 +291,21 @@ class ShellMessageWidget(QFrame):
     def _build_header_styles(self) -> str:
         """Build styles for the header area and role label."""
         style_manager = self._style_manager
-        background_color = self._get_background_color()
 
         return f"""
             #ShellMessageWidget QLabel#_role_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
                 padding: 0;
-                background-color: {background_color};
+                background-color: transparent;
             }}
-            #ShellMessageWidget QLabel#_role_label[messageSource="user"] {{
+            #ShellMessageWidget QLabel#_role_label[message_source="user"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
             }}
-            #ShellMessageWidget QLabel#_role_label[messageSource="success"] {{
+            #ShellMessageWidget QLabel#_role_label[message_source="success"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS)};
             }}
-            #ShellMessageWidget QLabel#_role_label[messageSource="error"] {{
+            #ShellMessageWidget QLabel#_role_label[message_source="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
         """
@@ -325,7 +313,6 @@ class ShellMessageWidget(QFrame):
     def _build_text_area_styles(self) -> str:
         """Build styles for the text area and scrollbars."""
         style_manager = self._style_manager
-        background_color = self._get_background_color()
 
         return f"""
             #ShellMessageWidget QTextEdit#_text_area {{
@@ -335,7 +322,7 @@ class ShellMessageWidget(QFrame):
                 border-radius: 0;
                 padding: 0;
                 margin: 0;
-                background-color: {background_color};
+                background-color: transparent;
             }}
 
             #ShellMessageWidget #_text_area QScrollBar:horizontal {{

@@ -143,6 +143,7 @@ class ShellInput(ShellMessageWidget):
         submit_key = self._get_submit_key_text()
 
         self._role_label.setText(strings.command_prompt.format(key=submit_key))
+        self._role_label.setProperty("message_source", "user")
         # Trigger stylesheet application to ensure proper styling
         self._apply_shared_stylesheet()
 
