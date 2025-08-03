@@ -241,15 +241,15 @@ class ConversationInput(ConversationMessage):
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
-            QFrame#conversationMessage {{
+            QFrame#ConversationMessage {{
                 background-color: {background_color};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {border_color};
             }}
 
-            QWidget#messageHeader,
-            QWidget#sectionsContainer {{
+            QFrame#ConversationMessage QWidget#_header,
+            QFrame#ConversationMessage QWidget#_sections_container {{
                 background-color: {background_color};
                 border: none;
                 border-radius: 0;

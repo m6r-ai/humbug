@@ -61,7 +61,7 @@ class ConversationMessage(QFrame):
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
         # Set object name for QSS targeting
-        self.setObjectName("conversationMessage")
+        self.setObjectName("ConversationMessage")
 
         self._is_input = is_input
 
@@ -92,7 +92,7 @@ class ConversationMessage(QFrame):
 
         # Create header area with horizontal layout
         self._header = QWidget(self)
-        self._header.setObjectName("messageHeader")
+        self._header.setObjectName("_header")
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(4)
@@ -102,13 +102,13 @@ class ConversationMessage(QFrame):
 
         if not is_input:
             self._expand_button = QToolButton(self._header)
-            self._expand_button.setObjectName("expandButton")
+            self._expand_button.setObjectName("_expand_button")
             self._expand_button.clicked.connect(self._toggle_expanded)
             self._header_layout.addWidget(self._expand_button)
 
         # Create role and timestamp labels
         self._role_label = QLabel(self._header)
-        self._role_label.setObjectName("roleLabel")
+        self._role_label.setObjectName("_role_label")
         self._role_label.setIndent(0)
         self._header_layout.addWidget(self._role_label)
         self._header_layout.addStretch()
@@ -123,7 +123,7 @@ class ConversationMessage(QFrame):
 
         # Container for message sections
         self._sections_container = QWidget(self)
-        self._sections_container.setObjectName("sectionsContainer")
+        self._sections_container.setObjectName("_sections_container")
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
         self._sections_layout.setSpacing(15)
@@ -131,9 +131,9 @@ class ConversationMessage(QFrame):
 
         # Tool approval widgets
         self._approval_widget: QWidget | None = None
-        self._text_edit: MinHeightTextEdit | None = None
-        self._approve_button: QPushButton | None = None
-        self._reject_button: QPushButton | None = None
+        self._approval_text_edit: MinHeightTextEdit | None = None
+        self._approval_approve_button: QPushButton | None = None
+        self._approval_reject_button: QPushButton | None = None
 
         # Track sections
         self._sections: List[ConversationMessageSection] = []
@@ -268,11 +268,11 @@ class ConversationMessage(QFrame):
         if self._delete_message_button:
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
 
-        if self._approve_button:
-            self._approve_button.setText(strings.approve_tool_call)
+        if self._approval_approve_button:
+            self._approval_approve_button.setText(strings.approve_tool_call)
 
-        if self._reject_button:
-            self._reject_button.setText(strings.reject_tool_call)
+        if self._approval_reject_button:
+            self._approval_reject_button.setText(strings.reject_tool_call)
 
         # Update expand button tooltip
         self._update_expand_button()
@@ -325,7 +325,7 @@ class ConversationMessage(QFrame):
             A new ConversationMessageSection instance
         """
         section = ConversationMessageSection(self._is_input, language, self._sections_container)
-        section.setObjectName("messageSection")
+        section.setObjectName("ConversationMessageSection")
 
         section.selection_changed.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
@@ -386,7 +386,7 @@ class ConversationMessage(QFrame):
         if style == AIMessageSource.AI:
             strings = self._language_manager.strings()
             self._fork_message_button = QToolButton(self)
-            self._fork_message_button.setObjectName("forkButton")
+            self._fork_message_button.setObjectName("_fork_button")
             self._fork_message_button.clicked.connect(self._fork_message)
             self._fork_message_button.setToolTip(strings.tooltip_fork_message)
             self._fork_message_button.installEventFilter(event_filter)
@@ -396,7 +396,7 @@ class ConversationMessage(QFrame):
         elif style == AIMessageSource.USER and not self._is_input:
             strings = self._language_manager.strings()
             self._delete_message_button = QToolButton(self)
-            self._delete_message_button.setObjectName("deleteButton")
+            self._delete_message_button.setObjectName("_delete_button")
             self._delete_message_button.clicked.connect(self._delete_message)
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
             self._delete_message_button.installEventFilter(event_filter)
@@ -405,13 +405,13 @@ class ConversationMessage(QFrame):
         # We have copy and save buttons for several message sources
         if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
             self._copy_message_button = QToolButton(self)
-            self._copy_message_button.setObjectName("copyButton")
+            self._copy_message_button.setObjectName("_copy_button")
             self._copy_message_button.clicked.connect(self._copy_message)
             self._copy_message_button.installEventFilter(event_filter)
             self._header_layout.addWidget(self._copy_message_button)
 
             self._save_message_button = QToolButton(self)
-            self._save_message_button.setObjectName("saveButton")
+            self._save_message_button.setObjectName("_save_button")
             self._save_message_button.clicked.connect(self._save_message)
             self._save_message_button.installEventFilter(event_filter)
             self._header_layout.addWidget(self._save_message_button)
@@ -450,23 +450,18 @@ class ConversationMessage(QFrame):
         """
         assert self._approval_widget is None, "Approval widget already exists"
 
-        self._approval_widget = self._create_tool_approval_widget(tool_call, reason, destructive)
-        self._layout.addWidget(self._approval_widget)
-
-    def _create_tool_approval_widget(self, tool_call: AIToolCall, reason: str, destructive: bool) -> QWidget:
-        """Create widget for tool call approval."""
-        approval_widget = QWidget()
-        approval_widget.setObjectName("approvalWidget")
-        layout = QVBoxLayout(approval_widget)
+        self._approval_widget = QWidget()
+        self._approval_widget.setObjectName("_approval_widget")
+        layout = QVBoxLayout(self._approval_widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(8)
         strings = self._language_manager.strings()
 
-        self._text_edit = MinHeightTextEdit()
-        self._text_edit.setObjectName("approvalTextEdit")
-        self._text_edit.set_text(reason)
-        self._text_edit.setReadOnly(True)
-        layout.addWidget(self._text_edit)
+        self._approval_text_edit = MinHeightTextEdit()
+        self._approval_text_edit.setObjectName("_approval_text_edit")
+        self._approval_text_edit.set_text(reason)
+        self._approval_text_edit.setReadOnly(True)
+        layout.addWidget(self._approval_text_edit)
 
         # Approval buttons
         button_layout = QHBoxLayout()
@@ -477,29 +472,29 @@ class ConversationMessage(QFrame):
         zoom_factor = self._style_manager.zoom_factor()
         min_button_width = int(180 * zoom_factor)
 
-        self._approve_button = QPushButton(strings.approve_tool_call)
-        self._approve_button.setObjectName("approveButton")
-        self._approve_button.clicked.connect(lambda: self._approve_tool_call(tool_call))
-        self._approve_button.setMinimumWidth(min_button_width)
-        self._approve_button.setMinimumHeight(min_button_height)
-        self._approve_button.setProperty("recommended", not destructive)
-        self._approve_button.setContentsMargins(8, 8, 8, 8)
+        self._approval_approve_button = QPushButton(strings.approve_tool_call)
+        self._approval_approve_button.setObjectName("_approval_approve_button")
+        self._approval_approve_button.clicked.connect(lambda: self._approve_tool_call(tool_call))
+        self._approval_approve_button.setMinimumWidth(min_button_width)
+        self._approval_approve_button.setMinimumHeight(min_button_height)
+        self._approval_approve_button.setProperty("recommended", not destructive)
+        self._approval_approve_button.setContentsMargins(8, 8, 8, 8)
 
-        self._reject_button = QPushButton(strings.reject_tool_call)
-        self._reject_button.setObjectName("rejectButton")
-        self._reject_button.clicked.connect(self._reject_tool_call)
-        self._reject_button.setMinimumWidth(min_button_width)
-        self._reject_button.setMinimumHeight(min_button_height)
-        self._reject_button.setContentsMargins(8, 8, 8, 8)
+        self._approval_reject_button = QPushButton(strings.reject_tool_call)
+        self._approval_reject_button.setObjectName("_approval_reject_button")
+        self._approval_reject_button.clicked.connect(self._reject_tool_call)
+        self._approval_reject_button.setMinimumWidth(min_button_width)
+        self._approval_reject_button.setMinimumHeight(min_button_height)
+        self._approval_reject_button.setContentsMargins(8, 8, 8, 8)
 
-        button_layout.addWidget(self._approve_button)
-        button_layout.addWidget(self._reject_button)
+        button_layout.addWidget(self._approval_approve_button)
+        button_layout.addWidget(self._approval_reject_button)
         button_layout.addStretch()
 
         layout.addSpacing(2)
         layout.addLayout(button_layout)
 
-        return approval_widget
+        self._layout.addWidget(self._approval_widget)
 
     def _approve_tool_call(self, tool_call: AIToolCall) -> None:
         """Handle tool call approval."""
@@ -517,8 +512,8 @@ class ConversationMessage(QFrame):
             self._layout.removeWidget(self._approval_widget)
             self._approval_widget.deleteLater()
             self._approval_widget = None
-            self._approve_button = None
-            self._reject_button = None
+            self._approval_approve_button = None
+            self._approval_reject_button = None
 
     def _get_role_color(self) -> str:
         """Get the role color for the current message type."""
@@ -562,15 +557,15 @@ class ConversationMessage(QFrame):
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
-            QFrame#conversationMessage {{
+            QFrame#ConversationMessage {{
                 background-color: {background_color};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {border_color};
             }}
 
-            QWidget#messageHeader,
-            QWidget#sectionsContainer {{
+            #ConversationMessage QWidget#_header,
+            #ConversationMessage QWidget#_sections_container {{
                 background-color: {background_color};
                 border: none;
                 border-radius: 0;
@@ -585,7 +580,7 @@ class ConversationMessage(QFrame):
         background_color = self._get_background_color()
 
         return f"""
-            QLabel#roleLabel {{
+            #ConversationMessage QLabel#_role_label {{
                 color: {role_color};
                 margin: 0;
                 padding: 0;
@@ -599,11 +594,11 @@ class ConversationMessage(QFrame):
         background_color = self._get_background_color()
 
         return f"""
-            QToolButton#expandButton,
-            QToolButton#copyButton,
-            QToolButton#saveButton,
-            QToolButton#forkButton,
-            QToolButton#deleteButton {{
+            #ConversationMessage QToolButton#_expand_button,
+            #ConversationMessage QToolButton#_copy_button,
+            #ConversationMessage QToolButton#_save_button,
+            #ConversationMessage QToolButton#_fork_button,
+            #ConversationMessage QToolButton#_delete_button {{
                 background-color: {background_color};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
@@ -611,17 +606,17 @@ class ConversationMessage(QFrame):
                 margin: 0px;
             }}
 
-            QToolButton#copyButton:hover,
-            QToolButton#saveButton:hover,
-            QToolButton#forkButton:hover,
-            QToolButton#deleteButton:hover {{
+            #ConversationMessage QToolButton#_copy_button:hover,
+            #ConversationMessage QToolButton#_save_button:hover,
+            #ConversationMessage QToolButton#_fork_button:hover,
+            #ConversationMessage QToolButton#_delete_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
 
-            QToolButton#copyButton:pressed,
-            QToolButton#saveButton:pressed,
-            QToolButton#forkButton:pressed,
-            QToolButton#deleteButton:pressed {{
+            #ConversationMessage QToolButton#_copy_button:pressed,
+            #ConversationMessage QToolButton#_save_button:pressed,
+            #ConversationMessage QToolButton#_fork_button:pressed,
+            #ConversationMessage QToolButton#_delete_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
         """
@@ -632,11 +627,11 @@ class ConversationMessage(QFrame):
         background_color = self._get_background_color()
 
         return f"""
-            QWidget#approvalWidget {{
+            #ConversationMessage QWidget#_approval_widget {{
                 background-color: {background_color};
             }}
 
-            QTextEdit#approvalTextEdit {{
+            #ConversationMessage QTextEdit#_approval_text_edit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: {background_color};
                 border: none;
@@ -645,40 +640,37 @@ class ConversationMessage(QFrame):
                 margin: 0;
             }}
 
-            QPushButton#approveButton,
-            QPushButton#rejectButton {{
+            #ConversationMessage QPushButton#_approval_approve_button[recommended="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+            }}
+            #ConversationMessage QPushButton#_approval_approve_button[recommended="true"]:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+            }}
+            #ConversationMessage QPushButton#_approval_approve_button[recommended="true"]:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+            }}
+            #ConversationMessage QPushButton#_approval_approve_button[recommended="false"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+            }}
+            #ConversationMessage QPushButton#_approval_approve_button[recommended="false"]:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+            }}
+            #ConversationMessage QPushButton#_approval_approve_button[recommended="false"]:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+            }}
+
+            #ConversationMessage QPushButton#_approval_reject_button {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border-radius: 4px;
             }}
-            QPushButton#approveButton:hover,
-            QPushButton#rejectButton:hover {{
+            #ConversationMessage QPushButton#_approval_reject_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
             }}
-            QPushButton#approveButton:pressed,
-            QPushButton#rejectButton:pressed {{
+            #ConversationMessage QPushButton#_approval_reject_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
-            }}
-
-            QPushButton#approveButton[recommended="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-            }}
-            QPushButton#approveButton[recommended="true"]:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
-            }}
-            QPushButton#approveButton[recommended="true"]:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
-            }}
-            QPushButton#approveButton[recommended="false"] {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-            }}
-            QPushButton#approveButton[recommended="false"]:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
-            }}
-            QPushButton#approveButton[recommended="false"]:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
         """
 
@@ -687,25 +679,25 @@ class ConversationMessage(QFrame):
         style_manager = self._style_manager
         border_radius = int(style_manager.message_bubble_spacing() / 2)
         return f"""
-            QFrame#messageSection[sectionStyle="text-system"] {{
+            QFrame#ConversationMessageSection[sectionStyle="text-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            QFrame#messageSection[sectionStyle="text-user"] {{
+            QFrame#ConversationMessageSection[sectionStyle="text-user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            QFrame#messageSection[sectionStyle="code-system"] {{
+            QFrame#ConversationMessageSection[sectionStyle="code-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            QFrame#messageSection[sectionStyle="code-user"] {{
+            QFrame#ConversationMessageSection[sectionStyle="code-user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 border-radius: {border_radius}px;
@@ -713,7 +705,7 @@ class ConversationMessage(QFrame):
             }}
 
             /* Text areas within message sections */
-            QFrame#messageSection QTextEdit {{
+            #ConversationMessageSection QTextEdit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
@@ -723,7 +715,7 @@ class ConversationMessage(QFrame):
             }}
 
             /* Labels (language headers) within message sections */
-            QFrame#messageSection QLabel {{
+            #ConversationMessageSection QLabel {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
                 background-color: transparent;
                 margin: 0;
@@ -731,39 +723,41 @@ class ConversationMessage(QFrame):
             }}
 
             /* Header containers within message sections */
-            QFrame#messageSection QWidget {{
+            #ConversationMessageSection QWidget {{
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
             /* Buttons within message sections */
-            QFrame#messageSection QToolButton {{
+            #ConversationMessageSection QToolButton {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 padding: 0px;
             }}
-            QFrame#messageSection QToolButton:hover {{
+            #ConversationMessageSection QToolButton:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
-            QFrame#messageSection QToolButton:pressed {{
+            #ConversationMessageSection QToolButton:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
 
             /* Scrollbars within message sections */
-            QFrame#messageSection QScrollBar:horizontal {{
+            #ConversationMessageSection QScrollBar:horizontal {{
                 height: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
-            QFrame#messageSection QScrollBar::handle:horizontal {{
+            #ConversationMessageSection QScrollBar::handle:horizontal {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
-            QFrame#messageSection QScrollBar::add-page:horizontal, QFrame#messageSection QScrollBar::sub-page:horizontal {{
+            #ConversationMessageSection QScrollBar::add-page:horizontal,
+            #ConversationMessageSection QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
-            QFrame#messageSection QScrollBar::add-line:horizontal, QFrame#messageSection QScrollBar::sub-line:horizontal {{
+            #ConversationMessageSection QScrollBar::add-line:horizontal,
+            #ConversationMessageSection QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
         """
@@ -978,14 +972,14 @@ class ConversationMessage(QFrame):
         self._apply_button_style()
 
         # Apply fonts to approval buttons if present
-        if self._approve_button:
-            self._approve_button.setFont(font)
+        if self._approval_approve_button:
+            self._approval_approve_button.setFont(font)
 
-        if self._reject_button:
-            self._reject_button.setFont(font)
+        if self._approval_reject_button:
+            self._approval_reject_button.setFont(font)
 
-        if self._text_edit:
-            self._text_edit.setFont(font)
+        if self._approval_text_edit:
+            self._approval_text_edit.setFont(font)
 
         # Apply styling to all sections
         for section in self._sections:

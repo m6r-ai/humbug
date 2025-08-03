@@ -49,7 +49,7 @@ class LogMessage(QFrame):
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
         # Set object name for QSS targeting
-        self.setObjectName("logMessage")
+        self.setObjectName("LogMessage")
 
         self._logger = logging.getLogger("LogMessage")
 
@@ -67,14 +67,14 @@ class LogMessage(QFrame):
 
         # Create header area with horizontal layout
         self._header = QWidget(self)
-        self._header.setObjectName("logHeader")
+        self._header.setObjectName("_header")
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(4)
 
         # Create role and timestamp labels
         self._level_label = QLabel(self)
-        self._level_label.setObjectName("levelLabel")
+        self._level_label.setObjectName("_level_label")
         self._level_label.setIndent(0)
         self._header_layout.addWidget(self._level_label)
         self._header_layout.addStretch()
@@ -84,7 +84,7 @@ class LogMessage(QFrame):
 
         # Create text area
         self._text_area = LogTextEdit(self)
-        self._text_area.setObjectName("logTextArea")
+        self._text_area.setObjectName("_text_area")
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -112,7 +112,7 @@ class LogMessage(QFrame):
             MindspaceLogLevel.ERROR: "error"
         }.get(level, "error")
 
-        self._level_label.setProperty("logLevel", level_name)
+        self._level_label.setProperty("log_level", level_name)
 
         # Set the content in the text area
         self._text_area.set_text(text)
@@ -235,14 +235,14 @@ class LogMessage(QFrame):
         border_radius = int(style_manager.message_bubble_spacing())
 
         return f"""
-            QFrame#logMessage {{
+            QFrame#LogMessage {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {border_color};
             }}
 
-            QWidget#logHeader {{
+            #LogMessage QWidget#_header {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 border: none;
                 border-radius: 0;
@@ -255,26 +255,26 @@ class LogMessage(QFrame):
         """Build styles for the header area and level label."""
         style_manager = self._style_manager
         return f"""
-            QLabel#levelLabel {{
+            #LogMessage QLabel#_level_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
                 padding: 0;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
-            QLabel#levelLabel[logLevel="trace"] {{
+            #LogMessage QLabel#_level_label[log_level="trace"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_TRACE)};
             }}
 
-            QLabel#levelLabel[logLevel="info"] {{
+            #LogMessage QLabel#_level_label[log_level="info"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION)};
             }}
 
-            QLabel#levelLabel[logLevel="warn"] {{
+            #LogMessage QLabel#_level_label[log_level="warn"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
             }}
 
-            QLabel#levelLabel[logLevel="error"] {{
+            #LogMessage QLabel#_level_label[log_level="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
             }}
         """
@@ -283,7 +283,7 @@ class LogMessage(QFrame):
         """Build styles for the text area and scrollbars."""
         style_manager = self._style_manager
         return f"""
-            QTextEdit#logTextArea {{
+            #LogMessage QTextEdit#_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
@@ -293,23 +293,23 @@ class LogMessage(QFrame):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
-            QTextEdit#logTextArea QScrollBar:horizontal {{
+            #LogMessage QTextEdit#_text_area QScrollBar:horizontal {{
                 height: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
 
-            QTextEdit#logTextArea QScrollBar::handle:horizontal {{
+            #LogMessage QTextEdit#_text_area QScrollBar::handle:horizontal {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
 
-            QTextEdit#logTextArea QScrollBar::add-page:horizontal,
-            QTextEdit#logTextArea QScrollBar::sub-page:horizontal {{
+            #LogMessage QTextEdit#_text_area QScrollBar::add-page:horizontal,
+            #LogMessage QTextEdit#_text_area QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
 
-            QTextEdit#logTextArea QScrollBar::add-line:horizontal,
-            QTextEdit#logTextArea QScrollBar::sub-line:horizontal {{
+            #LogMessage QTextEdit#_text_area QScrollBar::add-line:horizontal,
+            #LogMessage QTextEdit#_text_area QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
         """

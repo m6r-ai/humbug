@@ -39,7 +39,7 @@ class ShellMessageWidget(QFrame):
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
         # Set object name for QSS targeting
-        self.setObjectName("shellMessage")
+        self.setObjectName("ShellMessageWidget")
 
         self._is_input = is_input
 
@@ -65,14 +65,14 @@ class ShellMessageWidget(QFrame):
 
         # Create header area with horizontal layout
         self._header = QWidget(self)
-        self._header.setObjectName("shellHeader")
+        self._header.setObjectName("_header")
         self._header_layout = QHBoxLayout(self._header)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(4)
 
         # Create role and timestamp labels
         self._role_label = QLabel(self)
-        self._role_label.setObjectName("roleLabel")
+        self._role_label.setObjectName("_role_label")
         self._role_label.setIndent(0)
         self._header_layout.addWidget(self._role_label)
         self._header_layout.addStretch()
@@ -82,7 +82,7 @@ class ShellMessageWidget(QFrame):
 
         # Create text area
         self._text_area = ShellTextEdit(is_input, self)
-        self._text_area.setObjectName("shellTextArea")
+        self._text_area.setObjectName("_text_area")
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -274,23 +274,23 @@ class ShellMessageWidget(QFrame):
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
-            QFrame#shellMessage {{
+            QFrame#ShellMessageWidget {{
                 background-color: {background_color};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {border_color};
             }}
-            QFrame#shellMessage[messageSource="user"] {{
+            QFrame#ShellMessageWidget[messageSource="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
-            QFrame#shellMessage[messageSource="success"] {{
+            QFrame#ShellMessageWidget[messageSource="success"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
-            QFrame#shellMessage[messageSource="error"] {{
+            QFrame#ShellMessageWidget[messageSource="error"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
-            QWidget#shellHeader {{
+            #ShellMessageWidget QWidget#_header {{
                 background-color: {background_color};
                 border: none;
                 border-radius: 0;
@@ -305,19 +305,19 @@ class ShellMessageWidget(QFrame):
         background_color = self._get_background_color()
 
         return f"""
-            QLabel#roleLabel {{
+            #ShellMessageWidget QLabel#_role_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
                 padding: 0;
                 background-color: {background_color};
             }}
-            QLabel#roleLabel[messageSource="user"] {{
+            #ShellMessageWidget QLabel#_role_label[messageSource="user"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
             }}
-            QLabel#roleLabel[messageSource="success"] {{
+            #ShellMessageWidget QLabel#_role_label[messageSource="success"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS)};
             }}
-            QLabel#roleLabel[messageSource="error"] {{
+            #ShellMessageWidget QLabel#_role_label[messageSource="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
         """
@@ -328,7 +328,7 @@ class ShellMessageWidget(QFrame):
         background_color = self._get_background_color()
 
         return f"""
-            QTextEdit#shellTextArea {{
+            #ShellMessageWidget QTextEdit#_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
@@ -338,20 +338,20 @@ class ShellMessageWidget(QFrame):
                 background-color: {background_color};
             }}
 
-            QTextEdit#shellTextArea QScrollBar:horizontal {{
+            #ShellMessageWidget #_text_area QScrollBar:horizontal {{
                 height: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
-            QTextEdit#shellTextArea QScrollBar::handle:horizontal {{
+            #ShellMessageWidget #_text_area QScrollBar::handle:horizontal {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
-            QTextEdit#shellTextArea QScrollBar::add-page:horizontal,
-            QTextEdit#shellTextArea QScrollBar::sub-page:horizontal {{
+            #ShellMessageWidget #_text_area QScrollBar::add-page:horizontal,
+            #ShellMessageWidget #_text_area QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
-            QTextEdit#shellTextArea QScrollBar::add-line:horizontal,
-            QTextEdit#shellTextArea QScrollBar::sub-line:horizontal {{
+            #ShellMessageWidget #_text_area QScrollBar::add-line:horizontal,
+            #ShellMessageWidget #_text_area QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
         """

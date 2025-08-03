@@ -30,7 +30,7 @@ class WikiMarkdownContent(WikiContentWidget):
         super().__init__(parent)
 
         # Set object name for QSS targeting
-        self.setObjectName("wikiMarkdownContent")
+        self.setObjectName("WikiMarkdownContent")
 
         self._logger = logging.getLogger("WikiMarkdownContent")
         self._content = ""
@@ -41,7 +41,7 @@ class WikiMarkdownContent(WikiContentWidget):
 
         # Container for content sections
         self._sections_container = QWidget(self)
-        self._sections_container.setObjectName("sectionsContainer")
+        self._sections_container.setObjectName("_sections_container")
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
         self._sections_layout.setSpacing(15)
@@ -75,10 +75,10 @@ class WikiMarkdownContent(WikiContentWidget):
         """
         is_input = False  # Wiki sections are never input
         section = WikiMarkdownContentSection(is_input, language, self._sections_container)
-        section.setObjectName("wikiSection")
+        section.setObjectName("WikiMarkdownContentSection")
 
         section_type = "code" if language is not None else "text"
-        section.setProperty("sectionType", section_type)
+        section.setProperty("section_type", section_type)
         section.setProperty("contained", self._contained)
 
         section.selection_changed.connect(
@@ -158,7 +158,7 @@ class WikiMarkdownContent(WikiContentWidget):
 
                     # Update section type property
                     section_type = "code" if language is not None else "text"
-                    section.setProperty("sectionType", section_type)
+                    section.setProperty("section_type", section_type)
                     section.setProperty("contained", self._contained)
 
                 section.set_content(node)
@@ -203,15 +203,15 @@ class WikiMarkdownContent(WikiContentWidget):
         """Build styles for the main container."""
         style_manager = self._style_manager
         return f"""
-            QWidget#wikiMarkdownContent {{
+            QWidget#WikiMarkdownContent {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            QWidget#wikiMarkdownContent[contained="true"] {{
+            QWidget#WikiMarkdownContent[contained="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
-            QWidget#sectionsContainer {{
+            #WikiMarkdownContent QWidget#_sections_container {{
                 background-color: transparent;
                 border: none;
                 margin: 0;
@@ -223,7 +223,7 @@ class WikiMarkdownContent(WikiContentWidget):
         """Build styles for language headers within sections."""
         style_manager = self._style_manager
         return f"""
-            QFrame#wikiSection QLabel#languageHeader {{
+            QFrame#WikiMarkdownContentSection QLabel {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
                 background-color: transparent;
                 margin: 0;
@@ -238,34 +238,34 @@ class WikiMarkdownContent(WikiContentWidget):
 
         return f"""
             /* Default section styling */
-            QFrame#wikiSection {{
+            QFrame#WikiMarkdownContentSection {{
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
 
             /* Text sections - normal (not contained) */
-            QFrame#wikiSection[sectionType="text"][contained="false"] {{
+            QFrame#WikiMarkdownContentSection[section_type="text"][contained="false"] {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
             /* Text sections - contained */
-            QFrame#wikiSection[sectionType="text"][contained="true"] {{
+            QFrame#WikiMarkdownContentSection[section_type="text"][contained="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             /* Code sections - normal (not contained) */
-            QFrame#wikiSection[sectionType="code"][contained="false"] {{
+            QFrame#WikiMarkdownContentSection[section_type="code"][contained="false"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             /* Code sections - contained */
-            QFrame#wikiSection[sectionType="code"][contained="true"] {{
+            QFrame#WikiMarkdownContentSection[section_type="code"][contained="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
             }}
 
             /* Text areas within sections */
-            QFrame#wikiSection QTextEdit {{
+            #WikiMarkdownContentSection QTextEdit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
@@ -275,27 +275,27 @@ class WikiMarkdownContent(WikiContentWidget):
             }}
 
             /* Header containers within sections */
-            QFrame#wikiSection QWidget#headerContainer {{
+            #WikiMarkdownContentSection QWidget {{
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
             /* Scrollbars within sections */
-            QFrame#wikiSection QScrollBar:horizontal {{
+            #WikiMarkdownContentSection QScrollBar:horizontal {{
                 height: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
-            QFrame#wikiSection QScrollBar::handle:horizontal {{
+            #WikiMarkdownContentSection QScrollBar::handle:horizontal {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
-            QFrame#wikiSection QScrollBar::add-page:horizontal,
-            QFrame#wikiSection QScrollBar::sub-page:horizontal {{
+            #WikiMarkdownContentSection QScrollBar::add-page:horizontal,
+            #WikiMarkdownContentSection QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
-            QFrame#wikiSection QScrollBar::add-line:horizontal,
-            QFrame#wikiSection QScrollBar::sub-line:horizontal {{
+            #WikiMarkdownContentSection QScrollBar::add-line:horizontal,
+            #WikiMarkdownContentSection QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
         """

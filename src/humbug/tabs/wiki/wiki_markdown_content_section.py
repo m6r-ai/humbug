@@ -66,14 +66,12 @@ class WikiMarkdownContentSection(QFrame):
 
             # Create a container for header (language label only, no buttons)
             self._header_container = QWidget()
-            self._header_container.setObjectName("headerContainer")
             self._header_layout = QHBoxLayout(self._header_container)
             self._header_layout.setContentsMargins(0, 0, 0, 0)
             self._header_layout.setSpacing(4)
 
             # Add language label on the left
             self._language_header = QLabel()
-            self._language_header.setObjectName("languageHeader")
             self._language_header.setIndent(0)
             self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._header_layout.addWidget(self._language_header)
