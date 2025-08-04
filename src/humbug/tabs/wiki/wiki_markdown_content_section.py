@@ -44,6 +44,8 @@ class WikiMarkdownContentSection(QFrame):
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
+        self.setObjectName("WikiMarkdownContentSection")
+
         self._logger = logging.getLogger("WikiMarkdownContentSection")
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
