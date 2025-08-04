@@ -10,7 +10,7 @@ from metaphor import (
 )
 from syntax import Token, TokenType
 
-from humbug.column_manager import ColumnManager
+from humbug.tabs.column_manager import ColumnManager
 from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.shell.shell_command import ShellCommand

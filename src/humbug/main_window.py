@@ -25,7 +25,6 @@ from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
-from humbug.column_manager import ColumnManager
 from humbug.delegate_ai_tool import DelegateAITool
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
@@ -39,6 +38,7 @@ from humbug.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
+from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.shell.commands.shell_command_clear import ShellCommandClear

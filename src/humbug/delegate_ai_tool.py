@@ -9,10 +9,10 @@ from ai_tool import (
     AIToolResult, AIToolCall
 )
 
-from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
+from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.user.user_manager import UserManager
 

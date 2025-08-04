@@ -65,8 +65,8 @@ class ConversationMessageSection(QFrame):
         self._language = language
         self._language_header = None
         self._header_container = None
-        self._copy_button = None
-        self._save_as_button = None
+        self._copy_button: QToolButton | None = None
+        self._save_as_button: QToolButton | None = None
 
         if language is not None:
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)

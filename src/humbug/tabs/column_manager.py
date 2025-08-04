@@ -9,14 +9,14 @@ from PySide6.QtCore import Signal, QTimer
 from ai import AIConversationHistory, AIConversationSettings, AIReasoningCapability
 
 from humbug.color_role import ColorRole
-from humbug.column_splitter import ColumnSplitter
-from humbug.column_widget import ColumnWidget
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
+from humbug.tabs.column_splitter import ColumnSplitter
+from humbug.tabs.column_widget import ColumnWidget
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_tab import EditorTab

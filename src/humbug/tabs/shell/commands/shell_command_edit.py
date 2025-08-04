@@ -6,9 +6,9 @@ from typing import List
 
 from syntax import Token, TokenType
 
-from humbug.column_manager import ColumnManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
 

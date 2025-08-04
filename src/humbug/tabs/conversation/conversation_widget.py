@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QEvent, QObject, QRect
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtGui import QCursor, QResizeEvent, QShowEvent
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
@@ -1256,7 +1256,7 @@ class ConversationWidget(QWidget):
             # After initial layout is complete, check for visibility changes after resize
             self._lazy_update_visible_sections()
 
-    def showEvent(self, event) -> None:
+    def showEvent(self, event: QShowEvent) -> None:
         """Ensure visible sections are highlighted when widget becomes visible."""
         super().showEvent(event)
 
