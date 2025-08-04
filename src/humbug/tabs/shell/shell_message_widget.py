@@ -97,9 +97,6 @@ class ShellMessageWidget(QFrame):
         self._is_focused = False
         self._mouse_left_button_pressed = False
 
-        # Set input property for QSS targeting
-        self.setProperty("isInput", is_input)
-
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
         self._on_language_changed()
