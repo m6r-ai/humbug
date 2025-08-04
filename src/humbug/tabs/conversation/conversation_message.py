@@ -761,8 +761,6 @@ class ConversationMessage(QFrame):
         font = self.font()
         base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
-        self.setFont(font)
-
         self._role_label.setFont(font)
 
         self._apply_button_style()
