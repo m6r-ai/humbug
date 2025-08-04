@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QSize, QObject
 from PySide6.QtGui import (
-    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor, QFont
+    QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor
 )
 
 from dmarkdown import MarkdownASTNode, MarkdownASTTextNode
@@ -159,6 +159,7 @@ class ConversationMessageSection(QFrame):
 
         else:
             self._use_markdown = False
+
             # Defer creation of expensive language highlighter until section becomes visible
             self._highlighter = None
             self._needs_lazy_update = True
@@ -463,17 +464,19 @@ class ConversationMessageSection(QFrame):
             )))
             self._save_as_button.setIconSize(icon_size)
 
-    def apply_style(self, font: QFont) -> None:
+    def apply_style(self) -> None:
         """
         Apply styling to this section.
         """
+        style_manager = self._style_manager
+        factor = style_manager.zoom_factor()
+        font = self.font()
+        base_font_size = style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
+
         if self._language_header:
             self._language_header.setFont(font)
-
-        if self._language is not None:
-            font = self._text_area.font()
-            font.setFamilies(self._style_manager.monospace_font_families())
 
         self._text_area.setFont(font)
 

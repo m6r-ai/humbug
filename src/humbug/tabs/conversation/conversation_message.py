@@ -388,13 +388,7 @@ class ConversationMessage(QFrame):
 
         # Set property that QSS will match against
         section.setProperty("section_style", style_class)
-
-        factor = self._style_manager.zoom_factor()
-        font = self.font()
-        base_font_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
-
-        section.apply_style(font)
+        section.apply_style()
 
         return section
 
@@ -781,7 +775,7 @@ class ConversationMessage(QFrame):
 
         # Apply styling to all sections
         for section in self._sections:
-            section.apply_style(font)
+            section.apply_style()
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """

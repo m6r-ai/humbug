@@ -1546,6 +1546,10 @@ class ConversationWidget(QWidget):
         shared_stylesheet = "\n".join(stylesheet_parts)
         self.setStyleSheet(shared_stylesheet)
 
+        if self._initial_layout_complete:
+            self._initial_layout_complete = False
+            self._layout_stabilization_timer.start(100)
+
     def _show_conversation_context_menu(self, pos: QPoint) -> None:
         """
         Create and show the context menu at the given position.
