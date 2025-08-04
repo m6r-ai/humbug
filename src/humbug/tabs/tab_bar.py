@@ -1,7 +1,7 @@
 from typing import cast
 
 from PySide6.QtWidgets import QTabBar, QWidget
-from PySide6.QtCore import QEvent, QObject
+from PySide6.QtCore import QEvent, QObject, QSize
 from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent
 
 from humbug.color_role import ColorRole
@@ -130,8 +130,26 @@ class TabBar(QTabBar):
                 bottom_border_rect = tab_rect.adjusted(0, tab_rect.height() - 1, 0, 0)
                 painter.fillRect(bottom_border_rect, bottom_border_color)
 
+        rect = self.rect()
+        height = rect.height()
+        painter.fillRect(
+            0, height - 2, rect.width(), height - 1, self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
+        )
+
         # Let Qt paint the text and other tab elements on top
         super().paintEvent(event)
+
+    def sizeHint(self) -> QSize:
+        """
+        Provide a size hint for the tab bar based on its contents.
+
+        Returns:
+            QSize: The recommended size for the tab bar
+        """
+        # Use the default size hint from QTabBar
+        size_hint = super().sizeHint()
+        size_hint.setHeight(size_hint.height() + 2)
+        return size_hint
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """

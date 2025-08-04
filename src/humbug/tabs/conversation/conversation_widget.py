@@ -1509,6 +1509,7 @@ class ConversationWidget(QWidget):
         """
 
     def _on_style_changed(self) -> None:
+        """Update styles when the application style changes."""
         factor = self._style_manager.zoom_factor()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()

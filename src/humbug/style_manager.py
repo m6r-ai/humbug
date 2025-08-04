@@ -1184,9 +1184,9 @@ class StyleManager(QObject):
         """
         if mode != self._color_mode:
             self._color_mode = mode
-            self._initialize_highlights()  # Reinitialize highlights with new colors
+            self._initialize_highlights()
             self._initialize_proportional_highlights()
-            self.style_changed.emit()  # Trigger style update
+            self.style_changed.emit()
 
     def zoom_factor(self) -> float:
         """Current zoom scaling factor."""

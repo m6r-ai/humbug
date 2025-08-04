@@ -80,7 +80,7 @@ class ConversationMessage(QFrame):
         self._message_rendered = True
         if not is_input and not content:
             self._message_rendered = False
-            self.setVisible(False)
+            self.hide()
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -220,7 +220,7 @@ class ConversationMessage(QFrame):
 
     def set_focused(self, focused: bool) -> None:
         """Set the focused state of this message."""
-        assert self.isVisible(), "Focused message must be visible"
+        assert not self.isHidden(), "Focused message must not be hidden"
 
         if self._is_focused == focused:
             return
@@ -257,7 +257,13 @@ class ConversationMessage(QFrame):
             return
 
         self._is_expanded = expanded
-        self._sections_container.setVisible(expanded)
+
+        if expanded:
+            self._sections_container.show()
+
+        else:
+            self._sections_container.hide()
+
         self._update_expand_button()
 
     def _toggle_expanded(self) -> None:
@@ -613,7 +619,7 @@ class ConversationMessage(QFrame):
         # Show the message if it has text
         if text:
             self._message_rendered = True
-            self.setVisible(True)
+            self.show()
 
     def message_id(self) -> str | None:
         """Get the unique message ID."""

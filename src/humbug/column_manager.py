@@ -1765,11 +1765,14 @@ class ColumnManager(QWidget):
                 padding: 0px;
             }}
             QTabBar::scroller {{
-                width: 20px;
+                width: 28px;
             }}
             QTabBar QToolButton {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                border: none;
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+            QTabBar QToolButton:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
             }}
             QTabBar QToolButton::right-arrow {{
                 image: url({self._style_manager.get_icon_path('arrow-right')});
