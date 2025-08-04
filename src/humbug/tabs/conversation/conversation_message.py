@@ -765,6 +765,8 @@ class ConversationMessage(QFrame):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
+        self._role_label.setFont(font)
+
         self._apply_button_style()
 
         # Apply fonts to approval buttons if present
@@ -780,8 +782,6 @@ class ConversationMessage(QFrame):
         # Apply styling to all sections
         for section in self._sections:
             section.apply_style(font)
-
-#        self._apply_shared_stylesheet()
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """
