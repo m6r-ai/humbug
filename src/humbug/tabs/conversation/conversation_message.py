@@ -577,21 +577,19 @@ class ConversationMessage(QFrame):
     def _build_header_styles(self) -> str:
         """Build styles for the header area."""
         role_color = self._get_role_color()
-        background_color = self._get_background_color()
 
         return f"""
             #ConversationMessage QLabel#_role_label {{
                 color: {role_color};
                 margin: 0;
                 padding: 0;
-                background-color: {background_color};
+                background-color: transparent;
             }}
         """
 
     def _build_button_styles(self) -> str:
         """Build styles for all buttons in the message."""
         style_manager = self._style_manager
-        background_color = self._get_background_color()
 
         return f"""
             #ConversationMessage QToolButton#_expand_button,
@@ -599,7 +597,7 @@ class ConversationMessage(QFrame):
             #ConversationMessage QToolButton#_save_button,
             #ConversationMessage QToolButton#_fork_button,
             #ConversationMessage QToolButton#_delete_button {{
-                background-color: {background_color};
+                background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 padding: 0px;
@@ -624,16 +622,15 @@ class ConversationMessage(QFrame):
     def _build_approval_styles(self) -> str:
         """Build styles for tool approval widgets."""
         style_manager = self._style_manager
-        background_color = self._get_background_color()
 
         return f"""
             #ConversationMessage QWidget#_approval_widget {{
-                background-color: {background_color};
+                background-color: transparent;
             }}
 
             #ConversationMessage QTextEdit#_approval_text_edit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {background_color};
+                background-color: transparent;
                 border: none;
                 border-radius: 0px;
                 padding: 0;
