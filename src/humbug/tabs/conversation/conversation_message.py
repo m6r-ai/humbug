@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
 )
 from PySide6.QtCore import Signal, QPoint, QSize, Qt, QRect, QObject
-from PySide6.QtGui import QIcon, QGuiApplication, QResizeEvent, QColor
+from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QResizeEvent, QColor, QPainter, QPen
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
@@ -171,6 +171,8 @@ class ConversationMessage(QFrame):
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_language_changed()
 
+        self._border_color = self._get_border_color()
+
         self._needs_lazy_update = True
 
         # Set default expanded state based on message type
@@ -182,6 +184,34 @@ class ConversationMessage(QFrame):
 
         if content:
             self.set_content(content)
+
+    def paintEvent(self, arg__1: QPaintEvent) -> None:
+        """Override paint event to paint custom borders."""
+        super().paintEvent(arg__1)
+
+        painter = QPainter(self)
+        border_width = 2
+        border_radius = int(self._style_manager.message_bubble_spacing() / 2)
+        border_color = self._get_border_color()
+
+        # Enable antialiasing for smooth curves
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # Set up the pen for the border
+        pen = QPen(QColor(border_color), border_width)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        painter.setPen(pen)
+
+        # Don't fill the rectangle, just draw the border
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        # Adjust rectangle to center the border line
+        # (QPainter draws the border centered on the rectangle edge)
+        adjustment = border_width // 2
+        adjusted_rect = self.rect().adjusted(adjustment, adjustment, -adjustment, -adjustment)
+
+        # Draw the rounded rectangle border
+        painter.drawRoundedRect(adjusted_rect, border_radius, border_radius)
 
     def is_rendered(self) -> bool:
         """Check if the message will be rendered."""
@@ -202,7 +232,9 @@ class ConversationMessage(QFrame):
         if focused:
             self.setFocus()
 
-        self._apply_shared_stylesheet()
+        self._border_color = self._get_border_color()
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def is_bookmarked(self) -> bool:
         """Check if this message is bookmarked."""
@@ -211,7 +243,9 @@ class ConversationMessage(QFrame):
     def set_bookmarked(self, bookmarked: bool) -> None:
         """Set the bookmarked state."""
         self._is_bookmarked = bookmarked
-        self._apply_shared_stylesheet()
+        self._border_color = self._get_border_color()
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def is_expanded(self) -> bool:
         """Check if this message is expanded."""
@@ -545,18 +579,18 @@ class ConversationMessage(QFrame):
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
-        border_color = self._get_border_color()
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
             QFrame#ConversationMessage {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
-                border: 2px solid {border_color};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
             QFrame#ConversationMessage[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
 
             #ConversationMessage QWidget#_header,

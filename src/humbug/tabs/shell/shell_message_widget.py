@@ -87,6 +87,11 @@ class ShellMessageWidget(QFrame):
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
+        self._role_label.setProperty("message_source", "user")
+        self.setProperty("message_source", "user")
+
+        self.setProperty("border", "default")
+
         # Connect signals from text area
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
@@ -116,9 +121,14 @@ class ShellMessageWidget(QFrame):
 
         self._is_focused = focused
         if focused:
+            self.setProperty("border", "focused")
             self.setFocus()
 
-        self._apply_shared_stylesheet()
+        else:
+            self.setProperty("border", "default")
+
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
@@ -196,7 +206,9 @@ class ShellMessageWidget(QFrame):
 
         # Update the header
         self._update_role_text()
-        self._apply_shared_stylesheet()
+
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
@@ -231,37 +243,24 @@ class ShellMessageWidget(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _get_border_color(self) -> str:
-        """Get the border color based on current state."""
-        if self._is_focused and self.hasFocus():
-            return self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
-
-        current_source = self._message_source or ShellMessageSource.USER
-        if current_source == ShellMessageSource.USER:
-            return self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
-
-        return self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
-        border_color = self._get_border_color()
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
             QFrame#ShellMessageWidget {{
                 margin: 0;
                 border-radius: {border_radius}px;
-                border: 2px solid {border_color};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
             QFrame#ShellMessageWidget[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
-            QFrame#ShellMessageWidget[message_source="success"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-            QFrame#ShellMessageWidget[message_source="error"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            QFrame#ShellMessageWidget[border="focused"] {{
+                border-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
             }}
 
             #ShellMessageWidget QWidget#_header {{

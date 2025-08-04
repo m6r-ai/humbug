@@ -230,6 +230,19 @@ class ConversationInput(ConversationMessage):
         # Return as hex color
         return f"#{rgb_value:02x}{rgb_value:02x}{rgb_value:02x}"
 
+    def _get_border_color(self) -> str:
+        """
+        Get the border color based on current state.
+
+        Returns:
+            str: Hex color string for the border
+        """
+        if self._is_streaming and self._animation_frame > 0:
+            return self._get_fade_color()
+
+        # Default border color when not streaming or animation is not active
+        return super()._get_border_color()
+
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
@@ -266,7 +279,8 @@ class ConversationInput(ConversationMessage):
         if not self._is_streaming:
             return
 
-        self._apply_shared_stylesheet()
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""

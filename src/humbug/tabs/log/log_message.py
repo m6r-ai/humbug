@@ -114,6 +114,8 @@ class LogMessage(QFrame):
 
         self._level_label.setProperty("log_level", level_name)
 
+        self.setProperty("border", "default")
+
         # Set the content in the text area
         self._text_area.set_text(text)
 
@@ -136,9 +138,14 @@ class LogMessage(QFrame):
 
         self._is_focused = focused
         if focused:
+            self.setProperty("border", "focused")
             self.setFocus()
 
-        self._apply_shared_stylesheet()
+        else:
+            self.setProperty("border", "default")
+
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
@@ -221,17 +228,9 @@ class LogMessage(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _get_border_color(self) -> str:
-        """Get the border color based on current state."""
-        if self._is_focused and self.hasFocus():
-            return self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
-
-        return self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
-        border_color = self._get_border_color()
         border_radius = int(style_manager.message_bubble_spacing())
 
         return f"""
@@ -239,7 +238,10 @@ class LogMessage(QFrame):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
-                border: 2px solid {border_color};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+            QFrame#LogMessage[border="focused"] {{
+                border-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
             }}
 
             #LogMessage QWidget#_header {{
