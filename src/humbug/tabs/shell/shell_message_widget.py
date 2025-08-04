@@ -245,18 +245,6 @@ class ShellMessageWidget(QFrame):
 
         return self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
 
-    def _get_role_color(self) -> str:
-        """Get the role color for the current message source."""
-        role_colours = {
-            ShellMessageSource.USER: ColorRole.MESSAGE_USER,
-            ShellMessageSource.SUCCESS: ColorRole.MESSAGE_SYSTEM_SUCCESS,
-            ShellMessageSource.ERROR: ColorRole.MESSAGE_SYSTEM_ERROR,
-        }
-
-        current_source = self._message_source or ShellMessageSource.USER
-        role = role_colours.get(current_source, ColorRole.MESSAGE_USER)
-        return self._style_manager.get_color_str(role)
-
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager

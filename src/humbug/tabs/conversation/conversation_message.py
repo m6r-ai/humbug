@@ -113,6 +113,19 @@ class ConversationMessage(QFrame):
         self._header_layout.addWidget(self._role_label)
         self._header_layout.addStretch()
 
+        role_sources = {
+            AIMessageSource.USER: "user",
+            AIMessageSource.AI: "ai",
+            AIMessageSource.REASONING: "reasoning",
+            AIMessageSource.TOOL_CALL: "tool_call",
+            AIMessageSource.TOOL_RESULT: "tool_result",
+            AIMessageSource.SYSTEM: "system"
+        }
+
+        current_style = self._message_source or AIMessageSource.USER
+        role = role_sources.get(current_style, "user")
+        self._role_label.setProperty("message_source", role)
+
         self._copy_message_button: QToolButton | None = None
         self._save_message_button: QToolButton | None = None
         self._fork_message_button: QToolButton | None = None
@@ -344,7 +357,7 @@ class ConversationMessage(QFrame):
             style_class = "text-user" if is_user_message else "text-system"
 
         # Set property that QSS will match against
-        section.setProperty("sectionStyle", style_class)
+        section.setProperty("section_style", style_class)
 
         factor = self._style_manager.zoom_factor()
         font = self.font()
@@ -515,21 +528,6 @@ class ConversationMessage(QFrame):
             self._approval_approve_button = None
             self._approval_reject_button = None
 
-    def _get_role_color(self) -> str:
-        """Get the role color for the current message type."""
-        role_colours = {
-            AIMessageSource.USER: ColorRole.MESSAGE_USER,
-            AIMessageSource.AI: ColorRole.MESSAGE_AI,
-            AIMessageSource.REASONING: ColorRole.MESSAGE_REASONING,
-            AIMessageSource.TOOL_CALL: ColorRole.MESSAGE_TOOL_CALL,
-            AIMessageSource.TOOL_RESULT: ColorRole.MESSAGE_TOOL_RESULT,
-            AIMessageSource.SYSTEM: ColorRole.MESSAGE_SYSTEM_ERROR
-        }
-
-        current_style = self._message_source or AIMessageSource.USER
-        role = role_colours.get(current_style, ColorRole.MESSAGE_USER)
-        return self._style_manager.get_color_str(role)
-
     def _get_background_color(self) -> str:
         """Get the background color for the current message type."""
         current_style = self._message_source or AIMessageSource.USER
@@ -576,14 +574,31 @@ class ConversationMessage(QFrame):
 
     def _build_header_styles(self) -> str:
         """Build styles for the header area."""
-        role_color = self._get_role_color()
+        style_manager = self._style_manager
 
         return f"""
             #ConversationMessage QLabel#_role_label {{
-                color: {role_color};
                 margin: 0;
                 padding: 0;
                 background-color: transparent;
+            }}
+            #ConversationMessage QLabel#_role_label[message_source="user"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
+            }}
+            #ConversationMessage QLabel#_role_label[message_source="ai"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_AI)};
+            }}
+            #ConversationMessage QLabel#_role_label[message_source="reasoning"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_REASONING)};
+            }}
+            #ConversationMessage QLabel#_role_label[message_source="tool_call"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_TOOL_CALL)};
+            }}
+            #ConversationMessage QLabel#_role_label[message_source="tool_result"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_TOOL_RESULT)};
+            }}
+            #ConversationMessage QLabel#_role_label[message_source="system"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
         """
 
@@ -676,25 +691,25 @@ class ConversationMessage(QFrame):
         style_manager = self._style_manager
         border_radius = int(style_manager.message_bubble_spacing() / 2)
         return f"""
-            QFrame#ConversationMessageSection[sectionStyle="text-system"] {{
+            QFrame#ConversationMessageSection[section_style="text-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            QFrame#ConversationMessageSection[sectionStyle="text-user"] {{
+            QFrame#ConversationMessageSection[section_style="text-user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            QFrame#ConversationMessageSection[sectionStyle="code-system"] {{
+            QFrame#ConversationMessageSection[section_style="code-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            QFrame#ConversationMessageSection[sectionStyle="code-user"] {{
+            QFrame#ConversationMessageSection[section_style="code-user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 border-radius: {border_radius}px;

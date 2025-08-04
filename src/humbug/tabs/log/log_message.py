@@ -265,15 +265,12 @@ class LogMessage(QFrame):
             #LogMessage QLabel#_level_label[log_level="trace"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_TRACE)};
             }}
-
             #LogMessage QLabel#_level_label[log_level="info"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION)};
             }}
-
             #LogMessage QLabel#_level_label[log_level="warn"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
             }}
-
             #LogMessage QLabel#_level_label[log_level="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
             }}
