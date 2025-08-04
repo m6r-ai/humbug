@@ -693,6 +693,91 @@ class ShellWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
+    def _build_message_frame_styles(self) -> str:
+        """Build styles for the main message frame."""
+        style_manager = self._style_manager
+        border_radius = int(self._style_manager.message_bubble_spacing())
+
+        return f"""
+            QFrame#ShellMessageWidget {{
+                margin: 0;
+                border-radius: {border_radius}px;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+            QFrame#ShellMessageWidget[message_source="user"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
+            QFrame#ShellMessageWidget[border="focused"] {{
+                border-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
+            }}
+
+            #ShellMessageWidget QWidget#_header {{
+                background-color: transparent;
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+        """
+
+    def _build_header_styles(self) -> str:
+        """Build styles for the header area and role label."""
+        style_manager = self._style_manager
+
+        return f"""
+            #ShellMessageWidget QLabel#_role_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                margin: 0;
+                padding: 0;
+                border: none;
+                background-color: transparent;
+            }}
+            #ShellMessageWidget QLabel#_role_label[message_source="user"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
+            }}
+            #ShellMessageWidget QLabel#_role_label[message_source="success"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS)};
+            }}
+            #ShellMessageWidget QLabel#_role_label[message_source="error"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
+            }}
+        """
+
+    def _build_text_area_styles(self) -> str:
+        """Build styles for the text area and scrollbars."""
+        style_manager = self._style_manager
+
+        return f"""
+            #ShellMessageWidget QTextEdit#_text_area {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: transparent;
+            }}
+
+            #ShellMessageWidget #_text_area QScrollBar:horizontal {{
+                height: 12px;
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            #ShellMessageWidget #_text_area QScrollBar::handle:horizontal {{
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+            #ShellMessageWidget #_text_area QScrollBar::add-page:horizontal,
+            #ShellMessageWidget #_text_area QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+            #ShellMessageWidget #_text_area QScrollBar::add-line:horizontal,
+            #ShellMessageWidget #_text_area QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """
+
     def _on_style_changed(self) -> None:
         factor = self._style_manager.zoom_factor()
         font = self.font()
@@ -700,12 +785,6 @@ class ShellWidget(QWidget):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        self._messages_container.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-        """)
         self._scroll_area.setStyleSheet(f"""
             QScrollArea {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
@@ -726,6 +805,15 @@ class ShellWidget(QWidget):
                 height: 0px;
             }}
         """)
+
+        stylesheet_parts = [
+            self._build_message_frame_styles(),
+            self._build_header_styles(),
+            self._build_text_area_styles()
+        ]
+
+        shared_stylesheet = "\n".join(stylesheet_parts)
+        self.setStyleSheet(shared_stylesheet)
 
     def _show_shell_context_menu(self, pos: QPoint) -> None:
         """

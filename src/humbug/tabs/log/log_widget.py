@@ -545,6 +545,92 @@ class LogWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
+    def _build_message_frame_styles(self) -> str:
+        """Build styles for the main message frame."""
+        style_manager = self._style_manager
+        border_radius = int(style_manager.message_bubble_spacing())
+
+        return f"""
+            QFrame#LogMessage {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+            QFrame#LogMessage[border="focused"] {{
+                border-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
+            }}
+
+            #LogMessage QWidget#_header {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+        """
+
+    def _build_header_styles(self) -> str:
+        """Build styles for the header area and level label."""
+        style_manager = self._style_manager
+        return f"""
+            #LogMessage QLabel#_level_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                margin: 0;
+                padding: 0;
+                border: none;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            #LogMessage QLabel#_level_label[log_level="trace"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_TRACE)};
+            }}
+            #LogMessage QLabel#_level_label[log_level="info"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION)};
+            }}
+            #LogMessage QLabel#_level_label[log_level="warn"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
+            }}
+            #LogMessage QLabel#_level_label[log_level="error"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
+            }}
+        """
+
+    def _build_text_area_styles(self) -> str:
+        """Build styles for the text area and scrollbars."""
+        style_manager = self._style_manager
+        return f"""
+            #LogMessage QTextEdit#_text_area {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            #LogMessage QTextEdit#_text_area QScrollBar:horizontal {{
+                height: 12px;
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+
+            #LogMessage QTextEdit#_text_area QScrollBar::handle:horizontal {{
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+
+            #LogMessage QTextEdit#_text_area QScrollBar::add-page:horizontal,
+            #LogMessage QTextEdit#_text_area QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+
+            #LogMessage QTextEdit#_text_area QScrollBar::add-line:horizontal,
+            #LogMessage QTextEdit#_text_area QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """
+
     def _on_style_changed(self) -> None:
         factor = self._style_manager.zoom_factor()
         font = self.font()
@@ -552,12 +638,6 @@ class LogWidget(QWidget):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        self._messages_container.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-        """)
         self._scroll_area.setStyleSheet(f"""
             QScrollArea {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
@@ -578,6 +658,15 @@ class LogWidget(QWidget):
                 height: 0px;
             }}
         """)
+
+        stylesheet_parts = [
+            self._build_message_frame_styles(),
+            self._build_header_styles(),
+            self._build_text_area_styles()
+        ]
+
+        shared_stylesheet = "\n".join(stylesheet_parts)
+        self.setStyleSheet(shared_stylesheet)
 
     def _show_log_context_menu(self, pos: QPoint) -> None:
         """
