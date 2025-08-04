@@ -374,8 +374,6 @@ class ConversationMessage(QFrame):
             A new ConversationMessageSection instance
         """
         section = ConversationMessageSection(self._is_input, language, self._sections_container)
-        section.setObjectName("ConversationMessageSection")
-
         section.selection_changed.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
