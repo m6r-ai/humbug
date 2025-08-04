@@ -1366,6 +1366,7 @@ class ConversationWidget(QWidget):
         return f"""
             #ConversationMessage QWidget#_approval_widget {{
                 background-color: transparent;
+                border: none;
             }}
 
             #ConversationMessage QTextEdit#_approval_text_edit {{
