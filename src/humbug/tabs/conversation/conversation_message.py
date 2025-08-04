@@ -125,6 +125,7 @@ class ConversationMessage(QFrame):
         current_style = self._message_source or AIMessageSource.USER
         role = role_sources.get(current_style, "user")
         self._role_label.setProperty("message_source", role)
+        self.setProperty("message_source", role)
 
         self._copy_message_button: QToolButton | None = None
         self._save_message_button: QToolButton | None = None
@@ -528,13 +529,6 @@ class ConversationMessage(QFrame):
             self._approval_approve_button = None
             self._approval_reject_button = None
 
-    def _get_background_color(self) -> str:
-        """Get the background color for the current message type."""
-        current_style = self._message_source or AIMessageSource.USER
-        return self._style_manager.get_color_str(
-            ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
-        )
-
     def _get_border_color(self) -> str:
         """Get the border color based on current state."""
         if self._is_focused and self.hasFocus():
@@ -550,21 +544,24 @@ class ConversationMessage(QFrame):
 
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
-        background_color = self._get_background_color()
+        style_manager = self._style_manager
         border_color = self._get_border_color()
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
             QFrame#ConversationMessage {{
-                background-color: {background_color};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {border_color};
             }}
+            QFrame#ConversationMessage[message_source="user"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
 
             #ConversationMessage QWidget#_header,
             #ConversationMessage QWidget#_sections_container {{
-                background-color: {background_color};
+                background-color: transparent;
                 border: none;
                 border-radius: 0;
                 padding: 0;

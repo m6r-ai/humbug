@@ -232,7 +232,7 @@ class ConversationInput(ConversationMessage):
 
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
-        background_color = self._get_background_color()
+        style_manager = self._style_manager
         border_color = self._get_border_color()
         if self._is_streaming:
             # Use animated border color if streaming
@@ -242,15 +242,18 @@ class ConversationInput(ConversationMessage):
 
         return f"""
             QFrame#ConversationMessage {{
-                background-color: {background_color};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {border_color};
             }}
+            QFrame#ConversationMessage[message_source="user"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+            }}
 
             QFrame#ConversationMessage QWidget#_header,
             QFrame#ConversationMessage QWidget#_sections_container {{
-                background-color: {background_color};
+                background-color: transparent;
                 border: none;
                 border-radius: 0;
                 padding: 0;
