@@ -73,6 +73,7 @@ class ConversationMessageSection(QFrame):
 
             # Create a container for header (language label + buttons)
             self._header_container = QWidget()
+            self._header_container.setObjectName("_header_container")
             self._header_layout = QHBoxLayout(self._header_container)
             self._header_layout.setContentsMargins(0, 0, 0, 0)
             self._header_layout.setSpacing(4)

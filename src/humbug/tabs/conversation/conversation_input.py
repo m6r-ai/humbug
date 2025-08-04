@@ -140,8 +140,13 @@ class ConversationInput(ConversationMessage):
 
     def _on_slow_timer(self) -> None:
         """Handle slow timer timeout - provides regular animation updates."""
-        if self._is_streaming:
-            self._update_border_animation()
+        if not self._is_streaming:
+            return
+
+        if self._debounce_timer.isActive():
+            return
+
+        self._update_border_animation()
 
     def _on_debounce_timeout(self) -> None:
         """
@@ -193,7 +198,7 @@ class ConversationInput(ConversationMessage):
         self._animation_frame = 0
         self._pending_message = False
         self._no_message_counter = 0
-        self._on_style_changed()  # Restore normal styling
+        self._update_border_style()
 
     def _update_border_animation(self) -> None:
         """Update the border animation frame."""
@@ -205,11 +210,11 @@ class ConversationInput(ConversationMessage):
 
         # Reverse direction at the extremes for full cycle (start→mid→start)
         if self._animation_frame >= self._animation_steps:
-            self._animation_frame = self._animation_steps - 1
+            self._animation_frame = self._animation_steps - 2
             self._fade_direction = -1
 
         elif self._animation_frame < 0:
-            self._animation_frame = 0
+            self._animation_frame = 1
             self._fade_direction = 1
 
         self._update_border_style()
@@ -237,48 +242,14 @@ class ConversationInput(ConversationMessage):
         Returns:
             str: Hex color string for the border
         """
-        if self._is_streaming and self._animation_frame > 0:
+        if self._is_streaming:
             return self._get_fade_color()
 
         # Default border color when not streaming or animation is not active
         return super()._get_border_color()
 
-    def _build_message_frame_styles(self) -> str:
-        """Build styles for the main message frame."""
-        style_manager = self._style_manager
-        border_color = self._get_border_color()
-        if self._is_streaming:
-            # Use animated border color if streaming
-            border_color = self._get_fade_color()
-
-        border_radius = int(self._style_manager.message_bubble_spacing())
-
-        return f"""
-            QFrame#ConversationMessage {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                margin: 0;
-                border-radius: {border_radius}px;
-                border: 2px solid {border_color};
-            }}
-            QFrame#ConversationMessage[message_source="user"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-            }}
-
-            QFrame#ConversationMessage QWidget#_header,
-            QFrame#ConversationMessage QWidget#_sections_container {{
-                background-color: transparent;
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-            }}
-        """
-
     def _update_border_style(self) -> None:
         """Update the border style with the current animation color."""
-        if not self._is_streaming:
-            return
-
         self.style().unpolish(self)
         self.style().polish(self)
 
