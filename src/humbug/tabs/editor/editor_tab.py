@@ -139,12 +139,8 @@ class EditorTab(TabBase):
 
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""
-        metadata_state = {
-            "language": self._current_programming_language.name
-        }
-
-        if temp_state:
-            metadata_state["content"] = self._editor_widget.toPlainText()
+        metadata = self._editor_widget.create_state_metadata(temp_state)
+        metadata["language"] = self._current_programming_language.name
 
         return TabState(
             type=TabType.EDITOR,
@@ -153,7 +149,7 @@ class EditorTab(TabBase):
             cursor_position=self._get_cursor_position(),
             horizontal_scroll=self._editor_widget.horizontalScrollBar().value(),
             vertical_scroll=self._editor_widget.verticalScrollBar().value(),
-            metadata=metadata_state
+            metadata=metadata
         )
 
     @classmethod
@@ -168,20 +164,18 @@ class EditorTab(TabBase):
         tab = cls(state.tab_id, "" if number else state.path, number, parent)
 
         if state.metadata:
+            tab._editor_widget.restore_from_metadata(state.metadata)
+
             # Restore language if specified
             if "language" in state.metadata:
                 language = ProgrammingLanguage[state.metadata["language"]]
                 tab._update_programming_language(language)
 
-            # Restore content if specified
-            if "content" in state.metadata:
-                tab._editor_widget.setPlainText(state.metadata["content"])
-
         # Restore cursor position if present
         if state.cursor_position:
             tab._set_cursor_position(state.cursor_position)
 
-        # Restore scroll poisitions if present
+        # Restore scroll positions if present
         if state.horizontal_scroll:
             tab._editor_widget.horizontalScrollBar().setValue(state.horizontal_scroll)
 

@@ -1,4 +1,4 @@
-from typing import List, Tuple, cast
+from typing import List, Tuple, Dict, Any, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit
 from PySide6.QtCore import Qt, QRect, Signal, QObject, QEvent
@@ -104,6 +104,33 @@ class EditorWidget(QPlainTextEdit):
         self.installEventFilter(self._event_filter)
 
         self._on_style_changed()
+
+    def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
+        """
+        Create metadata dictionary capturing current widget state.
+
+        Returns:
+            Dictionary containing log state metadata
+        """
+        metadata: Dict[str, Any] = {}
+
+        if temp_state:
+            metadata["content"] = self.toPlainText()
+
+        return metadata
+
+    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+        """
+        Restore widget state from metadata.
+
+        Args:
+            metadata: Dictionary containing state metadata
+        """
+        if not metadata:
+            return
+
+        if "content" in metadata:
+            self.setPlainText(metadata["content"])
 
     def _on_widget_activated(self, _widget: QWidget) -> None:
         """
