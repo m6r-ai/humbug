@@ -989,6 +989,7 @@ class MainWindow(QMainWindow):
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
+
             QMenuBar {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
                 padding: 4px;
@@ -1003,6 +1004,7 @@ class MainWindow(QMainWindow):
             QMenuBar::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
             }}
+
             QMenu {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -1023,15 +1025,7 @@ class MainWindow(QMainWindow):
             QMenu::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)}
             }}
-        """)
 
-        # Update status bar font
-        status_font = self.font()
-        status_font.setPointSizeF(base_font_size * zoom_factor)
-        self._status_bar.setFont(status_font)
-        self._status_message_label.setFont(status_font)
-
-        self._status_bar.setStyleSheet(f"""
             QStatusBar {{
                 background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -1042,19 +1036,24 @@ class MainWindow(QMainWindow):
                 border: 0;
                 padding: 0;
             }}
-            QLabel {{
+
+            QStatusBar QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 padding: 0;
             }}
-        """)
 
-        self._splitter.setStyleSheet(f"""
             QSplitter::handle {{
                 background-color: {style_manager.get_color_str(ColorRole.SPLITTER)};
                 margin: 0;
                 width: 1px;
             }}
         """)
+
+        # Update status bar font
+        status_font = self.font()
+        status_font.setPointSizeF(base_font_size * zoom_factor)
+        self._status_bar.setFont(status_font)
+        self._status_message_label.setFont(status_font)
 
     def _new_conversation(self) -> ConversationTab | None:
         """Create new conversation tab."""
