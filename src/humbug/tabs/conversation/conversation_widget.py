@@ -1300,7 +1300,7 @@ class ConversationWidget(QWidget):
             }}
         """
 
-    def _build_message_frame_styles(self) -> str:
+    def _build_conversation_message_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         border_radius = int(self._style_manager.message_bubble_spacing())
@@ -1325,13 +1325,7 @@ class ConversationWidget(QWidget):
                 padding: 0;
                 margin: 0;
             }}
-        """
 
-    def _build_header_styles(self) -> str:
-        """Build styles for the header area."""
-        style_manager = self._style_manager
-
-        return f"""
             #ConversationMessage QLabel#_role_label {{
                 margin: 0;
                 padding: 0;
@@ -1356,13 +1350,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage QLabel#_role_label[message_source="system"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
-        """
 
-    def _build_button_styles(self) -> str:
-        """Build styles for all buttons in the message."""
-        style_manager = self._style_manager
-
-        return f"""
             #ConversationMessage QToolButton#_expand_button,
             #ConversationMessage QToolButton#_copy_button,
             #ConversationMessage QToolButton#_save_button,
@@ -1388,13 +1376,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage QToolButton#_delete_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
-        """
 
-    def _build_approval_styles(self) -> str:
-        """Build styles for tool approval widgets."""
-        style_manager = self._style_manager
-
-        return f"""
             #ConversationMessage QWidget#_approval_widget {{
                 background-color: transparent;
                 border: none;
@@ -1443,7 +1425,7 @@ class ConversationWidget(QWidget):
             }}
         """
 
-    def _build_section_styles(self) -> str:
+    def _build_conversation_message_section_styles(self) -> str:
         """Build styles for message sections."""
         style_manager = self._style_manager
         border_radius = int(style_manager.message_bubble_spacing() / 2)
@@ -1549,11 +1531,8 @@ class ConversationWidget(QWidget):
 
         stylesheet_parts = [
             self._build_widget_style(),
-            self._build_message_frame_styles(),
-            self._build_header_styles(),
-            self._build_button_styles(),
-            self._build_approval_styles(),
-            self._build_section_styles()
+            self._build_conversation_message_styles(),
+            self._build_conversation_message_section_styles()
         ]
 
         shared_stylesheet = "\n".join(stylesheet_parts)

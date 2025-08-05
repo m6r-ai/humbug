@@ -574,7 +574,7 @@ class LogWidget(QWidget):
             }}
         """
 
-    def _build_message_frame_styles(self) -> str:
+    def _build_log_message_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         border_radius = int(style_manager.message_bubble_spacing())
@@ -597,12 +597,7 @@ class LogWidget(QWidget):
                 padding: 0;
                 margin: 0;
             }}
-        """
 
-    def _build_header_styles(self) -> str:
-        """Build styles for the header area and level label."""
-        style_manager = self._style_manager
-        return f"""
             #LogMessage QLabel#_level_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
@@ -623,12 +618,7 @@ class LogWidget(QWidget):
             #LogMessage QLabel#_level_label[log_level="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
             }}
-        """
 
-    def _build_text_area_styles(self) -> str:
-        """Build styles for the text area and scrollbars."""
-        style_manager = self._style_manager
-        return f"""
             #LogMessage QTextEdit#_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
@@ -669,9 +659,7 @@ class LogWidget(QWidget):
 
         stylesheet_parts = [
             self._build_widget_style(),
-            self._build_message_frame_styles(),
-            self._build_header_styles(),
-            self._build_text_area_styles()
+            self._build_log_message_styles()
         ]
 
         shared_stylesheet = "\n".join(stylesheet_parts)

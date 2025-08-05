@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor
 
-from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
 from humbug.tabs.wiki.wiki_markdown_content import WikiMarkdownContent
@@ -26,6 +25,8 @@ class WikiMarkdownPreviewContent(WikiContentWidget):
         super().__init__(parent)
         self._logger = logging.getLogger("WikiMarkdownPreviewContent")
         self._content = ""
+
+        self.setObjectName("WikiMarkdownPreviewContent")
 
         self._style_manager = StyleManager()
 
@@ -209,15 +210,3 @@ class WikiMarkdownPreviewContent(WikiContentWidget):
         base_font_size = self._style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
-
-        # Style the frame - use same style as file content for consistency
-        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)
-
-        self.setStyleSheet(f"""
-            QFrame {{
-                background-color: {background_color};
-                margin: 0;
-                border-radius: {int(self._style_manager.message_bubble_spacing())}px;
-                border: 0;
-            }}
-        """)

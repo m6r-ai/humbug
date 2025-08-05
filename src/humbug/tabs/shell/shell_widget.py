@@ -722,7 +722,7 @@ class ShellWidget(QWidget):
             }}
         """
 
-    def _build_message_frame_styles(self) -> str:
+    def _build_shell_message_widget_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         border_radius = int(self._style_manager.message_bubble_spacing())
@@ -749,13 +749,7 @@ class ShellWidget(QWidget):
                 padding: 0;
                 margin: 0;
             }}
-        """
 
-    def _build_header_styles(self) -> str:
-        """Build styles for the header area and role label."""
-        style_manager = self._style_manager
-
-        return f"""
             #ShellMessageWidget QLabel#_role_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
@@ -772,13 +766,7 @@ class ShellWidget(QWidget):
             #ShellMessageWidget QLabel#_role_label[message_source="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
-        """
 
-    def _build_text_area_styles(self) -> str:
-        """Build styles for the text area and scrollbars."""
-        style_manager = self._style_manager
-
-        return f"""
             #ShellMessageWidget QTextEdit#_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
@@ -816,9 +804,7 @@ class ShellWidget(QWidget):
 
         stylesheet_parts = [
             self._build_widget_style(),
-            self._build_message_frame_styles(),
-            self._build_header_styles(),
-            self._build_text_area_styles()
+            self._build_shell_message_widget_styles()
         ]
 
         shared_stylesheet = "\n".join(stylesheet_parts)

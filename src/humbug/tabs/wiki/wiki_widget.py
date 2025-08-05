@@ -664,6 +664,140 @@ class WikiWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_top()
 
+    def _build_widget_style(self) -> str:
+        """Build styles for the conversation widget."""
+        style_manager = self._style_manager
+
+        return f"""
+            QWidget {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+
+            QScrollArea {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            QScrollBar::add-page:vertical,
+            QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            QScrollBar::add-line:vertical,
+            QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+        """
+
+    def _build_wiki_file_content_style(self) -> str:
+        """Build styles for the WikiFileContent widget."""
+        style_manager = self._style_manager
+
+        return f"""
+            QFrame#WikiFileContent {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                margin: 0;
+                border-radius: {int(style_manager.message_bubble_spacing())}px;
+                border: none;
+            }}
+
+            #WikiFileContent QWidget#_content_container {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #WikiFileContent QWidget#_header_container {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #WikiFileContent QLabel#_language_header {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            #WikiFileContent QTextEdit#_text_area {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: transparent;
+            }}
+
+            #WikiFileContent #_text_area QScrollBar:horizontal {{
+                height: 12px;
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            #WikiFileContent #_text_area QScrollBar::handle:horizontal {{
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+            #WikiFileContent #_text_area QScrollBar::add-page:horizontal,
+            #WikiFileContent #_text_area QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+            #WikiFileContent #_text_area QScrollBar::add-line:horizontal,
+            #WikiFileContent #_text_area QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+            #WikiFileContent #_text_area QScrollBar:vertical {{
+                width: 12px;
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            #WikiFileContent #_text_area QScrollBar::handle:vertical {{
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            #WikiFileContent #_text_area QScrollBar::add-page:vertical,
+            #WikiFileContent #_text_area QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            #WikiFileContent #_text_area QScrollBar::add-line:vertical,
+            #WikiFileContent #_text_area QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+
+            #WikiFileContent QToolButton#_edit_button {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 0;
+                padding: 0px;
+            }}
+            #WikiFileContent QToolButton#_edit_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            #WikiFileContent QToolButton#_edit_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+        """
+
+    def _build_wiki_markdown_preview_content_style(self) -> str:
+        """Build styles for the WikiMarkdownPreviewContent widget."""
+        style_manager = self._style_manager
+
+        return f"""
+            QFrame#WikiMarkdownPreviewContent {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                margin: 0;
+                border-radius: {int(style_manager.message_bubble_spacing())}px;
+                border: 0;
+            }}
+        """
+
     def _on_style_changed(self) -> None:
         """Handle style changes."""
         factor = self._style_manager.zoom_factor()
@@ -672,31 +806,14 @@ class WikiWidget(QWidget):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
+        stylesheet_parts = [
+            self._build_widget_style(),
+            self._build_wiki_file_content_style(),
+            self._build_wiki_markdown_preview_content_style(),
+        ]
 
-            QScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-            QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-        """)
+        shared_stylesheet = "\n".join(stylesheet_parts)
+        self.setStyleSheet(shared_stylesheet)
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
