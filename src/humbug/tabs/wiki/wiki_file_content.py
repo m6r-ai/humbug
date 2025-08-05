@@ -49,12 +49,14 @@ class WikiFileContent(WikiContentWidget):
 
         # Create header with edit button
         self._header_container = QWidget()
+        self._header_container.setObjectName("_header_container")
         self._header_layout = QHBoxLayout(self._header_container)
         self._header_layout.setContentsMargins(0, 0, 0, 0)
         self._header_layout.setSpacing(4)
 
         # Add language label
         self._language_header = QLabel()
+        self._language_header.setObjectName("_language_header")
         self._language_header.setIndent(0)
         self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
         self._header_layout.addWidget(self._language_header)
@@ -64,6 +66,7 @@ class WikiFileContent(WikiContentWidget):
 
         # Add Edit button with icon
         self._edit_button = QToolButton()
+        self._edit_button.setObjectName("_edit_button")
         self._edit_button.clicked.connect(self._on_edit_clicked)
         self._header_layout.addWidget(self._edit_button)
 
@@ -72,6 +75,7 @@ class WikiFileContent(WikiContentWidget):
 
         # Create text area for source code
         self._text_area = MarkdownTextEdit()
+        self._text_area.setObjectName("_text_area")
         self._text_area.setAcceptRichText(False)  # No rich text for source code
         self._text_area.setReadOnly(True)  # Always read-only in wiki
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -357,83 +361,10 @@ class WikiFileContent(WikiContentWidget):
 
         # Style text area
         self._text_area.setFont(font)
-        self._text_area.setStyleSheet(f"""
-            QTextEdit {{
-                color: {text_color};
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                border: none;
-                border-radius: 0;
-                padding: 0;
-                margin: 0;
-                background-color: {background_color};
-            }}
-            QScrollBar:horizontal {{
-                height: 12px;
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            QScrollBar::handle:horizontal {{
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
-            QScrollBar:vertical {{
-                width: 12px;
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            QScrollBar::handle:vertical {{
-                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-        """)
-
-        # Style header container
-        self._header_container.setStyleSheet(f"""
-            QWidget {{
-                background-color: {background_color};
-                margin: 0;
-                padding: 0;
-            }}
-        """)
 
         # Style language header
         label_color = self._style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)
         self._language_header.setFont(font)
-        self._language_header.setStyleSheet(f"""
-            QLabel {{
-                color: {label_color};
-                background-color: {background_color};
-                margin: 0;
-                padding: 0;
-            }}
-        """)
-
-        # Style buttons
-        button_style = f"""
-            QToolButton {{
-                background-color: {background_color};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 0;
-                padding: 0px;
-            }}
-            QToolButton:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            QToolButton:pressed {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-        """
 
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
@@ -443,7 +374,6 @@ class WikiFileContent(WikiContentWidget):
             self._style_manager.get_icon_path("edit"), icon_base_size
         )))
         self._edit_button.setIconSize(icon_size)
-        self._edit_button.setStyleSheet(button_style)
 
         self.setStyleSheet(f"""
             QWidget {{
@@ -451,6 +381,76 @@ class WikiFileContent(WikiContentWidget):
                 margin: 0;
                 border-radius: {int(self._style_manager.message_bubble_spacing())}px;
                 border: 0;
+            }}
+
+            QWidget#_header_container {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            QLabel#_language_header {{
+                color: {label_color};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            QTextEdit#_text_area {{
+                color: {text_color};
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+                background-color: transparent;
+            }}
+
+            #_text_area QScrollBar:horizontal {{
+                height: 12px;
+                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            #_text_area QScrollBar::handle:horizontal {{
+                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+            #_text_area QScrollBar::add-page:horizontal,
+            #_text_area QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+            #_text_area QScrollBar::add-line:horizontal,
+            #_text_area QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+            #_text_area QScrollBar:vertical {{
+                width: 12px;
+                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            #_text_area QScrollBar::handle:vertical {{
+                background: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            #_text_area QScrollBar::add-page:vertical,
+            #_text_area QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            #_text_area QScrollBar::add-line:vertical,
+            #_text_area QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+
+            QToolButton#_edit_button {{
+                background-color: {background_color};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 0;
+                padding: 0px;
+            }}
+            QToolButton#_edit_button:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QToolButton#_edit_button:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
         """)
 
