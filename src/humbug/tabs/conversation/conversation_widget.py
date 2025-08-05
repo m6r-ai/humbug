@@ -1218,18 +1218,24 @@ class ConversationWidget(QWidget):
 
         delta = message_pos.y() - scroll_value
 
+        message_spacing = int(self._style_manager.message_bubble_spacing())
+        message_y = message_pos.y()
+
         # Determine if scrolling is needed
         if delta < 0:
             # Message is above visible area
-            self._scroll_area.verticalScrollBar().setValue(message_pos.y())
+            y = max(0, message_y - message_spacing)
+            self._scroll_area.verticalScrollBar().setValue(y)
 
         elif delta + message.height() > viewport_height:
             # Message is below visible area
             if message.height() > viewport_height:
-                self._scroll_area.verticalScrollBar().setValue(message_pos.y())
+                y = max(0, message_y - message_spacing)
+                self._scroll_area.verticalScrollBar().setValue(y)
 
             else:
-                self._scroll_area.verticalScrollBar().setValue(message_pos.y() + message.height() - viewport_height + 10)
+                y = message_y + message.height() - viewport_height + message_spacing
+                self._scroll_area.verticalScrollBar().setValue(y)
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next visible message is possible."""
