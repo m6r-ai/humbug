@@ -157,7 +157,7 @@ class StyleManager(QObject):
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
                 ColorMode.DARK: "#000000",
-                ColorMode.LIGHT: "#c8c8c8"
+                ColorMode.LIGHT: "#d8d8d8"
             },
             ColorRole.TAB_BACKGROUND_ACTIVE: {
                 ColorMode.DARK: "#1e1e1e",
@@ -177,7 +177,7 @@ class StyleManager(QObject):
             },
             ColorRole.TAB_BORDER_ACTIVE: {
                 ColorMode.DARK: "#8080ff",
-                ColorMode.LIGHT: "#4040c0"
+                ColorMode.LIGHT: "#3030ff"
             },
 
             # Button colours

@@ -1769,7 +1769,7 @@ class ColumnManager(QWidget):
             }}
             QTabBar QToolButton {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
             QTabBar QToolButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};

@@ -1,7 +1,7 @@
 from typing import cast
 
 from PySide6.QtWidgets import QTabBar, QWidget
-from PySide6.QtCore import QEvent, QObject, QSize
+from PySide6.QtCore import QEvent, QObject
 from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent
 
 from humbug.color_role import ColorRole
@@ -85,12 +85,16 @@ class TabBar(QTabBar):
         # Create painter
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        rightmost_tab_right = 0
 
         # Paint each tab's background
         for index in range(self.count()):
             tab_rect = self.tabRect(index)
             if not tab_rect.intersects(event.rect()):
                 continue  # Skip tabs not in the update region
+
+            # Track the rightmost position
+            rightmost_tab_right = max(rightmost_tab_right, tab_rect.right() + 1)
 
             # Get tab state
             tab_state = self.tabData(index)
@@ -111,7 +115,7 @@ class TabBar(QTabBar):
 
             # Draw left border if we're not the first tab
             if index > 0:
-                left_border_color = self._style_manager.get_color(ColorRole.TAB_BAR_BACKGROUND)
+                left_border_color = self._style_manager.get_color(ColorRole.SPLITTER)
                 left_border_rect = tab_rect.adjusted(0, 0, -tab_rect.width() + 1, 0)
                 painter.fillRect(left_border_rect, left_border_color)
 
@@ -125,31 +129,31 @@ class TabBar(QTabBar):
                 painter.fillRect(border_rect, border_color)
 
             # Draw bottom border for all tabs
-            bottom_border_color = self._style_manager.get_color(ColorRole.TAB_BAR_BACKGROUND)
+            bottom_border_color = self._style_manager.get_color(ColorRole.SPLITTER)
             if not is_current:  # Only non-current tabs get bottom border
                 bottom_border_rect = tab_rect.adjusted(0, tab_rect.height() - 1, 0, 0)
                 painter.fillRect(bottom_border_rect, bottom_border_color)
 
-        rect = self.rect()
-        height = rect.height()
-        painter.fillRect(
-            0, height - 2, rect.width(), height - 1, self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
-        )
+        # Paint right edge of rightmost tab and bottom edge of empty space
+        if self.count() > 0 and rightmost_tab_right < self.width():
+            splitter_color = self._style_manager.get_color(ColorRole.SPLITTER)
+
+            # Paint right edge of the rightmost tab
+            right_edge_rect = self.rect()
+            right_edge_rect.setLeft(rightmost_tab_right)
+            right_edge_rect.setWidth(1)
+            painter.fillRect(right_edge_rect, splitter_color)
+
+            # Paint bottom edge of empty space to the right
+            if rightmost_tab_right + 1 < self.width():
+                empty_space_bottom_rect = self.rect()
+                empty_space_bottom_rect.setLeft(rightmost_tab_right + 1)
+                empty_space_bottom_rect.setTop(self.height() - 1)
+                empty_space_bottom_rect.setHeight(1)
+                painter.fillRect(empty_space_bottom_rect, splitter_color)
 
         # Let Qt paint the text and other tab elements on top
         super().paintEvent(event)
-
-    def sizeHint(self) -> QSize:
-        """
-        Provide a size hint for the tab bar based on its contents.
-
-        Returns:
-            QSize: The recommended size for the tab bar
-        """
-        # Use the default size hint from QTabBar
-        size_hint = super().sizeHint()
-        size_hint.setHeight(size_hint.height() + 2)
-        return size_hint
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """
