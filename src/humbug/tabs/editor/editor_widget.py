@@ -1,17 +1,24 @@
+import logging
+import os
+import time
 from typing import List, Tuple, Dict, Any, cast
 
-from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit
-from PySide6.QtCore import Qt, QRect, Signal, QObject, QEvent
+from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
+from PySide6.QtCore import Qt, QRect, Signal, QObject, QEvent, QTimer
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
     QResizeEvent, QPaintEvent
 )
 
+from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
+
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
+from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.style_manager import StyleManager
+from humbug.tabs.editor.editor_highlighter import EditorHighlighter
 from humbug.tabs.editor.editor_line_number_area import EditorLineNumberArea
 
 
@@ -52,22 +59,40 @@ class EditorWidgetEventFilter(QObject):
 class EditorWidget(QPlainTextEdit):
     """Text editor widget with line numbers, syntax highlighting, and find functionality."""
 
-    # Emits when parent should be activated by user interaction
-    activated = Signal()
+    # Content/state changes
+    content_modified = Signal(bool)  # True if modified, False if saved
+    status_updated = Signal()        # Request status bar update
+    activated = Signal()             # User interaction occurred
+    file_saved = Signal(str)         # File path saved
 
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the editor."""
+    def __init__(self, path: str = "", untitled_number: int | None = None, parent: QWidget | None = None) -> None:
+        """
+        Initialize the editor widget.
+
+        Args:
+            path: Optional file path to load
+            untitled_number: Optional untitled file number for new files
+            parent: Optional parent widget
+        """
         super().__init__(parent)
+        self._logger = logging.getLogger("EditorWidget")
 
-        # Enable standard scrollbars
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        # File state
+        self._path = path
+        self._untitled_number = untitled_number
+        self._last_save_content = ""
+        self._is_modified = False
 
         # Editor settings
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)  # No word wrap for code
         self.setTabStopDistance(32)  # 4 spaces worth of tab stops
 
+        # Enable standard scrollbars
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
         self._style_manager = StyleManager()
+        self._init_colour_mode = self._style_manager.color_mode()
 
         # Setup line number area
         self._line_number_area = EditorLineNumberArea(
@@ -94,43 +119,131 @@ class EditorWidget(QPlainTextEdit):
         self._matches: List[Tuple[int, int]] = []  # List of (start, end) positions
         self._current_match = -1
         self._last_search = ""
-        self._style_manager.style_changed.connect(self._on_style_changed)
+
+        # Programming language and syntax highlighting
+        self._current_programming_language = ProgrammingLanguage.TEXT
+        self._highlighter = EditorHighlighter(self.document())
+
+        # Auto-backup functionality
+        self._auto_backup_timer = QTimer(self)
+        self._auto_backup_timer.timeout.connect(self._auto_backup)
+
+        # Mindspace integration
+        self._mindspace_manager = MindspaceManager()
+        self._mindspace_manager.settings_changed.connect(self._on_mindspace_settings_changed)
 
         # Set up activation tracking
         self._event_filter = EditorWidgetEventFilter(self)
         self._event_filter.widget_activated.connect(self._on_widget_activated)
         self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
-
         self.installEventFilter(self._event_filter)
 
+        # Connect text changes
+        self.textChanged.connect(self._on_text_changed)
+        self.cursorPositionChanged.connect(self.status_updated)
+
+        # Connect to style changes
+        self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
 
-    def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
-        """
-        Create metadata dictionary capturing current widget state.
+        # Load file if path provided
+        if self._path:
+            self._load_file()
 
-        Returns:
-            Dictionary containing log state metadata
-        """
-        metadata: Dict[str, Any] = {}
+        # Update programming language based on path
+        self._update_programming_language_from_path()
 
-        if temp_state:
-            metadata["content"] = self.toPlainText()
+        # Update auto-backup based on current mindspace settings
+        self._update_auto_backup_from_settings()
 
-        return metadata
-
-    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
-        """
-        Restore widget state from metadata.
-
-        Args:
-            metadata: Dictionary containing state metadata
-        """
-        if not metadata:
+    def _load_file(self) -> None:
+        """Load content from file path."""
+        if not self._path or not os.path.exists(self._path):
             return
 
-        if "content" in metadata:
-            self.setPlainText(metadata["content"])
+        try:
+            with open(self._path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            self.setPlainText(content)
+            self._last_save_content = content
+            self._set_modified(False)
+
+        except Exception as e:
+            self._logger.error("Failed to load file '%s': %s", self._path, str(e))
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_opening_file_title,
+                strings.could_not_open.format(self._path, str(e))
+            )
+
+    def _update_programming_language_from_path(self) -> None:
+        """Update programming language based on current path."""
+        if self._path:
+            new_language = ProgrammingLanguageUtils.from_file_extension(self._path)
+
+        else:
+            new_language = ProgrammingLanguage.TEXT
+
+        self._update_programming_language(new_language)
+
+    def _update_programming_language(self, new_language: ProgrammingLanguage) -> None:
+        """
+        Update the syntax highlighting language.
+
+        Args:
+            new_language: The new programming language to use
+        """
+        if self._current_programming_language != new_language:
+            self._current_programming_language = new_language
+            self._highlighter.set_language(new_language)
+            self.status_updated.emit()
+
+    def _update_auto_backup_from_settings(self) -> None:
+        """Update auto-backup settings from mindspace."""
+        if not self._mindspace_manager.has_mindspace():
+            self._auto_backup_timer.stop()
+            return
+
+        settings = self._mindspace_manager.settings()
+        if settings is None:
+            self._auto_backup_timer.stop()
+            return
+
+        self._update_auto_backup_settings(settings.auto_backup, settings.auto_backup_interval)
+
+    def _update_auto_backup_settings(self, enabled: bool, interval: int) -> None:
+        """Update auto-backup settings."""
+        if enabled:
+            self._auto_backup_timer.setInterval(interval * 1000)  # Convert to milliseconds
+            if self._is_modified:
+                # If we have unsaved changes, start backup immediately
+                self._auto_backup_timer.start()
+            return
+
+        clear_backups = self._auto_backup_timer.isActive()
+        self._auto_backup_timer.stop()
+
+        # Clean up any existing backups since auto-backup is disabled
+        if clear_backups:
+            self._cleanup_backup_files()
+
+    def _set_modified(self, modified: bool) -> None:
+        """
+        Set the modified state and emit appropriate signals.
+
+        Args:
+            modified: Whether the content is modified
+        """
+        if self._is_modified != modified:
+            self._is_modified = modified
+            self.content_modified.emit(modified)
+
+    def _on_mindspace_settings_changed(self) -> None:
+        """Handle mindspace settings changes."""
+        self._update_auto_backup_from_settings()
 
     def _on_widget_activated(self, _widget: QWidget) -> None:
         """
@@ -154,6 +267,302 @@ class EditorWidget(QPlainTextEdit):
         """Handle language changes by updating the UI."""
         self._update_line_number_area_width()
         self.viewport().update()
+        self.status_updated.emit()
+
+    def _on_text_changed(self) -> None:
+        """Handle changes to editor content."""
+        current_content = self.toPlainText()
+        is_modified = current_content != self._last_save_content
+        self._set_modified(is_modified)
+
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        settings = self._mindspace_manager.settings()
+        if settings is None:
+            return
+
+        if settings.auto_backup:
+            if is_modified and not self._auto_backup_timer.isActive():
+                self._auto_backup_timer.start()
+
+            elif not is_modified:
+                self._auto_backup_timer.stop()
+
+    def _auto_backup(self) -> None:
+        """Handle auto-backup functionality."""
+        if not self._is_modified:
+            return
+
+        # All backups should now go in mindspace .humbug/backups
+        if not self._mindspace_manager.has_mindspace():
+            return  # No backups without a mindspace
+
+        backup_dir = self._mindspace_manager.get_absolute_path(os.path.join(".humbug", "backups"))
+        os.makedirs(backup_dir, exist_ok=True)
+
+        if not self._path:
+            # For untitled files, use timestamp-based backup in mindspace
+            prefix = f"backup-{self._untitled_number}-"
+            current_time = int(time.time())
+            try:
+                # Clean up old backups for this untitled file
+                for file in os.listdir(backup_dir):
+                    if file.startswith(prefix):
+                        file_path = os.path.join(backup_dir, file)
+
+                        # Keep only backups from last hour
+                        if current_time - os.path.getctime(file_path) > 3600:
+                            try:
+                                os.remove(file_path)
+
+                            except OSError as e:
+                                self._logger.warning("Failed to remove old backup %s: %s", file_path, str(e))
+
+            except OSError as e:
+                self._logger.warning("Failed to clean up old backups: %s", str(e))
+
+            backup_file = os.path.join(
+                backup_dir,
+                f"{prefix}{current_time}.txt"
+            )
+
+        else:
+            backup_file = f"{self._path}.backup"
+
+            # Clean up any very old backups that might have been left behind
+            try:
+                if os.path.exists(backup_file):
+                    if time.time() - os.path.getctime(backup_file) > 86400:  # 24 hours
+                        try:
+                            os.remove(backup_file)
+
+                        except OSError:
+                            pass  # Ignore cleanup errors for old files
+
+            except OSError:
+                pass  # Ignore stat errors
+
+        try:
+            with open(backup_file, 'w', encoding='utf-8') as f:
+                f.write(self.toPlainText())
+
+        except Exception as e:
+            self._logger.error("Failed to create backup file '%s': %s", backup_file, str(e))
+
+    def _cleanup_backup_files(self) -> None:
+        """Clean up any backup files for this editor."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        if self._path:
+            # Clean up backup for saved file
+            backup_file = f"{self._path}.backup"
+            try:
+                if os.path.exists(backup_file):
+                    os.remove(backup_file)
+
+            except OSError as e:
+                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
+
+        elif self._untitled_number:
+            # Clean up backups for untitled file
+            backup_dir = self._mindspace_manager.get_absolute_path(os.path.join(".humbug", "backups"))
+            prefix = f"backup-{self._untitled_number}-"
+            try:
+                for file in os.listdir(backup_dir):
+                    if file.startswith(prefix):
+                        try:
+                            os.remove(os.path.join(backup_dir, file))
+
+                        except OSError as e:
+                            self._logger.warning("Failed to remove backup %s: %s", file, str(e))
+
+            except OSError as e:
+                self._logger.warning("Failed to clean up backups: %s", str(e))
+
+    def path(self) -> str:
+        """Get the current file path."""
+        return self._path
+
+    def set_path(self, path: str) -> None:
+        """
+        Set the file path and update language detection.
+
+        Args:
+            path: Path to file
+        """
+        self._path = path
+        self._untitled_number = None
+        self._update_programming_language_from_path()
+
+    def is_modified(self) -> bool:
+        """Check if the content has been modified."""
+        return self._is_modified
+
+    def can_close(self) -> bool:
+        """Check if the editor can be closed, handling unsaved changes."""
+        if not self._is_modified:
+            return True
+
+        strings = self._language_manager.strings()
+        document_name = self._path or f'Untitled-{self._untitled_number}'
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.save_changes_title,
+            strings.unsaved_changes.format(document_name),
+            [MessageBoxButton.SAVE, MessageBoxButton.DISCARD, MessageBoxButton.CANCEL]
+        )
+
+        if result == MessageBoxButton.SAVE:
+            return self.save_file()
+
+        if result == MessageBoxButton.DISCARD:
+            self._set_modified(False)
+            return True
+
+        return False
+
+    def close_widget(self) -> None:
+        """Close the editor widget and clean up resources."""
+        # Delete any backup files when we close
+        if self._auto_backup_timer.isActive():
+            self._cleanup_backup_files()
+
+    def save_file(self) -> bool:
+        """
+        Save the current file.
+
+        Returns:
+            bool: True if save was successful
+        """
+        if not self._path:
+            return self.save_file_as()
+
+        try:
+            content = self.toPlainText()
+            with open(self._path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            self._last_save_content = content
+            self._set_modified(False)
+
+            # Delete any backup files
+            backup_file = f"{self._path}.backup"
+            try:
+                if os.path.exists(backup_file):
+                    os.remove(backup_file)
+
+            except OSError as e:
+                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
+
+            self.file_saved.emit(self._path)
+            return True
+
+        except Exception as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                strings.could_not_save.format(self._path, str(e))
+            )
+            return False
+
+    def save_file_as(self) -> bool:
+        """
+        Show save as dialog and save file.
+
+        Returns:
+            bool: True if save was successful
+        """
+        strings = self._language_manager.strings()
+        export_dialog = QFileDialog()
+        export_dialog.setWindowTitle(strings.file_dialog_save_file)
+
+        if self._path:
+            export_dialog.setDirectory(self._path)
+
+        else:
+            fd_dir = self._mindspace_manager.file_dialog_directory()
+            if not fd_dir:
+                return False
+
+            export_dialog.setDirectory(fd_dir)
+
+        export_dialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+        if export_dialog.exec_() != QFileDialog.DialogCode.Accepted:
+            return False
+
+        filename = export_dialog.selectedFiles()[0]
+        self._mindspace_manager.update_file_dialog_directory(filename)
+        self.set_path(filename)
+
+        return self.save_file()
+
+    def get_status_info(self) -> Dict[str, Any]:
+        """
+        Get status information for the status bar.
+
+        Returns:
+            Dictionary with status information
+        """
+        cursor = self.textCursor()
+        line = cursor.blockNumber() + 1
+        column = cursor.columnNumber() + 1
+
+        # Get file info
+        encoding = "UTF-8"
+        line_ending = "LF"  # We could detect this from file content
+
+        # Get language name for display
+        file_type = ProgrammingLanguageUtils.get_display_name(self._current_programming_language)
+
+        return {
+            'line': line,
+            'column': column,
+            'encoding': encoding,
+            'line_ending': line_ending,
+            'type': file_type
+        }
+
+    def create_state_metadata(self, temp_state: bool) -> Dict[str, Any]:
+        """
+        Create metadata dictionary capturing current widget state.
+
+        Args:
+            temp_state: Whether this is temporary state for moving tabs
+
+        Returns:
+            Dictionary containing editor state metadata
+        """
+        metadata: Dict[str, Any] = {}
+
+        if temp_state:
+            metadata["content"] = self.toPlainText()
+
+        metadata["language"] = self._current_programming_language.name
+
+        return metadata
+
+    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+        """
+        Restore widget state from metadata.
+
+        Args:
+            metadata: Dictionary containing state metadata
+        """
+        if not metadata:
+            return
+
+        if "content" in metadata:
+            self.setPlainText(metadata["content"])
+
+        # Restore language if specified
+        if "language" in metadata:
+            language = ProgrammingLanguage[metadata["language"]]
+            self._update_programming_language(language)
 
     def _line_number_area_width(self) -> int:
         """Calculate the width needed for the line number area."""
@@ -570,6 +979,11 @@ class EditorWidget(QPlainTextEdit):
         space_width = self._style_manager.get_space_width()
         self.setTabStopDistance(space_width * 8)
 
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode() != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode()
+            self._highlighter.rehighlight()
+
         self.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
@@ -723,3 +1137,23 @@ class EditorWidget(QPlainTextEdit):
         self._matches = []
         self._current_match = -1
         self._last_search = ""
+
+    def can_undo(self) -> bool:
+        """Check if undo is available."""
+        return self.document().isUndoAvailable()
+
+    def can_redo(self) -> bool:
+        """Check if redo is available."""
+        return self.document().isRedoAvailable()
+
+    def can_cut(self) -> bool:
+        """Check if cut is available."""
+        return self.textCursor().hasSelection()
+
+    def can_copy(self) -> bool:
+        """Check if copy is available."""
+        return self.textCursor().hasSelection()
+
+    def can_paste(self) -> bool:
+        """Check if paste is available."""
+        return True
