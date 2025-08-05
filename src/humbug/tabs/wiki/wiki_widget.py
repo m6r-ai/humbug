@@ -677,8 +677,7 @@ class WikiWidget(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;
             }}
-        """)
-        self._scroll_area.setStyleSheet(f"""
+
             QScrollArea {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;
