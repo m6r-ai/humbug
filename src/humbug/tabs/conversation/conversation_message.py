@@ -446,7 +446,7 @@ class ConversationMessage(QFrame):
 
         return section
 
-    def lazy_update(self, viewport_rect: QRect, scroll_container: QWidget, event_filter: QObject) -> None:
+    def lazy_update(self, viewport_rect: QRect, scroll_container: QWidget, event_filter: QObject, is_streaming: bool) -> None:
         """
         Handle lazy updates for sections based on viewport visibility.
 
@@ -466,6 +466,10 @@ class ConversationMessage(QFrame):
             # Only create highlighter if section intersects with viewport
             if section_rect.intersects(viewport_rect):
                 section.lazy_update(event_filter)
+
+        # If we're streaming we don't want our buttons yet
+        if is_streaming:
+            return
 
         if not self._needs_lazy_update:
             return

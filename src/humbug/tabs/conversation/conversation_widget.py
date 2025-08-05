@@ -404,7 +404,7 @@ class ConversationWidget(QWidget):
         # Create viewport rect in scroll area content coordinates
         visible_rect = QRect(0, scroll_offset, viewport_rect.width(), viewport_rect.height())
 
-        for message in self._messages:
+        for i, message in enumerate(self._messages):
             if not message.is_rendered():
                 continue
 
@@ -414,7 +414,8 @@ class ConversationWidget(QWidget):
 
             # Only check sections if message intersects with viewport
             if message_rect.intersects(visible_rect):
-                message.lazy_update(visible_rect, self._messages_container, self._event_filter)
+                is_streaming = self._is_streaming and i == len(self._messages) - 1
+                message.lazy_update(visible_rect, self._messages_container, self._event_filter, is_streaming)
 
     def _on_initial_layout_stabilized(self) -> None:
         """Handle the initial layout stabilization - do the first visibility check."""
@@ -855,6 +856,8 @@ class ConversationWidget(QWidget):
         result = self._create_completion_result()
         self.submit_finished.emit(result)
         self.update_label.emit()
+        if self._initial_layout_complete:
+            self._lazy_update_visible_sections()
 
     def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
