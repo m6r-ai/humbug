@@ -308,7 +308,7 @@ class DelegateAITool(AITool):
                 self._logger.warning("Delegated AI task failed: %s", error_msg)
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"Delegated AI task failed, tab ID: {tab_id}, session ID: {session_id}, error: {error_msg}"
+                    f"Delegated AI task failed\ntab ID: {tab_id}\nsession ID: {session_id}\nerror: {error_msg}"
                 )
                 return AIToolResult(
                     id=tool_call.id,
@@ -330,7 +330,7 @@ class DelegateAITool(AITool):
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Delegated AI task completed, tab ID: {tab_id}, session ID: {session_id}, response: {response_content[:50]}..."
+                f"Delegated AI task completed\ntab ID: {tab_id}\nsession ID: {session_id}\nresponse: {response_content[:50]}..."
             )
 
             return AIToolResult(
@@ -423,7 +423,7 @@ class DelegateAITool(AITool):
             session_info = "continuing session" if session_id else "new session"
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI delegated task ({session_info}), tab ID: {tab_id}, session ID: {session_id}, prompt: '{task_prompt[:50]}...'"
+                f"AI delegated task ({session_info})\ntab ID: {tab_id}\nsession ID: {session_id}\nprompt: '{task_prompt[:50]}...'"
             )
 
             # Create a continuation task that waits for completion

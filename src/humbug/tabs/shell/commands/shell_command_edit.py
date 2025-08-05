@@ -85,7 +85,7 @@ class ShellCommandEdit(ShellCommand):
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Shell opened editor for: '{full_path}', tab ID: {editor_tab.tab_id()}"
+                f"Shell opened editor for: '{full_path}'\ntab ID: {editor_tab.tab_id()}"
             )
             self._history_manager.add_message(
                 ShellMessageSource.SUCCESS,

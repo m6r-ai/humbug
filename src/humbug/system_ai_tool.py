@@ -385,7 +385,7 @@ class SystemAITool(AITool):
             tab_id = editor_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened editor for file: '{relative_path}', tab ID: {tab_id}"
+                f"AI opened editor for file: '{relative_path}'\ntab ID: {tab_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -416,7 +416,7 @@ class SystemAITool(AITool):
             tab_id = terminal_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI created new terminal, tab ID: {tab_id}"
+                f"AI created new terminal\ntab ID: {tab_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -458,7 +458,7 @@ class SystemAITool(AITool):
             tab_id = conversation_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened conversation for: '{conversation_path}', tab ID: {tab_id}"
+                f"AI opened conversation for: '{conversation_path}'\ntab ID: {tab_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -526,7 +526,7 @@ class SystemAITool(AITool):
             tab_id = conversation_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI created new conversation, tab ID: {tab_id}"
+                f"AI created new conversation\ntab ID: {tab_id}"
             )
             result_parts = [f"Created new conversation, tab ID: {tab_id}"]
             if model:
@@ -565,7 +565,7 @@ class SystemAITool(AITool):
             tab_id = shell_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened system shell, tab ID: {tab_id}"
+                f"AI opened system shell\ntab ID: {tab_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -594,7 +594,7 @@ class SystemAITool(AITool):
             tab_id = shell_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened mindspace log, tab ID: {tab_id}"
+                f"AI opened mindspace log\ntab ID: {tab_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -637,7 +637,7 @@ class SystemAITool(AITool):
             tab_id = wiki_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened wiki tab for: '{location}', tab ID: {tab_id}"
+                f"AI opened wiki tab for: '{location}'\ntab ID: {tab_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -702,7 +702,7 @@ class SystemAITool(AITool):
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI closed tab, tab ID: {tab_id}"
+                f"AI closed tab\ntab ID: {tab_id}"
             )
             return AIToolResult(
                 id=tool_call.id,

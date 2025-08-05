@@ -845,7 +845,7 @@ class MainWindow(QMainWindow):
 
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
-                    f"User opened conversation: '{path}', tab ID: {conversation_tab.tab_id()}"
+                    f"User opened conversation: '{path}'\ntab ID: {conversation_tab.tab_id()}"
                 )
 
                 if focus_widget is not None:
@@ -859,7 +859,7 @@ class MainWindow(QMainWindow):
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User opened wiki page: '{path}', tab ID: {wiki_tab.tab_id()}"
+            f"User opened wiki page: '{path}'\ntab ID: {wiki_tab.tab_id()}"
         )
 
         if focus_widget is not None:
@@ -881,7 +881,7 @@ class MainWindow(QMainWindow):
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User opened editor for file: '{path}', tab ID: {editor_tab.tab_id()}"
+            f"User opened editor for file: '{path}'\ntab ID: {editor_tab.tab_id()}"
         )
 
     def _on_mindspace_tree_file_deleted(self, path: str) -> None:
@@ -929,7 +929,7 @@ class MainWindow(QMainWindow):
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"User opened editor for file: '{path}', tab ID: {editor_tab.tab_id()}"
+                f"User opened editor for file: '{path}'\nTab ID: {editor_tab.tab_id()}"
             )
 
         except OSError as e:
@@ -1080,7 +1080,7 @@ class MainWindow(QMainWindow):
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User created new conversion, tab ID: {conversation_tab.tab_id()}"
+            f"User created new conversation\ntab ID: {conversation_tab.tab_id()}"
         )
         return conversation_tab
 
@@ -1245,7 +1245,7 @@ class MainWindow(QMainWindow):
         self._column_manager.close_tab()
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User closed tab, tab ID: {tab.tab_id()}"
+            f"User closed tab\nTab ID: {tab.tab_id()}"
         )
 
     def _submit_message(self) -> None:

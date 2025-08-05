@@ -134,7 +134,7 @@ class ShellCommandConversation(ShellCommand):
             )
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Shell created new conversion, tab ID: {conversation_tab.tab_id()}"
+                f"Shell created new conversion\ntab ID: {conversation_tab.tab_id()}"
             )
             return True
 

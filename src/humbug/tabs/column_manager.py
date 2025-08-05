@@ -382,7 +382,7 @@ class ColumnManager(QWidget):
         self.close_tab_by_id(tab_id)
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User closed tab, tab ID: {tab_id}"
+            f"User closed tab\ntab ID: {tab_id}"
         )
 
     def _on_tab_updated_state_changed(self, tab_id: str, is_updated: bool) -> None:
