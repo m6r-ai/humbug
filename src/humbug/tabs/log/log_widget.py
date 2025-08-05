@@ -546,7 +546,7 @@ class LogWidget(QWidget):
             self._scroll_to_bottom()
 
     def _build_widget_style(self) -> str:
-        """Build styles for the conversation widget."""
+        """Build styles for the log widget."""
 
         return f"""
             QWidget {{
@@ -572,7 +572,6 @@ class LogWidget(QWidget):
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 height: 0px;
             }}
-
         """
 
     def _build_message_frame_styles(self) -> str:

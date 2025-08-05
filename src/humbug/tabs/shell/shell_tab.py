@@ -8,11 +8,9 @@ import logging
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.status_message import StatusMessage
-from humbug.style_manager import StyleManager
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.shell.shell_widget import ShellWidget
 from humbug.tabs.tab_base import TabBase
@@ -63,10 +61,6 @@ class ShellTab(TabBase):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
-
-        self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
 
     def activate(self) -> None:
         """Activate the tab."""
@@ -231,14 +225,6 @@ class ShellTab(TabBase):
         text = self._find_widget.get_search_text()
         current, total = self._shell_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
-
-    def _on_style_changed(self) -> None:
-        """Handle style changes."""
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-        """)
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""

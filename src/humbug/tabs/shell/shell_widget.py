@@ -693,6 +693,35 @@ class ShellWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
+    def _build_widget_style(self) -> str:
+        """Build styles for the log widget."""
+
+        return f"""
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            QScrollArea {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+
+            QScrollBar:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+        """
+
     def _build_message_frame_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
@@ -785,28 +814,8 @@ class ShellWidget(QWidget):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        self._scroll_area.setStyleSheet(f"""
-            QScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-            QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-        """)
-
         stylesheet_parts = [
+            self._build_widget_style(),
             self._build_message_frame_styles(),
             self._build_header_styles(),
             self._build_text_area_styles()
