@@ -7,6 +7,8 @@ Bug fixes:
 - Navigating between messsages in a conversation could be very slow, and the recent changes involving tool use could
   have the UI attempt to navigate messages that were not visible.
 - Loading large and complex conversations could be very slow.  Optimized this by adding lazy updates to the UI.
+- The tab bar layout could be difficult to see properly at times, the scroll buttons didn't have hover effects, and the
+  type icon did not activate the tab.
 
 Internal structure changes:
 
