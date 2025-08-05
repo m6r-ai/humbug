@@ -121,7 +121,7 @@ class TabBar(QTabBar):
 
             # Draw top border for current tabs
             if is_current:
-                border_color_role = ColorRole.TAB_BORDER_ACTIVE if is_active_column else ColorRole.TAB_BACKGROUND_ACTIVE
+                border_color_role = ColorRole.TAB_BORDER_ACTIVE if is_active_column else ColorRole.SPLITTER
                 border_color = self._style_manager.get_color(border_color_role)
 
                 # Draw 2px top border
