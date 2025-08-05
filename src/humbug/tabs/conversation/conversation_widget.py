@@ -155,6 +155,35 @@ class ConversationWidget(QWidget):
         self._message_with_selection: ConversationMessage | None = None
         self._is_streaming = False
 
+        # Message border animation state (moved from ConversationInput)
+        self._animated_message: ConversationMessage | None = None
+        self._animation_frame = 0
+        self._fade_direction = 1
+        self._is_animating = False
+
+        # Animation parameters for smooth fade
+        self._animation_steps = 32  # Steps for half cycle (start to mid)
+
+        # Timer intervals
+        self._slow_interval_ms = int(3000 / self._animation_steps)
+        self._debounce_interval_ms = int(750 / self._animation_steps)
+
+        # Slow timer - always running during animation to provide regular updates
+        self._slow_timer = QTimer()
+        self._slow_timer.setInterval(self._slow_interval_ms)
+        self._slow_timer.timeout.connect(self._on_slow_timer)
+
+        # Pending message flag and counter for smooth transition
+        self._pending_animation_message = False
+        self._no_message_counter = 0
+        self._max_no_message_cycles = 16  # Number of cycles before disabling debounce timer
+
+        # Debounce timer for message notifications
+        self._debounce_timer = QTimer()
+        self._debounce_timer.setSingleShot(True)
+        self._debounce_timer.timeout.connect(self._on_debounce_timeout)
+        self._debounce_timer.setInterval(self._debounce_interval_ms)
+
         # Initialize tracking variables
         self._auto_scroll = True
         self._last_scroll_maximum = 0
@@ -338,6 +367,10 @@ class ConversationWidget(QWidget):
 
         self._install_activation_tracking(msg_widget)
 
+        # If we're currently animating, transfer animation to this new message
+        if self._is_animating:
+            self._transfer_animation_to_message(msg_widget)
+
     def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
         """
         Change the expansion state of a message.
@@ -437,9 +470,147 @@ class ConversationWidget(QWidget):
         """
         Handle streaming update events from AI conversation.
 
-        This triggers the visual feedback animation in the input widget.
+        This triggers the visual feedback animation for the last visible message.
         """
-        self._input.trigger_streaming_animation()
+        self.trigger_message_animation()
+
+    def trigger_message_animation(self) -> None:
+        """
+        Trigger animation update due to network message received.
+
+        This method implements debouncing - if the debounce timer is not active,
+        it triggers an immediate animation update and starts the debounce timer.
+        If the debounce timer is already active, it sets a pending flag to
+        indicate another message was received during the debounce period.
+
+        When a new message is received, the no-message counter is reset to zero.
+        """
+        if not self._is_animating:
+            return
+
+        # Reset the no-message counter since we received a message
+        self._no_message_counter = 0
+
+        if self._debounce_timer.isActive():
+            self._pending_animation_message = True
+            return
+
+        # No debounce timer running - trigger immediate update
+        self._update_border_animation()
+        self._debounce_timer.start()
+        self._pending_animation_message = False
+
+    def _on_slow_timer(self) -> None:
+        """Handle slow timer timeout - provides regular animation updates."""
+        if not self._is_animating:
+            return
+
+        if self._debounce_timer.isActive():
+            return
+
+        self._update_border_animation()
+
+    def _on_debounce_timeout(self) -> None:
+        """
+        Handle debounce timer timeout.
+
+        If there was a pending message during the debounce period, immediately
+        trigger another animation update and restart the debounce timer.
+
+        If there was no pending message, increment the no-message counter.
+        If the counter reaches the maximum, disable the debounce timer.
+        Otherwise, treat it as if we saw a message (for smooth transition).
+        """
+        if self._pending_animation_message:
+            # There was a message during debounce - trigger update and restart
+            self._update_border_animation()
+            self._debounce_timer.start()
+            self._pending_animation_message = False
+            return
+
+        # No message during debounce period
+        self._no_message_counter += 1
+
+        if self._no_message_counter >= self._max_no_message_cycles:
+            # Reached maximum cycles - stop debounce timer
+            # Animation will continue with slow timer only
+            self._no_message_counter = 0
+            return
+
+        # Continue fast animation for smooth transition
+        self._update_border_animation()
+        self._debounce_timer.start()
+
+    def _start_message_border_animation(self) -> None:
+        """Start animating the last visible message."""
+        last_message = self._find_last_visible_message_widget()
+        if not last_message:
+            return
+
+        self._animated_message = last_message
+        self._animation_frame = 0
+        self._fade_direction = 1
+        self._is_animating = True
+        self._pending_animation_message = False
+        self._no_message_counter = 0
+
+        # Start animation on the message
+        last_message.set_border_animation(True, self._animation_frame)
+
+        # Start the slow timer - this runs continuously
+        self._slow_timer.start()
+
+    def _transfer_animation_to_message(self, new_message: ConversationMessage) -> None:
+        """Transfer animation to a new message."""
+        # Stop current animation
+        if self._animated_message:
+            self._animated_message.set_border_animation(False)
+
+        # Start new animation (reset frame)
+        self._animated_message = new_message
+        self._animation_frame = 0
+        self._fade_direction = 1
+        new_message.set_border_animation(True, self._animation_frame)
+
+    def _stop_message_border_animation(self) -> None:
+        """Stop all message border animation."""
+        if self._animated_message:
+            self._animated_message.set_border_animation(False)
+            self._animated_message = None
+
+        self._is_animating = False
+        self._slow_timer.stop()
+        self._debounce_timer.stop()
+        self._animation_frame = 0
+        self._pending_animation_message = False
+        self._no_message_counter = 0
+
+    def _find_last_visible_message_widget(self) -> ConversationMessage | None:
+        """Find the last visible message widget."""
+        for message in reversed(self._messages):
+            if message.isVisible():
+                return message
+        return None
+
+    def _update_border_animation(self) -> None:
+        """Update the border animation frame."""
+        if not self._is_animating or not self._animated_message:
+            return
+
+        # Update animation frame with direction
+        self._animation_frame += self._fade_direction
+
+        # Reverse direction at the extremes for full cycle (start→mid→start)
+        if self._animation_frame >= self._animation_steps:
+            self._animation_frame = self._animation_steps - 2
+            self._fade_direction = -1
+
+        elif self._animation_frame < 0:
+            self._animation_frame = 1
+            self._fade_direction = 1
+
+        # Update the animated message
+        self._animated_message.set_border_animation(True, self._animation_frame)
 
     async def _on_request_error(self, retries_exhausted: bool, message: AIMessage) -> None:
         """
@@ -454,6 +625,7 @@ class ConversationWidget(QWidget):
         if retries_exhausted:
             self._is_streaming = False
             self._input.set_streaming(False)
+            self._stop_message_border_animation()
             self.status_updated.emit()
 
             result = self._create_completion_result()
@@ -539,6 +711,10 @@ class ConversationWidget(QWidget):
         """
         self._current_unfinished_message = message
         self._add_message(message)
+
+        # Start animation if not already animating
+        if not self._is_animating:
+            self._start_message_border_animation()
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
@@ -630,6 +806,7 @@ class ConversationWidget(QWidget):
         # Update status bar with token counts
         self._is_streaming = False
         self._input.set_streaming(False)
+        self._stop_message_border_animation()
 
         # Reset message update throttling state
         self._pending_message = None
@@ -1238,6 +1415,7 @@ class ConversationWidget(QWidget):
             self.submit_finished.emit(result)
 
         self._unregister_ai_conversation_callbacks()
+        self._stop_message_border_animation()
         self._delete_empty_transcript_file()
 
     def resizeEvent(self, event: QResizeEvent) -> None:
@@ -1694,6 +1872,10 @@ class ConversationWidget(QWidget):
             self._current_bookmark_index = None
             self._message_with_selection = None
 
+            # Stop any animation on deleted messages
+            if self._animated_message and self._animated_message not in preserved_messages:
+                self._stop_message_border_animation()
+
             # Emit status update
             self.status_updated.emit()
 
@@ -1873,6 +2055,10 @@ class ConversationWidget(QWidget):
         loop.create_task(ai_conversation.submit_message(message))
         self._append_message_to_transcript(message)
 
+        # Start animation if not already animating
+        if not self._is_animating:
+            self._start_message_border_animation()
+
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
         self._scroll_to_bottom()
@@ -2005,6 +2191,10 @@ class ConversationWidget(QWidget):
             if current_unfinished_message:
                 self._add_message(current_unfinished_message)
                 self._current_unfinished_message = current_unfinished_message
+
+            # Start animation if we're streaming
+            if self._is_streaming and not self._is_animating:
+                self._start_message_border_animation()
 
         else:
             # Restore settings

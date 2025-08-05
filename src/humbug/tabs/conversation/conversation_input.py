@@ -3,7 +3,7 @@
 import sys
 from typing import cast, Dict
 
-from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize, QTimer
+from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
 from PySide6.QtWidgets import QWidget, QToolButton
 
@@ -45,33 +45,6 @@ class ConversationInput(ConversationMessage):
         # Connect text changes to update button state
         self._text_area.textChanged.connect(self._on_text_changed)
 
-        # Animation state for streaming border
-        self._animation_frame = 0
-
-        # Animation parameters for smooth fade
-        self._animation_steps = 32  # Steps for half cycle (start to mid)
-        self._fade_direction = 1    # 1 for brightening, -1 for darkening
-
-        # Timer intervals
-        self._slow_interval_ms = int(3000 / self._animation_steps)
-        self._debounce_interval_ms = int(750 / self._animation_steps)
-
-        # Slow timer - always running during streaming to provide regular updates
-        self._slow_timer = QTimer()
-        self._slow_timer.setInterval(self._slow_interval_ms)
-        self._slow_timer.timeout.connect(self._on_slow_timer)
-
-        # Pending message flag and counter for smooth transition
-        self._pending_message = False
-        self._no_message_counter = 0
-        self._max_no_message_cycles = 16  # Number of cycles before disabling debounce timer
-
-        # Debounce timer for message notifications
-        self._debounce_timer = QTimer()
-        self._debounce_timer.setSingleShot(True)
-        self._debounce_timer.timeout.connect(self._on_debounce_timeout)
-        self._debounce_timer.setInterval(self._debounce_interval_ms)
-
         self._update_header_text()
         self._on_style_changed()
         self._update_submit_button_state()
@@ -99,159 +72,9 @@ class ConversationInput(ConversationMessage):
 
     def set_streaming(self, streaming: bool) -> None:
         """Update the streaming state and header text."""
-        was_streaming = self._is_streaming
         self._is_streaming = streaming
         self._update_header_text()
         self._update_submit_button_state()
-
-        # Start or stop border animation based on streaming state
-        if streaming and not was_streaming:
-            self._start_border_animation()
-            return
-
-        if not streaming and was_streaming:
-            self._stop_border_animation()
-
-    def trigger_streaming_animation(self) -> None:
-        """
-        Trigger animation update due to network message received.
-
-        This method implements debouncing - if the debounce timer is not active,
-        it triggers an immediate animation update and starts the debounce timer.
-        If the debounce timer is already active, it sets a pending flag to
-        indicate another message was received during the debounce period.
-
-        When a new message is received, the no-message counter is reset to zero.
-        """
-        if not self._is_streaming:
-            return
-
-        # Reset the no-message counter since we received a message
-        self._no_message_counter = 0
-
-        if self._debounce_timer.isActive():
-            self._pending_message = True
-            return
-
-        # No debounce timer running - trigger immediate update
-        self._update_border_animation()
-        self._debounce_timer.start()
-        self._pending_message = False
-
-    def _on_slow_timer(self) -> None:
-        """Handle slow timer timeout - provides regular animation updates."""
-        if not self._is_streaming:
-            return
-
-        if self._debounce_timer.isActive():
-            return
-
-        self._update_border_animation()
-
-    def _on_debounce_timeout(self) -> None:
-        """
-        Handle debounce timer timeout.
-
-        If there was a pending message during the debounce period, immediately
-        trigger another animation update and restart the debounce timer.
-
-        If there was no pending message, increment the no-message counter.
-        If the counter reaches the maximum, disable the debounce timer.
-        Otherwise, treat it as if we saw a message (for smooth transition).
-        """
-        if self._pending_message:
-            # There was a message during debounce - trigger update and restart
-            self._update_border_animation()
-            self._debounce_timer.start()
-            self._pending_message = False
-            return
-
-        # No message during debounce period
-        self._no_message_counter += 1
-
-        if self._no_message_counter >= self._max_no_message_cycles:
-            # Reached maximum cycles - stop debounce timer
-            # Animation will continue with slow timer only
-            self._no_message_counter = 0
-            return
-
-        # Continue fast animation for smooth transition
-        self._update_border_animation()
-        self._debounce_timer.start()
-
-    def _start_border_animation(self) -> None:
-        """Start the border fade animation."""
-        # Initialize animation state based on current theme
-        self._animation_frame = self._animation_steps // 2
-        self._fade_direction = 1
-        self._pending_message = False
-        self._no_message_counter = 0
-
-        # Start the slow timer - this runs continuously
-        self._slow_timer.start()
-        self._update_border_style()
-
-    def _stop_border_animation(self) -> None:
-        """Stop the border animation and restore normal styling."""
-        self._slow_timer.stop()
-        self._debounce_timer.stop()
-        self._animation_frame = 0
-        self._pending_message = False
-        self._no_message_counter = 0
-        self._update_border_style()
-
-    def _update_border_animation(self) -> None:
-        """Update the border animation frame."""
-        if not self._is_streaming:
-            return
-
-        # Update animation frame with direction
-        self._animation_frame += self._fade_direction
-
-        # Reverse direction at the extremes for full cycle (start→mid→start)
-        if self._animation_frame >= self._animation_steps:
-            self._animation_frame = self._animation_steps - 2
-            self._fade_direction = -1
-
-        elif self._animation_frame < 0:
-            self._animation_frame = 1
-            self._fade_direction = 1
-
-        self._update_border_style()
-
-    def _get_fade_color(self) -> str:
-        """
-        Calculate the current fade color based on animation frame.
-
-        Returns:
-            str: Hex color string for the current animation frame
-        """
-        # Calculate intensity (0.0 to 1.0)
-        intensity = self._animation_frame / (self._animation_steps - 1)
-
-        # Convert to RGB value (0-255)
-        rgb_value = int(intensity * 255)
-
-        # Return as hex color
-        return f"#{rgb_value:02x}{rgb_value:02x}{rgb_value:02x}"
-
-    def _get_border_color(self) -> str:
-        """
-        Get the border color based on current state.
-
-        Returns:
-            str: Hex color string for the border
-        """
-        if self._is_streaming:
-            return self._get_fade_color()
-
-        # Default border color when not streaming or animation is not active
-        return super()._get_border_color()
-
-    def _update_border_style(self) -> None:
-        """Update the border style with the current animation color."""
-        self.style().unpolish(self)
-        self.style().polish(self)
 
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
@@ -265,10 +88,6 @@ class ConversationInput(ConversationMessage):
         super()._on_style_changed()
         self._set_role_style()
         self._update_submit_button_styling()
-
-        # If we're streaming, apply the animated border instead of normal styling
-        if self._is_streaming:
-            self._update_border_style()
 
     def _update_submit_button_styling(self) -> None:
         """Update submit button styling and icon."""

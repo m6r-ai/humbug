@@ -77,6 +77,10 @@ class ConversationMessage(QFrame):
 
         self._style_manager = StyleManager()
 
+        # Border animation state
+        self._is_border_animated = False
+        self._animation_frame = 0
+
         self._message_rendered = True
         if not is_input and not content:
             self._message_rendered = False
@@ -181,6 +185,42 @@ class ConversationMessage(QFrame):
 
         if content:
             self.set_content(content)
+
+    def set_border_animation(self, active: bool, frame: int = 0) -> None:
+        """
+        Enable/disable border animation with specific frame.
+
+        Args:
+            active: Whether border animation should be active
+            frame: Animation frame (0 to animation_steps-1)
+        """
+        self._is_border_animated = active
+        self._animation_frame = frame
+        self._update_border_style()
+
+    def _get_fade_color(self) -> str:
+        """
+        Calculate the current fade color based on animation frame.
+
+        Returns:
+            str: Hex color string for the current animation frame
+        """
+        # Animation parameters (matching ConversationInput)
+        animation_steps = 32  # Steps for half cycle (start to mid)
+
+        # Calculate intensity (0.0 to 1.0)
+        intensity = self._animation_frame / (animation_steps - 1)
+
+        # Convert to RGB value (0-255)
+        rgb_value = int(intensity * 255)
+
+        # Return as hex color
+        return f"#{rgb_value:02x}{rgb_value:02x}{rgb_value:02x}"
+
+    def _update_border_style(self) -> None:
+        """Update the border style with the current animation color."""
+        self.style().unpolish(self)
+        self.style().polish(self)
 
     def paintEvent(self, arg__1: QPaintEvent) -> None:
         """Override paint event to paint custom borders."""
@@ -558,6 +598,9 @@ class ConversationMessage(QFrame):
 
     def _get_border_color(self) -> str:
         """Get the border color based on current state."""
+        if self._is_border_animated:
+            return self._get_fade_color()
+
         if self._is_focused and self.hasFocus():
             return self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
 
