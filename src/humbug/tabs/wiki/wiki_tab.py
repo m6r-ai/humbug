@@ -7,10 +7,8 @@ from PySide6.QtCore import QUrl, Signal
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
-from humbug.style_manager import StyleManager
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
@@ -75,10 +73,6 @@ class WikiTab(TabBase):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
-
-        self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
 
         # Load content
         self._wiki_content_widget.load_content()
@@ -288,11 +282,3 @@ class WikiTab(TabBase):
         text = self._find_widget.get_search_text()
         current, total = self._wiki_content_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
-
-    def _on_style_changed(self) -> None:
-        """Handle style changes."""
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-        """)

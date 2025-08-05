@@ -672,7 +672,7 @@ class WikiWidget(QWidget):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        self._content_container.setStyleSheet(f"""
+        self.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;
