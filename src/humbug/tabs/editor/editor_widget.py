@@ -78,12 +78,12 @@ class EditorWidget(QPlainTextEdit):
         self.setFont(font)
         self._line_number_area.setFont(font)
 
-        self.blockCountChanged.connect(self.update_line_number_area_width)
+        self.blockCountChanged.connect(self._update_line_number_area_width)
         self.updateRequest.connect(self._update_line_number_area)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
-        self.update_line_number_area_width()
+        self._update_line_number_area_width()
 
         # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
         palette = self.palette()
@@ -102,6 +102,8 @@ class EditorWidget(QPlainTextEdit):
         self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
 
         self.installEventFilter(self._event_filter)
+
+        self._on_style_changed()
 
     def _on_widget_activated(self, _widget: QWidget) -> None:
         """
@@ -123,7 +125,7 @@ class EditorWidget(QPlainTextEdit):
 
     def _on_language_changed(self) -> None:
         """Handle language changes by updating the UI."""
-        self.update_line_number_area_width()
+        self._update_line_number_area_width()
         self.viewport().update()
 
     def _line_number_area_width(self) -> int:
@@ -137,7 +139,7 @@ class EditorWidget(QPlainTextEdit):
         digit_width = self.fontMetrics().horizontalAdvance('9')
         return digit_width * (digits + 4)
 
-    def update_line_number_area_width(self) -> None:
+    def _update_line_number_area_width(self) -> None:
         """Update the margins to accommodate the line numbers."""
         width = self._line_number_area_width()
 
@@ -158,7 +160,7 @@ class EditorWidget(QPlainTextEdit):
                 self._line_number_area.width(), rect.height())
 
         if rect.contains(self.viewport().rect()):
-            self.update_line_number_area_width()
+            self._update_line_number_area_width()
 
     def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
         """Handle resize events."""
@@ -530,6 +532,51 @@ class EditorWidget(QPlainTextEdit):
 
     def _on_style_changed(self) -> None:
         """Handle style changes affecting search highlighting."""
+        # Update font size
+        zoom_factor = self._style_manager.zoom_factor()
+        font = self.font()
+        base_size = self._style_manager.base_font_size()
+        font.setPointSizeF(base_size * zoom_factor)
+        self.setFont(font)
+
+        # Update tab stops - scale with zoom
+        space_width = self._style_manager.get_space_width()
+        self.setTabStopDistance(space_width * 8)
+
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+            QPlainTextEdit {{
+                border: none;
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-color: none;
+            }}
+            QScrollBar:vertical, QScrollBar:horizontal {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+                height: 12px;
+            }}
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+                min-width: 20px;
+            }}
+            QScrollBar::add-page, QScrollBar::sub-page {{
+                background: none;
+            }}
+            QScrollBar::add-line, QScrollBar::sub-line {{
+                height: 0px;
+                width: 0px;
+            }}
+            QAbstractScrollArea::corner {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+        """)
+
+        # Scale line number area
+        self._update_line_number_area_width()
+
         self._highlight_matches()
 
     def find_text(self, text: str, forward: bool = True) -> None:

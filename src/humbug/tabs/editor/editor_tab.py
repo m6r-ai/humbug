@@ -11,7 +11,6 @@ from PySide6.QtGui import QTextCursor
 
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -234,50 +233,6 @@ class EditorTab(TabBase):
         """
         Handle style and zoom changes.
         """
-        # Update font size
-        zoom_factor = self._style_manager.zoom_factor()
-        font = self._editor_widget.font()
-        base_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_size * zoom_factor)
-        self._editor_widget.setFont(font)
-
-        # Update tab stops - scale with zoom
-        space_width = self._style_manager.get_space_width()
-        self._editor_widget.setTabStopDistance(space_width * 8)
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-            QPlainTextEdit {{
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                selection-color: none;
-            }}
-            QScrollBar:vertical, QScrollBar:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-                height: 12px;
-            }}
-            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-                min-width: 20px;
-            }}
-            QScrollBar::add-page, QScrollBar::sub-page {{
-                background: none;
-            }}
-            QScrollBar::add-line, QScrollBar::sub-line {{
-                height: 0px;
-                width: 0px;
-            }}
-            QAbstractScrollArea::corner {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-        """)
-
-        # Scale line number area
-        self._editor_widget.update_line_number_area_width()
-
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode() != self._init_colour_mode:
             self._init_colour_mode = self._style_manager.color_mode()
