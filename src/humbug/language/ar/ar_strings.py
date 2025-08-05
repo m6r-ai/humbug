@@ -213,6 +213,7 @@ def get_arabic_strings() -> LanguageStrings:
         terminal_status="طرفية: {name} ({columns}x{rows})",
         system_status="نظام",
         log_status="سجل",
+        wiki_status="ويكي: {path}",
 
         # Bookmark
         bookmark_section="تبديل الإشارة",

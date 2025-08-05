@@ -213,6 +213,7 @@ def get_french_strings() -> LanguageStrings:
         terminal_status="Terminal : {name} ({columns}x{rows})",
         system_status="Statut du système",
         log_status="Journal",
+        wiki_status="Wiki : {path}",
 
         # Bookmark Actions
         bookmark_section="Marquer/Démarquer",

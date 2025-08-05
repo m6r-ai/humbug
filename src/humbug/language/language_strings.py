@@ -202,6 +202,7 @@ class LanguageStrings:
     terminal_status: str
     system_status: str
     log_status: str
+    wiki_status: str
 
     # Bookmark-related strings
     bookmark_section: str

@@ -213,6 +213,7 @@ def get_english_strings() -> LanguageStrings:
         terminal_status="Terminal: {name} ({columns}x{rows})",
         system_status="System",
         log_status="Log",
+        wiki_status="Wiki: {path}",
 
         # Bookmark-related strings
         bookmark_section="Toggle Bookmark",

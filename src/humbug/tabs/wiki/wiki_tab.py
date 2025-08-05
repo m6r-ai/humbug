@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
+from humbug.status_message import StatusMessage
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
@@ -159,6 +160,13 @@ class WikiTab(TabBase):
 
     def update_status(self) -> None:
         """Update status bar."""
+        strings = self._language_manager.strings()
+        message = StatusMessage(
+            strings.wiki_status.format(
+                path=self._path
+            )
+        )
+        self.status_message.emit(message)
 
     def can_close_tab(self) -> bool:
         """Check if wiki can be closed."""
