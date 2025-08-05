@@ -8,11 +8,9 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from terminal import TerminalBase, create_terminal
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.status_message import StatusMessage
-from humbug.style_manager import StyleManager
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
@@ -88,7 +86,6 @@ class TerminalTab(TabBase):
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("TerminalTab")
         self._command = command
-        self._style_manager = StyleManager()
         self._mindspace_manager = MindspaceManager()
 
         # Create layout
@@ -113,10 +110,6 @@ class TerminalTab(TabBase):
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
-
-        # Handle style changes
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
 
         # Initialize process and task tracking
         self._terminal_process: TerminalBase = create_terminal(self._mindspace_manager.mindspace_path())
@@ -259,45 +252,6 @@ class TerminalTab(TabBase):
 
         except Exception as e:
             self._logger.error("Failed to write to process: %s", str(e))
-
-    def _on_style_changed(self) -> None:
-        """Handle style changes."""
-        # Apply consistent styling to both the terminal widget and its viewport
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-            QAbstractScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-            QAbstractScrollArea::viewport {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-            QScrollBar:vertical, QScrollBar:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-                height: 12px;
-            }}
-            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-                min-width: 20px;
-            }}
-            QScrollBar::add-page, QScrollBar::sub-page {{
-                background: none;
-            }}
-            QScrollBar::add-line, QScrollBar::sub-line {{
-                height: 0px;
-                width: 0px;
-            }}
-            QAbstractScrollArea::corner {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-        """)
-
-        self._terminal_widget.update_dimensions()
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """

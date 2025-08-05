@@ -150,7 +150,46 @@ class TerminalWidget(QAbstractScrollArea):
         # Force redraw with new colors
         self.viewport().update()
 
-    def update_dimensions(self) -> None:
+        # Apply consistent styling to both the terminal widget and its viewport
+        self.setStyleSheet(f"""
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            QAbstractScrollArea {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+            QAbstractScrollArea::viewport {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                border: none;
+            }}
+            QAbstractScrollArea::corner {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+
+            QScrollBar:vertical, QScrollBar:horizontal {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+                height: 12px;
+            }}
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+                min-width: 20px;
+            }}
+            QScrollBar::add-page, QScrollBar::sub-page {{
+                background: none;
+            }}
+            QScrollBar::add-line, QScrollBar::sub-line {{
+                height: 0px;
+                width: 0px;
+            }}
+        """)
+
+        self._update_dimensions()
+
+    def _update_dimensions(self) -> None:
         """Update terminal dimensions based on widget size and font metrics."""
 
         # Get the width of the vertical scrollbar
@@ -1076,7 +1115,7 @@ class TerminalWidget(QAbstractScrollArea):
     def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
         """Handle resize events."""
         super().resizeEvent(event)
-        self.update_dimensions()
+        self._update_dimensions()
         self.viewport().update()
 
     def focusNextPrevChild(self, _next: bool) -> bool:  # type: ignore[override]
