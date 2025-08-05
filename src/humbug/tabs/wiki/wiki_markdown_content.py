@@ -10,7 +10,6 @@ from PySide6.QtGui import QColor
 from dmarkdown import MarkdownConverter
 from syntax import ProgrammingLanguage
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
 from humbug.tabs.wiki.wiki_markdown_content_section import WikiMarkdownContentSection
@@ -167,9 +166,6 @@ class WikiMarkdownContent(WikiContentWidget):
             self._sections_layout.removeWidget(section)
             section.deleteLater()
 
-        # Apply stylesheet after content changes
-        self._apply_stylesheet()
-
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
         return self._section_with_selection is not None and self._section_with_selection.has_selection()
@@ -197,119 +193,6 @@ class WikiMarkdownContent(WikiContentWidget):
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
 
-    def _build_container_styles(self) -> str:
-        """Build styles for the main container."""
-        style_manager = self._style_manager
-        return f"""
-            QWidget#WikiMarkdownContent {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            QWidget#WikiMarkdownContent[contained="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            #WikiMarkdownContent QWidget#_sections_container {{
-                background-color: transparent;
-                border: none;
-                margin: 0;
-                padding: 0;
-            }}
-        """
-
-    def _build_header_styles(self) -> str:
-        """Build styles for language headers within sections."""
-        style_manager = self._style_manager
-        return f"""
-            QFrame#WikiMarkdownContentSection QLabel {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
-                background-color: transparent;
-                margin: 0;
-                padding: 0;
-            }}
-        """
-
-    def _build_section_styles(self) -> str:
-        """Build styles for wiki sections with all 3 background combinations."""
-        style_manager = self._style_manager
-        border_radius = int(style_manager.message_bubble_spacing())
-
-        return f"""
-            /* Default section styling */
-            QFrame#WikiMarkdownContentSection {{
-                margin: 0;
-                border-radius: {border_radius}px;
-                border: 0;
-            }}
-
-            /* Text sections - normal (not contained) */
-            QFrame#WikiMarkdownContentSection[section_type="text"][contained="false"] {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-
-            /* Text sections - contained */
-            QFrame#WikiMarkdownContentSection[section_type="text"][contained="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            /* Code sections - normal (not contained) */
-            QFrame#WikiMarkdownContentSection[section_type="code"][contained="false"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-            }}
-
-            /* Code sections - contained */
-            QFrame#WikiMarkdownContentSection[section_type="code"][contained="true"] {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
-            }}
-
-            /* Text areas within sections */
-            #WikiMarkdownContentSection QTextEdit {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: transparent;
-                border: none;
-                padding: 0;
-                margin: 0;
-                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-            }}
-
-            /* Header containers within sections */
-            #WikiMarkdownContentSection QWidget {{
-                background-color: transparent;
-                margin: 0;
-                padding: 0;
-            }}
-
-            /* Scrollbars within sections */
-            #WikiMarkdownContentSection QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #WikiMarkdownContentSection QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #WikiMarkdownContentSection QScrollBar::add-page:horizontal,
-            #WikiMarkdownContentSection QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #WikiMarkdownContentSection QScrollBar::add-line:horizontal,
-            #WikiMarkdownContentSection QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
-        """
-
-    def _apply_stylesheet(self) -> None:
-        """Apply the stylesheet to this content widget and all sections."""
-        # Build sections: container, sections, headers
-        stylesheet_parts = [
-            self._build_container_styles(),
-            self._build_header_styles(),
-            self._build_section_styles()
-        ]
-
-        shared_stylesheet = "\n".join(stylesheet_parts)
-        self.setStyleSheet(shared_stylesheet)
-
     def _on_style_changed(self) -> None:
         """Handle the style changing."""
         factor = self._style_manager.zoom_factor()
@@ -321,8 +204,6 @@ class WikiMarkdownContent(WikiContentWidget):
         # Apply fonts to all sections
         for section in self._sections:
             section.apply_font(font)
-
-        self._apply_stylesheet()
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """

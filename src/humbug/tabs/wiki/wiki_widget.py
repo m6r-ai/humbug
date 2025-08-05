@@ -785,6 +785,102 @@ class WikiWidget(QWidget):
             }}
         """
 
+    def _build_wiki_markdown_content_styles(self) -> str:
+        """Build styles for the main container."""
+        style_manager = self._style_manager
+        return f"""
+            QWidget#WikiMarkdownContent {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            QWidget#WikiMarkdownContent[contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            #WikiMarkdownContent QWidget#_sections_container {{
+                background-color: transparent;
+                border: none;
+                margin: 0;
+                padding: 0;
+            }}
+        """
+
+    def _build_wiki_markdown_content_section_styles(self) -> str:
+        """Build styles for language headers within sections."""
+        style_manager = self._style_manager
+        border_radius = int(style_manager.message_bubble_spacing())
+
+        return f"""
+            /* Default section styling */
+            QFrame#WikiMarkdownContentSection {{
+                margin: 0;
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+
+            /* Text sections - normal (not contained) */
+            QFrame#WikiMarkdownContentSection[section_type="text"][contained="false"] {{
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+
+            /* Text sections - contained */
+            QFrame#WikiMarkdownContentSection[section_type="text"][contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            /* Code sections - normal (not contained) */
+            QFrame#WikiMarkdownContentSection[section_type="code"][contained="false"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+            }}
+
+            /* Code sections - contained */
+            QFrame#WikiMarkdownContentSection[section_type="code"][contained="true"] {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+            }}
+
+            QFrame#WikiMarkdownContentSection QLabel {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            /* Text areas within sections */
+            #WikiMarkdownContentSection QTextEdit {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+
+            /* Header containers within sections */
+            #WikiMarkdownContentSection QWidget {{
+                background-color: transparent;
+                margin: 0;
+                padding: 0;
+            }}
+
+            /* Scrollbars within sections */
+            #WikiMarkdownContentSection QScrollBar:horizontal {{
+                height: 12px;
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            #WikiMarkdownContentSection QScrollBar::handle:horizontal {{
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+            #WikiMarkdownContentSection QScrollBar::add-page:horizontal,
+            #WikiMarkdownContentSection QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+            #WikiMarkdownContentSection QScrollBar::add-line:horizontal,
+            #WikiMarkdownContentSection QScrollBar::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """
+
     def _build_wiki_markdown_preview_content_style(self) -> str:
         """Build styles for the WikiMarkdownPreviewContent widget."""
         style_manager = self._style_manager
@@ -809,6 +905,8 @@ class WikiWidget(QWidget):
         stylesheet_parts = [
             self._build_widget_style(),
             self._build_wiki_file_content_style(),
+            self._build_wiki_markdown_content_styles(),
+            self._build_wiki_markdown_content_section_styles(),
             self._build_wiki_markdown_preview_content_style(),
         ]
 
