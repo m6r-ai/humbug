@@ -12,7 +12,6 @@ from ai import AIConversationHistory, AIConversationSettings
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
-from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_settings_dialog import ConversationSettingsDialog
 from humbug.tabs.conversation.conversation_widget import ConversationWidget
 from humbug.tabs.find_widget import FindWidget
@@ -46,8 +45,6 @@ class ConversationTab(TabBase):
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
         self._path = path
-
-        self._style_manager = StyleManager()
 
         # Create layout
         layout = QVBoxLayout(self)

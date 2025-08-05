@@ -547,11 +547,13 @@ class EditorWidget(QPlainTextEdit):
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
+
             QPlainTextEdit {{
                 border: none;
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 selection-color: none;
             }}
+
             QScrollBar:vertical, QScrollBar:horizontal {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;
@@ -569,6 +571,7 @@ class EditorWidget(QPlainTextEdit):
                 height: 0px;
                 width: 0px;
             }}
+
             QAbstractScrollArea::corner {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
