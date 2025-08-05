@@ -14,6 +14,7 @@ Internal structure changes:
 
 - Various tab types (conversation, log, shell, wiki) use a message structure inside a container widget.  Unified the
   Qt style sheet (QSS) handling for each message type to improve performance and unify styling in a single style sheet.
+- Dramatically simplified all tab types so their style sheets are fully defined in their top-level widget classes.
 
 ## v0.20 (2025-07-26)
 
