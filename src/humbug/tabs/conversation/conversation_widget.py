@@ -368,8 +368,14 @@ class ConversationWidget(QWidget):
         self._install_activation_tracking(msg_widget)
 
         # If we're currently animating, transfer animation to this new message
-        if self._is_animating:
+        # but only if the new message is not hidden
+        if self._is_animating and msg_widget.is_rendered():
             self._transfer_animation_to_message(msg_widget)
+
+        # If we're animating but current animated message is no longer visible,
+        # find a new visible message to animate
+        elif self._is_animating and self._animated_message and not self._animated_message.is_rendered():
+            self._update_animated_message()
 
     def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
         """
@@ -382,7 +388,12 @@ class ConversationWidget(QWidget):
         if message_index >= len(self._messages):
             return
 
-        self._messages[message_index].set_expanded(expanded)
+        message_widget = self._messages[message_index]
+        message_widget.set_expanded(expanded)
+
+        # If we're animating and the animated message visibility changed, update animation
+        if self._is_animating:
+            self._update_animated_message()
 
     def _lazy_update_visible_sections(self) -> None:
         """Ensure all visible code sections have highlighters created."""
@@ -572,6 +583,23 @@ class ConversationWidget(QWidget):
         self._fade_direction = 1
         new_message.set_border_animation(True, self._animation_frame)
 
+    def _update_animated_message(self) -> None:
+        """Update which message is being animated based on visibility."""
+        if not self._is_animating:
+            return
+
+        # Find the last visible message
+        last_visible = self._find_last_visible_message_widget()
+
+        # If no visible messages, stop animation
+        if not last_visible:
+            self._stop_message_border_animation()
+            return
+
+        # If the currently animated message is different from last visible, transfer
+        if self._animated_message != last_visible:
+            self._transfer_animation_to_message(last_visible)
+
     def _stop_message_border_animation(self) -> None:
         """Stop all message border animation."""
         if self._animated_message:
@@ -588,13 +616,18 @@ class ConversationWidget(QWidget):
     def _find_last_visible_message_widget(self) -> ConversationMessage | None:
         """Find the last visible message widget."""
         for message in reversed(self._messages):
-            if message.isVisible():
+            if message.is_rendered():
                 return message
         return None
 
     def _update_border_animation(self) -> None:
         """Update the border animation frame."""
         if not self._is_animating or not self._animated_message:
+            return
+
+        # Check if animated message is still visible
+        if not self._animated_message.is_rendered():
+            self._update_animated_message()
             return
 
         # Update animation frame with direction
@@ -701,6 +734,10 @@ class ConversationWidget(QWidget):
             # When a message is expanded, ensure its sections are highlighted if layout is complete
             if self._initial_layout_complete:
                 self._lazy_update_visible_sections()
+
+        # Update animation target if visibility changed
+        if self._is_animating:
+            self._update_animated_message()
 
     async def _on_message_added(self, message: AIMessage) -> None:
         """
@@ -1064,7 +1101,7 @@ class ConversationWidget(QWidget):
             Index of next visible message, or -1 if none found
         """
         for i in range(start_index + 1, len(self._messages)):
-            if self._messages[i].isVisible():
+            if self._messages[i].is_rendered():
                 return i
 
         return -1
@@ -1080,7 +1117,7 @@ class ConversationWidget(QWidget):
             Index of previous visible message, or -1 if none found
         """
         for i in range(start_index - 1, -1, -1):
-            if self._messages[i].isVisible():
+            if self._messages[i].is_rendered():
                 return i
 
         return -1
@@ -1093,7 +1130,7 @@ class ConversationWidget(QWidget):
             Index of last visible message, or -1 if none found
         """
         for i in range(len(self._messages) - 1, -1, -1):
-            if self._messages[i].isVisible():
+            if self._messages[i].is_rendered():
                 return i
 
         return -1
@@ -1106,7 +1143,7 @@ class ConversationWidget(QWidget):
             Index of first visible message, or -1 if none found
         """
         for i, message in enumerate(self._messages):
-            if message.isVisible():
+            if message.is_rendered():
                 return i
 
         return -1
@@ -1786,7 +1823,7 @@ class ConversationWidget(QWidget):
             message_widget = self._messages[current_index]
 
             # If we hit a visible message, stop (don't include it)
-            if message_widget.isVisible():
+            if message_widget.is_rendered():
                 break
 
             # This is a hidden message, include it and continue
