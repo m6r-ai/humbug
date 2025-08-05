@@ -10,7 +10,6 @@ from PySide6.QtCore import Signal
 
 from ai import AIConversationHistory, AIConversationSettings
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
@@ -49,8 +48,6 @@ class ConversationTab(TabBase):
         self._path = path
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -325,14 +322,6 @@ class ConversationTab(TabBase):
         text = self._find_widget.get_search_text()
         current, total = self._conversation_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
-
-    def _on_style_changed(self) -> None:
-        """Handle style changes."""
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-            }}
-        """)
 
     def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""
