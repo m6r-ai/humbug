@@ -2,6 +2,12 @@
 
 ## v0.21 (2025-07-xx)
 
+New features:
+
+- The current active message that's being processed in a conversation is now the one that is highlighted when the
+  conversation is active.  This now uses a rotating colour border to make it more visually obvious.  This means that
+  it's also obvious if a delegated AI is actively communicating too.
+
 Bug fixes:
 
 - Navigating between messsages in a conversation could be very slow, and the recent changes involving tool use could

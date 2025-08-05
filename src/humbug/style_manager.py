@@ -284,8 +284,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#e4e4e4"
             },
             ColorRole.MESSAGE_FOCUSED: {
-                ColorMode.DARK: "#6a7684",
-                ColorMode.LIGHT: "#7a8694"
+                ColorMode.DARK: "#3a4654",
+                ColorMode.LIGHT: "#aab6c4"
             },
             ColorRole.MESSAGE_USER: {
                 ColorMode.DARK: "#8080c0",

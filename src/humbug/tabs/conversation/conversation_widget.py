@@ -162,7 +162,7 @@ class ConversationWidget(QWidget):
         self._is_animating = False
 
         # Animation parameters for smooth fade
-        self._animation_steps = 32  # Steps for half cycle (start to mid)
+        self._animation_steps = 64
 
         # Timer intervals
         self._slow_interval_ms = int(3000 / self._animation_steps)
@@ -566,7 +566,7 @@ class ConversationWidget(QWidget):
         self._no_message_counter = 0
 
         # Start animation on the message
-        last_message.set_border_animation(True, self._animation_frame)
+        last_message.set_border_animation(True, self._animation_frame, self._animation_steps)
 
         # Start the slow timer - this runs continuously
         self._slow_timer.start()
@@ -581,7 +581,7 @@ class ConversationWidget(QWidget):
         self._animated_message = new_message
         self._animation_frame = 0
         self._fade_direction = 1
-        new_message.set_border_animation(True, self._animation_frame)
+        new_message.set_border_animation(True, self._animation_frame, self._animation_steps)
 
     def _update_animated_message(self) -> None:
         """Update which message is being animated based on visibility."""
@@ -643,7 +643,7 @@ class ConversationWidget(QWidget):
             self._fade_direction = 1
 
         # Update the animated message
-        self._animated_message.set_border_animation(True, self._animation_frame)
+        self._animated_message.set_border_animation(True, self._animation_frame, self._animation_steps)
 
     async def _on_request_error(self, retries_exhausted: bool, message: AIMessage) -> None:
         """

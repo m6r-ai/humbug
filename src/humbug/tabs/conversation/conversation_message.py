@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 from typing import Dict, List, Tuple
+import colorsys
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
@@ -17,7 +18,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.min_height_text_edit import MinHeightTextEdit
-from humbug.style_manager import StyleManager
+from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.conversation.conversation_message_section import ConversationMessageSection
 
 
@@ -80,6 +81,7 @@ class ConversationMessage(QFrame):
         # Border animation state
         self._is_border_animated = False
         self._animation_frame = 0
+        self._animation_steps = 64
 
         self._message_rendered = True
         if not is_input and not content:
@@ -186,7 +188,7 @@ class ConversationMessage(QFrame):
         if content:
             self.set_content(content)
 
-    def set_border_animation(self, active: bool, frame: int = 0) -> None:
+    def set_border_animation(self, active: bool, frame: int = 0, step: int = 64) -> None:
         """
         Enable/disable border animation with specific frame.
 
@@ -196,26 +198,34 @@ class ConversationMessage(QFrame):
         """
         self._is_border_animated = active
         self._animation_frame = frame
+        self._animation_steps = step
         self._update_border_style()
 
     def _get_fade_color(self) -> str:
         """
-        Calculate the current fade color based on animation frame.
+        Calculate the current fade color based on animation frame using color palette.
 
         Returns:
             str: Hex color string for the current animation frame
         """
-        # Animation parameters (matching ConversationInput)
-        animation_steps = 32  # Steps for half cycle (start to mid)
+        # Animation parameters
+        hue = self._animation_frame / self._animation_steps
+        saturation = 0.7
+        if self._style_manager.color_mode() == ColorMode.DARK:
+            value = 0.5
 
-        # Calculate intensity (0.0 to 1.0)
-        intensity = self._animation_frame / (animation_steps - 1)
+        else:
+            value = 1.0
 
-        # Convert to RGB value (0-255)
-        rgb_value = int(intensity * 255)
+        # Convert HSV to RGB
+        r, g, b = colorsys.hsv_to_rgb(hue, saturation, value)
 
-        # Return as hex color
-        return f"#{rgb_value:02x}{rgb_value:02x}{rgb_value:02x}"
+        # Convert to 0-255 range and format as hex
+        r_int = int(r * 255)
+        g_int = int(g * 255)
+        b_int = int(b * 255)
+
+        return f"#{r_int:02x}{g_int:02x}{b_int:02x}"
 
     def _update_border_style(self) -> None:
         """Update the border style with the current animation color."""
