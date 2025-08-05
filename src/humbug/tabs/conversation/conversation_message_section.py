@@ -449,7 +449,7 @@ class ConversationMessageSection(QFrame):
         return local_pos
 
     def _apply_button_style(self) -> None:
-        """ Apply styles to the copy and save buttons."""
+        """Apply styles to the copy and save buttons."""
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
@@ -467,9 +467,7 @@ class ConversationMessageSection(QFrame):
             self._save_as_button.setIconSize(icon_size)
 
     def apply_style(self) -> None:
-        """
-        Apply styling to this section.
-        """
+        """Apply styling to this section."""
         style_manager = self._style_manager
         factor = style_manager.zoom_factor()
         font = self.font()

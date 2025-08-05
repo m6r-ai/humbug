@@ -143,7 +143,7 @@ class WikiMarkdownContent(WikiContentWidget):
                 font = self.font()
                 base_font_size = self._style_manager.base_font_size()
                 font.setPointSizeF(base_font_size * factor)
-                section.apply_font(font)
+                section.apply_style()
                 section.set_content(node)
                 continue
 
@@ -201,9 +201,9 @@ class WikiMarkdownContent(WikiContentWidget):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
-        # Apply fonts to all sections
+        # Apply styles to all sections
         for section in self._sections:
-            section.apply_font(font)
+            section.apply_style()
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """

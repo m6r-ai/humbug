@@ -5,7 +5,7 @@ from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import QVBoxLayout, QFrame, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent
-from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QFont
+from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor
 
 from dmarkdown import MarkdownASTNode, MarkdownASTTextNode
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
@@ -275,25 +275,27 @@ class WikiMarkdownContentSection(QFrame):
         """Check if this section contains a code block."""
         return self._text_area.has_code_block()
 
-    def apply_font(self, font: QFont) -> None:
-        """
-        Apply font to this section.
+    def apply_style(self) -> None:
+        """Apply styling to this section."""
+        style_manager = self._style_manager
+        factor = style_manager.zoom_factor()
+        font = self.font()
+        base_font_size = style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * factor)
 
-        Args:
-            font: Font to apply
-        """
         self._text_area.setFont(font)
         if self._language_header:
             self._language_header.setFont(font)
+
+        if self._content_node:
+            # Re-render markdown content with new font
+            self._renderer.visit(self._content_node)
 
         # Re-render markdown content if needed and color mode changed
         if self._style_manager.color_mode() != self._init_colour_mode:
             self._init_colour_mode = self._style_manager.color_mode()
             if self._highlighter:
                 self._highlighter.rehighlight()
-
-            elif self._content_node:
-                self._renderer.visit(self._content_node)
 
     def find_text(self, text: str) -> List[Tuple[int, int]]:
         """

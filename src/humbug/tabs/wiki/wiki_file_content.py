@@ -357,7 +357,6 @@ class WikiFileContent(WikiContentWidget):
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
-        self.setFont(font)
 
         # Style text area
         self._text_area.setFont(font)
