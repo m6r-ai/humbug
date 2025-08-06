@@ -1742,7 +1742,6 @@ class ColumnManager(QWidget):
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
-        print(f"style column manager widget: {self}")
         style = f"""
             QSplitter::handle {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};

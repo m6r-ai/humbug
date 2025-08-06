@@ -440,7 +440,6 @@ class WikiContent:
                 contents.extend(companion_content)
 
             file_type = self.get_file_type(file_path)
-            print(f"Generating file content for: {file_path} (type: {file_type})")
             if file_type == 'image':
                 md_lines = [
                     "  ",
