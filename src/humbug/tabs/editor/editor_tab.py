@@ -1,10 +1,8 @@
 import logging
-from typing import Dict
 
 from PySide6.QtWidgets import (
     QVBoxLayout, QWidget
 )
-from PySide6.QtGui import QTextCursor
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
@@ -93,9 +91,6 @@ class EditorTab(TabBase):
             type=TabType.EDITOR,
             tab_id=self._tab_id,
             path=path,
-            cursor_position=self._get_cursor_position(),
-            horizontal_scroll=self._editor_widget.horizontalScrollBar().value(),
-            vertical_scroll=self._editor_widget.verticalScrollBar().value(),
             metadata=metadata
         )
 
@@ -118,57 +113,7 @@ class EditorTab(TabBase):
         if state.metadata:
             tab._editor_widget.restore_from_metadata(state.metadata)
 
-        # Restore cursor position if present
-        if state.cursor_position:
-            tab._set_cursor_position(state.cursor_position)
-
-        # Restore scroll positions if present
-        if state.horizontal_scroll:
-            tab._editor_widget.horizontalScrollBar().setValue(state.horizontal_scroll)
-
-        if state.vertical_scroll:
-            tab._editor_widget.verticalScrollBar().setValue(state.vertical_scroll)
-
         return tab
-
-    def _set_cursor_position(self, position: Dict[str, int]) -> None:
-        """
-        Set cursor position in editor.
-
-        Args:
-            position: Dictionary with 'line' and 'column' keys
-        """
-        if not position:
-            return
-
-        cursor = self._editor_widget.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.Start)
-
-        # Move cursor to specified position
-        for _ in range(position.get("line", 0)):
-            cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
-
-        cursor.movePosition(
-            QTextCursor.MoveOperation.Right,
-            QTextCursor.MoveMode.MoveAnchor,
-            position.get("column", 0)
-        )
-
-        self._editor_widget.setTextCursor(cursor)
-        self._editor_widget.ensureCursorVisible()
-
-    def _get_cursor_position(self) -> Dict[str, int]:
-        """
-        Get current cursor position from editor.
-
-        Returns:
-            Dictionary with 'line' and 'column' keys
-        """
-        cursor = self._editor_widget.textCursor()
-        return {
-            "line": cursor.blockNumber(),
-            "column": cursor.columnNumber()
-        }
 
     def set_path(self, path: str) -> None:
         """

@@ -539,10 +539,13 @@ class EditorWidget(QPlainTextEdit):
         """
         metadata: Dict[str, Any] = {}
 
+        metadata["language"] = self._current_programming_language.name
+        metadata["cursor"] = self._get_cursor_position()
+        metadata["horizontal_scroll"] = self.horizontalScrollBar().value()
+        metadata["vertical_scroll"] = self.verticalScrollBar().value()
+
         if temp_state:
             metadata["content"] = self.toPlainText()
-
-        metadata["language"] = self._current_programming_language.name
 
         return metadata
 
@@ -563,6 +566,56 @@ class EditorWidget(QPlainTextEdit):
         if "language" in metadata:
             language = ProgrammingLanguage[metadata["language"]]
             self._update_programming_language(language)
+
+        # Restore cursor position if present
+        if "cursor" in metadata:
+            self._set_cursor_position(metadata["cursor"])
+
+        # Restore scroll positions if present
+        if "horizontal_scroll" in metadata:
+            self.horizontalScrollBar().setValue(metadata["horizontal_scroll"])
+
+        if "vertical_scroll" in metadata:
+            self.verticalScrollBar().setValue(metadata["vertical_scroll"])
+
+    def _set_cursor_position(self, position: Dict[str, int]) -> None:
+        """
+        Set cursor position in editor.
+
+        Args:
+            position: Dictionary with 'line' and 'column' keys
+        """
+        if not position:
+            return
+
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.Start)
+
+        # Move cursor to specified position
+        for _ in range(position.get("line", 0)):
+            cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
+
+        cursor.movePosition(
+            QTextCursor.MoveOperation.Right,
+            QTextCursor.MoveMode.MoveAnchor,
+            position.get("column", 0)
+        )
+
+        self.setTextCursor(cursor)
+        self.ensureCursorVisible()
+
+    def _get_cursor_position(self) -> Dict[str, int]:
+        """
+        Get current cursor position from editor.
+
+        Returns:
+            Dictionary with 'line' and 'column' keys
+        """
+        cursor = self.textCursor()
+        return {
+            "line": cursor.blockNumber(),
+            "column": cursor.columnNumber()
+        }
 
     def _line_number_area_width(self) -> int:
         """Calculate the width needed for the line number area."""

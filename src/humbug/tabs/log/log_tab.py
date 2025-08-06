@@ -97,9 +97,6 @@ class LogTab(TabBase):
             type=TabType.LOG,
             tab_id=self._tab_id,
             path="",  # Log tab doesn't have a file path
-            cursor_position=None,
-            horizontal_scroll=None,
-            vertical_scroll=None,
             metadata=metadata
         )
 

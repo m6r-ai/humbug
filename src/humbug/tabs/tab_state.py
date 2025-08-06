@@ -10,9 +10,6 @@ class TabState:
     type: TabType
     tab_id: str
     path: str
-    cursor_position: Dict[str, int] | None = None
-    horizontal_scroll: int | None = None
-    vertical_scroll: int | None = None
     metadata: Dict[str, Any] | None = None
     is_ephemeral: bool = False
 

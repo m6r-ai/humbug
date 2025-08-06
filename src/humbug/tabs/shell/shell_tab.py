@@ -97,9 +97,6 @@ class ShellTab(TabBase):
             type=TabType.SHELL,
             tab_id=self._tab_id,
             path="",  # Shell tab doesn't have a file path
-            cursor_position=None,
-            horizontal_scroll=None,
-            vertical_scroll=None,
             metadata=metadata
         )
 
