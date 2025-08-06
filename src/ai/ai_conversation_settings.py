@@ -20,13 +20,22 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-3-5-sonnet-20241022": AIModel(
-            name="claude-3-5-sonnet-20241022",
+        "claude-sonnet-4-20250514": AIModel(
+            name="claude-sonnet-4-20250514",
             provider="anthropic",
             context_window=200000,
-            max_output_tokens=8192,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "claude-sonnet-4-20250514 (thinking)": AIModel(
+            name="claude-sonnet-4-20250514",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "claude-3-7-sonnet-20250219": AIModel(
@@ -47,8 +56,17 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-4-sonnet-20250514": AIModel(
-            name="claude-4-sonnet-20250514",
+        "claude-3-5-sonnet-20241022": AIModel(
+            name="claude-3-5-sonnet-20241022",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "claude-opus-4-1-20250805": AIModel(
+            name="claude-opus-4-1-20250805",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
@@ -56,17 +74,17 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-4-sonnet-20250514 (thinking)": AIModel(
-            name="claude-4-sonnet-20250514",
+        "claude-opus-4-1-20250805 (thinking)": AIModel(
+            name="claude-opus-4-1-20250805",
             provider="anthropic",
             context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            max_output_tokens=32000,  # This is actuall 64000 but that's too much
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-4-opus-20250514": AIModel(
-            name="claude-4-opus-20250514",
+        "claude-opus-4-20250805": AIModel(
+            name="claude-opus-4-20250805",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
@@ -74,8 +92,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-4-opus-20250514 (thinking)": AIModel(
-            name="claude-4-opus-20250514",
+        "claude-opus-4-20250514 (thinking)": AIModel(
+            name="claude-opus-4-20250514",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actuall 64000 but that's too much
@@ -105,22 +123,13 @@ class AIConversationSettings:
         ),
 
         # Google models
-        "gemini-1.5-flash": AIModel(
-            name="gemini-1.5-flash",
+        "gemini-2.5-flash": AIModel(
+            name="gemini-2.5-flash",
             provider="google",
             context_window=1048576,
-            max_output_tokens=8192,
+            max_output_tokens=65536,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gemini-1.5-pro": AIModel(
-            name="gemini-1.5-pro",
-            provider="google",
-            context_window=2097152,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gemini-2.0-flash": AIModel(
@@ -132,13 +141,13 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "gemini-2.5-flash": AIModel(
-            name="gemini-2.5-flash",
+        "gemini-1.5-flash": AIModel(
+            name="gemini-1.5-flash",
             provider="google",
             context_window=1048576,
-            max_output_tokens=65536,
+            max_output_tokens=8192,
             supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gemini-2.5-pro": AIModel(
@@ -148,6 +157,15 @@ class AIConversationSettings:
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gemini-1.5-pro": AIModel(
+            name="gemini-1.5-pro",
+            provider="google",
+            context_window=2097152,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
@@ -163,19 +181,19 @@ class AIConversationSettings:
         ),
 
         # Mistral models
-        "codestral-latest": AIModel(
-            name="codestral-latest",
+        "devstral-small-2505": AIModel(
+            name="devstral-small-2505",
             provider="mistral",
-            context_window=262144,
+            context_window=131072,
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "devstral-small-2505": AIModel(
-            name="devstral-small-2505",
+        "codestral-latest": AIModel(
+            name="codestral-latest",
             provider="mistral",
-            context_window=131072,
+            context_window=262144,
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
@@ -266,26 +284,8 @@ class AIConversationSettings:
         ),
 
         # OpenAI models
-        "gpt-4o-mini": AIModel(
-            name="gpt-4o-mini",
-            provider="openai",
-            context_window=128000,
-            max_output_tokens=16384,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-4o": AIModel(
-            name="gpt-4o",
-            provider="openai",
-            context_window=128000,
-            max_output_tokens=16384,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-4.1": AIModel(
-            name="gpt-4.1",
+        "gpt-4.1-nano": AIModel(
+            name="gpt-4.1-nano",
             provider="openai",
             context_window=200000,
             max_output_tokens=16384,
@@ -302,10 +302,28 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "gpt-4.1-nano": AIModel(
-            name="gpt-4.1-nano",
+        "gpt-4o-mini": AIModel(
+            name="gpt-4o-mini",
+            provider="openai",
+            context_window=128000,
+            max_output_tokens=16384,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-4.1": AIModel(
+            name="gpt-4.1",
             provider="openai",
             context_window=200000,
+            max_output_tokens=16384,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-4o": AIModel(
+            name="gpt-4o",
+            provider="openai",
+            context_window=128000,
             max_output_tokens=16384,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
@@ -320,17 +338,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "o1": AIModel(
-            name="o1",
-            provider="openai",
-            context_window=200000,
-            max_output_tokens=100000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "o3": AIModel(
-            name="o3",
+        "o4-mini": AIModel(
+            name="o4-mini",
             provider="openai",
             context_window=200000,
             max_output_tokens=100000,
@@ -347,8 +356,17 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "o4-mini": AIModel(
-            name="o4-mini",
+        "o3": AIModel(
+            name="o3",
+            provider="openai",
+            context_window=200000,
+            max_output_tokens=100000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "o1": AIModel(
+            name="o1",
             provider="openai",
             context_window=200000,
             max_output_tokens=100000,
@@ -358,6 +376,24 @@ class AIConversationSettings:
         ),
 
         # xAI models
+        "grok-3-mini": AIModel(
+            name="grok-3-mini",
+            provider="xai",
+            context_window=131072,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "grok-3-mini-fast": AIModel(
+            name="grok-3-mini-fast",
+            provider="xai",
+            context_window=131072,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "grok-4-0709": AIModel(
             name="grok-4-0709",
             provider="xai",
@@ -383,24 +419,6 @@ class AIConversationSettings:
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "grok-3-mini": AIModel(
-            name="grok-3-mini",
-            provider="xai",
-            context_window=131072,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "grok-3-mini-fast": AIModel(
-            name="grok-3-mini-fast",
-            provider="xai",
-            context_window=131072,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         )
     }
@@ -597,7 +615,7 @@ class AIConversationSettings:
         """
         # Try Google first
         if "google" in ai_backends:
-            return "gemini-1.5-flash"
+            return "gemini-2.5-flash"
 
         # Then Anthropic
         if "anthropic" in ai_backends:
@@ -611,9 +629,21 @@ class AIConversationSettings:
         if "deepseek" in ai_backends:
             return "deepseek-chat"
 
+        # Then Mistral
+        if "mistral" in ai_backends:
+            return "mistral-large-latest"
+
+        # Then Ollama
+        if "ollama" in ai_backends:
+            return "qwen3:4b"
+
+        # Then xAI
+        if "xai" in ai_backends:
+            return "grok-4-0709"
+
         # Finally OpenAI
         if "openai" in ai_backends:
-            return "o1-mini"
+            return "gpt-4.1-mini"
 
         # Shouldn't happen as we require at least one backend
-        return "gemini-1.5-flash"
+        return "gemini-2.5-flash"

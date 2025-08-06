@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v0.21 (2025-07-xx)
+## v0.21 (2025-08-06)
 
 New features:
 
@@ -9,20 +9,24 @@ New features:
   it's also obvious if a delegated AI is actively communicating too.
 - If the user tries to close a conversation that is currently streaming then give them a warning dialog and ask them
   to confirm they want to cancel it.
+- Added support for Claude Opus 4.1.
 
 Bug fixes:
 
 - Navigating between messsages in a conversation could be very slow, and the recent changes involving tool use could
   have the UI attempt to navigate messages that were not visible.
 - Loading large and complex conversations could be very slow.  Optimized this by adding lazy updates to the UI.
-- The tab bar layout could be difficult to see properly at times, the scroll buttons didn't have hover effects, and the
-  type icon did not activate the tab.
+- The tab bar layout was difficult to see properly at times, the scroll buttons didn't have hover effects, and the
+  type icon did not activate the tab.  All these are now resolved.
+- In cleaning up the widget hierarchy, various small problems with layouts were discovered and fixed.
 
 Internal structure changes:
 
 - Various tab types (conversation, log, shell, wiki) use a message structure inside a container widget.  Unified the
   Qt style sheet (QSS) handling for each message type to improve performance and unify styling in a single style sheet.
 - Dramatically simplified all tab types so their style sheets are fully defined in their top-level widget classes.
+- The structure of tab objects is now much more consistent across all 6 different types of tabs.  This makes it easier
+  to work out where the business logic for each type of tab should be found.
 
 ## v0.20 (2025-07-26)
 
