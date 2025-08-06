@@ -191,6 +191,8 @@ class ConversationWidget(QWidget):
         # Layout stabilization tracking for lazy syntax highlighting.  We don't have a signal for when
         # the layout has finalized so we watch resize events and wait for them to stop firing.
         self._initial_layout_complete = False
+        self._initial_scroll_position: int | None = None
+        self._initial_auto_scroll = True
         self._layout_stabilization_timer = QTimer(self)
         self._layout_stabilization_timer.setSingleShot(True)
         self._layout_stabilization_timer.timeout.connect(self._on_initial_layout_stabilized)
@@ -421,6 +423,12 @@ class ConversationWidget(QWidget):
         """Handle the initial layout stabilization - do the first visibility check."""
         self._initial_layout_complete = True
         self._lazy_update_visible_sections()
+
+        # If we have an initial scroll position, set it now
+        if self._initial_scroll_position is not None:
+            self._auto_scroll = self._initial_auto_scroll
+            self._scroll_area.verticalScrollBar().setValue(self._initial_scroll_position)
+            self._initial_scroll_position = None
 
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all callbacks from the AIConversation object."""
@@ -1471,21 +1479,17 @@ class ConversationWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-        # If initial layout is not yet complete, reset the stabilization timer
-        if not self._initial_layout_complete:
-            # Reset the timer each time we get a resize during initial loading
-            self._layout_stabilization_timer.start(100)  # 100ms delay after last resize
-
-        else:
-            # After initial layout is complete, check for visibility changes after resize
-            self._lazy_update_visible_sections()
-
     def showEvent(self, event: QShowEvent) -> None:
         """Ensure visible sections are highlighted when widget becomes visible."""
         super().showEvent(event)
 
         # Only check visibility if initial layout is complete
-        if self._initial_layout_complete:
+        if not self._initial_layout_complete:
+            # Reset the timer each time we get a resize during initial loading
+            self._layout_stabilization_timer.start(100)
+
+        else:
+            # After initial layout is complete, check for visibility changes after resize
             self._lazy_update_visible_sections()
 
     def cancel_current_tasks(self) -> None:
@@ -2134,6 +2138,9 @@ class ConversationWidget(QWidget):
         metadata["content"] = self._input.to_plain_text()
         metadata['cursor'] = self._get_cursor_position()
 
+        metadata["auto_scroll"] = self._auto_scroll
+        metadata["vertical_scroll"] = self._scroll_area.verticalScrollBar().value()
+
         # Store message expansion states
         expansion_states = []
         for message_widget in self._messages:
@@ -2198,6 +2205,13 @@ class ConversationWidget(QWidget):
 
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])
+
+        # Restore vertical scroll position if specified
+        if "auto_scroll" in metadata:
+            self._initial_auto_scroll = metadata["auto_scroll"]
+
+        if "vertical_scroll" in metadata:
+            self._initial_scroll_position = metadata["vertical_scroll"]
 
         # Restore message expansion states if specified
         if "message_expansion" in metadata:
@@ -2354,9 +2368,11 @@ class ConversationWidget(QWidget):
             # Move to next/previous match
             if forward:
                 self._current_match_index += 1
+
                 # If we've reached the end of matches in current widget
                 if self._current_match_index >= len(self._matches[self._current_widget_index][1]):
                     self._current_widget_index += 1
+
                     # If we've reached the end of widgets, wrap around
                     if self._current_widget_index >= len(self._matches):
                         self._current_widget_index = 0
