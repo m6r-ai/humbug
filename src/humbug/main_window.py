@@ -1055,6 +1055,10 @@ class MainWindow(QMainWindow):
         self._status_bar.setFont(status_font)
         self._status_message_label.setFont(status_font)
 
+        # Apply styles to the mindspace tree and column manager
+        self._mindspace_tree.apply_style()
+        self._column_manager.apply_style()
+
     def _new_conversation(self) -> ConversationTab | None:
         """Create new conversation tab."""
         if not self._mindspace_manager.has_mindspace():

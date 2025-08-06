@@ -112,11 +112,8 @@ class ColumnManager(QWidget):
         self._protected_tab: TabBase | None = None
 
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._on_style_changed)
 
         self._current_status_tab: TabBase | None = None
-
-        self._on_style_changed()
 
     def protect_current_tab(self, protect: bool) -> None:
         """Set whether to protect the current tab from being overwritten."""
@@ -1743,10 +1740,9 @@ class ColumnManager(QWidget):
 
         return restored_paths
 
-    def _on_style_changed(self) -> None:
-        """
-        Handle style changes from StyleManager.
-        """
+    def apply_style(self) -> None:
+        """Apply style changes from StyleManager."""
+        print(f"style column manager widget: {self}")
         style = f"""
             QSplitter::handle {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
