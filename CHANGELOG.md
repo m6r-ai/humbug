@@ -7,6 +7,8 @@ New features:
 - The current active message that's being processed in a conversation is now the one that is highlighted when the
   conversation is active.  This now uses a rotating colour border to make it more visually obvious.  This means that
   it's also obvious if a delegated AI is actively communicating too.
+- If the user tries to close a conversation that is currently streaming then give them a warning dialog and ask them
+  to confirm they want to cancel it.
 
 Bug fixes:
 
