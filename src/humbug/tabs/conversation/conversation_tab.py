@@ -217,7 +217,7 @@ class ConversationTab(TabBase):
 
     def can_close_tab(self) -> bool:
         """Check if conversation can be closed."""
-        return True
+        return self._conversation_widget.can_close()
 
     def close_tab(self) -> None:
         """Close the conversation."""

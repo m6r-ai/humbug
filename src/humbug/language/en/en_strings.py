@@ -174,6 +174,7 @@ def get_english_strings() -> LanguageStrings:
         confirm_delete_title="Confirm Delete",
         file_error_title="File Error",
         wiki_error_title="Wiki Error",
+        cancel_conversation_title="Cancel Conversation?",
 
         # Messages
         confirm_delete_message="Are you sure you want to delete {0}?",
@@ -198,6 +199,7 @@ def get_english_strings() -> LanguageStrings:
         error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
         error_saving_user_settings="Failed to save user settings: {}",
+        cancel_conversation="Are you sure you want to cancel the active conversation?",
 
         # Status bar
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",

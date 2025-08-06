@@ -174,6 +174,7 @@ def get_french_strings() -> LanguageStrings:
         confirm_delete_title="Confirmer la suppression",
         file_error_title="Erreur de fichier",
         wiki_error_title="Erreur de Wiki",
+        cancel_conversation_title="Annuler la conversation ?",
 
         # Messages
         confirm_delete_message="Êtes-vous sûr de vouloir supprimer {0} ?",
@@ -198,6 +199,7 @@ def get_french_strings() -> LanguageStrings:
         error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
         error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}",
         error_saving_user_settings="Échec de l'enregistrement des paramètres utilisateur : {}",
+        cancel_conversation="Êtes-vous sûr de vouloir annuler la conversation active ?",
 
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",

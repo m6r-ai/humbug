@@ -21,7 +21,7 @@ from ai_tool import AIToolCall
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.message_box import MessageBox, MessageBoxType
+from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_error import ConversationError
@@ -1460,6 +1460,26 @@ class ConversationWidget(QWidget):
 
         except Exception as e:
             self._logger.exception("Failed to delete empty conversation transcript: %s", e)
+
+    def can_close(self) -> bool:
+        """Check if the conversation can be closed, handling active streaming."""
+        if not self._is_streaming:
+            return True
+
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.cancel_conversation_title,
+            strings.cancel_conversation,
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            destructive=True
+        )
+
+        if result == MessageBoxButton.YES:
+            return True
+
+        return False
 
     def close_widget(self) -> None:
         """Close the conversation."""

@@ -169,6 +169,7 @@ class LanguageStrings:
     confirm_delete_title: str
     file_error_title: str
     wiki_error_title: str
+    cancel_conversation_title: str
 
     # Messages
     confirm_delete_message: str
@@ -193,6 +194,7 @@ class LanguageStrings:
     error_processing_metaphor: str
     error_saving_mindspace_settings: str
     error_saving_user_settings: str
+    cancel_conversation: str
 
     # Status bar
     editor_status: str

@@ -174,6 +174,7 @@ def get_arabic_strings() -> LanguageStrings:
         confirm_delete_title="تأكيد الحذف",
         file_error_title="خطأ في الملف",
         wiki_error_title="خطأ في الويكي",
+        cancel_conversation_title="إلغاء المحادثة؟",
 
         # Messages
         confirm_delete_message="هل أنت متأكد من حذف {0}؟",
@@ -198,6 +199,7 @@ def get_arabic_strings() -> LanguageStrings:
         error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
         error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}",
         error_saving_user_settings="فشل في حفظ إعدادات المستخدم: {}",
+        cancel_conversation="هل أنت متأكد من أنك تريد إلغاء المحادثة النشطة؟",
 
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
