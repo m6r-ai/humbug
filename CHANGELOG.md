@@ -1,5 +1,7 @@
 # Change log for Humbug
 
+## v0.22 (2025-08-xx)
+
 ## v0.21 (2025-08-06)
 
 New features:
