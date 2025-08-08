@@ -2,6 +2,10 @@
 
 ## v0.22 (2025-08-xx)
 
+New features:
+
+- Added support for GPT-5.  Removed support for the deprecated GPT-4.5.
+
 ## v0.21 (2025-08-06)
 
 New features:

@@ -284,20 +284,38 @@ class AIConversationSettings:
         ),
 
         # OpenAI models
+        "gpt-5-nano": AIModel(
+            name="gpt-5-nano",
+            provider="openai",
+            context_window=400000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "gpt-4.1-nano": AIModel(
             name="gpt-4.1-nano",
             provider="openai",
-            context_window=200000,
-            max_output_tokens=16384,
+            context_window=1048576,
+            max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-5-mini": AIModel(
+            name="gpt-5-mini",
+            provider="openai",
+            context_window=400000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gpt-4.1-mini": AIModel(
             name="gpt-4.1-mini",
             provider="openai",
-            context_window=200000,
-            max_output_tokens=16384,
+            context_window=1048576,
+            max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
@@ -311,26 +329,26 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "gpt-5": AIModel(
+            name="gpt-5",
+            provider="openai",
+            context_window=400000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "gpt-4.1": AIModel(
             name="gpt-4.1",
             provider="openai",
-            context_window=200000,
-            max_output_tokens=16384,
+            context_window=1048576,
+            max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gpt-4o": AIModel(
             name="gpt-4o",
-            provider="openai",
-            context_window=128000,
-            max_output_tokens=16384,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-4.5-preview": AIModel(
-            name="gpt-4.5-preview",
             provider="openai",
             context_window=128000,
             max_output_tokens=16384,
