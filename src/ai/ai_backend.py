@@ -228,7 +228,7 @@ class AIBackend(ABC):
 
                             except json.JSONDecodeError as e:
                                 self._logger.exception("JSON exception: %s", e)
-                                continue
+                                break
 
                             except Exception as e:
                                 self._logger.exception("Unexpected exception: %s", e)

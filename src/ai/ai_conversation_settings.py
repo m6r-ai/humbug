@@ -228,6 +228,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.NO_TOOLS
         ),
+        "gpt-oss:20b": AIModel(
+            name="gpt-oss:20b",
+            provider="ollama",
+            context_window=131072,
+            max_output_tokens=32768,  # This is actually 131072 but that's too much
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-oss:120b": AIModel(
+            name="gpt-oss:120b",
+            provider="ollama",
+            context_window=131072,
+            max_output_tokens=32768,  # This is actually 131072 but that's too much
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "llama3.2": AIModel(
             name="llama3.2",
             provider="ollama",

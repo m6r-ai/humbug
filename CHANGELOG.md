@@ -5,6 +5,7 @@
 New features:
 
 - Added support for GPT-5.  Removed support for the deprecated GPT-4.5.
+- Added support for gpt-oss:20b and gpt-oss:120b via the Ollama driver.
 
 ## v0.21 (2025-08-06)
 

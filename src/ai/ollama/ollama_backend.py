@@ -265,7 +265,8 @@ class OllamaBackend(AIBackend):
 
         # Build headers
         headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self._api_key}"
         }
 
         return RequestConfig(
