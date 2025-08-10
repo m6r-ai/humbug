@@ -4,11 +4,10 @@ import logging
 import os
 import shutil
 
-from PySide6.QtWidgets import (
-    QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog,
-    QLabel
-)
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer, QDir
+from PySide6.QtWidgets import (
+    QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog, QLabel
+)
 
 from humbug.color_role import ColorRole
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -1014,6 +1013,7 @@ class MindspaceFileTree(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 margin: 2px 0px 0px 0px;
             }}
+
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
@@ -1056,6 +1056,7 @@ class MindspaceFileTree(QWidget):
                 width: {branch_icon_size}px;
                 height: {branch_icon_size}px;
             }}
+
             QScrollBar:vertical {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;
@@ -1070,6 +1071,7 @@ class MindspaceFileTree(QWidget):
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
                 height: 0px;
             }}
+
             QToolTip {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -1077,6 +1079,7 @@ class MindspaceFileTree(QWidget):
                 margin: 0px;
                 border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
+
             QMenu::right-arrow {{
                 image: url({self._style_manager.get_icon_path('arrow-right')});
                 width: 16px;

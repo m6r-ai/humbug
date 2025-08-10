@@ -244,14 +244,14 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#2050c0"
             },
             ColorRole.MENU_BORDER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#606060",
+                ColorMode.LIGHT: "#b0b0b0"
             },
 
             # Splitter bars
             ColorRole.SPLITTER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#606060",
+                ColorMode.LIGHT: "#b0b0b0"
             },
 
             # Scroll bar elements
