@@ -1,4 +1,5 @@
 import logging
+import os
 import shutil
 import tempfile
 from datetime import datetime
@@ -401,6 +402,12 @@ class FileSystemAITool(AITool):
 
             # Atomic rename
             tmp_path.replace(path)
+
+            # Set proper permissions based on umask
+            umask = os.umask(0)
+            os.umask(umask)
+            desired_mode = 0o666 & ~umask
+            path.chmod(desired_mode)
 
         except PermissionError as e:
             raise AIToolExecutionError(f"Permission denied writing file: {str(e)}") from e
