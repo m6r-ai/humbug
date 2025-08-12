@@ -6,6 +6,8 @@ New features:
 
 - Added support for GPT-5.  Removed support for the deprecated GPT-4.5.
 - Added support for gpt-oss:20b and gpt-oss:120b via the Ollama driver.
+- Added support for Z.ai's GLM 4.5 models via a new Zai driver.
+- Removed the unused M6R backend.
 
 Bug fixes:
 
