@@ -598,25 +598,18 @@ class AIConversation:
 
     async def _handle_content(
         self,
-        reasoning: str,
         content: str,
         usage: AIUsage | None,
         tool_calls: List[AIToolCall] | None,
-        signature: str | None = None,
-        readacted_reasoning: str | None = None
     ) -> None:
         """
         Handle content updates from the AI response.
 
         Args:
-            reasoning: Reasoning text from the AI response
             content: Main content of the AI response
             usage: Optional token usage information
             tool_calls: Optional list of tool calls made by the AI
-            signature: Optional signature for the response
-            readacted_reasoning: Optional readacted reasoning text
         """
-        # We're handling a response.  Have we already seen part of this already?
         if self._current_ai_message:
             # Update existing message with new tool calls if provided
             if tool_calls:
@@ -636,19 +629,6 @@ class AIConversation:
                 )
 
             return
-
-        # If we previously had reasoning from the AI then close that out
-        if self._current_reasoning_message:
-            reasoning_message = self._conversation.update_message(
-                self._current_reasoning_message.id,
-                reasoning,
-                usage=usage,
-                completed=True,
-                signature=signature,
-                readacted_reasoning=readacted_reasoning
-            )
-            await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, reasoning_message)
-            self._current_reasoning_message = None
 
         # Create and add initial AI response message
         settings = self.conversation_settings()
@@ -782,13 +762,11 @@ class AIConversation:
         # Trigger streaming update event for visual feedback
         await self._trigger_event(AIConversationEvent.STREAMING_UPDATE)
 
-        # Handle main content first
-        if content:
-            await self._handle_content(reasoning, content, usage, tool_calls, signature, readacted_reasoning)
-
-        # If we have no content but have reasoning, handle that separately
-        elif reasoning:
+        if reasoning:
             await self._handle_reasoning(reasoning, usage, tool_calls, signature, readacted_reasoning)
+
+        if content:
+            await self._handle_content(content, usage, tool_calls)
 
         if usage:
             await self._handle_usage(reasoning, content, tool_calls)

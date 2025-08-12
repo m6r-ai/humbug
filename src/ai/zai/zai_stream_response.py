@@ -41,22 +41,19 @@ class ZaiStreamResponse(AIStreamResponse):
         if "tool_calls" in delta:
             tool_calls = delta["tool_calls"]
             for tool_call_delta in tool_calls:
-                tool_call_index = tool_call_delta.get("index", -1)
-                if tool_call_index == -1:
+                tool_call_id = tool_call_delta.get("id", "")
+                if not tool_call_id:
                     continue
 
-                tool_call_id = tool_call_delta.get("id", "")
-
-                # Initialize tool call if we haven't seen it before
-                if tool_call_index not in self._current_tool_calls:
-                    self._current_tool_calls[tool_call_index] = {
-                        "index": tool_call_index,
+                # Initialize tool call if we haven't seen this ID before
+                if tool_call_id not in self._current_tool_calls:
+                    self._current_tool_calls[tool_call_id] = {
                         "id": tool_call_id,
                         "name": "",
                         "arguments": ""
                     }
 
-                current_call = self._current_tool_calls[tool_call_index]
+                current_call = self._current_tool_calls[tool_call_id]
 
                 # Update function name if provided
                 function = tool_call_delta.get("function", {})
@@ -83,7 +80,6 @@ class ZaiStreamResponse(AIStreamResponse):
             total_tokens=usage.get("total_tokens", 0)
         )
 
-        print(f"accumulated tool calls: {self._current_tool_calls}")
         # Process all accumulated tool calls
         for call_data in self._current_tool_calls.values():
             # Create the tool call

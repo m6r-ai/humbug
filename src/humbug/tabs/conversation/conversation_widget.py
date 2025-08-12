@@ -775,7 +775,9 @@ class ConversationWidget(QWidget):
         if message.source not in (AIMessageSource.AI, AIMessageSource.REASONING):
             return
 
-        self._messages[-1].set_content(message.content)
+        for i in range(len(self._messages) - 1, -1, -1):
+            if self._messages[i].message_id() == message.id:
+                self._messages[i].set_content(message.content)
 
         # Scroll to bottom if auto-scrolling is enabled
         if self._auto_scroll:
