@@ -36,7 +36,10 @@ class ZaiStreamResponse(AIStreamResponse):
         if "content" in delta:
             new_content = delta["content"]
             if new_content:
-                self.content += new_content
+                # Z.ai's backend sometimes sends a newline as content before starting on
+                # reasoning content.  If this happens, ignore that newline.
+                if new_content != "\n" or self.content:
+                    self.content += new_content
 
         if "tool_calls" in delta:
             tool_calls = delta["tool_calls"]
