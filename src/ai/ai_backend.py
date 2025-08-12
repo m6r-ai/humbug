@@ -206,6 +206,7 @@ class AIBackend(ABC):
                                     if decoded_line == "[DONE]":
                                         break
 
+                                print(f"API: {decoded_line}")
                                 chunk = json.loads(decoded_line)
                                 response_handler.update_from_chunk(chunk)
 

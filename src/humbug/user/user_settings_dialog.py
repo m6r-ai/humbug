@@ -124,11 +124,11 @@ class UserSettingsDialog(QDialog):
             ("anthropic", strings.anthropic_backend),
             ("deepseek", strings.deepseek_backend),
             ("google", strings.google_backend),
-            ("m6r", strings.m6r_backend),
             ("mistral", strings.mistral_backend),
             ("ollama", strings.ollama_backend),
             ("openai", strings.openai_backend),
-            ("xai", strings.xai_backend)
+            ("xai", strings.xai_backend),
+            ("zai", strings.zai_backend)
         ]
 
         for backend_id, backend_name in ai_backend_mapping:
@@ -277,11 +277,11 @@ class UserSettingsDialog(QDialog):
             "anthropic": strings.anthropic_backend,
             "deepseek": strings.deepseek_backend,
             "google": strings.google_backend,
-            "m6r": strings.m6r_backend,
             "mistral": strings.mistral_backend,
             "ollama": strings.ollama_backend,
             "openai": strings.openai_backend,
-            "xai": strings.xai_backend
+            "xai": strings.xai_backend,
+            "zai": strings.zai_backend
         }
 
         for backend_id, controls in self._ai_backend_controls.items():

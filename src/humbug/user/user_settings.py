@@ -29,11 +29,11 @@ class UserSettings:
                 "anthropic": AIBackendSettings(),
                 "deepseek": AIBackendSettings(),
                 "google": AIBackendSettings(),
-                "m6r": AIBackendSettings(),
                 "mistral": AIBackendSettings(),
                 "openai": AIBackendSettings(),
                 "ollama": AIBackendSettings(),
-                "xai": AIBackendSettings()
+                "xai": AIBackendSettings(),
+                "zai": AIBackendSettings()
             },
             language=LanguageCode.EN,
             font_size=None,
@@ -63,11 +63,17 @@ class UserSettings:
             # Load AI backend settings
             if "ai_backends" in data:
                 for backend_id, backend_data in data["ai_backends"].items():
-                    settings.ai_backends[backend_id] = AIBackendSettings(
-                        enabled=backend_data.get("enabled", False),
-                        api_key=backend_data.get("api_key", ""),
-                        url=backend_data.get("url", "")
-                    )
+                    # Skip m6r backend if present in old settings
+                    if backend_id == "m6r":
+                        continue
+                    
+                    # Only process known backends
+                    if backend_id in settings.ai_backends:
+                        settings.ai_backends[backend_id] = AIBackendSettings(
+                            enabled=backend_data.get("enabled", False),
+                            api_key=backend_data.get("api_key", ""),
+                            url=backend_data.get("url", "")
+                        )
 
             # Legacy support for older settings format (v0.8 through v0.11)
             elif "api_keys" in data:
@@ -75,18 +81,21 @@ class UserSettings:
                     "ANTHROPIC_API_KEY": "anthropic",
                     "DEEPSEEK_API_KEY": "deepseek",
                     "GOOGLE_API_KEY": "google",
-                    "M6R_API_KEY": "m6r",
                     "MISTRAL_API_KEY": "mistral",
+                    "OLLAMA_API_KEY": "ollama",
                     "OPENAI_API_KEY": "openai",
-                    "XAI_API_KEY": "xai"
+                    "XAI_API_KEY": "xai",
+                    "ZAI_API_KEY": "zai"
                 }
 
                 for backend_id, api_key in data["api_keys"].items():
-                    settings.ai_backends[backend_mapping[backend_id]] = AIBackendSettings(
-                        enabled=api_key is not None and api_key != "",
-                        api_key=api_key,
-                        url=""
-                    )
+                    if backend_id in backend_mapping:
+                        mapped_backend = backend_mapping[backend_id]
+                        settings.ai_backends[mapped_backend] = AIBackendSettings(
+                            enabled=api_key is not None and api_key != "",
+                            api_key=api_key,
+                            url=""
+                        )
 
             # Load other settings
             language_code = data.get("language", "EN")
@@ -128,10 +137,11 @@ class UserSettings:
                 "ANTHROPIC_API_KEY": "anthropic",
                 "DEEPSEEK_API_KEY": "deepseek",
                 "GOOGLE_API_KEY": "google",
-                "M6R_API_KEY": "m6r",
                 "MISTRAL_API_KEY": "mistral",
+                "OLLAMA_API_KEY": "ollama",
                 "OPENAI_API_KEY": "openai",
-                "XAI_API_KEY": "xai"
+                "XAI_API_KEY": "xai",
+                "ZAI_API_KEY": "zai"
             }
 
             for key, backend_id in backend_mapping.items():

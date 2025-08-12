@@ -8,11 +8,11 @@ from ai.ai_backend_settings import AIBackendSettings
 from ai.anthropic.anthropic_backend import AnthropicBackend
 from ai.deepseek.deepseek_backend import DeepseekBackend
 from ai.google.google_backend import GoogleBackend
-from ai.m6r.m6r_backend import M6RBackend
 from ai.mistral.mistral_backend import MistralBackend
 from ai.ollama.ollama_backend import OllamaBackend
 from ai.openai.openai_backend import OpenAIBackend
 from ai.xai.xai_backend import XAIBackend
+from ai.zai.zai_backend import ZaiBackend
 
 
 class AIManager:
@@ -31,11 +31,11 @@ class AIManager:
         "anthropic": AnthropicBackend,
         "deepseek": DeepseekBackend,
         "google": GoogleBackend,
-        "m6r": M6RBackend,
         "mistral": MistralBackend,
         "ollama": OllamaBackend,
         "openai": OpenAIBackend,
-        "xai": XAIBackend
+        "xai": XAIBackend,
+        "zai": ZaiBackend
     }
 
     def __new__(cls) -> 'AIManager':

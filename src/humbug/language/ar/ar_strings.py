@@ -106,7 +106,7 @@ def get_arabic_strings() -> LanguageStrings:
         anthropic_backend="أنثروبيك",
         deepseek_backend="ديبسيك",
         google_backend="جوجل",
-        m6r_backend="M6R",
+        zai_backend="زاي",
         mistral_backend="ميسترال",
         openai_backend="أوبن إي آي",
         ollama_backend="أولاما",

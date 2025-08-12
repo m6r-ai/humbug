@@ -106,7 +106,7 @@ def get_french_strings() -> LanguageStrings:
         anthropic_backend="Anthropic",
         deepseek_backend="DeepSeek",
         google_backend="Google",
-        m6r_backend="M6R",
+        zai_backend="Zai",
         mistral_backend="Mistral",
         openai_backend="OpenAI",
         ollama_backend="Ollama",

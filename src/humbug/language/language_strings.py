@@ -101,7 +101,7 @@ class LanguageStrings:
     anthropic_backend: str
     deepseek_backend: str
     google_backend: str
-    m6r_backend: str
+    zai_backend: str
     mistral_backend: str
     openai_backend: str
     ollama_backend: str

@@ -169,17 +169,6 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
-        # M6R models
-        "tessa": AIModel(
-            name="tessa",
-            provider="m6r",
-            context_window=1024,
-            max_output_tokens=1024,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
-        ),
-
         # Mistral models
         "devstral-small-2505": AIModel(
             name="devstral-small-2505",
@@ -456,6 +445,53 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+
+        # Z.ai models
+        "glm-4.5": AIModel(
+            name="glm-4.5",
+            provider="zai",
+            context_window=128000,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "glm-4.5-X": AIModel(
+            name="glm-4.5-x",
+            provider="zai",
+            context_window=128000,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "glm-4.5-air": AIModel(
+            name="glm-4.5-air",
+            provider="zai",
+            context_window=128000,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "glm-4.5-airx": AIModel(
+            name="glm-4.5-airx",
+            provider="zai",
+            context_window=128000,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "glm-4.5-flash": AIModel(
+            name="glm-4.5-flash",
+            provider="zai",
+            context_window=128000,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         )
     }
 
@@ -649,37 +685,29 @@ class AIConversationSettings:
         Returns:
             The name of the default model to use
         """
-        # Try Google first
         if "google" in ai_backends:
             return "gemini-2.5-flash"
 
-        # Then Anthropic
         if "anthropic" in ai_backends:
             return "claude-3-5-haiku-20241022"
 
-        # Then M6R
-        if "m6r" in ai_backends:
-            return "tessa"
-
-        # Then Deepseek
         if "deepseek" in ai_backends:
             return "deepseek-chat"
 
-        # Then Mistral
         if "mistral" in ai_backends:
             return "mistral-large-latest"
 
-        # Then Ollama
         if "ollama" in ai_backends:
             return "qwen3:4b"
 
-        # Then xAI
+        if "openai" in ai_backends:
+            return "gpt-4.1-mini"
+
         if "xai" in ai_backends:
             return "grok-4-0709"
 
-        # Finally OpenAI
-        if "openai" in ai_backends:
-            return "gpt-4.1-mini"
+        if "zai" in ai_backends:
+            return "glm-4.5-flash"
 
         # Shouldn't happen as we require at least one backend
         return "gemini-2.5-flash"
