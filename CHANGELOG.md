@@ -12,6 +12,7 @@ New features:
 Bug fixes:
 
 - The filesystem tool was setting `0o600` permissions instead of `0o666 & ~umask`.
+- On attempting to close the application, tab close checks would be run twice.  Now they're only run once.
 
 ## v0.21 (2025-08-06)
 

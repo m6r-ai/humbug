@@ -708,7 +708,9 @@ class MainWindow(QMainWindow):
         # If we're switching mindspaces, save the current one first
         if self._mindspace_manager.has_mindspace():
             self._save_mindspace_state()
-            self._close_all_tabs()
+            if not self._close_all_tabs():
+                return
+
             self._mindspace_manager.close_mindspace()
 
         # Open the new mindspace
@@ -735,7 +737,9 @@ class MainWindow(QMainWindow):
             return
 
         self._save_mindspace_state()
-        self._close_all_tabs()
+        if not self._close_all_tabs():
+            return
+
         self._mindspace_tree.set_mindspace("")
         self._mindspace_manager.close_mindspace()
 
@@ -781,8 +785,8 @@ class MainWindow(QMainWindow):
                 strings.error_restoring_mindspace.format(str(e))
             )
 
-    def _close_all_tabs(self) -> None:
-        self._column_manager.close_all_tabs()
+    def _close_all_tabs(self) -> bool:
+        return self._column_manager.close_all_tabs()
 
     def _undo(self) -> None:
         self._column_manager.undo()
@@ -1357,10 +1361,9 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event: QEvent) -> None:
         """Handle application close request."""
-        if not self._column_manager.can_close_all_tabs():
+        self._save_mindspace_state()
+        if not self._close_all_tabs():
             event.ignore()
             return
 
-        self._save_mindspace_state()
-        self._close_all_tabs()
         event.accept()

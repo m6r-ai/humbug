@@ -1897,20 +1897,21 @@ class ColumnManager(QWidget):
         if wiki_tab:
             self.close_tab_by_id(wiki_tab.tab_id(), True)
 
-    def can_close_all_tabs(self) -> bool:
-        """Can we close all the tabs that are open?"""
+    def close_all_tabs(self) -> bool:
+        """
+        Close all open tabs.
+
+        Returns:
+            True if all tabs were closed successfully, False otherwise.
+        """
         all_tabs = list(self._tabs.values())
         for tab in all_tabs:
             if tab.is_modified() and not tab.can_close_tab():
                 return False
 
-        return True
+            self.close_tab_by_id(tab.tab_id(), force_close=True)
 
-    def close_all_tabs(self) -> None:
-        """Close all open tabs."""
-        all_tabs = list(self._tabs.values())
-        for tab in all_tabs:
-            self.close_tab_by_id(tab.tab_id())
+        return True
 
     def can_close_tab(self) -> bool:
         """Can we close the currently active tab?"""
