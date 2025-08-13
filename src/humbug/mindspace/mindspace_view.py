@@ -15,7 +15,7 @@ from humbug.style_manager import StyleManager
 class MindspaceView(QWidget):
     """Main mindspace view widget containing files and conversations sections."""
 
-    # Forward all file-related signals from files view
+    # Forward all file-related signals from both views
     file_single_clicked = Signal(str)  # Emits path when any file is single-clicked
     file_double_clicked = Signal(str)  # Emits path when any file is double-clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
@@ -74,6 +74,14 @@ class MindspaceView(QWidget):
         self._files_view.file_moved.connect(self.file_moved.emit)
         self._files_view.file_edited.connect(self.file_edited.emit)
 
+        # Connect conversations view signals to forward them
+        self._conversations_view.file_single_clicked.connect(self.file_single_clicked.emit)
+        self._conversations_view.file_double_clicked.connect(self.file_double_clicked.emit)
+        self._conversations_view.file_deleted.connect(self.file_deleted.emit)
+        self._conversations_view.file_renamed.connect(self.file_renamed.emit)
+        self._conversations_view.file_moved.connect(self.file_moved.emit)
+        self._conversations_view.file_edited.connect(self.file_edited.emit)
+
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
@@ -81,12 +89,26 @@ class MindspaceView(QWidget):
 
     def reveal_and_select_file(self, file_path: str) -> None:
         """
-        Forward file reveal and select to files view.
+        Reveal and select a file in the appropriate view (files or conversations).
 
         Args:
             file_path: Absolute path to the file to reveal and select
         """
-        self._files_view.reveal_and_select_file(file_path)
+        if not file_path:
+            return
+
+        # Determine which view should handle this file based on path
+        normalized_path = os.path.normpath(file_path)
+
+        # Check if this file is in the conversations directory
+        conversations_path = os.path.join(os.path.dirname(normalized_path), "conversations")
+        if "conversations" in normalized_path.split(os.sep):
+            # This file is in the conversations hierarchy, use conversations view
+            self._conversations_view.reveal_and_select_file(file_path)
+
+        else:
+            # This file is elsewhere in the mindspace, use files view
+            self._files_view.reveal_and_select_file(file_path)
 
     def set_mindspace(self, path: str) -> None:
         """
@@ -102,8 +124,9 @@ class MindspaceView(QWidget):
         else:
             self._mindspace_label.setText(os.path.basename(path))
 
-        # Forward to files view
+        # Forward to both views
         self._files_view.set_mindspace(path)
+        self._conversations_view.set_mindspace(path)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
