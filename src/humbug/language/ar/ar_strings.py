@@ -120,6 +120,8 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
+        mindspace_files="ملفات",
+        mindspace_conversations="محادثات",
 
         # Mindspace folders dialog
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",

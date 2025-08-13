@@ -105,7 +105,7 @@ class MindspaceFilesView(QWidget):
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Set initial label text
-        self._files_label.setText("Files")  # Will be updated by language change
+        self._files_label.setText(self._language_manager.strings().mindspace_files)
 
         # Timer for auto-expansion after model loads
         self._expansion_timer = QTimer()
@@ -976,9 +976,7 @@ class MindspaceFilesView(QWidget):
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        # For now, "Files" is not in the language strings, so we'll use English
-        # This can be updated when file strings are added to the language files
-        self._files_label.setText("Files")
+        self._files_label.setText(self._language_manager.strings().mindspace_files)
         self.apply_style()
 
     def apply_style(self) -> None:

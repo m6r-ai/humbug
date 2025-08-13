@@ -32,7 +32,7 @@ class MindspaceConversationsView(QWidget):
         # Create conversations label
         self._conversations_label = QLabel()
         self._conversations_label.setContentsMargins(0, 0, 0, 0)
-        self._conversations_label.setText("Conversations")  # Will be updated by language change
+        self._conversations_label.setText(self._language_manager.strings().mindspace_conversations)
 
         header_layout.addWidget(self._conversations_label)
         layout.addWidget(self._header_widget)
@@ -44,9 +44,7 @@ class MindspaceConversationsView(QWidget):
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        # For now, "Conversations" is not in the language strings, so we'll use English
-        # This can be updated when conversation strings are added to the language files
-        self._conversations_label.setText("Conversations")
+        self._conversations_label.setText(self._language_manager.strings().mindspace_conversations)
         self.apply_style()
 
     def apply_style(self) -> None:

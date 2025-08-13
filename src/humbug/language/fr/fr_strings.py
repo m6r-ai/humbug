@@ -120,6 +120,8 @@ def get_french_strings() -> LanguageStrings:
 
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
+        mindspace_files="Fichiers",
+        mindspace_conversations="Conversations",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configurer les dossiers de l'espace mental",

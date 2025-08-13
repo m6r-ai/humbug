@@ -120,6 +120,8 @@ def get_english_strings() -> LanguageStrings:
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",
+        mindspace_files="Files",
+        mindspace_conversations="Conversations",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configure Mindspace Folders",
