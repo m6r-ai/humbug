@@ -571,21 +571,33 @@ class MindspaceConversationsView(QWidget):
 
             # Create actions based on item type
             if is_dir:
-                # Directory context menu (no "New File" option)
-                edit_action = None
-                duplicate_action = None
-                new_folder_action = menu.addAction(strings.new_folder)
-                new_file_action = None  # Remove new file option
+                # Check if this is the conversations folder itself
+                is_conversations_root = (self._conversations_path and
+                                        os.path.normpath(path) == os.path.normpath(self._conversations_path))
+
+                if is_conversations_root:
+                    # For conversations root: only allow "New Folder" (no rename/delete)
+                    edit_action = None
+                    duplicate_action = None
+                    new_folder_action = menu.addAction(strings.new_folder)
+                    rename_action = None
+                    delete_action = None
+
+                else:
+                    # For other directories: show all options (no "New File" option)
+                    edit_action = None
+                    duplicate_action = None
+                    new_folder_action = menu.addAction(strings.new_folder)
+                    rename_action = menu.addAction(strings.rename)
+                    delete_action = menu.addAction(strings.delete)
 
             else:
                 # File context menu
                 edit_action = menu.addAction(strings.edit)
                 duplicate_action = menu.addAction(strings.duplicate)
-                new_file_action = None
                 new_folder_action = None
-
-            rename_action = menu.addAction(strings.rename)
-            delete_action = menu.addAction(strings.delete)
+                rename_action = menu.addAction(strings.rename)
+                delete_action = menu.addAction(strings.delete)
 
             # Add sorting options
             menu.addSeparator()
@@ -611,11 +623,11 @@ class MindspaceConversationsView(QWidget):
                         self._start_new_folder_creation(path)
                         return
 
-                    if action == rename_action:
+                    if rename_action and action == rename_action:
                         self._start_rename(index)
                         return
 
-                    if action == delete_action:
+                    if delete_action and action == delete_action:
                         self._handle_delete_folder(path)
                         return
 

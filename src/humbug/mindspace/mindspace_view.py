@@ -9,6 +9,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_conversations_view import MindspaceConversationsView
 from humbug.mindspace.mindspace_files_view import MindspaceFilesView
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
 
 
@@ -29,6 +30,7 @@ class MindspaceView(QWidget):
 
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
+        self._mindspace_manager = MindspaceManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Create main layout
@@ -97,17 +99,24 @@ class MindspaceView(QWidget):
         if not file_path:
             return
 
-        # Determine which view should handle this file based on path
-        normalized_path = os.path.normpath(file_path)
+        # Use mindspace manager to properly determine if file is in conversations hierarchy
+        if self._mindspace_manager.has_mindspace():
+            try:
+                relative_path = self._mindspace_manager.get_mindspace_relative_path(file_path)
+                if relative_path and relative_path.startswith("conversations" + os.sep):
+                    # File is within the mindspace's conversations directory
+                    self._conversations_view.reveal_and_select_file(file_path)
 
-        # Check if this file is in the conversations directory
-        conversations_path = os.path.join(os.path.dirname(normalized_path), "conversations")
-        if "conversations" in normalized_path.split(os.sep):
-            # This file is in the conversations hierarchy, use conversations view
-            self._conversations_view.reveal_and_select_file(file_path)
+                else:
+                    # File is elsewhere in mindspace
+                    self._files_view.reveal_and_select_file(file_path)
+
+            except Exception:
+                # Fallback to files view if path conversion fails
+                self._files_view.reveal_and_select_file(file_path)
 
         else:
-            # This file is elsewhere in the mindspace, use files view
+            # No mindspace active, default to files view
             self._files_view.reveal_and_select_file(file_path)
 
     def set_mindspace(self, path: str) -> None:
