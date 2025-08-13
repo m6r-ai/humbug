@@ -158,16 +158,17 @@ class AIBackend(ABC):
                                     attempt += 1
                                     continue
 
-                            # If we get a 503 error, the server is overloaded and we should retry
-                            if response.status == 503:
+                            # If we get one of many types of 500 series error, something went wrong on the server.  Some of these
+                            # are non-standard errors, but are seen with some LLMs.
+                            if response.status in {500, 501, 502, 503, 504, 508, 509, 529}:
                                 if attempt < self._max_retries - 1:
                                     delay = self._base_delay * (2 ** attempt)
                                     yield AIResponse(
                                         reasoning="",
                                         content="",
                                         error=AIError(
-                                            code="overloaded",
-                                            message=f"Server is overloaded.  Retrying in {delay} seconds...",
+                                            code="server_error",
+                                            message=f"Server error: {response.status}.  Retrying in {delay} seconds...",
                                             retries_exhausted=False,
                                             details=error_data
                                         )
