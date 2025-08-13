@@ -1,4 +1,4 @@
-"""File tree view implementation for mindspace files."""
+"""Files view widget for mindspace."""
 
 import logging
 import os
@@ -22,8 +22,8 @@ from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
 
-class MindspaceFileTree(QWidget):
-    """Tree view widget for displaying mindspace files."""
+class MindspaceFilesView(QWidget):
+    """Files view widget for displaying mindspace files."""
 
     file_single_clicked = Signal(str)  # Emits path when any file is single-clicked
     file_double_clicked = Signal(str)  # Emits path when any file is double-clicked
@@ -33,11 +33,11 @@ class MindspaceFileTree(QWidget):
     file_edited = Signal(str)  # Emits path when file is edited
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the file tree widget."""
+        """Initialize the files view widget."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._logger = logging.getLogger("MindspaceFileTree")
+        self._logger = logging.getLogger("MindspaceFilesView")
         self._mindspace_manager = MindspaceManager()
 
         # Create layout
@@ -51,11 +51,11 @@ class MindspaceFileTree(QWidget):
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
 
-        # Create mindspace label
-        self._mindspace_label = QLabel()
-        self._mindspace_label.setContentsMargins(0, 0, 0, 0)
+        # Create files label
+        self._files_label = QLabel()
+        self._files_label.setContentsMargins(0, 0, 0, 0)
 
-        header_layout.addWidget(self._mindspace_label)
+        header_layout.addWidget(self._files_label)
         header_layout.addStretch()
 
         layout.addWidget(self._header_widget)
@@ -105,7 +105,7 @@ class MindspaceFileTree(QWidget):
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Set initial label text
-        self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
+        self._files_label.setText("Files")  # Will be updated by language change
 
         # Timer for auto-expansion after model loads
         self._expansion_timer = QTimer()
@@ -933,7 +933,6 @@ class MindspaceFileTree(QWidget):
         if not path:
             # Clear the model when no mindspace is active
             self._filter_model.set_mindspace_root("")
-            self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
             return
 
         # Set the file system model root to the parent of the mindspace
@@ -941,7 +940,6 @@ class MindspaceFileTree(QWidget):
         parent_path = os.path.dirname(path)
         self._fs_model.setRootPath(parent_path)
         self._filter_model.set_mindspace_root(path)
-        self._mindspace_label.setText(os.path.basename(path))
 
         # Set the root index to the parent directory so we can see the mindspace folder
         parent_source_index = self._fs_model.index(parent_path)
@@ -978,9 +976,9 @@ class MindspaceFileTree(QWidget):
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        if not self._mindspace_path:
-            self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
-
+        # For now, "Files" is not in the language strings, so we'll use English
+        # This can be updated when file strings are added to the language files
+        self._files_label.setText("Files")
         self.apply_style()
 
     def apply_style(self) -> None:
@@ -991,7 +989,7 @@ class MindspaceFileTree(QWidget):
         # Update font size for label
         font = self.font()
         font.setPointSizeF(base_font_size * zoom_factor)
-        self._mindspace_label.setFont(font)
+        self._files_label.setFont(font)
 
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)

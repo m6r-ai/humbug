@@ -29,7 +29,7 @@ from humbug.delegate_ai_tool import DelegateAITool
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
-from humbug.mindspace.mindspace_file_tree import MindspaceFileTree
+from humbug.mindspace.mindspace_view import MindspaceView
 from humbug.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
@@ -334,14 +334,14 @@ class MainWindow(QMainWindow):
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
         layout.addWidget(self._splitter)
 
-        # Create and add file tree
-        self._mindspace_tree = MindspaceFileTree(self)
-        self._mindspace_tree.file_single_clicked.connect(self._on_mindspace_tree_file_single_clicked)
-        self._mindspace_tree.file_double_clicked.connect(self._on_mindspace_tree_file_double_clicked)
-        self._mindspace_tree.file_deleted.connect(self._on_mindspace_tree_file_deleted)
-        self._mindspace_tree.file_renamed.connect(self._on_mindspace_tree_file_renamed)
-        self._mindspace_tree.file_edited.connect(self._on_mindspace_tree_file_edited)
-        self._splitter.addWidget(self._mindspace_tree)
+        # Create and add mindspace view
+        self._mindspace_view = MindspaceView(self)
+        self._mindspace_view.file_single_clicked.connect(self._on_mindspace_view_file_single_clicked)
+        self._mindspace_view.file_double_clicked.connect(self._on_mindspace_view_file_double_clicked)
+        self._mindspace_view.file_deleted.connect(self._on_mindspace_view_file_deleted)
+        self._mindspace_view.file_renamed.connect(self._on_mindspace_view_file_renamed)
+        self._mindspace_view.file_edited.connect(self._on_mindspace_view_file_edited)
+        self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
         self._column_manager = ColumnManager(self)
@@ -352,10 +352,10 @@ class MainWindow(QMainWindow):
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
         self._splitter.addWidget(self._column_manager)
 
-        # Set initial file tree width
+        # Set initial mindspace view width
         self._splitter.setSizes([300, self.width() - 300])
 
-        # Set the stretch factors: 0 for file tree (no stretch) and 1 for column manager (stretch to fill)
+        # Set the stretch factors: 0 for mindspace view (no stretch) and 1 for column manager (stretch to fill)
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
 
@@ -617,7 +617,7 @@ class MainWindow(QMainWindow):
         """Handle tab change events."""
         path = self._column_manager.current_tab_path()
         if path:
-            self._mindspace_tree.reveal_and_select_file(path)
+            self._mindspace_view.reveal_and_select_file(path)
 
     def _on_column_manager_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
@@ -634,7 +634,7 @@ class MainWindow(QMainWindow):
                 if mindspace_path and os.path.exists(mindspace_path):
                     try:
                         self._mindspace_manager.open_mindspace(mindspace_path)
-                        self._mindspace_tree.set_mindspace(mindspace_path)
+                        self._mindspace_view.set_mindspace(mindspace_path)
                         self._restore_mindspace_state()
 
                     except MindspaceError as e:
@@ -716,7 +716,7 @@ class MainWindow(QMainWindow):
         # Open the new mindspace
         try:
             self._mindspace_manager.open_mindspace(path)
-            self._mindspace_tree.set_mindspace(path)
+            self._mindspace_view.set_mindspace(path)
 
         except MindspaceError as e:
             strings = self._language_manager.strings()
@@ -740,7 +740,7 @@ class MainWindow(QMainWindow):
         if not self._close_all_tabs():
             return
 
-        self._mindspace_tree.set_mindspace("")
+        self._mindspace_view.set_mindspace("")
         self._mindspace_manager.close_mindspace()
 
     def _save_mindspace_state(self) -> None:
@@ -773,7 +773,7 @@ class MainWindow(QMainWindow):
         try:
             restored_paths = self._column_manager.restore_state(saved_state)
             for path in restored_paths:
-                self._mindspace_tree.reveal_and_select_file(path)
+                self._mindspace_view.reveal_and_select_file(path)
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
@@ -825,8 +825,8 @@ class MainWindow(QMainWindow):
 
         self._column_manager.new_file()
 
-    def _on_mindspace_tree_file_single_clicked(self, path: str) -> None:
-        """Handle single click from the mindspace tree."""
+    def _on_mindspace_view_file_single_clicked(self, path: str) -> None:
+        """Handle single click from the mindspace view."""
         # We don't process single clicks immediately to allow for double clicks
         self._pending_single_click_path = path
         self._single_click_timer.start()
@@ -869,8 +869,8 @@ class MainWindow(QMainWindow):
         if focus_widget is not None:
             focus_widget.setFocus()
 
-    def _on_mindspace_tree_file_double_clicked(self, path: str) -> None:
-        """Handle double click from the mindspace tree."""
+    def _on_mindspace_view_file_double_clicked(self, path: str) -> None:
+        """Handle double click from the mindspace view."""
         # We will have started a single click timer, so stop it
         self._single_click_timer.stop()
         self._pending_single_click_path = None
@@ -888,7 +888,7 @@ class MainWindow(QMainWindow):
             f"User opened editor for file: '{path}'\ntab ID: {editor_tab.tab_id()}"
         )
 
-    def _on_mindspace_tree_file_deleted(self, path: str) -> None:
+    def _on_mindspace_view_file_deleted(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.
 
         Args:
@@ -896,7 +896,7 @@ class MainWindow(QMainWindow):
         """
         self._column_manager.close_deleted_file(path)
 
-    def _on_mindspace_tree_file_renamed(self, old_path: str, new_path: str) -> None:
+    def _on_mindspace_view_file_renamed(self, old_path: str, new_path: str) -> None:
         """Handle renaming of files.
 
         Args:
@@ -905,8 +905,8 @@ class MainWindow(QMainWindow):
         """
         self._column_manager.handle_file_rename(old_path, new_path)
 
-    def _on_mindspace_tree_file_edited(self, path: str) -> None:
-        """Handle file edited event from the mindspace tree."""
+    def _on_mindspace_view_file_edited(self, path: str) -> None:
+        """Handle file edited event from the mindspace view."""
         self._open_file_path(path)
 
     def _open_file(self) -> None:
@@ -948,12 +948,12 @@ class MainWindow(QMainWindow):
     def _save_file(self) -> None:
         """Save the current file."""
         path = self._column_manager.save_file()
-        self._mindspace_tree.reveal_and_select_file(path)
+        self._mindspace_view.reveal_and_select_file(path)
 
     def _save_file_as(self) -> None:
         """Save the current file with a new name."""
         path = self._column_manager.save_file_as()
-        self._mindspace_tree.reveal_and_select_file(path)
+        self._mindspace_view.reveal_and_select_file(path)
 
     def _open_wiki(self) -> None:
         """Open the wiki page in a new tab."""
@@ -1059,8 +1059,8 @@ class MainWindow(QMainWindow):
         self._status_bar.setFont(status_font)
         self._status_message_label.setFont(status_font)
 
-        # Apply styles to the mindspace tree and column manager
-        self._mindspace_tree.apply_style()
+        # Apply styles to the mindspace view and column manager
+        self._mindspace_view.apply_style()
         self._column_manager.apply_style()
 
     def _new_conversation(self) -> ConversationTab | None:
