@@ -23,7 +23,7 @@ class AIConversationSettings:
         "claude-sonnet-4-20250514": AIModel(
             name="claude-sonnet-4-20250514",
             provider="anthropic",
-            context_window=200000,
+            context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
@@ -32,7 +32,7 @@ class AIConversationSettings:
         "claude-sonnet-4-20250514 (thinking)": AIModel(
             name="claude-sonnet-4-20250514",
             provider="anthropic",
-            context_window=200000,
+            context_window=1000000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
