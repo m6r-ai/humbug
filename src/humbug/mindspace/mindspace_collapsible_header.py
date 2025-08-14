@@ -32,7 +32,7 @@ class MindspaceCollapsibleHeader(QWidget):
 
         # Create layout
         layout = QHBoxLayout(self)
-        spacing = 6
+        spacing = 5
         layout.setSpacing(spacing)
         layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
@@ -44,7 +44,7 @@ class MindspaceCollapsibleHeader(QWidget):
 
         # Create title label
         self._title_label = QLabel(title, self)
-        self._title_label.setContentsMargins(0, 0, 0, 0)
+        self._title_label.setIndent(0)
         layout.addWidget(self._title_label)
 
         # Add stretch to push everything to the left
@@ -127,7 +127,7 @@ class MindspaceCollapsibleHeader(QWidget):
         self._expand_button.setIcon(QIcon(self._style_manager.scale_icon(
             self._style_manager.get_icon_path(icon_name), icon_base_size
         )))
-        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
+        icon_scaled_size = round(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
         self._expand_button.setIconSize(icon_size)
 
@@ -177,6 +177,8 @@ class MindspaceCollapsibleHeader(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 border-radius: 0px;
                 margin: 0px;
+                padding: 0px;
+                border: none;
             }}
 
             QLabel {{

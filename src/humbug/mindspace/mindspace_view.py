@@ -50,6 +50,7 @@ class MindspaceView(QWidget):
 
         # Create mindspace label
         self._mindspace_label = QLabel()
+        self._mindspace_label.setIndent(0)
         self._mindspace_label.setContentsMargins(0, 0, 0, 0)
 
         header_layout.addWidget(self._mindspace_label)
@@ -133,7 +134,7 @@ class MindspaceView(QWidget):
 
         # Calculate header height based on zoom factor
         zoom_factor = self._style_manager.zoom_factor()
-        header_height = int(self._default_header_height * zoom_factor)
+        header_height = round(self._default_header_height * zoom_factor)
 
         if conversations_expanded and files_expanded:
             # Both expanded - restore saved sizes or use equal split, no space for spacer
@@ -142,6 +143,7 @@ class MindspaceView(QWidget):
                 conversations_size = self._saved_sizes[0]
                 files_size = self._saved_sizes[1]
                 self._splitter.setSizes([conversations_size, files_size, 0])
+
             else:
                 # Equal split
                 half_height = total_height // 2
@@ -288,14 +290,17 @@ class MindspaceView(QWidget):
         self._header_widget.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                margin: 2px 0px 0px 0px;
+                margin: 0px;
+                padding: 0px;
+                border: none;
             }}
 
             QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
-                padding: 4px 0px 5px 7px;
+                margin: 0px;
+                padding: 5px 0px 5px 10px;
             }}
         """)
 
@@ -311,7 +316,7 @@ class MindspaceView(QWidget):
             QSplitter::handle {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
                 margin: 0;
-                height: 1px;
+                height: 0px;
             }}
         """)
 

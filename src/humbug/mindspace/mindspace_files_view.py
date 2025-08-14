@@ -937,7 +937,7 @@ class MindspaceFilesView(QWidget):
 
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
-        file_icon_size = int(16 * zoom_factor)
+        file_icon_size = round(16 * zoom_factor)
         self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
 
         # Update font size for tree
@@ -946,7 +946,7 @@ class MindspaceFilesView(QWidget):
         self.setFont(font)
         self._tree_view.setFont(font)
 
-        branch_icon_size = int(12 * zoom_factor)
+        branch_icon_size = round(12 * zoom_factor)
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
 
         # Adjust tree indentation

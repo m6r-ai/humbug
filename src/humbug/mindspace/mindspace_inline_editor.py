@@ -150,7 +150,7 @@ class MindspaceInlineEditor(QWidget):
 
         # Standard spacing between icon and text in Qt tree views (scale with zoom)
         zoom_factor = self._style_manager.zoom_factor()
-        icon_text_spacing = int(10 * zoom_factor)
+        icon_text_spacing = round(10 * zoom_factor)
 
         # Calculate the offset needed to skip over the icon
         icon_offset = icon_width + icon_text_spacing
@@ -164,7 +164,7 @@ class MindspaceInlineEditor(QWidget):
         )
 
         # Ensure minimum width for editing (scaled)
-        min_width = int(50 * zoom_factor)
+        min_width = round(50 * zoom_factor)
         if text_rect.width() < min_width:
             text_rect.setWidth(min_width)
 
@@ -224,7 +224,7 @@ class MindspaceInlineEditor(QWidget):
                 0, 0, available_text_width, 0,
                 Qt.TextFlag.TextWordWrap, text
             )
-            error_height = text_rect.height() + int(8 * zoom_factor)  # Add padding
+            error_height = text_rect.height() + round(8 * zoom_factor)  # Add padding
 
             return line_edit_height + error_height
 
@@ -249,7 +249,7 @@ class MindspaceInlineEditor(QWidget):
 
         # Calculate optimal width
         zoom_factor = self._style_manager.zoom_factor()
-        min_width = int(64 * zoom_factor)
+        min_width = round(64 * zoom_factor)
         optimal_width = self._edit_width() - 1
         widget_width = max(min_width, optimal_width)
 
@@ -316,7 +316,7 @@ class MindspaceInlineEditor(QWidget):
 
         # Scale padding value
         zoom_factor = self._style_manager.zoom_factor()
-        padding = int(5 * zoom_factor)
+        padding = round(5 * zoom_factor)
 
         # Check if editor extends beyond viewport vertically
         if editor_rect.bottom() > viewport_rect.bottom():
