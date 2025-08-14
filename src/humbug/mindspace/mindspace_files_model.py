@@ -201,15 +201,6 @@ class MindspaceFilesModel(QSortFilterProxyModel):
         index = source_model.index(source_row, 0, source_parent)
         file_path = source_model.filePath(index)
 
-        # Get the parent directory path
-        parent_path = source_model.filePath(source_parent) if source_parent.isValid() else ""
-
-        # If we're at the root level (parent of mindspace), only show the mindspace directory
-        mindspace_parent = os.path.dirname(self._mindspace_root)
-        if parent_path == mindspace_parent:
-            return file_path == self._mindspace_root
-
-        # For items within the mindspace, apply normal filtering
         # Always hide .humbug directory
         if os.path.basename(file_path) == ".humbug":
             return False

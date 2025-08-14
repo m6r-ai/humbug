@@ -4,7 +4,7 @@ import logging
 import os
 import shutil
 
-from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer, QDir
+from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir
 from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QVBoxLayout, QMenu, QDialog
 )
@@ -99,12 +99,6 @@ class MindspaceConversationsView(QWidget):
         # Track current mindspace and conversations directory
         self._mindspace_path: str | None = None
         self._conversations_path: str | None = None
-
-        # Timer for auto-expansion after model loads
-        self._expansion_timer = QTimer()
-        self._expansion_timer.setSingleShot(True)
-        self._expansion_timer.timeout.connect(self._auto_expand_first_level)
-        self._expansion_timer.setInterval(100)  # Small delay to ensure model is ready
 
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
@@ -490,14 +484,14 @@ class MindspaceConversationsView(QWidget):
         Returns:
             QModelIndex of the target file if found, None otherwise
         """
-        if not self._mindspace_path:
+        if not self._conversations_path:
             return None
 
-        # Build list of paths from mindspace root to target file
+        # Build list of paths from conversations root to target file
         paths_to_expand = []
         current_path = file_path
 
-        while current_path and current_path != self._mindspace_path:
+        while current_path and current_path != self._conversations_path:
             paths_to_expand.append(current_path)
             parent_path = os.path.dirname(current_path)
             # Prevent infinite loop if we can't go up further
@@ -509,10 +503,8 @@ class MindspaceConversationsView(QWidget):
         # Reverse the list so we expand from root to leaf
         paths_to_expand.reverse()
 
-        # Start from the mindspace root index
-        current_index = self._filter_model.mapFromSource(
-            self._fs_model.index(self._mindspace_path)
-        )
+        # Start from the conversations root
+        current_index = QModelIndex()
 
         # Expand each directory in the path
         for path in paths_to_expand:
@@ -533,20 +525,6 @@ class MindspaceConversationsView(QWidget):
             current_index = filter_index
 
         return current_index
-
-    def _auto_expand_first_level(self) -> None:
-        """Auto-expand the first level of directories in the conversations folder."""
-        if not self._conversations_path:
-            return
-
-        # Get the conversations directory index and expand it to show its contents
-        conversations_source_index = self._fs_model.index(self._conversations_path)
-        if not conversations_source_index.isValid():
-            return
-
-        conversations_index = self._filter_model.mapFromSource(conversations_source_index)
-        if conversations_index.isValid():
-            self._tree_view.expand(conversations_index)
 
     def _ensure_item_visible_and_edit(self, item_path: str, select_extension: bool = True) -> None:
         """
@@ -643,67 +621,61 @@ class MindspaceConversationsView(QWidget):
         strings = self._language_manager.strings()
 
         # Determine the path and whether it's a file or directory
-        if index.isValid():
+        if not index.isValid():
+            # Clicked on empty space - show root context menu
+            menu = self._create_root_context_menu()
+
+        else:
             # Map to source model to get actual file path
             source_index = self._filter_model.mapToSource(index)
             path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
             is_dir = os.path.isdir(path)
 
-            # Check if this is the conversations folder itself
-            is_conversations_root = (self._conversations_path and
-                                    os.path.normpath(path) == os.path.normpath(self._conversations_path))
-
-            if is_conversations_root:
-                # For conversations root, use the shared root context menu
-                menu = self._create_root_context_menu()
+            # Create actions based on item type
+            if is_dir:
+                # For directories: show all options (no "New File" option)
+                edit_action = None
+                duplicate_action = None
+                new_folder_action = menu.addAction(strings.new_folder)
+                new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
+                rename_action = menu.addAction(strings.rename)
+                rename_action.triggered.connect(lambda: self._start_rename(index))
+                delete_action = menu.addAction(strings.delete)
+                delete_action.triggered.connect(lambda: self._handle_delete_folder(path))
 
             else:
-                # Create actions based on item type
-                if is_dir:
-                    # For other directories: show all options (no "New File" option)
-                    edit_action = None
-                    duplicate_action = None
-                    new_folder_action = menu.addAction(strings.new_folder)
-                    new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
-                    rename_action = menu.addAction(strings.rename)
-                    rename_action.triggered.connect(lambda: self._start_rename(index))
-                    delete_action = menu.addAction(strings.delete)
-                    delete_action.triggered.connect(lambda: self._handle_delete_folder(path))
+                # File context menu
+                edit_action = menu.addAction(strings.edit)
+                edit_action.triggered.connect(lambda: self._handle_edit_file(path))
+                duplicate_action = menu.addAction(strings.duplicate)
+                duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
+                new_folder_action = None
+                rename_action = menu.addAction(strings.rename)
+                rename_action.triggered.connect(lambda: self._start_rename(index))
+                delete_action = menu.addAction(strings.delete)
+                delete_action.triggered.connect(lambda: self._handle_delete_file(path))
 
-                else:
-                    # File context menu
-                    edit_action = menu.addAction(strings.edit)
-                    edit_action.triggered.connect(lambda: self._handle_edit_file(path))
-                    duplicate_action = menu.addAction(strings.duplicate)
-                    duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
-                    new_folder_action = None
-                    rename_action = menu.addAction(strings.rename)
-                    rename_action.triggered.connect(lambda: self._start_rename(index))
-                    delete_action = menu.addAction(strings.delete)
-                    delete_action.triggered.connect(lambda: self._handle_delete_file(path))
+            # Add sorting options
+            menu.addSeparator()
+            sort_menu = menu.addMenu(strings.sort_by)
 
-                # Add sorting options
-                menu.addSeparator()
-                sort_menu = menu.addMenu(strings.sort_by)
+            current_mode = self._filter_model.get_conversation_sort_mode()
 
-                current_mode = self._filter_model.get_conversation_sort_mode()
+            sort_by_name = sort_menu.addAction(strings.sort_by_name)
+            sort_by_name.setCheckable(True)
+            sort_by_name.setChecked(current_mode == MindspaceConversationsModel.SortMode.NAME)
+            sort_by_name.triggered.connect(
+                lambda: self._filter_model.set_conversation_sort_mode(MindspaceConversationsModel.SortMode.NAME)
+            )
 
-                sort_by_name = sort_menu.addAction(strings.sort_by_name)
-                sort_by_name.setCheckable(True)
-                sort_by_name.setChecked(current_mode == MindspaceConversationsModel.SortMode.NAME)
-                sort_by_name.triggered.connect(
-                    lambda: self._filter_model.set_conversation_sort_mode(MindspaceConversationsModel.SortMode.NAME)
-                )
+            sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
+            sort_by_creation.setCheckable(True)
+            sort_by_creation.setChecked(current_mode == MindspaceConversationsModel.SortMode.CREATION_TIME)
+            sort_by_creation.triggered.connect(
+                lambda: self._filter_model.set_conversation_sort_mode(MindspaceConversationsModel.SortMode.CREATION_TIME)
+            )
 
-                sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
-                sort_by_creation.setCheckable(True)
-                sort_by_creation.setChecked(current_mode == MindspaceConversationsModel.SortMode.CREATION_TIME)
-                sort_by_creation.triggered.connect(
-                    lambda: self._filter_model.set_conversation_sort_mode(MindspaceConversationsModel.SortMode.CREATION_TIME)
-                )
-
-            menu.exec_(self._tree_view.viewport().mapToGlobal(position))
-
+        menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
     def _start_new_folder_creation(self, parent_path: str) -> None:
         """
@@ -911,24 +883,19 @@ class MindspaceConversationsView(QWidget):
                 self._filter_model.set_conversations_root("")
                 return
 
-        # Set the file system model root to the parent of the conversations directory
-        # so the conversations directory itself is visible
-        parent_path = os.path.dirname(self._conversations_path)
-        self._fs_model.setRootPath(parent_path)
+        # Set the file system model root directly to the conversations directory
+        self._fs_model.setRootPath(self._conversations_path)
         self._filter_model.set_conversations_root(self._conversations_path)
 
-        # Set the root index to the parent directory so we can see the conversations folder
-        parent_source_index = self._fs_model.index(parent_path)
-        root_index = self._filter_model.mapFromSource(parent_source_index)
+        # Set the root index directly to the conversations directory
+        conversations_source_index = self._fs_model.index(self._conversations_path)
+        root_index = self._filter_model.mapFromSource(conversations_source_index)
         self._tree_view.setRootIndex(root_index)
 
         # Hide size, type, and date columns
         self._tree_view.header().hideSection(1)  # Size
         self._tree_view.header().hideSection(2)  # Type
         self._tree_view.header().hideSection(3)  # Date
-
-        # Auto-expand first level after a short delay
-        self._expansion_timer.start()
 
     def _on_tree_single_clicked(self, index: QModelIndex) -> None:
         """Handle single-click events."""

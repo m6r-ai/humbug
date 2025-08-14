@@ -146,27 +146,12 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
             return 0.0
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
-        """Filter to show conversations directory and its contents, following files view pattern."""
+        """Show all files within the conversations directory."""
         # If no conversations root is set, don't show any files
         if not self._conversations_root:
             return False
 
-        source_model = cast(QFileSystemModel, self.sourceModel())
-        if not source_model:
-            return False
-
-        index = source_model.index(source_row, 0, source_parent)
-        file_path = source_model.filePath(index)
-
-        # Get the parent directory path
-        parent_path = source_model.filePath(source_parent) if source_parent.isValid() else ""
-
-        # If we're at the root level (parent of conversations), only show the conversations directory
-        conversations_parent = os.path.dirname(self._conversations_root)
-        if parent_path == conversations_parent:
-            return file_path == self._conversations_root
-
-        # For items within the conversations directory, show all items
+        # we can show all items (no special filtering needed)
         return True
 
     def lessThan(
@@ -185,13 +170,8 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         left_path = source_model.filePath(source_left)
         right_path = source_model.filePath(source_right)
 
-        # Check if both files are in conversations hierarchy
-        left_in_conversations = self._is_in_conversations_hierarchy(left_path)
-        right_in_conversations = self._is_in_conversations_hierarchy(right_path)
-
         # Apply creation time sorting for conversation files (non-directories only)
-        if (left_in_conversations and right_in_conversations and
-            self._conversation_sort_mode == self.SortMode.CREATION_TIME and
+        if (self._conversation_sort_mode == self.SortMode.CREATION_TIME and
             not left_info.isDir() and not right_info.isDir()):
 
             left_time = self._get_file_creation_time(left_path)
@@ -209,21 +189,3 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
 
         # Both are same type (both directories or both files), sort alphabetically
         return left_info.fileName().lower() < right_info.fileName().lower()
-
-    def _is_in_conversations_hierarchy(self, file_path: str) -> bool:
-        """
-        Check if the given path is anywhere within the conversations folder hierarchy.
-
-        Args:
-            file_path: Path to check
-
-        Returns:
-            True if this path is within the conversations folder hierarchy, False otherwise
-        """
-        if not self._conversations_root or not file_path:
-            return False
-
-        normalized_file = os.path.normpath(file_path)
-        normalized_conversations = os.path.normpath(self._conversations_root)
-
-        return normalized_file.startswith(normalized_conversations + os.sep) or normalized_file == normalized_conversations
