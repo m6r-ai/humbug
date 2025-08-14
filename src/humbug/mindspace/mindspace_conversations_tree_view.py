@@ -1,6 +1,6 @@
 """Conversations tree view implementation for mindspace conversations with drag and drop support and inline editing."""
 
-from typing import cast, Callable
+from typing import cast
 
 from PySide6.QtWidgets import QWidget, QFileSystemModel
 from PySide6.QtCore import QSortFilterProxyModel, QDir
