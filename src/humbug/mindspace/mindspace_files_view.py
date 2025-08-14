@@ -6,11 +6,12 @@ import shutil
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QTimer, QDir
 from PySide6.QtWidgets import (
-    QFileSystemModel, QWidget, QHBoxLayout, QVBoxLayout, QMenu, QDialog, QLabel
+    QFileSystemModel, QWidget, QVBoxLayout, QMenu, QDialog
 )
 
 from humbug.color_role import ColorRole
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
+from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_file_move_dialog import MindspaceFileMoveDialog
 from humbug.mindspace.mindspace_files_delegate import MindspaceFilesDelegate
 from humbug.mindspace.mindspace_files_model import MindspaceFilesModel
@@ -45,20 +46,16 @@ class MindspaceFilesView(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Create header container
-        self._header_widget = QWidget()
-        header_layout = QHBoxLayout(self._header_widget)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(0)
+        # Create collapsible header
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._on_language_changed)
 
-        # Create files label
-        self._files_label = QLabel()
-        self._files_label.setContentsMargins(0, 0, 0, 0)
-
-        header_layout.addWidget(self._files_label)
-        header_layout.addStretch()
-
-        layout.addWidget(self._header_widget)
+        self._header = MindspaceCollapsibleHeader(
+            self._language_manager.strings().mindspace_files,
+            self
+        )
+        self._header.toggled.connect(self._on_header_toggled)
+        layout.addWidget(self._header)
 
         # Create tree view
         self._tree_view = MindspaceFilesTreeView()
@@ -101,12 +98,6 @@ class MindspaceFilesView(QWidget):
         # Track current mindspace
         self._mindspace_path: str | None = None
 
-        self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._on_language_changed)
-
-        # Set initial label text
-        self._files_label.setText(self._language_manager.strings().mindspace_files)
-
         # Timer for auto-expansion after model loads
         self._expansion_timer = QTimer()
         self._expansion_timer.setSingleShot(True)
@@ -116,6 +107,42 @@ class MindspaceFilesView(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
+
+    def _on_header_toggled(self, expanded: bool) -> None:
+        """
+        Handle header expand/collapse toggle.
+
+        Args:
+            expanded: Whether the section is now expanded
+        """
+        if expanded:
+            self._tree_view.show()
+
+        else:
+            self._tree_view.hide()
+
+    def is_expanded(self) -> bool:
+        """
+        Check if the files section is expanded.
+
+        Returns:
+            True if expanded, False if collapsed
+        """
+        return self._header.is_expanded()
+
+    def set_expanded(self, expanded: bool) -> None:
+        """
+        Set the expanded state of the files section.
+
+        Args:
+            expanded: Whether the section should be expanded
+        """
+        self._header.set_expanded(expanded, emit_signal=False)
+        if expanded:
+            self._tree_view.show()
+
+        else:
+            self._tree_view.hide()
 
     def _on_drop_target_changed(self) -> None:
         """
@@ -453,6 +480,10 @@ class MindspaceFilesView(QWidget):
         # Check if the file exists
         if not os.path.exists(normalized_path):
             return
+
+        # Ensure the section is expanded before revealing the file
+        if not self.is_expanded():
+            self.set_expanded(True)
 
         # Expand to the file and select it
         target_index = self._expand_to_path(normalized_path)
@@ -976,7 +1007,7 @@ class MindspaceFilesView(QWidget):
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        self._files_label.setText(self._language_manager.strings().mindspace_files)
+        self._header.set_title(self._language_manager.strings().mindspace_files)
         self.apply_style()
 
     def apply_style(self) -> None:
@@ -984,10 +1015,8 @@ class MindspaceFilesView(QWidget):
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
 
-        # Update font size for label
-        font = self.font()
-        font.setPointSizeF(base_font_size * zoom_factor)
-        self._files_label.setFont(font)
+        # Apply style to header
+        self._header.apply_style()
 
         self._icon_provider.update_icons()
         self._fs_model.setIconProvider(self._icon_provider)
@@ -995,6 +1024,8 @@ class MindspaceFilesView(QWidget):
         self._tree_view.setIconSize(QSize(file_icon_size, file_icon_size))
 
         # Update font size for tree
+        font = self.font()
+        font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
         self._tree_view.setFont(font)
 
@@ -1003,20 +1034,6 @@ class MindspaceFilesView(QWidget):
 
         # Adjust tree indentation
         self._tree_view.setIndentation(file_icon_size)
-
-        self._header_widget.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                margin: 2px 0px 0px 0px;
-            }}
-
-            QLabel {{
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: transparent;
-                border: none;
-                padding: 4px 0px 5px 7px;
-            }}
-        """)
 
         self.setStyleSheet(f"""
             QTreeView {{

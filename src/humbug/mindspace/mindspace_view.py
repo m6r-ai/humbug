@@ -89,6 +89,42 @@ class MindspaceView(QWidget):
 
         self._on_language_changed()
 
+    def get_conversations_expanded_state(self) -> bool:
+        """
+        Get the expanded state of the conversations section.
+
+        Returns:
+            True if conversations section is expanded, False if collapsed
+        """
+        return self._conversations_view.is_expanded()
+
+    def set_conversations_expanded_state(self, expanded: bool) -> None:
+        """
+        Set the expanded state of the conversations section.
+
+        Args:
+            expanded: Whether the conversations section should be expanded
+        """
+        self._conversations_view.set_expanded(expanded)
+
+    def get_files_expanded_state(self) -> bool:
+        """
+        Get the expanded state of the files section.
+
+        Returns:
+            True if files section is expanded, False if collapsed
+        """
+        return self._files_view.is_expanded()
+
+    def set_files_expanded_state(self, expanded: bool) -> None:
+        """
+        Set the expanded state of the files section.
+
+        Args:
+            expanded: Whether the files section should be expanded
+        """
+        self._files_view.set_expanded(expanded)
+
     def reveal_and_select_file(self, file_path: str) -> None:
         """
         Reveal and select a file in the appropriate view (files or conversations).
