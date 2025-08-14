@@ -12,7 +12,7 @@ from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager, ColorMode
 
 
-class MindspaceFileTreeIconProvider(QFileIconProvider):
+class MindspaceTreeIconProvider(QFileIconProvider):
     """Custom file icon provider with theme-aware scalable SVG icons."""
 
     def __init__(self) -> None:

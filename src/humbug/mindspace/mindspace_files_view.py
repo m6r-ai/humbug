@@ -14,10 +14,10 @@ from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_editable_delegate import MindspaceEditableDelegate
 from humbug.mindspace.mindspace_file_model import MindspaceFileModel
 from humbug.mindspace.mindspace_file_move_dialog import MindspaceFileMoveDialog
-from humbug.mindspace.mindspace_file_tree_icon_provider import MindspaceFileTreeIconProvider
 from humbug.mindspace.mindspace_file_tree_style import MindspaceFileTreeStyle
 from humbug.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
@@ -70,7 +70,7 @@ class MindspaceFilesView(QWidget):
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
         # Create file system model
-        self._icon_provider = MindspaceFileTreeIconProvider()
+        self._icon_provider = MindspaceTreeIconProvider()
         self._fs_model = QFileSystemModel()
         self._fs_model.setReadOnly(True)
         self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.NoDotAndDotDot | QDir.Filter.Hidden)
