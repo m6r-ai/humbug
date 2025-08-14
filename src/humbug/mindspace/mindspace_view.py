@@ -33,6 +33,10 @@ class MindspaceView(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
+        # Size tracking for dynamic splitter management
+        self._saved_sizes: list[int] = [1, 1, 0]  # Default: equal sizes for sections, 0 for spacer
+        self._default_header_height = 30  # Minimum height for collapsed sections
+
         # Create main layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -51,7 +55,7 @@ class MindspaceView(QWidget):
         header_layout.addWidget(self._mindspace_label)
         layout.addWidget(self._header_widget)
 
-        # Create splitter for mindpspace views
+        # Create splitter for mindspace views
         self._splitter = QSplitter(Qt.Orientation.Vertical)
         layout.addWidget(self._splitter)
 
@@ -61,12 +65,21 @@ class MindspaceView(QWidget):
         self._files_view = MindspaceFilesView()
         self._splitter.addWidget(self._files_view)
 
-        # Set equal proportions initially (50/50 split)
-        self._splitter.setSizes([1, 1])
+        # Create spacer widget - invisible widget that takes up space when both sections are collapsed
+        self._spacer_widget = QWidget()
+        self._splitter.addWidget(self._spacer_widget)
 
-        # Set stretch factors - both sections can stretch
+        # Set equal proportions initially for the two sections, no space for spacer
+        self._splitter.setSizes([1, 1, 0])
+
+        # Set stretch factors - both sections and spacer can stretch
         self._splitter.setStretchFactor(0, 1)
         self._splitter.setStretchFactor(1, 1)
+        self._splitter.setStretchFactor(2, 1)
+
+        # Connect header toggle signals to manage splitter sizes
+        self._conversations_view._header.toggled.connect(self._on_conversations_toggled)
+        self._files_view._header.toggled.connect(self._on_files_toggled)
 
         # Connect file view signals to forward them
         self._files_view.file_single_clicked.connect(self.file_single_clicked.emit)
@@ -88,6 +101,84 @@ class MindspaceView(QWidget):
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
 
         self._on_language_changed()
+
+    def _on_conversations_toggled(self, expanded: bool) -> None:
+        """
+        Handle conversations section expand/collapse.
+
+        Args:
+            expanded: Whether the conversations section is now expanded
+        """
+        self._update_splitter_sizes()
+
+    def _on_files_toggled(self, expanded: bool) -> None:
+        """
+        Handle files section expand/collapse.
+
+        Args:
+            expanded: Whether the files section is now expanded
+        """
+        self._update_splitter_sizes()
+
+    def _update_splitter_sizes(self) -> None:
+        """Update splitter sizes based on current expansion states."""
+        conversations_expanded = self._conversations_view.is_expanded()
+        files_expanded = self._files_view.is_expanded()
+
+        # Get current splitter height
+        total_height = self._splitter.height()
+        if total_height <= 0:
+            # Splitter not yet sized, use default proportions
+            total_height = 400
+
+        # Calculate header height based on zoom factor
+        zoom_factor = self._style_manager.zoom_factor()
+        header_height = int(self._default_header_height * zoom_factor)
+
+        if conversations_expanded and files_expanded:
+            # Both expanded - restore saved sizes or use equal split, no space for spacer
+            if len(self._saved_sizes) >= 2 and sum(self._saved_sizes[:2]) > 0:
+                # Restore the proportions of the two sections
+                conversations_size = self._saved_sizes[0]
+                files_size = self._saved_sizes[1]
+                self._splitter.setSizes([conversations_size, files_size, 0])
+            else:
+                # Equal split
+                half_height = total_height // 2
+                self._splitter.setSizes([half_height, half_height, 0])
+
+        elif conversations_expanded and not files_expanded:
+            # Only conversations expanded
+            # Save current sizes before changing (if both were previously expanded)
+            current_sizes = self._splitter.sizes()
+            if len(current_sizes) >= 2 and all(size > header_height for size in current_sizes[:2]):
+                self._saved_sizes = current_sizes
+
+            # Give most space to conversations, minimal to files, no space for spacer
+            conversations_size = total_height - header_height
+            self._splitter.setSizes([conversations_size, header_height, 0])
+
+        elif not conversations_expanded and files_expanded:
+            # Only files expanded
+            # Save current sizes before changing (if both were previously expanded)
+            current_sizes = self._splitter.sizes()
+            if len(current_sizes) >= 2 and all(size > header_height for size in current_sizes[:2]):
+                self._saved_sizes = current_sizes
+
+            # Give most space to files, minimal to conversations, no space for spacer
+            files_size = total_height - header_height
+            self._splitter.setSizes([header_height, files_size, 0])
+
+        else:
+            # Both collapsed - give minimal space to both sections, rest to spacer
+            # Save current sizes before changing
+            current_sizes = self._splitter.sizes()
+            if len(current_sizes) >= 2 and all(size > header_height for size in current_sizes[:2]):
+                self._saved_sizes = current_sizes
+
+            # Give minimal space to both sections, all remaining space to spacer
+            spacer_size = total_height - (2 * header_height)
+            self._splitter.setSizes([header_height, header_height, spacer_size])
 
     def get_conversations_expanded_state(self) -> bool:
         """
@@ -208,6 +299,13 @@ class MindspaceView(QWidget):
             }}
         """)
 
+        # Style the spacer widget to match background
+        self._spacer_widget.setStyleSheet(f"""
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+            }}
+        """)
+
         # Style the splitter
         self.setStyleSheet(f"""
             QSplitter::handle {{
@@ -220,3 +318,6 @@ class MindspaceView(QWidget):
         # Forward style updates to child views
         self._files_view.apply_style()
         self._conversations_view.apply_style()
+
+        # Update splitter sizes after style changes (zoom factor may have changed)
+        self._update_splitter_sizes()
