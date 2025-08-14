@@ -3,6 +3,7 @@
 import logging
 import os
 import shutil
+from typing import cast
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir
 from PySide6.QtWidgets import (
@@ -585,9 +586,11 @@ class MindspaceConversationsView(QWidget):
         menu = QMenu(self)
         strings = self._language_manager.strings()
 
-        # Conversations root actions - only allow new folder (no rename/delete of conversations root)
+        # Conversations root actions
         new_folder_action = menu.addAction(strings.new_folder)
-        new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(self._conversations_path))
+        new_folder_action.triggered.connect(
+            lambda: self._start_new_folder_creation(cast(str, self._conversations_path))
+        )
 
         # Add sorting options
         menu.addSeparator()

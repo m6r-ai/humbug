@@ -3,6 +3,7 @@
 import logging
 import os
 import shutil
+from typing import cast
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir
 from PySide6.QtWidgets import (
@@ -586,9 +587,13 @@ class MindspaceFilesView(QWidget):
 
         # Root directory actions
         new_folder_action = menu.addAction(strings.new_folder)
-        new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(self._mindspace_path))
+        new_folder_action.triggered.connect(
+            lambda: self._start_new_folder_creation(cast(str, self._mindspace_path))
+        )
         new_file_action = menu.addAction(strings.new_file)
-        new_file_action.triggered.connect(lambda: self._start_new_file_creation(self._mindspace_path))
+        new_file_action.triggered.connect(
+            lambda: self._start_new_file_creation(cast(str, self._mindspace_path))
+        )
 
         return menu
 

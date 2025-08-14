@@ -35,7 +35,6 @@ class MindspaceView(QWidget):
 
         # Size tracking for dynamic splitter management
         self._saved_sizes: list[int] = [1, 1, 0]  # Default: equal sizes for sections, 0 for spacer
-        self._default_header_height = 30  # Minimum height for collapsed sections
 
         # Create main layout
         layout = QVBoxLayout(self)
@@ -103,7 +102,7 @@ class MindspaceView(QWidget):
 
         self._on_language_changed()
 
-    def _on_conversations_toggled(self, expanded: bool) -> None:
+    def _on_conversations_toggled(self, _expanded: bool) -> None:
         """
         Handle conversations section expand/collapse.
 
@@ -112,7 +111,7 @@ class MindspaceView(QWidget):
         """
         self._update_splitter_sizes()
 
-    def _on_files_toggled(self, expanded: bool) -> None:
+    def _on_files_toggled(self, _expanded: bool) -> None:
         """
         Handle files section expand/collapse.
 
@@ -133,8 +132,7 @@ class MindspaceView(QWidget):
             total_height = 400
 
         # Calculate header height based on zoom factor
-        zoom_factor = self._style_manager.zoom_factor()
-        header_height = round(self._default_header_height * zoom_factor)
+        header_height = self._conversations_view._header.sizeHint().height()
 
         if conversations_expanded and files_expanded:
             # Both expanded - restore saved sizes or use equal split, no space for spacer

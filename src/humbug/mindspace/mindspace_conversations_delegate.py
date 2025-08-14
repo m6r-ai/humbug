@@ -117,7 +117,12 @@ class MindspaceConversationsDelegate(QStyledItemDelegate):
 
         return depth
 
-    def start_custom_edit(self, index: QModelIndex, tree_view: MindspaceConversationsTreeView, select_extension: bool = True) -> None:
+    def start_custom_edit(
+        self,
+        index: QModelIndex,
+        tree_view: MindspaceConversationsTreeView,
+        select_extension: bool = True
+    ) -> None:
         """
         Start custom inline editing that bypasses the model's editing system.
 
