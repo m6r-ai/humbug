@@ -55,6 +55,7 @@ class MindspaceFilesView(QWidget):
             self
         )
         self._header.toggled.connect(self._on_header_toggled)
+        self._header.set_context_menu_provider(self._create_header_context_menu)
         layout.addWidget(self._header)
 
         # Create tree view
@@ -602,6 +603,54 @@ class MindspaceFilesView(QWidget):
 
         delegate.start_custom_edit(filter_index, self._tree_view, select_extension)
 
+    def _create_header_context_menu(self) -> QMenu | None:
+        """
+        Create context menu for the header (root-level actions).
+
+        Returns:
+            QMenu with root-level actions, or None if no mindspace is active
+        """
+        if not self._mindspace_path:
+            return None
+
+        return self._create_root_context_menu()
+
+    def _create_root_context_menu(self) -> QMenu:
+        """
+        Create context menu for root-level actions.
+
+        Returns:
+            QMenu with actions appropriate for the root directory
+        """
+        menu = QMenu(self)
+        strings = self._language_manager.strings()
+
+        # Root directory actions
+        new_folder_action = menu.addAction(strings.new_folder)
+        new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(self._mindspace_path))
+        new_file_action = menu.addAction(strings.new_file)
+        new_file_action.triggered.connect(lambda: self._start_new_file_creation(self._mindspace_path))
+
+        # Add sorting options for conversations hierarchy
+        menu.addSeparator()
+        sort_menu = menu.addMenu(strings.sort_by)
+
+        current_mode = self._filter_model.get_conversation_sort_mode()
+
+        sort_by_name = sort_menu.addAction(strings.sort_by_name)
+        sort_by_name.setCheckable(True)
+        sort_by_name.setChecked(current_mode == MindspaceFilesModel.SortMode.NAME)
+        sort_by_name.triggered.connect(lambda: self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.NAME))
+
+        sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
+        sort_by_creation.setCheckable(True)
+        sort_by_creation.setChecked(current_mode == MindspaceFilesModel.SortMode.CREATION_TIME)
+        sort_by_creation.triggered.connect(
+            lambda: self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.CREATION_TIME)
+        )
+
+        return menu
+
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
         # Get the index at the clicked position
@@ -618,101 +667,68 @@ class MindspaceFilesView(QWidget):
             path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
             is_dir = os.path.isdir(path)
 
-            # Create actions based on item type
-            if is_dir:
-                # Directory context menu
-                edit_action = None
-                duplicate_action = None
-                new_folder_action = menu.addAction(strings.new_folder)
-                new_file_action = menu.addAction(strings.new_file)
+            # Check if this is the mindspace root
+            is_mindspace_root = (self._mindspace_path and
+                                os.path.normpath(path) == os.path.normpath(self._mindspace_path))
+
+            if is_mindspace_root:
+                # For mindspace root, use the shared root context menu
+                menu = self._create_root_context_menu()
 
             else:
-                # File context menu
-                edit_action = menu.addAction(strings.edit)
-                duplicate_action = menu.addAction(strings.duplicate)
-                new_file_action = None
-                new_folder_action = None
-
-            rename_action = menu.addAction(strings.rename)
-            delete_action = menu.addAction(strings.delete)
-            sort_by_name = None
-            sort_by_creation = None
-
-            # Check if this is in the conversations hierarchy
-            is_in_conversations_hierarchy = self._is_in_conversations_hierarchy(path)
-            if is_in_conversations_hierarchy:
-                menu.addSeparator()
-                sort_menu = menu.addMenu(strings.sort_by)
-
-                current_mode = self._filter_model.get_conversation_sort_mode()
-
-                sort_by_name = sort_menu.addAction(strings.sort_by_name)
-                sort_by_name.setCheckable(True)
-                sort_by_name.setChecked(current_mode == MindspaceFilesModel.SortMode.NAME)
-
-                sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
-                sort_by_creation.setCheckable(True)
-                sort_by_creation.setChecked(current_mode == MindspaceFilesModel.SortMode.CREATION_TIME)
-
-            # Execute the menu
-            action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
-
-            if action:
+                # Create actions based on item type
                 if is_dir:
-                    # Handle directory actions
-                    if action == new_folder_action:
-                        self._start_new_folder_creation(path)
-                        return
-
-                    if action == new_file_action:
-                        self._start_new_file_creation(path)
-                        return
-
-                    if action == rename_action:
-                        self._start_rename(index)
-                        return
-
-                    if action == delete_action:
-                        self._handle_delete_folder(path)
-                        return
-
-                    # Handle conversations hierarchy sorting actions
-                    if is_in_conversations_hierarchy:
-                        if action == sort_by_name:
-                            self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.NAME)
-                            return
-
-                        if action == sort_by_creation:
-                            self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.CREATION_TIME)
-                            return
+                    # Directory context menu
+                    edit_action = None
+                    duplicate_action = None
+                    new_folder_action = menu.addAction(strings.new_folder)
+                    new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
+                    new_file_action = menu.addAction(strings.new_file)
+                    new_file_action.triggered.connect(lambda: self._start_new_file_creation(path))
+                    rename_action = menu.addAction(strings.rename)
+                    rename_action.triggered.connect(lambda: self._start_rename(index))
+                    delete_action = menu.addAction(strings.delete)
+                    delete_action.triggered.connect(lambda: self._handle_delete_folder(path))
 
                 else:
-                    # Handle file actions
-                    if action == edit_action:
-                        self._handle_edit_file(path)
-                        return
+                    # File context menu
+                    edit_action = menu.addAction(strings.edit)
+                    edit_action.triggered.connect(lambda: self._handle_edit_file(path))
+                    duplicate_action = menu.addAction(strings.duplicate)
+                    duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
+                    new_file_action = None
+                    new_folder_action = None
+                    rename_action = menu.addAction(strings.rename)
+                    rename_action.triggered.connect(lambda: self._start_rename(index))
+                    delete_action = menu.addAction(strings.delete)
+                    delete_action.triggered.connect(lambda: self._handle_delete_file(path))
 
-                    if action == duplicate_action:
-                        self._start_duplicate_file(path)
-                        return
+                sort_by_name = None
+                sort_by_creation = None
 
-                    if action == rename_action:
-                        self._start_rename(index)
-                        return
+                # Check if this is in the conversations hierarchy
+                is_in_conversations_hierarchy = self._is_in_conversations_hierarchy(path)
+                if is_in_conversations_hierarchy:
+                    menu.addSeparator()
+                    sort_menu = menu.addMenu(strings.sort_by)
 
-                    if action == delete_action:
-                        self._handle_delete_file(path)
-                        return
+                    current_mode = self._filter_model.get_conversation_sort_mode()
 
-                    # Handle sorting actions for files in conversations hierarchy
-                    if is_in_conversations_hierarchy:
-                        if action == sort_by_name:
-                            self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.NAME)
-                            return
+                    sort_by_name = sort_menu.addAction(strings.sort_by_name)
+                    sort_by_name.setCheckable(True)
+                    sort_by_name.setChecked(current_mode == MindspaceFilesModel.SortMode.NAME)
+                    sort_by_name.triggered.connect(
+                        lambda: self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.NAME)
+                    )
 
-                        if action == sort_by_creation:
-                            self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.CREATION_TIME)
-                            return
+                    sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
+                    sort_by_creation.setCheckable(True)
+                    sort_by_creation.setChecked(current_mode == MindspaceFilesModel.SortMode.CREATION_TIME)
+                    sort_by_creation.triggered.connect(
+                        lambda: self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.CREATION_TIME)
+                    )
+
+            menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
     def _start_new_folder_creation(self, parent_path: str) -> None:
         """
