@@ -14,10 +14,10 @@ from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_conversations_delegate import MindspaceConversationsDelegate
 from humbug.mindspace.mindspace_conversations_model import MindspaceConversationsModel
 from humbug.mindspace.mindspace_file_move_dialog import MindspaceFileMoveDialog
-from humbug.mindspace.mindspace_file_tree_style import MindspaceFileTreeStyle
 from humbug.mindspace.mindspace_conversations_tree_view import MindspaceConversationsTreeView
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
+from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
@@ -63,7 +63,7 @@ class MindspaceConversationsView(QWidget):
         # Create tree view
         self._tree_view = MindspaceConversationsTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
-        self._tree_style = MindspaceFileTreeStyle()
+        self._tree_style = MindspaceTreeStyle()
         self._tree_view.setStyle(self._tree_style)
         self._tree_view.file_dropped.connect(self._on_file_dropped)
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)

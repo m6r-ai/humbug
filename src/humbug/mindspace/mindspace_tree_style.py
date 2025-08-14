@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QProxyStyle, QStyle, QStyleOption, QWidget
 
 from humbug.style_manager import StyleManager
 
-class MindspaceFileTreeStyle(QProxyStyle):
+class MindspaceTreeStyle(QProxyStyle):
     """
     A custom style for the Mindspace file tree that scales the pixel metrics
     according to the current zoom factor.
