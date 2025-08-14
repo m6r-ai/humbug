@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal,
 from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent
 
 
-class MindspaceFileTreeView(QTreeView):
+class MindspaceFilesTreeView(QTreeView):
     """Custom tree view with drag and drop support, auto-scroll, and inline editing."""
 
     file_dropped = Signal(str, str)  # dragged_path, target_path

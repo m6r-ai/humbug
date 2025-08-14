@@ -9,18 +9,18 @@ from PySide6.QtGui import QPainter, QPen
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_files_tree_view import MindspaceFilesTreeView
 from humbug.mindspace.mindspace_inline_editor import MindspaceInlineEditor
-from humbug.mindspace.mindspace_file_tree_view import MindspaceFileTreeView
 from humbug.style_manager import StyleManager
 
 
-class MindspaceEditableDelegate(QStyledItemDelegate):
+class MindspaceFilesDelegate(QStyledItemDelegate):
     """Custom item delegate that provides visual feedback for drop targets and handles inline editing."""
 
     edit_finished = Signal(QModelIndex, str)  # index, new_name
     edit_cancelled = Signal()
 
-    def __init__(self, tree_view: MindspaceFileTreeView, style_manager: StyleManager):
+    def __init__(self, tree_view: MindspaceFilesTreeView, style_manager: StyleManager):
         """
         Initialize the delegate.
 
@@ -52,7 +52,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
             # Use QTimer to ensure the geometry change has been processed
             QTimer.singleShot(0, self._current_editor.adjust_widget_size)
 
-    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> QRect:
+    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceFilesTreeView) -> QRect:
         """
         Calculate the rectangle that contains only the text portion of the item.
 
@@ -92,7 +92,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
 
         return text_rect
 
-    def _get_item_depth(self, index: QModelIndex, tree_view: MindspaceFileTreeView) -> int:
+    def _get_item_depth(self, index: QModelIndex, tree_view: MindspaceFilesTreeView) -> int:
         """
         Calculate the depth of an item in the tree hierarchy relative to the root index.
 
@@ -117,7 +117,7 @@ class MindspaceEditableDelegate(QStyledItemDelegate):
 
         return depth
 
-    def start_custom_edit(self, index: QModelIndex, tree_view: MindspaceFileTreeView, select_extension: bool = True) -> None:
+    def start_custom_edit(self, index: QModelIndex, tree_view: MindspaceFilesTreeView, select_extension: bool = True) -> None:
         """
         Start custom inline editing that bypasses the model's editing system.
 
