@@ -892,10 +892,15 @@ class MindspaceFilesView(QWidget):
         if not path:
             # Clear the model when no mindspace is active
             self._filter_model.set_mindspace_root("")
+            # Configure tree view for empty path
+            self._tree_view.configure_for_path("")
             return
 
         self._fs_model.setRootPath(path)
         self._filter_model.set_mindspace_root(path)
+
+        # Configure tree view with the mindspace path
+        self._tree_view.configure_for_path(path)
 
         # Set the root index directly to the mindspace directory
         mindspace_source_index = self._fs_model.index(path)

@@ -871,6 +871,8 @@ class MindspaceConversationsView(QWidget):
             # Clear the model when no mindspace is active
             self._conversations_path = None
             self._filter_model.set_conversations_root("")
+            # Configure tree view for empty path
+            self._tree_view.configure_for_path("")
             return
 
         # Set conversations directory path
@@ -880,15 +882,20 @@ class MindspaceConversationsView(QWidget):
         if not os.path.exists(self._conversations_path):
             try:
                 os.makedirs(self._conversations_path, exist_ok=True)
+
             except OSError as e:
                 self._logger.error("Failed to create conversations directory '%s': %s", self._conversations_path, str(e))
                 self._conversations_path = None
                 self._filter_model.set_conversations_root("")
+                self._tree_view.configure_for_path("")
                 return
 
         # Set the file system model root directly to the conversations directory
         self._fs_model.setRootPath(self._conversations_path)
         self._filter_model.set_conversations_root(self._conversations_path)
+
+        # Configure tree view with the conversations path
+        self._tree_view.configure_for_path(self._conversations_path)
 
         # Set the root index directly to the conversations directory
         conversations_source_index = self._fs_model.index(self._conversations_path)
