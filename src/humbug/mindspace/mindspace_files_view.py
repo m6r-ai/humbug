@@ -14,10 +14,10 @@ from humbug.color_role import ColorRole
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_file_move_dialog import MindspaceFileMoveDialog
-from humbug.mindspace.mindspace_files_delegate import MindspaceFilesDelegate
 from humbug.mindspace.mindspace_files_model import MindspaceFilesModel
 from humbug.mindspace.mindspace_files_tree_view import MindspaceFilesTreeView
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.style_manager import StyleManager
@@ -79,7 +79,7 @@ class MindspaceFilesView(QWidget):
         self._filter_model.setSourceModel(self._fs_model)
 
         # Create and set the editable delegate
-        self._delegate = MindspaceFilesDelegate(self._tree_view, self._style_manager)
+        self._delegate = MindspaceTreeDelegate(self._tree_view, self._style_manager)
         self._delegate.edit_finished.connect(self._on_delegate_edit_finished)
         self._delegate.edit_cancelled.connect(self._on_delegate_edit_cancelled)
         self._tree_view.setItemDelegate(self._delegate)
@@ -557,8 +557,8 @@ class MindspaceFilesView(QWidget):
 
         # Get the delegate and start custom editing
         delegate = self._tree_view.itemDelegate(filter_index)
-        if not isinstance(delegate, MindspaceFilesDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceFilesDelegate")
+        if not isinstance(delegate, MindspaceTreeDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
             return
 
         delegate.start_custom_edit(filter_index, self._tree_view, select_extension)
@@ -765,8 +765,8 @@ class MindspaceFilesView(QWidget):
 
         # Get the delegate and start rename editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
-        if not isinstance(delegate, MindspaceFilesDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceFilesDelegate")
+        if not isinstance(delegate, MindspaceTreeDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
             return
 
         delegate.start_custom_edit(index, self._tree_view, select_extension=False)

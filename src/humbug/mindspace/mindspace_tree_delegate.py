@@ -1,5 +1,6 @@
 """Base item delegate for mindspace tree views with inline editing and drop target support."""
 
+import os
 from typing import cast
 
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
@@ -13,8 +14,8 @@ from humbug.mindspace.mindspace_inline_editor import MindspaceInlineEditor
 from humbug.style_manager import StyleManager
 
 
-class MindspaceBaseDelegate(QStyledItemDelegate):
-    """Base item delegate that provides visual feedback for drop targets and handles inline editing."""
+class MindspaceTreeDelegate(QStyledItemDelegate):
+    """Tree item delegate that provides visual feedback for drop targets and handles inline editing."""
 
     edit_finished = Signal(QModelIndex, str)  # index, new_name
     edit_cancelled = Signal()
@@ -38,27 +39,35 @@ class MindspaceBaseDelegate(QStyledItemDelegate):
         # This ensures the tree view has processed the style change before we reposition the editor
         self._tree_view.style_updated.connect(self._on_tree_style_updated)
 
-    def get_tree_view_type(self) -> type:
-        """
-        Get the expected tree view type for type checking.
-        
-        Returns:
-            The expected tree view class type
-        """
-        raise NotImplementedError("Subclasses must implement get_tree_view_type")
-
     def validate_new_name(self, index: QModelIndex, new_name: str) -> tuple[bool, str]:
         """
-        Validate a new name for the item being edited.
-        
+        Validate a new name for uniqueness.
+
         Args:
             index: Model index being edited
             new_name: Proposed new name
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """
-        raise NotImplementedError("Subclasses must implement validate_new_name")
+        try:
+            # Get the file path from the tree view
+            file_path = self._tree_view.get_path_from_index(index)
+            if not file_path:
+                return False, self._language_manager.strings().error_validation_failed
+
+            # Get the directory
+            directory = os.path.dirname(file_path)
+
+            # Check if a file with this name already exists
+            new_path = os.path.join(directory, new_name)
+            if os.path.exists(new_path) and not os.path.samefile(new_path, file_path):
+                return False, self._language_manager.strings().rename_error_exists
+
+            return True, ""
+
+        except Exception:
+            return False, self._language_manager.strings().error_validation_failed
 
     def _on_tree_style_updated(self) -> None:
         """Handle tree view style updates by repositioning active editor."""
@@ -154,11 +163,6 @@ class MindspaceBaseDelegate(QStyledItemDelegate):
         """
         if self._current_editor is not None:
             return
-
-        # Validate tree view type
-        expected_type = self.get_tree_view_type()
-        if not isinstance(tree_view, expected_type):
-            raise TypeError(f"Expected tree view of type {expected_type.__name__}, got {type(tree_view).__name__}")
 
         # Get current text (full filename including extension)
         current_text = index.data(Qt.ItemDataRole.DisplayRole)
