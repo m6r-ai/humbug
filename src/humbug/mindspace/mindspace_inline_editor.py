@@ -9,7 +9,7 @@ from PySide6.QtGui import QFontMetrics, QKeyEvent, QFont
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_files_tree_view import MindspaceFilesTreeView
+from humbug.mindspace.mindspace_base_tree_view import MindspaceBaseTreeView
 from humbug.style_manager import StyleManager
 
 
@@ -38,7 +38,7 @@ class MindspaceInlineEditor(QWidget):
         self._language_manager = LanguageManager()
         self._validation_callback = validation_callback
         self._select_extension = select_extension
-        self._tree_view: MindspaceFilesTreeView | None = None  # Will be set by delegate
+        self._tree_view: MindspaceBaseTreeView | None = None  # Will be set by delegate
         self._editing_index: QModelIndex | None = None  # Will be set by delegate
 
         # Create layout
@@ -97,7 +97,7 @@ class MindspaceInlineEditor(QWidget):
         # No extension or empty name, select all
         self._line_edit.selectAll()
 
-    def set_tree_view(self, tree_view: MindspaceFilesTreeView) -> None:
+    def set_tree_view(self, tree_view: MindspaceBaseTreeView) -> None:
         """
         Set reference to tree view for viewport calculations.
 
@@ -129,7 +129,7 @@ class MindspaceInlineEditor(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         return font
 
-    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceFilesTreeView) -> QRect:
+    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceBaseTreeView) -> QRect:
         """
         Calculate the rectangle that contains only the text portion of the item.
         This is duplicated from the delegate to avoid circular imports.
