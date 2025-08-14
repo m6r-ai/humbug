@@ -9,7 +9,7 @@ from PySide6.QtGui import QPainter, QPen
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_base_tree_view import MindspaceBaseTreeView
+from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 from humbug.mindspace.mindspace_inline_editor import MindspaceInlineEditor
 from humbug.style_manager import StyleManager
 
@@ -20,7 +20,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
     edit_finished = Signal(QModelIndex, str)  # index, new_name
     edit_cancelled = Signal()
 
-    def __init__(self, tree_view: MindspaceBaseTreeView, style_manager: StyleManager):
+    def __init__(self, tree_view: MindspaceTreeView, style_manager: StyleManager):
         """
         Initialize the delegate.
 
@@ -82,7 +82,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
             # Use QTimer to ensure the geometry change has been processed
             QTimer.singleShot(0, self._current_editor.adjust_widget_size)
 
-    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceBaseTreeView) -> QRect:
+    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceTreeView) -> QRect:
         """
         Calculate the rectangle that contains only the text portion of the item.
 
@@ -122,7 +122,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
 
         return text_rect
 
-    def _get_item_depth(self, index: QModelIndex, tree_view: MindspaceBaseTreeView) -> int:
+    def _get_item_depth(self, index: QModelIndex, tree_view: MindspaceTreeView) -> int:
         """
         Calculate the depth of an item in the tree hierarchy relative to the root index.
 
@@ -150,7 +150,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
     def start_custom_edit(
         self,
         index: QModelIndex,
-        tree_view: MindspaceBaseTreeView,
+        tree_view: MindspaceTreeView,
         select_extension: bool = True
     ) -> None:
         """

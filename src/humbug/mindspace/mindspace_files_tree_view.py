@@ -6,10 +6,10 @@ from typing import cast, Callable
 from PySide6.QtWidgets import QWidget, QFileSystemModel
 from PySide6.QtCore import QSortFilterProxyModel, QDir
 
-from humbug.mindspace.mindspace_base_tree_view import MindspaceBaseTreeView
+from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 
 
-class MindspaceFilesTreeView(MindspaceBaseTreeView):
+class MindspaceFilesTreeView(MindspaceTreeView):
     """Custom tree view with drag and drop support, auto-scroll, and inline editing."""
 
     def __init__(self, parent: QWidget | None = None):
