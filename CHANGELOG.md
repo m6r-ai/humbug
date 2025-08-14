@@ -8,12 +8,16 @@ New features:
 - Added support for gpt-oss:20b and gpt-oss:120b via the Ollama driver.
 - Added support for Z.ai's GLM 4.5 models via a new Zai driver.
 - Removed the unused M6R backend.
+- Split out the conversations into a new view and simplified the files view so it no longer deals with complexities
+  associated with conversations.  This enabled a UI simplification that gives more screen real estate.
 
 Bug fixes:
 
 - The filesystem tool was setting `0o600` permissions instead of `0o666 & ~umask`.
 - On attempting to close the application, tab close checks would be run twice.  Now they're only run once.
 - Handle many more types of 500 series HTTP error with retries.
+- In looking at the new conversations view, it became clear that sorting by creation time was very slow.  Added a caching
+  solution and this has reduced application startup times by > 200 ms when lots of conversations are present.
 
 ## v0.21 (2025-08-06)
 

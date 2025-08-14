@@ -24,9 +24,15 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         self._conversations_root = ""
         self._conversation_sort_mode = self.SortMode.CREATION_TIME  # Default to creation time
 
+        # Cache for file creation times: {file_path: (cached_timestamp, file_mtime)}
+        self._creation_time_cache: dict[str, tuple[float, float]] = {}
+
     def set_conversations_root(self, path: str) -> None:
         """Set the conversations root path for filtering."""
         self._conversations_root = path
+
+        # Clear cache when conversations root changes
+        self._creation_time_cache.clear()
         self.invalidateFilter()
 
     def set_conversation_sort_mode(self, mode: SortMode) -> None:
@@ -48,6 +54,15 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
             Current sorting mode for conversation files
         """
         return self._conversation_sort_mode
+
+    def clear_creation_time_cache(self) -> None:
+        """
+        Clear the creation time cache.
+
+        This can be called when files are known to have changed externally
+        or when a full refresh is needed.
+        """
+        self._creation_time_cache.clear()
 
     def _is_conversation_file(self, file_path: str) -> bool:
         """
@@ -113,7 +128,7 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
 
     def _get_file_creation_time(self, file_path: str) -> float:
         """
-        Get file creation time, with conversation-aware fallbacks.
+        Get file creation time, with conversation-aware fallbacks and caching.
 
         Args:
             file_path: Path to the file
@@ -121,31 +136,64 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         Returns:
             Creation time as timestamp, or 0.0 if unable to determine
         """
-        # For conversation files, try to get timestamp from content first
-        if self._is_conversation_file(file_path):
-            conversation_time = self._get_conversation_timestamp(file_path)
-            if conversation_time > 0:
-                return conversation_time
-
-        # Fall back to filesystem timestamps
         try:
+            # Get current file modification time for cache validation
             stat_info = os.stat(file_path)
+            current_mtime = stat_info.st_mtime
 
-            # Use the most appropriate time field based on platform
-            # st_birthtime (macOS) > st_ctime (Windows/Unix) > st_mtime (fallback)
-            if hasattr(stat_info, 'st_birthtime') and stat_info.st_birthtime > 0:  # type: ignore[attr-defined]
-                return stat_info.st_birthtime  # type: ignore[attr-defined]
+            # Check if we have a cached result and if it's still valid
+            if file_path in self._creation_time_cache:
+                cached_timestamp, cached_mtime = self._creation_time_cache[file_path]
+                if cached_mtime == current_mtime:
+                    # Cache is still valid, return cached result
+                    return cached_timestamp
 
-            if hasattr(stat_info, 'st_ctime'):  # type: ignore[attr-defined]
-                return stat_info.st_ctime
+            # Cache miss or invalid - compute the creation time
+            creation_time = 0.0
 
-            return stat_info.st_mtime
+            # For conversation files, try to get timestamp from content first
+            if self._is_conversation_file(file_path):
+                conversation_time = self._get_conversation_timestamp(file_path)
+                if conversation_time > 0:
+                    creation_time = conversation_time
+
+                else:
+                    # Fall back to filesystem timestamps
+                    creation_time = self._get_filesystem_creation_time(stat_info)
+
+            else:
+                # Non-conversation file - use filesystem timestamps
+                creation_time = self._get_filesystem_creation_time(stat_info)
+
+            # Cache the result
+            self._creation_time_cache[file_path] = (creation_time, current_mtime)
+            return creation_time
 
         except OSError:
             # Return 0 if we can't get the time (file doesn't exist, permission error, etc.)
             return 0.0
 
-    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
+    def _get_filesystem_creation_time(self, stat_info: os.stat_result) -> float:
+        """
+        Get file creation time from filesystem stat information.
+
+        Args:
+            stat_info: Result from os.stat() call
+
+        Returns:
+            Creation time as timestamp
+        """
+        # Use the most appropriate time field based on platform
+        # st_birthtime (macOS) > st_ctime (Windows/Unix) > st_mtime (fallback)
+        if hasattr(stat_info, 'st_birthtime') and stat_info.st_birthtime > 0:  # type: ignore[attr-defined]
+            return stat_info.st_birthtime  # type: ignore[attr-defined]
+
+        if hasattr(stat_info, 'st_ctime'):  # type: ignore[attr-defined]
+            return stat_info.st_ctime
+
+        return stat_info.st_mtime
+
+    def filterAcceptsRow(self, _source_row: int, _source_parent: QModelIndex | QPersistentModelIndex) -> bool:
         """Show all files within the conversations directory."""
         # If no conversations root is set, don't show any files
         if not self._conversations_root:
