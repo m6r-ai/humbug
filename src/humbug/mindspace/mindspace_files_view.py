@@ -11,9 +11,9 @@ from PySide6.QtWidgets import (
 
 from humbug.color_role import ColorRole
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
-from humbug.mindspace.mindspace_file_model import MindspaceFileModel
 from humbug.mindspace.mindspace_file_move_dialog import MindspaceFileMoveDialog
 from humbug.mindspace.mindspace_files_delegate import MindspaceFilesDelegate
+from humbug.mindspace.mindspace_files_model import MindspaceFilesModel
 from humbug.mindspace.mindspace_files_tree_view import MindspaceFilesTreeView
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
@@ -76,7 +76,7 @@ class MindspaceFilesView(QWidget):
         self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.NoDotAndDotDot | QDir.Filter.Hidden)
 
         # Create filter model
-        self._filter_model = MindspaceFileModel()
+        self._filter_model = MindspaceFilesModel()
         self._filter_model.setSourceModel(self._fs_model)
 
         # Create and set the editable delegate
@@ -617,11 +617,11 @@ class MindspaceFilesView(QWidget):
 
                 sort_by_name = sort_menu.addAction(strings.sort_by_name)
                 sort_by_name.setCheckable(True)
-                sort_by_name.setChecked(current_mode == MindspaceFileModel.SortMode.NAME)
+                sort_by_name.setChecked(current_mode == MindspaceFilesModel.SortMode.NAME)
 
                 sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
                 sort_by_creation.setCheckable(True)
-                sort_by_creation.setChecked(current_mode == MindspaceFileModel.SortMode.CREATION_TIME)
+                sort_by_creation.setChecked(current_mode == MindspaceFilesModel.SortMode.CREATION_TIME)
 
             # Execute the menu
             action = menu.exec_(self._tree_view.viewport().mapToGlobal(position))
@@ -648,11 +648,11 @@ class MindspaceFilesView(QWidget):
                     # Handle conversations hierarchy sorting actions
                     if is_in_conversations_hierarchy:
                         if action == sort_by_name:
-                            self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.NAME)
+                            self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.NAME)
                             return
 
                         if action == sort_by_creation:
-                            self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.CREATION_TIME)
+                            self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.CREATION_TIME)
                             return
 
                 else:
@@ -676,11 +676,11 @@ class MindspaceFilesView(QWidget):
                     # Handle sorting actions for files in conversations hierarchy
                     if is_in_conversations_hierarchy:
                         if action == sort_by_name:
-                            self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.NAME)
+                            self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.NAME)
                             return
 
                         if action == sort_by_creation:
-                            self._filter_model.set_conversation_sort_mode(MindspaceFileModel.SortMode.CREATION_TIME)
+                            self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.CREATION_TIME)
                             return
 
     def _start_new_folder_creation(self, parent_path: str) -> None:

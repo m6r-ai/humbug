@@ -10,7 +10,7 @@ from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelI
 from PySide6.QtWidgets import QFileSystemModel, QWidget
 
 
-class MindspaceFileModel(QSortFilterProxyModel):
+class MindspaceFilesModel(QSortFilterProxyModel):
     """Filter model to hide .humbug directory and apply custom sorting."""
 
     class SortMode(Enum):
