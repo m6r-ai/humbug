@@ -435,25 +435,6 @@ class MindspaceFilesView(QWidget):
 
             counter += 1
 
-    def _is_in_conversations_hierarchy(self, path: str) -> bool:
-        """
-        Check if the given path is anywhere within the conversations folder hierarchy.
-
-        Args:
-            path: Path to check
-
-        Returns:
-            True if this path is within the conversations folder hierarchy, False otherwise
-        """
-        if not self._mindspace_path or not path:
-            return False
-
-        conversations_path = os.path.join(self._mindspace_path, "conversations")
-        normalized_path = os.path.normpath(path)
-        normalized_conversations = os.path.normpath(conversations_path)
-
-        return normalized_path.startswith(normalized_conversations + os.sep) or normalized_path == normalized_conversations
-
     def reveal_and_select_file(self, file_path: str) -> None:
         """
         Expand the tree to show the given file and select it.
@@ -609,24 +590,6 @@ class MindspaceFilesView(QWidget):
         new_file_action = menu.addAction(strings.new_file)
         new_file_action.triggered.connect(lambda: self._start_new_file_creation(self._mindspace_path))
 
-        # Add sorting options for conversations hierarchy
-        menu.addSeparator()
-        sort_menu = menu.addMenu(strings.sort_by)
-
-        current_mode = self._filter_model.get_conversation_sort_mode()
-
-        sort_by_name = sort_menu.addAction(strings.sort_by_name)
-        sort_by_name.setCheckable(True)
-        sort_by_name.setChecked(current_mode == MindspaceFilesModel.SortMode.NAME)
-        sort_by_name.triggered.connect(lambda: self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.NAME))
-
-        sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
-        sort_by_creation.setCheckable(True)
-        sort_by_creation.setChecked(current_mode == MindspaceFilesModel.SortMode.CREATION_TIME)
-        sort_by_creation.triggered.connect(
-            lambda: self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.CREATION_TIME)
-        )
-
         return menu
 
     def _show_context_menu(self, position: QPoint) -> None:
@@ -652,8 +615,6 @@ class MindspaceFilesView(QWidget):
             # Create actions based on item type
             if is_dir:
                 # Directory context menu
-                edit_action = None
-                duplicate_action = None
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
                 new_file_action = menu.addAction(strings.new_file)
@@ -669,37 +630,10 @@ class MindspaceFilesView(QWidget):
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
-                new_file_action = None
-                new_folder_action = None
                 rename_action = menu.addAction(strings.rename)
                 rename_action.triggered.connect(lambda: self._start_rename(index))
                 delete_action = menu.addAction(strings.delete)
                 delete_action.triggered.connect(lambda: self._handle_delete_file(path))
-
-            sort_by_name = None
-            sort_by_creation = None
-
-            # Check if this is in the conversations hierarchy
-            is_in_conversations_hierarchy = self._is_in_conversations_hierarchy(path)
-            if is_in_conversations_hierarchy:
-                menu.addSeparator()
-                sort_menu = menu.addMenu(strings.sort_by)
-
-                current_mode = self._filter_model.get_conversation_sort_mode()
-
-                sort_by_name = sort_menu.addAction(strings.sort_by_name)
-                sort_by_name.setCheckable(True)
-                sort_by_name.setChecked(current_mode == MindspaceFilesModel.SortMode.NAME)
-                sort_by_name.triggered.connect(
-                    lambda: self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.NAME)
-                )
-
-                sort_by_creation = sort_menu.addAction(strings.sort_by_creation_time)
-                sort_by_creation.setCheckable(True)
-                sort_by_creation.setChecked(current_mode == MindspaceFilesModel.SortMode.CREATION_TIME)
-                sort_by_creation.triggered.connect(
-                    lambda: self._filter_model.set_conversation_sort_mode(MindspaceFilesModel.SortMode.CREATION_TIME)
-                )
 
         menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
