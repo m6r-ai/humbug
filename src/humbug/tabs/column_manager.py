@@ -1793,8 +1793,9 @@ class ColumnManager(QWidget):
 
         # Trigger repaint of the tab bar to show updated colors
         for column in self._tab_columns:
-            if isinstance(column.tabBar(), TabBar):
-                column.tabBar().update()
+            tab_bar = column.tabBar()
+            if isinstance(tab_bar, TabBar):
+                tab_bar.update_tab_size()
 
     def can_undo(self) -> bool:
         """Check if the last action can be undone."""
