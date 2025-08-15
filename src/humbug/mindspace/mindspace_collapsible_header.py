@@ -192,7 +192,7 @@ class MindspaceCollapsibleHeader(QWidget):
             QToolButton {{
                 background-color: transparent;
                 border: none;
-                padding: 0px;
+                padding: 0px 0px 0px 2px;
                 margin: 0px;
             }}
         """)
