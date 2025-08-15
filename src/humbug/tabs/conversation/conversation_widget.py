@@ -1924,6 +1924,9 @@ class ConversationWidget(QWidget):
         # Get all messages from history
         all_messages = history.get_messages()
 
+        # Capture the prompt from the first message we're deleting.
+        prompt = all_messages[index].content
+
         # Keep only the messages up to the specified index
         preserved_history_messages = all_messages[:index]
 
@@ -1952,13 +1955,14 @@ class ConversationWidget(QWidget):
             # Emit status update
             self.status_updated.emit()
 
+            # Put the focus back to the input
+            self._focused_message_index = -1
+            self._input.set_content(prompt)
+            self._input.set_focused(True)
+
             # Scroll to bottom
             self._auto_scroll = True
             self._scroll_to_bottom()
-
-            # Put the focus back to the input
-            self._focused_message_index = -1
-            self._input.set_focused(True)
 
         except Exception as e:
             self._logger.error("Failed to update transcript after deletion: %s", str(e))

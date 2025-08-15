@@ -10,6 +10,7 @@ New features:
 - Removed the unused M6R backend.
 - Split out the conversations into a new view and simplified the files view so it no longer deals with complexities
   associated with conversations.  This enabled a UI simplification that gives more screen real estate.
+- When we delete the end of a conversation from a specific user message, reinsert that prompt into the input box.
 
 Bug fixes:
 

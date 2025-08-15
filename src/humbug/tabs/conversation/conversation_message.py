@@ -635,16 +635,17 @@ class ConversationMessage(QFrame):
         """
         self._message_content = text
 
-        # Extract sections directly using the markdown converter
-        if not self._is_input:
-            # Process the content and extract sections in one step
-            sections_data = self._markdown_converter.extract_sections(text, None)
+        # Input widgets don't have multiple sections so handle them as a special case.
+        if self._is_input:
+            self._sections[0].set_content(MarkdownASTTextNode(text))
+            if text:
+                self._message_rendered = True
+                self.show()
 
-        else:
-            # Input widgets don't use markdown processing
-            text_node = MarkdownASTDocumentNode()
-            text_node.add_child(MarkdownASTTextNode(text))
-            sections_data = [(text_node, None)]
+            return
+
+        # Extract sections directly using the markdown converter
+        sections_data = self._markdown_converter.extract_sections(text, None)
 
         # Create or update sections
         for i, (node, language) in enumerate(sections_data):
