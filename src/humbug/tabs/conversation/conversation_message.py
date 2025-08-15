@@ -11,7 +11,7 @@ from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QResizeEvent, QCo
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
-from dmarkdown import MarkdownASTDocumentNode, MarkdownASTTextNode, MarkdownConverter
+from dmarkdown import MarkdownASTTextNode, MarkdownConverter
 from syntax import ProgrammingLanguage
 
 from humbug.color_role import ColorRole
