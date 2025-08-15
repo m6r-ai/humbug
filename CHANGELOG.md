@@ -20,6 +20,11 @@ Bug fixes:
 - In looking at the new conversations view, it became clear that sorting by creation time was very slow.  Added a caching
   solution and this has reduced application startup times by > 200 ms when lots of conversations are present.
 
+Internal structure changes:
+
+- Split out the AI conversation transcript handling and moved it to a top-level package within the Humbug repo.  This is
+  useful for stand-alone applications.
+
 ## v0.21 (2025-08-06)
 
 New features:

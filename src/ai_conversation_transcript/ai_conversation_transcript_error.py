@@ -1,7 +1,7 @@
 from typing import Dict
 
 
-class ConversationTranscriptError(Exception):
+class AIConversationTranscriptError(Exception):
     """Base exception class for transcript-related errors."""
 
     def __init__(self, message: str, details: Dict | None = None):
@@ -16,9 +16,9 @@ class ConversationTranscriptError(Exception):
         self.details = details or {}
 
 
-class ConversationTranscriptFormatError(ConversationTranscriptError):
+class AIConversationTranscriptFormatError(AIConversationTranscriptError):
     """Exception raised when transcript format is invalid."""
 
 
-class ConversationTranscriptIOError(ConversationTranscriptError):
+class AIConversationTranscriptIOError(AIConversationTranscriptError):
     """Exception raised when transcript file operations fail."""

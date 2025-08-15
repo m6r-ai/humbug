@@ -17,6 +17,7 @@ from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
     AIConversationSettings, AIReasoningCapability, AIMessage, AIMessageSource
 )
+from ai_conversation_transcript import AIConversationTranscriptError, AIConversationTranscriptHandler
 from ai_tool import AIToolCall
 
 from humbug.color_role import ColorRole
@@ -27,8 +28,6 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
 from humbug.tabs.conversation.conversation_message import ConversationMessage
-from humbug.tabs.conversation.conversation_transcript_error import ConversationTranscriptError
-from humbug.tabs.conversation.conversation_transcript_handler import ConversationTranscriptHandler
 
 
 @dataclass
@@ -286,7 +285,7 @@ class ConversationWidget(QWidget):
         self._install_activation_tracking(self._messages_container)
 
         # Create transcript handler with provided filename, then load the transcript data
-        self._transcript_handler = ConversationTranscriptHandler(path)
+        self._transcript_handler = AIConversationTranscriptHandler(path)
         transcript_data = self._transcript_handler.read()
         self._load_message_history(transcript_data.messages, use_existing_ai_conversation)
         self._set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
@@ -887,7 +886,7 @@ class ConversationWidget(QWidget):
         try:
             self._transcript_handler.write([message.to_transcript_dict()])
 
-        except ConversationTranscriptError:
+        except AIConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
 
     def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
