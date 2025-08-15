@@ -2,9 +2,9 @@
 
 from typing import Callable
 
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton, QMenu
 from PySide6.QtCore import Signal, Qt, QSize, QPoint
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QMouseEvent
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton, QMenu
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -150,7 +150,7 @@ class MindspaceCollapsibleHeader(QWidget):
 
         menu.exec_(self.mapToGlobal(position))
 
-    def mousePressEvent(self, event) -> None:
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events to make entire header clickable."""
         if event.button() == Qt.MouseButton.LeftButton:
             self._toggle_expanded()

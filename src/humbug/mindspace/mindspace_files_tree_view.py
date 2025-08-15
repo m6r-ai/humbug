@@ -1,10 +1,10 @@
 """File tree view implementation for mindspace files with drag and drop support and inline editing."""
 
 import os
-from typing import cast, Callable
+from typing import cast
 
+from PySide6.QtCore import QSortFilterProxyModel, QDir, QModelIndex
 from PySide6.QtWidgets import QWidget, QFileSystemModel
-from PySide6.QtCore import QSortFilterProxyModel, QDir
 
 from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 
@@ -54,7 +54,7 @@ class MindspaceFilesTreeView(MindspaceTreeView):
         """
         self._mindspace_path = path
 
-    def get_path_from_index(self, index) -> str | None:
+    def get_path_from_index(self, index: QModelIndex) -> str | None:
         """
         Get the file system path from a model index.
 

@@ -63,11 +63,6 @@ class UserSettings:
             # Load AI backend settings
             if "ai_backends" in data:
                 for backend_id, backend_data in data["ai_backends"].items():
-                    # Skip m6r backend if present in old settings
-                    if backend_id == "m6r":
-                        continue
-                    
-                    # Only process known backends
                     if backend_id in settings.ai_backends:
                         settings.ai_backends[backend_id] = AIBackendSettings(
                             enabled=backend_data.get("enabled", False),
