@@ -105,6 +105,15 @@ class MindspaceConversationsView(QWidget):
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
 
+    def get_header_height(self) -> int:
+        """
+        Get the height of the header.
+
+        Returns:
+            Header height in pixels
+        """
+        return self._header.sizeHint().height()
+
     def _on_header_toggled(self, expanded: bool) -> None:
         """
         Handle header expand/collapse toggle.

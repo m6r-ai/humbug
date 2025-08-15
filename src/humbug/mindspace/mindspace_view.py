@@ -132,7 +132,7 @@ class MindspaceView(QWidget):
             total_height = 400
 
         # Calculate header height based on zoom factor
-        header_height = self._conversations_view._header.sizeHint().height()
+        header_height = self._conversations_view.get_header_height()
 
         if conversations_expanded and files_expanded:
             # Both expanded - restore saved sizes or use equal split, no space for spacer
