@@ -7,14 +7,13 @@ from typing import cast
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir
 from PySide6.QtWidgets import (
-    QFileSystemModel, QWidget, QVBoxLayout, QMenu, QDialog
+    QFileSystemModel, QWidget, QVBoxLayout, QMenu
 )
 
 from humbug.color_role import ColorRole
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_conversations_model import MindspaceConversationsModel
-from humbug.mindspace.mindspace_file_move_dialog import MindspaceFileMoveDialog
 from humbug.mindspace.mindspace_conversations_tree_view import MindspaceConversationsTreeView
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
@@ -158,6 +157,32 @@ class MindspaceConversationsView(QWidget):
         # This ensures both the old drop target and new drop target are repainted
         self._tree_view.viewport().update()
 
+    def _create_move_confirmation_message(self, item_name: str, source_path: str, dest_path: str) -> str:
+        """Create the confirmation message for file/folder move operations."""
+        strings = self._language_manager.strings()
+
+        # Get display paths (relative to mindspace if possible)
+        display_source = self._get_display_path(source_path)
+        display_dest = self._get_display_path(dest_path)
+
+        # Determine if it's a file or folder
+        is_folder = os.path.isdir(source_path)
+        confirmation_text = (strings.move_folder_confirmation.format(item_name)
+                            if is_folder else strings.move_file_confirmation.format(item_name))
+
+        return f"{confirmation_text}\n\n{strings.move_from_label} {display_source}\n\n{strings.move_to_label} {display_dest}"
+
+    def _get_display_path(self, path: str) -> str:
+        """Get the display path for the dialog (relative to mindspace if possible)."""
+        try:
+            if self._mindspace_manager.has_mindspace():
+                return self._mindspace_manager.get_relative_path(path)
+
+        except Exception:
+            pass
+
+        return path
+
     def _on_file_dropped(self, source_path: str, target_path: str) -> None:
         """
         Handle a file/folder drop operation.
@@ -182,9 +207,21 @@ class MindspaceConversationsView(QWidget):
                 )
                 return
 
-            # Show confirmation dialog
-            dialog = MindspaceFileMoveDialog(source_path, destination_path, self)
-            if dialog.exec() != QDialog.DialogCode.Accepted:
+            # Show confirmation dialog using MessageBox instead of custom dialog
+            strings = self._language_manager.strings()
+            is_folder = os.path.isdir(source_path)
+            title = strings.move_folder_title if is_folder else strings.move_file_title
+            message = self._create_move_confirmation_message(item_name, source_path, destination_path)
+
+            result = MessageBox.show_message(
+                self,
+                MessageBoxType.QUESTION,
+                title,
+                message,
+                [MessageBoxButton.YES, MessageBoxButton.NO]
+            )
+
+            if result != MessageBoxButton.YES:
                 return
 
             # Perform the move operation
