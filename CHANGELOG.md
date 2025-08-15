@@ -19,6 +19,7 @@ Bug fixes:
 - Handle many more types of 500 series HTTP error with retries.
 - In looking at the new conversations view, it became clear that sorting by creation time was very slow.  Added a caching
   solution and this has reduced application startup times by > 200 ms when lots of conversations are present.
+- Fixed a problem with tab bar zooming.
 
 Internal structure changes:
 
