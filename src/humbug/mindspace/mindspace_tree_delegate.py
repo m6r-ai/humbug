@@ -9,8 +9,8 @@ from PySide6.QtGui import QPainter, QPen
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.mindspace_tree_inline_editor import MindspaceTreeInlineEditor
 from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
-from humbug.mindspace.mindspace_inline_editor import MindspaceInlineEditor
 from humbug.style_manager import StyleManager
 
 
@@ -32,7 +32,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         self._tree_view = tree_view
         self._style_manager = style_manager
         self._language_manager = LanguageManager()
-        self._current_editor: MindspaceInlineEditor | None = None
+        self._current_editor: MindspaceTreeInlineEditor | None = None
         self._editing_index: QModelIndex | None = None
 
         # Connect to tree view's style update signal to handle zoom updates during editing
@@ -174,7 +174,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
             return self.validate_new_name(index, new_name)
 
         # Create the inline editor - it will automatically connect to style manager
-        editor = MindspaceInlineEditor(
+        editor = MindspaceTreeInlineEditor(
             initial_text=current_text,
             validation_callback=validation_callback,
             select_extension=select_extension

@@ -13,7 +13,7 @@ from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 from humbug.style_manager import StyleManager
 
 
-class MindspaceInlineEditor(QWidget):
+class MindspaceTreeInlineEditor(QWidget):
     """Custom inline editor with validation for file/folder names."""
 
     edit_finished = Signal(str)  # Emits the new name when editing is confirmed
