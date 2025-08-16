@@ -162,12 +162,6 @@ class MindspaceTreeInlineEditor(QLineEdit):
 
     def keyPressEvent(self, event) -> None:
         """Handle key events."""
-        if event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
-            # Only accept if validation passes
-            if self._is_valid:
-                self.edit_finished.emit(self.text().strip())
-            return
-
         if event.key() == Qt.Key.Key_Escape:
             self.edit_cancelled.emit()
             return

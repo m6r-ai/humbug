@@ -152,6 +152,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         if isinstance(editor, MindspaceTreeInlineEditor):
             if editor.is_valid():
                 new_name = editor.get_text()
+
                 # Emit our custom signal instead of modifying the model directly
                 # The view will handle the actual file operations
                 self.edit_finished.emit(index, new_name)
