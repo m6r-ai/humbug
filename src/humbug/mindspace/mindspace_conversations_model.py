@@ -6,7 +6,7 @@ import json
 import os
 from typing import cast
 
-from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex
+from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex, Qt
 from PySide6.QtWidgets import QFileSystemModel, QWidget
 
 
@@ -54,6 +54,16 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
             Current sorting mode for conversation files
         """
         return self._conversation_sort_mode
+
+    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
+        """Return the item flags for the given index, making all items editable."""
+        base_flags = super().flags(index)
+
+        # Make all items editable so Qt's editing system works
+        if index.isValid():
+            return base_flags | Qt.ItemFlag.ItemIsEditable
+
+        return base_flags
 
     def clear_creation_time_cache(self) -> None:
         """

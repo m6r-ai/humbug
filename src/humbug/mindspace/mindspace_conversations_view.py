@@ -601,14 +601,15 @@ class MindspaceConversationsView(QWidget):
         filter_index = self._filter_model.mapFromSource(source_index)
         if not filter_index.isValid():
             self._logger.warning("Filter index not valid for path: '%s'", item_path)
+            return
 
-        # Get the delegate and start custom editing
+        # Get the delegate and start editing
         delegate = self._tree_view.itemDelegate(filter_index)
         if not isinstance(delegate, MindspaceTreeDelegate):
             self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
             return
 
-        delegate.start_custom_edit(filter_index, self._tree_view, select_extension)
+        delegate.start_editing(filter_index, select_extension)
 
     def _create_header_context_menu(self) -> QMenu | None:
         """
@@ -787,13 +788,13 @@ class MindspaceConversationsView(QWidget):
         if not index.isValid():
             return
 
-        # Get the delegate and start rename editing (excludes extension from selection)
+        # Get the delegate and start Qt-based editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
         if not isinstance(delegate, MindspaceTreeDelegate):
             self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
             return
 
-        delegate.start_custom_edit(index, self._tree_view, select_extension=False)
+        delegate.start_editing(index, select_extension=False)
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""

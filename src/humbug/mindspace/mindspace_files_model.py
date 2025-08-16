@@ -3,7 +3,7 @@
 import os
 from typing import cast
 
-from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex
+from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex, Qt
 from PySide6.QtWidgets import QFileSystemModel, QWidget
 
 
@@ -19,6 +19,16 @@ class MindspaceFilesModel(QSortFilterProxyModel):
         """Set the mindspace root path for relative path calculations."""
         self._mindspace_root = path
         self.invalidateFilter()
+
+    def flags(self, index: QModelIndex | QPersistentModelIndex) -> Qt.ItemFlag:
+        """Return the item flags for the given index, making all items editable."""
+        base_flags = super().flags(index)
+
+        # Make all items editable so Qt's editing system works
+        if index.isValid():
+            return base_flags | Qt.ItemFlag.ItemIsEditable
+
+        return base_flags
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
         """Filter out .humbug directory."""

@@ -4,7 +4,7 @@ import os
 from typing import cast
 
 from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
-from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect, QEvent, QObject, QTimer
+from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect
 from PySide6.QtGui import QPainter, QPen
 
 from humbug.color_role import ColorRole
@@ -32,12 +32,18 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         self._tree_view = tree_view
         self._style_manager = style_manager
         self._language_manager = LanguageManager()
-        self._current_editor: MindspaceTreeInlineEditor | None = None
-        self._editing_index: QModelIndex | None = None
 
-        # Connect to tree view's style update signal to handle zoom updates during editing
-        # This ensures the tree view has processed the style change before we reposition the editor
-        self._tree_view.style_updated.connect(self._on_tree_style_updated)
+        # Track editor configuration for the next edit operation
+        self._next_edit_select_extension = True
+
+    def set_edit_selection_mode(self, select_extension: bool) -> None:
+        """
+        Configure how text should be selected for the next edit operation.
+
+        Args:
+            select_extension: Whether to select the file extension in addition to the name
+        """
+        self._next_edit_select_extension = select_extension
 
     def validate_new_name(self, index: QModelIndex, new_name: str) -> tuple[bool, str]:
         """
@@ -69,35 +75,102 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         except Exception:
             return False, self._language_manager.strings().error_validation_failed
 
-    def _on_tree_style_updated(self) -> None:
-        """Handle tree view style updates by repositioning active editor."""
-        if self._current_editor and self._editing_index:
-            # Recalculate the text rect with new zoom factor
-            rect = self._calculate_text_rect(self._editing_index, self._tree_view)
-
-            # Update the editor's initial geometry
-            self._current_editor.setGeometry(rect)
-
-            # Trigger the editor's size adjustment after geometry change
-            # Use QTimer to ensure the geometry change has been processed
-            QTimer.singleShot(0, self._current_editor.adjust_widget_size)
-
-    def _calculate_text_rect(self, index: QModelIndex, tree_view: MindspaceTreeView) -> QRect:
+    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
         """
-        Calculate the rectangle that contains only the text portion of the item.
+        Create the inline editor widget.
 
         Args:
-            index: Model index of the item
-            tree_view: The tree view widget
+            parent: Parent widget (tree view's viewport)
+            option: Style options for the item
+            index: Model index being edited
+
+        Returns:
+            The editor widget
+        """
+        # Get current text (full filename including extension)
+        current_text = index.data(Qt.ItemDataRole.DisplayRole)
+        if not current_text:
+            current_text = ""
+
+        # Create validation callback to check for existing files
+        def validation_callback(new_name: str) -> tuple[bool, str]:
+            return self.validate_new_name(index, new_name)
+
+        # Create the inline editor
+        editor = MindspaceTreeInlineEditor(
+            initial_text=current_text,
+            validation_callback=validation_callback,
+            select_extension=self._next_edit_select_extension,
+            parent=parent
+        )
+
+        # Connect signals
+        editor.edit_finished.connect(lambda name: self._on_edit_finished(index, name))
+        editor.edit_cancelled.connect(self._on_edit_cancelled)
+
+        # Reset selection mode for next time
+        self._next_edit_select_extension = True
+
+        return editor
+
+    def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
+        """
+        Set the initial data in the editor.
+
+        Args:
+            editor: The editor widget
+            index: Model index being edited
+        """
+        if isinstance(editor, MindspaceTreeInlineEditor):
+            current_text = index.data(Qt.ItemDataRole.DisplayRole)
+            if current_text:
+                editor.set_text(current_text)
+
+    def updateEditorGeometry(self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+        """
+        Update the editor geometry. Qt calls this automatically during scrolling.
+
+        Args:
+            editor: The editor widget
+            option: Style options for the item
+            index: Model index being edited
+        """
+        if isinstance(editor, MindspaceTreeInlineEditor):
+            # Calculate text-only rectangle (excluding icon)
+            text_rect = self._calculate_text_rect_from_option(option)
+            editor.setGeometry(text_rect)
+
+    def setModelData(self, editor: QWidget, model, index: QModelIndex) -> None:
+        """
+        Transfer data from editor to model. This is where we handle the actual file operations.
+
+        Args:
+            editor: The editor widget
+            model: The model
+            index: Model index being edited
+        """
+        if isinstance(editor, MindspaceTreeInlineEditor):
+            if editor.is_valid():
+                new_name = editor.get_text()
+                # Emit our custom signal instead of modifying the model directly
+                # The view will handle the actual file operations
+                self.edit_finished.emit(index, new_name)
+
+    def _calculate_text_rect_from_option(self, option: QStyleOptionViewItem) -> QRect:
+        """
+        Calculate the rectangle that contains only the text portion of the item from style option.
+
+        Args:
+            option: Style options for the item
 
         Returns:
             QRect covering only the text area (excluding icon)
         """
-        # Get the full visual rect (this already has correct positioning)
-        full_rect = tree_view.visualRect(index)
+        # Get the full rect from the option
+        full_rect = option.rect
 
         # Get the icon size (already scaled by zoom factor)
-        icon_size = tree_view.iconSize()
+        icon_size = self._tree_view.iconSize()
         icon_width = icon_size.width()
 
         # Standard spacing between icon and text in Qt tree views (scale with zoom)
@@ -122,110 +195,21 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
 
         return text_rect
 
-    def _get_item_depth(self, index: QModelIndex, tree_view: MindspaceTreeView) -> int:
+    def _on_edit_finished(self, index: QModelIndex, new_name: str) -> None:
         """
-        Calculate the depth of an item in the tree hierarchy relative to the root index.
+        Handle when editing is finished.
 
         Args:
-            index: Model index of the item
-            tree_view: The tree view widget
-
-        Returns:
-            Depth level (0 for items at root level)
+            index: Model index that was edited
+            new_name: The new name entered by the user
         """
-        if not index.isValid():
-            return 0
+        self.edit_finished.emit(index, new_name)
 
-        depth = 0
-        current = index
-        root_index = tree_view.rootIndex()
-
-        # Walk up the parent chain until we reach the root or an invalid index
-        while current.parent().isValid() and current.parent() != root_index:
-            depth += 1
-            current = current.parent()
-
-        return depth
-
-    def start_custom_edit(
-        self,
-        index: QModelIndex,
-        tree_view: MindspaceTreeView,
-        select_extension: bool = True
-    ) -> None:
+    def _on_edit_cancelled(self) -> None:
         """
-        Start custom inline editing that bypasses the model's editing system.
-
-        Args:
-            index: Model index to edit
-            tree_view: The tree view widget
-            select_extension: Whether to select the file extension in addition to the name
+        Handle when editing is cancelled.
         """
-        if self._current_editor is not None:
-            return
-
-        # Get current text (full filename including extension)
-        current_text = index.data(Qt.ItemDataRole.DisplayRole)
-        if not current_text:
-            current_text = ""
-
-        # Create validation callback to check for existing files
-        def validation_callback(new_name: str) -> tuple[bool, str]:
-            return self.validate_new_name(index, new_name)
-
-        # Create the inline editor - it will automatically connect to style manager
-        editor = MindspaceTreeInlineEditor(
-            initial_text=current_text,
-            validation_callback=validation_callback,
-            select_extension=select_extension
-        )
-
-        # Connect signals
-        editor.edit_finished.connect(lambda name: self._on_edit_finished(index, name))
-        editor.edit_cancelled.connect(self._on_edit_cancelled)
-
-        # Track the current editor
-        self._current_editor = editor
-        self._editing_index = index
-
-        # Set up the editor geometry and parent
-        editor.setParent(tree_view.viewport())
-
-        # Set reference to tree view for viewport calculations
-        editor.set_tree_view(tree_view)
-
-        # Set the editing index for position calculations
-        editor.set_editing_index(index)
-
-        # Get the text-only rect instead of full visual rect
-        rect = self._calculate_text_rect(index, tree_view)
-
-        # Set initial geometry (will be adjusted when error shows)
-        editor.setGeometry(rect)
-
-        # Show and focus the editor
-        editor.show()
-        editor.focus_editor()
-
-        # Install event filter to handle clicks outside the editor
-        editor.installEventFilter(self)
-        tree_view.viewport().installEventFilter(self)
-
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # type: ignore[override]
-        """Handle events to close editor when clicking outside."""
-        if self._current_editor and event.type() == event.Type.MouseButtonPress:
-            # Check if the click was outside the editor
-            if isinstance(obj, QWidget) and obj != self._current_editor and not self._current_editor.isAncestorOf(obj):
-                # Click outside editor - commit if valid, otherwise cancel
-                if self._current_editor.is_valid():
-                    self._current_editor.edit_finished.emit(self._current_editor.get_text())
-
-                else:
-                    self._current_editor.edit_cancelled.emit()
-
-                return True
-
-        return super().eventFilter(obj, event)
+        self.edit_cancelled.emit()
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
         """
@@ -266,41 +250,17 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         # Call the parent paint method to draw the normal item content
         super().paint(painter, option, index)
 
-    def _on_edit_finished(self, index: QModelIndex, new_name: str) -> None:
+    def start_editing(self, index: QModelIndex, select_extension: bool = True) -> None:
         """
-        Handle when editing is finished.
+        Start editing a specific file path.
 
         Args:
-            index: Model index that was edited
-            new_name: The new name entered by the user
+            index: Model index to edit
+            select_extension: Whether to select the file extension in addition to the name
         """
-        self._cleanup_editor()
-        self.edit_finished.emit(index, new_name)
-
-    def _on_edit_cancelled(self) -> None:
-        """
-        Handle when editing is cancelled.
-        """
-        self._cleanup_editor()
-        self.edit_cancelled.emit()
-
-    def _cleanup_editor(self) -> None:
-        """Clean up the current editor state."""
-        if self._current_editor:
-            # Remove event filters
-            self._current_editor.removeEventFilter(self)
-            if self._tree_view and self._tree_view.viewport():
-                self._tree_view.viewport().removeEventFilter(self)
-
-            # Clean up style manager connections
-            self._current_editor.cleanup_connections()
-
-            # Hide and delete the editor
-            self._current_editor.hide()
-            self._current_editor.deleteLater()
-
-        self._current_editor = None
-        self._editing_index = None
+        # Configure selection mode for the next edit
+        self.set_edit_selection_mode(select_extension)
+        self._tree_view.edit(index)
 
     def is_editing(self, index: QModelIndex) -> bool:
         """
@@ -312,4 +272,6 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         Returns:
             True if the index is being edited
         """
-        return self._editing_index is not None and self._editing_index == index
+        # Check if the tree view has an active editor for this index
+        current_editor = self._tree_view.indexWidget(index)
+        return isinstance(current_editor, MindspaceTreeInlineEditor)
