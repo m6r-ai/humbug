@@ -1,11 +1,11 @@
 """Simplified inline editor widget for mindspace file tree items that works with Qt's editor system."""
 
 import os
-from typing import Callable
+from typing import Callable, Any
 
 from PySide6.QtWidgets import QLineEdit, QWidget
 from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QKeyEvent
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -160,7 +160,7 @@ class MindspaceTreeInlineEditor(QLineEdit):
 
         self.setStyleSheet(style)
 
-    def keyPressEvent(self, event) -> None:
+    def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle key events."""
         if event.key() == Qt.Key.Key_Escape:
             self.edit_cancelled.emit()
