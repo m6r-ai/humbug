@@ -33,8 +33,17 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         self._style_manager = style_manager
         self._language_manager = LanguageManager()
 
+        self.closeEditor.connect(self._on_close_editor)
+
         # Track editor configuration for the next edit operation
         self._next_edit_select_extension = True
+
+    def _on_close_editor(self, editor: QWidget, hint) -> None:
+        """Handle when Qt closes an editor."""
+        if isinstance(editor, MindspaceTreeInlineEditor):
+            if hint == QStyledItemDelegate.EndEditHint.RevertModelCache:
+                # This means the edit was cancelled (usually by Escape key)
+                self.edit_cancelled.emit()
 
     def set_edit_selection_mode(self, select_extension: bool) -> None:
         """
