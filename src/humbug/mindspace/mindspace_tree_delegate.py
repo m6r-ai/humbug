@@ -1,10 +1,9 @@
 """Base item delegate for mindspace tree views with inline editing and drop target support."""
 
 import os
-from typing import cast
 
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
-from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect
+from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget, QAbstractItemDelegate
+from PySide6.QtCore import Qt, QModelIndex, QPersistentModelIndex, Signal, QRect, QAbstractItemModel
 from PySide6.QtGui import QPainter, QPen
 
 from humbug.color_role import ColorRole
@@ -38,10 +37,10 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         # Track editor configuration for the next edit operation
         self._next_edit_select_extension = True
 
-    def _on_close_editor(self, editor: QWidget, hint) -> None:
+    def _on_close_editor(self, editor: QWidget, hint: QAbstractItemDelegate.EndEditHint) -> None:
         """Handle when Qt closes an editor."""
         if isinstance(editor, MindspaceTreeInlineEditor):
-            if hint == QStyledItemDelegate.EndEditHint.RevertModelCache:
+            if hint == QAbstractItemDelegate.EndEditHint.RevertModelCache:
                 # This means the edit was cancelled (usually by Escape key)
                 self.edit_cancelled.emit()
 
@@ -84,7 +83,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         except Exception:
             return False, self._language_manager.strings().error_validation_failed
 
-    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> QWidget:
+    def createEditor(self, parent: QWidget, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> QWidget:
         """
         Create the inline editor widget.
 
@@ -103,7 +102,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
 
         # Create validation callback to check for existing files
         def validation_callback(new_name: str) -> tuple[bool, str]:
-            return self.validate_new_name(index, new_name)
+            return self.validate_new_name(QModelIndex(index), new_name)
 
         # Create the inline editor
         editor = MindspaceTreeInlineEditor(
@@ -114,7 +113,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         )
 
         # Connect signals
-        editor.edit_finished.connect(lambda name: self._on_edit_finished(index, name))
+        editor.edit_finished.connect(lambda name: self._on_edit_finished(QModelIndex(index), name))
         editor.edit_cancelled.connect(self._on_edit_cancelled)
 
         # Reset selection mode for next time
@@ -122,7 +121,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
 
         return editor
 
-    def setEditorData(self, editor: QWidget, index: QModelIndex) -> None:
+    def setEditorData(self, editor: QWidget, index: QModelIndex | QPersistentModelIndex) -> None:
         """
         Set the initial data in the editor.
 
@@ -135,7 +134,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
             if current_text:
                 editor.set_text(current_text)
 
-    def updateEditorGeometry(self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex) -> None:
+    def updateEditorGeometry(self, editor: QWidget, option: QStyleOptionViewItem, index: QModelIndex | QPersistentModelIndex) -> None:
         """
         Update the editor geometry. Qt calls this automatically during scrolling.
 
@@ -149,7 +148,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
             text_rect = self._calculate_text_rect_from_option(option)
             editor.setGeometry(text_rect)
 
-    def setModelData(self, editor: QWidget, model, index: QModelIndex) -> None:
+    def setModelData(self, editor: QWidget, model: QAbstractItemModel, index: QModelIndex | QPersistentModelIndex) -> None:
         """
         Transfer data from editor to model. This is where we handle the actual file operations.
 
@@ -164,7 +163,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
 
                 # Emit our custom signal instead of modifying the model directly
                 # The view will handle the actual file operations
-                self.edit_finished.emit(index, new_name)
+                self.edit_finished.emit(QModelIndex(index), new_name)
 
     def _calculate_text_rect_from_option(self, option: QStyleOptionViewItem) -> QRect:
         """
@@ -176,8 +175,8 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
         Returns:
             QRect covering only the text area (excluding icon)
         """
-        # Get the full rect from the option
-        full_rect = option.rect
+        # Get the full rect from the option - note rect is a valid property, but PySide6 doesn't expose it correctly!
+        full_rect = option.rect  # type: ignore
 
         # Get the icon size (already scaled by zoom factor)
         icon_size = self._tree_view.iconSize()
@@ -245,7 +244,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
             # Make the background slightly more transparent for subtlety
             drop_target_bg.setAlpha(128)
 
-            rect = cast(QRect, getattr(option, 'rect'))
+            rect = option.rect  # type: ignore
 
             # Draw drop target background
             painter.fillRect(rect, drop_target_bg)

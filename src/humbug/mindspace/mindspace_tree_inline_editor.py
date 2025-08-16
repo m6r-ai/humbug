@@ -3,8 +3,8 @@
 import os
 from typing import Callable
 
-from PySide6.QtWidgets import QLineEdit
-from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QLineEdit, QWidget
+from PySide6.QtCore import Signal, Qt
 from PySide6.QtGui import QFont
 
 from humbug.color_role import ColorRole
@@ -23,7 +23,7 @@ class MindspaceTreeInlineEditor(QLineEdit):
         initial_text: str = "",
         validation_callback: Callable[[str], tuple[bool, str]] | None = None,
         select_extension: bool = True,
-        parent: QLineEdit | None = None
+        parent: QWidget | None = None
     ):
         """
         Initialize the inline editor.
@@ -159,6 +159,16 @@ class MindspaceTreeInlineEditor(QLineEdit):
             """
 
         self.setStyleSheet(style)
+
+    def keyPressEvent(self, event) -> None:
+        """Handle key events."""
+        if event.key() == Qt.Key.Key_Escape:
+            self.edit_cancelled.emit()
+            return
+
+        # Let Qt handle Enter/Return through the normal delegate system
+        # This will eventually call setModelData() when editing is committed
+        super().keyPressEvent(event)
 
     def get_text(self) -> str:
         """Get the current text in the editor."""
