@@ -116,12 +116,18 @@ class MindspaceView(QWidget):
         """Update minimum sizes for splitter widgets to ensure headers remain visible."""
         # Calculate minimum height needed to show just the header
         conversations_header_height = self._conversations_view.get_header_height()
+        conversations_expanded = self._conversations_view.is_expanded()
         files_header_height = self._files_view.get_header_height()
+        files_expanded = self._files_view.is_expanded()
 
         # Set minimum size for conversations and files views to their header height
         # This prevents them from being collapsed completely
-        self._conversations_view.setMinimumHeight(conversations_header_height)
-        self._files_view.setMinimumHeight(files_header_height)
+        self._conversations_view.setMinimumHeight(
+            conversations_header_height + (conversations_header_height * 2 if conversations_expanded else 0)
+        )
+        self._files_view.setMinimumHeight(
+            files_header_height + (files_header_height * 2 if files_expanded else 0)
+        )
 
         # The spacer widget can be collapsed to 0
         self._spacer_widget.setMinimumHeight(0)
