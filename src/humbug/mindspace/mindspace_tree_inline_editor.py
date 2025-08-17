@@ -45,6 +45,7 @@ class MindspaceTreeInlineEditor(QLineEdit):
 
         # Track validation state
         self._is_valid = True
+        self.setProperty("is_valid", self._is_valid)
 
         # Connect text change signal for real-time validation
         self.textChanged.connect(self._validate_input)
@@ -115,9 +116,11 @@ class MindspaceTreeInlineEditor(QLineEdit):
             error_message: Error message to display (empty if valid)
         """
         self._is_valid = is_valid
+        self.setProperty("is_valid", is_valid)
 
         if is_valid:
             self.setToolTip("")
+
         else:
             self.setToolTip(error_message)
 
@@ -133,31 +136,24 @@ class MindspaceTreeInlineEditor(QLineEdit):
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
 
-        if self._is_valid:
-            # Normal styling
-            style = f"""
-                QLineEdit {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                    border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
-                    padding: 2px;
-                    selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                    selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                }}
-            """
-
-        else:
-            # Error styling with red border
-            style = f"""
-                QLineEdit {{
-                    background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
-                    color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                    border: 2px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
-                    padding: 1px;
-                    selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                    selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                }}
-            """
+        style = f"""
+            QLineEdit[is_valid="true"] {{
+                background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
+                padding: 2px;
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QLineEdit[is_valid="false"] {{
+                background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 2px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
+                padding: 1px;
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+        """
 
         self.setStyleSheet(style)
 
