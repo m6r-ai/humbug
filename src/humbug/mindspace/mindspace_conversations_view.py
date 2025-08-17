@@ -10,7 +10,6 @@ from PySide6.QtWidgets import (
     QFileSystemModel, QWidget, QVBoxLayout, QMenu
 )
 
-from humbug.color_role import ColorRole
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_conversations_model import MindspaceConversationsModel
@@ -998,83 +997,5 @@ class MindspaceConversationsView(QWidget):
         self.setFont(font)
         self._tree_view.setFont(font)
 
-        branch_icon_size = round(12 * zoom_factor)
-        expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
-
         # Adjust tree indentation
         self._tree_view.setIndentation(file_icon_size)
-
-        self.setStyleSheet(f"""
-            QTreeView {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                border: none;
-                padding: 0 0 0 8px;
-            }}
-            QTreeView::item {{
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 2px 0 2px 0;
-                margin: 0px;
-            }}
-            QTreeView::item:selected {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-            }}
-            QTreeView::item:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
-            }}
-            QTreeView::branch {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-            }}
-            QTreeView::branch:has-children:!has-siblings:closed,
-            QTreeView::branch:closed:has-children:has-siblings {{
-                image: url("{self._style_manager.get_icon_path(expand_icon)}");
-                padding: 0px;
-                width: {branch_icon_size}px;
-                height: {branch_icon_size}px;
-            }}
-            QTreeView::branch:open:has-children:!has-siblings,
-            QTreeView::branch:open:has-children:has-siblings {{
-                image: url("{self._style_manager.get_icon_path("arrow-down")}");
-                padding: 0px;
-                width: {branch_icon_size}px;
-                height: {branch_icon_size}px;
-            }}
-
-            QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
-
-            QToolTip {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 1px;
-                margin: 0px;
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-
-            QMenu::right-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-right')});
-                width: 16px;
-                height: 16px;
-            }}
-            QMenu::left-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-left')});
-                width: 16px;
-                height: 16px;
-            }}
-        """)
-
-        # Notify the tree view that it has finished processing style updates
-        # This ensures that any delegates or other components that depend on the tree view's
-        # updated layout can now safely reposition themselves
-        self._tree_view.notify_style_updated()

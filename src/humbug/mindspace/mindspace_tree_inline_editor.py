@@ -7,7 +7,6 @@ from PySide6.QtWidgets import QLineEdit, QWidget
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QFont
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
 
@@ -36,6 +35,8 @@ class MindspaceTreeInlineEditor(QLineEdit):
         """
         super().__init__(parent)
         self._style_manager = StyleManager()
+        self._style_manager.style_changed.connect(self._on_style_changed)
+
         self._language_manager = LanguageManager()
         self._validation_callback = validation_callback
         self._select_extension = select_extension
@@ -51,7 +52,7 @@ class MindspaceTreeInlineEditor(QLineEdit):
         self.textChanged.connect(self._validate_input)
 
         # Apply initial styling
-        self._apply_styling()
+        self._on_style_changed()
 
         # Perform initial validation and selection
         self._validate_input()
@@ -85,48 +86,46 @@ class MindspaceTreeInlineEditor(QLineEdit):
     def _validate_input(self) -> None:
         """Validate the current input and update visual feedback."""
         text = self.text().strip()
+        strings = self._language_manager.strings()
 
         # Check basic validation
         if not text:
-            self._set_validation_state(False, self._language_manager.strings().error_empty_name)
+            self._is_valid = False
+            self.setProperty("is_valid", False)
+            self.setToolTip(strings.error_empty_name)
+            self.style().unpolish(self)
+            self.style().polish(self)
             return
 
         # Check for invalid filesystem characters
         invalid_chars = r'\/:*?"<>|'
         if any(c in invalid_chars for c in text):
-            self._set_validation_state(False, self._language_manager.strings().error_invalid_characters)
+            self._is_valid = False
+            self.setProperty("is_valid", False)
+            self.setToolTip(strings.error_invalid_characters)
+            self.style().unpolish(self)
+            self.style().polish(self)
             return
 
         # Call additional validation callback if provided
         if self._validation_callback:
             is_valid, error_message = self._validation_callback(text)
             if not is_valid:
-                self._set_validation_state(False, error_message)
+                self._is_valid = False
+                self.setProperty("is_valid", False)
+                self.setToolTip(error_message)
+                self.style().unpolish(self)
+                self.style().polish(self)
                 return
 
         # All validation passed
-        self._set_validation_state(True, "")
+        self._is_valid = True
+        self.setProperty("is_valid", True)
+        self.setToolTip("")
+        self.style().unpolish(self)
+        self.style().polish(self)
 
-    def _set_validation_state(self, is_valid: bool, error_message: str) -> None:
-        """
-        Set the validation state and update visual feedback.
-
-        Args:
-            is_valid: Whether the current input is valid
-            error_message: Error message to display (empty if valid)
-        """
-        self._is_valid = is_valid
-        self.setProperty("is_valid", is_valid)
-
-        if is_valid:
-            self.setToolTip("")
-
-        else:
-            self.setToolTip(error_message)
-
-        self._apply_styling()
-
-    def _apply_styling(self) -> None:
+    def _on_style_changed(self) -> None:
         """Apply styling based on validation state and current zoom."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
@@ -135,27 +134,6 @@ class MindspaceTreeInlineEditor(QLineEdit):
         font = QFont()
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
-
-        style = f"""
-            QLineEdit[is_valid="true"] {{
-                background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
-                padding: 2px;
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-            }}
-            QLineEdit[is_valid="false"] {{
-                background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: 2px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
-                padding: 1px;
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-            }}
-        """
-
-        self.setStyleSheet(style)
 
     def get_text(self) -> str:
         """Get the current text in the editor."""

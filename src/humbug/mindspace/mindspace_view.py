@@ -309,12 +309,100 @@ class MindspaceView(QWidget):
             }}
         """)
 
+        branch_icon_size = round(12 * zoom_factor)
+        expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
+
         # Style the splitter
         self.setStyleSheet(f"""
             QSplitter::handle {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
                 margin: 0;
                 height: 0px;
+            }}
+
+            QTreeView {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: none;
+                padding: 0 0 0 8px;
+            }}
+            QTreeView::item {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: 2px 0 2px 0;
+                margin: 0px;
+            }}
+            QTreeView::item:selected {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+            QTreeView::item:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
+            }}
+            QTreeView::branch {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+            }}
+            QTreeView::branch:has-children:!has-siblings:closed,
+            QTreeView::branch:closed:has-children:has-siblings {{
+                image: url("{self._style_manager.get_icon_path(expand_icon)}");
+                padding: 0px;
+                width: {branch_icon_size}px;
+                height: {branch_icon_size}px;
+            }}
+            QTreeView::branch:open:has-children:!has-siblings,
+            QTreeView::branch:open:has-children:has-siblings {{
+                image: url("{self._style_manager.get_icon_path("arrow-down")}");
+                padding: 0px;
+                width: {branch_icon_size}px;
+                height: {branch_icon_size}px;
+            }}
+
+            QScrollBar:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: 12px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: 20px;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+                height: 0px;
+            }}
+
+            QToolTip {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                padding: 1px;
+                margin: 0px;
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+
+            QMenu::right-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-right')});
+                width: 16px;
+                height: 16px;
+            }}
+            QMenu::left-arrow {{
+                image: url({self._style_manager.get_icon_path('arrow-left')});
+                width: 16px;
+                height: 16px;
+            }}
+
+            QLineEdit[is_valid="true"] {{
+                background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
+                padding: 2px;
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QLineEdit[is_valid="false"] {{
+                background-color: {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_ERROR)};
+                padding: 1px;
+                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
         """)
 

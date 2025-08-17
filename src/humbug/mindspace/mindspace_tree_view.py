@@ -13,7 +13,6 @@ class MindspaceTreeView(QTreeView):
 
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
-    style_updated = Signal()  # Emitted after the tree view has processed style changes
     delete_requested = Signal()  # Emitted when delete key is pressed
 
     def __init__(self, parent: QWidget | None = None):
@@ -83,13 +82,6 @@ class MindspaceTreeView(QTreeView):
             path: Path to configure the tree view for
         """
         raise NotImplementedError("Subclasses must implement configure_for_path")
-
-    def notify_style_updated(self) -> None:
-        """
-        Notify that this tree view has finished processing style updates.
-        This should be called after the tree view has updated its layout, icon sizes, etc.
-        """
-        self.style_updated.emit()
 
     def get_current_drop_target(self) -> QModelIndex | None:
         """Get the current drop target index."""
