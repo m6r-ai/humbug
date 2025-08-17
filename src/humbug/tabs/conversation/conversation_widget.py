@@ -1555,19 +1555,19 @@ class ConversationWidget(QWidget):
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
-            QFrame#ConversationMessage {{
+            #ConversationMessage {{
                 margin: 0;
                 border-radius: {border_radius}px;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
-            QFrame#ConversationMessage[message_source="user"] {{
+            #ConversationMessage[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
 
-            #ConversationMessage QWidget#_header,
-            #ConversationMessage QWidget#_sections_container {{
+            #ConversationMessage #_header,
+            #ConversationMessage #_sections_container {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;
@@ -1575,36 +1575,36 @@ class ConversationWidget(QWidget):
                 margin: 0;
             }}
 
-            #ConversationMessage QLabel#_role_label {{
+            #ConversationMessage #_role_label {{
                 margin: 0;
                 padding: 0;
                 border: none;
                 background-color: transparent;
             }}
-            #ConversationMessage QLabel#_role_label[message_source="user"] {{
+            #ConversationMessage #_role_label[message_source="user"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
             }}
-            #ConversationMessage QLabel#_role_label[message_source="ai"] {{
+            #ConversationMessage #_role_label[message_source="ai"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_AI)};
             }}
-            #ConversationMessage QLabel#_role_label[message_source="reasoning"] {{
+            #ConversationMessage #_role_label[message_source="reasoning"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_REASONING)};
             }}
-            #ConversationMessage QLabel#_role_label[message_source="tool_call"] {{
+            #ConversationMessage #_role_label[message_source="tool_call"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_TOOL_CALL)};
             }}
-            #ConversationMessage QLabel#_role_label[message_source="tool_result"] {{
+            #ConversationMessage #_role_label[message_source="tool_result"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_TOOL_RESULT)};
             }}
-            #ConversationMessage QLabel#_role_label[message_source="system"] {{
+            #ConversationMessage #_role_label[message_source="system"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
 
-            #ConversationMessage QToolButton#_expand_button,
-            #ConversationMessage QToolButton#_copy_button,
-            #ConversationMessage QToolButton#_save_button,
-            #ConversationMessage QToolButton#_fork_button,
-            #ConversationMessage QToolButton#_delete_button {{
+            #ConversationMessage #_expand_button,
+            #ConversationMessage #_copy_button,
+            #ConversationMessage #_save_button,
+            #ConversationMessage #_fork_button,
+            #ConversationMessage #_delete_button {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
@@ -1612,26 +1612,26 @@ class ConversationWidget(QWidget):
                 margin: 0px;
             }}
 
-            #ConversationMessage QToolButton#_copy_button:hover,
-            #ConversationMessage QToolButton#_save_button:hover,
-            #ConversationMessage QToolButton#_fork_button:hover,
-            #ConversationMessage QToolButton#_delete_button:hover {{
+            #ConversationMessage #_copy_button:hover,
+            #ConversationMessage #_save_button:hover,
+            #ConversationMessage #_fork_button:hover,
+            #ConversationMessage #_delete_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
 
-            #ConversationMessage QToolButton#_copy_button:pressed,
-            #ConversationMessage QToolButton#_save_button:pressed,
-            #ConversationMessage QToolButton#_fork_button:pressed,
-            #ConversationMessage QToolButton#_delete_button:pressed {{
+            #ConversationMessage #_copy_button:pressed,
+            #ConversationMessage #_save_button:pressed,
+            #ConversationMessage #_fork_button:pressed,
+            #ConversationMessage #_delete_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
 
-            #ConversationMessage QWidget#_approval_widget {{
+            #ConversationMessage #_approval_widget {{
                 background-color: transparent;
                 border: none;
             }}
 
-            #ConversationMessage QTextEdit#_approval_text_edit {{
+            #ConversationMessage #_approval_text_edit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
@@ -1640,37 +1640,37 @@ class ConversationWidget(QWidget):
                 margin: 0;
             }}
 
-            #ConversationMessage QPushButton#_approval_approve_button[recommended="true"] {{
+            #ConversationMessage #_approval_approve_button[recommended="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
                 border-radius: 4px;
             }}
-            #ConversationMessage QPushButton#_approval_approve_button[recommended="true"]:hover {{
+            #ConversationMessage #_approval_approve_button[recommended="true"]:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
             }}
-            #ConversationMessage QPushButton#_approval_approve_button[recommended="true"]:pressed {{
+            #ConversationMessage #_approval_approve_button[recommended="true"]:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
             }}
-            #ConversationMessage QPushButton#_approval_approve_button[recommended="false"] {{
+            #ConversationMessage #_approval_approve_button[recommended="false"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
             }}
-            #ConversationMessage QPushButton#_approval_approve_button[recommended="false"]:hover {{
+            #ConversationMessage #_approval_approve_button[recommended="false"]:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
             }}
-            #ConversationMessage QPushButton#_approval_approve_button[recommended="false"]:pressed {{
+            #ConversationMessage #_approval_approve_button[recommended="false"]:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
-            #ConversationMessage QPushButton#_approval_reject_button {{
+            #ConversationMessage #_approval_reject_button {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border-radius: 4px;
             }}
-            #ConversationMessage QPushButton#_approval_reject_button:hover {{
+            #ConversationMessage #_approval_reject_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
             }}
-            #ConversationMessage QPushButton#_approval_reject_button:pressed {{
+            #ConversationMessage #_approval_reject_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
             }}
         """
@@ -1680,32 +1680,32 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         border_radius = int(style_manager.message_bubble_spacing() / 2)
         return f"""
-            #ConversationMessage QFrame#ConversationMessageSection[section_style="text-system"] {{
+            #ConversationMessage #ConversationMessageSection[section_style="text-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            #ConversationMessage QFrame#ConversationMessageSection[section_style="text-user"] {{
+            #ConversationMessage #ConversationMessageSection[section_style="text-user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            #ConversationMessage QFrame#ConversationMessageSection[section_style="code-system"] {{
+            #ConversationMessage #ConversationMessageSection[section_style="code-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
-            #ConversationMessage QFrame#ConversationMessageSection[section_style="code-user"] {{
+            #ConversationMessage #ConversationMessageSection[section_style="code-user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
 
-            #ConversationMessage #ConversationMessageSection QWidget#_header_container {{
+            #ConversationMessage #ConversationMessageSection #_header_container {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;

@@ -586,17 +586,17 @@ class LogWidget(QWidget):
         border_radius = int(style_manager.message_bubble_spacing())
 
         return f"""
-            QFrame#LogMessage {{
+            #LogMessage {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
-            QFrame#LogMessage[border="focused"] {{
+            #LogMessage[border="focused"] {{
                 border-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
             }}
 
-            #LogMessage QWidget#_header {{
+            #LogMessage #_header {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 border: none;
                 border-radius: 0;
@@ -604,7 +604,7 @@ class LogWidget(QWidget):
                 margin: 0;
             }}
 
-            #LogMessage QLabel#_level_label {{
+            #LogMessage #_level_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
                 padding: 0;
@@ -612,20 +612,20 @@ class LogWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
-            #LogMessage QLabel#_level_label[log_level="trace"] {{
+            #LogMessage #_level_label[log_level="trace"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_TRACE)};
             }}
-            #LogMessage QLabel#_level_label[log_level="info"] {{
+            #LogMessage #_level_label[log_level="info"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_INFORMATION)};
             }}
-            #LogMessage QLabel#_level_label[log_level="warn"] {{
+            #LogMessage #_level_label[log_level="warn"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_WARNING)};
             }}
-            #LogMessage QLabel#_level_label[log_level="error"] {{
+            #LogMessage #_level_label[log_level="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_ERROR)};
             }}
 
-            #LogMessage QTextEdit#_text_area {{
+            #LogMessage #_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
@@ -635,23 +635,23 @@ class LogWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
-            #LogMessage QTextEdit#_text_area QScrollBar:horizontal {{
+            #LogMessage #_text_area QScrollBar:horizontal {{
                 height: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
 
-            #LogMessage QTextEdit#_text_area QScrollBar::handle:horizontal {{
+            #LogMessage #_text_area QScrollBar::handle:horizontal {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
 
-            #LogMessage QTextEdit#_text_area QScrollBar::add-page:horizontal,
-            #LogMessage QTextEdit#_text_area QScrollBar::sub-page:horizontal {{
+            #LogMessage #_text_area QScrollBar::add-page:horizontal,
+            #LogMessage #_text_area QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
 
-            #LogMessage QTextEdit#_text_area QScrollBar::add-line:horizontal,
-            #LogMessage QTextEdit#_text_area QScrollBar::sub-line:horizontal {{
+            #LogMessage #_text_area QScrollBar::add-line:horizontal,
+            #LogMessage #_text_area QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
         """

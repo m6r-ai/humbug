@@ -734,21 +734,21 @@ class ShellWidget(QWidget):
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
-            QFrame#ShellMessageWidget {{
+            #ShellMessageWidget {{
                 margin: 0;
                 border-radius: {border_radius}px;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
-            QFrame#ShellMessageWidget[message_source="user"] {{
+            #ShellMessageWidget[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
-            QFrame#ShellMessageWidget[border="focused"] {{
+            #ShellMessageWidget[border="focused"] {{
                 border-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
             }}
 
-            #ShellMessageWidget QWidget#_header {{
+            #ShellMessageWidget #_header {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;
@@ -756,24 +756,24 @@ class ShellWidget(QWidget):
                 margin: 0;
             }}
 
-            #ShellMessageWidget QLabel#_role_label {{
+            #ShellMessageWidget #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
                 padding: 0;
                 border: none;
                 background-color: transparent;
             }}
-            #ShellMessageWidget QLabel#_role_label[message_source="user"] {{
+            #ShellMessageWidget #_role_label[message_source="user"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
             }}
-            #ShellMessageWidget QLabel#_role_label[message_source="success"] {{
+            #ShellMessageWidget #_role_label[message_source="success"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS)};
             }}
-            #ShellMessageWidget QLabel#_role_label[message_source="error"] {{
+            #ShellMessageWidget #_role_label[message_source="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
 
-            #ShellMessageWidget QTextEdit#_text_area {{
+            #ShellMessageWidget #_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;

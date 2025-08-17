@@ -701,33 +701,33 @@ class WikiWidget(QWidget):
         style_manager = self._style_manager
 
         return f"""
-            QFrame#WikiFileContent {{
+            #WikiFileContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {int(style_manager.message_bubble_spacing())}px;
                 border: none;
             }}
 
-            #WikiFileContent QWidget#_content_container {{
+            #WikiFileContent #_content_container {{
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
-            #WikiFileContent QWidget#_header_container {{
+            #WikiFileContent #_header_container {{
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
-            #WikiFileContent QLabel#_language_header {{
+            #WikiFileContent #_language_header {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
-            #WikiFileContent QTextEdit#_text_area {{
+            #WikiFileContent #_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
@@ -770,17 +770,17 @@ class WikiWidget(QWidget):
                 height: 0px;
             }}
 
-            #WikiFileContent QToolButton#_edit_button {{
+            #WikiFileContent #_edit_button {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 0;
                 padding: 0px;
             }}
-            #WikiFileContent QToolButton#_edit_button:hover {{
+            #WikiFileContent #_edit_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
-            #WikiFileContent QToolButton#_edit_button:pressed {{
+            #WikiFileContent #_edit_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
         """
