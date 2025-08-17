@@ -6,7 +6,6 @@ from PySide6.QtCore import Signal, Qt, QSize, QPoint
 from PySide6.QtGui import QIcon, QMouseEvent
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton, QMenu
 
-from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
 
@@ -25,6 +24,8 @@ class MindspaceCollapsibleHeader(QWidget):
             parent: Parent widget
         """
         super().__init__(parent)
+        self.setObjectName("MindspaceCollapsibleHeader")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self._is_expanded = True  # Default to expanded
@@ -38,7 +39,7 @@ class MindspaceCollapsibleHeader(QWidget):
 
         # Create expand/collapse button
         self._expand_button = QToolButton(self)
-        self._expand_button.setObjectName("expand_button")
+        self._expand_button.setObjectName("_expand_button")
         self._expand_button.clicked.connect(self._toggle_expanded)
         layout.addWidget(self._expand_button)
 
@@ -49,6 +50,7 @@ class MindspaceCollapsibleHeader(QWidget):
 
         # Add stretch to push everything to the left
         layout.addStretch()
+        self.setLayout(layout)
 
         # Update button appearance
         self._update_expand_button()
@@ -171,28 +173,3 @@ class MindspaceCollapsibleHeader(QWidget):
 
         # Update expand button
         self._update_expand_button()
-
-        self.setStyleSheet(f"""
-            QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                border-radius: 0px;
-                margin: 0px;
-                padding: 0px;
-                border: none;
-            }}
-
-            QLabel {{
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: transparent;
-                border: none;
-                padding: 0px;
-                margin: 0px;
-            }}
-
-            QToolButton {{
-                background-color: transparent;
-                border: none;
-                padding: 0px 0px 0px 2px;
-                margin: 0px;
-            }}
-        """)

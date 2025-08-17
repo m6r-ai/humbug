@@ -43,6 +43,7 @@ class MindspaceView(QWidget):
 
         # Create header container for mindspace name
         self._header_widget = QWidget()
+        self._header_widget.setObjectName("_header_widget")
         header_layout = QVBoxLayout(self._header_widget)
         header_layout.setContentsMargins(0, 0, 0, 0)
         header_layout.setSpacing(0)
@@ -67,6 +68,7 @@ class MindspaceView(QWidget):
 
         # Create spacer widget - invisible widget that takes up space when both sections are collapsed
         self._spacer_widget = QWidget()
+        self._spacer_widget.setObjectName("_spacer_widget")
         self._splitter.addWidget(self._spacer_widget)
 
         # Set equal proportions initially for the two sections, no space for spacer
@@ -284,36 +286,54 @@ class MindspaceView(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         self._mindspace_label.setFont(font)
 
-        # Style the header widget (mindspace label)
-        self._header_widget.setStyleSheet(f"""
-            QWidget {{
+        branch_icon_size = round(12 * zoom_factor)
+        expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
+
+        # Style the splitter
+        self.setStyleSheet(f"""
+            #_header_widget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 margin: 0px;
                 padding: 0px;
                 border: none;
             }}
 
-            QLabel {{
+            #_header_widget QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
                 margin: 0px;
-                padding: 5px 0px 5px 10px;
+                padding: 6px 0px 7px 10px;
             }}
-        """)
 
-        # Style the spacer widget to match background
-        self._spacer_widget.setStyleSheet(f"""
-            QWidget {{
+            #MindspaceCollapsibleHeader {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                border-radius: 0px;
+                margin: 0px;
+                padding: 0px 0px 1px 0px;
+                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+            }}
+
+            #MindspaceCollapsibleHeader QLabel {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                border: none;
+                padding: 0px;
+                margin: 0px;
+            }}
+
+            #MindspaceCollapsibleHeader QToolButton#_expand_button {{
+                background-color: transparent;
+                border: none;
+                padding: 0px 0px 0px 2px;
+                margin: 0px;
+            }}
+
+            QWidget#_spacer_widget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
-        """)
 
-        branch_icon_size = round(12 * zoom_factor)
-        expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
-
-        # Style the splitter
-        self.setStyleSheet(f"""
             QSplitter::handle {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
                 margin: 0;
