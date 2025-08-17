@@ -145,6 +145,7 @@ class MindspaceTreeInlineEditor(QLineEdit):
                     selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 }}
             """
+
         else:
             # Error styling with red border
             style = f"""
@@ -159,16 +160,6 @@ class MindspaceTreeInlineEditor(QLineEdit):
             """
 
         self.setStyleSheet(style)
-
-    def keyPressEvent(self, event: QKeyEvent) -> None:
-        """Handle key events."""
-        if event.key() == Qt.Key.Key_Escape:
-            self.edit_cancelled.emit()
-            return
-
-        # Let Qt handle Enter/Return through the normal delegate system
-        # This will eventually call setModelData() when editing is committed
-        super().keyPressEvent(event)
 
     def get_text(self) -> str:
         """Get the current text in the editor."""
