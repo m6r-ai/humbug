@@ -79,6 +79,14 @@ class MindspaceView(QWidget):
         self._splitter.setStretchFactor(1, 1)
         self._splitter.setStretchFactor(2, 1)
 
+        # Prevent complete collapse by making sections non-collapsible
+        self._splitter.setCollapsible(0, False)  # Conversations view cannot be collapsed
+        self._splitter.setCollapsible(1, False)  # Files view cannot be collapsed
+        self._splitter.setCollapsible(2, True)   # Spacer widget can be collapsed
+
+        # Set minimum sizes to ensure headers remain visible
+        self._update_minimum_sizes()
+
         # Connect header toggle signals to manage splitter sizes
         self._conversations_view._header.toggled.connect(self._on_conversations_toggled)
         self._files_view._header.toggled.connect(self._on_files_toggled)
@@ -104,6 +112,20 @@ class MindspaceView(QWidget):
 
         self._on_language_changed()
 
+    def _update_minimum_sizes(self) -> None:
+        """Update minimum sizes for splitter widgets to ensure headers remain visible."""
+        # Calculate minimum height needed to show just the header
+        conversations_header_height = self._conversations_view.get_header_height()
+        files_header_height = self._files_view.get_header_height()
+
+        # Set minimum size for conversations and files views to their header height
+        # This prevents them from being collapsed completely
+        self._conversations_view.setMinimumHeight(conversations_header_height)
+        self._files_view.setMinimumHeight(files_header_height)
+
+        # The spacer widget can be collapsed to 0
+        self._spacer_widget.setMinimumHeight(0)
+
     def _on_conversations_toggled(self, _expanded: bool) -> None:
         """
         Handle conversations section expand/collapse.
@@ -124,6 +146,8 @@ class MindspaceView(QWidget):
 
     def _update_splitter_sizes(self) -> None:
         """Update splitter sizes based on current expansion states."""
+        self._update_minimum_sizes()
+
         conversations_expanded = self._conversations_view.is_expanded()
         files_expanded = self._files_view.is_expanded()
 
