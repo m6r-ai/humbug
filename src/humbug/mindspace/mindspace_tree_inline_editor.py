@@ -1,11 +1,11 @@
 """Simplified inline editor widget for mindspace file tree items that works with Qt's editor system."""
 
 import os
-from typing import Callable, Any
+from typing import Callable
 
 from PySide6.QtWidgets import QLineEdit, QWidget
-from PySide6.QtCore import Signal, Qt
-from PySide6.QtGui import QFont, QKeyEvent
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QFont
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
