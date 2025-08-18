@@ -1752,12 +1752,13 @@ class ColumnManager(QWidget):
             QTabBar {{
                 border: none;
                 margin: 0px;
+                padding: 0px;
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
             }}
             QTabBar::tab {{
                 border: none;
-                margin: 1px;
-                padding: 0px;
+                margin: 0px;
+                padding: 4px 3px 3px 3px;
             }}
             QTabBar::scroller {{
                 width: 28px;

@@ -344,7 +344,7 @@ class MindspaceView(QWidget):
                 background-color: transparent;
                 border: none;
                 margin: 0px;
-                padding: 6px 0px 7px 10px;
+                padding: 7px 0px 7px 10px;
             }}
 
             #MindspaceCollapsibleHeader {{
