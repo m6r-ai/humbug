@@ -2,8 +2,8 @@
 
 from typing import Callable
 
-from PySide6.QtCore import Signal, Qt, QSize, QPoint
-from PySide6.QtGui import QIcon, QMouseEvent
+from PySide6.QtCore import Signal, Qt, QSize, QPoint, QEvent
+from PySide6.QtGui import QIcon, QMouseEvent, QEnterEvent
 from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton, QMenu
 
 from humbug.language.language_manager import LanguageManager
@@ -134,7 +134,7 @@ class MindspaceCollapsibleHeader(QWidget):
         self._expand_button.setIconSize(icon_size)
 
         # Update tooltip
-        self._expand_button.setToolTip(tooltip)
+        self.setToolTip(tooltip)
 
     def _show_context_menu(self, position: QPoint) -> None:
         """
@@ -151,6 +151,20 @@ class MindspaceCollapsibleHeader(QWidget):
             return
 
         menu.exec_(self.mapToGlobal(position))
+
+    def enterEvent(self, event: QEnterEvent) -> None:
+        """Handle mouse enter events for hover effect."""
+        self.setProperty("hovered", True)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event: QEvent) -> None:
+        """Handle mouse leave events for hover effect."""
+        self.setProperty("hovered", False)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        super().leaveEvent(event)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events to make entire header clickable."""

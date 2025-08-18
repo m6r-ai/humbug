@@ -330,7 +330,7 @@ class MindspaceView(QWidget):
         branch_icon_size = round(12 * zoom_factor)
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
 
-        # Style the splitter
+        # Style the mindspace view
         self.setStyleSheet(f"""
             #_header_widget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
@@ -353,6 +353,9 @@ class MindspaceView(QWidget):
                 margin: 0px;
                 padding: 0px 0px 1px 0px;
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+            }}
+            #MindspaceCollapsibleHeader[hovered="true"] {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
             }}
 
             #MindspaceCollapsibleHeader QLabel {{
