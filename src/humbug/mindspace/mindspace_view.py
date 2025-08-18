@@ -122,12 +122,23 @@ class MindspaceView(QWidget):
 
         # Set minimum size for conversations and files views to their header height
         # This prevents them from being collapsed completely
-        self._conversations_view.setMinimumHeight(
-            conversations_header_height + (conversations_header_height * 2 if conversations_expanded else 0)
-        )
-        self._files_view.setMinimumHeight(
-            files_header_height + (files_header_height * 2 if files_expanded else 0)
-        )
+        if conversations_expanded:
+            self._conversations_view.setMinimumHeight(
+                conversations_header_height + (conversations_header_height * 2 if conversations_expanded else 0)
+            )
+            self._conversations_view.setMaximumHeight(16777215)
+
+        else:
+            self._conversations_view.setFixedHeight(conversations_header_height)
+
+        if files_expanded:
+            self._files_view.setMinimumHeight(
+                files_header_height + (files_header_height * 2 if files_expanded else 0)
+            )
+            self._files_view.setMaximumHeight(16777215)
+
+        else:
+            self._files_view.setFixedHeight(files_header_height)
 
         # The spacer widget can be collapsed to 0
         self._spacer_widget.setMinimumHeight(0)
