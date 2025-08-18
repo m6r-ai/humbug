@@ -293,7 +293,6 @@ class CalculatorAITool(AITool):
                 "- To handle operations that require more than 2 steps\n"
                 "- To process numbers or expressions that are not commonly known\n"
                 "- To evaluate results that may generate more than a few digits"
-
             ),
             parameters=[
                 AIToolParameter(
