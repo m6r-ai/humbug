@@ -297,6 +297,7 @@ class TabLabel(QWidget):
             self._is_updated = False
 
         self._update_buttons()
+        self._update_label()
 
     def set_updated(self, is_updated: bool) -> None:
         """
@@ -309,6 +310,7 @@ class TabLabel(QWidget):
         if not self._is_current:
             self._is_updated = is_updated
             self._update_buttons()
+            self._update_label()
 
     def set_ephemeral(self, is_ephemeral: bool) -> None:
         """
