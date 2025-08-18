@@ -28,6 +28,7 @@ class EditorTab(TabBase):
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("EditorTab")
+        self._path = path
         self._untitled_number = untitled_number
 
         self._language_manager = LanguageManager()
