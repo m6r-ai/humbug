@@ -52,6 +52,7 @@ class MindspaceTreeView(QTreeView):
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)
+        self.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
 
     def get_root_path(self) -> str:
         """

@@ -228,6 +228,7 @@ def get_english_strings() -> LanguageStrings:
         rename="Rename",
         delete="Delete",
         edit="Edit",
+        wiki_view="View in Wiki",
         duplicate="Duplicate",
         sort_by="Sort By",
         sort_by_name="Sort by name",

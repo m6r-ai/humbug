@@ -336,11 +336,11 @@ class MainWindow(QMainWindow):
 
         # Create and add mindspace view
         self._mindspace_view = MindspaceView(self)
-        self._mindspace_view.file_single_clicked.connect(self._on_mindspace_view_file_single_clicked)
-        self._mindspace_view.file_double_clicked.connect(self._on_mindspace_view_file_double_clicked)
+        self._mindspace_view.file_clicked.connect(self._on_mindspace_view_file_clicked)
         self._mindspace_view.file_deleted.connect(self._on_mindspace_view_file_deleted)
         self._mindspace_view.file_renamed.connect(self._on_mindspace_view_file_renamed)
         self._mindspace_view.file_edited.connect(self._on_mindspace_view_file_edited)
+        self._mindspace_view.file_opened_in_wiki.connect(self._on_mindspace_view_file_opened_in_wiki)
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
@@ -367,13 +367,6 @@ class MainWindow(QMainWindow):
         self._menu_timer.setInterval(50)
         self._menu_timer.timeout.connect(self._update_menu_state)
         self._menu_timer.start()
-
-        # Handle single clicks with a delay to distinguish from double clicks
-        self._single_click_timer = QTimer()
-        self._single_click_timer.setSingleShot(True)
-        self._single_click_timer.timeout.connect(self._process_delayed_single_click)
-        self._single_click_timer.setInterval(QApplication.doubleClickInterval())
-        self._pending_single_click_path: str | None = None
 
         # Create status bar
         self._status_bar = QStatusBar()
@@ -825,61 +818,36 @@ class MainWindow(QMainWindow):
 
         self._column_manager.new_file()
 
-    def _on_mindspace_view_file_single_clicked(self, path: str) -> None:
-        """Handle single click from the mindspace view."""
-        # We don't process single clicks immediately to allow for double clicks
-        self._pending_single_click_path = path
-        self._single_click_timer.start()
-
-    def _process_delayed_single_click(self) -> None:
-        """Process the delayed single-click action."""
-        path = self._pending_single_click_path
-        if not path:
-            return
-
-        focus_widget = QApplication.focusWidget()
-
-        # Are we opening a conversation or a wiki page?
-        if os.path.isfile(path):
-            ext = os.path.splitext(path)[1].lower()
-            if ext == ".conv":
-                conversation_tab = self._open_conversation_path(path, True)
-                if conversation_tab is None:
-                    return
-
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"User opened conversation: '{path}'\ntab ID: {conversation_tab.tab_id()}"
-                )
-
-                if focus_widget is not None:
-                    focus_widget.setFocus()
-
-                return
-
-        wiki_tab = self._column_manager.open_wiki_page(path, True)
+    def _on_mindspace_view_file_opened_in_wiki(self, path: str) -> None:
+        """Handle click of a wiki link from the mindspace view."""
+        wiki_tab = self._column_manager.open_wiki_page(path, False)
         if wiki_tab is None:
             return
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User opened wiki page: '{path}'\ntab ID: {wiki_tab.tab_id()}"
+            f"User opened wiki: '{path}'\ntab ID: {wiki_tab.tab_id()}"
         )
 
-        if focus_widget is not None:
-            focus_widget.setFocus()
-
-    def _on_mindspace_view_file_double_clicked(self, path: str) -> None:
-        """Handle double click from the mindspace view."""
-        # We will have started a single click timer, so stop it
-        self._single_click_timer.stop()
-        self._pending_single_click_path = None
-
+    def _on_mindspace_view_file_clicked(self, path: str, ephemeral: bool) -> None:
+        """Handle click of a file from the mindspace view."""
         # Are we opening an editor file?
         if not os.path.isfile(path):
             return
 
-        editor_tab = self._column_manager.open_file(path)
+        ext = os.path.splitext(path)[1].lower()
+        if ext == ".conv":
+            conversation_tab = self._open_conversation_path(path, ephemeral)
+            if conversation_tab is None:
+                return
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened conversation: '{path}'\ntab ID: {conversation_tab.tab_id()}"
+            )
+            return
+
+        editor_tab = self._column_manager.open_file(path, ephemeral)
         if editor_tab is None:
             return
 
@@ -929,7 +897,7 @@ class MainWindow(QMainWindow):
     def _open_file_path(self, path: str) -> None:
         """Open file in editor tab."""
         try:
-            editor_tab = self._column_manager.open_file(path)
+            editor_tab = self._column_manager.open_file(path, False)
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,

@@ -66,17 +66,17 @@ class TabLabel(QWidget):
     def _create_type_pixmap(self) -> QPixmap:
         """Create a pixmap for the tab type."""
         icon_path = self._style_manager.get_icon_path(self._icon_name)
-        return self._style_manager.scale_icon(icon_path, 14)
+        return self._style_manager.scale_icon(icon_path, 16)
 
     def _create_inactive_type_pixmap(self) -> QPixmap:
         """Create a pixmap for the inactive tab type."""
         icon_path = self._style_manager.get_icon_path(f"inactive-{self._icon_name}")
-        return self._style_manager.scale_icon(icon_path, 14)
+        return self._style_manager.scale_icon(icon_path, 16)
 
     def _create_visible_close_icon(self) -> QIcon:
         icon = QIcon()
         icon_path = self._style_manager.get_icon_path("close")
-        pixmap = self._style_manager.scale_icon(icon_path, 14)  # 14px base size
+        pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
         icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
@@ -84,14 +84,14 @@ class TabLabel(QWidget):
     def _create_visible_inactive_close_icon(self) -> QIcon:
         icon = QIcon()
         icon_path = self._style_manager.get_icon_path("inactive-close")
-        pixmap = self._style_manager.scale_icon(icon_path, 14)  # 14px base size
+        pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
         icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
 
     def _create_invisible_close_icon(self) -> QIcon:
         """Create a transparent icon for the inactive state."""
-        size = round(14 * self._style_manager.zoom_factor())
+        size = round(16 * self._style_manager.zoom_factor())
         transparent_pixmap = QPixmap(size, size)
         transparent_pixmap.fill(Qt.GlobalColor.transparent)
         return QIcon(transparent_pixmap)
@@ -104,12 +104,12 @@ class TabLabel(QWidget):
 
         # Update type label and close button size
         factor = self._style_manager.zoom_factor()
-        button_size = round(14 * factor)
+        button_size = round(16 * factor)
         self._type_label.setFixedSize(button_size, button_size)
         self._close_button.setFixedSize(button_size, button_size)
 
         # Update close button icon size
-        icon_size = round(14 * factor)
+        icon_size = round(16 * factor)
         self._close_button.setIconSize(QSize(icon_size, icon_size))
 
         # Recreate pixmaps and icons at new size
@@ -123,8 +123,7 @@ class TabLabel(QWidget):
         # Update layout margins and spacing
         self._layout.setSpacing(round(6 * factor))
         margins = round(8 * factor)
-        v_margins = round(4 * factor)
-        self._layout.setContentsMargins(margins, v_margins, margins, v_margins)
+        self._layout.setContentsMargins(margins, 0, margins, 0)
 
         self._update_buttons()
 

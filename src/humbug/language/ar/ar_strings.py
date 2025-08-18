@@ -228,6 +228,7 @@ def get_arabic_strings() -> LanguageStrings:
         rename="إعادة التسمية",
         delete="حذف",
         edit="تحرير",
+        wiki_view="عرض في الويكي",
         duplicate="تكرار",
         sort_by="ترتيب حسب",
         sort_by_name="ترتيب حسب الاسم",

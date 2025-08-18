@@ -217,6 +217,7 @@ class LanguageStrings:
     rename: str
     delete: str
     edit: str
+    wiki_view: str
     duplicate: str
     sort_by: str
     sort_by_name: str

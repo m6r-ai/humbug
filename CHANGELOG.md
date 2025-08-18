@@ -11,6 +11,8 @@ New features:
 - Split out the conversations into a new view and simplified the files view so it no longer deals with complexities
   associated with conversations.  This enabled a UI simplification that gives more screen real estate.
 - When we delete the end of a conversation from a specific user message, reinsert that prompt into the input box.
+- Revised click and double-click behaviour for all mindspace tree actions.  These just create default ephemeral and
+  permanent tabs.
 
 Bug fixes:
 
@@ -20,6 +22,7 @@ Bug fixes:
 - In looking at the new conversations view, it became clear that sorting by creation time was very slow.  Added a caching
   solution and this has reduced application startup times by > 200 ms when lots of conversations are present.
 - Fixed a problem with tab bar zooming.
+- Fixed a problem when scrolling an file/folder edit in the mindspace tree views.
 
 Internal structure changes:
 

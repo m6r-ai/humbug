@@ -25,12 +25,12 @@ from humbug.language.language_manager import LanguageManager
 class MindspaceFilesView(QWidget):
     """Files view widget for displaying mindspace files."""
 
-    file_single_clicked = Signal(str)  # Emits path when any file is single-clicked
-    file_double_clicked = Signal(str)  # Emits path when any file is double-clicked
+    file_clicked = Signal(str, bool)  # Emits path and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str)  # Emits path when file is edited
+    file_opened_in_wiki = Signal(str)  # Emits path when file is opened in wiki
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the files view widget."""
@@ -86,7 +86,7 @@ class MindspaceFilesView(QWidget):
         self._tree_view.setModel(self._filter_model)
 
         # Connect signals
-        self._tree_view.clicked.connect(self._on_tree_single_clicked)
+        self._tree_view.clicked.connect(self._on_tree_clicked)
         self._tree_view.doubleClicked.connect(self._on_tree_double_clicked)
 
         # Add to layout
@@ -517,7 +517,7 @@ class MindspaceFilesView(QWidget):
 
         self._tree_view.clearSelection()
         self._tree_view.setCurrentIndex(target_index)
-        self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.PositionAtCenter)
+        self._tree_view.scrollTo(target_index, self._tree_view.ScrollHint.EnsureVisible)
 
     def _expand_to_path(self, file_path: str) -> QModelIndex | None:
         """
@@ -666,6 +666,8 @@ class MindspaceFilesView(QWidget):
             # Create actions based on item type
             if is_dir:
                 # Directory context menu
+                wiki_view_action = menu.addAction(strings.wiki_view)
+                wiki_view_action.triggered.connect(lambda: self._handle_wiki_view_file(path))
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
                 new_file_action = menu.addAction(strings.new_file)
@@ -679,6 +681,8 @@ class MindspaceFilesView(QWidget):
                 # File context menu
                 edit_action = menu.addAction(strings.edit)
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
+                wiki_view_action = menu.addAction(strings.wiki_view)
+                wiki_view_action.triggered.connect(lambda: self._handle_wiki_view_file(path))
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
                 rename_action = menu.addAction(strings.rename)
@@ -821,6 +825,10 @@ class MindspaceFilesView(QWidget):
         """Edit a file."""
         self.file_edited.emit(path)
 
+    def _handle_wiki_view_file(self, path: str) -> None:
+        """View a file in the wiki."""
+        self.file_opened_in_wiki.emit(path)
+
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
 
@@ -958,25 +966,25 @@ class MindspaceFilesView(QWidget):
         self._tree_view.header().hideSection(2)  # Type
         self._tree_view.header().hideSection(3)  # Date
 
-    def _on_tree_single_clicked(self, index: QModelIndex) -> None:
-        """Handle single-click events."""
+    def _on_tree_clicked(self, index: QModelIndex) -> None:
+        """Handle click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
-        self.file_single_clicked.emit(path)
+        self.file_clicked.emit(path, True)
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
-        """Handle double-click events."""
+        """Handle double click events."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
-        self.file_double_clicked.emit(path)
+        self.file_clicked.emit(path, False)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""

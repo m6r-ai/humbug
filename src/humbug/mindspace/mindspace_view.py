@@ -17,12 +17,12 @@ class MindspaceView(QWidget):
     """Main mindspace view widget containing files and conversations sections."""
 
     # Forward all file-related signals from both views
-    file_single_clicked = Signal(str)  # Emits path when any file is single-clicked
-    file_double_clicked = Signal(str)  # Emits path when any file is double-clicked
+    file_clicked = Signal(str, bool)  # Emits path and ephemeral flag when a file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str)  # Emits path when file is edited
+    file_opened_in_wiki = Signal(str)  # Emits path when file is opened in wiki
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the mindspace view widget."""
@@ -92,20 +92,20 @@ class MindspaceView(QWidget):
         self._files_view._header.toggled.connect(self._on_files_toggled)
 
         # Connect file view signals to forward them
-        self._files_view.file_single_clicked.connect(self.file_single_clicked.emit)
-        self._files_view.file_double_clicked.connect(self.file_double_clicked.emit)
+        self._files_view.file_clicked.connect(self.file_clicked.emit)
         self._files_view.file_deleted.connect(self.file_deleted.emit)
         self._files_view.file_renamed.connect(self.file_renamed.emit)
         self._files_view.file_moved.connect(self.file_moved.emit)
         self._files_view.file_edited.connect(self.file_edited.emit)
+        self._files_view.file_opened_in_wiki.connect(self.file_opened_in_wiki.emit)
 
         # Connect conversations view signals to forward them
-        self._conversations_view.file_single_clicked.connect(self.file_single_clicked.emit)
-        self._conversations_view.file_double_clicked.connect(self.file_double_clicked.emit)
+        self._conversations_view.file_clicked.connect(self.file_clicked.emit)
         self._conversations_view.file_deleted.connect(self.file_deleted.emit)
         self._conversations_view.file_renamed.connect(self.file_renamed.emit)
         self._conversations_view.file_moved.connect(self.file_moved.emit)
         self._conversations_view.file_edited.connect(self.file_edited.emit)
+        self._conversations_view.file_opened_in_wiki.connect(self.file_opened_in_wiki.emit)
 
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)

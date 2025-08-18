@@ -514,13 +514,16 @@ class ColumnManager(QWidget):
         # Set as active column
         self._active_column = self._tab_columns[0]
 
+        if os.path.isdir(path):
+            return
+
         # Handle the file drop
         ext = os.path.splitext(path)[1].lower()
         if ext == '.conv':
             tab: TabBase | None = self.open_conversation(path, False)
 
         else:
-            tab = self.open_wiki_page(path, False)
+            tab = self.open_file(path, False)
 
         if tab is None:
             return
@@ -600,6 +603,9 @@ class ColumnManager(QWidget):
             target_column: Column where the file was dropped
             target_index: Target position in the column
         """
+        if os.path.isdir(path):
+            return
+
         # Check file extension
         ext = os.path.splitext(path)[1].lower()
 
@@ -612,7 +618,7 @@ class ColumnManager(QWidget):
                 tab: TabBase | None = self.open_conversation(path, False)
 
             else:
-                tab = self.open_wiki_page(path, False)
+                tab = self.open_file(path, False)
 
             if tab is None:
                 return
@@ -1010,6 +1016,9 @@ class ColumnManager(QWidget):
             return
 
         if isinstance(tab, EditorTab):
+            if modified:
+                self._make_tab_permanent(tab)
+
             label = self._tab_labels.get(tab_id)
             if label:
                 current_text = label.text()
@@ -1298,17 +1307,22 @@ class ColumnManager(QWidget):
         self._add_tab(editor, f"Untitled-{self._untitled_count}")
         return editor
 
-    def open_file(self, path: str) -> EditorTab:
+    def open_file(self, path: str, ephemeral: bool) -> EditorTab:
         """Open a file in a new or existing editor tab."""
         assert os.path.isabs(path), "Path must be absolute"
 
         # Check if file is already open
         existing_tab = self._find_editor_tab_by_path(path)
-        if existing_tab is not None:
-            self._set_current_tab(existing_tab, False)
+        if existing_tab:
+            if existing_tab.is_ephemeral() and not ephemeral:
+                # If the existing tab is ephemeral, convert it to permanent
+                self._make_tab_permanent(existing_tab)
+
+            self._set_current_tab(existing_tab, ephemeral)
             return existing_tab
 
         editor = EditorTab("", path, None, self)
+        editor.set_ephemeral(ephemeral)
         self._add_tab(editor, os.path.basename(path))
         return editor
 
@@ -1758,7 +1772,7 @@ class ColumnManager(QWidget):
             QTabBar::tab {{
                 border: none;
                 margin: 0px;
-                padding: 4px 3px 3px 3px;
+                padding: 7px 0px 7px 0px;
             }}
             QTabBar::scroller {{
                 width: 28px;

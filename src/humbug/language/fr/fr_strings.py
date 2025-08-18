@@ -228,6 +228,7 @@ def get_french_strings() -> LanguageStrings:
         rename="Renommer",
         delete="Supprimer",
         edit="Modifier",
+        wiki_view="Voir dans le Wiki",
         duplicate="Dupliquer",
         sort_by="Trier par",
         sort_by_name="Trier par nom",
