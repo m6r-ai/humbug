@@ -181,29 +181,26 @@ class ConversationMessageSection(QFrame):
 
         self._needs_lazy_update = False
 
-        if self._language is not None:
-            if not self._copy_button and not self._save_as_button:
-                strings = self._language_manager.strings()
+        if self._language is None:
+            return
 
-                # Add Copy button with icon
-                self._copy_button = QToolButton()
-                self._copy_button.clicked.connect(self._copy_all_content)
-                self._copy_button.setToolTip(strings.tooltip_copy_contents)
-                self._copy_button.installEventFilter(event_filter)
-                self._header_layout.addWidget(self._copy_button)
+        strings = self._language_manager.strings()
 
-                # Add Save As button with icon
-                self._save_as_button = QToolButton()
-                self._save_as_button.clicked.connect(self._save_as)
-                self._save_as_button.setToolTip(strings.tooltip_save_contents)
-                self._save_as_button.installEventFilter(event_filter)
-                self._header_layout.addWidget(self._save_as_button)
+        # Add Copy button with icon
+        self._copy_button = QToolButton()
+        self._copy_button.clicked.connect(self._copy_all_content)
+        self._copy_button.setToolTip(strings.tooltip_copy_contents)
+        self._copy_button.installEventFilter(event_filter)
+        self._header_layout.addWidget(self._copy_button)
 
-                self._apply_button_style()
+        # Add Save As button with icon
+        self._save_as_button = QToolButton()
+        self._save_as_button.clicked.connect(self._save_as)
+        self._save_as_button.setToolTip(strings.tooltip_save_contents)
+        self._save_as_button.installEventFilter(event_filter)
+        self._header_layout.addWidget(self._save_as_button)
 
-        if self._highlighter is None:
-            highlighter = ConversationLanguageHighlighter(self._text_area.document(), self._content_node)
-            self._highlighter = highlighter
+        self._apply_button_style()
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
@@ -318,7 +315,9 @@ class ConversationMessageSection(QFrame):
 
             # If we have code block node, extract its content as plain text
             if isinstance(content, MarkdownASTCodeBlockNode):
-                self._set_language(content.language)
+                if self._highlighter is None:
+                    self._highlighter = ConversationLanguageHighlighter(self._text_area.document(), self._content_node)
+
                 self._text_area.set_text(content.content)
                 return
 
