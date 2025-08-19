@@ -207,7 +207,7 @@ class MarkdownASTBuilder:
 
         if self._in_code_block:
             # Check if our embedded parser indicates this should be a continuation
-            if self._embedded_language:
+            if self._embedded_language != ProgrammingLanguage.UNKNOWN:
                 if self._parse_code_line(line):
                     return 'code_block_content', line
 

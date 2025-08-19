@@ -5,7 +5,7 @@ import logging
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 
 from dmarkdown import MarkdownASTNode, MarkdownASTCodeBlockNode
-from syntax import TokenType, ProgrammingLanguage, ParserState
+from syntax import TokenType, ParserState
 
 from humbug.style_manager import StyleManager
 
@@ -25,22 +25,12 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
 
         self._content_node = content_node
+        assert isinstance(self._content_node, MarkdownASTCodeBlockNode), "content node must be a MarkdownASTCodeBlockNode"
 
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
-        self._language = ProgrammingLanguage.TEXT
+        self._language = self._content_node.language
         self._logger = logging.getLogger("ConversationLanguageHighlighter")
-
-    def set_language(self, language: ProgrammingLanguage) -> None:
-        """
-        Set the programming language for syntax highlighting.
-
-        Args:
-            language: The programming language to use
-        """
-        if self._language != language:
-            self._language = language
-            self.rehighlight()
 
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
