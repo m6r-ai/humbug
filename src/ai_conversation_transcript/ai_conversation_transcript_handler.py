@@ -8,7 +8,7 @@ from typing import Dict, List, Any
 
 from ai import AIMessage
 
-from ai_conversation_transcript import (
+from ai_conversation_transcript.ai_conversation_transcript_error import (
     AIConversationTranscriptFormatError, AIConversationTranscriptIOError
 )
 
