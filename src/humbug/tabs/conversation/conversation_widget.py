@@ -286,8 +286,8 @@ class ConversationWidget(QWidget):
 
         # Create transcript handler with provided filename, then load the transcript data
         self._transcript_handler = AIConversationTranscriptHandler(path)
-        transcript_data = self._transcript_handler.read()
-        self._load_message_history(transcript_data.messages, use_existing_ai_conversation)
+        conversation_history = self._transcript_handler.read()
+        self._load_message_history(conversation_history.get_messages(), use_existing_ai_conversation)
         self._set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
 
     def _set_delegated_conversation_mode(self, enabled: bool) -> None:
@@ -1387,15 +1387,12 @@ class ConversationWidget(QWidget):
         Args:
             history: AIConversationHistory object containing messages
         """
-        messages = history.get_messages()
-        transcript_messages = [msg.to_transcript_dict() for msg in messages]
-
         try:
             # Write history to new transcript file
-            self._transcript_handler.replace_messages(transcript_messages)
+            self._transcript_handler.replace_messages(history)
 
             # Load messages into the new tab
-            self._load_message_history(messages, False)
+            self._load_message_history(history.get_messages(), False)
 
         except Exception as e:
             raise ConversationError(f"Failed to write transcript for new history: {str(e)}") from e
@@ -1937,10 +1934,10 @@ class ConversationWidget(QWidget):
         self._input.set_model(conversation_settings.model)
 
         # Update the transcript file by rewriting it with only the preserved messages
-        transcript_messages = [msg.to_transcript_dict() for msg in preserved_history_messages]
+        preserved_history = AIConversationHistory(preserved_history_messages, history.version(), history.parent())
 
         try:
-            self._transcript_handler.replace_messages(transcript_messages)
+            self._transcript_handler.replace_messages(preserved_history)
 
             # Reset bookmarks and selection state
             self._bookmarked_messages = {}

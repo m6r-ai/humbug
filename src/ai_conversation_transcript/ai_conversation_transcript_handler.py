@@ -1,12 +1,11 @@
 """Unified transcript handling for conversations."""
 
-from dataclasses import dataclass
 import json
 import logging
 import os
-from typing import Dict, List, Any
+from typing import Dict, Any
 
-from ai import AIMessage
+from ai import AIMessage, AIConversationHistory
 
 from ai_conversation_transcript.ai_conversation_transcript_error import (
     AIConversationTranscriptFormatError, AIConversationTranscriptIOError
@@ -29,14 +28,6 @@ class FloatOneDecimalEncoder(json.JSONEncoder):
             return round(o, 1)
 
         return super().default(o)
-
-
-@dataclass
-class AIConversationTranscriptData:
-    """Container for transcript data and metadata."""
-    messages: List[AIMessage]
-    version: str
-    parent: str | None = None
 
 
 class AIConversationTranscriptHandler:
@@ -121,12 +112,12 @@ class AIConversationTranscriptHandler:
         if not isinstance(data["conversation"], list):
             raise AIConversationTranscriptFormatError("Conversation must be array")
 
-    def read(self) -> AIConversationTranscriptData:
+    def read(self) -> AIConversationHistory:
         """
         Read and validate transcript file.
 
         Returns:
-            AIConversationTranscriptData containing messages and metadata
+            AIConversationHistory containing messages and metadata
 
         Raises:
             AIConversationTranscriptFormatError: If transcript format is invalid
@@ -154,7 +145,7 @@ class AIConversationTranscriptHandler:
             except ValueError as e:
                 raise AIConversationTranscriptFormatError(f"Invalid message format: {str(e)}") from e
 
-        return AIConversationTranscriptData(
+        return AIConversationHistory(
             messages=messages,
             version=data["metadata"]["version"],
             parent=data["metadata"].get("parent", None)
@@ -205,31 +196,29 @@ class AIConversationTranscriptHandler:
                 details={"backup_created": os.path.exists(f"{self._filename}.backup")}
             ) from e
 
-    def replace_messages(self, messages: List[Dict]) -> None:
+    def replace_messages(self, history: AIConversationHistory) -> None:
         """
-        Replace all messages in the transcript file with the provided list.
-
-        Unlike write(), which appends messages, this method completely replaces
-        the conversation array while preserving metadata.
+        Replace all messages in the transcript file with those from the conversation history.
 
         Args:
-            messages: List of message dictionaries to replace existing messages
+            history: AIConversationHistory object containing messages and metadata
 
         Raises:
             AIConversationTranscriptFormatError: If transcript format is invalid
             AIConversationTranscriptIOError: If file operations fail
         """
         try:
-            # Read current content to preserve metadata
-            with open(self._filename, 'r', encoding='utf-8') as f:
-                data = json.load(f)
+            # Convert messages to transcript format
+            transcript_messages = [msg.to_transcript_dict() for msg in history.get_messages()]
 
-            # Validate the basic structure
-            if "metadata" not in data or "conversation" not in data:
-                raise AIConversationTranscriptFormatError("Missing required fields in transcript")
-
-            # Replace the entire conversation array
-            data["conversation"] = messages
+            # Create the full transcript structure
+            data = {
+                "metadata": {
+                    "version": history.version(),
+                    "parent": history.parent()
+                },
+                "conversation": transcript_messages
+            }
 
             # Write to temp file then rename for atomic operation
             temp_file = f"{self._filename}.tmp"
@@ -238,9 +227,6 @@ class AIConversationTranscriptHandler:
 
             # Atomic replace
             os.replace(temp_file, self._filename)
-
-        except json.JSONDecodeError as e:
-            raise AIConversationTranscriptFormatError(f"Invalid JSON in transcript: {str(e)}") from e
 
         except Exception as e:
             # Create backup of current file if possible

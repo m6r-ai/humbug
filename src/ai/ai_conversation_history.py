@@ -9,10 +9,20 @@ from ai.ai_usage import AIUsage
 class AIConversationHistory:
     """Manages the conversation history and state."""
 
-    def __init__(self, messages: List[AIMessage] | None = None) -> None:
-        """Initialize empty conversation history."""
+    def __init__(self, messages: List[AIMessage] | None = None, version: str = "0.1", parent: str | None = None) -> None:
+        """Initialize conversation history with optional metadata."""
         self._messages: List[AIMessage] = messages if messages is not None else []
+        self._version = version
+        self._parent = parent
         self._last_response_tokens = {"input": 0, "output": 0, "input_total": 0, "output_total": 0}
+
+    def version(self) -> str:
+        """Get the transcript version."""
+        return self._version
+
+    def parent(self) -> str | None:
+        """Get the parent transcript reference."""
+        return self._parent
 
     def clear(self) -> None:
         """Clear the conversation history."""
