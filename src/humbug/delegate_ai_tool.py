@@ -63,11 +63,12 @@ class DelegateAITool(AITool):
                 "- To explore multiple approaches to a problem before converging on a solution in your main conversation\n"
                 "- To give you a sounding board for ideas or to brainstorm with a different AI\n"
                 "Important:\n"
-                "- You must not use this tool if you would simply be giving the child AI the same task and with no significant "
+                "- Do not use this tool if you would simply be giving the child AI the same task and with no significant "
                 "differences in context or requirements\n"
+                "- The child AI does not have access to any different tools to the ones you have\n"
                 "- You must use the session_id parameter to continue a previous conversation\n"
-                "- You will have to generate the task_prompt and that can be very expensive if you need to provide a lot of "
-                "context in the task_prompt. If you need to provide something that is already in the filesystem, tell the "
+                "- You must generate the task_prompt and that can be very expensive if you need to provide a lot of "
+                "context in it. If you need to provide something that is already in the filesystem, tell the "
                 "delegated AI where to read it and do not provide the contents in the task_prompt. If the content is not "
                 "already in the filesystem, you must provide it in the task_prompt.\n"
                 "- You have the option to provide your current conversation context to a new child AI instance. This is very "
@@ -188,7 +189,7 @@ class DelegateAITool(AITool):
 
         Args:
             tool_call: Tool call containing task prompt and arguments
-            requester: AI model requesting the operation
+            requester_ref: AI model requesting the operation
             request_authorization: Function to call for user authorization
 
         Returns:
@@ -416,7 +417,7 @@ class DelegateAITool(AITool):
 
             # Submit the task prompt
             conversation_tab.set_input_text(task_prompt)
-            conversation_tab.submit_with_requester(conversation_settings.model)
+            conversation_tab.submit_with_requester(ai_conversation.conversation_settings().model)
 
             # Log the delegation
             tab_id = conversation_tab.tab_id()
