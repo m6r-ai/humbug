@@ -14,6 +14,7 @@ from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_conversations_model import MindspaceConversationsModel
 from humbug.mindspace.mindspace_conversations_tree_view import MindspaceConversationsTreeView
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
@@ -831,6 +832,10 @@ class MindspaceConversationsView(QWidget):
 
                 # Then delete the file
                 os.remove(path)
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"User deleted file '{path}'"
+                )
 
             except OSError as e:
                 self._logger.error("Failed to delete file '%s': %s", path, str(e))
@@ -861,6 +866,7 @@ class MindspaceConversationsView(QWidget):
                     [MessageBoxButton.OK]
                 )
                 return
+
         except OSError as e:
             self._logger.error("Failed to check if folder '%s' is empty: %s", path, str(e))
             MessageBox.show_message(
@@ -886,6 +892,10 @@ class MindspaceConversationsView(QWidget):
             try:
                 # Delete the empty folder
                 os.rmdir(path)
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"User deleted empty folder '{path}'"
+                )
 
             except OSError as e:
                 self._logger.error("Failed to delete folder '%s': %s", path, str(e))

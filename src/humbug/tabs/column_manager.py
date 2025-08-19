@@ -1900,17 +1900,29 @@ class ColumnManager(QWidget):
         # Find and close any editor tab for this file
         editor_tab = self._find_editor_tab_by_path(path)
         if editor_tab:
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Deleted '{path}' - closed editor tab\ntab ID: {editor_tab.tab_id()}"
+            )
             self.close_tab_by_id(editor_tab.tab_id(), True)
 
         # Also check for conversation files
         if path.endswith('.conv'):
             conversation_tab = self._find_conversation_tab_by_path(path)
             if conversation_tab:
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"Deleted '{path}' - closed conversation tab\ntab ID: {conversation_tab.tab_id()}"
+                )
                 self.close_tab_by_id(conversation_tab.tab_id(), True)
 
         # Close any wiki page we may have had for this file
         wiki_tab = self._find_wiki_tab_by_path(path)
         if wiki_tab:
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Deleted '{path}' - closed wiki tab\ntab ID: {wiki_tab.tab_id()}"
+            )
             self.close_tab_by_id(wiki_tab.tab_id(), True)
 
     def close_all_tabs(self) -> bool:
