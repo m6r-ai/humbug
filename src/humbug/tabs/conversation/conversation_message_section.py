@@ -318,6 +318,9 @@ class ConversationMessageSection(QFrame):
                 if self._highlighter is None:
                     self._highlighter = ConversationLanguageHighlighter(self._text_area.document(), self._content_node)
 
+                else:
+                    cast(ConversationLanguageHighlighter, self._highlighter).update_content(content)
+
                 self._text_area.set_text(content.content)
                 return
 

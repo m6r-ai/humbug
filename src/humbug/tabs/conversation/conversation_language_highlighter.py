@@ -70,3 +70,8 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
 
         except Exception:
             self._logger.exception("highlighting exception")
+
+    def update_content(self, content_node: MarkdownASTNode | None) -> None:
+        """Update the content node for the highlighter."""
+        assert isinstance(content_node, MarkdownASTCodeBlockNode), "content node must be a MarkdownASTCodeBlockNode"
+        self._content_node = content_node
