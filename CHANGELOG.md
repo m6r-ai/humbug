@@ -23,6 +23,7 @@ Bug fixes:
   solution and this has reduced application startup times by > 200 ms when lots of conversations are present.
 - Fixed a problem with tab bar zooming.
 - Fixed a problem when scrolling an file/folder edit in the mindspace tree views.
+- When delegating tasks to another AI the requester user name was mis-set.
 
 Internal structure changes:
 
