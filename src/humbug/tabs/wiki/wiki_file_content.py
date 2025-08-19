@@ -13,7 +13,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
 from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
-from humbug.tabs.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
+from humbug.tabs.wiki.wiki_language_highlighter import WikiLanguageHighlighter
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 
 
@@ -92,7 +92,7 @@ class WikiFileContent(WikiContentWidget):
 
         # Initialize variables
         self._language: ProgrammingLanguage | None = None
-        self._highlighter: ConversationLanguageHighlighter | None = None
+        self._highlighter: WikiLanguageHighlighter | None = None
         self._mouse_left_button_pressed = False
         self._init_colour_mode = self._style_manager.color_mode()
 
@@ -177,7 +177,7 @@ class WikiFileContent(WikiContentWidget):
             # Default to text if no language detected
             self._language = ProgrammingLanguage.TEXT
 
-        highlighter = ConversationLanguageHighlighter(self._text_area.document())
+        highlighter = WikiLanguageHighlighter(self._text_area.document())
         highlighter.set_language(self._language)
         self._highlighter = highlighter
         self._text_area.set_has_code_block(True)
