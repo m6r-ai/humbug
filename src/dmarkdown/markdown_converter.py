@@ -8,7 +8,7 @@ to HTML while preserving code blocks and handling streaming text updates.
 import logging
 from typing import List, Tuple, cast
 
-from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
+from syntax import ProgrammingLanguage
 
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 from dmarkdown.markdown_ast_node import MarkdownASTCodeBlockNode, MarkdownASTNode, MarkdownASTDocumentNode
@@ -97,11 +97,8 @@ class MarkdownConverter:
                 # Add any accumulated markdown before this code block
                 add_markdown_section()
 
-                # Process the code block
-                language = ProgrammingLanguageUtils.from_name(node.language) if node.language else ProgrammingLanguage.TEXT
-
                 # Add the code block node as a section with its language
-                sections.append((node, language))
+                sections.append((node, node.language))
 
             else:
                 # Add to current markdown content

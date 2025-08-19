@@ -8,6 +8,7 @@ import pytest
 import syntax.parser_imports
 # pylint: enable=unused-import
 
+from syntax import ProgrammingLanguage
 from dmarkdown import MarkdownASTBuilder
 
 from markdown_test_utils import (
@@ -382,7 +383,7 @@ print("Hello, world!")
     assert len(doc.children) == 1
     code_block = doc.children[0]
     assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
-    assert code_block.language == "python"
+    assert code_block.language == ProgrammingLanguage.PYTHON
     assert "def hello():" in code_block.content
     assert "print(\"Hello, world!\")" in code_block.content
 
@@ -1125,7 +1126,7 @@ def unclosed_function():
     assert len(doc.children) == 1
     code_block = doc.children[0]
     assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode"
-    assert code_block.language == "python"
+    assert code_block.language == ProgrammingLanguage.PYTHON
 
 
 def test_nested_code_blocks(ast_builder):
@@ -1538,7 +1539,7 @@ console.log("hello");
     doc = ast_builder.update_ast(new_text, previous)
 
     code_block = doc.children[0]
-    assert code_block.language == "javascript"
+    assert code_block.language == ProgrammingLanguage.JAVASCRIPT
     assert code_block.content.strip() == 'console.log("hello");'
 
 
@@ -1733,7 +1734,7 @@ Updated final paragraph."""
             code_element = child
             break
     assert code_element is not None
-    assert code_element.language == "javascript"
+    assert code_element.language == ProgrammingLanguage.JAVASCRIPT
 
 
 def test_whitespace_only_changes(ast_builder):

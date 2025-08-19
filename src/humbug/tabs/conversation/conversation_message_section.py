@@ -12,7 +12,7 @@ from PySide6.QtGui import (
     QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QIcon, QColor
 )
 
-from dmarkdown import MarkdownASTNode, MarkdownASTTextNode
+from dmarkdown import MarkdownASTNode, MarkdownASTCodeBlockNode, MarkdownASTTextNode
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
@@ -128,7 +128,7 @@ class ConversationMessageSection(QFrame):
         self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
 
         self._needs_lazy_update = False
-        self.set_language(language)
+        self._set_language(language)
 
         self._mouse_left_button_pressed = False
 
@@ -144,7 +144,7 @@ class ConversationMessageSection(QFrame):
         """Provide the language in use by this section."""
         return self._language
 
-    def set_language(self, language: ProgrammingLanguage | None) -> None:
+    def _set_language(self, language: ProgrammingLanguage | None) -> None:
         """Set the programming language to use for this message section"""
         self._language = language
 
@@ -202,7 +202,7 @@ class ConversationMessageSection(QFrame):
                 self._apply_button_style()
 
         if self._highlighter is None:
-            highlighter = ConversationLanguageHighlighter(self._text_area.document())
+            highlighter = ConversationLanguageHighlighter(self._text_area.document(), self._content_node)
             highlighter.set_language(cast(ProgrammingLanguage, self._language))
             self._highlighter = highlighter
 
@@ -310,14 +310,19 @@ class ConversationMessageSection(QFrame):
         Args:
             content: A MarkdownASTNode text content
         """
-        # If we have code block node, extract its content as plain text
-        if not self._use_markdown:
-            text_content = cast(MarkdownASTTextNode, content)
-            self._text_area.set_text(text_content.content)
-            return
-
-        # Store for re-styling
         self._content_node = content
+        if not self._use_markdown:
+            # If we have a text node, extract its content as plain text
+            if isinstance(content, MarkdownASTTextNode):
+                self._text_area.set_text(content.content)
+                return
+
+            # If we have code block node, extract its content as plain text
+            if isinstance(content, MarkdownASTCodeBlockNode):
+                self._set_language(content.language)
+                self._text_area.set_text(content.content)
+                return
+
         self._renderer.visit(content)
 
     def has_selection(self) -> bool:

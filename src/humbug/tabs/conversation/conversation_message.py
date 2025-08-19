@@ -654,16 +654,12 @@ class ConversationMessage(QFrame):
                 section = self._create_section_widget(language)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
-
                 section.set_content(node)
                 continue
 
             if i == len(self._sections) - 1:
                 # Update the last section with new content
                 section = self._sections[-1]
-                if language != section.language():
-                    section.set_language(language)
-
                 section.set_content(node)
 
         # Remove any extra sections

@@ -6,7 +6,7 @@ import logging
 import re
 from typing import Dict, List, Tuple, Any, cast
 
-from syntax import ParserRegistry, ProgrammingLanguage, ProgrammingLanguageUtils
+from syntax import ParserRegistry, ProgrammingLanguage, ProgrammingLanguageUtils, Token
 
 from dmarkdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownASTDocumentNode, MarkdownASTTextNode, MarkdownASTLineBreakNode,
@@ -126,13 +126,15 @@ class MarkdownASTBuilder:
 
         # Code block state tracking
         self._in_code_block = False
-        self._code_block_language = ""
+        self._code_block_language_name = ""
         self._code_block_content: List[str] = []
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
         self._code_block_indents: List[int] = []
         self._embedded_parser_state: Any = None
         self._embedded_language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
+        self._tokens_by_line: List[List[Token]] = []
+        self._states_by_line: List[Any] = []
 
         # Table state tracking using the new buffer approach
         self._table_buffer = TableBufferState()
@@ -146,13 +148,13 @@ class MarkdownASTBuilder:
         """
         return self._document
 
-    def _should_parse_code_block_as_continuation(
+    def _parse_code_line(
         self,
-        language: ProgrammingLanguage,
         line_content: str
     ) -> bool:
         """
-        Check if a line should be parsed as a continuation by the embedded parser.
+        Parse the next line of code in a code block.  This saves the parse result, and returns a status
+        indicating whether the line ends with a continuation to another line.
 
         Args:
             language: The programming language of the code block
@@ -161,20 +163,24 @@ class MarkdownASTBuilder:
         Returns:
             True if this line should be treated as a continuation
         """
-        if language == ProgrammingLanguage.TEXT:
-            return False
-
-        # Get or create parser for this language
-        parser = ParserRegistry.create_parser(language)
-        assert parser is not None, f"No parser registered for language: {language.name}"
-
-        # If language changed, reset state
-        if language != self._embedded_language:
-            self._embedded_parser_state = None
-            self._embedded_language = language
+        parser = ParserRegistry.create_parser(self._embedded_language)
+        assert parser is not None, f"No parser registered for language: {self._embedded_language.name}"
 
         # Parse the line and check if we're in a continuation
         new_state = parser.parse(self._embedded_parser_state, line_content)
+
+        # Extract tokens from the parser and cache them
+        line_tokens = []
+        while True:
+            token = parser.get_next_token()
+            if token is None:
+                break
+
+            line_tokens.append(token)
+
+        # Store results
+        self._tokens_by_line.append(line_tokens)
+        self._states_by_line.append(new_state)
 
         # Update stored state
         self._embedded_parser_state = new_state
@@ -201,10 +207,8 @@ class MarkdownASTBuilder:
 
         if self._in_code_block:
             # Check if our embedded parser indicates this should be a continuation
-            if self._code_block_language:
-                language = ProgrammingLanguageUtils.from_name(self._code_block_language)
-                assert language != ProgrammingLanguage.UNKNOWN, "Unknown programming language in code block"
-                if self._should_parse_code_block_as_continuation(language, line):
+            if self._embedded_language:
+                if self._parse_code_line(line):
                     return 'code_block_content', line
 
             # Check for code fence.  If we have one then we're either closing
@@ -1017,8 +1021,12 @@ class MarkdownASTBuilder:
         """
         # Create a code block node for the unclosed block
         code_block = MarkdownASTCodeBlockNode(
-            language=self._code_block_language,
-            content='\n'.join(self._code_block_content)
+            language_name=self._code_block_language_name,
+            content='\n'.join(self._code_block_content),
+            tokens_by_line=self._tokens_by_line,
+            states_by_line=self._states_by_line,
+            language=self._embedded_language,
+            total_lines=len(self._code_block_content)
         )
         code_block.line_start = self._code_block_start_line
         code_block.line_end = end_line
@@ -1032,13 +1040,15 @@ class MarkdownASTBuilder:
 
         # Reset code block state
         self._in_code_block = False
-        self._code_block_language = ""
+        self._code_block_language_name = ""
         self._code_block_content = []
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0
         self._code_block_indents = []
         self._embedded_parser_state = None
         self._embedded_language = ProgrammingLanguage.UNKNOWN
+        self._tokens_by_line = []
+        self._states_by_line = []
 
     def _handle_text_continuation(self, text: str, line_num: int) -> bool:
         """
@@ -1171,7 +1181,8 @@ class MarkdownASTBuilder:
 
         if line_type == 'code_block_start':
             self._in_code_block = True
-            self._code_block_language = content
+            self._code_block_language_name = content
+            self._embedded_language = ProgrammingLanguageUtils.from_name(content)
             self._code_block_content = []
             self._code_block_start_line = line_num
             self._last_processed_line_type = line_type
@@ -1251,7 +1262,7 @@ class MarkdownASTBuilder:
         self._last_processed_line_type = ""
         self._blank_line_count = 0
         self._in_code_block = False
-        self._code_block_language = ""
+        self._code_block_language_name = ""
         self._code_block_content = []
         self._code_block_start_line = -1
         self._code_block_nesting_level = 0

@@ -1,11 +1,11 @@
 """Conversation language highlighter."""
 
 import logging
-from typing import cast
 
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 
-from syntax import TokenType, ProgrammingLanguage, ParserState, ParserRegistry
+from dmarkdown import MarkdownASTNode, MarkdownASTCodeBlockNode
+from syntax import TokenType, ProgrammingLanguage, ParserState
 
 from humbug.style_manager import StyleManager
 
@@ -20,9 +20,11 @@ class ConversationLanguageHighlighterBlockData(QTextBlockUserData):
 class ConversationLanguageHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for source code files."""
 
-    def __init__(self, parent: QTextDocument) -> None:
+    def __init__(self, parent: QTextDocument, content_node: MarkdownASTNode | None) -> None:
         """Initialize the highlighter."""
         super().__init__(parent)
+
+        self._content_node = content_node
 
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
@@ -43,58 +45,38 @@ class ConversationLanguageHighlighter(QSyntaxHighlighter):
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
         try:
-            current_block = self.currentBlock()
-            prev_block = current_block.previous()
+            block_num = self.currentBlock().blockNumber()
 
-            prev_block_data: ConversationLanguageHighlighterBlockData | None = None
-            prev_parser_state = None
-
-            if prev_block is not None:
-                prev_block_data = cast(ConversationLanguageHighlighterBlockData, prev_block.userData())
-                if prev_block_data is not None:
-                    prev_parser_state = prev_block_data.parser_state
-
-            continuation_state = -1
-            current_block_data = cast(ConversationLanguageHighlighterBlockData, current_block.userData())
-
-            # Use the appropriate language parser
-            parser = ParserRegistry.create_parser(self._language)
-            if parser is None:
-                return
-
-            parser_state: ParserState | None = parser.parse(prev_parser_state, text)
+            assert isinstance(self._content_node, MarkdownASTCodeBlockNode), "content node must be a MarkdownASTCodeBlockNode"
+            tokens = self._content_node.tokens_by_line[block_num]
 
             # Apply syntax highlighting based on token types
             last_token_pos = 0
-            while True:
-                token = parser.get_next_token()
-                if token is None:
-                    # If we've reached the end of the line check if we had whitespace at the end.  If we
-                    # did then we need to highlight that too.
-                    if last_token_pos < len(text):
-                        self.setFormat(
-                            last_token_pos,
-                            len(text) - last_token_pos,
-                            self._style_manager.get_highlight(TokenType.TEXT)
-                        )
-                    break
-
+            for token in tokens:
                 highlight_len = len(token.value) + token.start - last_token_pos
                 self.setFormat(last_token_pos, highlight_len, self._style_manager.get_highlight(token.type))
                 last_token_pos += highlight_len
 
-            # Check if we need to rehighlight everything from this block onwards
-            if current_block_data is not None:
-                current_parser_state = current_block_data.parser_state
-                if current_parser_state is not None:
-                    continuation_state = current_parser_state.continuation_state
+            # If we've reached the end of the line check if we had whitespace at the end.  If we
+            # did then we need to highlight that too.
+            if last_token_pos < len(text):
+                self.setFormat(
+                    last_token_pos,
+                    len(text) - last_token_pos,
+                    self._style_manager.get_highlight(TokenType.TEXT)
+                )
+
+            continuation_state = -1
+            if block_num > 0:
+                # If the previous block has a continuation state, use it
+                prev_parser_state = self._content_node.states_by_line[block_num - 1]
+                if prev_parser_state is not None:
+                    continuation_state = prev_parser_state.continuation_state
+
+            parser_state = self._content_node.states_by_line[block_num]
 
             if parser_state is not None and continuation_state != parser_state.continuation_state:
                 self.setCurrentBlockState(self.currentBlockState() + 1)
-
-            block_data = ConversationLanguageHighlighterBlockData()
-            block_data.parser_state = parser_state
-            current_block.setUserData(block_data)
 
         except Exception:
             self._logger.exception("highlighting exception")

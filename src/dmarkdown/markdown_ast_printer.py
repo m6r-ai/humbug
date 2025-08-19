@@ -159,9 +159,22 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         if node.line_start is not None and node.line_end is not None:
             line_range = f" (lines {node.line_start}-{node.line_end})"
 
-        print(f"{self._indent()}CodeBlock{line_range}: language='{node.language}'")
+        parse_info = f", parsed ({node.language.name}, {node.total_lines} lines)"
+
+        print(f"{self._indent()}CodeBlock{line_range}: language='{node.language}'{parse_info}")
         self.indent_level += 1
         print(f"{self._indent()}Content: '{node.content[:30]}...' ({len(node.content)} chars)")
+
+        # Show parse result details if available
+        print(f"{self._indent()}ParseResult:")
+        self.indent_level += 1
+        for line_num in range(node.total_lines):
+            tokens = node.tokens_by_line[line_num]
+            state = node.states_by_line[line_num]
+            state_info = f", state: {type(state).__name__ if state else 'None'}"
+            print(f"{self._indent()}Line {line_num}: {len(tokens)} tokens{state_info}")
+        self.indent_level -= 1
+
         self.indent_level -= 1
         return node.content
 

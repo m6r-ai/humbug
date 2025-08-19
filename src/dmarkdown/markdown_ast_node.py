@@ -5,7 +5,10 @@ This module provides functionality to incrementally convert simplified markdown
 to HTML while preserving code blocks and handling streaming text updates.
 """
 
+from typing import List
+
 from dast import ASTNode, ASTVisitor
+from syntax import ParserState, ProgrammingLanguage, Token
 
 
 class MarkdownASTNode(ASTNode):
@@ -171,7 +174,15 @@ class MarkdownASTImageNode(MarkdownASTNode):
 
 class MarkdownASTCodeBlockNode(MarkdownASTNode):
     """Node representing a code block (<pre><code>)."""
-    def __init__(self, language: str = "", content: str = "") -> None:
+    def __init__(
+        self,
+        language_name: str,
+        content: str,
+        tokens_by_line: List[List[Token]],
+        states_by_line: List[ParserState | None],
+        language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN,
+        total_lines: int = 0
+    ) -> None:
         """
         Initialize a code block node.
 
@@ -180,8 +191,12 @@ class MarkdownASTCodeBlockNode(MarkdownASTNode):
             content: The code content
         """
         super().__init__()
-        self.language = language
+        self.language_name = language_name
         self.content = content
+        self.tokens_by_line = tokens_by_line
+        self.states_by_line = states_by_line
+        self.language = language
+        self.total_lines = total_lines
 
 
 class MarkdownASTLineBreakNode(MarkdownASTNode):

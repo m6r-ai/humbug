@@ -189,7 +189,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
         """Serialize a code block node."""
         result = {
             "type": "code_block",
-            "language": node.language,
+            "language": node.language_name,
             "content": node.content
         }
         self._add_line_info(result, node)
