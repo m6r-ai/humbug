@@ -78,7 +78,7 @@ class ShellCommandEdit(ShellCommand):
             self._column_manager.protect_current_tab(True)
 
             try:
-                editor_tab = self._column_manager.open_file(full_path)
+                editor_tab = self._column_manager.open_file(full_path, False)
 
             finally:
                 self._column_manager.protect_current_tab(False)
