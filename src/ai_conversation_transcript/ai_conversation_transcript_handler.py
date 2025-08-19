@@ -160,12 +160,12 @@ class AIConversationTranscriptHandler:
             parent=data["metadata"].get("parent", None)
         )
 
-    def write(self, messages: List[Dict]) -> None:
+    def append_message(self, message: Dict) -> None:
         """
-        Write messages to transcript file.
+        Append a message to the transcript file.
 
         Args:
-            messages: List of message dictionaries to append
+            message: Message dictionary to append
 
         Raises:
             AIConversationTranscriptIOError: If file operations fail
@@ -176,7 +176,7 @@ class AIConversationTranscriptHandler:
                 data = json.load(f)
 
             # Add new messages
-            data["conversation"].extend(messages)
+            data["conversation"].append(message)
 
             # Write to temp file then rename for atomic operation
             temp_file = f"{self._filename}.tmp"

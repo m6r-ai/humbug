@@ -878,13 +878,13 @@ class ConversationWidget(QWidget):
 
     def _append_message_to_transcript(self, message: AIMessage) -> None:
         """
-        Write messages to transcript file.
+        Append messages to transcript file.
 
         Args:
-            message: AIMessage to write to transcript
+            message: AIMessage to append to transcript
         """
         try:
-            self._transcript_handler.write([message.to_transcript_dict()])
+            self._transcript_handler.append_message(message.to_transcript_dict())
 
         except AIConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
