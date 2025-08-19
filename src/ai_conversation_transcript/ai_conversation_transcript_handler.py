@@ -196,9 +196,9 @@ class AIConversationTranscriptHandler:
                 details={"backup_created": os.path.exists(f"{self._filename}.backup")}
             ) from e
 
-    def replace_messages(self, history: AIConversationHistory) -> None:
+    def write(self, history: AIConversationHistory) -> None:
         """
-        Replace all messages in the transcript file with those from the conversation history.
+        Replace a transcript file with a new conversation history.
 
         Args:
             history: AIConversationHistory object containing messages and metadata

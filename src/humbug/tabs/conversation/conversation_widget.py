@@ -1389,7 +1389,7 @@ class ConversationWidget(QWidget):
         """
         try:
             # Write history to new transcript file
-            self._transcript_handler.replace_messages(history)
+            self._transcript_handler.write(history)
 
             # Load messages into the new tab
             self._load_message_history(history.get_messages(), False)
@@ -1937,7 +1937,7 @@ class ConversationWidget(QWidget):
         preserved_history = AIConversationHistory(preserved_history_messages, history.version(), history.parent())
 
         try:
-            self._transcript_handler.replace_messages(preserved_history)
+            self._transcript_handler.write(preserved_history)
 
             # Reset bookmarks and selection state
             self._bookmarked_messages = {}
