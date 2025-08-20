@@ -138,7 +138,10 @@ class TabLabel(QWidget):
         else:
             colour = ColorRole.TEXT_PRIMARY if show_active else ColorRole.TEXT_INACTIVE
 
-        self._label.setStyleSheet(f"color: {self._style_manager.get_color_str(colour)}")
+        self._label.setStyleSheet(f"""
+            color: {self._style_manager.get_color_str(colour)};
+            padding: 0 4px;
+        """)
         font = self._label.font()
         base_size = self._style_manager.base_font_size()
         scaled_size = base_size * self._style_manager.zoom_factor()
