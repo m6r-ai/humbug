@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v0.22 (2025-08-xx)
+## v0.22 (2025-08-20)
 
 New features:
 
@@ -13,6 +13,8 @@ New features:
 - When we delete the end of a conversation from a specific user message, reinsert that prompt into the input box.
 - Revised click and double-click behaviour for all mindspace tree actions.  These just create default ephemeral and
   permanent tabs.
+- Improved the delegate_ai tool description to clarify what child AIs can do, and to ensure child AIs are made aware that
+  they are child AIs.
 
 Bug fixes:
 
