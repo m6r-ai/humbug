@@ -117,6 +117,7 @@ class LanguageStrings:
     mindspace_label_none: str
     mindspace_files: str
     mindspace_conversations: str
+    mindspace_wiki: str
 
     # Mindspace folders dialog
     mindspace_folders_title: str
