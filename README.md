@@ -6,7 +6,7 @@ Think of it as an operating system for human-AI collaboration.
 It's designed to let you work on lots of different types of problems, but it currently shines at supporting you build software.
 A demonstration is that each version has been built using earlier versions of itself!
 
-![Humbug in action](docs/v0.18-demo.gif)
+![Humbug in action](docs/v0.22-demo.gif)
 
 ## What are the core ideas?
 
@@ -68,8 +68,6 @@ A demonstration is that each version has been built using earlier versions of it
   It's designed to help with any activities where you and your AIs need to work together on a problem.
   While it has a lot of tools for software developers, it has been designed to support a much wider set of needs.
   With its extensibility it's also easy to think about adding new tools for AIs, humans, or both.
-
-![Humbug in action](docs/v0.18-explore.gif)
 
 ## Learn more
 
