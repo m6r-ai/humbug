@@ -8,25 +8,7 @@ A demonstration is that each version has been built using earlier versions of it
 
 ![Humbug in action](docs/v0.18-demo.gif)
 
-## Why Humbug?
-
-- **AI as a first-class citizen**  
-
-  Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.
-  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI, so you're not tied to any one provider.
-  You can optimize for cost, and are future-proofed when you want to use something new.
-  You can seamlessly switch between models, even switching mid-conversation.
-
-- **Mindspaces: project-centric workspaces**  
-
-  Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
-  Switch between projects as easily as you switch between desktops.
-
-- **Structured context engineering with Metaphor**  
-
-  By going beyond ad-hoc prompts and making your intentions clear, you can get dramatically better results and lower operating costs.
-  Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
-  It's a language for AI orchestration.
+## What are the core ideas?
 
 - **Human–AI collaboration at the core**  
 
@@ -34,10 +16,28 @@ A demonstration is that each version has been built using earlier versions of it
   Humbug treats both humans and AIs as first-class actors.
   All tools, including the GUI, are designed to be available for both to use, so it's faster and easier to get things done.
 
+- **LLMs, lots of LLMs**  
+
+  Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.
+  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, xAI, and Z.ai so you're not tied to any one provider.
+  You can optimize for cost, and are future-proofed when you want to use something new.
+  You can seamlessly switch between models, even switching mid-conversation.
+
+- **Mindspaces: project-centric workspaces**  
+
+  Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
+
+- **Structured context engineering with Metaphor**  
+
+  By going beyond ad-hoc prompts and making your intentions clear, you can get dramatically better results and lower operating costs.
+  Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
+  It's a language for AI orchestration.
+
 - **Powerful, pluggable tools**  
 
-  Extends your LLMs with dynamic filesystem operations, a clock, a scientific calculator, and UI orchestration.
+  Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a scientific calculator, and UI orchestration.
   Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
+  Task delegation allows one LLM to make use of one or more other LLS.
   The UI supports simultaneous conversations, file editing with syntax highlights, dynamic wiki pages, terminal emulators, a system shell, and a system log.
   UI orchestration means your AI can help you work and visualise things using any of these tools too.
 
@@ -76,6 +76,8 @@ A demonstration is that each version has been built using earlier versions of it
 - **What's new:** [Latest updates](./CHANGELOG.md)
 - **Dive deeper:** [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor)
 - **Download:** [Download Humbug](https://github.com/m6r-ai/humbug/releases)
+- **Blog posts:** [Dave's blog posts about Humbug and Metaphor](https://davehudson.io/blog)
+- **Developer notes:** [Dave's project notes](https://davehudson.io/notes)
 - **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
 - **YouTube:** [@m6rai on YouTube](https://youtube.com/@m6rai)
 
