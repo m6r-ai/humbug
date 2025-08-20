@@ -21,8 +21,8 @@ class MindspaceView(QWidget):
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
-    file_edited = Signal(str)  # Emits path when file is edited
-    file_opened_in_wiki = Signal(str)  # Emits path when file is opened in wiki
+    file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
+    file_opened_in_wiki = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in wiki
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the mindspace view widget."""

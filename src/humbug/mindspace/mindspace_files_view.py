@@ -30,8 +30,8 @@ class MindspaceFilesView(QWidget):
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
-    file_edited = Signal(str)  # Emits path when file is edited
-    file_opened_in_wiki = Signal(str)  # Emits path when file is opened in wiki
+    file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
+    file_opened_in_wiki = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in wiki
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the files view widget."""
@@ -320,7 +320,7 @@ class MindspaceFilesView(QWidget):
 
             # If it's a file, signal that it should be opened for editing
             if not is_folder:
-                self.file_edited.emit(new_path)
+                self.file_edited.emit(new_path, False)
 
         except OSError as e:
             self._logger.error("Failed to rename temporary %s from '%s' to '%s': %s",
@@ -825,11 +825,11 @@ class MindspaceFilesView(QWidget):
 
     def _handle_edit_file(self, path: str) -> None:
         """Edit a file."""
-        self.file_edited.emit(path)
+        self.file_edited.emit(path, False)
 
     def _handle_wiki_view_file(self, path: str) -> None:
         """View a file in the wiki."""
-        self.file_opened_in_wiki.emit(path)
+        self.file_opened_in_wiki.emit(path, False)
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.

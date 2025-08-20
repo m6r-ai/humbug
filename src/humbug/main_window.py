@@ -818,9 +818,9 @@ class MainWindow(QMainWindow):
 
         self._column_manager.new_file()
 
-    def _on_mindspace_view_file_opened_in_wiki(self, path: str) -> None:
+    def _on_mindspace_view_file_opened_in_wiki(self, path: str, ephemeral: bool) -> None:
         """Handle click of a wiki link from the mindspace view."""
-        wiki_tab = self._column_manager.open_wiki_page(path, False)
+        wiki_tab = self._column_manager.open_wiki_page(path, ephemeral)
         if wiki_tab is None:
             return
 
@@ -873,9 +873,9 @@ class MainWindow(QMainWindow):
         """
         self._column_manager.handle_file_rename(old_path, new_path)
 
-    def _on_mindspace_view_file_edited(self, path: str) -> None:
+    def _on_mindspace_view_file_edited(self, path: str, ephemeral: bool) -> None:
         """Handle file edited event from the mindspace view."""
-        self._open_file_path(path)
+        self._open_file_path(path, ephemeral)
 
     def _open_file(self) -> None:
         """Show open file dialog and create editor tab."""
@@ -892,12 +892,12 @@ class MainWindow(QMainWindow):
             return
 
         self._mindspace_manager.update_file_dialog_directory(file_path)
-        self._open_file_path(file_path)
+        self._open_file_path(file_path, False)
 
-    def _open_file_path(self, path: str) -> None:
+    def _open_file_path(self, path: str, ephemeral: bool) -> None:
         """Open file in editor tab."""
         try:
-            editor_tab = self._column_manager.open_file(path, False)
+            editor_tab = self._column_manager.open_file(path, ephemeral)
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
@@ -1209,7 +1209,7 @@ class MainWindow(QMainWindow):
 
     def _on_column_manager_edit_file_requested(self, path: str) -> None:
         """Handle requests to open a file in the editor."""
-        self._open_file_path(path)
+        self._open_file_path(path, False)
 
     def _close_tab(self) -> None:
         """Close the current tab."""
