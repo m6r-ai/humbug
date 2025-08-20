@@ -323,7 +323,7 @@ class MindspaceView(QWidget):
         base_font_size = self._style_manager.base_font_size()
 
         # Update font size for mindspace label
-        font = self.font()
+        font = self._mindspace_label.font()
         font.setPointSizeF(base_font_size * zoom_factor)
         self._mindspace_label.setFont(font)
 
@@ -352,6 +352,8 @@ class MindspaceView(QWidget):
                 border-radius: 0px;
                 margin: 0px;
                 padding: 0px 0px 1px 0px;
+            }}
+            #MindspaceCollapsibleHeader[splitter="true"] {{
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
             #MindspaceCollapsibleHeader[hovered="true"] {{
