@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy, QApplication
 )
 from PySide6.QtCore import Signal, QSize, Qt, QMimeData, QPoint
-from PySide6.QtGui import QIcon, QPixmap, QDrag, QMouseEvent
+from PySide6.QtGui import QIcon, QPixmap, QDrag, QMouseEvent, QFontMetricsF
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -131,6 +131,20 @@ class TabLabel(QWidget):
 
     def _update_label(self) -> None:
         """Update the label based on current zoom factor and whether it's for an ephemeral tab."""
+        font = self._label.font()
+        base_size = self._style_manager.base_font_size()
+        scaled_size = base_size * self._style_manager.zoom_factor()
+        font.setPointSizeF(scaled_size)
+        font.setItalic(self._is_ephemeral)
+        self._label.setFont(font)
+
+        # Make allowance for the width of italicized text
+        font_metrics = QFontMetricsF(font)
+        space_width = font_metrics.horizontalAdvance('_')
+        text_width = font_metrics.horizontalAdvance(self._label.text())
+        self._label.setContentsMargins(space_width, 0, space_width, 0)
+        self._label.setMinimumWidth(text_width + 2 * space_width)
+
         show_active = self._is_current and self._is_active_column
         if self._is_ephemeral:
             colour = ColorRole.TEXT_EPHEMERAL if show_active else ColorRole.TEXT_EPHEMERAL_INACTIVE
@@ -140,14 +154,7 @@ class TabLabel(QWidget):
 
         self._label.setStyleSheet(f"""
             color: {self._style_manager.get_color_str(colour)};
-            padding: 0 4px;
         """)
-        font = self._label.font()
-        base_size = self._style_manager.base_font_size()
-        scaled_size = base_size * self._style_manager.zoom_factor()
-        font.setPointSizeF(scaled_size)
-        font.setItalic(self._is_ephemeral)
-        self._label.setFont(font)
 
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events for drag initiation."""
