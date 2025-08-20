@@ -132,8 +132,3 @@ Humbug is open source and the project welcomes contributions.  If you're interes
 
    See [Getting Started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) for a step-by-step guide to getting Humbug up and running.
 
-## Navigating the code
-
-Humbug itself includes a wiki-like viewer so if you clone this git repo you can simply create a mindspace with your humbug directory as the root of the mindspace.
-Open it up and click the top-level `humbug` folder and you'll see this `README.md` file.
-Any folders with their own `README.md` will give you pointers about what's in that folder.
