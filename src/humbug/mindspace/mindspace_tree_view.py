@@ -42,8 +42,8 @@ class MindspaceTreeView(QTreeView):
 
         # Auto-scroll configuration
         self._scroll_zone_size = 25  # Pixels from edge to trigger scrolling
-        self._min_scroll_speed = 2   # Minimum scroll speed
-        self._max_scroll_speed = 10  # Maximum scroll speed
+        self._min_scroll_speed = 6   # Minimum scroll speed
+        self._max_scroll_speed = 30  # Maximum scroll speed
 
         self.setHeaderHidden(True)
         self.setAnimated(True)

@@ -72,9 +72,6 @@ class MindspaceWikiView(QWidget):
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
-        self._tree_view.setAutoScroll(True)
-        self._tree_view.setAutoScrollMargin(20)  # Pixels from edge to trigger auto-scroll
-
         # Create file system model
         self._icon_provider = MindspaceTreeIconProvider()
         self._fs_model = QFileSystemModel()
