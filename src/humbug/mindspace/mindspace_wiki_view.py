@@ -76,7 +76,7 @@ class MindspaceWikiView(QWidget):
         self._icon_provider = MindspaceTreeIconProvider()
         self._fs_model = QFileSystemModel()
         self._fs_model.setReadOnly(True)
-        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.System)
+        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.NoDotDot)
 
         # Create filter model
         self._filter_model = MindspaceWikiModel()

@@ -216,11 +216,6 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         index = source_model.index(source_row, 0, source_parent)
         file_name = source_model.fileName(index)
 
-        # Handle special directory entries
-        if file_name == "..":
-            # Never show parent directory
-            return False
-
         if file_name == ".":
             # Only show current directory at the conversations root level
             # Check if the parent of this "." entry is the conversations root

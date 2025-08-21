@@ -31,7 +31,7 @@ class MindspaceWikiModel(QSortFilterProxyModel):
         return base_flags
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
-        """Filter out .humbug directory and ".." while allowing "." only at mindspace root."""
+        """Filter out .humbug directory."""
         # If no mindspace is open, don't show any files
         if not self._mindspace_root:
             return False
@@ -43,11 +43,6 @@ class MindspaceWikiModel(QSortFilterProxyModel):
         index = source_model.index(source_row, 0, source_parent)
         file_path = source_model.filePath(index)
         file_name = source_model.fileName(index)
-
-        # Handle special directory entries
-        if file_name == "..":
-            # Never show parent directory
-            return False
 
         if file_name == ".":
             # Only show current directory at the mindspace root level
