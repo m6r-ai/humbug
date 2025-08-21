@@ -7,7 +7,7 @@ from typing import cast
 
 from PySide6.QtCore import Signal, QModelIndex, Qt, QSize, QPoint, QDir
 from PySide6.QtWidgets import (
-    QFileSystemModel, QWidget, QVBoxLayout, QMenu, QFrame, QSizePolicy
+    QFileSystemModel, QWidget, QVBoxLayout, QMenu
 )
 
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
@@ -16,10 +16,8 @@ from humbug.mindspace.mindspace_files_model import MindspaceFilesModel
 from humbug.mindspace.mindspace_files_tree_view import MindspaceFilesTreeView
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_root_drop_widget import MindspaceRootDropWidget
 from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
-from humbug.mindspace.mindspace_tree_scroll_area import MindspaceTreeScrollArea
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
@@ -62,21 +60,6 @@ class MindspaceFilesView(QWidget):
         self._header.set_context_menu_provider(self._create_header_context_menu)
         layout.addWidget(self._header)
 
-        # Create scroll area for tree view and drop widget
-        self._scroll_area = MindspaceTreeScrollArea()
-        self._scroll_area.setWidgetResizable(True)
-        self._scroll_area.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        layout.addWidget(self._scroll_area)
-
-        # Create container widget for scroll area content
-        self._scroll_content = QWidget()
-        self._scroll_content_layout = QVBoxLayout(self._scroll_content)
-        self._scroll_content_layout.setContentsMargins(0, 0, 0, 0)
-        self._scroll_content_layout.setSpacing(0)
-
         # Create tree view
         self._tree_view = MindspaceFilesTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
@@ -86,14 +69,11 @@ class MindspaceFilesView(QWidget):
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
-        # Connect tree view auto-scroll signals to scroll area
-        self._tree_view.auto_scroll_requested.connect(self._scroll_area.start_auto_scroll)
-
         # Create file system model
         self._icon_provider = MindspaceTreeIconProvider()
         self._fs_model = QFileSystemModel()
         self._fs_model.setReadOnly(True)
-        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.NoDotAndDotDot | QDir.Filter.Hidden)
+        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.System)
 
         # Create filter model
         self._filter_model = MindspaceFilesModel()
@@ -112,23 +92,11 @@ class MindspaceFilesView(QWidget):
         self._tree_view.clicked.connect(self._on_tree_clicked)
         self._tree_view.doubleClicked.connect(self._on_tree_double_clicked)
 
-        # Disable tree view's own scrollbars since we're using the scroll area
+        # Add to layout
+        layout.addWidget(self._tree_view)
+
+        # Hide horizontal scrollbar
         self._tree_view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._tree_view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        # Add tree view to scroll content
-        self._scroll_content_layout.addWidget(self._tree_view)
-
-        # Create root drop widget
-        self._root_drop_widget = MindspaceRootDropWidget(self._get_mindspace_path)
-        self._root_drop_widget.file_dropped.connect(self._on_file_dropped)
-        self._root_drop_widget.set_context_menu_provider(self._create_header_context_menu)
-
-        # Add root drop widget to scroll content
-        self._scroll_content_layout.addWidget(self._root_drop_widget)
-
-        # Set the scroll content as the scroll area's widget
-        self._scroll_area.setWidget(self._scroll_content)
 
         # Track current mindspace
         self._mindspace_path: str | None = None
@@ -136,15 +104,6 @@ class MindspaceFilesView(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
-
-    def _get_mindspace_path(self) -> str:
-        """
-        Get the current mindspace path for the root drop widget.
-
-        Returns:
-            Current mindspace path, or empty string if no mindspace is active
-        """
-        return self._mindspace_path or ""
 
     def get_header_height(self) -> int:
         """
@@ -163,10 +122,10 @@ class MindspaceFilesView(QWidget):
             expanded: Whether the section is now expanded
         """
         if expanded:
-            self._scroll_area.show()
+            self._tree_view.show()
 
         else:
-            self._scroll_area.hide()
+            self._tree_view.hide()
 
         self.toggled.emit(expanded)
 
@@ -668,6 +627,26 @@ class MindspaceFilesView(QWidget):
 
         return menu
 
+    def _is_current_directory_item(self, index: QModelIndex) -> bool:
+        """
+        Check if the given index represents the current directory (".") item.
+
+        Args:
+            index: Model index to check
+
+        Returns:
+            True if this is the current directory item
+        """
+        if not index.isValid():
+            return False
+
+        source_index = self._filter_model.mapToSource(index)
+        if not source_index.isValid():
+            return False
+
+        file_name = self._fs_model.fileName(source_index)
+        return file_name == "."
+
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for file tree items."""
         # Get the index at the clicked position
@@ -680,6 +659,10 @@ class MindspaceFilesView(QWidget):
         # Determine the path and whether it's a file or directory
         if not index.isValid():
             # Clicked on empty space - show root context menu
+            menu = self._create_root_context_menu()
+
+        elif self._is_current_directory_item(index):
+            # Clicked on the current directory (".") item - show root context menu
             menu = self._create_root_context_menu()
 
         else:
@@ -838,6 +821,10 @@ class MindspaceFilesView(QWidget):
         if not index.isValid():
             return
 
+        # Don't allow renaming the current directory item
+        if self._is_current_directory_item(index):
+            return
+
         # Get the delegate and start Qt-based editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
         if not isinstance(delegate, MindspaceTreeDelegate):
@@ -960,6 +947,10 @@ class MindspaceFilesView(QWidget):
         if not index.isValid():
             return
 
+        # Don't allow renaming the current directory item
+        if self._is_current_directory_item(index):
+            return
+
         # Map to source model to get actual file path
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
@@ -984,13 +975,14 @@ class MindspaceFilesView(QWidget):
             self._tree_view.configure_for_path("")
             return
 
-        self._fs_model.setRootPath(path)
+        parent_path = os.path.dirname(path)
+        self._fs_model.setRootPath(parent_path)
         self._filter_model.set_mindspace_root(path)
 
         # Configure tree view with the mindspace path
         self._tree_view.configure_for_path(path)
 
-        # Set the root index directly to the mindspace directory
+        # Set the root index to the mindspace directory itself
         mindspace_source_index = self._fs_model.index(path)
         root_index = self._filter_model.mapFromSource(mindspace_source_index)
         self._tree_view.setRootIndex(root_index)
@@ -1046,6 +1038,3 @@ class MindspaceFilesView(QWidget):
 
         # Adjust tree indentation
         self._tree_view.setIndentation(file_icon_size)
-
-        # Apply style to root drop widget
-        self._root_drop_widget.apply_style()

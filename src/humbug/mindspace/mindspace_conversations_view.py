@@ -72,7 +72,7 @@ class MindspaceConversationsView(QWidget):
         self._icon_provider = MindspaceTreeIconProvider()
         self._fs_model = QFileSystemModel()
         self._fs_model.setReadOnly(True)
-        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.NoDotAndDotDot | QDir.Filter.Hidden)
+        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.System)
 
         # Create filter model
         self._filter_model = MindspaceConversationsModel()
@@ -104,6 +104,26 @@ class MindspaceConversationsView(QWidget):
         # Track pending new items for creation flow
         # Format: (parent_path, is_folder, temp_path)
         self._pending_new_item: tuple[str, bool, str] | None = None
+
+        # Auto-scroll state for drag operations
+        self._auto_scroll_active = False
+
+    def _handle_auto_scroll(self, start_scrolling: bool) -> None:
+        """
+        Handle auto-scroll requests from the tree view during drag operations.
+
+        Args:
+            start_scrolling: Whether to start or stop auto-scrolling
+        """
+        self._auto_scroll_active = start_scrolling
+
+        if start_scrolling:
+            # Start auto-scrolling - the tree view will handle the actual scrolling
+            # We just need to ensure the tree view's scroll bars are properly configured
+            pass
+        else:
+            # Stop auto-scrolling
+            pass
 
     def get_header_height(self) -> int:
         """
@@ -643,6 +663,26 @@ class MindspaceConversationsView(QWidget):
 
         return menu
 
+    def _is_current_directory_item(self, index: QModelIndex) -> bool:
+        """
+        Check if the given index represents the current directory (".") item.
+
+        Args:
+            index: Model index to check
+
+        Returns:
+            True if this is the current directory item
+        """
+        if not index.isValid():
+            return False
+
+        source_index = self._filter_model.mapToSource(index)
+        if not source_index.isValid():
+            return False
+
+        file_name = self._fs_model.fileName(source_index)
+        return file_name == "."
+
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for conversations tree items."""
         # Get the index at the clicked position
@@ -655,6 +695,10 @@ class MindspaceConversationsView(QWidget):
         # Determine the path and whether it's a file or directory
         if not index.isValid():
             # Clicked on empty space - show root context menu
+            menu = self._create_root_context_menu()
+
+        elif self._is_current_directory_item(index):
+            # Clicked on the current directory (".") item - show root context menu
             menu = self._create_root_context_menu()
 
         else:
@@ -772,6 +816,10 @@ class MindspaceConversationsView(QWidget):
             index: Model index of the item to rename
         """
         if not index.isValid():
+            return
+
+        # Don't allow renaming the current directory item
+        if self._is_current_directory_item(index):
             return
 
         # Get the delegate and start Qt-based editing (excludes extension from selection)
@@ -896,6 +944,10 @@ class MindspaceConversationsView(QWidget):
         if not index.isValid():
             return
 
+        # Don't allow deleting the current directory item
+        if self._is_current_directory_item(index):
+            return
+
         # Map to source model to get actual file path
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
@@ -936,14 +988,15 @@ class MindspaceConversationsView(QWidget):
                 self._tree_view.configure_for_path("")
                 return
 
-        # Set the file system model root directly to the conversations directory
-        self._fs_model.setRootPath(self._conversations_path)
+        # Set the root path to the parent directory of the conversations directory
+        parent_path = os.path.dirname(self._conversations_path)
+        self._fs_model.setRootPath(parent_path)
         self._filter_model.set_conversations_root(self._conversations_path)
 
         # Configure tree view with the conversations path
         self._tree_view.configure_for_path(self._conversations_path)
 
-        # Set the root index directly to the conversations directory
+        # Set the root index to the conversations directory itself
         conversations_source_index = self._fs_model.index(self._conversations_path)
         root_index = self._filter_model.mapFromSource(conversations_source_index)
         self._tree_view.setRootIndex(root_index)

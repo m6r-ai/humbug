@@ -203,13 +203,37 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
 
         return stat_info.st_mtime
 
-    def filterAcceptsRow(self, _source_row: int, _source_parent: QModelIndex | QPersistentModelIndex) -> bool:
-        """Show all files within the conversations directory."""
+    def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
+        """Show all files within the conversations directory, plus "." only at conversations root."""
         # If no conversations root is set, don't show any files
         if not self._conversations_root:
             return False
 
-        # we can show all items (no special filtering needed)
+        source_model = cast(QFileSystemModel, self.sourceModel())
+        if not source_model:
+            return False
+
+        index = source_model.index(source_row, 0, source_parent)
+        file_name = source_model.fileName(index)
+
+        # Handle special directory entries
+        if file_name == "..":
+            # Never show parent directory
+            return False
+
+        if file_name == ".":
+            # Only show current directory at the conversations root level
+            # Check if the parent of this "." entry is the conversations root
+            parent_path = source_model.filePath(source_parent) if source_parent.isValid() else ""
+
+            # Normalize paths for comparison
+            normalized_parent = os.path.normpath(parent_path) if parent_path else ""
+            normalized_conversations = os.path.normpath(self._conversations_root)
+
+            # Only show "." if we're at the conversations root level
+            return normalized_parent == normalized_conversations
+
+        # Show all other items (no special filtering needed)
         return True
 
     def lessThan(
@@ -220,6 +244,17 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         """Sort directories before files, then apply conversation-specific sorting or alphabetically."""
         source_model = cast(QFileSystemModel, self.sourceModel())
         if not source_model:
+            return False
+
+        # Get file names for both indexes
+        left_name = source_model.fileName(source_left)
+        right_name = source_model.fileName(source_right)
+
+        # "." always sorts to the top
+        if left_name == ".":
+            return True
+
+        if right_name == ".":
             return False
 
         # Get file info for both indexes

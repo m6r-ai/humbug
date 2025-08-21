@@ -5,7 +5,7 @@ from typing import cast, Callable
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
 from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir
-from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QKeyEvent
+from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent
 
 
 class MindspaceTreeView(QTreeView):
@@ -14,7 +14,6 @@ class MindspaceTreeView(QTreeView):
     file_dropped = Signal(str, str)  # dragged_path, target_path
     drop_target_changed = Signal()
     delete_requested = Signal()  # Emitted when delete key is pressed
-    auto_scroll_requested = Signal(bool)
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the base tree view."""
@@ -33,6 +32,18 @@ class MindspaceTreeView(QTreeView):
         self._auto_expand_timer.setInterval(500)  # 0.5 seconds
         self._pending_expand_index: QModelIndex | None = None
         self._auto_opened_folders: set[QPersistentModelIndex] = set()
+
+        # Auto-scroll timer for drag operations
+        self._auto_scroll_timer = QTimer()
+        self._auto_scroll_timer.timeout.connect(self._on_auto_scroll_timeout)
+        self._auto_scroll_timer.setInterval(50)  # 50ms for smooth scrolling
+        self._scroll_direction: int = 0  # -1 for up, 1 for down, 0 for no scroll
+        self._scroll_speed: int = 0  # Pixels to scroll per timer interval
+
+        # Auto-scroll configuration
+        self._scroll_zone_size = 25  # Pixels from edge to trigger scrolling
+        self._min_scroll_speed = 2   # Minimum scroll speed
+        self._max_scroll_speed = 10  # Maximum scroll speed
 
         self.setHeaderHidden(True)
         self.setAnimated(True)
@@ -377,6 +388,117 @@ class MindspaceTreeView(QTreeView):
 
         return os.path.isdir(target_path)
 
+    def _get_scroll_direction_and_speed(self, global_pos: QPoint | None = None) -> tuple[int, int]:
+        """
+        Calculate scroll direction and speed based on mouse position.
+
+        Args:
+            global_pos: Global mouse position, if None uses current cursor position
+
+        Returns:
+            Tuple of (direction, speed) where direction is -1/0/1 and speed is pixels per scroll
+        """
+        if global_pos is None:
+            global_pos = QCursor.pos()
+
+        # Convert global position to viewport coordinates
+        viewport_pos = self.viewport().mapFromGlobal(global_pos)
+        viewport_rect = self.viewport().rect()
+
+        # Calculate distance from viewport edges (can be negative if outside)
+        distance_from_top = viewport_pos.y()
+        distance_from_bottom = viewport_pos.y() - viewport_rect.height()
+
+        # Check if we should scroll up (mouse above or near top of viewport)
+        if distance_from_top < self._scroll_zone_size:
+            distance_out = self._scroll_zone_size - distance_from_top
+            # Scale speed based on distance outside viewport
+            if distance_from_top < 0:
+                # Mouse is above viewport - increase speed based on distance
+                distance_out = min(distance_out, viewport_rect.height() * 2)
+
+            speed_factor = distance_out / self._scroll_zone_size
+            speed = int(self._min_scroll_speed + (self._max_scroll_speed - self._min_scroll_speed) * speed_factor)
+            return -1, speed
+
+        # Check if we should scroll down (mouse below or near bottom of viewport)
+        if distance_from_bottom > -self._scroll_zone_size:
+            distance_out = distance_from_bottom + self._scroll_zone_size
+            # Scale speed based on distance outside viewport
+            if distance_from_bottom > 0:
+                # Mouse is below viewport - increase speed based on distance
+                distance_out = min(distance_out, viewport_rect.height() * 2)
+
+            speed_factor = distance_out / self._scroll_zone_size
+            speed = int(self._min_scroll_speed + (self._max_scroll_speed - self._min_scroll_speed) * speed_factor)
+            return 1, speed
+
+        # Not in scroll zone
+        return 0, 0
+
+    def _start_auto_scroll(self, direction: int, speed: int) -> None:
+        """
+        Start auto-scrolling in the specified direction.
+
+        Args:
+            direction: -1 for up, 1 for down
+            speed: Pixels to scroll per timer interval
+        """
+        if direction == 0:
+            self._stop_auto_scroll()
+            return
+
+        # Only start if not already scrolling in this direction at this speed
+        if self._scroll_direction != direction or self._scroll_speed != speed:
+            self._scroll_direction = direction
+            self._scroll_speed = speed
+
+            if not self._auto_scroll_timer.isActive():
+                self._auto_scroll_timer.start()
+
+    def _stop_auto_scroll(self) -> None:
+        """Stop auto-scrolling."""
+        if self._auto_scroll_timer.isActive():
+            self._auto_scroll_timer.stop()
+
+        self._scroll_direction = 0
+        self._scroll_speed = 0
+
+    def _on_auto_scroll_timeout(self) -> None:
+        """Handle auto-scroll timer timeout by scrolling the viewport."""
+        # Update scroll direction and speed based on current global mouse position
+        global_pos = QCursor.pos()
+        direction, speed = self._get_scroll_direction_and_speed(global_pos)
+
+        if direction == 0:
+            self._stop_auto_scroll()
+            return
+
+        # Update current direction and speed
+        self._scroll_direction = direction
+        self._scroll_speed = speed
+
+        # Get current scroll bar and perform scrolling
+        scroll_bar = self.verticalScrollBar()
+        if not scroll_bar:
+            return
+
+        current_value = scroll_bar.value()
+
+        if self._scroll_direction < 0:  # Scroll up
+            new_value = max(scroll_bar.minimum(), current_value - self._scroll_speed)
+
+        else:  # Scroll down
+            new_value = min(scroll_bar.maximum(), current_value + self._scroll_speed)
+
+        # Only scroll if we can actually move
+        if new_value != current_value:
+            scroll_bar.setValue(new_value)
+
+        else:
+            # We've hit the boundary, stop scrolling
+            self._stop_auto_scroll()
+
     def mousePressEvent(self, event: QMouseEvent) -> None:
         """Handle mouse press events for drag initiation."""
         if event.button() & Qt.MouseButton.LeftButton:
@@ -422,7 +544,7 @@ class MindspaceTreeView(QTreeView):
         drag = QDrag(self)
         drag.setMimeData(mime_data)
 
-        # Create drag pixmap from the tree item - use drag_index not index!
+        # Create drag pixmap from the tree item
         pixmap = self.viewport().grab(self.visualRect(drag_index))
         drag.setPixmap(pixmap)
         drag.setHotSpot(event.pos() - self._drag_start_pos)
@@ -433,8 +555,8 @@ class MindspaceTreeView(QTreeView):
         # Clear drop target, stop timers, and close auto-opened folders when drag ends
         self.clear_drop_target()
         self._stop_auto_expand_timer()
-        self.auto_scroll_requested.emit(False)
-        self._close_auto_opened_folders()
+        self._stop_auto_scroll()  # This will stop scrolling when drag completes
+        self._close_auto_opened_folders()  # Close all auto-opened folders
         self._drag_start_pos = None
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
@@ -457,7 +579,6 @@ class MindspaceTreeView(QTreeView):
         self.clear_drop_target()
         self._stop_auto_expand_timer()
         self._close_auto_opened_folders()
-        self.auto_scroll_requested.emit(False)
         super().dragLeaveEvent(event)
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
@@ -466,11 +587,17 @@ class MindspaceTreeView(QTreeView):
             event.ignore()
             self.clear_drop_target()
             self._stop_auto_expand_timer()
-            self.auto_scroll_requested.emit(False)
+            self._stop_auto_scroll()
             return
 
-        # Request auto-scrolling
-        self.auto_scroll_requested.emit(True)
+        # Handle auto-scrolling based on global mouse position
+        global_pos = QCursor.pos()
+        scroll_direction, scroll_speed = self._get_scroll_direction_and_speed(global_pos)
+        if scroll_direction != 0:
+            self._start_auto_scroll(scroll_direction, scroll_speed)
+
+        else:
+            self._stop_auto_scroll()
 
         # Get the index at the current position
         index = self.indexAt(event.pos())
@@ -563,7 +690,7 @@ class MindspaceTreeView(QTreeView):
         # Clear drop target and stop timers when drop completes
         self.clear_drop_target()
         self._stop_auto_expand_timer()
-        self.auto_scroll_requested.emit(False)
+        self._stop_auto_scroll()
 
         # Keep the final drop target open but close other auto-opened folders
         if drop_target_index.isValid():

@@ -31,8 +31,8 @@ class MindspaceFilesModel(QSortFilterProxyModel):
         return base_flags
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
-        """Filter out .humbug directory."""
-        # If no mindspace is open, don't show any files
+        """Filter out .humbug directory and ".." while allowing "." only at mindspace root."""
+       # If no mindspace is open, don't show any files
         if not self._mindspace_root:
             return False
 
@@ -42,6 +42,25 @@ class MindspaceFilesModel(QSortFilterProxyModel):
 
         index = source_model.index(source_row, 0, source_parent)
         file_path = source_model.filePath(index)
+
+        file_name = source_model.fileName(index)
+
+        # Handle special directory entries
+        if file_name == "..":
+            # Never show parent directory
+            return False
+
+        if file_name == ".":
+            # Only show current directory at the mindspace root level
+            # Check if the parent of this "." entry is the mindspace root
+            parent_path = source_model.filePath(source_parent) if source_parent.isValid() else ""
+
+            # Normalize paths for comparison
+            normalized_parent = os.path.normpath(parent_path) if parent_path else ""
+            normalized_mindspace = os.path.normpath(self._mindspace_root)
+
+            # Only show "." if we're at the mindspace root level
+            return normalized_parent == normalized_mindspace
 
         # Always hide .humbug directory
         if os.path.basename(file_path) == ".humbug":
@@ -57,6 +76,17 @@ class MindspaceFilesModel(QSortFilterProxyModel):
         """Sort directories before files, then alphabetically."""
         source_model = cast(QFileSystemModel, self.sourceModel())
         if not source_model:
+            return False
+
+        # Get file names for both indexes
+        left_name = source_model.fileName(source_left)
+        right_name = source_model.fileName(source_right)
+
+        # "." always sorts to the top
+        if left_name == ".":
+            return True
+
+        if right_name == ".":
             return False
 
         # Get file info for both indexes

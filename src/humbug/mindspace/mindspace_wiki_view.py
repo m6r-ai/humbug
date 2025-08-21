@@ -72,11 +72,14 @@ class MindspaceWikiView(QWidget):
         self._tree_view.drop_target_changed.connect(self._on_drop_target_changed)
         self._tree_view.delete_requested.connect(self._on_delete_requested)
 
+        self._tree_view.setAutoScroll(True)
+        self._tree_view.setAutoScrollMargin(20)  # Pixels from edge to trigger auto-scroll
+
         # Create file system model
         self._icon_provider = MindspaceTreeIconProvider()
         self._fs_model = QFileSystemModel()
         self._fs_model.setReadOnly(True)
-        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.NoDotAndDotDot | QDir.Filter.Hidden)
+        self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.System)
 
         # Create filter model
         self._filter_model = MindspaceWikiModel()
@@ -633,6 +636,26 @@ class MindspaceWikiView(QWidget):
 
         return menu
 
+    def _is_current_directory_item(self, index: QModelIndex) -> bool:
+        """
+        Check if the given index represents the current directory (".") item.
+
+        Args:
+            index: Model index to check
+
+        Returns:
+            True if this is the current directory item
+        """
+        if not index.isValid():
+            return False
+
+        source_index = self._filter_model.mapToSource(index)
+        if not source_index.isValid():
+            return False
+
+        file_name = self._fs_model.fileName(source_index)
+        return file_name == "."
+
     def _show_context_menu(self, position: QPoint) -> None:
         """Show context menu for wiki tree items."""
         # Get the index at the clicked position
@@ -645,6 +668,10 @@ class MindspaceWikiView(QWidget):
         # Determine the path and whether it's a file or directory
         if not index.isValid():
             # Clicked on empty space - show root context menu
+            menu = self._create_root_context_menu()
+
+        elif self._is_current_directory_item(index):
+            # Clicked on the current directory (".") item - show root context menu
             menu = self._create_root_context_menu()
 
         else:
@@ -805,6 +832,10 @@ class MindspaceWikiView(QWidget):
         if not index.isValid():
             return
 
+        # Don't allow renaming the current directory item
+        if self._is_current_directory_item(index):
+            return
+
         # Get the delegate and start Qt-based editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
         if not isinstance(delegate, MindspaceTreeDelegate):
@@ -927,6 +958,10 @@ class MindspaceWikiView(QWidget):
         if not index.isValid():
             return
 
+        # Don't allow deleting the current directory item
+        if self._is_current_directory_item(index):
+            return
+
         # Map to source model to get actual file path
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
@@ -951,13 +986,14 @@ class MindspaceWikiView(QWidget):
             self._tree_view.configure_for_path("")
             return
 
-        self._fs_model.setRootPath(path)
+        parent_path = os.path.dirname(path)
+        self._fs_model.setRootPath(parent_path)
         self._filter_model.set_mindspace_root(path)
 
         # Configure tree view with the mindspace path
         self._tree_view.configure_for_path(path)
 
-        # Set the root index directly to the mindspace directory
+        # Set the root index to the mindspace directory itself
         mindspace_source_index = self._fs_model.index(path)
         root_index = self._filter_model.mapFromSource(mindspace_source_index)
         self._tree_view.setRootIndex(root_index)
