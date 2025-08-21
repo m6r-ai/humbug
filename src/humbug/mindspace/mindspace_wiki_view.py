@@ -32,6 +32,7 @@ class MindspaceWikiView(QWidget):
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
     file_opened_in_wiki = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in wiki
+    toggled = Signal(bool)  # Emitted when expand/collapse state changes (expanded state)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the wiki view widget."""
@@ -132,6 +133,8 @@ class MindspaceWikiView(QWidget):
         else:
             self._tree_view.hide()
 
+        self.toggled.emit(expanded)
+
     def is_expanded(self) -> bool:
         """
         Check if the wiki section is expanded.
@@ -140,20 +143,6 @@ class MindspaceWikiView(QWidget):
             True if expanded, False if collapsed
         """
         return self._header.is_expanded()
-
-    def set_expanded(self, expanded: bool) -> None:
-        """
-        Set the expanded state of the wiki section.
-
-        Args:
-            expanded: Whether the section should be expanded
-        """
-        self._header.set_expanded(expanded, emit_signal=False)
-        if expanded:
-            self._tree_view.show()
-
-        else:
-            self._tree_view.hide()
 
     def _on_drop_target_changed(self) -> None:
         """
@@ -510,10 +499,6 @@ class MindspaceWikiView(QWidget):
         # Check if the file exists
         if not os.path.exists(normalized_path):
             return
-
-        # Ensure the section is expanded before revealing the file
-        if not self.is_expanded():
-            self.set_expanded(True)
 
         # Expand to the file and select it
         target_index = self._expand_to_path(normalized_path)

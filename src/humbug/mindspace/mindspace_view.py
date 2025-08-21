@@ -98,9 +98,9 @@ class MindspaceView(QWidget):
         self._update_minimum_sizes()
 
         # Connect header toggle signals to manage splitter sizes
-        self._conversations_view._header.toggled.connect(self._on_conversations_toggled)
-        self._files_view._header.toggled.connect(self._on_files_toggled)
-        self._wiki_view._header.toggled.connect(self._on_wiki_toggled)
+        self._conversations_view.toggled.connect(self._on_conversations_toggled)
+        self._files_view.toggled.connect(self._on_files_toggled)
+        self._wiki_view.toggled.connect(self._on_wiki_toggled)
 
         # Connect files view signals - files view clicks go to editor
         self._files_view.file_clicked.connect(self.file_clicked.emit)
