@@ -17,6 +17,10 @@ class MindspaceFilesTreeView(MindspaceTreeView):
         super().__init__(parent)
         self._mindspace_path: str = ""
 
+        # Connect to expansion/collapse signals to update size
+        self.expanded.connect(self.update_size)
+        self.collapsed.connect(self.update_size)
+
     def get_root_path(self) -> str:
         """
         Get the root path for this tree view.
@@ -86,3 +90,68 @@ class MindspaceFilesTreeView(MindspaceTreeView):
             return None
 
         return QDir.toNativeSeparators(file_model.filePath(source_index))
+
+    def setModel(self, model):
+        super().setModel(model)
+        if model:
+            model.dataChanged.connect(self.update_size)
+            model.rowsInserted.connect(self.update_size)
+            model.rowsRemoved.connect(self.update_size)
+
+    def showEvent(self, event):
+        """Handle the show event to update the size of the tree view."""
+        super().showEvent(event)
+        self.update_size()
+
+    def update_size(self):
+        """Update the fixed height of the tree view based on visible content."""
+        if not self.model():
+            return
+
+        # Force the view to layout its items
+        self.doItemsLayout()
+
+        # Calculate total height
+        total_height = 0
+        model = self.model()
+
+        # Simple calculation: row height * visible row count
+        if model.rowCount() > 0:
+            # Get the height of the first row as a reference
+            first_index = model.index(0, 0)
+            if first_index.isValid():
+                row_height = self.sizeHintForIndex(first_index).height()
+                visible_rows = self.get_visible_row_count()
+                total_height = row_height * visible_rows
+
+        # Add header height if visible
+        if self.header().isVisible():
+            total_height += self.header().height()
+
+        # Set a minimum height to avoid completely collapsing
+        min_height = 50  # Minimum height in pixels
+        total_height = max(total_height, min_height)
+
+        self.setFixedHeight(total_height)
+
+    def get_visible_row_count(self):
+        """Count all visible rows including expanded children."""
+        if not self.model():
+            return 0
+
+        def count_visible(parent_index):
+            """Recursively count visible rows under a parent index."""
+            count = 0
+            row_count = self.model().rowCount(parent_index)
+
+            for row in range(row_count):
+                count += 1  # Count this row
+                index = self.model().index(row, 0, parent_index)
+
+                # If this row is expanded, count its children too
+                if self.isExpanded(index):
+                    count += count_visible(index)
+
+            return count
+
+        return count_visible(self.rootIndex())
