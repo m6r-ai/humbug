@@ -292,7 +292,6 @@ class MindspaceView(QWidget):
         if not self._mindspace_manager.has_mindspace():
             return
 
-        print(f"Revealing file {file_path} in view {view_type}")
         match view_type:
             case MindspaceViewType.CONVERSATIONS:
                 self._conversations_view.reveal_and_select_file(file_path)
