@@ -1016,6 +1016,13 @@ class ConversationWidget(QWidget):
             self._messages[self._focused_message_index].set_focused(True)
             return
 
+        # If our input box is hidden then focus the last message.
+        if self._input.isHidden():
+            last_visible_index = self._find_last_visible_message()
+            self._focused_message_index = last_visible_index
+            self._messages[self._focused_message_index].set_focused(True)
+            return
+
         self._input.set_focused(True)
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
