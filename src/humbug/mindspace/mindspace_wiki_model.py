@@ -41,9 +41,7 @@ class MindspaceWikiModel(QSortFilterProxyModel):
             return False
 
         index = source_model.index(source_row, 0, source_parent)
-        file_path = source_model.filePath(index)
         file_name = source_model.fileName(index)
-
         if file_name == ".":
             # Only show current directory at the mindspace root level
             # Check if the parent of this "." entry is the mindspace root
@@ -57,6 +55,7 @@ class MindspaceWikiModel(QSortFilterProxyModel):
             return normalized_parent == normalized_mindspace
 
         # Always hide .humbug directory
+        file_path = source_model.filePath(index)
         if os.path.basename(file_path) == ".humbug":
             return False
 

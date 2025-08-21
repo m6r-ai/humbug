@@ -1,11 +1,15 @@
 """Base tree view implementation for mindspace with drag and drop support and inline editing."""
 
 import os
-from typing import cast, Callable
+from typing import cast, Callable, Union
 
 from PySide6.QtWidgets import QTreeView, QApplication, QWidget, QFileSystemModel
-from PySide6.QtCore import Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir
-from PySide6.QtGui import QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent
+from PySide6.QtCore import (
+    Qt, QSortFilterProxyModel, QMimeData, QPoint, Signal, QModelIndex, QPersistentModelIndex, QTimer, QDir, QRect
+)
+from PySide6.QtGui import (
+    QDrag, QMouseEvent, QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent, QCursor, QKeyEvent, QPainter
+)
 
 
 class MindspaceTreeView(QTreeView):
@@ -53,6 +57,17 @@ class MindspaceTreeView(QTreeView):
         self.setMouseTracking(True)
         self.setToolTipDuration(10000)
         self.setEditTriggers(QTreeView.EditTrigger.NoEditTriggers)
+
+    def drawBranches(self, painter: QPainter, rect: QRect, index: QModelIndex | QPersistentModelIndex) -> None:
+        """Override to hide branch indicators for current directory entries."""
+        # Check if this is the current directory entry
+        path = self._get_path_from_any_index(index)
+        if path and os.path.basename(path) == ".":
+            # Don't draw branches for "." entries
+            return
+
+        # Draw normal branches for other items
+        super().drawBranches(painter, rect, index)
 
     def get_root_path(self) -> str:
         """
@@ -108,6 +123,28 @@ class MindspaceTreeView(QTreeView):
         if self._current_drop_target is None or self._current_drop_target != index:
             self._current_drop_target = index
             self.drop_target_changed.emit()
+
+    def _get_path_from_any_index(self, index: Union[QModelIndex, QPersistentModelIndex]) -> str | None:
+        """
+        Get the file system path from either a QModelIndex or QPersistentModelIndex.
+
+        Args:
+            index: The model index to get the path for
+
+        Returns:
+            File system path if valid, None otherwise
+        """
+        if isinstance(index, QPersistentModelIndex):
+            if not index.isValid():
+                return None
+
+            # Convert to QModelIndex by accessing the underlying index
+            actual_index = self.model().index(index.row(), index.column(), index.parent())
+
+        else:
+            actual_index = index
+
+        return self.get_path_from_index(actual_index)
 
     def get_path_from_index(self, index: QModelIndex) -> str | None:
         """
@@ -317,7 +354,7 @@ class MindspaceTreeView(QTreeView):
                 continue
 
             # Get the path for this auto-opened folder
-            folder_path = self.get_path_from_index(QModelIndex(cast(QModelIndex, persistent_index)))
+            folder_path = self._get_path_from_any_index(persistent_index)
             if not folder_path:
                 folders_to_close.append(persistent_index)
                 continue
@@ -332,8 +369,9 @@ class MindspaceTreeView(QTreeView):
                 should_keep_open = should_keep_open or (folder_path == current_target_path)
 
             if not should_keep_open:
-                # Close the folder
-                self.collapse(QModelIndex(cast(QModelIndex, persistent_index)))
+                # Close the folder - convert persistent index to regular index
+                model_index = self.model().index(persistent_index.row(), persistent_index.column(), persistent_index.parent())
+                self.collapse(model_index)
                 folders_to_close.append(persistent_index)
 
         # Remove closed folders from our tracking set
