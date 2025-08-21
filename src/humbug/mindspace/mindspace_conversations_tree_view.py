@@ -1,5 +1,6 @@
 """Conversations tree view implementation for mindspace conversations with drag and drop support and inline editing."""
 
+import os
 from typing import cast
 
 from PySide6.QtCore import QSortFilterProxyModel, QDir, QModelIndex
@@ -37,7 +38,9 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
         Returns:
             True if the path can be dragged, False otherwise
         """
-        # All items in conversations can be dragged
+        if os.path.basename(path) == ".":
+            return False
+
         return True
 
     def configure_for_path(self, path: str) -> None:

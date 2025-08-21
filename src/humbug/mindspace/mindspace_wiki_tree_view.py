@@ -40,7 +40,7 @@ class MindspaceWikiTreeView(MindspaceTreeView):
         """
         # Check if this is a valid drag target
         source_basename = os.path.basename(path)
-        if source_basename in ['.humbug', 'conversations', 'metaphor']:
+        if source_basename in ['.', '.humbug', 'conversations', 'metaphor']:
             return False
 
         return True
