@@ -505,7 +505,40 @@ class ColumnManager(QWidget):
 
         self._add_tab_to_column(new_tab, tab_title, target_column)
 
-    def _on_welcome_widget_path_dropped(self, path: str) -> None:
+    def _open_file_by_source_type(self, source_type: str, path: str, ephemeral: bool) -> TabBase | None:
+        """
+        Open a file with the appropriate tab type based on source view.
+
+        Args:
+            source_type: Source view type ("conversations", "files", "wiki") or None
+            path: File path to open
+            ephemeral: Whether tab should be ephemeral
+
+        Returns:
+            Created tab or None if failed
+        """
+        if source_type == "conversations":
+            # We can't open directories as conversations
+            if os.path.isdir(path):
+                return None
+
+            # From conversations view - always open as conversation if .conv, otherwise editor
+            if path.endswith('.conv'):
+                return self.open_conversation(path, ephemeral)
+
+            return self.open_file(path, ephemeral)
+
+        if source_type == "wiki":
+            # From wiki view - always open as wiki page
+            return self.open_wiki_page(path, ephemeral)
+
+        # From files view - always open as editor
+        if os.path.isdir(path):
+            return None
+
+        return self.open_file(path, ephemeral)
+
+    def _on_welcome_widget_path_dropped(self, source_type: str, path: str) -> None:
         """Handle mindspace tree drops when only welcome widget is visible."""
         # Create first column if it doesn't exist
         if not self._tab_columns:
@@ -514,17 +547,8 @@ class ColumnManager(QWidget):
         # Set as active column
         self._active_column = self._tab_columns[0]
 
-        if os.path.isdir(path):
-            return
-
-        # Handle the file drop
-        ext = os.path.splitext(path)[1].lower()
-        if ext == '.conv':
-            tab: TabBase | None = self.open_conversation(path, False)
-
-        else:
-            tab = self.open_file(path, False)
-
+        # Handle the file drop using source type
+        tab = self._open_file_by_source_type(source_type, path, False)
         if tab is None:
             return
 
@@ -594,7 +618,13 @@ class ColumnManager(QWidget):
         # Update active states
         self._update_tabs()
 
-    def _on_column_widget_path_dropped(self, path: str, target_column: ColumnWidget, target_index: int) -> None:
+    def _on_column_widget_path_dropped(
+        self,
+        source_type: str,
+        path: str,
+        target_column: ColumnWidget,
+        target_index: int
+    ) -> None:
         """
         Handle a file being dropped into a column.
 
@@ -602,24 +632,13 @@ class ColumnManager(QWidget):
             path: Path dropped
             target_column: Column where the file was dropped
             target_index: Target position in the column
+            source_type: Source view type if available
         """
-        if os.path.isdir(path):
-            return
-
-        # Check file extension
-        ext = os.path.splitext(path)[1].lower()
-
         # Set the target column as active
         self._active_column = target_column
 
         try:
-            if ext == '.conv':
-                # Open conversation file
-                tab: TabBase | None = self.open_conversation(path, False)
-
-            else:
-                tab = self.open_file(path, False)
-
+            tab = self._open_file_by_source_type(source_type, path, False)
             if tab is None:
                 return
 
@@ -628,7 +647,7 @@ class ColumnManager(QWidget):
             if current_index != target_index:
                 target_column.tabBar().moveTab(current_index, target_index)
 
-        except (ConversationError, OSError) as e:
+        except (ConversationError, WikiError, OSError) as e:
             self._logger.exception("Failed to open dropped file '%s': %s", path, str(e))
 
     def _update_tab_bar_for_label_change(self, tab_id: str) -> None:

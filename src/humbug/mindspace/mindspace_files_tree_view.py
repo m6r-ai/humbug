@@ -54,6 +54,15 @@ class MindspaceFilesTreeView(MindspaceTreeView):
         """
         self._mindspace_path = path
 
+    def get_view_type(self) -> str:
+        """
+        Get the type identifier for this view.
+
+        Returns:
+            String identifying this as the files view
+        """
+        return "files"
+
     def get_path_from_index(self, index: QModelIndex) -> str | None:
         """
         Get the file system path from a model index.

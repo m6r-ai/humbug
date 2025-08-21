@@ -140,7 +140,7 @@ class TabLabel(QWidget):
 
         # Make allowance for the width of italicized text
         font_metrics = QFontMetricsF(font)
-        space_width = round(font_metrics.horizontalAdvance('_'))
+        space_width = round(font_metrics.horizontalAdvance(' '))
         text_width = round(font_metrics.horizontalAdvance(self._label.text()))
         self._label.setContentsMargins(space_width, 0, space_width, 0)
         self._label.setMinimumWidth(text_width + 2 * space_width)

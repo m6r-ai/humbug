@@ -10,7 +10,7 @@ from humbug.style_manager import StyleManager
 
 class WelcomeWidget(QFrame):
     """Widget showing welcome message when no tabs are open."""
-    path_dropped = Signal(str)
+    path_dropped = Signal(str, str)  # source_type, path
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize welcome widget."""
@@ -76,7 +76,19 @@ class WelcomeWidget(QFrame):
                 mime_data = bytes(mime_data)
 
             path = mime_data.decode()
-            self.path_dropped.emit(path)
+
+            # Extract source type if available
+            source_type = None
+            if event.mimeData().hasFormat("application/x-humbug-source"):
+                source_data = event.mimeData().data("application/x-humbug-source").data()
+
+                # Convert to bytes first if it's not already bytes
+                if not isinstance(source_data, bytes):
+                    source_data = bytes(source_data)
+
+                source_type = source_data.decode()
+
+            self.path_dropped.emit(source_type, path)
             event.acceptProposedAction()
             return
 

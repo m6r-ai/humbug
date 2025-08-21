@@ -12,7 +12,7 @@ class ColumnWidget(QTabWidget):
 
     column_activated = Signal(QTabWidget)
     tab_dropped = Signal(str, QTabWidget, int)  # tab_id, target_column, target_index
-    path_dropped = Signal(str, QTabWidget, int)  # path, target_column, target_index
+    path_dropped = Signal(str, str, QTabWidget, int)  # source_type, path, target_column, target_index
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab widget."""
@@ -142,6 +142,17 @@ class ColumnWidget(QTabWidget):
 
             path = mime_data.decode()
 
+            # Extract source type if available
+            source_type = None
+            if event.mimeData().hasFormat("application/x-humbug-source"):
+                source_data = event.mimeData().data("application/x-humbug-source").data()
+
+                # Convert to bytes first if it's not already bytes
+                if not isinstance(source_data, bytes):
+                    source_data = bytes(source_data)
+
+                source_type = source_data.decode()
+
             # Map the drop position to the tab bar
             pos = self.tabBar().mapFromParent(event.pos())
             target_index = self.tabBar().tabAt(pos)
@@ -151,7 +162,7 @@ class ColumnWidget(QTabWidget):
                 target_index = self.count()
 
             # Emit signal with path info for column manager to handle
-            self.path_dropped.emit(path, self, target_index)
+            self.path_dropped.emit(source_type, path, self, target_index)
             event.acceptProposedAction()
             return
 

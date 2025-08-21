@@ -57,7 +57,7 @@ class MindspaceTreeView(QTreeView):
     def get_root_path(self) -> str:
         """
         Get the root path for this tree view.
-        
+
         Returns:
             Root path string, or empty string if no root is configured
         """
@@ -66,10 +66,10 @@ class MindspaceTreeView(QTreeView):
     def is_valid_drag_source(self, path: str) -> bool:
         """
         Check if a path can be dragged from this tree view.
-        
+
         Args:
             path: Path to check for drag validity
-            
+
         Returns:
             True if the path can be dragged, False otherwise
         """
@@ -78,11 +78,20 @@ class MindspaceTreeView(QTreeView):
     def configure_for_path(self, path: str) -> None:
         """
         Configure the tree view for the given path.
-        
+
         Args:
             path: Path to configure the tree view for
         """
         raise NotImplementedError("Subclasses must implement configure_for_path")
+
+    def get_view_type(self) -> str:
+        """
+        Get the type identifier for this view.
+
+        Returns:
+            String identifying the view type ("conversations", "files", "wiki")
+        """
+        raise NotImplementedError("Subclasses must implement get_view_type")
 
     def get_current_drop_target(self) -> QModelIndex | None:
         """Get the current drop target index."""
@@ -526,9 +535,10 @@ class MindspaceTreeView(QTreeView):
         if not drag_path:
             return
 
-        # Create mime data with path
+        # Create mime data with path and source view type
         mime_data = QMimeData()
         mime_data.setData("application/x-humbug-path", drag_path.encode())
+        mime_data.setData("application/x-humbug-source", self.get_view_type().encode())
 
         # Create drag object
         drag = QDrag(self)
