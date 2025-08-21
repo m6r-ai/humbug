@@ -434,6 +434,15 @@ class MindspaceView(QWidget):
                 height: {branch_icon_size}px;
             }}
 
+            MindspaceRootDropWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: none;
+            }}
+            MindspaceRootDropWidget[is_drop_target="true"] {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+
             QScrollBar:vertical {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;

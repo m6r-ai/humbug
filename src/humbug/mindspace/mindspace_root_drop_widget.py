@@ -7,7 +7,6 @@ from PySide6.QtCore import Qt, QPoint, Signal
 from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QDragLeaveEvent
 from PySide6.QtWidgets import QWidget, QMenu
 
-from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 
 
@@ -39,7 +38,7 @@ class MindspaceRootDropWidget(QWidget):
 
         # Set initial styling
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self._apply_styling()
+        self.apply_style()
 
     def set_context_menu_provider(self, provider: Callable[[], QMenu | None]) -> None:
         """
@@ -50,35 +49,15 @@ class MindspaceRootDropWidget(QWidget):
         """
         self._context_menu_provider = provider
 
-    def _apply_styling(self) -> None:
-        """Apply styling based on current drop state and zoom factor."""
+    def apply_style(self) -> None:
+        """Apply styling based on zoom factor."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
 
         # Calculate height to match tree view text line height
         # This matches the height of a tree view item
-        line_height = int((base_font_size * zoom_factor) * 1.5)  # Font size + some padding
+        line_height = int((base_font_size * zoom_factor) * 1.75)  # Font size + some padding
         self.setMinimumHeight(line_height)
-
-        # Update background color based on drop state
-        if self._is_drop_target:
-            bg_color = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
-            border_color = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
-            self.setStyleSheet(f"""
-                MindspaceRootDropWidget {{
-                    background-color: {bg_color};
-                    border: 1px solid {border_color};
-                }}
-            """)
-        else:
-            # Match tree view background
-            bg_color = self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
-            self.setStyleSheet(f"""
-                MindspaceRootDropWidget {{
-                    background-color: {bg_color};
-                    border: none;
-                }}
-            """)
 
     def _show_context_menu(self, position: QPoint) -> None:
         """
@@ -134,31 +113,42 @@ class MindspaceRootDropWidget(QWidget):
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """Handle drag enter events."""
-        if self._is_valid_drop(event):
-            self._is_drop_target = True
-            self._apply_styling()
-            event.acceptProposedAction()
-        else:
+        if not self._is_valid_drop(event):
             event.ignore()
+            return
+
+        self._is_drop_target = True
+        self.setProperty("is_drop_target", True)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.apply_style()
+        event.acceptProposedAction()
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
         """Handle drag move events."""
-        if self._is_valid_drop(event):
-            event.acceptProposedAction()
-        else:
+        if not self._is_valid_drop(event):
             event.ignore()
+            return
+
+        event.acceptProposedAction()
 
     def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
         """Handle drag leave events."""
         self._is_drop_target = False
-        self._apply_styling()
+        self.setProperty("is_drop_target", False)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.apply_style()
         super().dragLeaveEvent(event)
 
     def dropEvent(self, event: QDropEvent) -> None:
         """Handle drop events."""
         # Clear drop target state first
         self._is_drop_target = False
-        self._apply_styling()
+        self.setProperty("is_drop_target", False)
+        self.style().unpolish(self)
+        self.style().polish(self)
+        self.apply_style()
 
         if not self._is_valid_drop(event):
             event.ignore()
@@ -180,7 +170,3 @@ class MindspaceRootDropWidget(QWidget):
         # Emit the drop signal
         self.file_dropped.emit(dragged_path, root_path)
         event.acceptProposedAction()
-
-    def apply_style(self) -> None:
-        """Update styling when application style changes."""
-        self._apply_styling()
