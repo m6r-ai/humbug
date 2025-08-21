@@ -56,7 +56,6 @@ class MindspaceConversationsView(QWidget):
             self
         )
         self._header.toggled.connect(self._on_header_toggled)
-        self._header.set_context_menu_provider(self._create_header_context_menu)
         layout.addWidget(self._header)
 
         # Create tree view
@@ -612,18 +611,6 @@ class MindspaceConversationsView(QWidget):
             return
 
         delegate.start_editing(filter_index, select_extension)
-
-    def _create_header_context_menu(self) -> QMenu | None:
-        """
-        Create context menu for the header (root-level actions).
-
-        Returns:
-            QMenu with root-level actions, or None if no conversations directory is active
-        """
-        if not self._conversations_path:
-            return None
-
-        return self._create_root_context_menu()
 
     def _create_root_context_menu(self) -> QMenu:
         """

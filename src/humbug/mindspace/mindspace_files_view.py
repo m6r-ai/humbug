@@ -57,7 +57,6 @@ class MindspaceFilesView(QWidget):
         )
         self._header.setProperty("splitter", True)
         self._header.toggled.connect(self._on_header_toggled)
-        self._header.set_context_menu_provider(self._create_header_context_menu)
         layout.addWidget(self._header)
 
         # Create tree view
@@ -592,18 +591,6 @@ class MindspaceFilesView(QWidget):
             return
 
         delegate.start_editing(filter_index, select_extension)
-
-    def _create_header_context_menu(self) -> QMenu | None:
-        """
-        Create context menu for the header (root-level actions).
-
-        Returns:
-            QMenu with root-level actions, or None if no mindspace is active
-        """
-        if not self._mindspace_path:
-            return None
-
-        return self._create_root_context_menu()
 
     def _create_root_context_menu(self) -> QMenu:
         """

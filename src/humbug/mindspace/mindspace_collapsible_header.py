@@ -1,10 +1,8 @@
 """Collapsible header widget for mindspace sections."""
 
-from typing import Callable
-
-from PySide6.QtCore import Signal, Qt, QSize, QPoint, QEvent
+from PySide6.QtCore import Signal, Qt, QSize, QEvent
 from PySide6.QtGui import QIcon, QMouseEvent, QEnterEvent
-from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton, QMenu
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QToolButton
 
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
@@ -29,7 +27,6 @@ class MindspaceCollapsibleHeader(QWidget):
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
         self._is_expanded = True  # Default to expanded
-        self._context_menu_provider: Callable[[], QMenu | None] | None = None
 
         # Create layout
         layout = QHBoxLayout(self)
@@ -58,10 +55,6 @@ class MindspaceCollapsibleHeader(QWidget):
         # Make the entire header clickable
         self.setCursor(Qt.CursorShape.PointingHandCursor)
 
-        # Enable context menu
-        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._show_context_menu)
-
     def set_title(self, title: str) -> None:
         """
         Set the header title text.
@@ -70,15 +63,6 @@ class MindspaceCollapsibleHeader(QWidget):
             title: New title text
         """
         self._title_label.setText(title)
-
-    def set_context_menu_provider(self, provider: Callable[[], QMenu | None]) -> None:
-        """
-        Set the context menu provider function.
-
-        Args:
-            provider: Function that returns a QMenu or None
-        """
-        self._context_menu_provider = provider
 
     def is_expanded(self) -> bool:
         """
@@ -135,22 +119,6 @@ class MindspaceCollapsibleHeader(QWidget):
 
         # Update tooltip
         self.setToolTip(tooltip)
-
-    def _show_context_menu(self, position: QPoint) -> None:
-        """
-        Show context menu at the specified position.
-
-        Args:
-            position: Position where the context menu was requested
-        """
-        if not self._context_menu_provider:
-            return
-
-        menu = self._context_menu_provider()
-        if not menu:
-            return
-
-        menu.exec_(self.mapToGlobal(position))
 
     def enterEvent(self, event: QEnterEvent) -> None:
         """Handle mouse enter events for hover effect."""
