@@ -2,6 +2,14 @@
 
 ## v0.23 (2025-08-xx)
 
+New features:
+
+- Added a wiki view to the mindspace view.
+
+Bug fixes:
+
+- When focusing a delegated AI conversation, don't assume we can focus the input box as there isn't one.
+
 ## v0.22 (2025-08-20)
 
 New features:

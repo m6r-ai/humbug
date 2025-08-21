@@ -29,12 +29,13 @@ from humbug.delegate_ai_tool import DelegateAITool
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
-from humbug.mindspace.mindspace_view import MindspaceView
 from humbug.mindspace.mindspace_folders_dialog import MindspaceFoldersDialog
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
+from humbug.mindspace.mindspace_view import MindspaceView
+from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
@@ -50,7 +51,9 @@ from humbug.tabs.shell.commands.shell_command_m6rc import ShellCommandM6rc
 from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTerminal
 from humbug.tabs.shell.commands.shell_command_wiki import ShellCommandWiki
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
+from humbug.tabs.tab_base import TabBase
 from humbug.tabs.wiki.wiki_error import WikiError
+from humbug.tabs.wiki.wiki_tab import WikiTab
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 from humbug.user.user_settings_dialog import UserSettingsDialog
@@ -606,11 +609,28 @@ class MainWindow(QMainWindow):
         """
         self._style_manager.set_color_mode(theme)
 
+    def _map_tab_to_mindspace_view(self, tab: TabBase) -> MindspaceViewType:
+        """Map a tab to its corresponding mindspace view type."""
+        if isinstance(tab, ConversationTab):
+            return MindspaceViewType.CONVERSATIONS
+
+        if isinstance(tab, WikiTab):
+            return MindspaceViewType.WIKI
+
+        return MindspaceViewType.FILES
+
     def _on_column_manager_tab_changed(self) -> None:
         """Handle tab change events."""
-        path = self._column_manager.current_tab_path()
-        if path:
-            self._mindspace_view.reveal_and_select_file(path)
+        current_tab = self._column_manager.get_current_tab()
+        if current_tab is None:
+            return
+
+        path = current_tab.path()
+        if path is None:
+            return
+
+        view_type = self._map_tab_to_mindspace_view(current_tab)
+        self._mindspace_view.reveal_and_select_file(view_type, path)
 
     def _on_column_manager_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
@@ -764,9 +784,7 @@ class MainWindow(QMainWindow):
             return
 
         try:
-            restored_paths = self._column_manager.restore_state(saved_state)
-            for path in restored_paths:
-                self._mindspace_view.reveal_and_select_file(path)
+            self._column_manager.restore_state(saved_state)
 
         except MindspaceError as e:
             self._logger.error("Failed to restore mindspace state: %s", str(e))
@@ -916,12 +934,12 @@ class MainWindow(QMainWindow):
     def _save_file(self) -> None:
         """Save the current file."""
         path = self._column_manager.save_file()
-        self._mindspace_view.reveal_and_select_file(path)
+        self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
 
     def _save_file_as(self) -> None:
         """Save the current file with a new name."""
         path = self._column_manager.save_file_as()
-        self._mindspace_view.reveal_and_select_file(path)
+        self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
 
     def _open_wiki(self) -> None:
         """Open the wiki page in a new tab."""

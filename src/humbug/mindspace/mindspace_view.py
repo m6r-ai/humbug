@@ -11,6 +11,7 @@ from humbug.mindspace.mindspace_conversations_view import MindspaceConversations
 from humbug.mindspace.mindspace_files_view import MindspaceFilesView
 from humbug.mindspace.mindspace_wiki_view import MindspaceWikiView
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager
 
 
@@ -331,7 +332,7 @@ class MindspaceView(QWidget):
         """
         self._wiki_view.set_expanded(expanded)
 
-    def reveal_and_select_file(self, file_path: str) -> None:
+    def reveal_and_select_file(self, view_type: MindspaceViewType, file_path: str) -> None:
         """
         Reveal and select a file in the appropriate view (files, conversations, or wiki).
 
@@ -342,25 +343,19 @@ class MindspaceView(QWidget):
             return
 
         # Use mindspace manager to properly determine if file is in conversations hierarchy
-        if self._mindspace_manager.has_mindspace():
-            try:
-                relative_path = self._mindspace_manager.get_mindspace_relative_path(file_path)
-                if relative_path and relative_path.startswith("conversations" + os.sep):
-                    # File is within the mindspace's conversations directory
-                    self._conversations_view.reveal_and_select_file(file_path)
+        if not self._mindspace_manager.has_mindspace():
+            return
 
-                else:
-                    # File is elsewhere in mindspace - reveal in files view by default
-                    # Users can switch to wiki view if needed
-                    self._files_view.reveal_and_select_file(file_path)
+        print(f"Revealing file {file_path} in view {view_type}")
+        match view_type:
+            case MindspaceViewType.CONVERSATIONS:
+                self._conversations_view.reveal_and_select_file(file_path)
 
-            except Exception:
-                # Fallback to files view if path conversion fails
+            case MindspaceViewType.WIKI:
+                self._wiki_view.reveal_and_select_file(file_path)
+
+            case MindspaceViewType.FILES:
                 self._files_view.reveal_and_select_file(file_path)
-
-        else:
-            # No mindspace active, default to files view
-            self._files_view.reveal_and_select_file(file_path)
 
     def set_mindspace(self, path: str) -> None:
         """
