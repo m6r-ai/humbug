@@ -278,60 +278,6 @@ class MindspaceView(QWidget):
                 third_height = total_height // 3
                 self._splitter.setSizes([third_height, third_height, third_height, 0])
 
-    def get_conversations_expanded_state(self) -> bool:
-        """
-        Get the expanded state of the conversations section.
-
-        Returns:
-            True if conversations section is expanded, False if collapsed
-        """
-        return self._conversations_view.is_expanded()
-
-    def set_conversations_expanded_state(self, expanded: bool) -> None:
-        """
-        Set the expanded state of the conversations section.
-
-        Args:
-            expanded: Whether the conversations section should be expanded
-        """
-        self._conversations_view.set_expanded(expanded)
-
-    def get_files_expanded_state(self) -> bool:
-        """
-        Get the expanded state of the files section.
-
-        Returns:
-            True if files section is expanded, False if collapsed
-        """
-        return self._files_view.is_expanded()
-
-    def set_files_expanded_state(self, expanded: bool) -> None:
-        """
-        Set the expanded state of the files section.
-
-        Args:
-            expanded: Whether the files section should be expanded
-        """
-        self._files_view.set_expanded(expanded)
-
-    def get_wiki_expanded_state(self) -> bool:
-        """
-        Get the expanded state of the wiki section.
-
-        Returns:
-            True if wiki section is expanded, False if collapsed
-        """
-        return self._wiki_view.is_expanded()
-
-    def set_wiki_expanded_state(self, expanded: bool) -> None:
-        """
-        Set the expanded state of the wiki section.
-
-        Args:
-            expanded: Whether the wiki section should be expanded
-        """
-        self._wiki_view.set_expanded(expanded)
-
     def reveal_and_select_file(self, view_type: MindspaceViewType, file_path: str) -> None:
         """
         Reveal and select a file in the appropriate view (files, conversations, or wiki).

@@ -531,9 +531,6 @@ class MindspaceConversationsView(QWidget):
         Returns:
             QModelIndex of the target file if found, None otherwise
         """
-        if not self._conversations_path:
-            return None
-
         # Build list of paths from conversations root to target file
         paths_to_expand = []
         current_path = file_path

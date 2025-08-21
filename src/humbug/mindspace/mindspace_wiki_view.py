@@ -57,6 +57,7 @@ class MindspaceWikiView(QWidget):
         self._header.setProperty("splitter", True)
         self._header.toggled.connect(self._on_header_toggled)
         self._header.set_context_menu_provider(self._create_header_context_menu)
+
         # Start collapsed by default
         self._header.set_expanded(False, emit_signal=False)
         layout.addWidget(self._header)
@@ -536,9 +537,6 @@ class MindspaceWikiView(QWidget):
         Returns:
             QModelIndex of the target file if found, None otherwise
         """
-        if not self._mindspace_path:
-            return None
-
         # Build list of paths from mindspace root to target file
         paths_to_expand = []
         current_path = file_path
