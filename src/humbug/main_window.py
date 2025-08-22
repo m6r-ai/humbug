@@ -847,32 +847,9 @@ class MainWindow(QMainWindow):
             f"User opened wiki: '{path}'\ntab ID: {wiki_tab.tab_id()}"
         )
 
-    def _on_mindspace_view_file_clicked(self, path: str, ephemeral: bool) -> None:
+    def _on_mindspace_view_file_clicked(self, source: MindspaceViewType, path: str, ephemeral: bool) -> None:
         """Handle click of a file from the mindspace view."""
-        # Are we opening an editor file?
-        if not os.path.isfile(path):
-            return
-
-        ext = os.path.splitext(path)[1].lower()
-        if ext == ".conv":
-            conversation_tab = self._open_conversation_path(path, ephemeral)
-            if conversation_tab is None:
-                return
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"User opened conversation: '{path}'\ntab ID: {conversation_tab.tab_id()}"
-            )
-            return
-
-        editor_tab = self._column_manager.open_file(path, ephemeral)
-        if editor_tab is None:
-            return
-
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"User opened editor for file: '{path}'\ntab ID: {editor_tab.tab_id()}"
-        )
+        self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
 
     def _on_mindspace_view_file_deleted(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.

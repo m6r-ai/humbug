@@ -13,6 +13,7 @@ from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
+from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
 from humbug.tabs.column_splitter import ColumnSplitter
@@ -505,6 +506,47 @@ class ColumnManager(QWidget):
 
         self._add_tab_to_column(new_tab, tab_title, target_column)
 
+    def open_file_by_mindspace_view_type(self, source: MindspaceViewType, path: str, ephemeral: bool) -> TabBase | None:
+        """
+        Open a file with the appropriate tab type based on mindspace view.
+
+        Args:
+            source: Mindspace view type
+            path: File path to open
+            ephemeral: Whether tab should be ephemeral
+
+        Returns:
+            Created tab or None if failed
+        """
+        if source == MindspaceViewType.CONVERSATIONS:
+            conversation_tab = self.open_conversation(path, ephemeral)
+            if conversation_tab:
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"User opened conversation: '{path}'\ntab ID: {conversation_tab.tab_id()}"
+                )
+
+            return conversation_tab
+
+        if source == MindspaceViewType.WIKI:
+            wiki_tab = self.open_wiki_page(path, ephemeral)
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened wiki page: '{path}'\ntab ID: {wiki_tab.tab_id()}"
+            )
+            return wiki_tab
+
+        # From files view - always open as editor
+        if os.path.isdir(path):
+            return None
+
+        editor_tab = self.open_file(path, ephemeral)
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User opened file: '{path}'\ntab ID: {editor_tab.tab_id()}"
+        )
+        return editor_tab
+
     def _open_file_by_source_type(self, source_type: str, path: str, ephemeral: bool) -> TabBase | None:
         """
         Open a file with the appropriate tab type based on source view.
@@ -517,26 +559,15 @@ class ColumnManager(QWidget):
         Returns:
             Created tab or None if failed
         """
-        if source_type == "conversations":
-            # We can't open directories as conversations
-            if os.path.isdir(path):
-                return None
+        mapping = {
+            "conversations": MindspaceViewType.CONVERSATIONS,
+            "files": MindspaceViewType.FILES,
+            "wiki": MindspaceViewType.WIKI
+        }
 
-            # From conversations view - always open as conversation if .conv, otherwise editor
-            if path.endswith('.conv'):
-                return self.open_conversation(path, ephemeral)
-
-            return self.open_file(path, ephemeral)
-
-        if source_type == "wiki":
-            # From wiki view - always open as wiki page
-            return self.open_wiki_page(path, ephemeral)
-
-        # From files view - always open as editor
-        if os.path.isdir(path):
-            return None
-
-        return self.open_file(path, ephemeral)
+        assert source_type in mapping
+        view_type = mapping[source_type]
+        return self.open_file_by_mindspace_view_type(view_type, path, ephemeral)
 
     def _on_welcome_widget_path_dropped(self, source_type: str, path: str) -> None:
         """Handle mindspace tree drops when only welcome widget is visible."""

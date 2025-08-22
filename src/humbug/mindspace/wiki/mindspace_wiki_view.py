@@ -12,13 +12,14 @@ from PySide6.QtWidgets import (
 
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
-from humbug.mindspace.mindspace_wiki_model import MindspaceWikiModel
-from humbug.mindspace.mindspace_wiki_tree_view import MindspaceWikiTreeView
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
+from humbug.mindspace.mindspace_view_type import MindspaceViewType
+from humbug.mindspace.wiki.mindspace_wiki_model import MindspaceWikiModel
+from humbug.mindspace.wiki.mindspace_wiki_tree_view import MindspaceWikiTreeView
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
@@ -26,7 +27,7 @@ from humbug.language.language_manager import LanguageManager
 class MindspaceWikiView(QWidget):
     """Wiki view widget for displaying mindspace files in wiki mode."""
 
-    file_clicked = Signal(str, bool)  # Emits path and ephemeral flag when any file is clicked
+    file_clicked = Signal(MindspaceViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
@@ -996,7 +997,7 @@ class MindspaceWikiView(QWidget):
             return
 
         # For wiki view, single clicks open in wiki
-        self.file_opened_in_wiki.emit(path, True)
+        self.file_clicked.emit(MindspaceViewType.WIKI, path, True)
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
         """Handle double click events - route to wiki view."""
@@ -1007,7 +1008,7 @@ class MindspaceWikiView(QWidget):
             return
 
         # For wiki view, double clicks also open in wiki (non-ephemeral)
-        self.file_opened_in_wiki.emit(path, False)
+        self.file_clicked.emit(MindspaceViewType.WIKI, path, False)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""

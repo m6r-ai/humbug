@@ -13,6 +13,10 @@ Bug fixes:
 
 - When focusing a delegated AI conversation, don't assume we can focus the input box as there isn't one.
 
+Internal structure changes:
+
+- Separated out the different types of mindspace views into separate directories to simplify maintenance.
+
 ## v0.22 (2025-08-20)
 
 New features:

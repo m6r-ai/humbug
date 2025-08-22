@@ -7,11 +7,11 @@ from PySide6.QtCore import Qt, Signal
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.mindspace_conversations_view import MindspaceConversationsView
-from humbug.mindspace.mindspace_files_view import MindspaceFilesView
-from humbug.mindspace.mindspace_wiki_view import MindspaceWikiView
+from humbug.mindspace.conversations.mindspace_conversations_view import MindspaceConversationsView
+from humbug.mindspace.files.mindspace_files_view import MindspaceFilesView
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
+from humbug.mindspace.wiki.mindspace_wiki_view import MindspaceWikiView
 from humbug.style_manager import StyleManager
 
 
@@ -19,7 +19,7 @@ class MindspaceView(QWidget):
     """Main mindspace view widget containing files, conversations, and wiki sections."""
 
     # Forward all file-related signals from all views
-    file_clicked = Signal(str, bool)  # Emits path and ephemeral flag when a file is clicked
+    file_clicked = Signal(MindspaceViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
