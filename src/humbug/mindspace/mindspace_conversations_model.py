@@ -270,36 +270,29 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         # Check user sort preference for directory/file organization
         sort_order = self._user_manager.settings().file_sort_order
         if sort_order == UserFileSortOrder.ALPHABETICAL:
-            # Skip directory/file separation for alphabetical sorting
-            # But still apply conversation-specific sorting for files
-            if (not left_info.isDir() and not right_info.isDir() and 
-                self._conversation_sort_mode == self.SortMode.CREATION_TIME):
-                # Both are files and we're using creation time sorting
+            if self._conversation_sort_mode == self.SortMode.CREATION_TIME:
                 left_time = self._get_file_creation_time(left_path)
                 right_time = self._get_file_creation_time(right_path)
+
                 # Sort newest first (reverse chronological order)
                 return left_time > right_time
 
-            # For directories or when using name sorting, sort alphabetically
+            # When using name sorting, sort alphabetically
             return left_info.fileName().lower() < right_info.fileName().lower()
 
         # Default directories-first logic
-        # Apply creation time sorting for conversation files (non-directories only)
-        if (self._conversation_sort_mode == self.SortMode.CREATION_TIME and
-            not left_info.isDir() and not right_info.isDir()):
-
-            left_time = self._get_file_creation_time(left_path)
-            right_time = self._get_file_creation_time(right_path)
-
-            # Sort newest first (reverse chronological order)
-            return left_time > right_time
-
-        # Directories come before files
         if left_info.isDir() and not right_info.isDir():
             return True
 
         if not left_info.isDir() and right_info.isDir():
             return False
+
+        if self._conversation_sort_mode == self.SortMode.CREATION_TIME:
+            left_time = self._get_file_creation_time(left_path)
+            right_time = self._get_file_creation_time(right_path)
+
+            # Sort newest first (reverse chronological order)
+            return left_time > right_time
 
         # Both are same type (both directories or both files), sort alphabetically
         return left_info.fileName().lower() < right_info.fileName().lower()
