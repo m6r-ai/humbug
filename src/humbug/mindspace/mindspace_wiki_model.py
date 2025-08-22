@@ -6,6 +6,9 @@ from typing import cast
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex, Qt
 from PySide6.QtWidgets import QFileSystemModel, QWidget
 
+from humbug.user.user_file_sort_order import UserFileSortOrder
+from humbug.user.user_manager import UserManager
+
 
 class MindspaceWikiModel(QSortFilterProxyModel):
     """Filter model to hide .humbug directory and apply custom sorting for wiki view."""
@@ -14,6 +17,12 @@ class MindspaceWikiModel(QSortFilterProxyModel):
         """Initialize the filter model."""
         super().__init__(parent)
         self._mindspace_root = ""
+        self._user_manager = UserManager()
+        self._user_manager.settings_changed.connect(self._on_user_settings_changed)
+
+    def _on_user_settings_changed(self) -> None:
+        """Handle user settings changes by re-sorting."""
+        self.invalidate()  # This triggers a resort
 
     def set_mindspace_root(self, path: str) -> None:
         """Set the mindspace root path for relative path calculations."""
@@ -86,6 +95,13 @@ class MindspaceWikiModel(QSortFilterProxyModel):
         left_info = source_model.fileInfo(source_left)
         right_info = source_model.fileInfo(source_right)
 
+        # Check user sort preference
+        sort_order = self._user_manager.settings().file_sort_order
+        if sort_order == UserFileSortOrder.ALPHABETICAL:
+            # Skip directory/file separation, just sort alphabetically
+            return left_info.fileName().lower() < right_info.fileName().lower()
+
+        # Default directories-first logic
         # Directories come before files
         if left_info.isDir() and not right_info.isDir():
             return True

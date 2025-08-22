@@ -9,6 +9,7 @@ from ai import AIBackendSettings
 
 from humbug.language.language_code import LanguageCode
 from humbug.style_manager import ColorMode
+from humbug.user.user_file_sort_order import UserFileSortOrder
 
 
 @dataclass
@@ -20,6 +21,7 @@ class UserSettings:
     language: LanguageCode = LanguageCode.EN
     font_size: float| None = None  # None means use the default font size
     theme: ColorMode = ColorMode.DARK  # Default to dark mode
+    file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
 
     @classmethod
     def create_default(cls) -> "UserSettings":
@@ -37,7 +39,8 @@ class UserSettings:
             },
             language=LanguageCode.EN,
             font_size=None,
-            theme=ColorMode.DARK
+            theme=ColorMode.DARK,
+            file_sort_order=UserFileSortOrder.DIRECTORIES_FIRST
         )
 
     @classmethod
@@ -104,6 +107,14 @@ class UserSettings:
 
             except (KeyError, ValueError):
                 settings.theme = ColorMode.DARK
+
+            # Load file sort order if available, otherwise use default
+            sort_order_str = data.get("fileSortOrder", "DIRECTORIES_FIRST")
+            try:
+                settings.file_sort_order = UserFileSortOrder[sort_order_str]
+
+            except (KeyError, ValueError):
+                settings.file_sort_order = UserFileSortOrder.DIRECTORIES_FIRST
 
         return settings
 
@@ -177,6 +188,7 @@ class UserSettings:
             "language": self.language.name,
             "fontSize": self.font_size,
             "theme": self.theme.name,
+            "fileSortOrder": self.file_sort_order.name,
         }
 
         with open(path, 'w', encoding='utf-8') as f:

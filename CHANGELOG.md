@@ -5,6 +5,8 @@
 New features:
 
 - Added a wiki view to the mindspace view.
+- Added the "." directory into all the mindspace views as a target for actions.
+- Added a user settings option to change the sort orders for folders/files.
 
 Bug fixes:
 

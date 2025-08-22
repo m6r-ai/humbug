@@ -23,6 +23,7 @@ from humbug.settings.settings_factory import SettingsFactory
 from humbug.settings.settings_section import SettingsSection
 from humbug.settings.settings_text_field import SettingsTextField
 from humbug.style_manager import StyleManager, ColorMode
+from humbug.user.user_file_sort_order import UserFileSortOrder
 from humbug.user.user_settings import UserSettings
 
 
@@ -110,6 +111,17 @@ class UserSettingsDialog(QDialog):
             (strings.theme_light, ColorMode.LIGHT)
         ]
         self._theme_combo.set_items(theme_items)
+
+        # File sort order selection
+        self._file_sort_combo = SettingsFactory.create_combo(strings.file_sort_order)
+        self._settings_container.add_setting(self._file_sort_combo)
+
+        # Add file sort order options
+        sort_items = [
+            (strings.sort_directories_first, UserFileSortOrder.DIRECTORIES_FIRST),
+            (strings.sort_alphabetical, UserFileSortOrder.ALPHABETICAL)
+        ]
+        self._file_sort_combo.set_items(sort_items)
 
         # Add some spacing between backends
         spacer = SettingsFactory.create_spacer(24)
@@ -263,6 +275,16 @@ class UserSettingsDialog(QDialog):
         self._theme_combo.set_items(theme_items)
         self._theme_combo.set_value(current_theme)
 
+        # Update file sort order combo items
+        current_sort_order = self._file_sort_combo.get_value()
+        sort_items = [
+            (strings.sort_directories_first, UserFileSortOrder.DIRECTORIES_FIRST),
+            (strings.sort_alphabetical, UserFileSortOrder.ALPHABETICAL)
+        ]
+        self._file_sort_combo.set_label(strings.file_sort_order)
+        self._file_sort_combo.set_items(sort_items)
+        self._file_sort_combo.set_value(current_sort_order)
+
         # Update buttons
         self.ok_button.setText(strings.ok)
         self.cancel_button.setText(strings.cancel)
@@ -320,7 +342,8 @@ class UserSettingsDialog(QDialog):
             ai_backends=ai_backends,
             language=self._language_combo.get_value(),
             font_size=self._font_size_spin.get_value(),
-            theme=self._theme_combo.get_value()
+            theme=self._theme_combo.get_value(),
+            file_sort_order=self._file_sort_combo.get_value()
         )
         return settings
 
@@ -342,7 +365,8 @@ class UserSettingsDialog(QDialog):
             ) for k, v in settings.ai_backends.items()},
             language=settings.language,
             font_size=settings.font_size,
-            theme=settings.theme
+            theme=settings.theme,
+            file_sort_order=settings.file_sort_order
         )
 
         # Initialize API backend settings
@@ -367,6 +391,9 @@ class UserSettingsDialog(QDialog):
 
         # Set theme
         self._theme_combo.set_value(settings.theme)
+
+        # Set file sort order
+        self._file_sort_combo.set_value(settings.file_sort_order)
 
         # Reset the modified state
         self._settings_container.reset_modified_state()

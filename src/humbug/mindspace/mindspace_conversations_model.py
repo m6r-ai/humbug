@@ -9,6 +9,9 @@ from typing import cast
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex, Qt
 from PySide6.QtWidgets import QFileSystemModel, QWidget
 
+from humbug.user.user_file_sort_order import UserFileSortOrder
+from humbug.user.user_manager import UserManager
+
 
 class MindspaceConversationsModel(QSortFilterProxyModel):
     """Filter model for conversations directory with custom sorting."""
@@ -23,9 +26,15 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         super().__init__(parent)
         self._conversations_root = ""
         self._conversation_sort_mode = self.SortMode.CREATION_TIME  # Default to creation time
+        self._user_manager = UserManager()
+        self._user_manager.settings_changed.connect(self._on_user_settings_changed)
 
         # Cache for file creation times: {file_path: (cached_timestamp, file_mtime)}
         self._creation_time_cache: dict[str, tuple[float, float]] = {}
+
+    def _on_user_settings_changed(self) -> None:
+        """Handle user settings changes by re-sorting."""
+        self.invalidate()  # This triggers a resort
 
     def set_conversations_root(self, path: str) -> None:
         """Set the conversations root path for filtering."""
@@ -258,6 +267,23 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         left_path = source_model.filePath(source_left)
         right_path = source_model.filePath(source_right)
 
+        # Check user sort preference for directory/file organization
+        sort_order = self._user_manager.settings().file_sort_order
+        if sort_order == UserFileSortOrder.ALPHABETICAL:
+            # Skip directory/file separation for alphabetical sorting
+            # But still apply conversation-specific sorting for files
+            if (not left_info.isDir() and not right_info.isDir() and 
+                self._conversation_sort_mode == self.SortMode.CREATION_TIME):
+                # Both are files and we're using creation time sorting
+                left_time = self._get_file_creation_time(left_path)
+                right_time = self._get_file_creation_time(right_path)
+                # Sort newest first (reverse chronological order)
+                return left_time > right_time
+
+            # For directories or when using name sorting, sort alphabetically
+            return left_info.fileName().lower() < right_info.fileName().lower()
+
+        # Default directories-first logic
         # Apply creation time sorting for conversation files (non-directories only)
         if (self._conversation_sort_mode == self.SortMode.CREATION_TIME and
             not left_info.isDir() and not right_info.isDir()):
@@ -268,7 +294,7 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
             # Sort newest first (reverse chronological order)
             return left_time > right_time
 
-        # Default sorting logic: directories come before files
+        # Directories come before files
         if left_info.isDir() and not right_info.isDir():
             return True
 

@@ -117,6 +117,9 @@ def get_french_strings() -> LanguageStrings:
         font_size="Taille de police",
         theme_dark="Sombre",
         theme_light="Clair",
+        file_sort_order="Ordre de tri des fichiers",
+        sort_directories_first="Dossiers en premier",
+        sort_alphabetical="Alphabétique",
 
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",

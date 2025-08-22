@@ -117,6 +117,9 @@ def get_english_strings() -> LanguageStrings:
         font_size="Font Size",
         theme_dark="Dark",
         theme_light="Light",
+        file_sort_order="File Sort Order",
+        sort_directories_first="Directories First",
+        sort_alphabetical="Alphabetical",
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",

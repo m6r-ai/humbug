@@ -112,6 +112,9 @@ class LanguageStrings:
     font_size: str
     theme_dark: str
     theme_light: str
+    file_sort_order: str
+    sort_directories_first: str
+    sort_alphabetical: str
 
     # Mindspace tree
     mindspace_label_none: str

@@ -117,6 +117,9 @@ def get_arabic_strings() -> LanguageStrings:
         font_size="حجم الخط",
         theme_dark="داكن",
         theme_light="فاتح",
+        file_sort_order="ترتيب الملفات",
+        sort_directories_first="المجلدات أولاً",
+        sort_alphabetical="أبجدي",
 
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
