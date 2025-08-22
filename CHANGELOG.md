@@ -7,6 +7,7 @@ New features:
 - Added a wiki view to the mindspace view.
 - Added the "." directory into all the mindspace views as a target for actions.
 - Added a user settings option to change the sort orders for folders/files.
+- Updated the DeepSeek context window sizes to match the DeepSeek 3.1 capabilities.
 
 Bug fixes:
 
