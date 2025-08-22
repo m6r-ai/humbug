@@ -106,7 +106,7 @@ class AIConversationSettings:
         "deepseek-chat": AIModel(
             name="deepseek-chat",
             provider="deepseek",
-            context_window=65536,
+            context_window=131072,
             max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
@@ -115,7 +115,7 @@ class AIConversationSettings:
         "deepseek-reasoner": AIModel(
             name="deepseek-reasoner",
             provider="deepseek",
-            context_window=65536,
+            context_window=131072,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
