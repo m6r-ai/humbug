@@ -2,9 +2,14 @@
 
 ## v0.24 (2025-08-xx)
 
+New features:
+
+- Added bit operations and base conversions to the calculator tool.
+
 Bug fixes:
 
 - If you try to open a directory that is not a valid mindspace then the previous one will no longer be closed.
+- The calculator tool now has a warning that ^ is for xor, and not for exponentiation.
 
 ## v0.23 (2025-08-22)
 
