@@ -2,6 +2,10 @@
 
 ## v0.24 (2025-08-xx)
 
+Bug fixes:
+
+- If you try to open a directory that is not a valid mindspace then the previous one will no longer be closed.
+
 ## v0.23 (2025-08-22)
 
 New features:

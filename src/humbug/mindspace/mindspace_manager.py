@@ -190,6 +190,19 @@ class MindspaceManager(QObject):
                             pass  # Ignore cleanup errors
             raise
 
+    def check_mindspace(self, path: str) -> bool:
+        """
+        Check if a mindspace exists at the specified path.
+
+        Args:
+            path: Path to the directory to check.
+
+        Returns:
+            True if a mindspace exists, False otherwise.
+        """
+        mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
+        return os.path.exists(mindspace_dir)
+
     def open_mindspace(self, path: str) -> None:
         """
         Open an existing mindspace.

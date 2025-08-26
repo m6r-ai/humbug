@@ -718,6 +718,17 @@ class MainWindow(QMainWindow):
         self._open_mindspace_path(dir_path)
 
     def _open_mindspace_path(self, path: str) -> None:
+        # Before we do anything, check if the new location is a mindspace
+        if not self._mindspace_manager.check_mindspace(path):
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.mindspace_error_title,
+                strings.error_opening_mindspace.format(path)
+            )
+            return
+
         # If we're switching mindspaces, save the current one first
         if self._mindspace_manager.has_mindspace():
             self._save_mindspace_state()
