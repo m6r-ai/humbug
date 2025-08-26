@@ -184,7 +184,8 @@ class TestFileSystemAIToolWriteFile:
         """Test successful writing to new file."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
-             patch('pathlib.Path.replace') as mock_replace:
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
 
             mock_exists.return_value = False  # New file
 
@@ -203,12 +204,16 @@ class TestFileSystemAIToolWriteFile:
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
             assert args[3] is False  # destructive parameter
+            
+            # Verify chmod was called
+            mock_chmod.assert_called_once()
 
     def test_write_file_success_overwrite(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test successful writing to existing file (overwrite)."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
-             patch('pathlib.Path.replace') as mock_replace:
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
 
             mock_exists.return_value = True  # Existing file
 
@@ -227,6 +232,9 @@ class TestFileSystemAIToolWriteFile:
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
             assert args[3] is True  # destructive parameter
+            
+            # Verify chmod was called
+            mock_chmod.assert_called_once()
 
     def test_write_file_no_content(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test writing file without content parameter."""
@@ -262,7 +270,8 @@ class TestFileSystemAIToolWriteFile:
         """Test writing file with custom encoding."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
-             patch('pathlib.Path.replace') as mock_replace:
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
 
             mock_exists.return_value = False
 
@@ -281,13 +290,17 @@ class TestFileSystemAIToolWriteFile:
             mock_temp_file.assert_called_once()
             kwargs = mock_temp_file.call_args[1]
             assert kwargs['encoding'] == 'utf-16'
+            
+            # Verify chmod was called
+            mock_chmod.assert_called_once()
 
     def test_write_file_create_parents(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test writing file with create_parents option."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir') as mock_mkdir, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
-             patch('pathlib.Path.replace') as mock_replace:
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
 
             mock_exists.return_value = False
 
@@ -304,6 +317,9 @@ class TestFileSystemAIToolWriteFile:
             assert "File written successfully" in result.content
             # Verify mkdir was called with parents=True
             mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+            
+            # Verify chmod was called
+            mock_chmod.assert_called_once()
 
     def test_write_file_authorization_denied(self, filesystem_tool, mock_authorization_denied, make_tool_call):
         """Test writing file when authorization is denied."""

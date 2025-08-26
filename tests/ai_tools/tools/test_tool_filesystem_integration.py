@@ -39,7 +39,8 @@ class TestFileSystemAIToolIntegration:
         """Test execute with write_file operation."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
-             patch('pathlib.Path.replace') as mock_replace:
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
 
             mock_exists.return_value = False
 
@@ -54,6 +55,8 @@ class TestFileSystemAIToolIntegration:
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             assert "File written successfully: file.txt (12 bytes)" in result.content
+            # Verify chmod was called
+            mock_chmod.assert_called_once()
 
     def test_execute_unexpected_error(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test execute with unexpected error."""
@@ -75,7 +78,8 @@ class TestFileSystemAIToolAuthorizationContext:
         """Test that authorization context includes relevant operation details."""
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('tempfile.NamedTemporaryFile') as mock_temp_file, \
-             patch('pathlib.Path.replace') as mock_replace:
+             patch('pathlib.Path.replace') as mock_replace, \
+             patch('pathlib.Path.chmod') as mock_chmod:
 
             mock_exists.return_value = False
 
@@ -95,6 +99,8 @@ class TestFileSystemAIToolAuthorizationContext:
             context = args[2]  # Third argument is context
 
             assert "Create a new file 'file.txt' with the provided content." in context
+            # Verify chmod was called
+            mock_chmod.assert_called_once()
 
     def test_authorization_context_copy_includes_destination(self, custom_path_resolver, mock_authorization, make_tool_call):
         """Test authorization context for copy operation includes destination."""
