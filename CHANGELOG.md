@@ -5,6 +5,8 @@
 New features:
 
 - Added bit operations and base conversions to the calculator tool.
+- Added new sleep and alarm operations to the clock tool.  These let the LLM sleep for a duration or until a specific
+  date/time.
 
 Bug fixes:
 
