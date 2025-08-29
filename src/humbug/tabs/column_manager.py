@@ -681,17 +681,13 @@ class ColumnManager(QWidget):
         except (ConversationError, WikiError, OSError) as e:
             self._logger.exception("Failed to open dropped file '%s': %s", path, str(e))
 
-    def _update_tab_bar_for_label_change(self, tab_id: str) -> None:
+    def _update_tab_bar_for_label_change(self, tab: TabBase) -> None:
         """
         Efficiently update the tab bar after a label text change.
 
         Args:
-            tab_id: ID of the tab whose label changed
+            tab: The tab whose label changed
         """
-        tab = self._tabs.get(tab_id)
-        if not tab:
-            return
-
         column = self._find_column_for_tab(tab)
         if column is None:
             return
@@ -723,7 +719,7 @@ class ColumnManager(QWidget):
                 tab_id = conversation_tab.tab_id()
                 label = self._tab_labels[tab_id]
                 label.set_text(new_title)
-                self._update_tab_bar_for_label_change(tab_id)
+                self._update_tab_bar_for_label_change(conversation_tab)
 
         # Update any wiki tab for this file
         wiki_tab = self._find_wiki_tab_by_path(old_path)
@@ -735,7 +731,7 @@ class ColumnManager(QWidget):
             tab_id = wiki_tab.tab_id()
             label = self._tab_labels[tab_id]
             label.set_text(new_title)
-            self._update_tab_bar_for_label_change(tab_id)
+            self._update_tab_bar_for_label_change(wiki_tab)
 
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
@@ -1078,7 +1074,7 @@ class ColumnManager(QWidget):
                 elif not modified and current_text.endswith('*'):
                     label.set_text(current_text[:-1])
 
-                self._update_tab_bar_for_label_change(tab_id)
+                self._update_tab_bar_for_label_change(tab)
 
     def current_tab_path(self) -> str:
         """
@@ -2043,9 +2039,9 @@ class ColumnManager(QWidget):
             title += "*"
 
         tab_id = tab.tab_id()
-        label = self._tab_labels.get(tab_id)
-        cast(TabLabel, label).set_text(title)
-        self._update_tab_bar_for_label_change(tab_id)
+        label = self._tab_labels[tab_id]
+        label.set_text(title)
+        self._update_tab_bar_for_label_change(tab)
 
     def can_show_all_columns(self) -> bool:
         """Check if all columns can be shown."""
