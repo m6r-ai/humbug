@@ -420,6 +420,14 @@ class MainWindow(QMainWindow):
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 
+    def changeEvent(self, event: QEvent) -> None:
+        """Handle change events."""
+        # If our window state changes then update the column manager's style
+        if event.type() == QEvent.Type.WindowStateChange:
+            self._column_manager.apply_style()
+
+        return super().changeEvent(event)
+
     def _update_menu_state(self) -> None:
         """Update enabled/disabled state of menu items."""
         # Update mindspace-specific actions

@@ -24,7 +24,7 @@ class ColumnWidget(QTabWidget):
         self.setAcceptDrops(True)
 
         # Configure tab bar
-        self.setTabBar(TabBar())
+        self.setTabBar(TabBar(self))
         tab_bar = self.tabBar()
         tab_bar.setDrawBase(False)
         tab_bar.setUsesScrollButtons(True)

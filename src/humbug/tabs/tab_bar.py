@@ -87,6 +87,17 @@ class TabBar(QTabBar):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rightmost_tab_right = 0
 
+        # Calculate the top border thickness we need.  Annoyingly this has to based on whether we're full screen or
+        # not because full screen has no border whereas windows have a 1px border.
+        border_px = 2
+        parent = self.parentWidget()
+        while parent:
+            if parent.isFullScreen():
+                border_px = 1
+                break
+
+            parent = parent.parentWidget()
+
         # Paint each tab's background
         for index in range(self.count()):
             tab_rect = self.tabRect(index)
@@ -123,9 +134,7 @@ class TabBar(QTabBar):
             if is_current:
                 border_color_role = ColorRole.TAB_BORDER_ACTIVE if is_active_column else ColorRole.SPLITTER
                 border_color = self._style_manager.get_color(border_color_role)
-
-                # Draw 2px top border
-                border_rect = tab_rect.adjusted(0, 0, 0, -tab_rect.height() + 2)
+                border_rect = tab_rect.adjusted(0, 0, 0, -tab_rect.height() + border_px)
                 painter.fillRect(border_rect, border_color)
 
             # Draw bottom border for all tabs
