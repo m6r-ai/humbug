@@ -9,6 +9,8 @@ New features:
   date/time.
 - Wiki, conversation, and editor tabs now watch the primary file on which they're based.  If the file is deleted then they
   will now strike out the tab label and change it to red text, until the file is restored.
+- When an unmodified editor tab's file is changed externally to the system then update the tab view to reflect the new
+  content.
 
 Bug fixes:
 
