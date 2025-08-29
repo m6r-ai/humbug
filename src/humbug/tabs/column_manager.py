@@ -474,9 +474,11 @@ class ColumnManager(QWidget):
         self._tabs[tab_id] = tab
         self._tab_labels[tab_id] = label
 
-        # Set ephemeral state on label if tab is ephemeral
         if tab.is_ephemeral():
             label.set_ephemeral(True)
+
+        if tab.is_path_missing():
+            label.set_file_missing(True)
 
         index = column.addTab(tab, "")
         column.tabBar().setTabButton(index, QTabBar.ButtonPosition.LeftSide, label)

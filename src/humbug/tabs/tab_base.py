@@ -130,6 +130,19 @@ class TabBase(QFrame):
         """
         raise NotImplementedError("Subclasses must implement set_path")
 
+    def is_path_missing(self) -> bool:
+        """
+        Check if the path associated with this tab exists.
+
+        Returns:
+            True if the path does not exist, False otherwise
+        """
+        # If we don't have a path, it can't be missing
+        if not self._path:
+            return False
+
+        return not os.path.exists(self._path)
+
     def _start_file_watching(self, path: str) -> None:
         """
         Start watching a file for changes.
