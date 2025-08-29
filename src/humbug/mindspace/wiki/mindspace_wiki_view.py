@@ -866,6 +866,10 @@ class MindspaceWikiView(QWidget):
                     f"User deleted file '{path}'"
                 )
 
+            except FileNotFoundError:
+                # This can happen if the file gets auto-deleted before we get to it - ignore!
+                pass
+
             except OSError as e:
                 self._logger.error("Failed to delete file '%s': %s", path, str(e))
                 MessageBox.show_message(
