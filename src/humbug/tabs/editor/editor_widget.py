@@ -179,6 +179,50 @@ class EditorWidget(QPlainTextEdit):
                 strings.could_not_open.format(self._path, str(e))
             )
 
+    def refresh_content(self) -> None:
+        """
+        Refresh the editor content from disk.
+
+        This method reads the current file from disk and replaces the editor content.
+        If the file is unreadable, the editor will be left empty.
+        The cursor position will be reset to the beginning and any selection will be cleared.
+        """
+        if not self._path:
+            self._logger.debug("No path set, cannot refresh content")
+            return
+
+        try:
+            if os.path.exists(self._path):
+                with open(self._path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                self._logger.debug("Refreshing content from file: %s", self._path)
+                self.setPlainText(content)
+                self._last_save_content = content
+
+            else:
+                self._logger.debug("File no longer exists, clearing content: %s", self._path)
+                self.setPlainText("")
+                self._last_save_content = ""
+
+            self._set_modified(False)
+
+            # Reset cursor to beginning and clear selection
+            cursor = QTextCursor(self.document())
+            cursor.movePosition(QTextCursor.MoveOperation.Start)
+            self.setTextCursor(cursor)
+
+        except Exception as e:
+            self._logger.error("Failed to refresh content from file '%s': %s", self._path, str(e))
+            # If file is unreadable, leave empty editor view
+            self.setPlainText("")
+            self._last_save_content = ""
+
+            # Reset cursor to beginning
+            cursor = QTextCursor(self.document())
+            cursor.movePosition(QTextCursor.MoveOperation.Start)
+            self.setTextCursor(cursor)
+
     def _update_programming_language_from_path(self) -> None:
         """Update programming language based on current path."""
         if self._path:

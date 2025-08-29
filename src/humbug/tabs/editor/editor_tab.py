@@ -84,6 +84,24 @@ class EditorTab(TabBase):
         # Update status bar with translated terms
         self.update_status()
 
+    def _handle_file_changed(self, changed_path: str) -> None:
+        """
+        Handle notification that the watched file has changed.
+
+        If the tab is not modified, refresh the content from disk and set the updated marker.
+
+        Args:
+            changed_path: Path of the file that changed
+        """
+        # First, let the parent handle file existence checking
+        super()._handle_file_changed(changed_path)
+
+        # If the tab is not modified, refresh the content
+        if not self.is_modified():
+            self._logger.debug("File changed and tab not modified, refreshing content: %s", changed_path)
+            self._editor_widget.refresh_content()
+            self.set_updated(True)
+
     def get_state(self, temp_state: bool=False) -> TabState:
         """Get serializable state for mindspace persistence."""
         metadata = self._editor_widget.create_state_metadata(temp_state)
