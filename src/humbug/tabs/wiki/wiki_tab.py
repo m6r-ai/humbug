@@ -78,6 +78,8 @@ class WikiTab(TabBase):
         # Load content
         self._wiki_content_widget.load_content()
 
+        self._start_file_watching(self._path)
+
     def _on_content_refreshed(self) -> None:
         """Handle when wiki content has been refreshed due to file changes."""
         self._logger.debug("Wiki content refreshed for path: %s", self._path)
@@ -150,13 +152,21 @@ class WikiTab(TabBase):
 
     def set_path(self, path: str) -> None:
         """
-        Set the wiki file path.
+        Set the file being edited.
 
         Args:
-            path: New path for the wiki file
+            path: Path to file
         """
+        # Stop watching old path
+        if self._path != path:
+            self._stop_file_watching()
+
         self._path = path
         self._wiki_content_widget.set_path(path)
+
+        # Start watching new path
+        if path:
+            self._start_file_watching(path)
 
     def update_status(self) -> None:
         """Update status bar."""

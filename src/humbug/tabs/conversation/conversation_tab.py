@@ -77,6 +77,8 @@ class ConversationTab(TabBase):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
+        self._start_file_watching(self._path)
+
     def activate(self) -> None:
         """Activate the tab."""
         self._conversation_widget.activate()
@@ -146,19 +148,25 @@ class ConversationTab(TabBase):
         except Exception as e:
             raise ValueError(f"Failed to restore conversation tab: {str(e)}") from e
 
-    def path(self) -> str:
-        """Get the conversation file path."""
-        return self._path
-
     def set_path(self, path: str) -> None:
         """
-        Set the conversation file path.
+        Set the file being edited.
 
         Args:
-            new_path: New path for the conversation file
+            path: Path to file
         """
+        # Stop watching old path
+        if self._path != path:
+            self._stop_file_watching()
+
         self._path = path
         self._conversation_widget.set_path(path)
+
+        # Start watching new path
+        if path:
+            self._start_file_watching(path)
+
+        self.update_status()
 
     def conversation_settings(self) -> AIConversationSettings:
         """Get the current conversation settings."""

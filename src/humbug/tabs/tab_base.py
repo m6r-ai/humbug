@@ -1,8 +1,11 @@
 import uuid
+import os
+import logging
 
 from PySide6.QtWidgets import QFrame, QWidget
 from PySide6.QtCore import Signal, QObject, QEvent
 
+from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_state import TabState
 
@@ -32,7 +35,8 @@ class TabBase(QFrame):
 
     # Common signals that both conversation and editor tabs will need
     modified_state_changed = Signal(str, bool)  # Emits (tab_id, is_modified)
-    updated_state_changed = Signal(str, bool)   # Emits (tab_id, is_updated)
+    updated_state_changed = Signal(str, bool)  # Emits (tab_id, is_updated)
+    file_state_changed = Signal(str, bool)  # Emits (tab_id, file_exists)
     status_message = Signal(StatusMessage)
     activated = Signal()  # Emits when tab is activated by user interaction
 
@@ -53,11 +57,20 @@ class TabBase(QFrame):
         self._is_updated = False
         self._is_ephemeral = False
         self._path: str = ""
+        self._logger = logging.getLogger(self.__class__.__name__)
+
+        # File watching
+        self._file_watcher = MindspaceFileWatcher()
+        self._file_exists = True
 
         # Set up activation tracking
         self._event_filter = TabEventFilter(self)
         self._event_filter.tab_activated.connect(self.activated)
         self.installEventFilter(self._event_filter)
+
+    def __del__(self) -> None:
+        """Clean up resources."""
+        self._stop_file_watching()
 
     def activate(self) -> None:
         """Activate the tab."""
@@ -116,6 +129,72 @@ class TabBase(QFrame):
             path: Path to associate with this tab
         """
         raise NotImplementedError("Subclasses must implement set_path")
+
+    def _start_file_watching(self, path: str) -> None:
+        """
+        Start watching a file for changes.
+
+        Args:
+            path: Absolute path to watch
+        """
+        if not path:
+            return
+
+        assert os.path.isabs(path), f"Path must be absolute: {path}"
+
+        # Stop watching the old path if any
+        self._stop_file_watching()
+
+        try:
+            self._file_watcher.watch_file(path, self._handle_file_changed)
+            self._logger.debug("Started watching file: %s", path)
+
+            # Check initial file state
+            self._check_file_state(path)
+
+        except Exception as e:
+            self._logger.error("Failed to start file watching for %s: %s", path, str(e))
+
+    def _stop_file_watching(self) -> None:
+        """Stop watching the current file."""
+        if self._path:
+            try:
+                self._file_watcher.unwatch_file(self._path, self._handle_file_changed)
+                self._logger.debug("Stopped watching file: %s", self._path)
+
+            except Exception as e:
+                self._logger.error("Failed to stop file watching for %s: %s", self._path, str(e))
+
+    def _handle_file_changed(self, changed_path: str) -> None:
+        """
+        Handle notification that the watched file has changed.
+
+        Args:
+            changed_path: Path of the file that changed
+        """
+        self._logger.debug("File changed: %s", changed_path)
+        self._check_file_state(changed_path)
+
+    def _check_file_state(self, path: str) -> None:
+        """
+        Check if the file exists and emit signal if state changed.
+
+        Args:
+            path: Path to check
+        """
+        try:
+            file_exists = os.path.exists(path)
+            if file_exists != self._file_exists:
+                self._file_exists = file_exists
+                self.file_state_changed.emit(self._tab_id, file_exists)
+                self._logger.debug("File state changed for %s: exists=%s", path, file_exists)
+
+        except Exception as e:
+            self._logger.error("Failed to check file state for %s: %s", path, str(e))
+            # Assume file doesn't exist if we can't check
+            if self._file_exists:
+                self._file_exists = False
+                self.file_state_changed.emit(self._tab_id, False)
 
     def get_state(self, temp_state: bool) -> TabState:
         """

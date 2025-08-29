@@ -55,6 +55,10 @@ class EditorTab(TabBase):
         self._editor_widget.file_saved.connect(self._on_file_saved)
         layout.addWidget(self._editor_widget)
 
+        # Start file watching if we have a path
+        if self._path:
+            self._start_file_watching(self._path)
+
         self.update_status()
 
     def activate(self) -> None:
@@ -123,7 +127,17 @@ class EditorTab(TabBase):
         Args:
             path: Path to file
         """
+        # Stop watching old path
+        if self._path != path:
+            self._stop_file_watching()
+
         self._path = path
+        self._editor_widget.set_path(path)
+
+        # Start watching new path
+        if path:
+            self._start_file_watching(path)
+
         self.update_status()
 
     def update_status(self) -> None:

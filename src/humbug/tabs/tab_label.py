@@ -37,6 +37,7 @@ class TabLabel(QWidget):
         self._is_updated = False
         self._is_hovered = False
         self._is_ephemeral = False
+        self._file_missing = False
         self._style_manager = StyleManager()
         self._drag_start_pos: QPoint | None = None
 
@@ -136,6 +137,7 @@ class TabLabel(QWidget):
         scaled_size = base_size * self._style_manager.zoom_factor()
         font.setPointSizeF(scaled_size)
         font.setItalic(self._is_ephemeral)
+        font.setStrikeOut(self._file_missing)
         self._label.setFont(font)
 
         # Make allowance for the width of italicized text
@@ -146,7 +148,10 @@ class TabLabel(QWidget):
         self._label.setMinimumWidth(text_width + 2 * space_width)
 
         show_active = self._is_current and self._is_active_column
-        if self._is_ephemeral:
+        if self._file_missing:
+            colour = ColorRole.TEXT_ERROR if show_active else ColorRole.TEXT_ERROR_INACTIVE
+
+        elif self._is_ephemeral:
             colour = ColorRole.TEXT_EPHEMERAL if show_active else ColorRole.TEXT_EPHEMERAL_INACTIVE
 
         else:
@@ -332,6 +337,16 @@ class TabLabel(QWidget):
             is_ephemeral: Whether this tab is ephemeral
         """
         self._is_ephemeral = is_ephemeral
+        self._update_label()
+
+    def set_file_missing(self, file_missing: bool) -> None:
+        """
+        Set the file missing state and update font styling.
+
+        Args:
+            file_missing: Whether the tab's file is missing/deleted
+        """
+        self._file_missing = file_missing
         self._update_label()
 
     def text(self) -> str:

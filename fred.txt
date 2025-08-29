@@ -7,8 +7,6 @@ New features:
 - Added bit operations and base conversions to the calculator tool.
 - Added new sleep and alarm operations to the clock tool.  These let the LLM sleep for a duration or until a specific
   date/time.
-- Wiki, conversation, and editor tabs now watch the primary file on which they're based.  If the file is deleted then they
-  will now strike out the tab label and change it to red text, until the file is restored.
 
 Bug fixes:
 

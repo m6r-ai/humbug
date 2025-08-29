@@ -397,6 +397,18 @@ class ColumnManager(QWidget):
 
         self._update_tabs(change_focus=False)
 
+    def _on_tab_file_state_changed(self, tab_id: str, file_exists: bool) -> None:
+        """
+        Update a tab's file state.
+
+        Args:
+            tab_id: ID of the tab to update
+            file_exists: Whether the tab's file exists
+        """
+        label = self._tab_labels.get(tab_id)
+        if label:
+            label.set_file_missing(not file_exists)
+
     def _remove_tab_from_column(self, tab: TabBase, column: ColumnWidget) -> None:
         """
         Remove a tab from a column and clean up associated data.
@@ -457,6 +469,7 @@ class ColumnManager(QWidget):
         tab.activated.connect(lambda: self._on_tab_activated(tab))
         tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
         tab.modified_state_changed.connect(self._on_tab_modified_state_changed)
+        tab.file_state_changed.connect(self._on_tab_file_state_changed)
 
         self._tabs[tab_id] = tab
         self._tab_labels[tab_id] = label
