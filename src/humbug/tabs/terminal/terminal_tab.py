@@ -281,9 +281,9 @@ class TerminalTab(TabBase):
         # Only store process/display state for temporary moves
         if temp_state:
             metadata.update(self._terminal_widget.create_state_metadata())
-            # Store reference to this tab for process transfer
             metadata['source_tab'] = self
             metadata['is_ephemeral'] = True
+            metadata['find_widget'] = self._find_widget.create_state_metadata()
 
         return TabState(
             type=TabType.TERMINAL,
@@ -322,6 +322,9 @@ class TerminalTab(TabBase):
             if 'source_tab' in state.metadata:
                 source_tab = state.metadata['source_tab']
                 tab._transfer_process_from(source_tab)
+
+            if 'find_widget' in state.metadata:
+                tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
 
         return tab
 

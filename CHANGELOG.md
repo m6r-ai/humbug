@@ -11,6 +11,7 @@ New features:
   will now strike out the tab label and change it to red text, until the file is restored.
 - When an unmodified editor tab's file is changed externally to the system then update the tab view to reflect the new
   content.
+- When moving a tab that has an open find bar, preserve the find bar and the search text.
 
 Bug fixes:
 

@@ -118,6 +118,7 @@ class ConversationTab(TabBase):
         metadata.update(self._conversation_widget.create_state_metadata(temp_state))
 
         if temp_state:
+            metadata['find_widget'] = self._find_widget.create_state_metadata()
             metadata['temp_state'] = True
 
         return TabState(
@@ -142,6 +143,9 @@ class ConversationTab(TabBase):
             # Restore widget-specific state if metadata present
             if state.metadata:
                 tab._conversation_widget.restore_from_metadata(state.metadata)
+
+                if 'find_widget' in state.metadata:
+                    tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
 
             return tab
 

@@ -1,5 +1,7 @@
 """Widget for handling find operations in editor."""
 
+from typing import Any, Dict
+
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLineEdit, QToolButton, QLabel
 )
@@ -193,3 +195,39 @@ class FindWidget(QWidget):
         """Set the search text and trigger a search."""
         self._search_input.setText(text)
         self._search_input.selectAll()
+
+    def create_state_metadata(self) -> Dict[str, Any]:
+        """
+        Create state metadata for persistence during tab moves.
+
+        Returns:
+            Dictionary containing find widget state
+        """
+        return {
+            'search_text': self.get_search_text(),
+            'is_visible': not self.isHidden()
+        }
+
+    def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
+        """
+        Restore state from metadata after tab moves.
+
+        Args:
+            metadata: Dictionary containing find widget state
+        """
+        try:
+            if 'search_text' in metadata:
+                self.set_search_text(metadata['search_text'])
+
+            # Reset match status since we're not re-executing searches
+            self.set_match_status(0, 0)
+
+            if metadata.get('is_visible', False):
+                self.show()
+
+            else:
+                self.hide()
+
+        except Exception:
+            # Fail silently if metadata is malformed
+            pass

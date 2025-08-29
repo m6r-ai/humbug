@@ -93,6 +93,9 @@ class ShellTab(TabBase):
         """
         metadata = self._shell_widget.create_state_metadata(temp_state)
 
+        if temp_state:
+            metadata['find_widget'] = self._find_widget.create_state_metadata()
+
         return TabState(
             type=TabType.SHELL,
             tab_id=self._tab_id,
@@ -116,6 +119,9 @@ class ShellTab(TabBase):
 
         if state.metadata:
             tab._shell_widget.restore_from_metadata(state.metadata)
+
+            if 'find_widget' in state.metadata:
+                tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
 
         return tab
 
