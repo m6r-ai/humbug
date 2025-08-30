@@ -18,6 +18,7 @@ from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 import syntax.parser_imports
 # pylint: enable=unused-import
 
+from humbug.exception_notifier import get_exception_notifier
 from humbug.main_window import MainWindow
 
 
@@ -81,6 +82,15 @@ def install_global_exception_handler() -> None:
             exc_info=(exc_type, exc_value, exc_traceback),
             stack_info=True
         )
+
+        # Notify the UI about the uncaught exception
+        try:
+            exception_notifier = get_exception_notifier()
+            exception_notifier.notify_exception()
+
+        except Exception:
+            # If notifying the UI fails, don't let that crash the exception handler
+            logger.error("Failed to notify UI of uncaught exception", exc_info=True)
 
     sys.excepthook = handle_exception
 

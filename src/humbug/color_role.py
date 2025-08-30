@@ -103,6 +103,7 @@ class ColorRole(Enum):
 
     # Status bar elements
     STATUS_BAR_BACKGROUND = auto()      # Status bar background
+    CANARY_BACKGROUND = auto()          # Canary indicator background for uncaught exceptions
 
     # Close button states
     CLOSE_BUTTON_BACKGROUND_HOVER = auto()
@@ -114,7 +115,7 @@ class ColorRole(Enum):
     # Syntax highlighting
     SYNTAX_ERROR = auto()               # Red
     SYNTAX_01 = auto()                  # Cyan
-    SYNTAX_02 = auto()                  # White
+    SYNTAX_02 = auto()                  # White
     SYNTAX_03 = auto()                  # Light green
     SYNTAX_04 = auto()                  # Light pink
     SYNTAX_05 = auto()                  # Mid grey

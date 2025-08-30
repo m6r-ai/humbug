@@ -357,6 +357,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#121212",
                 ColorMode.LIGHT: "#e8e8e8"
             },
+            ColorRole.CANARY_BACKGROUND: {
+                ColorMode.DARK: "#802020",
+                ColorMode.LIGHT: "#ff8080"
+            },
 
             # Close button states
             ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: {

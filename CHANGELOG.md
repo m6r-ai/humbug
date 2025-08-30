@@ -12,6 +12,8 @@ New features:
 - When an unmodified editor tab's file is changed externally to the system then update the tab view to reflect the new
   content.
 - When moving a tab that has an open find bar, preserve the find bar and the search text.
+- Added an exception "canary".  If an unhandled exception occurs the background of the status bar will now turn red to
+  alert you.
 
 Bug fixes:
 

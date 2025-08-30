@@ -26,6 +26,7 @@ from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
 from humbug.delegate_ai_tool import DelegateAITool
+from humbug.exception_notifier import get_exception_notifier
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_error import MindspaceError, MindspaceExistsError
@@ -379,6 +380,11 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self._status_bar)
         self._column_manager.status_message.connect(self._on_column_manager_status_message)
 
+        # Connect to exception notifier for canary functionality
+        self._canary_active = False
+        exception_notifier = get_exception_notifier()
+        exception_notifier.exception_occurred.connect(self._on_exception_occurred)
+
         self._on_language_changed()
 
         self._user_manager = UserManager()
@@ -427,6 +433,12 @@ class MainWindow(QMainWindow):
             self._column_manager.apply_style()
 
         return super().changeEvent(event)
+
+    def _on_exception_occurred(self) -> None:
+        """Handle uncaught exception notification by activating canary."""
+        self._logger.debug("Uncaught exception detected, activating canary")
+        self._canary_active = True
+        self._on_style_changed()  # Refresh styles to apply canary background
 
     def _update_menu_state(self) -> None:
         """Update enabled/disabled state of menu items."""
@@ -970,6 +982,13 @@ class MainWindow(QMainWindow):
         zoom_factor = style_manager.zoom_factor()
         base_font_size = style_manager.base_font_size()
 
+        # Determine status bar background color based on canary state
+        status_bg_color = (
+            style_manager.get_color_str(ColorRole.CANARY_BACKGROUND)
+            if self._canary_active
+            else style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)
+        )
+
         self.setStyleSheet(f"""
             QMainWindow {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
@@ -1013,7 +1032,7 @@ class MainWindow(QMainWindow):
             }}
 
             QStatusBar {{
-                background-color: {self._style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)};
+                background-color: {status_bg_color};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 padding: {2 * zoom_factor}px;
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
