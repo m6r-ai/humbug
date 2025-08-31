@@ -534,6 +534,9 @@ class ColumnManager(QWidget):
             Created tab or None if failed
         """
         if source == MindspaceViewType.CONVERSATIONS:
+            if os.path.isdir(path):
+                return None
+
             conversation_tab = self.open_conversation(path, ephemeral)
             if conversation_tab:
                 self._mindspace_manager.add_interaction(
