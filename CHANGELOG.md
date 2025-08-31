@@ -15,6 +15,7 @@ New features:
 - Added an exception "canary".  If an unhandled exception occurs the background of the status bar will now turn red to
   alert you.
 - Conversations in the conversations mindspace view now hide their `.conv` or `.json` file extensions.
+- "New mindspace" and "open mindspace" operations now default to the user's home directory.
 
 Bug fixes:
 
