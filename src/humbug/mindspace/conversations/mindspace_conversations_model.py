@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 import json
 import os
-from typing import cast
+from typing import Any, cast
 
 from PySide6.QtCore import QModelIndex, QSortFilterProxyModel, QPersistentModelIndex, Qt
 from PySide6.QtWidgets import QFileSystemModel, QWidget
@@ -74,6 +74,75 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
 
         return base_flags
 
+    def data(self, index: QModelIndex | QPersistentModelIndex, role: int = Qt.ItemDataRole.DisplayRole) -> Any:
+        """
+        Return data for the given index and role, with conversation file extension handling.
+
+        Args:
+            index: Model index to get data for
+            role: Data role being requested
+
+        Returns:
+            Data for the given index and role
+        """
+        # For display role, hide extensions from conversation files
+        if role == Qt.ItemDataRole.DisplayRole and index.isValid():
+            # Get the original filename from the source model
+            source_index = self.mapToSource(index)
+            if source_index.isValid():
+                source_model = cast(QFileSystemModel, self.sourceModel())
+                if source_model:
+                    file_path = source_model.filePath(source_index)
+                    filename = source_model.fileName(source_index)
+
+                    # Check if this is a conversation file and hide its extension
+                    if self._is_conversation_file_for_display(file_path):
+                        return self._get_display_name(filename)
+
+        # For all other roles (including EditRole), return the original data
+        return super().data(index, role)
+
+    def _is_conversation_file_for_display(self, file_path: str) -> bool:
+        """
+        Check if a file is a conversation file whose extension should be hidden.
+
+        Args:
+            file_path: Path to check
+
+        Returns:
+            True if this is a conversation file that should have its extension hidden
+        """
+        if not file_path:
+            return False
+
+        if not os.path.isfile(file_path):
+            return False
+
+        _, ext = os.path.splitext(file_path.lower())
+        return ext in ['.conv', '.json']
+
+    def _get_display_name(self, filename: str) -> str:
+        """
+        Get the display name for a conversation file (without extension).
+
+        Args:
+            filename: Original filename
+
+        Returns:
+            Display name with conversation file extension removed
+        """
+        if not filename:
+            return filename
+
+        # Remove the final .conv or .json extension
+        if filename.lower().endswith('.conv'):
+            return filename[:-5]  # Remove '.conv'
+
+        if filename.lower().endswith('.json'):
+            return filename[:-5]  # Remove '.json'
+
+        return filename
+
     def clear_creation_time_cache(self) -> None:
         """
         Clear the creation time cache.
@@ -98,7 +167,7 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
 
         # Check for .conv extension or other conversation file patterns
         _, ext = os.path.splitext(file_path.lower())
-        return ext in ['.conv', '.conversation', '.json']  # Add other extensions as needed
+        return ext in ['.conv', '.json']
 
     def _get_conversation_timestamp(self, file_path: str) -> float:
         """

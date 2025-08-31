@@ -12,11 +12,11 @@ from PySide6.QtWidgets import (
 
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.conversations.mindspace_conversations_model import MindspaceConversationsModel
+from humbug.mindspace.conversations.mindspace_conversations_tree_delegate import MindspaceConversationsTreeDelegate
 from humbug.mindspace.conversations.mindspace_conversations_tree_view import MindspaceConversationsTreeView
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
@@ -78,8 +78,8 @@ class MindspaceConversationsView(QWidget):
         self._filter_model = MindspaceConversationsModel()
         self._filter_model.setSourceModel(self._fs_model)
 
-        # Create and set the editable delegate
-        self._delegate = MindspaceTreeDelegate(self._tree_view, self._style_manager)
+        # Create and set the specialized conversations delegate
+        self._delegate = MindspaceConversationsTreeDelegate(self._tree_view, self._style_manager)
         self._delegate.edit_finished.connect(self._on_delegate_edit_finished)
         self._delegate.edit_cancelled.connect(self._on_delegate_edit_cancelled)
         self._tree_view.setItemDelegate(self._delegate)
@@ -107,6 +107,41 @@ class MindspaceConversationsView(QWidget):
 
         # Auto-scroll state for drag operations
         self._auto_scroll_active = False
+
+    def _is_conversation_file(self, file_path: str) -> bool:
+        """
+        Check if a file is a conversation file based on its extension.
+
+        Args:
+            file_path: Path to check
+
+        Returns:
+            True if this is a conversation file (.conv or .json)
+        """
+        if not file_path:
+            return False
+
+        if not os.path.isfile(file_path):
+            return False
+
+        _, ext = os.path.splitext(file_path.lower())
+        return ext in ['.conv', '.json']
+
+    def _get_original_extension(self, file_path: str) -> str:
+        """
+        Get the original extension from a conversation file.
+
+        Args:
+            file_path: Path to the conversation file
+
+        Returns:
+            The extension (including the dot) or empty string if not a conversation file
+        """
+        if not self._is_conversation_file(file_path):
+            return ""
+
+        _, ext = os.path.splitext(file_path)
+        return ext
 
     def _handle_auto_scroll(self, start_scrolling: bool) -> None:
         """
@@ -380,7 +415,7 @@ class MindspaceConversationsView(QWidget):
 
     def _complete_rename_operation(self, index: QModelIndex, new_name: str) -> None:
         """
-        Complete a rename operation.
+        Complete a rename operation with conversation file extension preservation.
 
         Args:
             index: Model index being renamed
@@ -391,9 +426,19 @@ class MindspaceConversationsView(QWidget):
         if not current_path:
             raise ValueError(self._language_manager.strings().error_invalid_path)
 
-        # Calculate the new path
+        # Calculate the new path with extension preservation for conversation files
         directory = os.path.dirname(current_path)
-        new_path = os.path.join(directory, new_name)
+
+        # Check if this is a conversation file and preserve its extension
+        if self._is_conversation_file(current_path):
+            original_extension = self._get_original_extension(current_path)
+            final_name = new_name + original_extension
+
+        else:
+            # Non-conversation file - use the name as-is
+            final_name = new_name
+
+        new_path = os.path.join(directory, final_name)
 
         try:
             # Perform the rename
@@ -607,8 +652,8 @@ class MindspaceConversationsView(QWidget):
 
         # Get the delegate and start editing
         delegate = self._tree_view.itemDelegate(filter_index)
-        if not isinstance(delegate, MindspaceTreeDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
+        if not isinstance(delegate, MindspaceConversationsTreeDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceConversationsTreeDelegate")
             return
 
         delegate.start_editing(filter_index, select_extension)
@@ -812,8 +857,8 @@ class MindspaceConversationsView(QWidget):
 
         # Get the delegate and start Qt-based editing (excludes extension from selection)
         delegate = self._tree_view.itemDelegate(index)
-        if not isinstance(delegate, MindspaceTreeDelegate):
-            self._logger.error("Delegate is not an instance of MindspaceTreeDelegate")
+        if not isinstance(delegate, MindspaceConversationsTreeDelegate):
+            self._logger.error("Delegate is not an instance of MindspaceConversationsTreeDelegate")
             return
 
         delegate.start_editing(index, select_extension=False)
