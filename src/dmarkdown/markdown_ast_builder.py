@@ -896,9 +896,8 @@ class MarkdownASTBuilder:
         """
         # Calculate the maximum number of columns across all rows
         max_columns = len(self._table_buffer.header_row)
-        if self._table_buffer.body_rows:
-            max_body_columns = max(len(row) for row in self._table_buffer.body_rows)
-            max_columns = max(max_columns, max_body_columns)
+        max_body_columns = max(len(row) for row in self._table_buffer.body_rows)
+        max_columns = max(max_columns, max_body_columns)
 
         # Normalize header row to have max_columns
         while len(self._table_buffer.header_row) < max_columns:
