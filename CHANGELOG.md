@@ -20,6 +20,8 @@ Bug fixes:
 
 - If you try to open a directory that is not a valid mindspace then the previous one will no longer be closed.
 - The calculator tool now has a warning that ^ is for xor, and not for exponentiation.
+- Further tightened the requirement for a delegating parent LLM to tell the child LLM that it has been delegated its
+  task by a parent LLM.
 - If you deleted a conversation in the mindspace view this could result in an error if closing the conversation tab would
   automatically delete the file.
 - Resolved a problem with label sizing on file renames.
