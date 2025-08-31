@@ -681,9 +681,7 @@ class MainWindow(QMainWindow):
         """Show folder selection dialog and create new mindspace."""
         self._menu_timer.stop()
         strings = self._language_manager.strings()
-        dir_path = QFileDialog.getExistingDirectory(
-            self, strings.file_dialog_new_mindspace
-        )
+        dir_path = QFileDialog.getExistingDirectory(self, strings.file_dialog_new_mindspace, os.path.expanduser("~"))
         self._menu_timer.start()
         if not dir_path:
             return
@@ -730,7 +728,7 @@ class MainWindow(QMainWindow):
         """Open a new mindspace."""
         self._menu_timer.stop()
         strings = self._language_manager.strings()
-        dir_path = QFileDialog.getExistingDirectory(self, strings.file_dialog_open_mindspace)
+        dir_path = QFileDialog.getExistingDirectory(self, strings.file_dialog_open_mindspace, os.path.expanduser("~"))
         self._menu_timer.start()
         if not dir_path:
             return
