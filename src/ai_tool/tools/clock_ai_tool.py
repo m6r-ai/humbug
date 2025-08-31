@@ -128,7 +128,7 @@ class ClockAITool(AITool):
         Get current time in the specified timezone.
 
         Args:
-            timezone_str: Timezone string, defaults to local timezone if None
+            timezone_str: Timezone string, defaults to UTC if None
 
         Returns:
             Current datetime in specified timezone
@@ -138,8 +138,8 @@ class ClockAITool(AITool):
         """
         try:
             if timezone_str is None:
-                # Use local timezone
-                return datetime.now()
+                # Default to UTC timezone
+                return datetime.now(timezone.utc)
 
             if timezone_str.upper() == "UTC":
                 return datetime.now(timezone.utc)
@@ -180,9 +180,9 @@ class ClockAITool(AITool):
             # Handle various ISO-like formats
             parsed_dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
 
-            # If no timezone info and user specified timezone, apply it
-            if parsed_dt.tzinfo is None and timezone_str is not None:
-                if timezone_str.upper() == "UTC":
+            # If no timezone info, apply default or specified timezone
+            if parsed_dt.tzinfo is None:
+                if timezone_str is None or timezone_str.upper() == "UTC":
                     parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
 
                 else:
