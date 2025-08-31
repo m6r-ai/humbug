@@ -2,29 +2,26 @@
 *~
 *.swp
 
-# Ignore generated prompts
-*.lcp
-
 # Ignore build files
-dist
-build
+/dist
+/build
 
 # Ignore python cache files
 **/__pycache__
 
 # Ignore code coverage reports
 .coverage
-htmlcov
-.pytest_cache
+/htmlcov
+/.pytest_cache
 
 # Ignore virtual environment
-venv
+/venv
 
 # Ignore conversation and log files
-conversations
+/conversations
 
 # Ignore humbug mindspace files
-.humbug
+/.humbug
 
 # Ignore Mac system files
 .DS_Store
