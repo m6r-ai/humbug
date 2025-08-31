@@ -894,6 +894,25 @@ class MarkdownASTBuilder:
         Returns:
             None
         """
+        # Calculate the maximum number of columns across all rows
+        max_columns = len(self._table_buffer.header_row)
+        if self._table_buffer.body_rows:
+            max_body_columns = max(len(row) for row in self._table_buffer.body_rows)
+            max_columns = max(max_columns, max_body_columns)
+
+        # Normalize header row to have max_columns
+        while len(self._table_buffer.header_row) < max_columns:
+            self._table_buffer.header_row.append("")
+
+        # Normalize alignments to have max_columns (default to "left" for additional columns)
+        while len(self._table_buffer.alignments) < max_columns:
+            self._table_buffer.alignments.append("left")
+
+        # Normalize all body rows to have max_columns
+        for row in self._table_buffer.body_rows:
+            while len(row) < max_columns:
+                row.append("")
+
         # Create the table structure
         table_node = MarkdownASTTableNode()
         header_node = MarkdownASTTableHeaderNode()
@@ -916,9 +935,7 @@ class MarkdownASTBuilder:
 
         for j, cell_content in enumerate(self._table_buffer.header_row):
             # Determine alignment
-            alignment = 'left'
-            if j < len(self._table_buffer.alignments):
-                alignment = self._table_buffer.alignments[j]
+            alignment = self._table_buffer.alignments[j]
 
             # Create cell
             cell_node = MarkdownASTTableCellNode(is_header=True, alignment=alignment)
@@ -947,9 +964,7 @@ class MarkdownASTBuilder:
 
             for j, cell_content in enumerate(row_cells):
                 # Determine alignment
-                alignment = 'left'
-                if j < len(self._table_buffer.alignments):
-                    alignment = self._table_buffer.alignments[j]
+                alignment = self._table_buffer.alignments[j]
 
                 # Create cell
                 cell_node = MarkdownASTTableCellNode(is_header=False, alignment=alignment)
