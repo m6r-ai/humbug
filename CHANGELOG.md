@@ -14,6 +14,7 @@ New features:
 - When moving a tab that has an open find bar, preserve the find bar and the search text.
 - Added an exception "canary".  If an unhandled exception occurs the background of the status bar will now turn red to
   alert you.
+- Conversations in the conversations mindspace view now hide their `.conv` or `.json` file extensions.
 
 Bug fixes:
 
@@ -23,6 +24,7 @@ Bug fixes:
   automatically delete the file.
 - Resolved a problem with label sizing on file renames.
 - Resolved a visual issue with the active tab highlighting.
+- Attempting to open a folder as a conversation used to trigger a silent exception.
 
 ## v0.23 (2025-08-22)
 
