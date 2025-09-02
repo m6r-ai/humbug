@@ -1647,6 +1647,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_approval_approve_button[recommended="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border-radius: 4px;
             }}
             #ConversationMessage #_approval_approve_button[recommended="true"]:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
@@ -1657,6 +1658,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_approval_approve_button[recommended="false"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border-radius: 4px;
             }}
             #ConversationMessage #_approval_approve_button[recommended="false"]:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
