@@ -2,6 +2,10 @@
 
 ## v0.25 (2025-09-xx)
 
+Bug fixes:
+
+- Delegating a task could trigger a previously-silent exception.
+
 ## v0.24 (2025-08-31)
 
 New features:

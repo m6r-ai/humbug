@@ -1385,6 +1385,11 @@ class ConversationWidget(QWidget):
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._input.set_plain_text(text)
+
+        # Our input box may be hidden if this is a delegated conversation
+        if not self._input.isHidden():
+            return
+
         self._input.setFocus()
 
     def set_conversation_history(self, history: AIConversationHistory) -> None:
