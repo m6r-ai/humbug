@@ -676,9 +676,7 @@ class ConversationWidget(QWidget):
             if self._last_submitted_message:
                 self._input.set_plain_text(self._last_submitted_message)
                 self._last_submitted_message = ""
-
-                if not self._input.isHidden():
-                    self._input.setFocus()
+                self._input.setFocus()
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
@@ -1387,11 +1385,6 @@ class ConversationWidget(QWidget):
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._input.set_plain_text(text)
-
-        # Our input box may be hidden if this is a delegated conversation
-        if not self._input.isHidden():
-            return
-
         self._input.setFocus()
 
     def set_conversation_history(self, history: AIConversationHistory) -> None:
