@@ -676,7 +676,9 @@ class ConversationWidget(QWidget):
             if self._last_submitted_message:
                 self._input.set_plain_text(self._last_submitted_message)
                 self._last_submitted_message = ""
-                self._input.setFocus()
+
+                if not self._input.isHidden():
+                    self._input.setFocus()
 
         # When we call this we should always scroll to the bottom and restore auto-scrolling
         self._auto_scroll = True
