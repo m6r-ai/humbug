@@ -5,6 +5,8 @@
 Bug fixes:
 
 - Delegating a task could trigger a previously-silent exception.
+- If we edit text that matches an active search in an editor the editor will re-trigger the search so the search highlights
+  and match counts are correct.
 
 ## v0.24 (2025-08-31)
 

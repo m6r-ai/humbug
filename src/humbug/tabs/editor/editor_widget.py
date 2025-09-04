@@ -61,6 +61,7 @@ class EditorWidget(QPlainTextEdit):
 
     # Content/state changes
     content_modified = Signal(bool)  # True if modified, False if saved
+    text_changed = Signal()          # Emitted on every text change
     status_updated = Signal()        # Request status bar update
     activated = Signal()             # User interaction occurred
     file_saved = Signal(str)         # File path saved
@@ -318,6 +319,7 @@ class EditorWidget(QPlainTextEdit):
         current_content = self.toPlainText()
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
+        self.text_changed.emit()
 
         if not self._mindspace_manager.has_mindspace():
             return
@@ -828,7 +830,7 @@ class EditorWidget(QPlainTextEdit):
         cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
 
         # If selection ends at start of line, don't indent that line
-        end_offs = 0
+        end_offs = 1
         check_cursor = QTextCursor(cursor)
         check_cursor.setPosition(end)
         if check_cursor.atBlockStart():
@@ -1120,13 +1122,41 @@ class EditorWidget(QPlainTextEdit):
 
         self._highlight_matches()
 
-    def find_text(self, text: str, forward: bool = True) -> None:
+    def _find_closest_match_to_cursor(self) -> int:
+        """
+        Find the match closest to the current cursor position.
+
+        Returns:
+            Index of the closest match, or 0 if no matches exist
+        """
+        if not self._matches:
+            return -1
+
+        cursor_pos = self.textCursor().position()
+        closest_index = 0
+        closest_distance = abs(self._matches[0][0] - cursor_pos)
+
+        for i, (start, end) in enumerate(self._matches):
+            # Calculate distance to start of match
+            distance_to_start = abs(start - cursor_pos)
+            # If cursor is within the match, distance is 0
+            if start <= cursor_pos <= end:
+                return i
+
+            if distance_to_start < closest_distance:
+                closest_distance = distance_to_start
+                closest_index = i
+
+        return closest_index
+
+    def find_text(self, text: str, forward: bool = True, move_cursor: bool = True) -> None:
         """
         Find all instances of text and highlight them.
 
         Args:
             text: Text to search for
-            forward: Whether to search forward from current position
+            forward: Whether to search forward from current position (only used when move_cursor is True)
+            move_cursor: Whether to move cursor to a match (True for user navigation, False for automatic updates)
         """
         # Clear existing highlights if search text changed
         if text != self._last_search:
@@ -1150,18 +1180,34 @@ class EditorWidget(QPlainTextEdit):
         if not self._matches:
             return
 
-        # Move to next/previous match
-        if forward:
-            self._current_match = (self._current_match + 1) % len(self._matches)
+        if move_cursor:
+            # User navigation - move to next/previous match
+            if forward:
+                self._current_match = (self._current_match + 1) % len(self._matches)
+
+            else:
+                self._current_match = (self._current_match - 1) if self._current_match > 0 else len(self._matches) - 1
+
+            # Scroll to current match
+            self._scroll_to_match(self._current_match)
 
         else:
-            self._current_match = (self._current_match - 1) if self._current_match > 0 else len(self._matches) - 1
+            # Automatic update - find closest match to current cursor position without moving cursor
+            self._current_match = self._find_closest_match_to_cursor()
 
         # Highlight all matches
         self._highlight_matches()
 
-        # Scroll to current match
-        self._scroll_to_match(self._current_match)
+    def set_current_match_index(self, index: int) -> None:
+        """
+        Set the current match index without moving the cursor.
+
+        Args:
+            index: 0-based index of the match to make current
+        """
+        if 0 <= index < len(self._matches):
+            self._current_match = index
+            self._highlight_matches()
 
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""

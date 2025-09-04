@@ -3,6 +3,7 @@ import logging
 from PySide6.QtWidgets import (
     QVBoxLayout, QWidget
 )
+from PySide6.QtCore import QTimer
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
@@ -50,10 +51,17 @@ class EditorTab(TabBase):
         # Create editor widget
         self._editor_widget = EditorWidget(path, untitled_number, self)
         self._editor_widget.content_modified.connect(self._on_content_modified)
+        self._editor_widget.text_changed.connect(self._on_text_changed)
         self._editor_widget.status_updated.connect(self.update_status)
         self._editor_widget.activated.connect(self.activated)
         self._editor_widget.file_saved.connect(self._on_file_saved)
         layout.addWidget(self._editor_widget)
+
+        # Set up debounced search update timer
+        self._search_update_timer = QTimer(self)
+        self._search_update_timer.setSingleShot(True)
+        self._search_update_timer.timeout.connect(self._update_search_after_edit)
+        self._search_update_debounce_ms = 100
 
         # Start file watching if we have a path
         if self._path:
@@ -66,8 +74,43 @@ class EditorTab(TabBase):
         self._editor_widget.setFocus()
 
     def _on_content_modified(self, modified: bool) -> None:
-        """Handle content modification changes."""
+        """Handle content modification state changes."""
         self._set_modified(modified)
+
+    def _on_text_changed(self) -> None:
+        """Handle any text changes in the editor."""
+        # If find widget is visible, schedule a search update
+        if not self._find_widget.isHidden():
+            self._search_update_timer.start(self._search_update_debounce_ms)
+
+    def _update_search_after_edit(self) -> None:
+        """Update search results after text has been modified."""
+        # Only proceed if find widget is still visible
+        if self._find_widget.isHidden():
+            return
+
+        search_text = self._find_widget.get_search_text()
+        if not search_text:
+            return
+
+        # Store current match index before clearing
+        current_match, _total_matches = self._editor_widget.get_match_status()
+        previous_match_index = current_match - 1 if current_match > 0 else -1  # Convert to 0-based
+
+        # Clear current search state and re-search without moving cursor
+        self._editor_widget.clear_find()
+        self._editor_widget.find_text(search_text, True, move_cursor=False)
+
+        # Try to restore the same match index if possible
+        new_current, new_total = self._editor_widget.get_match_status()
+        if new_total > 0 and previous_match_index >= 0:
+            # If the previous index is still valid, try to set it
+            if previous_match_index < new_total:
+                self._editor_widget.set_current_match_index(previous_match_index)
+                new_current, new_total = self._editor_widget.get_match_status()
+
+        # Update match count display
+        self._find_widget.set_match_status(new_current, new_total)
 
     def _on_file_saved(self, path: str) -> None:
         """Handle file being saved."""
@@ -278,6 +321,6 @@ class EditorTab(TabBase):
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        self._editor_widget.find_text(text, forward)
+        self._editor_widget.find_text(text, forward)  # move_cursor defaults to True for user navigation
         current, total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
