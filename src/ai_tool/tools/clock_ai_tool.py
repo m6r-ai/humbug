@@ -13,7 +13,7 @@ from ai_tool import (
 class ClockAITool(AITool):
     """Clock tool that provides time operations including sleep and alarm functionality."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the clock tool."""
         self._logger = logging.getLogger("ClockAITool")
 
