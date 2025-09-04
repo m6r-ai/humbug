@@ -773,6 +773,13 @@ class AIConversation:
 
     def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""
+        # Cancel pending tool authorization if present
+        if self._pending_authorization_future and not self._pending_authorization_future.done():
+            self._logger.debug("Cancelling pending tool authorization due to task cancellation")
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self.reject_pending_tool_calls("Operation cancelled by user"))
+
         for task in self._current_tasks:
             if not task.done():
                 task.cancel()

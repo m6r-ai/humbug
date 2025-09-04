@@ -290,6 +290,9 @@ class ConversationWidget(QWidget):
         self._load_message_history(conversation_history.get_messages(), use_existing_ai_conversation)
         self._set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
 
+        # Any active tool approval
+        self._pending_tool_call_approval: ConversationMessage | None = None
+
     def _set_delegated_conversation_mode(self, enabled: bool) -> None:
         """
         Enable or disable delegated conversation mode.
@@ -714,18 +717,21 @@ class ConversationWidget(QWidget):
         for msg_widget in self._messages:
             if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
+                self._pending_tool_call_approval = msg_widget
                 msg_widget.show_tool_approval_ui(tool_call, reason, destructive)
                 self.update_label.emit()
                 break
 
     def _on_tool_call_approved(self, _tool_call: AIToolCall) -> None:
         """Handle user approval of tool calls."""
+        self._pending_tool_call_approval = None
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
         loop.create_task(ai_conversation.approve_pending_tool_calls())
 
     def _on_tool_call_rejected(self, reason: str) -> None:
         """Handle user rejection of tool calls."""
+        self._pending_tool_call_approval = None
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
         loop.create_task(ai_conversation.reject_pending_tool_calls(reason))
@@ -1519,6 +1525,11 @@ class ConversationWidget(QWidget):
 
     def cancel_current_tasks(self) -> None:
         """Cancel any ongoing AI response tasks."""
+        # First remove any active tool approval UI
+        if self._pending_tool_call_approval:
+            self._pending_tool_call_approval.remove_tool_approval_ui()
+            self._pending_tool_call_approval = None
+
         ai_conversation = cast(AIConversation, self._ai_conversation)
         ai_conversation.cancel_current_tasks()
 

@@ -595,15 +595,15 @@ class ConversationMessage(QFrame):
     def _approve_tool_call(self, tool_call: AIToolCall) -> None:
         """Handle tool call approval."""
         self.tool_call_approved.emit(tool_call)
-        self._remove_approval_widget()
+        self.remove_tool_approval_ui()
 
     def _reject_tool_call(self) -> None:
         """Handle tool call rejection."""
         self.tool_call_rejected.emit("Tool call was rejected by the user")
-        self._remove_approval_widget()
+        self.remove_tool_approval_ui()
 
-    def _remove_approval_widget(self) -> None:
-        """Remove the approval widget."""
+    def remove_tool_approval_ui(self) -> None:
+        """Remove the tool approval UI."""
         if self._approval_widget:
             self._layout.removeWidget(self._approval_widget)
             self._approval_widget.deleteLater()
