@@ -19,6 +19,7 @@ Bug fixes:
   and match counts are correct.
 - If the user hits cancel on a conversation that's waiting on a tool approval this would leave the tool approval widget
   on the screen.  Now this is cleaned up.
+- File watching would not reliably stop when tabs were closed.  This is now handled precisely, not lazily.
 
 ## v0.24 (2025-08-31)
 

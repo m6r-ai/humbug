@@ -184,6 +184,8 @@ class WikiTab(TabBase):
 
     def close_tab(self) -> None:
         """Close the wiki tab."""
+        self._stop_file_watching()
+        self._wiki_content_widget.close_widget()
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Get serializable state for mindspace persistence."""

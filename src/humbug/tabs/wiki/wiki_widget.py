@@ -178,10 +178,6 @@ class WikiWidget(QWidget):
         self._event_filter.widget_activated.connect(self._on_widget_activated)
         self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
 
-    def __del__(self) -> None:
-        """Clean up file watching when widget is destroyed."""
-        self._unregister_file_watching()
-
     def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
         # Update status if needed
@@ -921,6 +917,10 @@ class WikiWidget(QWidget):
         """Copy selected text to clipboard."""
         if self._content_with_selection:
             self._content_with_selection.copy_selection()
+
+    def close_widget(self) -> None:
+        """Close the wiki widget and clean up resources."""
+        self._unregister_file_watching()
 
     def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
         """

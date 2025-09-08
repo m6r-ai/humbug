@@ -194,6 +194,7 @@ class EditorTab(TabBase):
         Args:
             path: Path to file
         """
+        print(f"3: Setting path: {path}")
         # Stop watching old path
         if self._path != path:
             self._stop_file_watching()
@@ -222,6 +223,7 @@ class EditorTab(TabBase):
 
     def close_tab(self) -> None:
         """Close the tab and clean up resources."""
+        self._stop_file_watching()
         self._editor_widget.close_widget()
 
     def can_save(self) -> bool:
