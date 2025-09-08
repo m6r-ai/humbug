@@ -20,6 +20,7 @@ Bug fixes:
 - If the user hits cancel on a conversation that's waiting on a tool approval this would leave the tool approval widget
   on the screen.  Now this is cleaned up.
 - File watching would not reliably stop when tabs were closed.  This is now handled precisely, not lazily.
+- Duplicating a file in the mindspace conversation view would not set the correct file extension.
 
 ## v0.24 (2025-08-31)
 

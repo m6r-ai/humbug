@@ -143,6 +143,30 @@ class MindspaceConversationsView(QWidget):
         _, ext = os.path.splitext(file_path)
         return ext
 
+    def _get_display_name_from_filename(self, filename: str, file_path: str) -> str:
+        """
+        Get the display name from a filename, removing conversation file extensions.
+
+        Args:
+            filename: The filename to process
+            file_path: Full path to the file (used to determine if it's a conversation file)
+
+        Returns:
+            Display name with conversation file extension removed if applicable
+        """
+        if not filename:
+            return filename
+
+        # Check if this is a conversation file and remove its extension for display
+        if self._is_conversation_file(file_path):
+            if filename.lower().endswith('.conv'):
+                return filename[:-5]  # Remove '.conv'
+
+            if filename.lower().endswith('.json'):
+                return filename[:-5]  # Remove '.json'
+
+        return filename
+
     def _handle_auto_scroll(self, start_scrolling: bool) -> None:
         """
         Handle auto-scroll requests from the tree view during drag operations.
@@ -353,8 +377,17 @@ class MindspaceConversationsView(QWidget):
         parent_path, is_folder, temp_path = self._pending_new_item
         self._pending_new_item = None
 
+        # For conversation files, add the original extension back
+        if not is_folder and self._is_conversation_file(temp_path):
+            original_extension = self._get_original_extension(temp_path)
+            final_name = new_name + original_extension
+
+        else:
+            # Non-conversation file or folder - use the name as-is
+            final_name = new_name
+
         # Create the full path for the final item
-        new_path = os.path.join(parent_path, new_name)
+        new_path = os.path.join(parent_path, final_name)
 
         try:
             # Rename the temporary item to the final name
@@ -489,7 +522,7 @@ class MindspaceConversationsView(QWidget):
 
     def _get_duplicate_file_name(self, source_path: str) -> str:
         """
-        Generate a unique name for a duplicate file.
+        Generate a unique name for a duplicate file, conversation-aware.
 
         Args:
             source_path: Path to the original file
@@ -500,38 +533,63 @@ class MindspaceConversationsView(QWidget):
         parent_path = os.path.dirname(source_path)
         original_filename = os.path.basename(source_path)
 
-        # Split filename and extension
-        name, ext = os.path.splitext(original_filename)
+        # For conversation files, work with the display name (without extension)
+        if self._is_conversation_file(source_path):
+            original_extension = self._get_original_extension(source_path)
+            display_name = self._get_display_name_from_filename(original_filename, source_path)
 
+            # Generate duplicate display name
+            duplicate_display_name = self._generate_duplicate_name(display_name, parent_path, original_extension)
+
+            # Return the full filename with extension
+            return duplicate_display_name + original_extension
+
+        # For non-conversation files, use the full filename
+        return self._generate_duplicate_name(original_filename, parent_path, "")
+
+    def _generate_duplicate_name(self, base_name: str, parent_path: str, extension: str) -> str:
+        """
+        Generate a unique duplicate name with " - copy" suffix.
+
+        Args:
+            base_name: Base name to duplicate (without extension for conversation files)
+            parent_path: Parent directory path
+            extension: File extension (empty for non-conversation files or folders)
+
+        Returns:
+            Unique duplicate name (without extension for conversation files)
+        """
         # Check if the name already ends with " - copy" or " - copy (n)"
         copy_suffix = " - copy"
-        if name.endswith(copy_suffix):
+        if base_name.endswith(copy_suffix):
             # Remove the existing " - copy" suffix to get the base name
-            base_name = name[:-len(copy_suffix)]
+            core_name = base_name[:-len(copy_suffix)]
 
-        elif " - copy (" in name and name.endswith(")"):
+        elif " - copy (" in base_name and base_name.endswith(")"):
             # Handle case like "filename - copy (2)" - extract base name
-            copy_index = name.rfind(" - copy (")
+            copy_index = base_name.rfind(" - copy (")
             if copy_index != -1:
-                base_name = name[:copy_index]
+                core_name = base_name[:copy_index]
 
             else:
-                base_name = name
+                core_name = base_name
 
         else:
             # No existing copy suffix
-            base_name = name
+            core_name = base_name
 
         # Generate unique copy name
         counter = 1
         while True:
             if counter == 1:
-                candidate_name = f"{base_name}{copy_suffix}{ext}"
+                candidate_name = f"{core_name}{copy_suffix}"
 
             else:
-                candidate_name = f"{base_name}{copy_suffix} ({counter}){ext}"
+                candidate_name = f"{core_name}{copy_suffix} ({counter})"
 
-            full_path = os.path.join(parent_path, candidate_name)
+            # Check if this name conflicts (add extension for the filesystem check)
+            test_filename = candidate_name + extension
+            full_path = os.path.join(parent_path, test_filename)
             if not os.path.exists(full_path):
                 return candidate_name
 
