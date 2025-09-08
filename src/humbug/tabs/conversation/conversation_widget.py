@@ -1853,6 +1853,8 @@ class ConversationWidget(QWidget):
         if index < 0 or index >= len(self._messages):
             return
 
+        assert self._messages[index].message_source() == AIMessageSource.USER, "Only user messages can be deleted."
+
         # Store all messages up to but not including the specified index
         preserved_messages = self._messages[:index]
 
@@ -1873,6 +1875,7 @@ class ConversationWidget(QWidget):
         all_messages = history.get_messages()
 
         # Capture the prompt from the first message we're deleting.
+        assert all_messages[index].source == AIMessageSource.USER, "Only user messages can be deleted."
         prompt = all_messages[index].content
 
         # Keep only the messages up to the specified index
