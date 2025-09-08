@@ -2,6 +2,12 @@
 
 ## v0.25 (2025-09-xx)
 
+New features:
+
+- When the AI backend gets a 200 OK connection response from the AI a new temporary "AI connected" message appears so the
+  user can tell the AI is responding but not showing any messages (e.g. setting up a tool call).  This also means
+  conversation transcripts now enable between network analytics.
+
 Bug fixes:
 
 - Delegating a task could trigger a previously-silent exception.
