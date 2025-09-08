@@ -69,6 +69,7 @@ def get_english_strings() -> LanguageStrings:
 
         # Message roles
         role_you="You",
+        role_connected="{model} connected",
         role_assistant="{model} response",
         role_reasoning="{model} reasoning",
         role_system="Humbug",
@@ -87,6 +88,9 @@ def get_english_strings() -> LanguageStrings:
         processing_message="Processing your request (Esc to cancel)",
         input_prompt="Chat with {model}... ({key} to submit)",
         command_prompt="Command... (Enter or {key} to submit)",
+
+        # AI thinking message
+        ai_thinking="AI is thinking...",
 
         # Dialog and settings
         cancel="Cancel",

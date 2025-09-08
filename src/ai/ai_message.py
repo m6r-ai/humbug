@@ -38,6 +38,7 @@ class AIMessage:
     # Map between AIMessageSource enum and transcript type strings
     _SOURCE_TYPE_MAP = {
         AIMessageSource.USER: "user_message",
+        AIMessageSource.AI_CONNECTED: "ai_connected",
         AIMessageSource.AI: "ai_response",
         AIMessageSource.REASONING: "ai_reasoning",
         AIMessageSource.SYSTEM: "system_message",

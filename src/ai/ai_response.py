@@ -21,6 +21,7 @@ class AIResponse:
     """Response from an AI backend."""
     reasoning: str
     content: str
+    connected: bool = False
     usage: AIUsage | None = None
     error: AIError | None = None
     model: str | None = None

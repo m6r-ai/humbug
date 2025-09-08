@@ -459,6 +459,9 @@ class ConversationWidget(QWidget):
         ai_conversation.unregister_callback(
             AIConversationEvent.STREAMING_UPDATE, self._on_streaming_update
         )
+        ai_conversation.unregister_callback(
+            AIConversationEvent.AI_CONNECTED, self._on_ai_connected
+        )
 
     def _register_ai_conversation_callbacks(self) -> None:
         """Register callbacks for AIConversation events."""
@@ -487,6 +490,27 @@ class ConversationWidget(QWidget):
         ai_conversation.register_callback(
             AIConversationEvent.STREAMING_UPDATE, self._on_streaming_update
         )
+        ai_conversation.register_callback(
+            AIConversationEvent.AI_CONNECTED, self._on_ai_connected
+        )
+
+    async def _on_ai_connected(self, message: AIMessage) -> None:
+        """
+        Handle AI connected event.
+
+        Args:
+            message: The AI_CONNECTED message
+        """
+        self._add_message(message)
+        self._append_message_to_transcript(message)
+
+        # Start animation if not already animating
+        if not self._is_animating:
+            self._start_message_border_animation()
+
+        # When we call this we should always scroll to the bottom and restore auto-scrolling
+        self._auto_scroll = True
+        self._scroll_to_bottom()
 
     async def _on_streaming_update(self) -> None:
         """
@@ -1437,8 +1461,11 @@ class ConversationWidget(QWidget):
             conversation_settings = ai_conversation.conversation_settings()
             self._input.set_model(conversation_settings.model)
 
-        # Add messages to this widget.
+        # Add messages to this widget, filtering out AI_CONNECTED messages when loading from transcript
         for message in messages:
+            if message.source == AIMessageSource.AI_CONNECTED:
+                continue  # Skip AI_CONNECTED messages when loading from transcript
+
             self._add_message(message)
 
         # Ensure we're scrolled to the end
@@ -1598,6 +1625,9 @@ class ConversationWidget(QWidget):
             }}
             #ConversationMessage #_role_label[message_source="user"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
+            }}
+            #ConversationMessage #_role_label[message_source="ai_connected"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_STREAMING)};
             }}
             #ConversationMessage #_role_label[message_source="ai"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_AI)};

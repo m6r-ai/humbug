@@ -69,6 +69,7 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Message roles
         role_you="أنت",
+        role_connected="متصل {model}",
         role_assistant="رد {model}",
         role_reasoning="تفكير {model}",
         role_system="هامبج",
@@ -87,6 +88,9 @@ def get_arabic_strings() -> LanguageStrings:
         processing_message="معالجة طلبك (Esc للإلغاء)",
         input_prompt="تحدث مع {model}... ({key} للإرسال)",
         command_prompt="الأمر... (Enter أو {key} للإرسال)",
+
+        # AI thinking message
+        ai_thinking="الذكاء الاصطناعي يفكر...",
 
         # Dialog and settings
         cancel="إلغاء",

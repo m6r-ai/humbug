@@ -120,6 +120,7 @@ class ConversationMessage(QFrame):
 
         role_sources = {
             AIMessageSource.USER: "user",
+            AIMessageSource.AI_CONNECTED: "ai_connected",
             AIMessageSource.AI: "ai",
             AIMessageSource.REASONING: "reasoning",
             AIMessageSource.TOOL_CALL: "tool_call",
@@ -390,6 +391,9 @@ class ConversationMessage(QFrame):
 
                 else:
                     role_text = strings.role_you
+
+            case AIMessageSource.AI_CONNECTED:
+                role_text = strings.role_connected.format(model=self._message_model)
 
             case AIMessageSource.AI:
                 role_text = strings.role_assistant.format(model=self._message_model)

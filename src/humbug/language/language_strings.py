@@ -64,6 +64,7 @@ class LanguageStrings:
 
     # Message roles and labels
     role_you: str
+    role_connected: str
     role_assistant: str
     role_reasoning: str
     role_system: str
@@ -82,6 +83,9 @@ class LanguageStrings:
     processing_message: str
     input_prompt: str  # Format: "Chat with {model}... ({key} to submit)"
     command_prompt: str  # Format: "Command... (Enter or {key} to submit)"
+
+    # AI thinking message
+    ai_thinking: str
 
     # Dialog and settings
     cancel: str

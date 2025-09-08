@@ -69,6 +69,7 @@ def get_french_strings() -> LanguageStrings:
 
         # Message roles
         role_you="Vous",
+        role_connected="{model} connecté",
         role_assistant="Réponse de {model}",
         role_reasoning="Raisonnement de {model}",
         role_system="Humbug",
@@ -87,6 +88,9 @@ def get_french_strings() -> LanguageStrings:
         processing_message="Traitement de votre requête (Échap pour annuler)",
         input_prompt="Discuter avec {model}... ({key} pour envoyer)",
         command_prompt="Commande... (Entrée ou {key} pour envoyer)",
+
+        # AI thinking message
+        ai_thinking="L'IA réfléchit...",
 
         # Dialog and settings
         cancel="Annuler",

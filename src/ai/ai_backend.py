@@ -189,6 +189,13 @@ class AIBackend(ABC):
                             )
                             return
 
+                        # Signal that AI is connected
+                        yield AIResponse(
+                            reasoning="",
+                            content="",
+                            connected=True
+                        )
+
                         # We got a success code.  Create a response handler and start generating AIResponse
                         # updates for each server-sent event we see.
                         response_handler = self._create_stream_response_handler()

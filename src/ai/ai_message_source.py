@@ -6,6 +6,7 @@ from enum import Enum
 class AIMessageSource(Enum):
     """Enumeration of possible message sources."""
     USER = "user"
+    AI_CONNECTED = "ai_connected"
     AI = "ai"
     REASONING = "reasoning"
     SYSTEM = "system"

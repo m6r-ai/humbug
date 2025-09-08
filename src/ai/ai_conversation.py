@@ -16,6 +16,8 @@ from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
 from ai_tool import AIToolManager, AIToolCall, AIToolResult, AIToolAuthorizationDenied
 
+from humbug.language.language_manager import LanguageManager
+
 
 class AIConversationEvent(Enum):
     """Events that can be emitted by the AIConversation class."""
@@ -28,6 +30,7 @@ class AIConversationEvent(Enum):
     TOOL_APPROVAL_REQUIRED = auto()
                                 # When tool calls need user approval
     STREAMING_UPDATE = auto()   # When a streaming response is updated
+    AI_CONNECTED = auto()       # When AI connection is established
 
 
 class AIConversation:
@@ -43,6 +46,7 @@ class AIConversation:
         self._logger = logging.getLogger("AIConversation")
         self._ai_manager = AIManager()
         self._tool_manager = AIToolManager()
+        self._language_manager = LanguageManager()
         self._settings = AIConversationSettings()
         self._conversation = AIConversationHistory()
         self._current_tasks: List[asyncio.Task] = []
@@ -220,7 +224,8 @@ class AIConversation:
                     error=response.error,
                     tool_calls=response.tool_calls,
                     signature=response.signature,
-                    readacted_reasoning=response.readacted_reasoning
+                    readacted_reasoning=response.readacted_reasoning,
+                    connected=response.connected
                 )
 
                 if response.error and response.error.retries_exhausted:
@@ -596,6 +601,23 @@ class AIConversation:
         else:
             self._logger.warning("AI response error: %s", error.message)
 
+    async def _handle_connection(self) -> None:
+        """Handle AI connection established."""
+        settings = self.conversation_settings()
+        strings = self._language_manager.strings()
+        connection_message = AIMessage.create(
+            AIMessageSource.AI_CONNECTED,
+            strings.ai_thinking,
+            model=settings.model,
+            temperature=settings.temperature,
+            reasoning_capability=settings.reasoning,
+            completed=True
+        )
+
+        # Add to history first, then trigger events
+        self._conversation.add_message(connection_message)
+        await self._trigger_event(AIConversationEvent.AI_CONNECTED, connection_message)
+
     async def _handle_content(
         self,
         content: str,
@@ -740,7 +762,8 @@ class AIConversation:
         error: AIError | None = None,
         tool_calls: List[AIToolCall] | None = None,
         signature: str | None = None,
-        readacted_reasoning: str | None = None
+        readacted_reasoning: str | None = None,
+        connected: bool = False
     ) -> None:
         """
         Update the current AI response in the conversation.
@@ -751,9 +774,17 @@ class AIConversation:
             usage: Optional token usage information
             error: Optional error information
             tool_calls: Optional list of tool calls made by the AI
+            signature: Optional signature for the response
+            readacted_reasoning: Optional readacted reasoning text
+            connected: Whether this indicates AI connection established
         """
         if error:
             await self._handle_error(error)
+            return
+
+        # Handle connection signal
+        if connected:
+            await self._handle_connection()
             return
 
         if not self._is_streaming:
