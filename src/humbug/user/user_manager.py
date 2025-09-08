@@ -119,10 +119,11 @@ class UserManager(QObject):
             "anthropic": os.environ.get("ANTHROPIC_API_KEY"),
             "deepseek": os.environ.get("DEEPSEEK_API_KEY"),
             "google": os.environ.get("GOOGLE_API_KEY"),
-            "m6r": os.environ.get("M6R_API_KEY"),
             "mistral": os.environ.get("MISTRAL_API_KEY"),
+            "ollama": os.environ.get("OLLAMA_API_KEY"),
             "openai": os.environ.get("OPENAI_API_KEY"),
-            "xai": os.environ.get("XAI_API_KEY")
+            "xai": os.environ.get("XAI_API_KEY"),
+            "zai": os.environ.get("ZAI_API_KEY")
         }
 
         settings = cast(UserSettings, self._settings)
