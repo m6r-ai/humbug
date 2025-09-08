@@ -682,6 +682,10 @@ class ConversationMessage(QFrame):
         """Get the unique message ID."""
         return self._message_id
 
+    def message_source(self) -> AIMessageSource | None:
+        """Get the source of the message."""
+        return self._message_source
+
     def _copy_message(self) -> None:
         """Copy the entire message content to clipboard."""
         content = self._message_content

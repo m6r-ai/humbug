@@ -351,6 +351,8 @@ class ConversationWidget(QWidget):
         Args:
             message: The message that was added
         """
+        self._hide_last_ai_connected_message()
+
         msg_widget = ConversationMessage(
             message.source, message.timestamp, message.model or "", message.id, message.user_name, message.content, self
         )
@@ -380,6 +382,35 @@ class ConversationWidget(QWidget):
         # find a new visible message to animate
         elif self._is_animating and self._animated_message and not self._animated_message.is_rendered():
             self._update_animated_message()
+
+    def _hide_last_ai_connected_message(self) -> None:
+        """
+        Hide the last AI_CONNECTED message from the UI if it is present.
+
+        This keeps the message in the transcript for analytics but removes it from
+        the visual conversation flow.
+        """
+        if not self._messages:
+            return
+
+        last_message_widget = self._messages[-1]
+        if last_message_widget.message_source() != AIMessageSource.AI_CONNECTED:
+            return
+
+        # Remove from UI
+        last_message_widget.hide()
+
+        # Clean up any references to this message
+        if last_message_widget in self._bookmarked_messages:
+            del self._bookmarked_messages[last_message_widget]
+            self._current_bookmark_index = None
+
+        if self._message_with_selection == last_message_widget:
+            self._message_with_selection = None
+
+        # If this was the animated message, stop animation (new message will start it)
+        if self._animated_message == last_message_widget:
+            self._animated_message = None
 
     def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
         """
@@ -1461,11 +1492,7 @@ class ConversationWidget(QWidget):
             conversation_settings = ai_conversation.conversation_settings()
             self._input.set_model(conversation_settings.model)
 
-        # Add messages to this widget, filtering out AI_CONNECTED messages when loading from transcript
         for message in messages:
-            if message.source == AIMessageSource.AI_CONNECTED:
-                continue  # Skip AI_CONNECTED messages when loading from transcript
-
             self._add_message(message)
 
         # Ensure we're scrolled to the end
