@@ -194,7 +194,6 @@ class EditorTab(TabBase):
         Args:
             path: Path to file
         """
-        print(f"3: Setting path: {path}")
         # Stop watching old path
         if self._path != path:
             self._stop_file_watching()

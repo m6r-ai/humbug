@@ -156,7 +156,6 @@ class TabBase(QFrame):
 
         try:
             self._file_watcher.watch_file(path, self._handle_file_changed)
-            print(f"1: Started watching file: {path}")
             self._logger.debug("Started watching file: %s", path)
 
             # Check initial file state
@@ -170,7 +169,6 @@ class TabBase(QFrame):
         if self._path:
             try:
                 self._file_watcher.unwatch_file(self._path, self._handle_file_changed)
-                print(f"2: Stopped watching file: {self._path}")
                 self._logger.debug("Stopped watching file: %s", self._path)
 
             except Exception as e:
