@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, Any, cast
 
-from ai import AIConversation, AIConversationSettings, AIReasoningCapability
+from ai import AIConversation, AIConversationSettings, AIManager, AIReasoningCapability
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
@@ -14,7 +14,6 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.conversation.conversation_tab import ConversationTab
-from humbug.user.user_manager import UserManager
 
 
 class DelegateAITool(AITool):
@@ -36,7 +35,7 @@ class DelegateAITool(AITool):
         """
         self._column_manager = column_manager
         self._mindspace_manager = MindspaceManager()
-        self._user_manager = UserManager()
+        self._ai_manager = AIManager()
         self._logger = logging.getLogger("DelegateAITool")
 
     def get_definition(self) -> AIToolDefinition:
@@ -240,7 +239,7 @@ class DelegateAITool(AITool):
         # Validate model exists if provided
         reasoning = None
         if model:
-            ai_backends = self._user_manager.get_ai_backends()
+            ai_backends = self._ai_manager.get_backends()
             available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
 
             if model not in available_models:
