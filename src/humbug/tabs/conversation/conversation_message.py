@@ -172,7 +172,6 @@ class ConversationMessage(QFrame):
         self._markdown_converter = MarkdownConverter()
 
         self._is_focused = False
-        self._is_bookmarked = False
 
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_language_changed()
@@ -265,6 +264,15 @@ class ConversationMessage(QFrame):
         """Check if the message will be rendered."""
         return self._message_rendered
 
+    def set_rendered(self, rendered: bool) -> None:
+        """Set the rendered state of this message."""
+        self._message_rendered = rendered
+        if not rendered:
+            self.hide()
+            return
+
+        self.show()
+
     def is_focused(self) -> bool:
         """Check if this message is focused."""
         return self._is_focused
@@ -281,16 +289,6 @@ class ConversationMessage(QFrame):
         if focused:
             self.setFocus()
 
-        self.style().unpolish(self)
-        self.style().polish(self)
-
-    def is_bookmarked(self) -> bool:
-        """Check if this message is bookmarked."""
-        return self._is_bookmarked
-
-    def set_bookmarked(self, bookmarked: bool) -> None:
-        """Set the bookmarked state."""
-        self._is_bookmarked = bookmarked
         self.style().unpolish(self)
         self.style().polish(self)
 
@@ -622,9 +620,6 @@ class ConversationMessage(QFrame):
 
         if self._is_focused and self.hasFocus():
             return self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
-
-        if self._is_bookmarked:
-            return self._style_manager.get_color_str(ColorRole.MESSAGE_BOOKMARK)
 
         current_style = self._message_source or AIMessageSource.USER
         return self._style_manager.get_color_str(

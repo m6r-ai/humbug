@@ -360,34 +360,6 @@ class ConversationTab(TabBase):
         """Navigate to the previous message."""
         self._conversation_widget.navigate_to_previous_message()
 
-    def can_toggle_bookmark(self) -> bool:
-        """Can we toggle bookmarks?"""
-        return self._conversation_widget.can_toggle_bookmark()
-
-    def is_checked_bookmark(self) -> bool:
-        """Is the current bookmark set (checked)?"""
-        return self._conversation_widget.is_checked_bookmark()
-
-    def toggle_bookmark(self) -> None:
-        """Toggle a bookmark at the current message."""
-        self._conversation_widget.toggle_bookmark()
-
-    def can_navigate_next_bookmark(self) -> bool:
-        """Can we go to a next bookmark?"""
-        return self._conversation_widget.can_navigate_next_bookmark()
-
-    def navigate_next_bookmark(self) -> None:
-        """Move to the next bookmark."""
-        self._conversation_widget.navigate_next_bookmark()
-
-    def can_navigate_previous_bookmark(self) -> bool:
-        """Can we go to a previous bookmark?"""
-        return self._conversation_widget.can_navigate_previous_bookmark()
-
-    def navigate_previous_bookmark(self) -> None:
-        """Move to the previous bookmark."""
-        self._conversation_widget.navigate_previous_bookmark()
-
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._conversation_widget.set_input_text(text)

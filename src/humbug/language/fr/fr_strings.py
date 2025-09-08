@@ -227,11 +227,6 @@ def get_french_strings() -> LanguageStrings:
         log_status="Journal",
         wiki_status="Wiki : {path}",
 
-        # Bookmark Actions
-        bookmark_section="Marquer/Démarquer",
-        next_bookmark="Signet suivant",
-        previous_bookmark="Signet précédent",
-
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Renommer",
         delete="Supprimer",

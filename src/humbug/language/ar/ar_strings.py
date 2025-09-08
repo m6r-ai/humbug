@@ -227,11 +227,6 @@ def get_arabic_strings() -> LanguageStrings:
         log_status="سجل",
         wiki_status="ويكي: {path}",
 
-        # Bookmark
-        bookmark_section="تبديل الإشارة",
-        next_bookmark="الإشارة التالية",
-        previous_bookmark="الإشارة السابقة",
-
         # Mindspace File Tree Edit Menu Errors and Options
         rename="إعادة التسمية",
         delete="حذف",

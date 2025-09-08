@@ -1,7 +1,6 @@
 """Conversation widget implementation."""
 
 import asyncio
-from dataclasses import dataclass
 import logging
 import os
 import time
@@ -28,24 +27,6 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
 from humbug.tabs.conversation.conversation_message import ConversationMessage
-
-
-@dataclass
-class BookmarkData:
-    """Data associated with a bookmarked message."""
-    widget: 'ConversationMessage'
-    scroll_position: int
-
-    def __init__(self, widget: 'ConversationMessage', scroll_position: int):
-        """
-        Initialize bookmark data.
-
-        Args:
-            widget: The bookmarked message widget
-            scroll_position: Vertical scroll position when bookmarked
-        """
-        self.widget = widget
-        self.scroll_position = scroll_position
 
 
 class ConversationWidgetEventFilter(QObject):
@@ -122,9 +103,6 @@ class ConversationWidget(QWidget):
         self._logger = logging.getLogger("ConversationWidget")
 
         self.setObjectName("ConversationWidget")
-
-        self._bookmarked_messages: Dict[ConversationMessage, BookmarkData] = {}
-        self._current_bookmark_index: int | None = None
 
         self._mindspace_manager = MindspaceManager()
 
@@ -246,9 +224,6 @@ class ConversationWidget(QWidget):
 
         # Tracking for focused message
         self._focused_message_index = -1
-
-        # Add bookmark status
-        self._is_bookmarked = False
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -394,16 +369,12 @@ class ConversationWidget(QWidget):
             return
 
         last_message_widget = self._messages[-1]
+        print(f"last message: {last_message_widget}, src: {last_message_widget.message_source()}")
         if last_message_widget.message_source() != AIMessageSource.AI_CONNECTED:
             return
 
         # Remove from UI
-        last_message_widget.hide()
-
-        # Clean up any references to this message
-        if last_message_widget in self._bookmarked_messages:
-            del self._bookmarked_messages[last_message_widget]
-            self._current_bookmark_index = None
+        last_message_widget.set_rendered(False)
 
         if self._message_with_selection == last_message_widget:
             self._message_with_selection = None
@@ -748,8 +719,6 @@ class ConversationWidget(QWidget):
             message: The tool call message
         """
         self._add_message(message)
-
-        # Write the tool call to the transcript
         self._append_message_to_transcript(message)
 
     async def _on_tool_approval_required(
@@ -1337,51 +1306,6 @@ class ConversationWidget(QWidget):
         # If on a message, check if there are visible messages before current position
         return self._find_previous_visible_message(self._focused_message_index) != -1
 
-    def _toggle_message_bookmark(self, message_widget: ConversationMessage) -> None:
-        """Toggle bookmark status for a message."""
-        if message_widget in self._bookmarked_messages:
-            # Remove bookmark
-            del self._bookmarked_messages[message_widget]
-            message_widget.set_bookmarked(False)
-
-        else:
-            # Add bookmark with current scroll position
-            scroll_position = self._scroll_area.verticalScrollBar().value()
-            self._bookmarked_messages[message_widget] = BookmarkData(
-                widget=message_widget,
-                scroll_position=scroll_position
-            )
-            message_widget.set_bookmarked(True)
-
-        # Reset bookmark index when bookmarks change
-        self._current_bookmark_index = None
-
-    def navigate_bookmarks(self, forward: bool = True) -> None:
-        """Navigate between bookmarked messages."""
-        if not self._bookmarked_messages:
-            return
-
-        # Convert to list for ordered access while maintaining BookmarkData
-        bookmarked_items = list(self._bookmarked_messages.items())
-
-        # Initialize bookmark index if not set
-        if self._current_bookmark_index is None:
-            # Start from the beginning or end based on navigation direction
-            self._current_bookmark_index = -1 if forward else len(bookmarked_items)
-
-        # Calculate next bookmark index
-        if forward:
-            self._current_bookmark_index = (self._current_bookmark_index + 1) % len(bookmarked_items)
-
-        else:
-            self._current_bookmark_index = (self._current_bookmark_index - 1) % len(bookmarked_items)
-
-        # Get the bookmarked message and its data
-        _message_widget, bookmark_data = bookmarked_items[self._current_bookmark_index]
-
-        # Restore the scroll position
-        self._scroll_area.verticalScrollBar().setValue(bookmark_data.scroll_position)
-
     def _on_selection_changed(self, message_widget: ConversationMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
         if not has_selection:
@@ -1890,20 +1814,6 @@ class ConversationWidget(QWidget):
         fork_action.triggered.connect(self.fork_requested)
         menu.addSeparator()
 
-        toggle_bookmark_action = menu.addAction(strings.bookmark_section)
-        toggle_bookmark_action.setEnabled(self.can_toggle_bookmark())
-        toggle_bookmark_action.setCheckable(True)
-        toggle_bookmark_action.setChecked(self.is_checked_bookmark())
-        toggle_bookmark_action.triggered.connect(self.toggle_bookmark)
-
-        next_bookmark_action = menu.addAction(strings.next_bookmark)
-        next_bookmark_action.setEnabled(self.can_navigate_next_bookmark())
-        next_bookmark_action.triggered.connect(self.navigate_next_bookmark)
-
-        prev_bookmark_action = menu.addAction(strings.previous_bookmark)
-        prev_bookmark_action.setEnabled(self.can_navigate_previous_bookmark())
-        prev_bookmark_action.triggered.connect(self.navigate_previous_bookmark)
-
         # Show menu at click position
         menu.exec_(self.mapToGlobal(pos))
 
@@ -2015,11 +1925,6 @@ class ConversationWidget(QWidget):
         try:
             self._transcript_handler.write(preserved_history)
 
-            # Reset bookmarks and selection state
-            self._bookmarked_messages = {}
-            self._current_bookmark_index = None
-            self._message_with_selection = None
-
             # Stop any animation on deleted messages
             if self._animated_message and self._animated_message not in preserved_messages:
                 self._stop_message_border_animation()
@@ -2044,70 +1949,6 @@ class ConversationWidget(QWidget):
                 self._language_manager.strings().error_title_rename,
                 f"Failed to update transcript after deletion: {str(e)}"
             )
-
-    def can_toggle_bookmark(self) -> bool:
-        """Can we toggle bookmarks?"""
-        focus_widget: QWidget | None = self.focusWidget()
-        if not focus_widget:
-            return False
-
-        while focus_widget and not isinstance(focus_widget, ConversationMessage):
-            focus_widget = focus_widget.parentWidget()
-            if isinstance(focus_widget, ConversationWidget):
-                return False
-
-        if isinstance(focus_widget, ConversationInput):
-            return False
-
-        return True
-
-    def is_checked_bookmark(self) -> bool:
-        """Is the current bookmark set (checked)?"""
-        focus_widget: QWidget | None = self.focusWidget()
-        if not focus_widget:
-            return False
-
-        while focus_widget and not isinstance(focus_widget, ConversationMessage):
-            focus_widget = focus_widget.parentWidget()
-            if isinstance(focus_widget, ConversationWidget):
-                return False
-
-        if isinstance(focus_widget, ConversationInput):
-            return False
-
-        return cast(ConversationMessage, focus_widget).is_bookmarked()
-
-    def toggle_bookmark(self) -> None:
-        """Toggle a bookmark at the current message."""
-        focus_widget: QWidget | None = self.focusWidget()
-        if not focus_widget:
-            return
-
-        while focus_widget and not isinstance(focus_widget, ConversationMessage):
-            focus_widget = focus_widget.parentWidget()
-            if isinstance(focus_widget, ConversationWidget):
-                return
-
-        if isinstance(focus_widget, ConversationInput):
-            return
-
-        self._toggle_message_bookmark(cast(ConversationMessage, focus_widget))
-
-    def can_navigate_next_bookmark(self) -> bool:
-        """Can we go to a next bookmark?"""
-        return bool(self._bookmarked_messages)
-
-    def navigate_next_bookmark(self) -> None:
-        """Move to the next bookmark."""
-        self.navigate_bookmarks(forward=True)
-
-    def can_navigate_previous_bookmark(self) -> bool:
-        """Can we go to a previous bookmark?"""
-        return bool(self._bookmarked_messages)
-
-    def navigate_previous_bookmark(self) -> None:
-        """Move to the previous bookmark."""
-        self.navigate_bookmarks(forward=False)
 
     def can_cut(self) -> bool:
         """Check if cut operation is available."""
@@ -2247,17 +2088,6 @@ class ConversationWidget(QWidget):
 
         metadata["message_expansion"] = expansion_states
 
-        # Store bookmarks
-        bookmark_data = []
-        for message_widget, data in self._bookmarked_messages.items():
-            if message_widget in self._messages:
-                bookmark_data.append({
-                    'index': self._messages.index(message_widget),
-                    'scroll_position': data.scroll_position
-                })
-
-        metadata['bookmarks'] = bookmark_data
-
         # Store current settings
         ai_conversation = cast(AIConversation, self._ai_conversation)
         settings = ai_conversation.conversation_settings()
@@ -2317,22 +2147,6 @@ class ConversationWidget(QWidget):
             expansion_states = metadata["message_expansion"]
             for i, is_expanded in enumerate(expansion_states):
                 self._change_message_expansion(i, is_expanded)
-
-        # Restore bookmarks if specified
-        if 'bookmarks' in metadata:
-            bookmark_data = metadata['bookmarks']
-            for data in bookmark_data:
-                index = data['index']
-                scroll_position = data['scroll_position']
-                if 0 <= index < len(self._messages):
-                    msg_widget = self._messages[index]
-
-                    # Add bookmark with stored scroll position
-                    self._bookmarked_messages[msg_widget] = BookmarkData(
-                        widget=msg_widget,
-                        scroll_position=scroll_position
-                    )
-                    msg_widget.set_bookmarked(True)
 
         # If we have a conversation reference then we're going to take that over!
         if "ai_conversation_ref" in metadata:

@@ -227,11 +227,6 @@ def get_english_strings() -> LanguageStrings:
         log_status="Log",
         wiki_status="Wiki: {path}",
 
-        # Bookmark-related strings
-        bookmark_section="Toggle Bookmark",
-        next_bookmark="Next Bookmark",
-        previous_bookmark="Previous Bookmark",
-
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Rename",
         delete="Delete",

@@ -216,11 +216,6 @@ class LanguageStrings:
     log_status: str
     wiki_status: str
 
-    # Bookmark-related strings
-    bookmark_section: str
-    next_bookmark: str
-    previous_bookmark: str
-
     # Mindspace File Tree Edit Menu Errors and Options
     rename: str
     delete: str
