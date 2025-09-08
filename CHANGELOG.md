@@ -9,7 +9,7 @@ New features:
   conversation transcripts now enable between network analytics.
 - Removed the "bookmark" functionality in the conversation tabs.  While this was nice idea early in development it appears
   to be something almost no-one uses now because the AI can write files via the filesystem tool.  Removing this significantly
-  simplifies the code.
+  simplifies the code (over 300 lines removed).
 
 Bug fixes:
 
