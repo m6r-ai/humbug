@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple, Any, Set, cast
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QEvent, QObject, QRect
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QRect
 from PySide6.QtGui import QCursor, QResizeEvent, QShowEvent
 
 from ai import (
@@ -27,40 +27,7 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
 from humbug.tabs.conversation.conversation_message import ConversationMessage
-
-
-class ConversationWidgetEventFilter(QObject):
-    """Event filter to track activation events from child widgets."""
-
-    widget_activated = Signal(object)
-    widget_deactivated = Signal(object)
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the event filter."""
-        super().__init__(parent)
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        """
-        Filter events to detect widget activation.
-
-        Args:
-            obj: The object that received the event
-            event: The event that was received
-
-        Returns:
-            True if event was handled, False to pass to the target object
-        """
-        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
-            # Simply emit the signal with the object that received the event
-            self.widget_activated.emit(watched)
-            return False  # Don't consume the event
-
-        if event.type() == QEvent.Type.FocusOut:
-            # Emit a widget deactivated signal
-            self.widget_deactivated.emit(watched)
-            return False  # Don't consume the event
-
-        return super().eventFilter(watched, event)
+from humbug.tabs.conversation.conversation_widget_event_filter import ConversationWidgetEventFilter
 
 
 class ConversationWidget(QWidget):
@@ -369,7 +336,6 @@ class ConversationWidget(QWidget):
             return
 
         last_message_widget = self._messages[-1]
-        print(f"last message: {last_message_widget}, src: {last_message_widget.message_source()}")
         if last_message_widget.message_source() != AIMessageSource.AI_CONNECTED:
             return
 
