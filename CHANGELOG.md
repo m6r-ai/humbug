@@ -10,6 +10,7 @@ New features:
 - Removed the "bookmark" functionality in the conversation tabs.  While this was nice idea early in development it appears
   to be something almost no-one uses now because the AI can write files via the filesystem tool.  Removing this significantly
   simplifies the code (over 300 lines removed).
+- Added `grok-code-fast-1` support using the xAI backend.
 
 Bug fixes:
 

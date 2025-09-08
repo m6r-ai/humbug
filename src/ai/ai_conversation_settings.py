@@ -401,6 +401,15 @@ class AIConversationSettings:
         ),
 
         # xAI models
+        "grok-code-fast-1": AIModel(
+            name="grok-code-fast-1",
+            provider="xai",
+            context_window=262144,
+            max_output_tokens=8192,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "grok-3-mini": AIModel(
             name="grok-3-mini",
             provider="xai",
