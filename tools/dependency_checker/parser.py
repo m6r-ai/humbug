@@ -254,12 +254,12 @@ class ImportParser:
         # For external modules, we typically care about the top-level package
         return import_info.module.split('.')[0]
 
-    def get_python_files(self, directory: str, ignore_patterns: List[str] = None) -> List[str]:
+    def get_python_files(self, directory: str, ignore_patterns: Optional[List[str]] = None) -> List[str]:
         """Get all Python files in a directory, respecting ignore patterns."""
         if ignore_patterns is None:
             ignore_patterns = []
 
-        python_files = []
+        python_files: List[str] = []
         directory_path = Path(directory)
 
         if not directory_path.exists():

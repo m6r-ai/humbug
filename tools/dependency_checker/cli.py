@@ -5,6 +5,7 @@ Command-line interface for the dependency checker.
 import sys
 import argparse
 import os
+from typing import Any
 
 from .config import DependencyConfig
 from .validator import DependencyValidator
@@ -12,7 +13,7 @@ from .reporter import DependencyReporter
 from .utils import create_dependency_graph, get_project_stats
 
 
-def main():
+def main() -> int:
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
         description="Python Module Dependency Checker",
@@ -96,7 +97,7 @@ Examples:
         return 1
 
 
-def handle_check(args):
+def handle_check(args: Any) -> int:
     """Handle the check command."""
     if not os.path.exists(args.config):
         print(f"Configuration file not found: {args.config}")
@@ -136,7 +137,7 @@ def handle_check(args):
     return reporter.get_exit_code(result)
 
 
-def handle_init(args):
+def handle_init(args: Any) -> int:
     """Handle the init command."""
     if os.path.exists(args.config) and not args.force:
         print(f"Configuration file already exists: {args.config}")
@@ -171,7 +172,7 @@ def handle_init(args):
     return 0
 
 
-def handle_validate_config(args):
+def handle_validate_config(args: Any) -> int:
     """Handle the validate-config command."""
     if not os.path.exists(args.config):
         print(f"Configuration file not found: {args.config}")
@@ -203,7 +204,7 @@ def handle_validate_config(args):
         return 1
 
 
-def handle_graph(args):
+def handle_graph(args: Any) -> int:
     """Handle the graph command."""
     if not os.path.exists(args.config):
         print(f"Configuration file not found: {args.config}")
@@ -229,7 +230,7 @@ def handle_graph(args):
     return 1
 
 
-def handle_stats(args):
+def handle_stats(args: Any) -> int:
     """Handle the stats command."""
     if not os.path.exists(args.src_root):
         print(f"Source root directory not found: {args.src_root}")

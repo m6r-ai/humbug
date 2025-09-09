@@ -3,7 +3,7 @@ Reporting and output formatting for dependency validation results.
 """
 
 import json
-from typing import List
+from typing import List, Dict
 from pathlib import Path
 
 from .validator import ValidationResult, Violation
@@ -12,7 +12,7 @@ from .validator import ValidationResult, Violation
 class DependencyReporter:
     """Formats and outputs dependency validation results."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def format_text(self, result: ValidationResult, verbose: bool = False) -> str:
@@ -94,7 +94,7 @@ class DependencyReporter:
     def _add_violation_details(self, lines: List[str], violations: List[Violation]) -> None:
         """Add violation details to the output lines."""
         # Group violations by file
-        violations_by_file = {}
+        violations_by_file: Dict[str, List[Violation]] = {}
         for violation in violations:
             if violation.file_path not in violations_by_file:
                 violations_by_file[violation.file_path] = []
@@ -165,7 +165,7 @@ class DependencyReporter:
 
         return "\n".join(lines)
 
-    def print_results(self, result: ValidationResult, format_type: str = "text", verbose: bool = False):
+    def print_results(self, result: ValidationResult, format_type: str = "text", verbose: bool = False) -> None:
         """Print results to stdout in the specified format."""
         if format_type == "json":
             print(self.format_json(result))
@@ -174,7 +174,7 @@ class DependencyReporter:
         else:
             print(self.format_text(result, verbose))
 
-    def save_results(self, result: ValidationResult, output_path: str, format_type: str = "text", verbose: bool = False):
+    def save_results(self, result: ValidationResult, output_path: str, format_type: str = "text", verbose: bool = False) -> None:
         """Save results to a file."""
         if format_type == "json":
             content = self.format_json(result)

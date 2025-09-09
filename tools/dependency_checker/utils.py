@@ -3,10 +3,10 @@ Utility functions for the dependency checker.
 """
 
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Any, List, Optional
 
 
-def create_dependency_graph(config_data: Dict) -> str:
+def create_dependency_graph(config_data: Dict[str, Any]) -> str:
     """Create a DOT format dependency graph."""
     lines = []
     lines.append("digraph dependencies {")
@@ -31,34 +31,39 @@ def create_dependency_graph(config_data: Dict) -> str:
     return "\n".join(lines)
 
 
-def get_project_stats(src_root: str) -> Dict:
+def get_project_stats(src_root: str) -> Dict[str, Any]:
     """Get basic statistics about the project."""
-    stats = {
-        'total_files': 0,
-        'python_files': 0,
-        'total_lines': 0,
-        'modules': [],
-        'largest_module': None,
-        'largest_module_files': 0
-    }
+    total_files = 0
+    python_files = 0
+    total_lines = 0
+    modules: List[str] = []
+    largest_module: Optional[str] = None
+    largest_module_files = 0
 
     src_path = Path(src_root)
     if not src_path.exists():
-        return stats
+        return {
+            'total_files': total_files,
+            'python_files': python_files,
+            'total_lines': total_lines,
+            'modules': modules,
+            'largest_module': largest_module,
+            'largest_module_files': largest_module_files
+        }
 
-    module_file_counts = {}
+    module_file_counts: Dict[str, int] = {}
 
     for file_path in src_path.rglob("*"):
         if file_path.is_file():
-            stats['total_files'] += 1
+            total_files += 1
 
             if file_path.suffix == '.py':
-                stats['python_files'] += 1
+                python_files += 1
 
                 # Count lines
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
-                        stats['total_lines'] += sum(1 for line in f)
+                        total_lines += sum(1 for line in f)
 
                 except Exception:
                     pass
@@ -72,11 +77,17 @@ def get_project_stats(src_root: str) -> Dict:
                 except ValueError:
                     pass
 
-    stats['modules'] = list(module_file_counts.keys())
+    modules = list(module_file_counts.keys())
 
     if module_file_counts:
-        largest_module = max(module_file_counts, key=module_file_counts.get)
-        stats['largest_module'] = largest_module
-        stats['largest_module_files'] = module_file_counts[largest_module]
+        largest_module = max(module_file_counts, key=lambda k: module_file_counts[k])
+        largest_module_files = module_file_counts[largest_module]
 
-    return stats
+    return {
+        'total_files': total_files,
+        'python_files': python_files,
+        'total_lines': total_lines,
+        'modules': modules,
+        'largest_module': largest_module,
+        'largest_module_files': largest_module_files
+    }
