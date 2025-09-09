@@ -469,6 +469,10 @@ class ConversationWidget(QWidget):
         Args:
             message: The AI_CONNECTED message
         """
+        # Our "thinking" message is empty when we receive it.  We populate it here.
+        strings = self._language_manager.strings()
+        message.content = strings.ai_thinking
+
         self._add_message(message)
         self._append_message_to_transcript(message)
 

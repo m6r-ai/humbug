@@ -22,6 +22,11 @@ Bug fixes:
 - File watching would not reliably stop when tabs were closed.  This is now handled precisely, not lazily.
 - Duplicating a file in the mindspace conversation view would not set the correct file extension.
 
+Internal structure changes:
+
+- Added a new `tools` directory and a `dependency_checker` tool.  This checks that internal modules are not using
+  dependencies that they shouldn't be using.
+
 ## v0.24 (2025-08-31)
 
 New features:

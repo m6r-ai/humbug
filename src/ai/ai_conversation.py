@@ -16,8 +16,6 @@ from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
 from ai_tool import AIToolManager, AIToolCall, AIToolResult, AIToolAuthorizationDenied
 
-from humbug.language.language_manager import LanguageManager
-
 
 class AIConversationEvent(Enum):
     """Events that can be emitted by the AIConversation class."""
@@ -46,7 +44,6 @@ class AIConversation:
         self._logger = logging.getLogger("AIConversation")
         self._ai_manager = AIManager()
         self._tool_manager = AIToolManager()
-        self._language_manager = LanguageManager()
         self._settings = AIConversationSettings()
         self._conversation = AIConversationHistory()
         self._current_tasks: List[asyncio.Task] = []
@@ -604,10 +601,9 @@ class AIConversation:
     async def _handle_connection(self) -> None:
         """Handle AI connection established."""
         settings = self.conversation_settings()
-        strings = self._language_manager.strings()
         connection_message = AIMessage.create(
             AIMessageSource.AI_CONNECTED,
-            strings.ai_thinking,
+            "",
             model=settings.model,
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
