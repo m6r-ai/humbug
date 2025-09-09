@@ -2,7 +2,6 @@
 Reporting and output formatting for dependency validation results.
 """
 
-import json
 from typing import List, Dict
 from pathlib import Path
 
@@ -48,6 +47,7 @@ class DependencyReporter:
             violation_desc = []
             if internal_count > 0:
                 violation_desc.append(f"{internal_count} internal")
+
             if external_count > 0:
                 violation_desc.append(f"{external_count} external")
 
@@ -68,6 +68,7 @@ class DependencyReporter:
             if external_violations:
                 if internal_violations:
                     lines.append("")
+
                 lines.append("External Dependency Violations:")
                 lines.append("-" * 33)
                 self._add_violation_details(lines, external_violations)
@@ -81,11 +82,13 @@ class DependencyReporter:
 
         if result.internal_violations:
             lines.append(f"  Internal violations: {len(result.internal_violations)}")
+
         if result.external_violations:
             lines.append(f"  External violations: {len(result.external_violations)}")
 
         if result.has_violations:
             lines.append(f"  Status: ✗ FAILED - {result.violation_count} violation(s)")
+
         else:
             lines.append("  Status: ✓ PASSED - No violations found")
 
@@ -106,6 +109,7 @@ class DependencyReporter:
             # Show relative path if possible
             try:
                 display_path = str(Path(file_path).relative_to(Path.cwd()))
+
             except ValueError:
                 display_path = file_path
 
@@ -116,76 +120,13 @@ class DependencyReporter:
                 lines.append(f"     Rule: {violation.rule_description}")
                 lines.append("")
 
-    def format_json(self, result: ValidationResult) -> str:
-        """Format results as JSON."""
-        violations_data = []
+    def print_results(self, result: ValidationResult) -> None:
+        """Print results to stdout as text."""
+        print(self.format_text(result))
 
-        for violation in result.violations:
-            violations_data.append({
-                "file_path": violation.file_path,
-                "line_number": violation.line_number,
-                "importing_module": violation.importing_module,
-                "imported_module": violation.imported_module,
-                "import_statement": violation.import_statement,
-                "rule_description": violation.rule_description,
-                "violation_type": violation.violation_type
-            })
-
-        data = {
-            "summary": {
-                "files_checked": result.files_checked,
-                "modules_checked": list(result.modules_checked),
-                "violation_count": result.violation_count,
-                "internal_violation_count": len(result.internal_violations),
-                "external_violation_count": len(result.external_violations),
-                "has_violations": result.has_violations
-            },
-            "violations": violations_data
-        }
-
-        return json.dumps(data, indent=2)
-
-    def format_csv(self, result: ValidationResult) -> str:
-        """Format results as CSV."""
-        lines = []
-        lines.append("file_path,line_number,importing_module,imported_module,import_statement,rule_description,violation_type")
-
-        for violation in result.violations:
-            # Escape CSV fields that might contain commas
-            fields = [
-                violation.file_path,
-                str(violation.line_number),
-                violation.importing_module,
-                violation.imported_module,
-                f'"{violation.import_statement}"',
-                f'"{violation.rule_description}"',
-                violation.violation_type
-            ]
-            lines.append(",".join(fields))
-
-        return "\n".join(lines)
-
-    def print_results(self, result: ValidationResult, format_type: str = "text") -> None:
-        """Print results to stdout in the specified format."""
-        if format_type == "json":
-            print(self.format_json(result))
-
-        elif format_type == "csv":
-            print(self.format_csv(result))
-
-        else:
-            print(self.format_text(result))
-
-    def save_results(self, result: ValidationResult, output_path: str, format_type: str = "text") -> None:
-        """Save results to a file."""
-        if format_type == "json":
-            content = self.format_json(result)
-
-        elif format_type == "csv":
-            content = self.format_csv(result)
-
-        else:
-            content = self.format_text(result)
+    def save_results(self, result: ValidationResult, output_path: str) -> None:
+        """Save results to a file as text."""
+        content = self.format_text(result)
 
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(content)

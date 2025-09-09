@@ -9,7 +9,7 @@ A comprehensive tool for enforcing inter-module dependency rules in Python proje
 - **External Dependency Control**: Fine-grained control over third-party package usage
 - **Secure by Default**: External dependencies must be explicitly allowed
 - **Comprehensive Analysis**: Parses all Python files to extract import statements
-- **Multiple Output Formats**: Text, JSON, and CSV output formats
+- **Human-Readable Reports**: Clear text output with detailed violation information
 - **CI/CD Integration**: Returns appropriate exit codes for automated pipelines
 - **Detailed Reporting**: Clear violation reports with file locations and line numbers
 - **Pattern Matching**: Support for wildcard patterns and ignore rules
@@ -199,8 +199,8 @@ python check-dependencies.py check
 # Check specific module
 python check-dependencies.py check --module humbug
 
-# Generate JSON report
-python check-dependencies.py check --format json --output report.json
+# Save report to file
+python check-dependencies.py check --output report.txt
 
 # Use custom configuration file
 python check-dependencies.py check --config my-rules.yaml
@@ -241,14 +241,14 @@ if result.has_violations:
 allowed = config.is_external_dependency_allowed("ai", "requests")
 print(f"AI can use requests: {allowed}")
 
-# Save reports in different formats
-reporter.save_results(result, "violations.json", "json")
-reporter.save_results(result, "violations.csv", "csv")
+# Save report to file
+reporter.save_results(result, "violations.txt")
 ```
 
-## Output Formats
+## Output Format
 
-### Text Output (Default)
+The tool outputs human-readable text reports with clear violation information:
+
 ```
 Dependency Check Results
 ========================
@@ -276,31 +276,6 @@ Summary:
   Internal violations: 1
   External violations: 1
   Status: ✗ FAILED - 2 violation(s)
-```
-
-### JSON Output
-```json
-{
-  "summary": {
-    "files_checked": 45,
-    "modules_checked": ["ai", "syntax", "dmarkdown", "humbug"],
-    "violation_count": 2,
-    "internal_violation_count": 1,
-    "external_violation_count": 1,
-    "has_violations": true
-  },
-  "violations": [
-    {
-      "file_path": "src/ai/models.py",
-      "line_number": 5,
-      "importing_module": "ai",
-      "imported_module": "humbug",
-      "import_statement": "from humbug.logger import Logger",
-      "rule_description": "ai cannot depend on humbug",
-      "violation_type": "internal"
-    }
-  ]
-}
 ```
 
 ## Testing and Exploration
@@ -385,9 +360,9 @@ jobs:
 check-deps:
 	python check-dependencies.py check
 
-.PHONY: check-deps-json
-check-deps-json:
-	python check-dependencies.py check --format json --output dependency-report.json
+.PHONY: check-deps-file
+check-deps-file:
+	python check-dependencies.py check --output dependency-report.txt
 ```
 
 ## Advanced Usage
@@ -517,7 +492,7 @@ modules:
 ### 5. CI/CD Integration
 
 - Run checks on every commit
-- Use JSON output for automated analysis
+- Save reports to files for automated analysis
 - Set up notifications for violations
 - Block merges with dependency violations
 
@@ -588,8 +563,7 @@ python check-dependencies.py check --config dependency-rules-prod.yaml
 
 The tool is designed to be extensible. Key areas for enhancement:
 
-- Additional output formats
-- More sophisticated import resolution
+- Enhanced import resolution
 - Integration with other tools
 - Performance optimizations
 - Enhanced pattern matching

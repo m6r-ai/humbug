@@ -35,8 +35,6 @@ Examples:
     check_parser.add_argument('--config', '-c', default='dependency-rules.yaml',
                              help='Configuration file path')
     check_parser.add_argument('--module', '-m', help='Check specific module only')
-    check_parser.add_argument('--format', '-f', choices=['text', 'json', 'csv'],
-                             default='text', help='Output format')
     check_parser.add_argument('--output', '-o', help='Output file path')
     check_parser.add_argument('--src-root', default='src',
                              help='Source root directory')
@@ -132,11 +130,11 @@ def handle_check(args: Any) -> int:
 
     # Output results
     if args.output:
-        reporter.save_results(result, args.output, args.format)
+        reporter.save_results(result, args.output)
         print(f"Results saved to: {args.output}")
 
     else:
-        reporter.print_results(result, args.format)
+        reporter.print_results(result)
 
     return reporter.get_exit_code(result)
 
