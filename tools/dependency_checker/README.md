@@ -26,14 +26,14 @@ pip install PyYAML>=6.0
 
 1. **Initialize configuration**:
    ```bash
-   python check-dependencies.py init
+   python -m tools.dependency_checker init
    ```
 
 2. **Edit the generated `dependency-rules.yaml`** to define your dependency rules
 
 3. **Run dependency check**:
    ```bash
-   python check-dependencies.py check
+   python -m tools.dependency_checker check
    ```
 
 ## Configuration
@@ -194,31 +194,44 @@ modules:
 
 ```bash
 # Check all modules
-python check-dependencies.py check
+python -m tools.dependency_checker check
 
 # Check specific module
-python check-dependencies.py check --module humbug
+python -m tools.dependency_checker check --module humbug
 
 # Save report to file
-python check-dependencies.py check --output report.txt
+python -m tools.dependency_checker check --output report.txt
 
 # Use custom configuration file
-python check-dependencies.py check --config my-rules.yaml
+python -m tools.dependency_checker check --config my-rules.yaml
 
 # Validate configuration
-python check-dependencies.py validate-config
+python -m tools.dependency_checker validate-config
 
 # Generate dependency graph
-python check-dependencies.py graph --output deps.dot
+python -m tools.dependency_checker graph --output deps.dot
 
 # Show project statistics
-python check-dependencies.py stats
+python -m tools.dependency_checker stats
+```
+
+### Alternative Ways to Run
+
+If you prefer, you can also run the CLI script directly:
+
+```bash
+# Run the CLI script directly
+python tools/dependency_checker/cli.py check
+
+# Or make it executable (Unix/Linux/Mac)
+chmod +x tools/dependency_checker/cli.py
+./tools/dependency_checker/cli.py check
 ```
 
 ### Python API
 
 ```python
-from dependency_checker import DependencyConfig, DependencyValidator, DependencyReporter
+from tools.dependency_checker import DependencyConfig, DependencyValidator, DependencyReporter
 
 # Load configuration
 config = DependencyConfig.load_from_file('dependency-rules.yaml')
@@ -284,19 +297,19 @@ Summary:
 
 ```bash
 # Validate your rules
-python check-dependencies.py validate-config
+python -m tools.dependency_checker validate-config
 
 # See what modules were discovered
-python check-dependencies.py stats
+python -m tools.dependency_checker stats
 
 # Test specific module
-python check-dependencies.py check --module core
+python -m tools.dependency_checker check --module core
 ```
 
 ### Debug Import Detection
 
 ```python
-from dependency_checker import ImportParser, DependencyConfig
+from tools.dependency_checker import ImportParser, DependencyConfig
 
 # Test import detection
 parser = ImportParser("src")
@@ -327,7 +340,7 @@ repos:
     hooks:
       - id: dependency-check
         name: Check module dependencies
-        entry: python check-dependencies.py check
+        entry: python -m tools.dependency_checker check
         language: system
         pass_filenames: false
 ```
@@ -350,7 +363,7 @@ jobs:
       - name: Install dependencies
         run: pip install PyYAML
       - name: Check dependencies
-        run: python check-dependencies.py check
+        run: python -m tools.dependency_checker check
 ```
 
 ### Make Target
@@ -358,11 +371,27 @@ jobs:
 ```makefile
 .PHONY: check-deps
 check-deps:
-	python check-dependencies.py check
+	python -m tools.dependency_checker check
 
 .PHONY: check-deps-file
 check-deps-file:
-	python check-dependencies.py check --output dependency-report.txt
+	python -m tools.dependency_checker check --output dependency-report.txt
+```
+
+### Shell Aliases (Optional)
+
+For frequent use, you can add convenience aliases to your shell configuration:
+
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+alias check-deps='python -m tools.dependency_checker check'
+alias init-deps='python -m tools.dependency_checker init'
+alias validate-deps='python -m tools.dependency_checker validate-config'
+
+# Then simply run:
+check-deps
+init-deps
+validate-deps
 ```
 
 ## Advanced Usage
@@ -501,7 +530,7 @@ modules:
 ### Common Issues
 
 1. **"Configuration file not found"**
-   - Run `python check-dependencies.py init` to create the configuration file
+   - Run `python -m tools.dependency_checker init` to create the configuration file
 
 2. **"Module not found in configuration"**
    - Add the module to your `dependency-rules.yaml` file
@@ -512,7 +541,7 @@ modules:
    - Check if the import is actually needed
 
 4. **"Configuration validation failed"**
-   - Run `python check-dependencies.py validate-config` for details
+   - Run `python -m tools.dependency_checker validate-config` for details
    - Ensure all referenced modules are defined
    - Check for circular dependencies
 
@@ -526,10 +555,10 @@ You can have different configuration files for different environments:
 
 ```bash
 # Development (more permissive)
-python check-dependencies.py check --config dependency-rules-dev.yaml
+python -m tools.dependency_checker check --config dependency-rules-dev.yaml
 
 # Production (more restrictive)  
-python check-dependencies.py check --config dependency-rules-prod.yaml
+python -m tools.dependency_checker check --config dependency-rules-prod.yaml
 ```
 
 ## Use Cases
