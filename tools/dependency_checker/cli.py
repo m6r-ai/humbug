@@ -2,7 +2,6 @@
 Command-line interface for the dependency checker.
 """
 
-import sys
 import argparse
 import os
 from typing import Any
@@ -101,7 +100,7 @@ def handle_check(args: Any) -> int:
     """Handle the check command."""
     if not os.path.exists(args.config):
         print(f"Configuration file not found: {args.config}")
-        print("Run 'dependency-checker init' to create a default configuration.")
+        print("Run 'python -m tools.dependency_checker init' to create a default configuration.")
         return 1
 
     config = DependencyConfig.load_from_file(args.config)
@@ -255,7 +254,3 @@ def handle_stats(args: Any) -> int:
             print(f"Largest module: {stats['largest_module']} ({stats['largest_module_files']} files)")
 
     return 0
-
-
-if __name__ == '__main__':
-    sys.exit(main())

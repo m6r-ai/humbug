@@ -215,19 +215,6 @@ python -m tools.dependency_checker graph --output deps.dot
 python -m tools.dependency_checker stats
 ```
 
-### Alternative Ways to Run
-
-If you prefer, you can also run the CLI script directly:
-
-```bash
-# Run the CLI script directly
-python tools/dependency_checker/cli.py check
-
-# Or make it executable (Unix/Linux/Mac)
-chmod +x tools/dependency_checker/cli.py
-./tools/dependency_checker/cli.py check
-```
-
 ### Python API
 
 ```python
