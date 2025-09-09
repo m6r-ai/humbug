@@ -165,21 +165,25 @@ class DependencyReporter:
 
         return "\n".join(lines)
 
-    def print_results(self, result: ValidationResult, format_type: str = "text", verbose: bool = False) -> None:
+    def print_results(self, result: ValidationResult, format_type: str = "text") -> None:
         """Print results to stdout in the specified format."""
         if format_type == "json":
             print(self.format_json(result))
+
         elif format_type == "csv":
             print(self.format_csv(result))
+
         else:
             print(self.format_text(result))
 
-    def save_results(self, result: ValidationResult, output_path: str, format_type: str = "text", verbose: bool = False) -> None:
+    def save_results(self, result: ValidationResult, output_path: str, format_type: str = "text") -> None:
         """Save results to a file."""
         if format_type == "json":
             content = self.format_json(result)
+
         elif format_type == "csv":
             content = self.format_csv(result)
+
         else:
             content = self.format_text(result)
 

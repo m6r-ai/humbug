@@ -38,8 +38,6 @@ Examples:
     check_parser.add_argument('--format', '-f', choices=['text', 'json', 'csv'],
                              default='text', help='Output format')
     check_parser.add_argument('--output', '-o', help='Output file path')
-    check_parser.add_argument('--verbose', '-v', action='store_true',
-                             help='Verbose output')
     check_parser.add_argument('--src-root', default='src',
                              help='Source root directory')
 
@@ -134,11 +132,11 @@ def handle_check(args: Any) -> int:
 
     # Output results
     if args.output:
-        reporter.save_results(result, args.output, args.format, args.verbose)
+        reporter.save_results(result, args.output, args.format)
         print(f"Results saved to: {args.output}")
 
     else:
-        reporter.print_results(result, args.format, args.verbose)
+        reporter.print_results(result, args.format)
 
     return reporter.get_exit_code(result)
 

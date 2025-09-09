@@ -315,7 +315,7 @@ python check-dependencies.py validate-config
 python check-dependencies.py stats
 
 # Test specific module
-python check-dependencies.py check --module core --verbose
+python check-dependencies.py check --module core
 ```
 
 ### Debug Import Detection

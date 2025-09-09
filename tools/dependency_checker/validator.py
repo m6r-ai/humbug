@@ -34,18 +34,22 @@ class ValidationResult:
 
     @property
     def has_violations(self) -> bool:
+        """Check if there are any violations in the result."""
         return len(self.violations) > 0
 
     @property
     def violation_count(self) -> int:
+        """Get the total number of violations."""
         return len(self.violations)
 
     @property
     def internal_violations(self) -> List[Violation]:
+        """Get only the internal dependency violations."""
         return [v for v in self.violations if v.violation_type == "internal"]
 
     @property
     def external_violations(self) -> List[Violation]:
+        """Get only the external dependency violations."""
         return [v for v in self.violations if v.violation_type == "external"]
 
 
