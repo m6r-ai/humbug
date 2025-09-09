@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from ai import AIConversationSettings
 from ai_tool import (
@@ -13,6 +13,7 @@ from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.user.user_manager import UserManager
 
 
@@ -21,8 +22,9 @@ class SystemAITool(AITool):
     System operations tool for LLM interaction.
 
     Provides structured access to system operations like opening files, creating terminals,
-    starting conversations, and accessing wiki views. All operations are restricted to
-    the current mindspace and require user authorization.
+    starting conversations, accessing wiki views, and controlling terminal operations.
+    All operations are restricted to the current mindspace and require user authorization
+    where appropriate.
     """
 
     def __init__(self, column_manager: ColumnManager):
@@ -85,7 +87,7 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="tab_id",
                     type="string",
-                    description="ID of a tab (for tab_info, close_tab and move_tab operations)",
+                    description="ID of a tab (for tab_info, close_tab, move_tab, and terminal operations)",
                     required=False
                 ),
                 AIToolParameter(
@@ -110,6 +112,18 @@ class SystemAITool(AITool):
                     name="message",
                     type="string",
                     description="Message to submit to conversation (for spawn_ai_child_conversation operation)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="command",
+                    type="string",
+                    description="Command to send to terminal (for send_terminal_command operation)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="lines",
+                    type="integer",
+                    description="Number of lines to read from terminal buffer (for read_terminal operation)",
                     required=False
                 )
             ]
@@ -136,8 +150,8 @@ class SystemAITool(AITool):
                 handler=self._new_terminal_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="Create a terminal tab for the user. "
-                    "You (the AI) cannot use this to run commands"
+                description="Create a terminal tab. "
+                    "You (the AI) can use this to run commands"
             ),
             "open_conversation_tab": AIToolOperationDefinition(
                 name="open_conversation_tab",
@@ -153,7 +167,6 @@ class SystemAITool(AITool):
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
                 description="Create a new AI conversation tab, with optional model/temperature. "
-                    "You (the AI) cannot use this to send messages"
             ),
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
@@ -203,6 +216,27 @@ class SystemAITool(AITool):
                 allowed_parameters={"tab_id", "target_column"},
                 required_parameters={"tab_id", "target_column"},
                 description="Move a tab to a specific column by index - there are a maximum of 6 columns"
+            ),
+            "send_terminal_command": AIToolOperationDefinition(
+                name="send_terminal_command",
+                handler=self._send_terminal_command,
+                allowed_parameters={"tab_id", "command"},
+                required_parameters={"command"},
+                description="Send a command to a terminal tab (given its tab ID). Requires user authorization."
+            ),
+            "read_terminal": AIToolOperationDefinition(
+                name="read_terminal",
+                handler=self._read_terminal,
+                allowed_parameters={"tab_id", "lines"},
+                required_parameters=set(),
+                description="Read current terminal buffer content (given a terminal tab ID)"
+            ),
+            "get_terminal_status": AIToolOperationDefinition(
+                name="get_terminal_status",
+                handler=self._get_terminal_status,
+                allowed_parameters={"tab_id"},
+                required_parameters=set(),
+                description="Get terminal status and process information (given a terminal tab ID)"
             )
         }
 
@@ -300,6 +334,219 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Invalid path '{path_str}': {str(e)}") from e
+
+    def _get_terminal_tab(self, arguments: Dict[str, Any]) -> TerminalTab:
+        """
+        Get a terminal tab by ID or current tab.
+
+        Args:
+            arguments: Tool arguments containing optional tab_id
+
+        Returns:
+            TerminalTab instance
+
+        Raises:
+            AIToolExecutionError: If no terminal tab found
+        """
+        tab_id = arguments.get("tab_id")
+        if tab_id:
+            # Get specific terminal by ID
+            if not isinstance(tab_id, str):
+                raise AIToolExecutionError("'tab_id' must be a string")
+
+            tab = self._column_manager.get_tab_by_id(tab_id)
+            if not tab:
+                raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+
+            if not isinstance(tab, TerminalTab):
+                raise AIToolExecutionError(f"Tab {tab_id} is not a terminal tab")
+
+            return tab
+
+        else:
+            # Use current tab
+            current_tab = self._column_manager.get_current_tab()
+            if not current_tab:
+                raise AIToolExecutionError("No current tab is open")
+
+            if not isinstance(current_tab, TerminalTab):
+                raise AIToolExecutionError("Current tab is not a terminal tab")
+
+            return current_tab
+
+    def _get_terminal_buffer_content(self, terminal_tab: TerminalTab, max_lines: Optional[int] = None) -> str:
+        """
+        Get the terminal buffer content as text.
+
+        Args:
+            terminal_tab: Terminal tab to read from
+            max_lines: Maximum number of lines to return (None for all)
+
+        Returns:
+            Terminal buffer content as string
+        """
+        # Access the terminal widget and its buffer
+        if not hasattr(terminal_tab, '_terminal_widget'):
+            raise AIToolExecutionError("Terminal widget is not available")
+
+        terminal_widget = terminal_tab._terminal_widget
+
+        # Get the terminal state and buffer
+        if not hasattr(terminal_widget, '_state'):
+            raise AIToolExecutionError("Terminal state is not available")
+
+        state = terminal_widget._state
+        buffer = state.current_buffer()
+
+        # Get buffer dimensions
+        history_lines = buffer.history_lines()
+        cols = buffer.cols
+
+        # Determine which lines to read
+        if max_lines is None:
+            start_line = 0
+            end_line = history_lines
+
+        else:
+            start_line = max(0, history_lines - max_lines)
+            end_line = history_lines
+
+        # Extract text content
+        lines = []
+        for line_idx in range(start_line, end_line):
+            if line_idx < len(buffer.lines):
+                line = buffer.lines[line_idx]
+                line_text = ""
+
+                # Extract characters from the line
+                for col in range(cols):
+                    char, _, _, _ = line.get_character(col)
+                    line_text += char
+
+                # Remove trailing spaces
+                line_text = line_text.rstrip()
+                lines.append(line_text)
+
+        return '\n'.join(lines)
+
+    def _get_terminal_status_info(self, terminal_tab: TerminalTab) -> Dict[str, Any]:
+        """
+        Get terminal status information.
+
+        Args:
+            terminal_tab: Terminal tab to get status for
+
+        Returns:
+            Dictionary containing terminal status information
+        """
+        status: Dict[str, Any] = {}
+
+        try:
+            # Get basic tab info
+            status['tab_id'] = terminal_tab.tab_id()
+            status['running'] = getattr(terminal_tab, '_running', False)
+
+            # Get process information
+            if hasattr(terminal_tab, '_terminal_process') and terminal_tab._terminal_process:
+                process = terminal_tab._terminal_process
+                status['process_id'] = getattr(process, 'get_process_id', lambda: None)()
+                status['process_running'] = getattr(process, 'is_running', lambda: False)()
+                status['working_directory'] = getattr(process, 'get_working_directory', lambda: None)()
+                status['process_name'] = getattr(process, 'get_process_name', lambda: 'Unknown')()
+
+            else:
+                status['process_id'] = None
+                status['process_running'] = False
+                status['working_directory'] = None
+                status['process_name'] = 'No process'
+
+            # Get terminal dimensions
+            if hasattr(terminal_tab, '_terminal_widget'):
+                terminal_widget = terminal_tab._terminal_widget
+                if hasattr(terminal_widget, 'get_terminal_size'):
+                    rows, cols = terminal_widget.get_terminal_size()
+                    status['terminal_size'] = {'rows': rows, 'cols': cols}
+
+                else:
+                    status['terminal_size'] = {'rows': 'unknown', 'cols': 'unknown'}
+
+                # Get cursor position if available
+                if hasattr(terminal_widget, '_state'):
+                    state = terminal_widget._state
+                    buffer = state.current_buffer()
+                    status['cursor_position'] = {
+                        'row': buffer.cursor.row,
+                        'col': buffer.cursor.col,
+                        'visible': buffer.cursor.visible
+                    }
+                    status['buffer_lines'] = buffer.history_lines()
+
+            else:
+                status['terminal_size'] = {'rows': 'unknown', 'cols': 'unknown'}
+                status['cursor_position'] = None
+                status['buffer_lines'] = 0
+
+        except Exception as e:
+            self._logger.warning(f"Error getting terminal status: {e}")
+            status['error'] = str(e)
+
+        return status
+
+    def _format_terminal_status(self, status_info: Dict[str, Any]) -> str:
+        """
+        Format terminal status information as readable text.
+
+        Args:
+            status_info: Status information dictionary
+
+        Returns:
+            Formatted status text
+        """
+        lines = []
+
+        lines.append(f"Tab ID: {status_info.get('tab_id', 'Unknown')}")
+        lines.append(f"Running: {status_info.get('running', False)}")
+
+        # Process information
+        pid = status_info.get('process_id')
+        if pid:
+            lines.append(f"Process ID: {pid}")
+
+        else:
+            lines.append("Process ID: None")
+
+        lines.append(f"Process Running: {status_info.get('process_running', False)}")
+        lines.append(f"Process Name: {status_info.get('process_name', 'Unknown')}")
+
+        working_dir = status_info.get('working_directory')
+        if working_dir:
+            lines.append(f"Working Directory: {working_dir}")
+
+        else:
+            lines.append("Working Directory: Unknown")
+
+        # Terminal dimensions
+        term_size = status_info.get('terminal_size', {})
+        rows = term_size.get('rows', 'unknown')
+        cols = term_size.get('cols', 'unknown')
+        lines.append(f"Terminal Size: {rows} rows x {cols} cols")
+
+        # Cursor position
+        cursor_pos = status_info.get('cursor_position')
+        if cursor_pos:
+            lines.append(f"Cursor Position: row {cursor_pos['row']}, col {cursor_pos['col']} (visible: {cursor_pos['visible']})")
+
+        else:
+            lines.append("Cursor Position: Unknown")
+
+        lines.append(f"Buffer Lines: {status_info.get('buffer_lines', 0)}")
+
+        # Error information
+        error = status_info.get('error')
+        if error:
+            lines.append(f"Error: {error}")
+
+        return '\n'.join(lines)
 
     async def execute(
         self,
@@ -797,3 +1044,123 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to move tab {tab_id} to column {target_column}: {str(e)}") from e
+
+    async def _send_terminal_command(
+        self,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Send a command to a terminal."""
+        arguments = tool_call.arguments
+
+        # Get and validate command
+        command = arguments.get("command")
+        if not command or not isinstance(command, str):
+            raise AIToolExecutionError("'command' must be a non-empty string")
+
+        # Get terminal tab
+        terminal_tab = self._get_terminal_tab(arguments)
+        tab_id = terminal_tab.tab_id()
+
+        # Build authorization context
+        context = f"Send command to terminal (tab {tab_id}): '{command}'"
+
+        # Request authorization - commands can be destructive
+        authorized = await request_authorization("system", arguments, context, True)
+        if not authorized:
+            raise AIToolAuthorizationDenied(f"User denied permission to send command: {command}")
+
+        try:
+            # Send command to terminal - add newline to execute
+            command_bytes = (command + '\n').encode('utf-8')
+
+            # Access the terminal process through the tab's internal structure
+            if hasattr(terminal_tab, '_terminal_process') and terminal_tab._terminal_process:
+                await terminal_tab._terminal_process.write_data(command_bytes)
+            else:
+                raise AIToolExecutionError("Terminal process is not available")
+
+            # Log the operation
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI sent command to terminal: '{command}'\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Command sent to terminal {tab_id}: '{command}'"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to send command to terminal: {str(e)}") from e
+
+    async def _read_terminal(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Read terminal buffer content."""
+        arguments = tool_call.arguments
+
+        # Get terminal tab
+        terminal_tab = self._get_terminal_tab(arguments)
+        tab_id = terminal_tab.tab_id()
+
+        # Get optional lines parameter
+        lines = arguments.get("lines")
+        if lines is not None and not isinstance(lines, int):
+            raise AIToolExecutionError("'lines' must be an integer")
+
+        try:
+            # Get terminal buffer content
+            buffer_content = self._get_terminal_buffer_content(terminal_tab, lines)
+
+            # Log the operation
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI read terminal buffer\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Terminal buffer content (tab {tab_id}):\n\n{buffer_content}"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to read terminal: {str(e)}") from e
+
+    async def _get_terminal_status(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get terminal status information."""
+        arguments = tool_call.arguments
+
+        # Get terminal tab
+        terminal_tab = self._get_terminal_tab(arguments)
+        tab_id = terminal_tab.tab_id()
+
+        try:
+            # Get terminal status
+            status_info = self._get_terminal_status_info(terminal_tab)
+
+            # Log the operation
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested terminal status\ntab ID: {tab_id}"
+            )
+
+            # Format status as readable text
+            status_text = self._format_terminal_status(status_info)
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Terminal status (tab {tab_id}):\n{status_text}"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get terminal status: {str(e)}") from e
