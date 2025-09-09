@@ -193,6 +193,7 @@ class ImportParser:
 
                 if relative_part:
                     resolved = '.'.join(base_parts + [relative_part])
+
                 else:
                     resolved = '.'.join(base_parts)
 
@@ -221,8 +222,10 @@ class ImportParser:
             parts = rel_path.parts[:-1]  # Remove filename
             if parts:
                 return '.'.join(parts)
+
         except ValueError:
             pass
+
         return None
 
     def is_standard_library_import(self, module_name: str) -> bool:

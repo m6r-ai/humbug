@@ -3,10 +3,10 @@ Configuration management for dependency checker.
 """
 
 import os
-import yaml
-from pathlib import Path
 from typing import Dict, List, Set
 from dataclasses import dataclass, field
+
+import yaml
 
 
 @dataclass
@@ -30,7 +30,7 @@ class DependencyConfig:
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-        with open(config_path, 'r') as f:
+        with open(config_path, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
 
         # Parse modules
@@ -83,7 +83,7 @@ class DependencyConfig:
             'src_root': self.src_root
         }
 
-        with open(config_path, 'w') as f:
+        with open(config_path, 'w', encoding='utf-8') as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=True)
 
     def get_allowed_dependencies(self, module: str) -> Set[str]:
@@ -122,16 +122,18 @@ class DependencyConfig:
         if pattern == "standard_library":
             # This would need to be enhanced with actual stdlib detection
             return False
-        elif pattern == "third_party":
+
+        if pattern == "third_party":
             # This is a catch-all for non-stdlib modules
             return True
-        elif pattern.endswith("*"):
+
+        if pattern.endswith("*"):
             # Wildcard pattern matching
             prefix = pattern[:-1]
             return module_name.startswith(prefix)
-        else:
-            # Exact match
-            return module_name == pattern
+
+        # Exact match
+        return module_name == pattern
 
     def get_all_modules(self) -> Set[str]:
         """Get all defined modules."""
@@ -156,6 +158,7 @@ class DependencyConfig:
         def has_cycle(node: str) -> bool:
             if node in rec_stack:
                 return True
+
             if node in visited:
                 return False
 

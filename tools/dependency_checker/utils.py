@@ -74,6 +74,7 @@ def get_project_stats(src_root: str) -> Dict[str, Any]:
                     if rel_path.parts:
                         module = rel_path.parts[0]
                         module_file_counts[module] = module_file_counts.get(module, 0) + 1
+
                 except ValueError:
                     pass
 

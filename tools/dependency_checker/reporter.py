@@ -15,7 +15,7 @@ class DependencyReporter:
     def __init__(self) -> None:
         pass
 
-    def format_text(self, result: ValidationResult, verbose: bool = False) -> str:
+    def format_text(self, result: ValidationResult) -> str:
         """Format results as human-readable text."""
         lines = []
 
@@ -172,7 +172,7 @@ class DependencyReporter:
         elif format_type == "csv":
             print(self.format_csv(result))
         else:
-            print(self.format_text(result, verbose))
+            print(self.format_text(result))
 
     def save_results(self, result: ValidationResult, output_path: str, format_type: str = "text", verbose: bool = False) -> None:
         """Save results to a file."""
@@ -181,7 +181,7 @@ class DependencyReporter:
         elif format_type == "csv":
             content = self.format_csv(result)
         else:
-            content = self.format_text(result, verbose)
+            content = self.format_text(result)
 
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(content)

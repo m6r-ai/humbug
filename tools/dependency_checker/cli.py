@@ -80,17 +80,21 @@ Examples:
     try:
         if args.command == 'check':
             return handle_check(args)
-        elif args.command == 'init':
+
+        if args.command == 'init':
             return handle_init(args)
-        elif args.command == 'validate-config':
+
+        if args.command == 'validate-config':
             return handle_validate_config(args)
-        elif args.command == 'graph':
+
+        if args.command == 'graph':
             return handle_graph(args)
-        elif args.command == 'stats':
+
+        if args.command == 'stats':
             return handle_stats(args)
-        else:
-            print(f"Unknown command: {args.command}")
-            return 1
+
+        print(f"Unknown command: {args.command}")
+        return 1
 
     except Exception as e:
         print(f"Error: {e}")
@@ -124,6 +128,7 @@ def handle_check(args: Any) -> int:
             print(f"Module '{args.module}' not found in configuration.")
             return 1
         result = validator.validate_module(args.module)
+
     else:
         result = validator.validate_all()
 
@@ -131,6 +136,7 @@ def handle_check(args: Any) -> int:
     if args.output:
         reporter.save_results(result, args.output, args.format, args.verbose)
         print(f"Results saved to: {args.output}")
+
     else:
         reporter.print_results(result, args.format, args.verbose)
 
@@ -186,18 +192,19 @@ def handle_validate_config(args: Any) -> int:
             print("Configuration validation failed:")
             for error in errors:
                 print(f"  ✗ {error}")
+
             return 1
-        else:
-            print("✓ Configuration is valid")
-            print(f"  Modules: {len(config.get_all_modules())}")
 
-            # Count total dependencies
-            total_internal = sum(len(module_config.internal_dependencies) for module_config in config.modules.values())
-            total_external = sum(len(module_config.external_dependencies) for module_config in config.modules.values())
+        print("✓ Configuration is valid")
+        print(f"  Modules: {len(config.get_all_modules())}")
 
-            print(f"  Total internal dependency rules: {total_internal}")
-            print(f"  Total external dependency rules: {total_external}")
-            return 0
+        # Count total dependencies
+        total_internal = sum(len(module_config.internal_dependencies) for module_config in config.modules.values())
+        total_external = sum(len(module_config.external_dependencies) for module_config in config.modules.values())
+
+        print(f"  Total internal dependency rules: {total_internal}")
+        print(f"  Total external dependency rules: {total_external}")
+        return 0
 
     except Exception as e:
         print(f"Error loading configuration: {e}")
