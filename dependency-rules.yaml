@@ -1,0 +1,79 @@
+# Dependency Rules Configuration
+# This file defines module dependency rules with both internal and external dependencies in one place
+
+modules:
+  ai:
+    internal_dependencies:
+      - ai_tool
+    external_dependencies:
+      - "standard_library"
+      - "aiohttp"
+      - "certifi"
+  
+  ai_conversation_transcript:
+    internal_dependencies:
+      - ai
+    external_dependencies:
+      - "standard_library"
+  
+  ai_tool:
+    internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+  
+  dast:
+    internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+  
+  dmarkdown:
+    internal_dependencies:
+      - dast
+      - syntax
+    external_dependencies:
+      - "standard_library"
+  
+  humbug:
+    internal_dependencies:
+      - ai
+      - ai_conversation_transcript
+      - ai_tool
+      - dast
+      - dmarkdown
+      - metaphor
+      - syntax
+      - terminal
+    external_dependencies:
+      - "standard_library"
+      - "PySide6"
+      - "qasync"
+
+  metaphor:
+    internal_dependencies:
+      - dast
+      - syntax
+    external_dependencies:
+      - "standard_library"
+  
+  syntax:
+    internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+  
+  terminal:
+    internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+# File patterns to ignore during checking
+ignore_patterns:
+  - "*/test_*.py"        # Test files
+  - "*/tests/*"          # Test directories
+  - "*/__pycache__/*"    # Python cache directories
+  - "*.pyc"              # Compiled Python files
+  - "*/.git/*"           # Git directories
+  - "*/build/*"          # Build directories
+  - "*/dist/*"           # Distribution directories
+
+# Source root directory (relative to this config file)
+src_root: "src"
