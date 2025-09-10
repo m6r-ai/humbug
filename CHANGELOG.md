@@ -4,6 +4,8 @@
 
 New features:
 
+- Updated the system AI tool to allow the AI to send commands to a terminal window (subject to user approval) and to be
+  able to query the status of terminal.  This allows the AI to have full control of the terminal!
 - When the AI backend gets a 200 OK connection response from the AI a new temporary "AI connected" message appears so the
   user can tell the AI is responding but not showing any messages (e.g. setting up a tool call).  This also means
   conversation transcripts now enable between network analytics.

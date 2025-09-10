@@ -37,9 +37,10 @@ A demonstration is that each version has been built using earlier versions of it
 
   Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a scientific calculator, and UI orchestration.
   Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
-  Task delegation allows one LLM to make use of one or more other LLS.
+  Task delegation allows one LLM to make use of one or more other LLMs.
   The UI supports simultaneous conversations, file editing with syntax highlights, dynamic wiki pages, terminal emulators, a system shell, and a system log.
   UI orchestration means your AI can help you work and visualise things using any of these tools too.
+  LLMs can check the status of terminal tabs and issue commands to them (subject to user approval)
 
 - **Open and extensible**  
 
