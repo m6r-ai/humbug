@@ -350,30 +350,17 @@ class SystemAITool(AITool):
         Raises:
             AIToolExecutionError: If no terminal tab found
         """
-        tab_id = arguments.get("tab_id")
-        if tab_id:
-            # Get specific terminal by ID
-            if not isinstance(tab_id, str):
-                raise AIToolExecutionError("'tab_id' must be a string")
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
 
-            tab = self._column_manager.get_tab_by_id(tab_id)
-            if not tab:
-                raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+        # Get specific terminal by ID
+        tab = self._column_manager.get_tab_by_id(tab_id)
+        if not tab:
+            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
-            if not isinstance(tab, TerminalTab):
-                raise AIToolExecutionError(f"Tab {tab_id} is not a terminal tab")
+        if not isinstance(tab, TerminalTab):
+            raise AIToolExecutionError(f"Tab {tab_id} is not a terminal tab")
 
-            return tab
-
-        # Use current tab
-        current_tab = self._column_manager.get_current_tab()
-        if not current_tab:
-            raise AIToolExecutionError("No current tab is open")
-
-        if not isinstance(current_tab, TerminalTab):
-            raise AIToolExecutionError("Current tab is not a terminal tab")
-
-        return current_tab
+        return tab
 
     def _format_terminal_status(self, status_info: TerminalStatusInfo) -> str:
         """
