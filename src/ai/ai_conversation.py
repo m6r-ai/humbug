@@ -555,32 +555,41 @@ class AIConversation:
         Args:
             error: AIError object containing error details
         """
+        # For cancellation, don't log as warning since it's user-initiated
+        if error.code == "cancelled":
+            self._logger.debug("AI response cancelled by user")
+
+        else:
+            self._logger.warning("AI response error: %s", error.message)
+
         # Only stop streaming if retries are exhausted
-        if error.retries_exhausted:
-            self._is_streaming = False
+        if not error.retries_exhausted:
+            return
 
-            # For cancellation, preserve the partial response first
-            if self._current_reasoning_message:
-                message = self._conversation.update_message(
-                    self._current_reasoning_message.id,
-                    content=self._current_reasoning_message.content,
-                    completed=False
-                )
-                if message:
-                    await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
+        self._is_streaming = False
 
-                self._current_reasoning_message = None
+        # For cancellation, preserve the partial response first
+        if self._current_reasoning_message:
+            message = self._conversation.update_message(
+                self._current_reasoning_message.id,
+                content=self._current_reasoning_message.content,
+                completed=False
+            )
+            if message:
+                await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
 
-            if self._current_ai_message:
-                message = self._conversation.update_message(
-                    self._current_ai_message.id,
-                    content=self._current_ai_message.content,
-                    completed=False
-                )
-                if message:
-                    await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
+            self._current_reasoning_message = None
 
-                self._current_ai_message = None
+        if self._current_ai_message:
+            message = self._conversation.update_message(
+                self._current_ai_message.id,
+                content=self._current_ai_message.content,
+                completed=False
+            )
+            if message:
+                await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
+
+            self._current_ai_message = None
 
         error_msg = error.message
         error_message = AIMessage.create(
@@ -590,13 +599,6 @@ class AIConversation:
         )
         self._conversation.add_message(error_message)
         await self._trigger_event(AIConversationEvent.ERROR, error.retries_exhausted, error_message)
-
-        # For cancellation, don't log as warning since it's user-initiated
-        if error.code == "cancelled":
-            self._logger.debug("AI response cancelled by user")
-
-        else:
-            self._logger.warning("AI response error: %s", error.message)
 
     async def _handle_connection(self) -> None:
         """Handle AI connection established."""
