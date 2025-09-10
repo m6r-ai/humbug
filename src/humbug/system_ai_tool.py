@@ -221,22 +221,22 @@ class SystemAITool(AITool):
                 name="send_terminal_command",
                 handler=self._send_terminal_command,
                 allowed_parameters={"tab_id", "command"},
-                required_parameters={"command"},
-                description="Send a command to a terminal tab (given its tab ID). Requires user authorization."
+                required_parameters={"tab_id", "command"},
+                description="Send a command to a terminal tab, given its ID. Requires user authorization."
             ),
             "read_terminal": AIToolOperationDefinition(
                 name="read_terminal",
                 handler=self._read_terminal,
                 allowed_parameters={"tab_id", "lines"},
-                required_parameters=set(),
-                description="Read current terminal buffer content (given a terminal tab ID)"
+                required_parameters={"tab_id"},
+                description="Read current terminal buffer content, given its tab ID"
             ),
             "get_terminal_status": AIToolOperationDefinition(
                 name="get_terminal_status",
                 handler=self._get_terminal_status,
                 allowed_parameters={"tab_id"},
-                required_parameters=set(),
-                description="Get terminal status and process information (given a terminal tab ID)"
+                required_parameters={"tab_id"},
+                description="Get terminal status and process information, given its tab ID"
             )
         }
 
