@@ -15,6 +15,7 @@ from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
+from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
 from humbug.tabs.terminal.terminal_widget import TerminalWidget
 
 
@@ -508,3 +509,65 @@ class TerminalTab(TabBase):
         self._terminal_widget.find_text(text, forward)
         current, total = self._terminal_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
+
+    def get_terminal_buffer_content(self, max_lines: int | None = None) -> str:
+        """
+        Get terminal buffer content.
+
+        Args:
+            max_lines: Maximum number of lines to return (None for all)
+
+        Returns:
+            Terminal buffer content as string
+        """
+        return self._terminal_widget.get_buffer_content(max_lines)
+
+    def get_terminal_status_info(self) -> TerminalStatusInfo:
+        """
+        Get complete terminal status information.
+
+        Returns:
+            TerminalStatusInfo containing complete terminal status
+        """
+        # Get widget-level status information
+        widget_status = self._terminal_widget.get_widget_status_info()
+
+        # Get process information
+        process_id = self._terminal_process.get_process_id()
+        process_running = self._terminal_process.is_running()
+        process_name = self._terminal_process.get_process_name()
+
+        return TerminalStatusInfo(
+            # Widget info
+            terminal_size=widget_status.terminal_size,
+            cursor_position=widget_status.cursor_position,
+            cursor_visible=widget_status.cursor_visible,
+            buffer_lines=widget_status.buffer_lines,
+
+            # Tab/Process info
+            tab_id=self._tab_id,
+            tab_running=self._running,
+            process_id=process_id,
+            process_running=process_running,
+            process_name=process_name,
+        )
+
+    async def send_command(self, command: str) -> None:
+        """
+        Send command to terminal process.
+
+        Args:
+            command: Command string to send
+
+        Raises:
+            RuntimeError: If terminal process is not available or not running
+        """
+        if not self._terminal_process:
+            raise RuntimeError("Terminal process is not available")
+
+        if not self._running:
+            raise RuntimeError("Terminal is not running")
+
+        # Send command with newline to execute it
+        command_bytes = (command + '\n').encode('utf-8')
+        await self._terminal_process.write_data(command_bytes)

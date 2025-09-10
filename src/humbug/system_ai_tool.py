@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from ai import AIConversationSettings
 from ai_tool import (
@@ -9,10 +9,12 @@ from ai_tool import (
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
     AIToolResult, AIToolCall
 )
+
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
 from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.user.user_manager import UserManager
 
@@ -363,188 +365,49 @@ class SystemAITool(AITool):
 
             return tab
 
-        else:
-            # Use current tab
-            current_tab = self._column_manager.get_current_tab()
-            if not current_tab:
-                raise AIToolExecutionError("No current tab is open")
+        # Use current tab
+        current_tab = self._column_manager.get_current_tab()
+        if not current_tab:
+            raise AIToolExecutionError("No current tab is open")
 
-            if not isinstance(current_tab, TerminalTab):
-                raise AIToolExecutionError("Current tab is not a terminal tab")
+        if not isinstance(current_tab, TerminalTab):
+            raise AIToolExecutionError("Current tab is not a terminal tab")
 
-            return current_tab
+        return current_tab
 
-    def _get_terminal_buffer_content(self, terminal_tab: TerminalTab, max_lines: Optional[int] = None) -> str:
-        """
-        Get the terminal buffer content as text.
-
-        Args:
-            terminal_tab: Terminal tab to read from
-            max_lines: Maximum number of lines to return (None for all)
-
-        Returns:
-            Terminal buffer content as string
-        """
-        # Access the terminal widget and its buffer
-        if not hasattr(terminal_tab, '_terminal_widget'):
-            raise AIToolExecutionError("Terminal widget is not available")
-
-        terminal_widget = terminal_tab._terminal_widget
-
-        # Get the terminal state and buffer
-        if not hasattr(terminal_widget, '_state'):
-            raise AIToolExecutionError("Terminal state is not available")
-
-        state = terminal_widget._state
-        buffer = state.current_buffer()
-
-        # Get buffer dimensions
-        history_lines = buffer.history_lines()
-        cols = buffer.cols
-
-        # Determine which lines to read
-        if max_lines is None:
-            start_line = 0
-            end_line = history_lines
-
-        else:
-            start_line = max(0, history_lines - max_lines)
-            end_line = history_lines
-
-        # Extract text content
-        lines = []
-        for line_idx in range(start_line, end_line):
-            if line_idx < len(buffer.lines):
-                line = buffer.lines[line_idx]
-                line_text = ""
-
-                # Extract characters from the line
-                for col in range(cols):
-                    char, _, _, _ = line.get_character(col)
-                    line_text += char
-
-                # Remove trailing spaces
-                line_text = line_text.rstrip()
-                lines.append(line_text)
-
-        return '\n'.join(lines)
-
-    def _get_terminal_status_info(self, terminal_tab: TerminalTab) -> Dict[str, Any]:
-        """
-        Get terminal status information.
-
-        Args:
-            terminal_tab: Terminal tab to get status for
-
-        Returns:
-            Dictionary containing terminal status information
-        """
-        status: Dict[str, Any] = {}
-
-        try:
-            # Get basic tab info
-            status['tab_id'] = terminal_tab.tab_id()
-            status['running'] = getattr(terminal_tab, '_running', False)
-
-            # Get process information
-            if hasattr(terminal_tab, '_terminal_process') and terminal_tab._terminal_process:
-                process = terminal_tab._terminal_process
-                status['process_id'] = getattr(process, 'get_process_id', lambda: None)()
-                status['process_running'] = getattr(process, 'is_running', lambda: False)()
-                status['working_directory'] = getattr(process, 'get_working_directory', lambda: None)()
-                status['process_name'] = getattr(process, 'get_process_name', lambda: 'Unknown')()
-
-            else:
-                status['process_id'] = None
-                status['process_running'] = False
-                status['working_directory'] = None
-                status['process_name'] = 'No process'
-
-            # Get terminal dimensions
-            if hasattr(terminal_tab, '_terminal_widget'):
-                terminal_widget = terminal_tab._terminal_widget
-                if hasattr(terminal_widget, 'get_terminal_size'):
-                    rows, cols = terminal_widget.get_terminal_size()
-                    status['terminal_size'] = {'rows': rows, 'cols': cols}
-
-                else:
-                    status['terminal_size'] = {'rows': 'unknown', 'cols': 'unknown'}
-
-                # Get cursor position if available
-                if hasattr(terminal_widget, '_state'):
-                    state = terminal_widget._state
-                    buffer = state.current_buffer()
-                    status['cursor_position'] = {
-                        'row': buffer.cursor.row,
-                        'col': buffer.cursor.col,
-                        'visible': buffer.cursor.visible
-                    }
-                    status['buffer_lines'] = buffer.history_lines()
-
-            else:
-                status['terminal_size'] = {'rows': 'unknown', 'cols': 'unknown'}
-                status['cursor_position'] = None
-                status['buffer_lines'] = 0
-
-        except Exception as e:
-            self._logger.warning(f"Error getting terminal status: {e}")
-            status['error'] = str(e)
-
-        return status
-
-    def _format_terminal_status(self, status_info: Dict[str, Any]) -> str:
+    def _format_terminal_status(self, status_info: TerminalStatusInfo) -> str:
         """
         Format terminal status information as readable text.
 
         Args:
-            status_info: Status information dictionary
+            status_info: TerminalStatusInfo instance
 
         Returns:
             Formatted status text
         """
         lines = []
 
-        lines.append(f"Tab ID: {status_info.get('tab_id', 'Unknown')}")
-        lines.append(f"Running: {status_info.get('running', False)}")
+        lines.append(f"Tab ID: {status_info.tab_id}")
+        lines.append(f"Running: {status_info.tab_running}")
 
         # Process information
-        pid = status_info.get('process_id')
-        if pid:
-            lines.append(f"Process ID: {pid}")
-
+        if status_info.process_id:
+            lines.append(f"Process ID: {status_info.process_id}")
         else:
             lines.append("Process ID: None")
 
-        lines.append(f"Process Running: {status_info.get('process_running', False)}")
-        lines.append(f"Process Name: {status_info.get('process_name', 'Unknown')}")
-
-        working_dir = status_info.get('working_directory')
-        if working_dir:
-            lines.append(f"Working Directory: {working_dir}")
-
-        else:
-            lines.append("Working Directory: Unknown")
+        lines.append(f"Process Running: {status_info.process_running}")
+        lines.append(f"Process Name: {status_info.process_name}")
 
         # Terminal dimensions
-        term_size = status_info.get('terminal_size', {})
-        rows = term_size.get('rows', 'unknown')
-        cols = term_size.get('cols', 'unknown')
+        rows, cols = status_info.terminal_size
         lines.append(f"Terminal Size: {rows} rows x {cols} cols")
 
         # Cursor position
-        cursor_pos = status_info.get('cursor_position')
-        if cursor_pos:
-            lines.append(f"Cursor Position: row {cursor_pos['row']}, col {cursor_pos['col']} (visible: {cursor_pos['visible']})")
+        cursor_row, cursor_col = status_info.cursor_position
+        lines.append(f"Cursor Position: row {cursor_row}, col {cursor_col} (visible: {status_info.cursor_visible})")
 
-        else:
-            lines.append("Cursor Position: Unknown")
-
-        lines.append(f"Buffer Lines: {status_info.get('buffer_lines', 0)}")
-
-        # Error information
-        error = status_info.get('error')
-        if error:
-            lines.append(f"Error: {error}")
+        lines.append(f"Buffer Lines: {status_info.buffer_lines}")
 
         return '\n'.join(lines)
 
@@ -1071,14 +934,8 @@ class SystemAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to send command: {command}")
 
         try:
-            # Send command to terminal - add newline to execute
-            command_bytes = (command + '\n').encode('utf-8')
-
-            # Access the terminal process through the tab's internal structure
-            if hasattr(terminal_tab, '_terminal_process') and terminal_tab._terminal_process:
-                await terminal_tab._terminal_process.write_data(command_bytes)
-            else:
-                raise AIToolExecutionError("Terminal process is not available")
+            # Send command to terminal using public method
+            await terminal_tab.send_command(command)
 
             # Log the operation
             self._mindspace_manager.add_interaction(
@@ -1113,8 +970,8 @@ class SystemAITool(AITool):
             raise AIToolExecutionError("'lines' must be an integer")
 
         try:
-            # Get terminal buffer content
-            buffer_content = self._get_terminal_buffer_content(terminal_tab, lines)
+            # Get terminal buffer content using public method
+            buffer_content = terminal_tab.get_terminal_buffer_content(lines)
 
             # Log the operation
             self._mindspace_manager.add_interaction(
@@ -1144,8 +1001,8 @@ class SystemAITool(AITool):
         tab_id = terminal_tab.tab_id()
 
         try:
-            # Get terminal status
-            status_info = self._get_terminal_status_info(terminal_tab)
+            # Get terminal status using public method
+            status_info = terminal_tab.get_terminal_status_info()
 
             # Log the operation
             self._mindspace_manager.add_interaction(

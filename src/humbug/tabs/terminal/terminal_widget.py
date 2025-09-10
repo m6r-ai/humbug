@@ -17,6 +17,7 @@ from terminal import TerminalCharacterAttributes, TerminalBuffer, TerminalState
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 from humbug.tabs.terminal.terminal_selection import TerminalSelection
+from humbug.tabs.terminal.terminal_status import TerminalWidgetStatusInfo
 
 
 @dataclass
@@ -1308,3 +1309,61 @@ class TerminalWidget(QAbstractScrollArea):
             return 0, 0
 
         return self._current_match + 1, len(self._matches)
+
+    def get_buffer_content(self, max_lines: int | None = None) -> str:
+        """
+        Get terminal buffer content as text.
+
+        Args:
+            max_lines: Maximum number of lines to return (None for all)
+
+        Returns:
+            Terminal buffer content as string
+        """
+        buffer = self._state.current_buffer()
+        history_lines = buffer.history_lines()
+        cols = buffer.cols
+
+        # Determine which lines to read
+        if max_lines is None:
+            start_line = 0
+            end_line = history_lines
+
+        else:
+            start_line = max(0, history_lines - max_lines)
+            end_line = history_lines
+
+        # Extract text content
+        lines = []
+        for line_idx in range(start_line, end_line):
+            if line_idx < len(buffer.lines):
+                line = buffer.lines[line_idx]
+                line_text = ""
+
+                # Extract characters from the line
+                for col in range(cols):
+                    char, _, _, _ = line.get_character(col)
+                    line_text += char
+
+                # Remove trailing spaces
+                line_text = line_text.rstrip()
+                lines.append(line_text)
+
+        return '\n'.join(lines)
+
+    def get_widget_status_info(self) -> TerminalWidgetStatusInfo:
+        """
+        Get widget-level status information.
+
+        Returns:
+            TerminalWidgetStatusInfo containing widget status
+        """
+        buffer = self._state.current_buffer()
+        rows, cols = self._state.get_terminal_size()
+
+        return TerminalWidgetStatusInfo(
+            terminal_size=(rows, cols),
+            cursor_position=(buffer.cursor.row, buffer.cursor.col),
+            cursor_visible=buffer.cursor.visible,
+            buffer_lines=buffer.history_lines()
+        )
