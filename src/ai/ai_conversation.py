@@ -193,7 +193,7 @@ class AIConversation:
         settings = self.conversation_settings()
 
         try:
-            self._logger.debug("=== Starting AI response streaming ===")
+            self._logger.debug("Starting AI response streaming")
 
             # Get appropriate backend for conversation
             provider = AIConversationSettings.get_provider(settings.model)
@@ -269,8 +269,6 @@ class AIConversation:
             return
 
         finally:
-            self._logger.debug("=== Finished AI response streaming ===")
-
             # Properly close the async generator if it exists
             if stream is not None:
                 try:
@@ -726,6 +724,8 @@ class AIConversation:
         self._current_reasoning_message = new_message
 
     async def _handle_usage(self, reasoning: str, content: str, tool_calls: List[AIToolCall] | None) -> None:
+        self._logger.debug("Finished AI response streaming")
+
         self._is_streaming = False
 
         if not content and not reasoning:
