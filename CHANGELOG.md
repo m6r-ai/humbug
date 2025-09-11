@@ -2,6 +2,11 @@
 
 ## v0.26 (2025-09-xx)
 
+Bug fixes:
+
+- The system AI tool was not escaping control characters in a way the terminal could handle so things like backspace,
+  escape, or Ctrl+C didn't work correctly.
+
 ## v0.25 (2025-09-10)
 
 New features:

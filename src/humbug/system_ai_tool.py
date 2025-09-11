@@ -1,6 +1,9 @@
+"""Terminal tab implementation."""
+
 import json
 import logging
 import os
+import re
 from typing import Dict, Any, List
 
 from ai import AIConversationSettings
@@ -224,7 +227,8 @@ class SystemAITool(AITool):
                 handler=self._send_terminal_command,
                 allowed_parameters={"tab_id", "command"},
                 required_parameters={"tab_id", "command"},
-                description="Send a command to a terminal tab, given its ID. Requires user authorization."
+                description="Send a command to a terminal tab, given its ID. Requires user authorization. "
+                    "You must use `\\u####` format to send any control characters other than newline, carriage return, or tab."
             ),
             "read_terminal": AIToolOperationDefinition(
                 name="read_terminal",
@@ -397,6 +401,50 @@ class SystemAITool(AITool):
         lines.append(f"Buffer Lines: {status_info.buffer_lines}")
 
         return '\n'.join(lines)
+
+    def _process_ai_escape_sequences(self, command: str) -> str:
+        """
+        Convert AI's literal Unicode escape sequences to actual control characters.
+
+        This handles the JSON double-escaping issue where the AI sends commands with
+        Unicode escapes that got converted to literal text. For example:
+        - AI intends: ESC character for ANSI colors
+        - AI should send: \\u001b in JSON (becomes actual ESC after json.loads)
+        - But if double-escaped: \\\\u001b in JSON (becomes literal \\u001b text)
+        - This function: converts literal \\u001b back to actual ESC character
+
+        We only process Unicode escapes (\\u####) because:
+        1. They're unambiguous in intent (clearly meant to be characters)
+        2. They're valid JSON escape sequences (unlike \\x##)
+        3. They avoid the ambiguity issues with \\n, \\t, etc.
+
+        Args:
+            command: Command string potentially containing literal Unicode escape sequences
+
+        Returns:
+            Command string with Unicode escape sequences converted to actual characters
+        """
+        if not command:
+            return command
+
+        # Convert \u#### Unicode sequences to actual characters
+        def unicode_replace(match):
+            hex_value = match.group(1)
+            try:
+                char_code = int(hex_value, 16)
+                return chr(char_code)
+
+            except (ValueError, OverflowError):
+                # If invalid Unicode code point, return original
+                return match.group(0)
+
+        result = re.sub(r'\\u([0-9a-fA-F]{4})', unicode_replace, command)
+
+        # Log conversion for debugging if any changes were made
+        if result != command:
+            self._logger.debug("Processed AI Unicode escape sequences: %r -> %r", command, result)
+
+        return result
 
     async def execute(
         self,
@@ -908,12 +956,17 @@ class SystemAITool(AITool):
         if not command or not isinstance(command, str):
             raise AIToolExecutionError("'command' must be a non-empty string")
 
+        # Process escape sequences from AI - convert literal Unicode escapes to actual characters
+        processed_command = self._process_ai_escape_sequences(command)
+
         # Get terminal tab
         terminal_tab = self._get_terminal_tab(arguments)
         tab_id = terminal_tab.tab_id()
 
-        # Build authorization context
+        # Build authorization context - show original command for transparency
         context = f"Send command to terminal (tab {tab_id}): '{command}'"
+        if processed_command != command:
+            context += f"\n(will be processed as: '{processed_command!r}')"
 
         # Request authorization - commands can be destructive
         authorized = await request_authorization("system", arguments, context, True)
@@ -921,8 +974,7 @@ class SystemAITool(AITool):
             raise AIToolAuthorizationDenied(f"User denied permission to send command: {command}")
 
         try:
-            # Send command to terminal using public method
-            await terminal_tab.send_command(command)
+            await terminal_tab.send_command(processed_command)
 
             # Log the operation
             self._mindspace_manager.add_interaction(
