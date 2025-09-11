@@ -46,9 +46,9 @@ class FileSystemAITool(AITool):
         # Build description from operations
         base_description = (
             f"The filesystem tool lets you (the AI) perform various file and directory operations within the current "
-            f"sandbox environment (this sandbox is called the project mindspace). Just because you can use this tool, "
-            f"does not mean you should, especially if you will be writing or modifying the filesystem. You should not "
-            "assume the user wants you to write files or directories unless they ask you to do so."
+            f"filesystem sandbox environment (this sandbox is called the project mindspace). Just because you can use this "
+            f"tool, does not mean you should, especially if you will be writing or modifying the filesystem. You should not "
+            f"assume the user wants you to write files or directories unless they ask you to do so."
             f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
         )
 

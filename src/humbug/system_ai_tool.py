@@ -231,7 +231,7 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id", "input"},
                 description="Write input to a terminal tab, given its ID. "
                     "This will be processed as a series of interactive key strokes. "
-                    "You must use `\\u####` format to send any control characters other than newline, carriage return, or tab"
+                    "You must use `\\u####` format to send any control characters (ASCII values less than 0x20)"
             ),
             "read_terminal": AIToolOperationDefinition(
                 name="read_terminal",
