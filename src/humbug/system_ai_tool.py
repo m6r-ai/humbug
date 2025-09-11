@@ -120,9 +120,9 @@ class SystemAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
-                    name="command",
+                    name="input",
                     type="string",
-                    description="Command to send to terminal (for send_terminal_command operation)",
+                    description="Input to write to terminal (for write_terminal operation)",
                     required=False
                 ),
                 AIToolParameter(
@@ -155,8 +155,10 @@ class SystemAITool(AITool):
                 handler=self._new_terminal_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="Create a terminal tab. "
-                    "You (the AI) can use this to run commands"
+                description="Create a fully interactive terminal tab. "
+                    "This provides a terminal emulator connected to a new shell. "
+                    "You may interact with this terminal using the `read_terminal` and `write_terminal` operations, but"
+                    "you must use `read_terminal` to observe any changes."
             ),
             "open_conversation_tab": AIToolOperationDefinition(
                 name="open_conversation_tab",
@@ -222,20 +224,22 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id", "target_column"},
                 description="Move a tab to a specific column by index - there are a maximum of 6 columns"
             ),
-            "send_terminal_command": AIToolOperationDefinition(
-                name="send_terminal_command",
-                handler=self._send_terminal_command,
-                allowed_parameters={"tab_id", "command"},
-                required_parameters={"tab_id", "command"},
-                description="Send a command to a terminal tab, given its ID. Requires user authorization. "
-                    "You must use `\\u####` format to send any control characters other than newline, carriage return, or tab."
+            "write_terminal": AIToolOperationDefinition(
+                name="write_terminal_input",
+                handler=self._write_terminal,
+                allowed_parameters={"tab_id", "input"},
+                required_parameters={"tab_id", "input"},
+                description="Write input to a terminal tab, given its ID. "
+                    "This will be processed as a series of interactive key strokes. "
+                    "You must use `\\u####` format to send any control characters other than newline, carriage return, or tab"
             ),
             "read_terminal": AIToolOperationDefinition(
                 name="read_terminal",
                 handler=self._read_terminal,
                 allowed_parameters={"tab_id", "lines"},
                 required_parameters={"tab_id"},
-                description="Read current terminal buffer content, given its tab ID"
+                description="Read the current terminal buffer (ouput display) content, given its tab ID. "
+                    "This returns the raw content of the terminal display"
             ),
             "get_terminal_status": AIToolOperationDefinition(
                 name="get_terminal_status",
@@ -402,11 +406,11 @@ class SystemAITool(AITool):
 
         return '\n'.join(lines)
 
-    def _process_ai_escape_sequences(self, command: str) -> str:
+    def _process_ai_escape_sequences(self, raw_input: str) -> str:
         """
         Convert AI's literal Unicode escape sequences to actual control characters.
 
-        This handles the JSON double-escaping issue where the AI sends commands with
+        This handles the JSON double-escaping issue where the AI sends input with
         Unicode escapes that got converted to literal text. For example:
         - AI intends: ESC character for ANSI colors
         - AI should send: \\u001b in JSON (becomes actual ESC after json.loads)
@@ -419,13 +423,13 @@ class SystemAITool(AITool):
         3. They avoid the ambiguity issues with \\n, \\t, etc.
 
         Args:
-            command: Command string potentially containing literal Unicode escape sequences
+            raw_input: Input string potentially containing literal Unicode escape sequences
 
         Returns:
-            Command string with Unicode escape sequences converted to actual characters
+            Processed input string with Unicode escape sequences converted to actual characters
         """
-        if not command:
-            return command
+        if not raw_input:
+            return raw_input
 
         # Convert \u#### Unicode sequences to actual characters
         def unicode_replace(match):
@@ -438,11 +442,11 @@ class SystemAITool(AITool):
                 # If invalid Unicode code point, return original
                 return match.group(0)
 
-        result = re.sub(r'\\u([0-9a-fA-F]{4})', unicode_replace, command)
+        result = re.sub(r'\\u([0-9a-fA-F]{4})', unicode_replace, raw_input)
 
         # Log conversion for debugging if any changes were made
-        if result != command:
-            self._logger.debug("Processed AI Unicode escape sequences: %r -> %r", command, result)
+        if result != raw_input:
+            self._logger.debug("Processed AI Unicode escape sequences: %r -> %r", raw_input, result)
 
         return result
 
@@ -943,53 +947,53 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to move tab {tab_id} to column {target_column}: {str(e)}") from e
 
-    async def _send_terminal_command(
+    async def _write_terminal(
         self,
         tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Send a command to a terminal."""
+        """Write to a terminal."""
         arguments = tool_call.arguments
 
-        # Get and validate command
-        command = arguments.get("command")
-        if not command or not isinstance(command, str):
-            raise AIToolExecutionError("'command' must be a non-empty string")
+        # Get and validate input
+        raw_input = arguments.get("input")
+        if not raw_input or not isinstance(raw_input, str):
+            raise AIToolExecutionError("'input' must be a non-empty string")
 
         # Process escape sequences from AI - convert literal Unicode escapes to actual characters
-        processed_command = self._process_ai_escape_sequences(command)
+        processed_input = self._process_ai_escape_sequences(raw_input)
 
         # Get terminal tab
         terminal_tab = self._get_terminal_tab(arguments)
         tab_id = terminal_tab.tab_id()
 
-        # Build authorization context - show original command for transparency
-        context = f"Send command to terminal (tab {tab_id}): '{command}'"
-        if processed_command != command:
-            context += f"\n(will be processed as: '{processed_command!r}')"
+        # Build authorization context - show original input for transparency
+        context = f"Send input to terminal (tab {tab_id}): '{raw_input}'"
+        if processed_input != raw_input:
+            context += f"\n(will be processed as: '{processed_input!r}')"
 
         # Request authorization - commands can be destructive
         authorized = await request_authorization("system", arguments, context, True)
         if not authorized:
-            raise AIToolAuthorizationDenied(f"User denied permission to send command: {command}")
+            raise AIToolAuthorizationDenied(f"User denied permission to send input: {raw_input}")
 
         try:
-            await terminal_tab.send_command(processed_command)
+            await terminal_tab.send_command(processed_input)
 
             # Log the operation
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI sent command to terminal: '{command}'\ntab ID: {tab_id}"
+                f"AI sent command to terminal: '{raw_input}'\ntab ID: {tab_id}"
             )
 
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Command sent to terminal {tab_id}: '{command}'"
+                content=f"Input sent to terminal {tab_id}: '{input}'"
             )
 
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to send command to terminal: {str(e)}") from e
+            raise AIToolExecutionError(f"Failed to send input to terminal: {str(e)}") from e
 
     async def _read_terminal(
         self,
