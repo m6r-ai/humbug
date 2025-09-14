@@ -1,0 +1,354 @@
+diff --git a/src/humbug/system_ai_tool.py b/src/humbug/system_ai_tool.py
+index 0a19be71..75b55f49 100644
+--- a/src/humbug/system_ai_tool.py
++++ b/src/humbug/system_ai_tool.py
+@@ -1,6 +1,9 @@
++"""Terminal tab implementation."""
++
+ import json
+ import logging
+ import os
++import re
+ from typing import Dict, Any, List
+ 
+ from ai import AIConversationSettings
+@@ -9,10 +12,13 @@ from ai_tool import (
+     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
+     AIToolResult, AIToolCall
+ )
++
+ from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
+ from humbug.mindspace.mindspace_manager import MindspaceManager
+ from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
+ from humbug.tabs.column_manager import ColumnManager
++from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
++from humbug.tabs.terminal.terminal_tab import TerminalTab
+ from humbug.user.user_manager import UserManager
+ 
+ 
+@@ -21,8 +27,9 @@ class SystemAITool(AITool):
+     System operations tool for LLM interaction.
+ 
+     Provides structured access to system operations like opening files, creating terminals,
+-    starting conversations, and accessing wiki views. All operations are restricted to
+-    the current mindspace and require user authorization.
++    starting conversations, accessing wiki views, and controlling terminal operations.
++    All operations are restricted to the current mindspace and require user authorization
++    where appropriate.
+     """
+ 
+     def __init__(self, column_manager: ColumnManager):
+@@ -85,7 +92,7 @@ class SystemAITool(AITool):
+                 AIToolParameter(
+                     name="tab_id",
+                     type="string",
+-                    description="ID of a tab (for tab_info, close_tab and move_tab operations)",
++                    description="ID of a tab (for tab_info, close_tab, move_tab, and terminal operations)",
+                     required=False
+                 ),
+                 AIToolParameter(
+@@ -111,6 +118,18 @@ class SystemAITool(AITool):
+                     type="string",
+                     description="Message to submit to conversation (for spawn_ai_child_conversation operation)",
+                     required=False
++                ),
++                AIToolParameter(
++                    name="input",
++                    type="string",
++                    description="Input to write to terminal (for write_terminal operation)",
++                    required=False
++                ),
++                AIToolParameter(
++                    name="lines",
++                    type="integer",
++                    description="Number of lines to read from terminal buffer (for read_terminal operation)",
++                    required=False
+                 )
+             ]
+         )
+@@ -136,8 +155,10 @@ class SystemAITool(AITool):
+                 handler=self._new_terminal_tab,
+                 allowed_parameters=set(),
+                 required_parameters=set(),
+-                description="Create a terminal tab for the user. "
+-                    "You (the AI) cannot use this to run commands"
++                description="Create a fully interactive terminal tab. "
++                    "This provides a terminal emulator connected to a new shell. "
++                    "You may interact with this terminal using the `read_terminal` and `write_terminal` operations, but"
++                    "you must use `read_terminal` to observe any changes."
+             ),
+             "open_conversation_tab": AIToolOperationDefinition(
+                 name="open_conversation_tab",
+@@ -153,7 +174,6 @@ class SystemAITool(AITool):
+                 allowed_parameters={"model", "temperature"},
+                 required_parameters=set(),
+                 description="Create a new AI conversation tab, with optional model/temperature. "
+-                    "You (the AI) cannot use this to send messages"
+             ),
+             "show_system_shell_tab": AIToolOperationDefinition(
+                 name="show_system_shell_tab",
+@@ -203,6 +223,30 @@ class SystemAITool(AITool):
+                 allowed_parameters={"tab_id", "target_column"},
+                 required_parameters={"tab_id", "target_column"},
+                 description="Move a tab to a specific column by index - there are a maximum of 6 columns"
++            ),
++            "write_terminal": AIToolOperationDefinition(
++                name="write_terminal_input",
++                handler=self._write_terminal,
++                allowed_parameters={"tab_id", "input"},
++                required_parameters={"tab_id", "input"},
++                description="Write input to a terminal tab, given its ID. "
++                    "This will be processed as a series of interactive key strokes. "
++                    "You must use `\\u####` format to send any control characters (ASCII values less than 0x20)"
++            ),
++            "read_terminal": AIToolOperationDefinition(
++                name="read_terminal",
++                handler=self._read_terminal,
++                allowed_parameters={"tab_id", "lines"},
++                required_parameters={"tab_id"},
++                description="Read the current terminal buffer (ouput display) content, given its tab ID. "
++                    "This returns the raw content of the terminal display"
++            ),
++            "get_terminal_status": AIToolOperationDefinition(
++                name="get_terminal_status",
++                handler=self._get_terminal_status,
++                allowed_parameters={"tab_id"},
++                required_parameters={"tab_id"},
++                description="Get terminal status and process information, given its tab ID"
+             )
+         }
+ 
+@@ -301,6 +345,111 @@ class SystemAITool(AITool):
+         except Exception as e:
+             raise AIToolExecutionError(f"Invalid path '{path_str}': {str(e)}") from e
+ 
++    def _get_terminal_tab(self, arguments: Dict[str, Any]) -> TerminalTab:
++        """
++        Get a terminal tab by ID or current tab.
++
++        Args:
++            arguments: Tool arguments containing optional tab_id
++
++        Returns:
++            TerminalTab instance
++
++        Raises:
++            AIToolExecutionError: If no terminal tab found
++        """
++        tab_id = self._get_str_value_from_key("tab_id", arguments)
++
++        # Get specific terminal by ID
++        tab = self._column_manager.get_tab_by_id(tab_id)
++        if not tab:
++            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
++
++        if not isinstance(tab, TerminalTab):
++            raise AIToolExecutionError(f"Tab {tab_id} is not a terminal tab")
++
++        return tab
++
++    def _format_terminal_status(self, status_info: TerminalStatusInfo) -> str:
++        """
++        Format terminal status information as readable text.
++
++        Args:
++            status_info: TerminalStatusInfo instance
++
++        Returns:
++            Formatted status text
++        """
++        lines = []
++
++        lines.append(f"Tab ID: {status_info.tab_id}")
++        lines.append(f"Running: {status_info.tab_running}")
++
++        # Process information
++        if status_info.process_id:
++            lines.append(f"Process ID: {status_info.process_id}")
++        else:
++            lines.append("Process ID: None")
++
++        lines.append(f"Process Running: {status_info.process_running}")
++        lines.append(f"Process Name: {status_info.process_name}")
++
++        # Terminal dimensions
++        rows, cols = status_info.terminal_size
++        lines.append(f"Terminal Size: {rows} rows x {cols} cols")
++
++        # Cursor position
++        cursor_row, cursor_col = status_info.cursor_position
++        lines.append(f"Cursor Position: row {cursor_row}, col {cursor_col} (visible: {status_info.cursor_visible})")
++
++        lines.append(f"Buffer Lines: {status_info.buffer_lines}")
++
++        return '\n'.join(lines)
++
++    def _process_ai_escape_sequences(self, raw_input: str) -> str:
++        """
++        Convert AI's literal Unicode escape sequences to actual control characters.
++
++        This handles the JSON double-escaping issue where the AI sends input with
++        Unicode escapes that got converted to literal text. For example:
++        - AI intends: ESC character for ANSI colors
++        - AI should send: \\u001b in JSON (becomes actual ESC after json.loads)
++        - But if double-escaped: \\\\u001b in JSON (becomes literal \\u001b text)
++        - This function: converts literal \\u001b back to actual ESC character
++
++        We only process Unicode escapes (\\u####) because:
++        1. They're unambiguous in intent (clearly meant to be characters)
++        2. They're valid JSON escape sequences (unlike \\x##)
++        3. They avoid the ambiguity issues with \\n, \\t, etc.
++
++        Args:
++            raw_input: Input string potentially containing literal Unicode escape sequences
++
++        Returns:
++            Processed input string with Unicode escape sequences converted to actual characters
++        """
++        if not raw_input:
++            return raw_input
++
++        # Convert \u#### Unicode sequences to actual characters
++        def unicode_replace(match):
++            hex_value = match.group(1)
++            try:
++                char_code = int(hex_value, 16)
++                return chr(char_code)
++
++            except (ValueError, OverflowError):
++                # If invalid Unicode code point, return original
++                return match.group(0)
++
++        result = re.sub(r'\\u([0-9a-fA-F]{4})', unicode_replace, raw_input)
++
++        # Log conversion for debugging if any changes were made
++        if result != raw_input:
++            self._logger.debug("Processed AI Unicode escape sequences: %r -> %r", raw_input, result)
++
++        return result
++
+     async def execute(
+         self,
+         tool_call: AIToolCall,
+@@ -797,3 +946,121 @@ class SystemAITool(AITool):
+ 
+         except Exception as e:
+             raise AIToolExecutionError(f"Failed to move tab {tab_id} to column {target_column}: {str(e)}") from e
++
++    async def _write_terminal(
++        self,
++        tool_call: AIToolCall,
++        request_authorization: AIToolAuthorizationCallback
++    ) -> AIToolResult:
++        """Write to a terminal."""
++        arguments = tool_call.arguments
++
++        # Get and validate input
++        raw_input = arguments.get("input")
++        if not raw_input or not isinstance(raw_input, str):
++            raise AIToolExecutionError("'input' must be a non-empty string")
++
++        # Process escape sequences from AI - convert literal Unicode escapes to actual characters
++        processed_input = self._process_ai_escape_sequences(raw_input)
++
++        # Get terminal tab
++        terminal_tab = self._get_terminal_tab(arguments)
++        tab_id = terminal_tab.tab_id()
++
++        # Build authorization context - show original input for transparency
++        context = f"Send input to terminal (tab {tab_id}): '{raw_input}'"
++        if processed_input != raw_input:
++            context += f"\n(will be processed as: '{processed_input!r}')"
++
++        # Request authorization - commands can be destructive
++        authorized = await request_authorization("system", arguments, context, True)
++        if not authorized:
++            raise AIToolAuthorizationDenied(f"User denied permission to send input: {raw_input}")
++
++        try:
++            await terminal_tab.send_command(processed_input)
++
++            # Log the operation
++            self._mindspace_manager.add_interaction(
++                MindspaceLogLevel.INFO,
++                f"AI sent command to terminal: '{raw_input}'\ntab ID: {tab_id}"
++            )
++
++            return AIToolResult(
++                id=tool_call.id,
++                name="system",
++                content=f"Input sent to terminal {tab_id}: '{input}'"
++            )
++
++        except Exception as e:
++            raise AIToolExecutionError(f"Failed to send input to terminal: {str(e)}") from e
++
++    async def _read_terminal(
++        self,
++        tool_call: AIToolCall,
++        _request_authorization: AIToolAuthorizationCallback
++    ) -> AIToolResult:
++        """Read terminal buffer content."""
++        arguments = tool_call.arguments
++
++        # Get terminal tab
++        terminal_tab = self._get_terminal_tab(arguments)
++        tab_id = terminal_tab.tab_id()
++
++        # Get optional lines parameter
++        lines = arguments.get("lines")
++        if lines is not None and not isinstance(lines, int):
++            raise AIToolExecutionError("'lines' must be an integer")
++
++        try:
++            # Get terminal buffer content using public method
++            buffer_content = terminal_tab.get_terminal_buffer_content(lines)
++
++            # Log the operation
++            self._mindspace_manager.add_interaction(
++                MindspaceLogLevel.INFO,
++                f"AI read terminal buffer\ntab ID: {tab_id}"
++            )
++
++            return AIToolResult(
++                id=tool_call.id,
++                name="system",
++                content=f"Terminal buffer content (tab {tab_id}):\n\n{buffer_content}"
++            )
++
++        except Exception as e:
++            raise AIToolExecutionError(f"Failed to read terminal: {str(e)}") from e
++
++    async def _get_terminal_status(
++        self,
++        tool_call: AIToolCall,
++        _request_authorization: AIToolAuthorizationCallback
++    ) -> AIToolResult:
++        """Get terminal status information."""
++        arguments = tool_call.arguments
++
++        # Get terminal tab
++        terminal_tab = self._get_terminal_tab(arguments)
++        tab_id = terminal_tab.tab_id()
++
++        try:
++            # Get terminal status using public method
++            status_info = terminal_tab.get_terminal_status_info()
++
++            # Log the operation
++            self._mindspace_manager.add_interaction(
++                MindspaceLogLevel.INFO,
++                f"AI requested terminal status\ntab ID: {tab_id}"
++            )
++
++            # Format status as readable text
++            status_text = self._format_terminal_status(status_info)
++
++            return AIToolResult(
++                id=tool_call.id,
++                name="system",
++                content=f"Terminal status (tab {tab_id}):\n{status_text}"
++            )
++
++        except Exception as e:
++            raise AIToolExecutionError(f"Failed to get terminal status: {str(e)}") from e
