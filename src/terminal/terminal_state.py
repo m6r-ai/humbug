@@ -321,15 +321,17 @@ class TerminalState:
         try:
             modes = [int(x) for x in params.split(';')]
             for mode in modes:
+                buffer_mode = buffer.modes()
                 if mode == 1:  # DECCKM - Application Cursor Keys
-                    buffer.modes.application_cursor = set_mode
+                    buffer_mode.application_cursor = set_mode
 
                 elif mode == 3:  # DECCOLM - 80/132 Column Mode
                     # In xterm this changes column count but for now we'll ignore
                     buffer.clear()
-                    buffer.scroll_region.top = 0
-                    buffer.scroll_region.bottom = buffer.rows
-                    buffer.scroll_region.rows = buffer.rows
+                    scroll_region = buffer.scroll_region()
+                    scroll_region.top = 0
+                    scroll_region.bottom = buffer.rows()
+                    scroll_region.rows = buffer.rows()
 
                 elif mode == 5:  # DECSCNM - Screen Mode (Reverse)
                     self._screen_reverse_mode = set_mode
@@ -338,7 +340,7 @@ class TerminalState:
                     buffer.set_origin(set_mode)
 
                 elif mode == 7:  # DECAWM - Auto-wrap Mode
-                    buffer.modes.auto_wrap = set_mode
+                    buffer_mode.auto_wrap = set_mode
 
                 elif mode == 12:  # att610 - Start/Stop Blinking Cursor
                     buffer.set_cursor_blink(set_mode)
@@ -384,7 +386,7 @@ class TerminalState:
                         self._current_buffer.restore_cursor()
 
                 elif mode == 2004:  # Bracketed paste mode
-                    buffer.modes.bracketed_paste = set_mode
+                    buffer_mode.bracketed_paste = set_mode
 
                 else:
                     self._logger.warning("Unknown PM operation %d", mode)
@@ -401,8 +403,10 @@ class TerminalState:
         if enable:
             if not self._alternate_buffer:
                 buffer = self._current_buffer
-                self._alternate_buffer = TerminalBuffer(buffer.rows, buffer.cols, False)
+                self._alternate_buffer = TerminalBuffer(buffer.rows(), buffer.cols(), False)
+
             self._current_buffer = self._alternate_buffer
+
         else:
             self._current_buffer = self._main_buffer
             self._alternate_buffer = None
@@ -482,7 +486,7 @@ class TerminalState:
 
         elif code == 'r':  # DECSTBM - Set Top and Bottom Margins
             top = max(1, params[0])
-            bottom = max(1, params[1]) if len(params) > 1 else buffer.rows
+            bottom = max(1, params[1]) if len(params) > 1 else buffer.rows()
             buffer.set_top_and_bottom_margins(top, bottom)
 
         elif code == 's':  # Save cursor position
@@ -501,108 +505,112 @@ class TerminalState:
         while i < len(params):
             param = params[i]
 
+            attributes = buffer.attributes()
+
             if param == 0:  # Reset
-                buffer.attributes.current = TerminalCharacterAttributes.NONE
-                buffer.attributes.foreground = None
-                buffer.attributes.background = None
+                attributes.current = TerminalCharacterAttributes.NONE
+                attributes.foreground = None
+                attributes.background = None
 
             elif param == 1:  # Bold
-                buffer.attributes.current |= TerminalCharacterAttributes.BOLD
+                attributes.current |= TerminalCharacterAttributes.BOLD
 
             elif param == 2:  # Dim
-                buffer.attributes.current |= TerminalCharacterAttributes.DIM
+                attributes.current |= TerminalCharacterAttributes.DIM
 
             elif param == 3:  # Italic
-                buffer.attributes.current |= TerminalCharacterAttributes.ITALIC
+                attributes.current |= TerminalCharacterAttributes.ITALIC
 
             elif param == 4:  # Underline
-                buffer.attributes.current |= TerminalCharacterAttributes.UNDERLINE
+                attributes.current |= TerminalCharacterAttributes.UNDERLINE
 
             elif param == 5:  # Blink
-                buffer.attributes.current |= TerminalCharacterAttributes.BLINK
+                attributes.current |= TerminalCharacterAttributes.BLINK
 
             elif param == 7:  # Inverse
-                buffer.attributes.current |= TerminalCharacterAttributes.INVERSE
+                attributes.current |= TerminalCharacterAttributes.INVERSE
 
             elif param == 8:  # Hidden
-                buffer.attributes.current |= TerminalCharacterAttributes.HIDDEN
+                attributes.current |= TerminalCharacterAttributes.HIDDEN
 
             elif param == 9:  # Strike
-                buffer.attributes.current |= TerminalCharacterAttributes.STRIKE
+                attributes.current |= TerminalCharacterAttributes.STRIKE
 
             elif param == 21:  # Normal intensity (not bold)
-                buffer.attributes.current &= ~TerminalCharacterAttributes.BOLD
+                attributes.current &= ~TerminalCharacterAttributes.BOLD
 
             elif param == 22:  # Normal intensity (not bold and not dim)
-                buffer.attributes.current &= ~(TerminalCharacterAttributes.BOLD | TerminalCharacterAttributes.DIM)
+                attributes.current &= ~(TerminalCharacterAttributes.BOLD | TerminalCharacterAttributes.DIM)
 
             elif param == 23:  # Not italic
-                buffer.attributes.current &= ~TerminalCharacterAttributes.ITALIC
+                attributes.current &= ~TerminalCharacterAttributes.ITALIC
 
             elif param == 24:  # Not underlined
-                buffer.attributes.current &= ~TerminalCharacterAttributes.UNDERLINE
+                attributes.current &= ~TerminalCharacterAttributes.UNDERLINE
 
             elif param == 25:  # Not blinking
-                buffer.attributes.current &= ~TerminalCharacterAttributes.BLINK
+                attributes.current &= ~TerminalCharacterAttributes.BLINK
 
             elif param == 27:  # Not inverse
-                buffer.attributes.current &= ~TerminalCharacterAttributes.INVERSE
+                attributes.current &= ~TerminalCharacterAttributes.INVERSE
 
             elif param == 28:  # Not hidden
-                buffer.attributes.current &= ~TerminalCharacterAttributes.HIDDEN
+                attributes.current &= ~TerminalCharacterAttributes.HIDDEN
 
             elif param == 29:  # Not strike
-                buffer.attributes.current &= ~TerminalCharacterAttributes.STRIKE
+                attributes.current &= ~TerminalCharacterAttributes.STRIKE
 
             elif 30 <= param <= 37:  # Standard foreground color
-                buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
-                buffer.attributes.foreground = self._ansi_colors[param - 30]
+                attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
+                attributes.foreground = self._ansi_colors[param - 30]
 
             elif param == 38:  # Extended foreground color
                 if i + 2 < len(params):
                     if params[i + 1] == 5:  # 256 colors
                         color_index = params[i + 2]
-                        buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
-                        buffer.attributes.foreground = self._xterm_to_rgb(color_index)
+                        attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
+                        attributes.foreground = self._xterm_to_rgb(color_index)
                         i += 2
+
                     elif params[i + 1] == 2 and i + 4 < len(params):  # RGB
                         r, g, b = params[i + 2:i + 5]
-                        buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
-                        buffer.attributes.foreground = (r << 16) | (g << 8) | b
+                        attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
+                        attributes.foreground = (r << 16) | (g << 8) | b
                         i += 4
 
             elif param == 39:  # Default foreground color
-                buffer.attributes.current &= ~TerminalCharacterAttributes.CUSTOM_FG
-                buffer.attributes.foreground = None
+                attributes.current &= ~TerminalCharacterAttributes.CUSTOM_FG
+                attributes.foreground = None
 
             elif 40 <= param <= 47:  # Standard background color
-                buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
-                buffer.attributes.background = self._ansi_colors[param - 40]
+                attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
+                attributes.background = self._ansi_colors[param - 40]
 
             elif param == 48:  # Extended background color
                 if i + 2 < len(params):
                     if params[i + 1] == 5:  # 256 colors
                         color_index = params[i + 2]
-                        buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
-                        buffer.attributes.background = self._xterm_to_rgb(color_index)
+                        attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
+                        attributes.background = self._xterm_to_rgb(color_index)
                         i += 2
+
                     elif params[i + 1] == 2 and i + 4 < len(params):  # RGB
                         r, g, b = params[i + 2:i + 5]
-                        buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
-                        buffer.attributes.background = (r << 16) | (g << 8) | b
+                        attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
+                        attributes.background = (r << 16) | (g << 8) | b
                         i += 4
 
             elif param == 49:  # Default background color
-                buffer.attributes.current &= ~TerminalCharacterAttributes.CUSTOM_BG
-                buffer.attributes.background = None
+                attributes.current &= ~TerminalCharacterAttributes.CUSTOM_BG
+                attributes.background = None
 
             elif 90 <= param <= 97:  # Bright foreground colors
-                buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
-                buffer.attributes.foreground = self._ansi_colors[param - 90 + 8]  # Map to bright color indices
+                attributes.current |= TerminalCharacterAttributes.CUSTOM_FG
+                attributes.foreground = self._ansi_colors[param - 90 + 8]  # Map to bright color indices
 
             elif 100 <= param <= 107:  # Bright background colors
-                buffer.attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
-                buffer.attributes.background = self._ansi_colors[param - 100 + 8]  # Map to bright color indices
+                attributes.current |= TerminalCharacterAttributes.CUSTOM_BG
+                attributes.background = self._ansi_colors[param - 100 + 8]  # Map to bright color indices
 
             else:
                 self._logger.warning("Unknown SGR sequence: %r", params)
@@ -686,15 +694,15 @@ class TerminalState:
             Tuple of (rows, cols)
         """
         buffer = self._current_buffer
-        return (buffer.rows, buffer.cols)
+        return (buffer.rows(), buffer.cols())
 
     def terminal_rows(self) -> int:
         """Get the number of rows in the terminal display."""
-        return self._current_buffer.rows
+        return self._current_buffer.rows()
 
     def terminal_columns(self) -> int:
         """Get the number of columns in the terminal display."""
-        return self._current_buffer.cols
+        return self._current_buffer.cols()
 
     def terminal_history_lines(self) -> int:
         """Get the number of lines of history including the current display"""
@@ -702,15 +710,15 @@ class TerminalState:
 
     def application_cursor_mode(self) -> bool:
         """Get if terminal is in application cursor mode."""
-        return self._current_buffer.modes.application_cursor
+        return self._current_buffer.modes().application_cursor
 
     def application_keypad_mode(self) -> bool:
         """Get if terminal is in application keypad mode."""
-        return self._current_buffer.modes.application_keypad
+        return self._current_buffer.modes().application_keypad
 
     def bracketed_paste_mode(self) -> bool:
         """Get if terminal is in bracketed paste mode."""
-        return self._current_buffer.modes.bracketed_paste
+        return self._current_buffer.modes().bracketed_paste
 
     def blinking_chars_on_screen(self) -> bool:
         """Determine if there are any blinking characters on-screen."""

@@ -263,7 +263,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Always update if cursor is visible and blinking
         buffer = self._state.current_buffer()
-        cursor = buffer.cursor
+        cursor = buffer.cursor()
         if cursor.visible and cursor.blink:
             # Convert cursor position to viewport coordinates
             history_lines = self._state.terminal_history_lines()
@@ -709,7 +709,8 @@ class TerminalWidget(QAbstractScrollArea):
             if line_index >= terminal_history_lines:
                 break
 
-            line = buffer.lines[line_index]
+            lines = buffer.lines()
+            line = lines[line_index]
             current_run_start_col = start_col
             current_text = ""
             current_attrs = TerminalCharacterAttributes.NONE
@@ -758,7 +759,7 @@ class TerminalWidget(QAbstractScrollArea):
             )
 
         # Draw cursor if visible
-        if buffer.cursor.visible and self._has_focus:
+        if buffer.cursor().visible and self._has_focus:
             self._draw_cursor(
                 painter,
                 buffer,
@@ -963,6 +964,8 @@ class TerminalWidget(QAbstractScrollArea):
         selection_color = self.palette().highlight().color()
         selection_text_color = self.palette().highlightedText().color()
 
+        lines = self._state.current_buffer().lines()
+
         for row in range(max(visible_start_row, 0), min(visible_end_row + 1, terminal_rows)):
             y = row * self._char_height
             row_start = selection.start_col if row + first_visible_line == selection.start_row else 0
@@ -980,7 +983,7 @@ class TerminalWidget(QAbstractScrollArea):
                 painter.fillRect(selection_rect, selection_color)
                 line_index = first_visible_line + row
                 if line_index < terminal_history_lines:
-                    line = self._state.current_buffer().lines[line_index]
+                    line = lines[line_index]
                     painter.setPen(selection_text_color)
                     for col in range(row_start, row_end):
                         char, _attrs, _fg, _bg = line.get_character(col)
@@ -1000,22 +1003,24 @@ class TerminalWidget(QAbstractScrollArea):
     ) -> None:
         """Draw terminal cursor using floating-point positioning."""
         # Don't draw if cursor should be hidden
-        if (not buffer.cursor.visible or
+        cursor = buffer.cursor()
+        if (not cursor.visible or
             not self._has_focus or
-            (buffer.cursor.blink and not self._blink_state)):
+            (cursor.blink and not self._blink_state)):
             return
 
-        cursor_line = terminal_history_lines - terminal_rows + buffer.cursor.row
+        cursor_line = terminal_history_lines - terminal_rows + cursor.row
         visible_cursor_row = cursor_line - first_visible_line
 
         if 0 <= visible_cursor_row < terminal_rows:
             # Calculate cursor position using floating-point coordinates
-            cursor_x = buffer.cursor.col * self._char_width
+            cursor_x = cursor.col * self._char_width
             cursor_y = visible_cursor_row * self._char_height
 
             if cursor_line < terminal_history_lines:
-                line = buffer.lines[cursor_line]
-                char, _attrs, _fg, _bg = line.get_character(buffer.cursor.col)
+                lines = buffer.lines()
+                line = lines[cursor_line]
+                char, _attrs, _fg, _bg = line.get_character(cursor.col)
 
                 # Draw inverted cursor using floating-point rectangle
                 painter.fillRect(
@@ -1046,7 +1051,8 @@ class TerminalWidget(QAbstractScrollArea):
             if row >= terminal_history_lines:
                 break
 
-            line = buffer.lines[row]
+            lines = buffer.lines()
+            line = lines[row]
             start = selection.start_col if row == selection.start_row else 0
             end = selection.end_col if row == selection.end_row else terminal_cols
 
@@ -1208,14 +1214,16 @@ class TerminalWidget(QAbstractScrollArea):
             if text:
                 buffer = self._state.current_buffer()
                 rows = buffer.history_lines()
+                cols = buffer.cols()
 
                 # Search through all lines in buffer
+                lines = buffer.lines()
                 for row in range(rows):
-                    line = buffer.lines[row]
+                    line = lines[row]
                     line_text = ""
 
                     # Build text for this line
-                    for col in range(buffer.cols):
+                    for col in range(cols):
                         char, _, _, _ = line.get_character(col)
                         line_text += char
 
@@ -1322,7 +1330,7 @@ class TerminalWidget(QAbstractScrollArea):
         """
         buffer = self._state.current_buffer()
         history_lines = buffer.history_lines()
-        cols = buffer.cols
+        cols = buffer.cols()
 
         # Determine which lines to read
         if max_lines is None:
@@ -1330,14 +1338,19 @@ class TerminalWidget(QAbstractScrollArea):
             end_line = history_lines
 
         else:
+            max_cursor_row = buffer.max_cursor_row()
+            rows = buffer.rows()
+            empty_lines = rows - (max_cursor_row + 1)
+            history_lines -= empty_lines
             start_line = max(0, history_lines - max_lines)
             end_line = history_lines
 
         # Extract text content
-        lines = []
+        extracted_lines = []
+        lines = buffer.lines()
         for line_idx in range(start_line, end_line):
-            if line_idx < len(buffer.lines):
-                line = buffer.lines[line_idx]
+            if line_idx < len(lines):
+                line = lines[line_idx]
                 line_text = ""
 
                 # Extract characters from the line
@@ -1347,9 +1360,9 @@ class TerminalWidget(QAbstractScrollArea):
 
                 # Remove trailing spaces
                 line_text = line_text.rstrip()
-                lines.append(line_text)
+                extracted_lines.append(line_text)
 
-        return '\n'.join(lines)
+        return '\n'.join(extracted_lines)
 
     def get_widget_status_info(self) -> TerminalWidgetStatusInfo:
         """
@@ -1360,10 +1373,11 @@ class TerminalWidget(QAbstractScrollArea):
         """
         buffer = self._state.current_buffer()
         rows, cols = self._state.get_terminal_size()
+        cursor = buffer.cursor()
 
         return TerminalWidgetStatusInfo(
             terminal_size=(rows, cols),
-            cursor_position=(buffer.cursor.row, buffer.cursor.col),
-            cursor_visible=buffer.cursor.visible,
+            cursor_position=(cursor.row, cursor.col),
+            cursor_visible=cursor.visible,
             buffer_lines=buffer.history_lines()
         )
