@@ -6,6 +6,9 @@ Bug fixes:
 
 - The system AI tool was not escaping control characters in a way the terminal could handle so things like backspace,
   escape, or Ctrl+C didn't work correctly.
+- The `terminal_read` operation did not account for lines at the bottom of the terminal potentially never having had
+  content.
+- Correctly clear down empty line tracking when the terminal display is cleared.
 
 ## v0.25 (2025-09-10)
 
