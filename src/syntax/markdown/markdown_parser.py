@@ -137,6 +137,48 @@ class MarkdownParser(Parser):
 
         return -1
 
+    def _is_bold_marker(self, text: str, i: int) -> bool:
+        """
+        Check if position i starts a valid bold formatting marker.
+
+        Args:
+            text: The text being parsed
+            i: The current position in the text
+
+        Returns:
+            True if position i starts a bold marker (**text** or __text__)
+        """
+        if i + 2 >= len(text) or text[i+2].isspace():
+            return False
+
+        is_double_asterisk = text[i:i+2] == '**'
+        is_double_underscore = (text[i:i+2] == '__' and (i == 0 or text[i - 1].isspace()))
+
+        return is_double_asterisk or is_double_underscore
+
+    def _is_italic_marker(self, text: str, i: int) -> bool:
+        """
+        Check if position i starts a valid italic formatting marker.
+
+        Args:
+            text: The text being parsed
+            i: The current position in the text
+
+        Returns:
+            True if position i starts an italic marker (*text* or _text_)
+        """
+        if i + 1 >= len(text) or text[i + 1].isspace():
+            return False
+
+        at_start = i == 0
+        preceded_by_space = not at_start and text[i - 1].isspace()
+        not_part_of_bold = at_start or text[i-1] != text[i]
+
+        is_asterisk = text[i] == '*'
+        is_underscore = text[i] == '_' and (at_start or preceded_by_space)
+
+        return (is_asterisk or is_underscore) and not_part_of_bold
+
     def _parse_inline_formatting_in_text(self, text_token: Token, block_type: TokenType | None) -> List[Token]:
         """
         Parse a text token for inline formatting and return a list of tokens.
@@ -262,9 +304,7 @@ class MarkdownParser(Parser):
                     continue
 
             # Check for bold (**text** or __text__)
-            elif (i + 2 < len(text) and
-                    ((text[i:i+2] == '**') or (text[i:i+2] == '__' and (i == 0 or text[i - 1].isspace()))) and
-                    not text[i+2].isspace()):  # pylint: disable=too-many-boolean-expressions
+            elif self._is_bold_marker(text, i):
                 # Add any accumulated text
                 add_text_token(current_text_start, i)
 
@@ -291,10 +331,7 @@ class MarkdownParser(Parser):
                     continue
 
             # Check for italic (*text* or _text_)
-            elif (i + 1 < len(text) and
-                    ((text[i] == '*') or (text[i] == '_' and (i == 0 or text[i - 1].isspace()))) and
-                    not text[i + 1].isspace() and
-                    (i == 0 or text[i-1] != text[i])):  # pylint: disable=too-many-boolean-expressions
+            elif self._is_italic_marker(text, i):
                 # Add any accumulated text
                 add_text_token(current_text_start, i)
 
