@@ -430,7 +430,7 @@ class SystemAITool(AITool):
             return raw_input
 
         # Convert \u#### Unicode sequences to actual characters
-        def unicode_replace(match):
+        def unicode_replace(match: re.Match[str]) -> str:
             hex_value = match.group(1)
             try:
                 char_code = int(hex_value, 16)
