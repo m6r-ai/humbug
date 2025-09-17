@@ -41,7 +41,7 @@ class AIFPLAITool(AITool):
                 "- Bitwise: (bit-or 5 3), (bit-and 7 3), (bit-xor 5 3), (bit-not 5)\n"
                 "- Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)\n"
                 "- Base conversion: (bin 255), (hex 255), (oct 255)\n"
-                "- Complex numbers: (complex 3 4), (+ 1 (* 2 j))\n"
+                "- Complex numbers: (complex 3 4), (+ 1 (* 2 j)), (real 3+4j), (imag 3+4j)\n"
                 "- Constants: pi, e, j\n"
                 "- Number literals: 42, 3.14, 0xFF, 0b1010, 0o755\n\n"
                 "- Nested expressions\n"
