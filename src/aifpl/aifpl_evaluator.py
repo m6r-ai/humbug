@@ -182,7 +182,7 @@ class AIFPLEvaluator:
 
         # Handle operations that return booleans
         if op_def.get('returns_boolean'):
-            return self._apply_comparison_operator(operator, op_def, evaluated_args)
+            return self._apply_comparison_operator(operator, evaluated_args)
 
         # Filter out string and boolean arguments for mathematical operations
         for arg in evaluated_args:
@@ -276,7 +276,7 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown boolean operator: '{operator}'")
 
-    def _apply_string_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> Union[str, int, bool]:
+    def _apply_string_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> Union[str, int, float, bool]:
         """Apply string operators."""
         if operator == 'string-append':
             if not args and 'identity' in op_def:
@@ -413,7 +413,7 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown string operator: '{operator}'")
 
-    def _apply_comparison_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> bool:
+    def _apply_comparison_operator(self, operator: str, args: List[Any]) -> bool:
         """Apply comparison operators that return booleans."""
         # Filter out string and boolean arguments for numeric comparisons
         for arg in args:

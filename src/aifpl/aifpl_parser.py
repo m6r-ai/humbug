@@ -66,7 +66,7 @@ class AIFPLParser:
         if self.current_token.type == AIFPLTokenType.LPAREN:
             return self._parse_list(start_pos)
 
-        if self.current_token.type in (AIFPLTokenType.NUMBER, AIFPLTokenType.SYMBOL, 
+        if self.current_token.type in (AIFPLTokenType.NUMBER, AIFPLTokenType.SYMBOL,
                                        AIFPLTokenType.STRING, AIFPLTokenType.BOOLEAN):
             return self._parse_atom(start_pos)
 

@@ -89,7 +89,7 @@ class AIFPLTokenizer:
             AIFPLTokenError: If string is malformed
         """
         i = start + 1  # Skip opening quote
-        result = []
+        result: list[str] = []
 
         while i < len(expression):
             char = expression[i]
