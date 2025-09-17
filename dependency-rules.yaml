@@ -9,30 +9,35 @@ modules:
       - "standard_library"
       - "aiohttp"
       - "certifi"
-  
+
   ai_conversation_transcript:
     internal_dependencies:
       - ai
     external_dependencies:
       - "standard_library"
-  
+
   ai_tool:
-    internal_dependencies: []
+    internal_dependencies:
+      - aifpl
     external_dependencies:
       - "standard_library"
-  
+
+  aifpl:
+    external_dependencies:
+      - "standard_library"
+
   dast:
     internal_dependencies: []
     external_dependencies:
       - "standard_library"
-  
+
   dmarkdown:
     internal_dependencies:
       - dast
       - syntax
     external_dependencies:
       - "standard_library"
-  
+
   humbug:
     internal_dependencies:
       - ai
@@ -54,12 +59,12 @@ modules:
       - syntax
     external_dependencies:
       - "standard_library"
-  
+
   syntax:
     internal_dependencies: []
     external_dependencies:
       - "standard_library"
-  
+
   terminal:
     internal_dependencies: []
     external_dependencies:
