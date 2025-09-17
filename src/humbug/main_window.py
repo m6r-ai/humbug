@@ -19,7 +19,7 @@ from metaphor import (
 )
 
 from ai_tool import AIToolManager
-from ai_tool.tools.aifpl_ai_tool import AifplAITool
+from ai_tool.tools.aifpl_ai_tool import AIFPLAITool
 from ai_tool.tools.clock_ai_tool import ClockAITool
 from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
 
@@ -396,7 +396,7 @@ class MainWindow(QMainWindow):
 
         self._ai_tool_manager = AIToolManager()
         self._ai_tool_manager.register_tool(
-            AifplAITool(), "AIFPL: evaluates expressions using AI Functional Programming Language syntax"
+            AIFPLAITool(), "AIFPL: evaluates expressions using AI Functional Programming Language syntax"
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
