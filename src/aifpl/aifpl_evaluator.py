@@ -22,6 +22,9 @@ class AIFPLEvaluator:
 
     # Operator and function definitions
     OPERATORS: Dict[str, Dict[str, Any]] = {
+        # Conditional operators
+        'if': {'type': 'special', 'args': 3, 'lazy_evaluation': True},
+
         # Arithmetic operators
         '+': {'type': 'variadic', 'min_args': 0, 'identity': 0},
         '-': {'type': 'variadic', 'min_args': 1},
@@ -181,7 +184,12 @@ class AIFPLEvaluator:
 
         op_def: Dict[str, Any] = self.OPERATORS[operator]
 
-        # Evaluate arguments
+        # Handle special forms that require lazy evaluation
+        if op_def.get('type') == 'special':
+            if operator == 'if':
+                return self._apply_if_conditional(args, depth)
+
+        # For regular operators, evaluate arguments first
         evaluated_args = [self.evaluate(arg, depth) for arg in args]
 
         # Check argument count
@@ -234,6 +242,38 @@ class AIFPLEvaluator:
 
         # Handle regular mathematical operations
         return self._apply_mathematical_operator(operator, op_def, evaluated_args)
+
+    def _apply_if_conditional(self, args: List[SExpression], depth: int) -> Union[int, float, complex, str, bool, list]:
+        """
+        Handle if conditional with lazy evaluation of branches.
+
+        Args:
+            args: List of unevaluated arguments [condition, then-expr, else-expr]
+            depth: Current recursion depth
+
+        Returns:
+            Result of evaluating the chosen branch
+
+        Raises:
+            AIFPLEvalError: If condition is not boolean or wrong number of arguments
+        """
+        if len(args) != 3:
+            raise AIFPLEvalError(f"Operator 'if' requires exactly 3 arguments (condition, then, else), got {len(args)}")
+
+        condition_expr, then_expr, else_expr = args
+
+        # Evaluate condition first
+        condition = self.evaluate(condition_expr, depth)
+
+        # Validate condition is boolean
+        if not isinstance(condition, bool):
+            raise AIFPLEvalError(f"Operator 'if' requires boolean condition, got {type(condition).__name__}")
+
+        # Lazy evaluation: only evaluate the chosen branch
+        if condition:
+            return self.evaluate(then_expr, depth)
+
+        return self.evaluate(else_expr, depth)
 
     def _validate_arity(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> None:
         """Validate argument count for an operator."""

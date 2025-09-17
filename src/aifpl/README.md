@@ -1,6 +1,6 @@
 # AIFPL (AI Functional Programming Language)
 
-AIFPL is a mathematical expression language with LISP-like S-expression syntax designed for AI tool integration. It supports mathematical calculations, string manipulation, boolean operations, and list processing.
+AIFPL is a mathematical expression language with LISP-like S-expression syntax designed for AI tool integration. It supports mathematical calculations, string manipulation, boolean operations, list processing, and conditional evaluation.
 
 ## Features
 
@@ -9,6 +9,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **String operations**: Manipulation, searching, conversion with full UTF-8 support
 - **Boolean operations**: Logic operations with strict type checking
 - **List operations**: Construction, manipulation, and conversion with heterogeneous support
+- **Conditional evaluation**: `if` expressions with lazy evaluation of branches
 - **Number formats**: Integers, floats, complex numbers, hex (0xFF), binary (0b1010), octal (0o755)
 - **String literals**: `"hello world"` with escape sequences
 - **Boolean literals**: `#t` (true) and `#f` (false)
@@ -67,6 +68,60 @@ except AIFPLError as e:
 ```
 
 ## Supported Operations
+
+### Conditional Operations
+
+AIFPL supports conditional evaluation with lazy evaluation of branches:
+
+```lisp
+(if condition then-expr else-expr)
+```
+
+**Basic Examples:**
+```lisp
+(if (> 5 3) "greater" "less")         ; → "greater"
+(if (= 1 2) (+ 1 1) (* 2 2))          ; → 4
+(if #t "true branch" "false branch")  ; → "true branch"
+(if #f "true branch" "false branch")  ; → "false branch"
+```
+
+**Lazy Evaluation (Key Feature):**
+```lisp
+(if #t 42 (/ 1 0))                    ; → 42 (no division by zero error)
+(if #f (undefined-symbol) "safe")     ; → "safe" (no undefined symbol error)
+(if (> x 0) (/ 100 x) "undefined")    ; Safe division
+```
+
+**Practical Examples:**
+```lisp
+; Safe list operations
+(if (null? my-list) "empty" (first my-list))
+
+; Data validation
+(if (string-contains? email "@") "valid email" "invalid email")
+
+; Conditional string building
+(if (> count 1)
+    (string-append (number->string count) " items")
+    "1 item")
+
+; List processing
+(if (member? "target" search-list)
+    (string-append "Found at position " (number->string (find-index "target" search-list)))
+    "Not found")
+```
+
+**Nested Conditionals:**
+```lisp
+(if (> x 0)
+    (if (> x 10) "big positive" "small positive")
+    (if (< x -10) "big negative" "small negative or zero"))
+```
+
+**Type Requirements:**
+- Condition must be a boolean (`#t` or `#f`)
+- Both then-expr and else-expr are required
+- Only the chosen branch is evaluated (lazy evaluation)
 
 ### Arithmetic
 - `(+ 1 2 3)` → `6`
@@ -284,12 +339,17 @@ AIFPL has a strict type system with the following types:
 ; Valid - list equality
 (= (list 1 2) (list 1 2))             ; → #t
 
+; Valid - conditionals with boolean conditions
+(if #t "yes" "no")                    ; → "yes"
+(if (> 5 3) 42 0)                     ; → 42
+
 ; Invalid - type mismatch
 (+ 1 "hello")                         ; Error: cannot add number and string
 (and #t 1)                            ; Error: 'and' requires boolean arguments
 (string-length 42)                    ; Error: string-length requires string
 (+ (list 1 2))                        ; Error: cannot add list
 (< (list 1) (list 2))                 ; Error: cannot compare lists (only = works)
+(if 1 "yes" "no")                     ; Error: condition must be boolean
 
 ; Valid - explicit conversion
 (string-append "Count: " (number->string 42))  ; → "Count: 42"
@@ -307,6 +367,30 @@ AIFPL has a strict type system with the following types:
 
 ## Common Usage Patterns
 
+### Conditional Processing
+```lisp
+; Safe division
+(if (= divisor 0) "undefined" (/ dividend divisor))
+
+; Safe list access
+(if (null? my-list) "empty" (first my-list))
+
+; Data validation
+(if (string-contains? input "@")
+    (string-append "Email: " input)
+    "Invalid email format")
+
+; Conditional list processing
+(if (> (length items) 0)
+    (string-join items ", ")
+    "No items")
+
+; Nested conditionals for complex logic
+(if (> temperature 30)
+    "hot"
+    (if (> temperature 20) "warm" "cold"))
+```
+
 ### String Processing
 ```lisp
 ; Split CSV data and process
@@ -317,6 +401,11 @@ AIFPL has a strict type system with the following types:
 ; Build strings from components
 (string-join (list "hello" "world") " ")        ; → "hello world"
 (string-join (reverse (string-split "a-b-c" "-")) "+")  ; → "c+b+a"
+
+; Conditional string processing
+(if (> (string-length text) 10)
+    (string-append (substring text 0 10) "...")
+    text)
 ```
 
 ### Character-Level Processing
@@ -333,6 +422,11 @@ AIFPL has a strict type system with the following types:
 (list (list "name" "John") (list "age" 25))     ; → (("name" "John") ("age" 25))
 (first (list (list 1 2) (list 3 4)))           ; → (1 2)
 (rest (first (list (list 1 2 3) (list 4 5))))  ; → (2 3)
+
+; Conditional data processing
+(if (member? "error" status-list)
+    (list "status" "error" "failed")
+    (list "status" "ok" "success"))
 ```
 
 ## Design Principles
@@ -344,12 +438,13 @@ AIFPL has a strict type system with the following types:
 5. **Performance**: Efficient direct evaluation of nested structures
 6. **Functional Purity**: No side effects, deterministic results
 7. **LISP Compatibility**: Following traditional LISP semantics where applicable
+8. **Lazy Evaluation**: Conditionals only evaluate necessary branches
 
 ## Exception Hierarchy
 
 - `AIFPLError` - Base exception
   - `AIFPLTokenError` - Tokenization errors
-  - `AIFPLParseError` - Parsing errors  
+  - `AIFPLParseError` - Parsing errors
   - `AIFPLEvalError` - Evaluation errors
 
 ## Advanced Usage
@@ -382,6 +477,10 @@ print(f"Boolean: {bool_result}")  # Boolean: True
 
 formatted_bool = tool.evaluate_and_format('(member? 2 (list 1 2 3))')
 print(f"Formatted Boolean: {formatted_bool}")  # Formatted Boolean: #t
+
+# Conditional results
+cond_result = tool.evaluate('(if (> 5 3) "greater" "less")')
+print(f"Conditional: {cond_result}")  # Conditional: greater
 ```
 
 ### Error Handling Patterns
@@ -403,15 +502,25 @@ except AIFPLError as e:
     print(f"General AIFPL error: {e}")
 ```
 
-### Nested List Processing
+### Complex Conditional Processing
 
 ```python
-# Complex nested operations
+# Complex nested operations with conditionals
 nested_expr = '''
-(string-join 
-  (reverse 
-    (string-split "hello,world,test" ",")) 
-  " | ")
+(if (> (length (string-split input ",")) 1)
+    (string-join
+      (reverse
+        (string-split input ","))
+      " | ")
+    "single item")
 '''
-result = tool.evaluate(nested_expr)  # → "test | world | hello"
+
+# Safe processing with error handling
+safe_expr = '''
+(if (string-contains? data "@")
+    (if (> (string-length data) 5)
+        (string-upcase data)
+        data)
+    "not an email")
+'''
 ```
