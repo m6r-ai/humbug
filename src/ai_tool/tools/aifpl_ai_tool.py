@@ -1,4 +1,4 @@
-"""AIFPL (AI Functional Programming Language) calculator tool with LISP-like syntax."""
+"""AIFPL (AI Functional Programming Language) tool with LISP-like syntax."""
 
 import asyncio
 import logging
@@ -16,7 +16,7 @@ class AIFPLAITool(AITool):
 
     def __init__(self) -> None:
         """Initialize the AIFPL tool."""
-        self._calculator = AIFPL()
+        self._tool = AIFPL()
         self._logger = logging.getLogger("AIFPLAITool")
 
     def get_definition(self) -> AIToolDefinition:
@@ -30,7 +30,7 @@ class AIFPLAITool(AITool):
             name="AIFPL",
             description=(
                 "The AIFPL (AI Functional Programming Language) calculator uses LISP-like (S expression) syntax for "
-                "mathematical expressions and string/boolean operations. "
+                "mathematical expressions, string/boolean operations, and list manipulation. "
                 "Syntax: (operator arg1 arg2 ...)\n\n"
                 "Supported operations:\n"
                 "- Arithmetic: (+ 1 2 3), (- 10 3), (* 2 3 4), (/ 12 3), (// 7 3), (% 7 3), (** 2 3)\n"
@@ -47,8 +47,31 @@ class AIFPLAITool(AITool):
                 "- String operations: (string-append \"hello\" \" \" \"world\"), (string-length \"hello\")\n"
                 "- String manipulation: (substring \"hello\" 1 4), (string-upcase \"hello\"), (string-downcase \"HELLO\")\n"
                 "- String predicates: (string-contains? \"hello\" \"ell\"), (string-prefix? \"hello\" \"he\")\n"
-                "- String conversion: (string->number \"42\"), (number->string 42)\n"
-                "- Constants: pi, e, j, true, false\n"
+                "- String conversion: (string->number \"42\"), (number->string 42)\n\n"
+                "List Operations:\n"
+                "- Construction: (list 1 2 3) → (1 2 3), (list \"a\" \"b\") → (\"a\" \"b\"), (list) → ()\n"
+                "- Access: (first (list 1 2 3)) → 1, (rest (list 1 2 3)) → (2 3)\n"
+                "- Properties: (length (list 1 2 3)) → 3, (null? (list)) → #t\n"
+                "- Manipulation: (cons 1 (list 2 3)) → (1 2 3), (append (list 1 2) (list 3 4)) → (1 2 3 4)\n"
+                "- Search: (member? 2 (list 1 2 3)) → #t, (member? 5 (list 1 2 3)) → #f\n"
+                "- Utilities: (reverse (list 1 2 3)) → (3 2 1), (list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"\n\n"
+                "String-List Integration:\n"
+                "- (string->list \"hello\") → (\"h\" \"e\" \"l\" \"l\" \"o\")\n"
+                "- (list->string (list \"h\" \"i\")) → \"hi\"\n"
+                "- (string-split \"a,b,c\" \",\") → (\"a\" \"b\" \"c\")\n"
+                "- (string-join (list \"hello\" \"world\") \" \") → \"hello world\"\n\n"
+                "List Type Rules:\n"
+                "- Lists support mixed types: (list 1 \"hi\" #t) → (1 \"hi\" #t)\n"
+                "- Lists don't work with arithmetic: (+ (list 1 2)) → ERROR\n"
+                "- Lists don't work with comparisons except equality: (< (list 1) (list 2)) → ERROR\n"
+                "- Only equality works: (= (list 1 2) (list 1 2)) → #t\n"
+                "- List functions require list arguments: (first \"hello\") → ERROR\n"
+                "- String functions require string arguments: (string-length (list \"hi\")) → ERROR\n\n"
+                "Common Patterns:\n"
+                "- Process CSV: (string-split \"name,age,city\" \",\") then manipulate list\n"
+                "- Build strings: create list of parts, then (string-join parts \" \")\n"
+                "- Character processing: (string->list text) for char-by-char operations\n\n"
+                "Constants: pi, e, j, true, false\n"
                 "- Literals: 42, 3.14, 0xFF, 0b1010, 0o755, \"hello\", #t, #f\n\n"
                 "String literals support escape sequences:\n"
                 "- \\\" (quote), \\\\ (backslash), \\n (newline), \\t (tab), \\r (carriage return)\n"
@@ -58,12 +81,18 @@ class AIFPLAITool(AITool):
                 "- Whitespace is required between all tokens\n"
                 "- Arithmetic operators are variadic where sensible: (+ 1 2 3 4) = 10\n"
                 "- String operations work only on strings, boolean operations only on booleans\n"
-                "- Comparison operators work on numbers and return #t or #f\n"
+                "- List operations work only on lists (except list? predicate)\n"
+                "- Comparison operators work on numbers, lists only support equality\n"
                 "- Results are simplified to real numbers when imaginary part is negligible\n"
                 "- Bitwise operations only work on integers\n"
+                "- Lists display as LISP notation: (1 2 3) not [1,2,3]\n"
+                "- Booleans display as: #t or #f\n"
+                "- Empty list displays as: ()\n"
                 "- Use explicit conversion functions: (string->number \"42\"), (number->string 42)\n"
                 "- String indexing uses LISP convention: (substring \"hello\" 1 4) → \"ell\" (start=1, end=4 exclusive)\n"
-                "- Do not use it for anything other than mathematical calculations and basic string/boolean operations\n"
+                "- List indexing is 0-based: (list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"\n"
+                "- Do not use it for anything other than mathematical calculations, basic string/boolean operations, "
+                "and list manipulation\n"
             ),
             parameters=[
                 AIToolParameter(
@@ -88,13 +117,8 @@ class AIFPLAITool(AITool):
         Raises:
             Various AIFPL-related exceptions
         """
-        result = self._calculator.evaluate(expression)
-
-        # Format boolean results in LISP style
-        if isinstance(result, bool):
-            return "#t" if result else "#f"
-
-        return str(result)
+        # Use the new evaluate_and_format method for proper LISP formatting
+        return self._tool.evaluate_and_format(expression)
 
     async def execute(
         self,

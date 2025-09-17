@@ -1,6 +1,6 @@
 # AIFPL (AI Functional Programming Language)
 
-AIFPL is a mathematical expression language with LISP-like S-expression syntax designed for AI tool integration. It supports mathematical calculations, string manipulation, and boolean operations.
+AIFPL is a mathematical expression language with LISP-like S-expression syntax designed for AI tool integration. It supports mathematical calculations, string manipulation, boolean operations, and list processing.
 
 ## Features
 
@@ -8,6 +8,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Mathematical operations**: Arithmetic, trigonometry, logarithms, bitwise operations
 - **String operations**: Manipulation, searching, conversion with full UTF-8 support
 - **Boolean operations**: Logic operations with strict type checking
+- **List operations**: Construction, manipulation, and conversion with heterogeneous support
 - **Number formats**: Integers, floats, complex numbers, hex (0xFF), binary (0b1010), octal (0o755)
 - **String literals**: `"hello world"` with escape sequences
 - **Boolean literals**: `#t` (true) and `#f` (false)
@@ -35,15 +36,22 @@ src/aifpl/
 ```python
 from aifpl import AIFPL
 
-calculator = AIFPL()
-result = calculator.evaluate("(+ 1 2 3)")  # Returns: 6
+tool = AIFPL()
+result = tool.evaluate("(+ 1 2 3)")  # Returns: 6
 ```
 
 ### With Configuration
 
 ```python
-calculator = AIFPL(max_depth=200, imaginary_tolerance=1e-12)
-result = calculator.evaluate("(sin (* pi 0.5))")  # Returns: 1
+tool = AIFPL(max_depth=200, imaginary_tolerance=1e-12)
+result = tool.evaluate("(sin (* pi 0.5))")  # Returns: 1
+```
+
+### Formatted Output
+
+```python
+# Get results with LISP-style formatting
+result_str = tool.evaluate_and_format("(list 1 2 3)")  # Returns: "(1 2 3)"
 ```
 
 ### Error Handling
@@ -51,9 +59,9 @@ result = calculator.evaluate("(sin (* pi 0.5))")  # Returns: 1
 ```python
 from aifpl import AIFPL, AIFPLError
 
-calculator = AIFPL()
+tool = AIFPL()
 try:
-    result = calculator.evaluate("(+ 1 2")  # Missing closing paren
+    result = tool.evaluate("(+ 1 2")  # Missing closing paren
 except AIFPLError as e:
     print(f"AIFPL error: {e}")
 ```
@@ -111,6 +119,40 @@ except AIFPLError as e:
 - `(real 5)` → `5` (real part of real number)
 - `(imag 5)` → `0` (imaginary part of real number)
 
+### List Operations
+
+#### List Construction and Manipulation
+```lisp
+(list 1 2 3)                          ; → (1 2 3)
+(list "a" "b" "c")                     ; → ("a" "b" "c")
+(list 1 "hello" #t)                    ; → (1 "hello" #t) [mixed types]
+(list)                                 ; → () [empty list]
+(cons 1 (list 2 3))                    ; → (1 2 3) [prepend]
+(append (list 1 2) (list 3 4))         ; → (1 2 3 4) [concatenate]
+(reverse (list 1 2 3))                 ; → (3 2 1)
+```
+
+#### List Access and Properties
+```lisp
+(first (list 1 2 3))                  ; → 1
+(rest (list 1 2 3))                   ; → (2 3)
+(list-ref (list "a" "b" "c") 1)       ; → "b" (0-indexed)
+(length (list 1 2 3))                 ; → 3
+(null? (list))                        ; → #t
+(null? (list 1))                      ; → #f
+(list? (list 1 2))                    ; → #t
+(list? "hello")                       ; → #f
+(member? 2 (list 1 2 3))              ; → #t
+(member? 5 (list 1 2 3))              ; → #f
+```
+
+#### List Equality
+```lisp
+(= (list 1 2) (list 1 2))             ; → #t
+(= (list 1 2) (list 1 3))             ; → #f
+(= (list 1 2) (list 1 2 3))           ; → #f
+```
+
 ### String Operations
 
 #### String Construction and Conversion
@@ -142,6 +184,22 @@ except AIFPLError as e:
 (string-suffix? "hello" "lo")             ; → #t
 (string=? "hello" "hello")                ; → #t
 (string=? "hello" "world")                ; → #f
+```
+
+### String-List Integration
+
+#### String-List Conversion
+```lisp
+(string->list "hello")                ; → ("h" "e" "l" "l" "o")
+(list->string (list "h" "e" "l" "l" "o"))  ; → "hello"
+```
+
+#### String Splitting and Joining
+```lisp
+(string-split "name,age,city" ",")    ; → ("name" "age" "city")
+(string-split "hello world" " ")      ; → ("hello" "world")
+(string-join (list "hello" "world") " ")  ; → "hello world"
+(string-join (list "a" "b" "c") ",") ; → "a,b,c"
 ```
 
 ### String Literals and Escape Sequences
@@ -198,12 +256,14 @@ AIFPL has a strict type system with the following types:
 - **Numbers**: `int`, `float`, `complex` (with automatic promotion)
 - **Strings**: UTF-8 strings with no automatic conversion
 - **Booleans**: `#t` and `#f` with no automatic conversion
+- **Lists**: Heterogeneous collections supporting any element type
 
 ### Type Promotion Rules
 
 1. **Numeric promotion**: `int → float → complex`
-2. **No cross-type operations**: Strings and booleans don't mix with numbers
+2. **No cross-type operations**: Strings, booleans, and lists don't mix with numbers
 3. **Explicit conversion**: Use conversion functions when needed
+4. **List heterogeneity**: Lists can contain mixed types
 
 ### Examples of Type Strictness
 
@@ -217,14 +277,62 @@ AIFPL has a strict type system with the following types:
 (+ 1 2.5)                             ; → 3.5 (int promoted to float)
 (* 2 (complex 1 1))                   ; → (2+2j) (promoted to complex)
 
+; Valid - heterogeneous lists
+(list 1 "hello" #t)                   ; → (1 "hello" #t)
+(append (list 1 2) (list "a" "b"))    ; → (1 2 "a" "b")
+
+; Valid - list equality
+(= (list 1 2) (list 1 2))             ; → #t
+
 ; Invalid - type mismatch
 (+ 1 "hello")                         ; Error: cannot add number and string
 (and #t 1)                            ; Error: 'and' requires boolean arguments
 (string-length 42)                    ; Error: string-length requires string
+(+ (list 1 2))                        ; Error: cannot add list
+(< (list 1) (list 2))                 ; Error: cannot compare lists (only = works)
 
 ; Valid - explicit conversion
 (string-append "Count: " (number->string 42))  ; → "Count: 42"
 (+ 5 (string->number "10"))                    ; → 15
+(list->string (string->list "hello"))          ; → "hello"
+```
+
+### List Type Rules
+
+1. **Mixed types allowed**: `(list 1 "hi" #t)` is valid
+2. **No arithmetic operations**: `(+ (list 1 2))` is an error
+3. **Only equality comparison**: `(= (list 1) (list 1))` works, `(< (list 1) (list 2))` doesn't
+4. **Type-specific functions**: List functions require lists, string functions require strings
+5. **Explicit conversion**: Use `string->list`, `list->string` for conversions
+
+## Common Usage Patterns
+
+### String Processing
+```lisp
+; Split CSV data and process
+(string-split "name,age,city" ",")              ; → ("name" "age" "city")
+(first (string-split "John,25,NYC" ","))        ; → "John"
+(length (string-split "a,b,c,d" ","))           ; → 4
+
+; Build strings from components
+(string-join (list "hello" "world") " ")        ; → "hello world"
+(string-join (reverse (string-split "a-b-c" "-")) "+")  ; → "c+b+a"
+```
+
+### Character-Level Processing
+```lisp
+; Convert to characters, process, convert back
+(string->list "hello")                          ; → ("h" "e" "l" "l" "o")
+(reverse (string->list "hello"))                ; → ("o" "l" "l" "e" "h")
+(list->string (reverse (string->list "hello"))) ; → "olleh"
+```
+
+### Data Structure Manipulation
+```lisp
+; Build complex data structures
+(list (list "name" "John") (list "age" 25))     ; → (("name" "John") ("age" 25))
+(first (list (list 1 2) (list 3 4)))           ; → (1 2)
+(rest (first (list (list 1 2 3) (list 4 5))))  ; → (2 3)
 ```
 
 ## Design Principles
@@ -235,6 +343,7 @@ AIFPL has a strict type system with the following types:
 4. **Error Handling**: Detailed error messages with position information
 5. **Performance**: Efficient direct evaluation of nested structures
 6. **Functional Purity**: No side effects, deterministic results
+7. **LISP Compatibility**: Following traditional LISP semantics where applicable
 
 ## Exception Hierarchy
 
@@ -249,22 +358,30 @@ AIFPL has a strict type system with the following types:
 
 ```python
 # Increase recursion depth for deeply nested expressions
-calculator = AIFPL(max_depth=500)
+tool = AIFPL(max_depth=500)
 
 # Adjust tolerance for complex number simplification
-calculator = AIFPL(imaginary_tolerance=1e-15)
+tool = AIFPL(imaginary_tolerance=1e-15)
 ```
 
 ### Working with Results
 
 ```python
-result = calculator.evaluate('(string-contains? "hello" "ell")')
-print(f"Result: {result}")  # Result: True
-print(f"Type: {type(result)}")  # Type: <class 'bool'>
+# Raw evaluation returns Python objects
+result = tool.evaluate('(list 1 2 3)')
+print(f"Result: {result}")  # Result: [1, 2, 3]
+print(f"Type: {type(result)}")  # Type: <class 'list'>
 
-# Boolean results are Python bool objects
-if result:
-    print("String contains substring!")
+# Formatted evaluation returns LISP-style strings
+formatted = tool.evaluate_and_format('(list 1 2 3)')
+print(f"Formatted: {formatted}")  # Formatted: (1 2 3)
+
+# Boolean results
+bool_result = tool.evaluate('(member? 2 (list 1 2 3))')
+print(f"Boolean: {bool_result}")  # Boolean: True
+
+formatted_bool = tool.evaluate_and_format('(member? 2 (list 1 2 3))')
+print(f"Formatted Boolean: {formatted_bool}")  # Formatted Boolean: #t
 ```
 
 ### Error Handling Patterns
@@ -272,10 +389,10 @@ if result:
 ```python
 from aifpl import AIFPL, AIFPLTokenError, AIFPLParseError, AIFPLEvalError
 
-calculator = AIFPL()
+tool = AIFPL()
 
 try:
-    result = calculator.evaluate(expression)
+    result = tool.evaluate(expression)
 except AIFPLTokenError as e:
     print(f"Tokenization error: {e}")
 except AIFPLParseError as e:
@@ -284,4 +401,17 @@ except AIFPLEvalError as e:
     print(f"Evaluation error: {e}")
 except AIFPLError as e:
     print(f"General AIFPL error: {e}")
+```
+
+### Nested List Processing
+
+```python
+# Complex nested operations
+nested_expr = '''
+(string-join 
+  (reverse 
+    (string-split "hello,world,test" ",")) 
+  " | ")
+'''
+result = tool.evaluate(nested_expr)  # → "test | world | hello"
 ```

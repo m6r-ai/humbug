@@ -92,6 +92,29 @@ class AIFPLEvaluator:
         'string-prefix?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
         'string-suffix?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
         'string=?': {'type': 'variadic', 'min_args': 2, 'string_only': True, 'returns_boolean': True},
+
+        # List construction and manipulation
+        'list': {'type': 'variadic', 'min_args': 0, 'list_operation': True},
+        'cons': {'type': 'binary', 'list_operation': True},
+        'append': {'type': 'variadic', 'min_args': 2, 'list_operation': True},
+        'reverse': {'type': 'unary', 'list_operation': True},
+
+        # List access and properties
+        'first': {'type': 'unary', 'list_operation': True},
+        'rest': {'type': 'unary', 'list_operation': True},
+        'list-ref': {'type': 'binary', 'list_operation': True},
+        'length': {'type': 'unary', 'list_operation': True},
+
+        # List predicates
+        'null?': {'type': 'unary', 'list_operation': True, 'returns_boolean': True},
+        'list?': {'type': 'unary', 'returns_boolean': True},
+        'member?': {'type': 'binary', 'list_operation': True, 'returns_boolean': True},
+
+        # String-list conversion
+        'string->list': {'type': 'unary', 'string_only': True, 'returns_list': True},
+        'list->string': {'type': 'unary', 'list_operation': True, 'converts_to_string': True},
+        'string-split': {'type': 'binary', 'string_only': True, 'returns_list': True},
+        'string-join': {'type': 'binary', 'list_operation': True, 'converts_to_string': True},
     }
 
     # Tolerance for considering imaginary part as zero
@@ -108,7 +131,7 @@ class AIFPLEvaluator:
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
 
-    def evaluate(self, expr: SExpression, depth: int = 0) -> Union[int, float, complex, str, bool]:
+    def evaluate(self, expr: SExpression, depth: int = 0) -> Union[int, float, complex, str, bool, list]:
         """
         Recursively evaluate AST.
 
@@ -151,7 +174,7 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Invalid expression type: {type(expr).__name__}")
 
-    def _apply_operator(self, operator: str, args: List[SExpression], depth: int) -> Union[int, float, complex, str, bool]:
+    def _apply_operator(self, operator: str, args: List[SExpression], depth: int) -> Union[int, float, complex, str, bool, list]:
         """Apply an operator to its arguments."""
         if operator not in self.OPERATORS:
             raise AIFPLEvalError(f"Unknown operator: '{operator}'")
@@ -164,6 +187,10 @@ class AIFPLEvaluator:
         # Check argument count
         self._validate_arity(operator, op_def, evaluated_args)
 
+        # Handle list operations
+        if op_def.get('list_operation'):
+            return self._apply_list_operator(operator, evaluated_args)
+
         # Handle special cases that return strings
         if op_def.get('returns_string'):
             return self._apply_string_function(operator, evaluated_args)
@@ -171,6 +198,10 @@ class AIFPLEvaluator:
         # Handle functions that convert to strings
         if op_def.get('converts_to_string'):
             return self._apply_conversion_to_string(operator, evaluated_args)
+
+        # Handle functions that return lists
+        if op_def.get('returns_list'):
+            return self._apply_list_returning_function(operator, evaluated_args)
 
         # Handle boolean-only operations
         if op_def.get('boolean_only'):
@@ -182,11 +213,11 @@ class AIFPLEvaluator:
 
         # Handle operations that return booleans
         if op_def.get('returns_boolean'):
-            return self._apply_comparison_operator(operator, evaluated_args)
+            return self._apply_boolean_returning_operator(operator, evaluated_args)
 
-        # Filter out string and boolean arguments for mathematical operations
+        # Filter out string, boolean, and list arguments for mathematical operations
         for arg in evaluated_args:
-            if isinstance(arg, (str, bool)):
+            if isinstance(arg, (str, bool, list)):
                 raise AIFPLEvalError(f"Operator '{operator}' cannot operate on {type(arg).__name__} arguments")
 
         # Handle bitwise operations (require integers)
@@ -222,6 +253,158 @@ class AIFPLEvaluator:
             min_args = op_def.get('min_args', 0)
             if arg_count < min_args:
                 raise AIFPLEvalError(f"Operator '{operator}' requires at least {min_args} arguments, got {arg_count}")
+
+    def _apply_list_operator(self, operator: str, args: List[Any]) -> Union[list, bool, Any]:
+        """Apply list operations."""
+        if operator == 'list':
+            # Create a new list from arguments (heterogeneous allowed)
+            return list(args)
+
+        if operator == 'cons':
+            element, list_arg = args
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list as second argument, got {type(list_arg).__name__}")
+
+            return [element] + list_arg
+
+        if operator == 'append':
+            # All arguments must be lists
+            for i, arg in enumerate(args):
+                if not isinstance(arg, list):
+                    raise AIFPLEvalError(
+                        f"Operator '{operator}' requires list arguments, got {type(arg).__name__} at position {i}"
+                    )
+
+            result = []
+            for list_arg in args:
+                result.extend(list_arg)
+
+            return result
+
+        if operator == 'reverse':
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
+
+            return list(reversed(list_arg))
+
+        if operator == 'first':
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
+
+            if not list_arg:
+                raise AIFPLEvalError("Cannot get first element of empty list")
+
+            return list_arg[0]
+
+        if operator == 'rest':
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
+
+            if not list_arg:
+                raise AIFPLEvalError("Cannot get rest of empty list")
+
+            return list_arg[1:]
+
+        if operator == 'list-ref':
+            list_arg, index_arg = args
+
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list as first argument, got {type(list_arg).__name__}")
+
+            index = self._to_integer(index_arg, operator)
+
+            if index < 0 or index >= len(list_arg):
+                raise AIFPLEvalError(f"List index {index} out of bounds for list of length {len(list_arg)}")
+
+            return list_arg[index]
+
+        if operator == 'length':
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
+
+            return len(list_arg)
+
+        if operator == 'null?':
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
+
+            return len(list_arg) == 0
+
+        if operator == 'member?':
+            element, list_arg = args
+
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list as second argument, got {type(list_arg).__name__}")
+
+            return element in list_arg
+
+        if operator == 'list->string':
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
+
+            # All elements must be strings
+            for i, element in enumerate(list_arg):
+                if not isinstance(element, str):
+                    raise AIFPLEvalError(
+                        f"Operator '{operator}' requires list of strings, got {type(element).__name__} at position {i}"
+                    )
+
+            return ''.join(list_arg)
+
+        if operator == 'string-join':
+            list_arg, separator_arg = args
+
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"Operator '{operator}' requires list as first argument, got {type(list_arg).__name__}")
+
+            if not isinstance(separator_arg, str):
+                raise AIFPLEvalError(
+                    f"Operator '{operator}' requires string as second argument, got {type(separator_arg).__name__}"
+                )
+
+            # All list elements must be strings
+            for i, element in enumerate(list_arg):
+                if not isinstance(element, str):
+                    raise AIFPLEvalError(
+                        f"Operator '{operator}' requires list of strings, got {type(element).__name__} at position {i}"
+                    )
+
+            return separator_arg.join(list_arg)
+
+        raise AIFPLEvalError(f"Unknown list operator: '{operator}'")
+
+    def _apply_list_returning_function(self, operator: str, args: List[Any]) -> list:
+        """Apply functions that return lists."""
+        if operator == 'string->list':
+            string_arg = args[0]
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(string_arg).__name__}")
+
+            return list(string_arg)
+
+        if operator == 'string-split':
+            string_arg, separator_arg = args
+
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+
+            if not isinstance(separator_arg, str):
+                raise AIFPLEvalError(
+                    f"Operator '{operator}' requires string as second argument, got {type(separator_arg).__name__}"
+                )
+
+            if not separator_arg:
+                raise AIFPLEvalError("String separator cannot be empty")
+
+            return string_arg.split(separator_arg)
+
+        raise AIFPLEvalError(f"Unknown list-returning function: '{operator}'")
 
     def _apply_string_function(self, operator: str, args: List[Any]) -> str:
         """Apply functions that return strings."""
@@ -413,11 +596,28 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown string operator: '{operator}'")
 
-    def _apply_comparison_operator(self, operator: str, args: List[Any]) -> bool:
-        """Apply comparison operators that return booleans."""
-        # Filter out string and boolean arguments for numeric comparisons
+    def _apply_boolean_returning_operator(self, operator: str, args: List[Any]) -> bool:
+        """Apply operators that return booleans (including comparisons and predicates)."""
+        # Handle list? predicate specially
+        if operator == 'list?':
+            return isinstance(args[0], list)
+
+        # Handle list equality specially
+        if operator == '=' and any(isinstance(arg, list) for arg in args):
+            # All arguments must be lists for list comparison
+            for arg in args:
+                if not isinstance(arg, list):
+                    raise AIFPLEvalError(f"Cannot compare list with {type(arg).__name__}")
+
+            # Check if all lists are equal
+            return all(arg == args[0] for arg in args[1:])
+
+        # Filter out string, boolean, and list arguments for numeric comparisons
         for arg in args:
-            if isinstance(arg, (str, bool)):
+            if isinstance(arg, (str, bool, list)):
+                if isinstance(arg, list):
+                    raise AIFPLEvalError(f"Comparison operator '{operator}' cannot compare lists (only equality '=' works)")
+
                 raise AIFPLEvalError(f"Comparison operator '{operator}' cannot operate on {type(arg).__name__} arguments")
 
         # Promote types to common type
@@ -706,7 +906,7 @@ class AIFPLEvaluator:
 
         return value
 
-    def simplify_result(self, result: Union[int, float, complex, str, bool]) -> Union[int, float, complex, str, bool]:
+    def simplify_result(self, result: Union[int, float, complex, str, bool, list]) -> Union[int, float, complex, str, bool, list]:
         """Simplify complex results to real numbers when imaginary part is negligible."""
         if isinstance(result, complex):
             # If imaginary part is effectively zero, return just the real part
@@ -723,3 +923,34 @@ class AIFPLEvaluator:
             return int(result)
 
         return result
+
+    def format_result(self, result: Union[int, float, complex, str, bool, list]) -> str:
+        """
+        Format result for display, using LISP conventions for lists and booleans.
+
+        Args:
+            result: The result to format
+
+        Returns:
+            String representation of the result
+        """
+        if isinstance(result, bool):
+            return "#t" if result else "#f"
+
+        if isinstance(result, str):
+            # For strings, add quotes to distinguish from symbols
+            return f'"{result}"'
+
+        if isinstance(result, list):
+            # Format list in LISP notation: (element1 element2 ...)
+            if not result:
+                return "()"
+
+            formatted_elements = []
+            for element in result:
+                formatted_elements.append(self.format_result(element))
+
+            return f"({' '.join(formatted_elements)})"
+
+        # For other types, use standard string representation
+        return str(result)

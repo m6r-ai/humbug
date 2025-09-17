@@ -26,7 +26,7 @@ class AIFPL:
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
 
-    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool]:
+    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list]:
         """
         Evaluate an AIFPL expression.
 
@@ -58,3 +58,37 @@ class AIFPL:
 
         # Simplify the result
         return evaluator.simplify_result(result)
+
+    def evaluate_and_format(self, expression: str) -> str:
+        """
+        Evaluate an AIFPL expression and return formatted result.
+
+        Args:
+            expression: AIFPL expression string to evaluate
+
+        Returns:
+            String representation of the result using LISP conventions
+
+        Raises:
+            AIFPLTokenError: If tokenization fails
+            AIFPLParseError: If parsing fails
+            AIFPLEvalError: If evaluation fails
+        """
+        # Phase 1: Tokenization
+        tokenizer = AIFPLTokenizer()
+        tokens = tokenizer.tokenize(expression)
+
+        # Phase 2: Parsing
+        parser = AIFPLParser(tokens)
+        parsed = parser.parse()
+
+        # Phase 3: Evaluation
+        evaluator = AIFPLEvaluator(
+            max_depth=self.max_depth,
+            imaginary_tolerance=self.imaginary_tolerance
+        )
+        result = evaluator.evaluate(parsed.expr)
+
+        # Simplify and format the result
+        simplified = evaluator.simplify_result(result)
+        return evaluator.format_result(simplified)
