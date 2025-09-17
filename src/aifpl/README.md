@@ -1,13 +1,17 @@
 # AIFPL (AI Functional Programming Language)
 
-AIFPL is a mathematical expression language with LISP-like S-expression syntax designed for AI tool integration.
+AIFPL is a mathematical expression language with LISP-like S-expression syntax designed for AI tool integration. It supports mathematical calculations, string manipulation, and boolean operations.
 
 ## Features
 
 - **S-expression syntax**: `(operator arg1 arg2 ...)`
 - **Mathematical operations**: Arithmetic, trigonometry, logarithms, bitwise operations
+- **String operations**: Manipulation, searching, conversion with full UTF-8 support
+- **Boolean operations**: Logic operations with strict type checking
 - **Number formats**: Integers, floats, complex numbers, hex (0xFF), binary (0b1010), octal (0o755)
-- **Constants**: `pi`, `e`, `j` (imaginary unit)
+- **String literals**: `"hello world"` with escape sequences
+- **Boolean literals**: `#t` (true) and `#f` (false)
+- **Constants**: `pi`, `e`, `j` (imaginary unit), `true`, `false`
 - **Type promotion**: Automatic promotion from int → float → complex
 - **Result simplification**: Complex numbers with negligible imaginary parts become real
 
@@ -65,6 +69,22 @@ except AIFPLError as e:
 - `(% 7 3)` → `1` (modulo)
 - `(** 2 3)` → `8` (exponentiation)
 
+### Comparison Operations
+- `(= 1 1)` → `#t`
+- `(= 1 2)` → `#f`
+- `(< 1 2)` → `#t`
+- `(> 3 2)` → `#t`
+- `(<= 1 1)` → `#t`
+- `(>= 2 1)` → `#t`
+
+### Boolean Operations
+- `(and #t #f)` → `#f`
+- `(and #t #t)` → `#t`
+- `(or #t #f)` → `#t`
+- `(or #f #f)` → `#f`
+- `(not #t)` → `#f`
+- `(not #f)` → `#t`
+
 ### Mathematical Functions
 - `(sin (* pi 0.5))` → `1`
 - `(cos 0)` → `1`
@@ -90,6 +110,60 @@ except AIFPLError as e:
 - `(imag (complex 3 4))` → `4` (extract imaginary part)
 - `(real 5)` → `5` (real part of real number)
 - `(imag 5)` → `0` (imaginary part of real number)
+
+### String Operations
+
+#### String Construction and Conversion
+```lisp
+(string-append "hello" " " "world")   ; → "hello world"
+(number->string 42)                   ; → "42"
+(number->string 3.14)                 ; → "3.14"
+(string->number "42")                 ; → 42
+(string->number "3.14")               ; → 3.14
+```
+
+#### String Information and Access
+```lisp
+(string-length "hello")               ; → 5
+(string-ref "hello" 1)                ; → "e" (character at index 1)
+(substring "hello" 1 4)               ; → "ell" (start=1, end=4 exclusive)
+```
+
+#### String Manipulation
+```lisp
+(string-upcase "hello")               ; → "HELLO"
+(string-downcase "HELLO")             ; → "hello"
+```
+
+#### String Predicates
+```lisp
+(string-contains? "hello world" "world")  ; → #t
+(string-prefix? "hello" "he")             ; → #t
+(string-suffix? "hello" "lo")             ; → #t
+(string=? "hello" "hello")                ; → #t
+(string=? "hello" "world")                ; → #f
+```
+
+### String Literals and Escape Sequences
+
+String literals use double quotes and support escape sequences:
+
+```lisp
+"hello world"                         ; Basic string
+"She said \"Hello!\""                 ; Escaped quotes
+"Line 1\nLine 2"                      ; Newline
+"Column 1\tColumn 2"                  ; Tab
+"Path\\to\\file"                      ; Backslash
+"Unicode: \u03B1\u03B2\u03B3"         ; Greek letters αβγ
+```
+
+**Supported escape sequences:**
+- `\"` → literal quote
+- `\\` → literal backslash
+- `\n` → newline
+- `\t` → tab
+- `\r` → carriage return
+- `\uXXXX` → Unicode code point (4 hex digits)
 
 ### Complex Number Operations
 The `real` and `imag` functions extract components from any numeric value:
@@ -117,18 +191,50 @@ The `real` and `imag` functions extract components from any numeric value:
 (real (* j j))                          ; → -1
 ```
 
-**Type Behavior:**
-- Returns most specific type (int when possible, float when necessary)
-- Respects `imaginary_tolerance` setting for tiny imaginary parts
-- `(imag (complex 3.0 1e-15))` → `0` (if below tolerance)
+## Type System
+
+AIFPL has a strict type system with the following types:
+
+- **Numbers**: `int`, `float`, `complex` (with automatic promotion)
+- **Strings**: UTF-8 strings with no automatic conversion
+- **Booleans**: `#t` and `#f` with no automatic conversion
+
+### Type Promotion Rules
+
+1. **Numeric promotion**: `int → float → complex`
+2. **No cross-type operations**: Strings and booleans don't mix with numbers
+3. **Explicit conversion**: Use conversion functions when needed
+
+### Examples of Type Strictness
+
+```lisp
+; Valid - same types
+(+ 1 2 3)                             ; → 6 (all integers)
+(string-append "hello" " " "world")   ; → "hello world" (all strings)
+(and #t #f #t)                        ; → #f (all booleans)
+
+; Valid - numeric promotion
+(+ 1 2.5)                             ; → 3.5 (int promoted to float)
+(* 2 (complex 1 1))                   ; → (2+2j) (promoted to complex)
+
+; Invalid - type mismatch
+(+ 1 "hello")                         ; Error: cannot add number and string
+(and #t 1)                            ; Error: 'and' requires boolean arguments
+(string-length 42)                    ; Error: string-length requires string
+
+; Valid - explicit conversion
+(string-append "Count: " (number->string 42))  ; → "Count: 42"
+(+ 5 (string->number "10"))                    ; → 15
+```
 
 ## Design Principles
 
 1. **Independence**: No dependencies on other application packages
 2. **Simplicity**: Direct S-expression evaluation without over-engineering
-3. **Type Safety**: Comprehensive type hints throughout
+3. **Type Safety**: Comprehensive type hints and strict type checking
 4. **Error Handling**: Detailed error messages with position information
 5. **Performance**: Efficient direct evaluation of nested structures
+6. **Functional Purity**: No side effects, deterministic results
 
 ## Exception Hierarchy
 
@@ -136,3 +242,46 @@ The `real` and `imag` functions extract components from any numeric value:
   - `AIFPLTokenError` - Tokenization errors
   - `AIFPLParseError` - Parsing errors  
   - `AIFPLEvalError` - Evaluation errors
+
+## Advanced Usage
+
+### Custom Configuration
+
+```python
+# Increase recursion depth for deeply nested expressions
+calculator = AIFPL(max_depth=500)
+
+# Adjust tolerance for complex number simplification
+calculator = AIFPL(imaginary_tolerance=1e-15)
+```
+
+### Working with Results
+
+```python
+result = calculator.evaluate('(string-contains? "hello" "ell")')
+print(f"Result: {result}")  # Result: True
+print(f"Type: {type(result)}")  # Type: <class 'bool'>
+
+# Boolean results are Python bool objects
+if result:
+    print("String contains substring!")
+```
+
+### Error Handling Patterns
+
+```python
+from aifpl import AIFPL, AIFPLTokenError, AIFPLParseError, AIFPLEvalError
+
+calculator = AIFPL()
+
+try:
+    result = calculator.evaluate(expression)
+except AIFPLTokenError as e:
+    print(f"Tokenization error: {e}")
+except AIFPLParseError as e:
+    print(f"Parsing error: {e}")
+except AIFPLEvalError as e:
+    print(f"Evaluation error: {e}")
+except AIFPLError as e:
+    print(f"General AIFPL error: {e}")
+```

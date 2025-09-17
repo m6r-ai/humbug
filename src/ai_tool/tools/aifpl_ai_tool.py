@@ -30,7 +30,7 @@ class AIFPLAITool(AITool):
             name="AIFPL",
             description=(
                 "The AIFPL (AI Functional Programming Language) calculator uses LISP-like (S expression) syntax for "
-                "mathematical expressions. "
+                "mathematical expressions and string/boolean operations. "
                 "Syntax: (operator arg1 arg2 ...)\n\n"
                 "Supported operations:\n"
                 "- Arithmetic: (+ 1 2 3), (- 10 3), (* 2 3 4), (/ 12 3), (// 7 3), (% 7 3), (** 2 3)\n"
@@ -42,16 +42,28 @@ class AIFPLAITool(AITool):
                 "- Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)\n"
                 "- Base conversion: (bin 255), (hex 255), (oct 255)\n"
                 "- Complex numbers: (complex 3 4), (+ 1 (* 2 j)), (real 3+4j), (imag 3+4j)\n"
-                "- Constants: pi, e, j\n"
-                "- Number literals: 42, 3.14, 0xFF, 0b1010, 0o755\n\n"
-                "- Nested expressions\n"
+                "- Comparison: (= 1 1), (< 1 2), (> 3 2), (<= 1 1), (>= 2 1)\n"
+                "- Boolean operations: (and #t #f), (or #t #f), (not #t)\n"
+                "- String operations: (string-append \"hello\" \" \" \"world\"), (string-length \"hello\")\n"
+                "- String manipulation: (substring \"hello\" 1 4), (string-upcase \"hello\"), (string-downcase \"HELLO\")\n"
+                "- String predicates: (string-contains? \"hello\" \"ell\"), (string-prefix? \"hello\" \"he\")\n"
+                "- String conversion: (string->number \"42\"), (number->string 42)\n"
+                "- Constants: pi, e, j, true, false\n"
+                "- Literals: 42, 3.14, 0xFF, 0b1010, 0o755, \"hello\", #t, #f\n\n"
+                "String literals support escape sequences:\n"
+                "- \\\" (quote), \\\\ (backslash), \\n (newline), \\t (tab), \\r (carriage return)\n"
+                "- \\uXXXX (Unicode code point with 4 hex digits)\n\n"
                 "Important:\n"
                 "- All operators use prefix notation: (+ 1 2) not (1 + 2)\n"
                 "- Whitespace is required between all tokens\n"
                 "- Arithmetic operators are variadic where sensible: (+ 1 2 3 4) = 10\n"
+                "- String operations work only on strings, boolean operations only on booleans\n"
+                "- Comparison operators work on numbers and return #t or #f\n"
                 "- Results are simplified to real numbers when imaginary part is negligible\n"
                 "- Bitwise operations only work on integers\n"
-                "- Do not use it for anything other than mathematical calculations of the types described\n"
+                "- Use explicit conversion functions: (string->number \"42\"), (number->string 42)\n"
+                "- String indexing uses LISP convention: (substring \"hello\" 1 4) → \"ell\" (start=1, end=4 exclusive)\n"
+                "- Do not use it for anything other than mathematical calculations and basic string/boolean operations\n"
             ),
             parameters=[
                 AIToolParameter(
@@ -77,6 +89,11 @@ class AIFPLAITool(AITool):
             Various AIFPL-related exceptions
         """
         result = self._calculator.evaluate(expression)
+
+        # Format boolean results in LISP style
+        if isinstance(result, bool):
+            return "#t" if result else "#f"
+
         return str(result)
 
     async def execute(

@@ -11,6 +11,8 @@ class AIFPLTokenType(Enum):
     RPAREN = ")"
     SYMBOL = "SYMBOL"
     NUMBER = "NUMBER"
+    STRING = "STRING"
+    BOOLEAN = "BOOLEAN"
     EOF = "EOF"
 
 

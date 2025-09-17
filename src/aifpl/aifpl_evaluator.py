@@ -16,6 +16,8 @@ class AIFPLEvaluator:
         'pi': math.pi,
         'e': math.e,
         'j': 1j,
+        'true': True,
+        'false': False,
     }
 
     # Operator and function definitions
@@ -28,6 +30,18 @@ class AIFPLEvaluator:
         '//': {'type': 'binary'},
         '%': {'type': 'binary'},
         '**': {'type': 'binary'},
+
+        # Comparison operators
+        '=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
+        '<': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
+        '>': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
+        '<=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
+        '>=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
+
+        # Boolean operators
+        'and': {'type': 'variadic', 'min_args': 0, 'identity': True, 'boolean_only': True},
+        'or': {'type': 'variadic', 'min_args': 0, 'identity': False, 'boolean_only': True},
+        'not': {'type': 'unary', 'boolean_only': True},
 
         # Bitwise operators
         'bit-or': {'type': 'variadic', 'min_args': 2, 'bitwise': True},
@@ -62,6 +76,22 @@ class AIFPLEvaluator:
         'real': {'type': 'unary'},
         'imag': {'type': 'unary'},
         'complex': {'type': 'binary'},
+
+        # String functions
+        'string-append': {'type': 'variadic', 'min_args': 0, 'identity': '', 'string_only': True},
+        'string-length': {'type': 'unary', 'string_only': True},
+        'substring': {'type': 'ternary', 'string_only': True},
+        'string-upcase': {'type': 'unary', 'string_only': True},
+        'string-downcase': {'type': 'unary', 'string_only': True},
+        'string-ref': {'type': 'binary', 'string_only': True},
+        'string->number': {'type': 'unary', 'string_only': True},
+        'number->string': {'type': 'unary', 'converts_to_string': True},
+
+        # String predicates
+        'string-contains?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
+        'string-prefix?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
+        'string-suffix?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
+        'string=?': {'type': 'variadic', 'min_args': 2, 'string_only': True, 'returns_boolean': True},
     }
 
     # Tolerance for considering imaginary part as zero
@@ -78,7 +108,7 @@ class AIFPLEvaluator:
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
 
-    def evaluate(self, expr: SExpression, depth: int = 0) -> Union[int, float, complex, str]:
+    def evaluate(self, expr: SExpression, depth: int = 0) -> Union[int, float, complex, str, bool]:
         """
         Recursively evaluate AST.
 
@@ -96,7 +126,7 @@ class AIFPLEvaluator:
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})")
 
         # Atom evaluation
-        if isinstance(expr, (int, float, complex)):
+        if isinstance(expr, (int, float, complex, str, bool)):
             return expr
 
         if isinstance(expr, str):
@@ -121,7 +151,7 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Invalid expression type: {type(expr).__name__}")
 
-    def _apply_operator(self, operator: str, args: List[SExpression], depth: int) -> Union[int, float, complex, str]:
+    def _apply_operator(self, operator: str, args: List[SExpression], depth: int) -> Union[int, float, complex, str, bool]:
         """Apply an operator to its arguments."""
         if operator not in self.OPERATORS:
             raise AIFPLEvalError(f"Unknown operator: '{operator}'")
@@ -138,10 +168,26 @@ class AIFPLEvaluator:
         if op_def.get('returns_string'):
             return self._apply_string_function(operator, evaluated_args)
 
-        # Filter out string arguments for mathematical operations
+        # Handle functions that convert to strings
+        if op_def.get('converts_to_string'):
+            return self._apply_conversion_to_string(operator, evaluated_args)
+
+        # Handle boolean-only operations
+        if op_def.get('boolean_only'):
+            return self._apply_boolean_operator(operator, op_def, evaluated_args)
+
+        # Handle string-only operations
+        if op_def.get('string_only'):
+            return self._apply_string_operator(operator, op_def, evaluated_args)
+
+        # Handle operations that return booleans
+        if op_def.get('returns_boolean'):
+            return self._apply_comparison_operator(operator, op_def, evaluated_args)
+
+        # Filter out string and boolean arguments for mathematical operations
         for arg in evaluated_args:
-            if isinstance(arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' cannot operate on string arguments")
+            if isinstance(arg, (str, bool)):
+                raise AIFPLEvalError(f"Operator '{operator}' cannot operate on {type(arg).__name__} arguments")
 
         # Handle bitwise operations (require integers)
         if op_def.get('bitwise'):
@@ -169,6 +215,9 @@ class AIFPLEvaluator:
         if op_type == 'binary' and arg_count != 2:
             raise AIFPLEvalError(f"Operator '{operator}' takes exactly 2 arguments, got {arg_count}")
 
+        if op_type == 'ternary' and arg_count != 3:
+            raise AIFPLEvalError(f"Operator '{operator}' takes exactly 3 arguments, got {arg_count}")
+
         if op_type == 'variadic':
             min_args = op_def.get('min_args', 0)
             if arg_count < min_args:
@@ -191,6 +240,209 @@ class AIFPLEvaluator:
             return oct(int_arg)
 
         raise AIFPLEvalError(f"Unknown string function: '{operator}'")
+
+    def _apply_conversion_to_string(self, operator: str, args: List[Any]) -> str:
+        """Apply functions that convert values to strings."""
+        if operator == 'number->string':
+            arg = args[0]
+            if isinstance(arg, (int, float, complex)):
+                return str(arg)
+
+            raise AIFPLEvalError(f"Operator '{operator}' requires numeric argument, got {type(arg).__name__}")
+
+        raise AIFPLEvalError(f"Unknown conversion function: '{operator}'")
+
+    def _apply_boolean_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> bool:
+        """Apply boolean operators."""
+        # Validate all arguments are booleans
+        for i, arg in enumerate(args):
+            if not isinstance(arg, bool):
+                raise AIFPLEvalError(f"Operator '{operator}' requires boolean arguments, got {type(arg).__name__} at position {i}")
+
+        if operator == 'and':
+            if not args and 'identity' in op_def:
+                return op_def['identity']
+
+            return all(args)
+
+        if operator == 'or':
+            if not args and 'identity' in op_def:
+                return op_def['identity']
+
+            return any(args)
+
+        if operator == 'not':
+            return not args[0]
+
+        raise AIFPLEvalError(f"Unknown boolean operator: '{operator}'")
+
+    def _apply_string_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> Union[str, int, bool]:
+        """Apply string operators."""
+        if operator == 'string-append':
+            if not args and 'identity' in op_def:
+                return op_def['identity']
+
+            # Validate all arguments are strings
+            for i, arg in enumerate(args):
+                if not isinstance(arg, str):
+                    raise AIFPLEvalError(
+                        f"Operator '{operator}' requires string arguments, got {type(arg).__name__} at position {i}"
+                    )
+
+            return ''.join(args)
+
+        if operator == 'string-length':
+            arg = args[0]
+            if not isinstance(arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(arg).__name__}")
+
+            return len(arg)
+
+        if operator == 'substring':
+            string_arg, start_arg, end_arg = args
+
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+
+            start = self._to_integer(start_arg, operator)
+            end = self._to_integer(end_arg, operator)
+
+            # Validate indices
+            if start < 0:
+                raise AIFPLEvalError(f"String index cannot be negative: {start}")
+
+            if end < start:
+                raise AIFPLEvalError(f"End index ({end}) cannot be less than start index ({start})")
+
+            if start > len(string_arg):
+                raise AIFPLEvalError(f"Start index ({start}) beyond string length ({len(string_arg)})")
+
+            return string_arg[start:end]
+
+        if operator == 'string-upcase':
+            arg = args[0]
+            if not isinstance(arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(arg).__name__}")
+
+            return arg.upper()
+
+        if operator == 'string-downcase':
+            arg = args[0]
+            if not isinstance(arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(arg).__name__}")
+
+            return arg.lower()
+
+        if operator == 'string-ref':
+            string_arg, index_arg = args
+
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+
+            index = self._to_integer(index_arg, operator)
+
+            if index < 0 or index >= len(string_arg):
+                raise AIFPLEvalError(f"String index {index} out of range for string of length {len(string_arg)}")
+
+            return string_arg[index]
+
+        if operator == 'string->number':
+            arg = args[0]
+            if not isinstance(arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(arg).__name__}")
+
+            # Try to parse as number
+            arg = arg.strip()
+
+            try:
+                # Try integer first
+                if '.' not in arg and 'e' not in arg.lower():
+                    return int(arg)
+
+                return float(arg)
+
+            except ValueError as e:
+                raise AIFPLEvalError(f"Cannot convert string '{arg}' to number") from e
+
+        # String predicates
+        if operator == 'string-contains?':
+            string_arg, substring_arg = args
+
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+
+            if not isinstance(substring_arg, str):
+                raise AIFPLEvalError(
+                    f"Operator '{operator}' requires string as second argument, got {type(substring_arg).__name__}"
+                )
+
+            return substring_arg in string_arg
+
+        if operator == 'string-prefix?':
+            string_arg, prefix_arg = args
+
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+
+            if not isinstance(prefix_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as second argument, got {type(prefix_arg).__name__}")
+
+            return string_arg.startswith(prefix_arg)
+
+        if operator == 'string-suffix?':
+            string_arg, suffix_arg = args
+
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+
+            if not isinstance(suffix_arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as second argument, got {type(suffix_arg).__name__}")
+
+            return string_arg.endswith(suffix_arg)
+
+        if operator == 'string=?':
+            # Validate all arguments are strings
+            for i, arg in enumerate(args):
+                if not isinstance(arg, str):
+                    raise AIFPLEvalError(
+                        f"Operator '{operator}' requires string arguments, got {type(arg).__name__} at position {i}"
+                    )
+
+            # Check if all strings are equal
+            return all(arg == args[0] for arg in args[1:])
+
+        raise AIFPLEvalError(f"Unknown string operator: '{operator}'")
+
+    def _apply_comparison_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> bool:
+        """Apply comparison operators that return booleans."""
+        # Filter out string and boolean arguments for numeric comparisons
+        for arg in args:
+            if isinstance(arg, (str, bool)):
+                raise AIFPLEvalError(f"Comparison operator '{operator}' cannot operate on {type(arg).__name__} arguments")
+
+        # Promote types to common type
+        promoted_args = self._promote_types(*args)
+
+        try:
+            if operator == '=':
+                return all(arg == promoted_args[0] for arg in promoted_args[1:])
+
+            if operator == '<':
+                return all(promoted_args[i] < promoted_args[i + 1] for i in range(len(promoted_args) - 1))
+
+            if operator == '>':
+                return all(promoted_args[i] > promoted_args[i + 1] for i in range(len(promoted_args) - 1))
+
+            if operator == '<=':
+                return all(promoted_args[i] <= promoted_args[i + 1] for i in range(len(promoted_args) - 1))
+
+            if operator == '>=':
+                return all(promoted_args[i] >= promoted_args[i + 1] for i in range(len(promoted_args) - 1))
+
+            raise AIFPLEvalError(f"Unknown comparison operator: '{operator}'")
+
+        except TypeError as e:
+            raise AIFPLEvalError(f"Cannot compare values in '{operator}': {e}") from e
 
     def _apply_bitwise_operator(self, operator: str, args: List[Any]) -> int:
         """Apply bitwise operators (require integer arguments)."""
@@ -454,7 +706,7 @@ class AIFPLEvaluator:
 
         return value
 
-    def simplify_result(self, result: Union[int, float, complex, str]) -> Union[int, float, complex, str]:
+    def simplify_result(self, result: Union[int, float, complex, str, bool]) -> Union[int, float, complex, str, bool]:
         """Simplify complex results to real numbers when imaginary part is negligible."""
         if isinstance(result, complex):
             # If imaginary part is effectively zero, return just the real part

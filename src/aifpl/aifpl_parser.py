@@ -8,7 +8,7 @@ from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 
 
 # S-Expression types
-Atom = Union[int, float, complex, str]
+Atom = Union[int, float, complex, str, bool]
 SExpression = Union[Atom, List['SExpression']]
 
 
@@ -66,7 +66,8 @@ class AIFPLParser:
         if self.current_token.type == AIFPLTokenType.LPAREN:
             return self._parse_list(start_pos)
 
-        if self.current_token.type in (AIFPLTokenType.NUMBER, AIFPLTokenType.SYMBOL):
+        if self.current_token.type in (AIFPLTokenType.NUMBER, AIFPLTokenType.SYMBOL, 
+                                       AIFPLTokenType.STRING, AIFPLTokenType.BOOLEAN):
             return self._parse_atom(start_pos)
 
         raise AIFPLParseError(f"Unexpected token: {self.current_token.value} at position {self.current_token.position}")
@@ -93,7 +94,7 @@ class AIFPLParser:
         return ParsedExpression(elements, start_pos, end_pos)
 
     def _parse_atom(self, start_pos: int) -> ParsedExpression:
-        """Parse an atomic value (number or symbol)."""
+        """Parse an atomic value (number, string, boolean, or symbol)."""
         assert self.current_token is not None, "_parse_atom called with None token"
 
         token = self.current_token

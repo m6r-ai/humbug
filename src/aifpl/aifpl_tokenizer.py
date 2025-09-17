@@ -42,6 +42,23 @@ class AIFPLTokenizer:
                 i += 1
                 continue
 
+            # String literals
+            if expression[i] == '"':
+                string_value, length = self._read_string(expression, i)
+                tokens.append(AIFPLToken(AIFPLTokenType.STRING, string_value, i, length))
+                i += length
+                continue
+
+            # Boolean literals (#t, #f)
+            if expression[i] == '#' and i + 1 < len(expression):
+                if expression[i + 1] in 'tf':
+                    boolean_value = expression[i + 1] == 't'
+                    tokens.append(AIFPLToken(AIFPLTokenType.BOOLEAN, boolean_value, i, 2))
+                    i += 2
+                    continue
+
+                raise AIFPLTokenError(f"Invalid boolean literal at position {i}: expected #t or #f")
+
             # Numbers (including complex, hex, binary, octal, scientific notation)
             if self._is_number_start(expression, i):
                 number, length = self._read_number(expression, i)
@@ -60,6 +77,78 @@ class AIFPLTokenizer:
 
         tokens.append(AIFPLToken(AIFPLTokenType.EOF, None, len(expression)))
         return tokens
+
+    def _read_string(self, expression: str, start: int) -> tuple[str, int]:
+        """
+        Read a string literal from the expression.
+
+        Returns:
+            Tuple of (string_value, length_consumed)
+
+        Raises:
+            AIFPLTokenError: If string is malformed
+        """
+        i = start + 1  # Skip opening quote
+        result = []
+
+        while i < len(expression):
+            char = expression[i]
+
+            # End of string
+            if char == '"':
+                i += 1  # Skip closing quote
+                return ''.join(result), i - start
+
+            # Escape sequences
+            if char == '\\':
+                if i + 1 >= len(expression):
+                    raise AIFPLTokenError(f"Unterminated escape sequence at position {i}")
+
+                next_char = expression[i + 1]
+
+                if next_char == '"':
+                    result.append('"')
+
+                elif next_char == '\\':
+                    result.append('\\')
+
+                elif next_char == 'n':
+                    result.append('\n')
+
+                elif next_char == 't':
+                    result.append('\t')
+
+                elif next_char == 'r':
+                    result.append('\r')
+
+                elif next_char == 'u':
+                    # Unicode escape sequence \uXXXX
+                    if i + 5 >= len(expression):
+                        raise AIFPLTokenError(f"Incomplete Unicode escape sequence at position {i}")
+
+                    hex_digits = expression[i + 2:i + 6]
+                    if not all(c in '0123456789abcdefABCDEF' for c in hex_digits):
+                        raise AIFPLTokenError(f"Invalid Unicode escape sequence at position {i}: \\u{hex_digits}")
+
+                    try:
+                        code_point = int(hex_digits, 16)
+                        result.append(chr(code_point))
+                        i += 4  # Skip the extra 4 characters (uXXXX)
+
+                    except ValueError as e:
+                        raise AIFPLTokenError(f"Invalid Unicode code point at position {i}: \\u{hex_digits}") from e
+
+                else:
+                    raise AIFPLTokenError(f"Invalid escape sequence at position {i}: \\{next_char}")
+
+                i += 2  # Skip escape sequence
+                continue
+
+            # Regular character
+            result.append(char)
+            i += 1
+
+        raise AIFPLTokenError(f"Unterminated string literal starting at position {start}")
 
     def _is_number_start(self, expression: str, pos: int) -> bool:
         """Check if position starts a number literal."""
@@ -205,7 +294,7 @@ class AIFPLTokenizer:
         while i < len(expression):
             char = expression[i]
             # Symbol characters: letters, digits, hyphens, and operator chars
-            if char.isalnum() or char in '-+*/%<>=!&|^~':
+            if char.isalnum() or char in '-+*/%<>=!&|^~?':
                 i += 1
 
             else:

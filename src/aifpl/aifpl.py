@@ -26,7 +26,7 @@ class AIFPL:
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
 
-    def evaluate(self, expression: str) -> Union[int, float, complex, str]:
+    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool]:
         """
         Evaluate an AIFPL expression.
 
