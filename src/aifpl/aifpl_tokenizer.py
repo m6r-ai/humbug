@@ -42,7 +42,7 @@ class AIFPLTokenizer:
                 i += 1
                 continue
 
-            # Numbers (including complex, hex, binary, octal)
+            # Numbers (including complex, hex, binary, octal, scientific notation)
             if self._is_number_start(expression, i):
                 number, length = self._read_number(expression, i)
                 tokens.append(AIFPLToken(AIFPLTokenType.NUMBER, number, i, length))
@@ -139,10 +139,11 @@ class AIFPLTokenizer:
                 oct_value = int(expression[oct_start:i], 8)
                 return (-oct_value if negative else oct_value), i - start
 
-        # Regular decimal number (int or float)
+        # Regular decimal number (int, float, or scientific notation)
         num_start = i
         has_dot = False
 
+        # Read the base number (digits and optional decimal point)
         while i < len(expression):
             char = expression[i]
             if char.isdigit():
@@ -158,12 +159,28 @@ class AIFPLTokenizer:
         if i == num_start:
             raise AIFPLTokenError(f"Invalid number at position {start}")
 
+        # Check for scientific notation (e or E)
+        if i < len(expression) and expression[i].lower() == 'e':
+            i += 1  # consume 'e' or 'E'
+
+            # Optional sign after 'e'
+            if i < len(expression) and expression[i] in '+-':
+                i += 1  # consume '+' or '-'
+
+            # Must have digits after 'e' (and optional sign)
+            exponent_start = i
+            while i < len(expression) and expression[i].isdigit():
+                i += 1
+
+            if i == exponent_start:
+                raise AIFPLTokenError(f"Invalid scientific notation: missing exponent digits at position {i}")
+
         number_str = expression[num_start:i]
 
         try:
-            if has_dot:
+            # Always use float for scientific notation or numbers with decimal points
+            if 'e' in number_str.lower() or has_dot:
                 decimal_value: Union[int, float] = float(number_str)
-
             else:
                 decimal_value = int(number_str)
 

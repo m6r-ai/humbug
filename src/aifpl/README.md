@@ -86,6 +86,41 @@ except AIFPLError as e:
 ### Complex Numbers
 - `(complex 3 4)` → `(3+4j)`
 - `(+ 1 (* 2 j))` → `(1+2j)`
+- `(real (complex 3 4))` → `3` (extract real part)
+- `(imag (complex 3 4))` → `4` (extract imaginary part)
+- `(real 5)` → `5` (real part of real number)
+- `(imag 5)` → `0` (imaginary part of real number)
+
+### Complex Number Operations
+The `real` and `imag` functions extract components from any numeric value:
+
+**Real Part Extraction:**
+```lisp
+(real 42)              ; → 42
+(real 3.14)            ; → 3.14
+(real (complex 3 4))   ; → 3
+(real j)               ; → 0
+```
+
+**Imaginary Part Extraction:**
+```lisp
+(imag 42)              ; → 0
+(imag 3.14)            ; → 0
+(imag (complex 3 4))   ; → 4
+(imag j)               ; → 1
+```
+
+**With Expressions:**
+```lisp
+(real (+ (complex 1 2) (complex 3 4)))  ; → 4
+(imag (sqrt -1))                        ; → 1
+(real (* j j))                          ; → -1
+```
+
+**Type Behavior:**
+- Returns most specific type (int when possible, float when necessary)
+- Respects `imaginary_tolerance` setting for tiny imaginary parts
+- `(imag (complex 3.0 1e-15))` → `0` (if below tolerance)
 
 ## Design Principles
 

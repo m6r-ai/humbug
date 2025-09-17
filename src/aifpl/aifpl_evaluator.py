@@ -58,7 +58,9 @@ class AIFPLEvaluator:
         'hex': {'type': 'unary', 'integer_only': True, 'returns_string': True},
         'oct': {'type': 'unary', 'integer_only': True, 'returns_string': True},
 
-        # Complex number constructor
+        # Complex number functions
+        'real': {'type': 'unary'},
+        'imag': {'type': 'unary'},
         'complex': {'type': 'binary'},
     }
 
@@ -362,6 +364,12 @@ class AIFPLEvaluator:
                 real, imag = promoted_args
                 return complex(real, imag)
 
+            if operator == 'real':
+                return self._extract_real_part(promoted_args[0])
+
+            if operator == 'imag':
+                return self._extract_imaginary_part(promoted_args[0])
+
             raise AIFPLEvalError(f"Unknown mathematical operator: '{operator}'")
 
         except ZeroDivisionError as e:
@@ -369,6 +377,53 @@ class AIFPLEvaluator:
 
         except (ValueError, OverflowError) as e:
             raise AIFPLEvalError(f"Mathematical error in '{operator}': {e}") from e
+
+    def _extract_real_part(self, value: Union[int, float, complex]) -> Union[int, float]:
+        """
+        Extract the real part of a number, returning the most specific type.
+
+        Args:
+            value: Numeric value to extract real part from
+
+        Returns:
+            Real part as int or float
+        """
+        if isinstance(value, complex):
+            real_part = value.real
+            # If the imaginary part is below tolerance, we might want to simplify
+            # but we still return the real part with its original precision
+            if isinstance(real_part, float) and real_part.is_integer():
+                return int(real_part)
+
+            return real_part
+
+        # For real numbers, return as-is (int or float)
+        return value
+
+    def _extract_imaginary_part(self, value: Union[int, float, complex]) -> Union[int, float]:
+        """
+        Extract the imaginary part of a number, returning the most specific type.
+
+        Args:
+            value: Numeric value to extract imaginary part from
+
+        Returns:
+            Imaginary part as int or float
+        """
+        if isinstance(value, complex):
+            imag_part = value.imag
+            # Apply tolerance check - if below threshold, return 0 (int)
+            if abs(imag_part) < self.imaginary_tolerance:
+                return 0
+
+            # Otherwise return the imaginary part, simplifying to int if possible
+            if isinstance(imag_part, float) and imag_part.is_integer():
+                return int(imag_part)
+
+            return imag_part
+
+        # For real numbers, imaginary part is always 0 (int)
+        return 0
 
     def _promote_types(self, *values: Any) -> tuple:
         """Promote arguments to common type: int → float → complex."""
