@@ -8,11 +8,7 @@ from syntax.lexer import Lexer, LexerState, Token, TokenType
 class AIFPLLexerState(LexerState):
     """
     State information for the AIFPL lexer.
-
-    Attributes:
-        in_comment: Indicates if we're currently parsing a multi-line comment
     """
-    in_comment: bool = False
 
 
 class AIFPLLexer(Lexer):
@@ -22,10 +18,6 @@ class AIFPLLexer(Lexer):
     This lexer handles AIFPL-specific syntax including identifiers, numbers,
     strings, and special forms.
     """
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._in_comment = False
 
     def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> AIFPLLexerState:
         """
@@ -40,20 +32,8 @@ class AIFPLLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
-        if prev_lexer_state is not None:
-            assert isinstance(prev_lexer_state, AIFPLLexerState), \
-                f"Expected AIFPLLexerState, got {type(prev_lexer_state).__name__}"
-            self._in_comment = prev_lexer_state.in_comment
-
-        if self._in_comment:
-            self._read_multiline_comment(0)
-
-        if not self._in_comment:
-            self._inner_lex()
-
-        lexer_state = AIFPLLexerState()
-        lexer_state.in_comment = self._in_comment
-        return lexer_state
+        self._inner_lex()
+        return AIFPLLexerState()
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -81,7 +61,7 @@ class AIFPLLexer(Lexer):
             return self._read_delimiter
 
         if ch == '.':
-            return self._read_dot_or_number
+            return self._read_dot
 
         if ch in ('+', '-'):
             return self._read_number_or_identifier
@@ -97,7 +77,6 @@ class AIFPLLexer(Lexer):
         - Boolean (#t, #f)
         - Character (#\\x)
         - Binary/octal/decimal/hex (#b, #o, #d, #x)
-        - Block comment (#| ... |#)
         """
         start = self._position
         if self._position + 1 >= self._input_len:
@@ -114,11 +93,6 @@ class AIFPLLexer(Lexer):
                 value=self._input[start:self._position],
                 start=start
             ))
-            return
-
-        # Handle block comments
-        if ch == '|':
-            self._read_multiline_comment(2)
             return
 
         # Handle number bases
@@ -167,33 +141,6 @@ class AIFPLLexer(Lexer):
             start=start
         ))
 
-    def _read_multiline_comment(self, skip_chars: int) -> None:
-        """
-        Read a multi-line comment token.
-        """
-        self._in_comment = True
-        start = self._position
-        self._position += skip_chars
-        while self._position + 1 < self._input_len:
-            if (self._input[self._position] == '|' and
-                    self._input[self._position + 1] == '#'):
-                self._in_comment = False
-                self._position += 2
-                break
-
-            self._position += 1
-
-        # If we're still in a block comment we've got one character left on this line and
-        # we need to include it in the comment too.
-        if self._in_comment:
-            self._position = self._input_len
-
-        self._tokens.append(Token(
-            type=TokenType.COMMENT,
-            value=self._input[start:self._position],
-            start=start
-        ))
-
     def _read_identifier(self) -> None:
         """
         Read an identifier token.
@@ -236,9 +183,9 @@ class AIFPLLexer(Lexer):
 
         self._read_identifier()
 
-    def _read_dot_or_number(self) -> None:
+    def _read_dot(self) -> None:
         """
-        Read a dot token or start of decimal number.
+        Read start of decimal number.
         """
         if (self._position + 1 < self._input_len and
             self._is_digit(self._input[self._position + 1])):
@@ -247,11 +194,7 @@ class AIFPLLexer(Lexer):
 
         start = self._position
         self._position += 1
-        self._tokens.append(Token(
-            type=TokenType.DOT,
-            value='.',
-            start=start
-        ))
+        self._tokens.append(Token(type=TokenType.ERROR, value='.', start=start))
 
     def _read_number(self) -> None:
         """
