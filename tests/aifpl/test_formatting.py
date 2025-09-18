@@ -421,9 +421,10 @@ class TestFormatting:
             assert isinstance(formatted_result, str)
             
             # For simple values, we can verify some consistency
-            if isinstance(python_result, (int, float)):
-                assert str(python_result) == formatted_result or formatted_result == str(int(python_result))
-            elif isinstance(python_result, bool):
+            # FIXED: Check for booleans FIRST since bool is a subclass of int in Python
+            if isinstance(python_result, bool):
                 assert formatted_result in ['#t', '#f']
+            elif isinstance(python_result, (int, float)):
+                assert str(python_result) == formatted_result or formatted_result == str(int(python_result))
             elif isinstance(python_result, str):
                 assert formatted_result == f'"{python_result}"'

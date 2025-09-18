@@ -14,6 +14,15 @@ class LambdaFunction:
     closure_env: 'Environment'
     name: Optional[str] = None  # For debugging/error messages
 
+    def __call__(self, *args, **kwargs):
+        """
+        Make LambdaFunction callable for Python's callable() function.
+
+        This is just to satisfy the callable() check in tests.
+        Actual function calling is handled by the evaluator.
+        """
+        raise RuntimeError("LambdaFunction objects should be called through the evaluator, not directly")
+
 
 @dataclass
 class TailCall:

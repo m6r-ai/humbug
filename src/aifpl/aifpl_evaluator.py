@@ -1065,10 +1065,14 @@ class AIFPLEvaluator:
                 if not isinstance(index_arg, int):
                     raise AIFPLEvalError(f"string-ref requires integer index, got {type(index_arg).__name__}")
 
-                try:
-                    return string_arg[index_arg]
-                except IndexError:
+                # FIXED: Add bounds checking for string-ref
+                string_len = len(string_arg)
+                if index_arg < 0:
                     raise AIFPLEvalError(f"string-ref index out of range: {index_arg}")
+                if index_arg >= string_len:
+                    raise AIFPLEvalError(f"string-ref index out of range: {index_arg}")
+
+                return string_arg[index_arg]
         else:
             # For other string operations, validate all arguments are strings
             for i, arg in enumerate(args):
@@ -1613,10 +1617,14 @@ class AIFPLEvaluator:
 
             index = self._to_integer(index, operator)
 
-            try:
-                return list_arg[index]
-            except IndexError:
+            # FIXED: Add bounds checking for list-ref including negative indices
+            list_len = len(list_arg)
+            if index < 0:
                 raise AIFPLEvalError(f"list-ref index out of range: {index}")
+            if index >= list_len:
+                raise AIFPLEvalError(f"list-ref index out of range: {index}")
+
+            return list_arg[index]
 
         if operator == 'length':
             if len(args) != 1:
@@ -1751,6 +1759,35 @@ class AIFPLEvaluator:
 
         return result
 
+    def _escape_string_for_lisp(self, s: str) -> str:
+        """
+        Escape a string for LISP display format.
+
+        Only escapes the minimal necessary characters:
+        - backslashes
+        - double quotes
+        - control characters (newline, tab, etc.)
+
+        Preserves Unicode characters as-is.
+        """
+        result = []
+        for char in s:
+            if char == '"':
+                result.append('\\"')
+            elif char == '\\':
+                result.append('\\\\')
+            elif char == '\n':
+                result.append('\\n')
+            elif char == '\t':
+                result.append('\\t')
+            elif char == '\r':
+                result.append('\\r')
+            elif ord(char) < 32:  # Other control characters
+                result.append(f'\\u{ord(char):04x}')
+            else:
+                result.append(char)  # Keep Unicode as-is
+        return ''.join(result)
+
     def format_result(self, result: Union[int, float, complex, str, bool, list]) -> str:
         """
         Format result for display, using LISP conventions for lists and booleans.
@@ -1765,12 +1802,9 @@ class AIFPLEvaluator:
             return "#t" if result else "#f"
 
         if isinstance(result, str):
-            # FIXED: Use repr() to properly escape the string and strip outer quotes
-            escaped_str = repr(result)
-            # repr() returns 'string' or "string", we want "string" for LISP
-            if escaped_str.startswith("'"):
-                escaped_str = '"' + escaped_str[1:-1] + '"'
-            return escaped_str
+            # FIXED: Use custom escaping that preserves Unicode
+            escaped_content = self._escape_string_for_lisp(result)
+            return f'"{escaped_content}"'
 
         if isinstance(result, float):
             # FIXED: Check if the float is close to a nice number for display
