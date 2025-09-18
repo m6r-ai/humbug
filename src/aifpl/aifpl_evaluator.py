@@ -146,8 +146,9 @@ class AIFPLEvaluator:
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
         self.call_stack = CallStack()
-        # TODO: Add call_chain tracking for mutual recursion support
-        # self.call_chain: List[LambdaFunction] = []
+
+        # NEW: Add call chain tracking for mutual recursion detection
+        self.call_chain: List[LambdaFunction] = []
 
     def evaluate(self, expr: SExpression, env: Optional[Environment] = None, depth: int = 0) -> Union[int, float, complex, str, bool, list]:
         """
@@ -370,14 +371,20 @@ class AIFPLEvaluator:
             expression=str(func.body) if hasattr(func.body, '__str__') else "<body>"
         )
 
+        # NEW: Track function in call chain for mutual recursion detection
+        self.call_chain.append(func)
+
         try:
-            # Enable tail call optimization
+            # Enable tail call optimization with mutual recursion support
             result = self._evaluate_with_tail_detection(func.body, func_env, depth, func)
             return result
 
         finally:
-            # Always pop the call frame
+            # Always pop the call frame and remove from call chain
             self.call_stack.pop()
+            # NEW: Remove function from call chain
+            if self.call_chain and self.call_chain[-1] is func:
+                self.call_chain.pop()
 
     def _is_tail_call(self, expr: SExpression) -> bool:
         """
@@ -420,14 +427,19 @@ class AIFPLEvaluator:
             call_chain: List of functions currently being executed
 
         Returns:
-            True if this is a recursive call
+            True if this is a recursive call (simple or mutual)
         """
         # Simple recursion: calling the same function
         if call_chain and func_value == call_chain[-1]:
             return True
 
         # Mutual recursion: calling any function in the current call chain
-        return func_value in call_chain
+        # Use object identity comparison since LambdaFunction objects are unique
+        for chain_func in call_chain:
+            if func_value is chain_func:
+                return True
+
+        return False
 
     def _evaluate_with_tail_detection(self, expr: SExpression, env: Environment, depth: int, current_function: LambdaFunction) -> Union[int, float, complex, str, bool, list, TailCall]:
         """
@@ -466,27 +478,20 @@ class AIFPLEvaluator:
             # Evaluate the function
             func_value = self._evaluate_expression(expr.function, env, depth)
 
-            # If it's a lambda function, check for recursion
+            # If it's a lambda function, check for recursion (simple or mutual)
             if isinstance(func_value, LambdaFunction):
-                # Get current call chain from call stack
-                call_chain = []
-                for frame in self.call_stack.frames:
-                    # This is a simple heuristic - in a full implementation,
-                    # we'd need to track LambdaFunction objects more carefully
-                    if hasattr(frame, 'function_object'):
-                        call_chain.append(frame.function_object)
-
-                # For now, simple recursion detection: same function
-                if func_value == current_function:
-                    # This is a tail recursive call!
+                # Use the call chain we're tracking
+                if self._is_recursive_call(func_value, self.call_chain):
+                    # This is a recursive call (simple or mutual)!
                     return TailCall(
                         function=expr.function,
                         arguments=expr.arguments,
                         environment=env
                     )
                 else:
-                    # Not recursive, evaluate normally
-                    return self._evaluate_function_call(expr, env, depth)
+                    # FIXED: Not recursive, but still use tail-optimized mechanism
+                    # Don't fall back to regular recursion!
+                    return self._call_lambda_function(func_value, expr.arguments, env, depth)
             else:
                 # Built-in function, evaluate normally
                 return self._evaluate_function_call(expr, env, depth)
