@@ -359,6 +359,6 @@ class AIFPLLexer(Lexer):
             True if the value is a special form, False otherwise
         """
         special_forms = {
-            'if'
+            'and', 'if', 'or'
         }
         return value.lower() in special_forms
