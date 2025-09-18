@@ -233,7 +233,7 @@ class TestErrors:
         with pytest.raises(AIFPLEvalError, match="takes exactly 1 argument, got 0"):
             aifpl.evaluate("(abs)")
 
-        with pytest.raises(AIFPLEvalError, match="requires string arguments"):
+        with pytest.raises(AIFPLEvalError, match="takes exactly 1 argument, got 0"):
             aifpl.evaluate("(string-length)")
 
         # Too many arguments
@@ -577,7 +577,7 @@ class TestErrors:
         (let ((x 10))
           (let ((f (lambda (y)
                     (if (> y 0)
-                        (+ x (/ y 0))  ; Error here
+                        (+ x (/ y 0))
                         y))))
             (f 5)))
         '''
@@ -588,7 +588,7 @@ class TestErrors:
         # Error in deeply nested functional composition
         nested_functional = '''
         (fold + 0
-              (map (lambda (x) (/ x 0))  ; Error in map function
+              (map (lambda (x) (/ x 0))
                    (filter (lambda (x) (> x 0))
                            (list 1 2 3))))
         '''

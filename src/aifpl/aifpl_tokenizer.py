@@ -31,6 +31,12 @@ class AIFPLTokenizer:
                 i += 1
                 continue
 
+            # Comments - skip from ';' to end of line
+            if expression[i] == ';':
+                while i < len(expression) and expression[i] != '\n':
+                    i += 1
+                continue
+
             # Parentheses
             if expression[i] == '(':
                 tokens.append(AIFPLToken(AIFPLTokenType.LPAREN, '(', i))
@@ -49,9 +55,18 @@ class AIFPLTokenizer:
                 i += length
                 continue
 
-            # Boolean literals (#t, #f)
+            # Boolean literals (#t, #f) with validation for invalid patterns like #true, #false
             if expression[i] == '#' and i + 1 < len(expression):
                 if expression[i + 1] in 'tf':
+                    # Check if this is part of a longer invalid sequence like #true or #false
+                    if i + 2 < len(expression) and expression[i + 2].isalpha():
+                        # Find end of the invalid sequence
+                        end = i + 2
+                        while end < len(expression) and expression[end].isalnum():
+                            end += 1
+                        invalid_literal = expression[i:end]
+                        raise AIFPLTokenError(f"Invalid boolean literal at position {i}: '{invalid_literal}' (use #t or #f)")
+
                     boolean_value = expression[i + 1] == 't'
                     tokens.append(AIFPLToken(AIFPLTokenType.BOOLEAN, boolean_value, i, 2))
                     i += 2
