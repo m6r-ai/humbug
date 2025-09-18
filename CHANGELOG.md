@@ -18,6 +18,7 @@ Bug fixes:
 - The `terminal_read` operation did not account for lines at the bottom of the terminal potentially never having had
   content.
 - Correctly clear down empty line tracking when the terminal display is cleared.
+- The Scheme lexer had a subtle bug that could cause the system to block.
 
 ## v0.25 (2025-09-10)
 

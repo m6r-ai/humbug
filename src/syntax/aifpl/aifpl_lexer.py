@@ -80,6 +80,7 @@ class AIFPLLexer(Lexer):
         """
         start = self._position
         if self._position + 1 >= self._input_len:
+            self._position += 1
             self._tokens.append(Token(type=TokenType.ERROR, value='#', start=start))
             return
 
@@ -204,8 +205,7 @@ class AIFPLLexer(Lexer):
         - Integers: 42
         - Decimals: 3.14
         - Scientific: 1e10
-        - Complex: 3+4i
-        - Rationals: 22/7
+        - Complex: 3+4j
         - Signed: +42, -42
         """
         start = self._position
@@ -215,39 +215,26 @@ class AIFPLLexer(Lexer):
             self._position += 1
 
         # Read integer part
-        while (self._position < self._input_len and
-               self._is_digit(self._input[self._position])):
+        while (self._position < self._input_len and self._is_digit(self._input[self._position])):
             self._position += 1
 
         # Handle decimal point
-        if (self._position < self._input_len and
-                self._input[self._position] == '.'):
+        if (self._position < self._input_len and self._input[self._position] == '.'):
             self._position += 1
-            while (self._position < self._input_len and
-                   self._is_digit(self._input[self._position])):
+            while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
         # Handle exponent
-        if (self._position < self._input_len and
-                self._input[self._position].lower() == 'e'):
+        if (self._position < self._input_len and self._input[self._position].lower() == 'e'):
             self._position += 1
             if self._input[self._position] in ('+', '-'):
                 self._position += 1
-            while (self._position < self._input_len and
-                   self._is_digit(self._input[self._position])):
-                self._position += 1
 
-        # Handle rational
-        if (self._position < self._input_len and
-                self._input[self._position] == '/'):
-            self._position += 1
-            while (self._position < self._input_len and
-                   self._is_digit(self._input[self._position])):
+            while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
         # Handle complex
-        if (self._position < self._input_len and
-                self._input[self._position].lower() == 'i'):
+        if (self._position < self._input_len and self._input[self._position].lower() == 'j'):
             self._position += 1
 
         self._tokens.append(Token(
@@ -302,6 +289,6 @@ class AIFPLLexer(Lexer):
             True if the value is a special form, False otherwise
         """
         special_forms = {
-            'and', 'if', 'or'
+            'and', 'if', 'let', 'lambda', 'or'
         }
         return value.lower() in special_forms

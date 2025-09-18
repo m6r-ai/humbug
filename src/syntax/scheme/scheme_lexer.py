@@ -102,6 +102,7 @@ class SchemeLexer(Lexer):
         """
         start = self._position
         if self._position + 1 >= self._input_len:
+            self._position += 1
             self._tokens.append(Token(type=TokenType.ERROR, value='#', start=start))
             return
 
@@ -125,8 +126,7 @@ class SchemeLexer(Lexer):
         # Handle characters
         if ch == '\\':
             self._position += 2
-            while (self._position < self._input_len and
-                   not self._is_delimiter(self._input[self._position])):
+            while (self._position < self._input_len and not self._is_delimiter(self._input[self._position])):
                 self._position += 1
 
             self._tokens.append(Token(
@@ -196,8 +196,7 @@ class SchemeLexer(Lexer):
         start = self._position
         self._position += skip_chars
         while self._position + 1 < self._input_len:
-            if (self._input[self._position] == '|' and
-                    self._input[self._position + 1] == '#'):
+            if (self._input[self._position] == '|' and self._input[self._position + 1] == '#'):
                 self._in_comment = False
                 self._position += 2
                 break
@@ -293,16 +292,14 @@ class SchemeLexer(Lexer):
             self._position += 1
 
         # Read integer part
-        while (self._position < self._input_len and
-               self._is_digit(self._input[self._position])):
+        while (self._position < self._input_len and self._is_digit(self._input[self._position])):
             self._position += 1
 
         # Handle decimal point
         if (self._position < self._input_len and
                 self._input[self._position] == '.'):
             self._position += 1
-            while (self._position < self._input_len and
-                   self._is_digit(self._input[self._position])):
+            while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
         # Handle exponent
@@ -311,21 +308,18 @@ class SchemeLexer(Lexer):
             self._position += 1
             if self._input[self._position] in ('+', '-'):
                 self._position += 1
-            while (self._position < self._input_len and
-                   self._is_digit(self._input[self._position])):
+
+            while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
         # Handle rational
-        if (self._position < self._input_len and
-                self._input[self._position] == '/'):
+        if (self._position < self._input_len and self._input[self._position] == '/'):
             self._position += 1
-            while (self._position < self._input_len and
-                   self._is_digit(self._input[self._position])):
+            while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
         # Handle complex
-        if (self._position < self._input_len and
-                self._input[self._position].lower() == 'i'):
+        if (self._position < self._input_len and self._input[self._position].lower() == 'i'):
             self._position += 1
 
         self._tokens.append(Token(
