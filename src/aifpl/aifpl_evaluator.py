@@ -42,9 +42,9 @@ class AIFPLEvaluator:
         '<=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
         '>=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
 
-        # Boolean operators
-        'and': {'type': 'variadic', 'min_args': 0, 'identity': True, 'boolean_only': True},
-        'or': {'type': 'variadic', 'min_args': 0, 'identity': False, 'boolean_only': True},
+        # Boolean operators - FIXED: Add lazy evaluation support
+        'and': {'type': 'special', 'min_args': 0, 'identity': True, 'boolean_only': True, 'lazy_evaluation': True},
+        'or': {'type': 'special', 'min_args': 0, 'identity': False, 'boolean_only': True, 'lazy_evaluation': True},
         'not': {'type': 'unary', 'boolean_only': True},
 
         # Bitwise operators
@@ -323,8 +323,8 @@ class AIFPLEvaluator:
                     return result
 
             elif isinstance(func_value, str):
-                # Built-in operator/function
-                return self._apply_builtin_operator(func_value, current_call.arguments, current_env, depth)
+                # Built-in operator/function - FIXED: Increment depth
+                return self._apply_builtin_operator(func_value, current_call.arguments, current_env, depth + 1)
 
             else:
                 raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
@@ -493,12 +493,38 @@ class AIFPLEvaluator:
                     # Don't fall back to regular recursion!
                     return self._call_lambda_function(func_value, expr.arguments, env, depth)
             else:
-                # Built-in function, evaluate normally
-                return self._evaluate_function_call(expr, env, depth)
+                # Built-in function, evaluate normally - FIXED: Increment depth
+                return self._evaluate_function_call(expr, env, depth + 1)
 
         # For other expressions, evaluate normally
         else:
             return self._evaluate_expression(expr, env, depth)
+
+    def _python_value_to_ast_node(self, value: Any) -> SExpression:
+        """
+        Convert a Python value to the appropriate AST node type.
+
+        This is needed for higher-order functions that need to pass evaluated values
+        as arguments to other functions.
+
+        Args:
+            value: Python value to convert
+
+        Returns:
+            Appropriate AST node
+        """
+        if isinstance(value, str):
+            return StringLiteral(value)
+        elif isinstance(value, (int, float, complex, bool)):
+            return value
+        elif isinstance(value, list):
+            # FIXED: For lists, create a FunctionCall to (list ...)
+            # Convert each element recursively
+            list_elements = [self._python_value_to_ast_node(item) for item in value]
+            return FunctionCall(function="list", arguments=list_elements, position=0)
+        else:
+            # For other types (like LambdaFunction), return as-is
+            return value
 
     def _apply_builtin_operator(self, operator: str, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
         """Apply built-in operators and functions."""
@@ -511,14 +537,18 @@ class AIFPLEvaluator:
         if op_def.get('type') == 'special':
             if operator == 'if':
                 return self._apply_if_conditional(args, env, depth)
+            elif operator == 'and':
+                return self._apply_and_short_circuit(args, env, depth)
+            elif operator == 'or':
+                return self._apply_or_short_circuit(args, env, depth)
 
         # Handle higher-order functions (map, filter, fold, etc.)
         if op_def.get('higher_order'):
             return self._apply_higher_order_function(operator, args, env, depth)
 
-        # For regular operators, evaluate arguments first
+        # For regular operators, evaluate arguments first - FIXED: Increment depth
         try:
-            evaluated_args = [self._evaluate_expression(arg, env, depth) for arg in args]
+            evaluated_args = [self._evaluate_expression(arg, env, depth + 1) for arg in args]
         except AIFPLEvalError as e:
             raise AIFPLEvalError(f"Error evaluating arguments for '{operator}': {e}") from e
 
@@ -545,7 +575,7 @@ class AIFPLEvaluator:
         if op_def.get('returns_list'):
             return self._apply_list_returning_function(operator, evaluated_args)
 
-        # Handle boolean-only operations
+        # Handle boolean-only operations (only NOT now, since AND/OR are special)
         if op_def.get('boolean_only'):
             return self._apply_boolean_operator(operator, op_def, evaluated_args)
 
@@ -573,6 +603,68 @@ class AIFPLEvaluator:
         # Handle regular mathematical operations
         return self._apply_mathematical_operator(operator, op_def, evaluated_args)
 
+    def _apply_and_short_circuit(self, args: List[SExpression], env: Environment, depth: int) -> bool:
+        """
+        Handle AND with short-circuit evaluation.
+
+        Args:
+            args: List of unevaluated arguments
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Boolean result of AND operation
+        """
+        # Empty AND returns True (identity)
+        if not args:
+            return True
+
+        # Evaluate arguments one by one, short-circuiting on first False
+        for arg in args:
+            result = self._evaluate_expression(arg, env, depth + 1)
+
+            # Validate that result is boolean
+            if not isinstance(result, bool):
+                raise AIFPLEvalError(f"Operator 'and' requires boolean arguments, got {type(result).__name__}")
+
+            # Short-circuit: if any argument is False, return False immediately
+            if not result:
+                return False
+
+        # All arguments were True
+        return True
+
+    def _apply_or_short_circuit(self, args: List[SExpression], env: Environment, depth: int) -> bool:
+        """
+        Handle OR with short-circuit evaluation.
+
+        Args:
+            args: List of unevaluated arguments
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Boolean result of OR operation
+        """
+        # Empty OR returns False (identity)
+        if not args:
+            return False
+
+        # Evaluate arguments one by one, short-circuiting on first True
+        for arg in args:
+            result = self._evaluate_expression(arg, env, depth + 1)
+
+            # Validate that result is boolean
+            if not isinstance(result, bool):
+                raise AIFPLEvalError(f"Operator 'or' requires boolean arguments, got {type(result).__name__}")
+
+            # Short-circuit: if any argument is True, return True immediately
+            if result:
+                return True
+
+        # All arguments were False
+        return False
+
     def _apply_higher_order_function(self, operator: str, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
         """Apply higher-order functions like map, filter, fold."""
         if operator == 'map':
@@ -589,8 +681,9 @@ class AIFPLEvaluator:
             # Apply function to each element
             result = []
             for item in list_value:
-                # Create a function call for each item
-                item_call = FunctionCall(function=func_expr, arguments=[item], position=0)
+                # FIXED: Convert Python values to appropriate AST nodes
+                item_ast = self._python_value_to_ast_node(item)
+                item_call = FunctionCall(function=func_expr, arguments=[item_ast], position=0)
                 item_result = self._evaluate_function_call(item_call, env, depth + 1)
                 result.append(item_result)
 
@@ -610,8 +703,9 @@ class AIFPLEvaluator:
             # Filter elements based on predicate
             result = []
             for item in list_value:
-                # Create a function call for each item
-                pred_call = FunctionCall(function=pred_expr, arguments=[item], position=0)
+                # FIXED: Convert Python values to appropriate AST nodes
+                item_ast = self._python_value_to_ast_node(item)
+                pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, bool):
@@ -636,8 +730,10 @@ class AIFPLEvaluator:
 
             # Fold over the list
             for item in list_value:
-                # Create a function call with accumulator and current item
-                fold_call = FunctionCall(function=func_expr, arguments=[accumulator, item], position=0)
+                # FIXED: Convert Python values to appropriate AST nodes
+                acc_ast = self._python_value_to_ast_node(accumulator)
+                item_ast = self._python_value_to_ast_node(item)
+                fold_call = FunctionCall(function=func_expr, arguments=[acc_ast, item_ast], position=0)
                 accumulator = self._evaluate_function_call(fold_call, env, depth + 1)
 
             return accumulator
@@ -684,8 +780,9 @@ class AIFPLEvaluator:
 
             # Find first element matching predicate
             for item in list_value:
-                # Create a function call for each item
-                pred_call = FunctionCall(function=pred_expr, arguments=[item], position=0)
+                # FIXED: Convert Python values to appropriate AST nodes
+                item_ast = self._python_value_to_ast_node(item)
+                pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, bool):
@@ -709,8 +806,9 @@ class AIFPLEvaluator:
 
             # Check if any element matches predicate
             for item in list_value:
-                # Create a function call for each item
-                pred_call = FunctionCall(function=pred_expr, arguments=[item], position=0)
+                # FIXED: Convert Python values to appropriate AST nodes
+                item_ast = self._python_value_to_ast_node(item)
+                pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, bool):
@@ -734,8 +832,9 @@ class AIFPLEvaluator:
 
             # Check if all elements match predicate
             for item in list_value:
-                # Create a function call for each item
-                pred_call = FunctionCall(function=pred_expr, arguments=[item], position=0)
+                # FIXED: Convert Python values to appropriate AST nodes
+                item_ast = self._python_value_to_ast_node(item)
+                pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, bool):
@@ -769,18 +868,18 @@ class AIFPLEvaluator:
 
         condition_expr, then_expr, else_expr = args
 
-        # Evaluate condition first
-        condition = self._evaluate_expression(condition_expr, env, depth)
+        # Evaluate condition first - FIXED: Increment depth
+        condition = self._evaluate_expression(condition_expr, env, depth + 1)
 
         # Validate condition is boolean
         if not isinstance(condition, bool):
             raise AIFPLEvalError(f"Operator 'if' requires boolean condition, got {type(condition).__name__}")
 
-        # Lazy evaluation: only evaluate the chosen branch
+        # Lazy evaluation: only evaluate the chosen branch - FIXED: Increment depth
         if condition:
-            return self._evaluate_expression(then_expr, env, depth)
+            return self._evaluate_expression(then_expr, env, depth + 1)
         else:
-            return self._evaluate_expression(else_expr, env, depth)
+            return self._evaluate_expression(else_expr, env, depth + 1)
 
     def _validate_arity(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> None:
         """Validate argument count for an operator."""
@@ -904,26 +1003,16 @@ class AIFPLEvaluator:
         raise AIFPLEvalError(f"Unknown list-returning function: '{operator}'")
 
     def _apply_boolean_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> bool:
-        """Apply boolean operators."""
-        # Validate all arguments are boolean
-        for i, arg in enumerate(args):
-            if not isinstance(arg, bool):
-                raise AIFPLEvalError(f"Operator '{operator}' requires boolean arguments, argument {i+1} is {type(arg).__name__}")
-
-        if operator == 'and':
-            if not args:
-                return op_def.get('identity', True)
-            return all(args)
-
-        if operator == 'or':
-            if not args:
-                return op_def.get('identity', False)
-            return any(args)
-
+        """Apply boolean operators (only NOT now, since AND/OR are special)."""
         if operator == 'not':
             if len(args) != 1:
                 raise AIFPLEvalError(f"not requires exactly 1 argument, got {len(args)}")
-            return not args[0]
+
+            arg = args[0]
+            if not isinstance(arg, bool):
+                raise AIFPLEvalError(f"Operator 'not' requires boolean arguments, got {type(arg).__name__}")
+
+            return not arg
 
         raise AIFPLEvalError(f"Unknown boolean operator: '{operator}'")
 
@@ -1012,16 +1101,95 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown string operator: '{operator}'")
 
+    def _strict_equality_check(self, args: List[Any]) -> bool:
+        """
+        Perform strict type-aware equality check with numeric equivalence.
+
+        Args:
+            args: List of values to compare for equality
+
+        Returns:
+            True if all values are equal under AIFPL equality rules
+        """
+        if len(args) < 2:
+            return True  # Vacuous truth for single argument
+
+        first = args[0]
+
+        # Check all remaining arguments against the first
+        for arg in args[1:]:
+            if not self._values_equal(first, arg):
+                return False
+
+        return True
+
+    def _values_equal(self, a: Any, b: Any) -> bool:
+        """
+        Check if two values are equal under AIFPL equality rules.
+
+        Rules:
+        1. Same types: use Python equality
+        2. Numeric types: allow int/float/complex equivalence
+        3. Different non-numeric types: always False
+
+        Args:
+            a: First value
+            b: Second value
+
+        Returns:
+            True if values are equal under AIFPL rules
+        """
+        # Same type - use Python equality
+        if type(a) == type(b):
+            return a == b
+
+        # Both are numeric types - allow equivalence
+        if self._is_numeric(a) and self._is_numeric(b):
+            return self._numeric_equal(a, b)
+
+        # Different non-numeric types are never equal
+        return False
+
+    def _is_numeric(self, value: Any) -> bool:
+        """Check if a value is a numeric type (excluding booleans)."""
+        # FIXED: Exclude booleans explicitly since bool is a subclass of int in Python
+        return isinstance(value, (int, float, complex)) and not isinstance(value, bool)
+
+    def _numeric_equal(self, a: Union[int, float, complex], b: Union[int, float, complex]) -> bool:
+        """
+        Check numeric equality allowing type promotion.
+
+        Args:
+            a: First numeric value
+            b: Second numeric value
+
+        Returns:
+            True if numerically equivalent
+        """
+        # Handle complex numbers specially
+        if isinstance(a, complex) or isinstance(b, complex):
+            # Convert both to complex for comparison
+            complex_a = complex(a) if not isinstance(a, complex) else a
+            complex_b = complex(b) if not isinstance(b, complex) else b
+
+            # Check if they're equal within tolerance for imaginary parts
+            real_equal = abs(complex_a.real - complex_b.real) < 1e-15
+            imag_equal = abs(complex_a.imag - complex_b.imag) < self.imaginary_tolerance
+
+            return real_equal and imag_equal
+
+        # Both are real numbers (int or float)
+        return a == b
+
     def _apply_boolean_returning_operator(self, operator: str, args: List[Any]) -> bool:
         """Apply operators that return boolean values."""
         if operator in ('=', '<', '>', '<=', '>='):
             if len(args) < 2:
                 raise AIFPLEvalError(f"Operator '{operator}' requires at least 2 arguments, got {len(args)}")
 
-            # Handle equality separately (works with all types)
+            # Handle equality with strict type checking
             if operator == '=':
-                first = args[0]
-                return all(arg == first for arg in args[1:])
+                return self._strict_equality_check(args)
 
             # For comparison operators, ensure all arguments are numeric
             for i, arg in enumerate(args):
