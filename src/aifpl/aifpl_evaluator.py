@@ -167,7 +167,13 @@ class AIFPLEvaluator:
         # NEW: Add call chain tracking for mutual recursion detection
         self.call_chain: List[LambdaFunction] = []
 
-    def evaluate(self, expr: SExpression, env: Optional[Environment] = None, depth: int = 0) -> Union[int, float, complex, str, bool, list]:
+    # FIXED: Updated return type to include LambdaFunction
+    def evaluate(
+        self,
+        expr: SExpression,
+        env: Optional[Environment] = None,
+        depth: int = 0
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
         Recursively evaluate AST.
 
@@ -208,7 +214,13 @@ class AIFPLEvaluator:
             stack_trace = self.call_stack.format_stack_trace()
             raise AIFPLEvalError(f"Unexpected error during evaluation: {e}\nCall stack:\n{stack_trace}") from e
 
-    def _evaluate_expression(self, expr: SExpression, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+    # FIXED: Updated return type to include LambdaFunction
+    def _evaluate_expression(
+        self,
+        expr: SExpression,
+        env: Environment,
+        depth: int
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """Internal expression evaluation with type dispatch."""
 
         # Check depth limit at the start of every expression evaluation
@@ -236,7 +248,7 @@ class AIFPLEvaluator:
                 else:
                     raise
 
-        # Lambda expression
+        # Lambda expression - FIXED: Now allowed in return type
         if isinstance(expr, LambdaExpr):
             return LambdaFunction(
                 parameters=expr.parameters,
@@ -273,7 +285,7 @@ class AIFPLEvaluator:
         let_expr: LetExpr,
         env: Environment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list]:
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
         Evaluate let expression with sequential binding.
 
@@ -304,7 +316,7 @@ class AIFPLEvaluator:
         func_call: FunctionCall,
         env: Environment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list]:
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
         Evaluate function call with tail call optimization.
 
@@ -319,7 +331,12 @@ class AIFPLEvaluator:
         # Check if this is a tail call that can be optimized
         return self._evaluate_tail_optimized_call(func_call, env, depth)
 
-    def _evaluate_tail_optimized_call(self, func_call: FunctionCall, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+    def _evaluate_tail_optimized_call(
+        self,
+        func_call: FunctionCall,
+        env: Environment,
+        depth: int
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
         Evaluate function call with tail call optimization.
 
@@ -382,7 +399,7 @@ class AIFPLEvaluator:
         args: List[SExpression],
         env: Environment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, TailCall]:
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction, TailCall]:
         """
         Call a lambda function with given arguments.
 
@@ -495,7 +512,13 @@ class AIFPLEvaluator:
 
         return False
 
-    def _evaluate_with_tail_detection(self, expr: SExpression, env: Environment, depth: int, current_function: LambdaFunction) -> Union[int, float, complex, str, bool, list, TailCall]:
+    def _evaluate_with_tail_detection(
+        self,
+        expr: SExpression,
+        env: Environment,
+        depth: int,
+        current_function: LambdaFunction
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction, TailCall]:
         """
         Evaluate an expression with tail call detection.
 
@@ -585,7 +608,13 @@ class AIFPLEvaluator:
         # For other types (like LambdaFunction), return as-is
         return value
 
-    def _apply_builtin_operator(self, operator: str, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+    def _apply_builtin_operator(
+        self,
+        operator: str,
+        args: List[SExpression],
+        env: Environment,
+        depth: int
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """Apply built-in operators and functions."""
         if operator not in self.OPERATORS:
             raise AIFPLEvalError(f"Unknown operator: '{operator}'")
@@ -643,7 +672,7 @@ class AIFPLEvaluator:
 
         # Handle boolean-only operations (only NOT now, since AND/OR are special)
         if op_def.get('boolean_only'):
-            return self._apply_boolean_operator(operator, op_def, evaluated_args)
+            return self._apply_boolean_operator(operator, evaluated_args)
 
         # Handle string-only operations (now only for non-boolean returning functions)
         if op_def.get('string_only'):
@@ -756,7 +785,7 @@ class AIFPLEvaluator:
         args: List[SExpression],
         env: Environment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list]:
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """Apply higher-order functions like map, filter, fold."""
         if operator == 'map':
             if len(args) != 2:
@@ -836,31 +865,41 @@ class AIFPLEvaluator:
 
             # Now evaluate arguments
             evaluated_args = [self._evaluate_expression(arg, env, depth) for arg in args]
-
-            if len(evaluated_args) == 2:
-                start, end = evaluated_args
-                step = 1
-
-            elif len(evaluated_args) == 3:
-                start, end, step = evaluated_args
-
-            else:
-                # This should never happen due to the check above, but keep for safety
+            if len(evaluated_args) < 2 or len(evaluated_args) > 3:
                 raise AIFPLEvalError(f"range requires 2 or 3 arguments (start, end[, step]), got {len(evaluated_args)}")
 
-            # Validate arguments
-            for i, arg in enumerate([start, end, step]):
-                if not isinstance(arg, (int, float)):
-                    raise AIFPLEvalError(f"range argument {i+1} must be numeric, got {type(arg).__name__}")
+            if len(evaluated_args) == 2:
+                start_val2, end_val2 = evaluated_args
+                if not isinstance(start_val2, (int, float)):
+                    raise AIFPLEvalError(f"range argument 1 must be numeric, got {type(start_val2).__name__}")
 
-            # Convert to integers
-            start, end, step = int(start), int(end), int(step)
+                if not isinstance(end_val2, (int, float)):
+                    raise AIFPLEvalError(f"range argument 2 must be numeric, got {type(end_val2).__name__}")
 
-            if step == 0:
+                start_val = int(start_val2)
+                end_val = int(end_val2)
+                step_val: int = 1
+
+            else:
+                start_val3, end_val3, step_val3 = evaluated_args
+                if not isinstance(start_val3, (int, float)):
+                    raise AIFPLEvalError(f"range argument 1 must be numeric, got {type(start_val3).__name__}")
+
+                if not isinstance(end_val3, (int, float)):
+                    raise AIFPLEvalError(f"range argument 2 must be numeric, got {type(end_val3).__name__}")
+
+                if not isinstance(step_val3, (int, float)):
+                    raise AIFPLEvalError(f"range argument 3 must be numeric, got {type(step_val3).__name__}")
+
+                start_val = int(start_val3)
+                end_val = int(end_val3)
+                step_val = int(step_val3)
+
+            if step_val == 0:
                 raise AIFPLEvalError("range step cannot be zero")
 
             # Generate range
-            return list(range(start, end, step))
+            return list(range(start_val, end_val, step_val))
 
         if operator == 'find':
             if len(args) != 2:
@@ -942,7 +981,12 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Higher-order function '{operator}' not yet implemented")
 
-    def _apply_if_conditional(self, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+    def _apply_if_conditional(
+        self,
+        args: List[SExpression],
+        env: Environment,
+        depth: int
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
         Handle if conditional with lazy evaluation of branches.
 
@@ -1101,7 +1145,7 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown list-returning function: '{operator}'")
 
-    def _apply_boolean_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> bool:
+    def _apply_boolean_operator(self, operator: str, args: List[Any]) -> bool:
         """Apply boolean operators (only NOT now, since AND/OR are special)."""
         if operator == 'not':
             if len(args) != 1:
@@ -1115,13 +1159,21 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown boolean operator: '{operator}'")
 
-    def _apply_string_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> Union[str, int, float, bool]:
+    # FIXED: Updated return type to include complex
+    def _apply_string_operator(
+        self,
+        operator: str,
+        op_def: Dict[str, Any],
+        args: List[Any]
+    ) -> Union[str, int, float, bool, complex]:
         """Apply string operations."""
         # Special handling for functions that need integer indices
         if operator in ('substring', 'string-ref'):
             # First argument must be string
             if not isinstance(args[0], str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, argument 1 is {type(args[0]).__name__}")
+                raise AIFPLEvalError(
+                    f"Operator '{operator}' requires string as first argument, argument 1 is {type(args[0]).__name__}"
+                )
 
             if operator == 'substring':
                 if len(args) != 3:
@@ -1236,7 +1288,7 @@ class AIFPLEvaluator:
                 # Try to parse as integer first
                 if '.' not in string_arg and 'e' not in string_arg.lower() and 'j' not in string_arg.lower():
                     return int(string_arg)
-                # Try complex number
+                # Try complex number - FIXED: This can return complex which is now allowed
                 elif 'j' in string_arg.lower():
                     return complex(string_arg)
                 # Otherwise float
@@ -1365,22 +1417,24 @@ class AIFPLEvaluator:
             # For comparison operators, ensure all arguments are numeric
             for i, arg in enumerate(args):
                 if isinstance(arg, (str, bool, list)):
-                    raise AIFPLEvalError(f"Operator '{operator}' requires numeric arguments, argument {i+1} is {type(arg).__name__}")
+                    raise AIFPLEvalError(
+                        f"Operator '{operator}' requires numeric arguments, argument {i+1} is {type(arg).__name__}"
+                    )
 
             # Check comparison chain
             for i in range(len(args) - 1):
                 left, right = args[i], args[i + 1]
 
-                if operator == '<' and not (left < right):
+                if operator == '<' and not left < right:
                     return False
 
-                if operator == '>' and not (left > right):
+                if operator == '>' and not left > right:
                     return False
 
-                if operator == '<=' and not (left <= right):
+                if operator == '<=' and not left <= right:
                     return False
 
-                if operator == '>=' and not (left >= right):
+                if operator == '>=' and not left >= right:
                     return False
 
             return True
@@ -1392,7 +1446,7 @@ class AIFPLEvaluator:
 
             string_arg, substring = args
             if not isinstance(string_arg, str) or not isinstance(substring, str):
-                raise AIFPLEvalError(f"string-contains? requires string arguments")
+                raise AIFPLEvalError("string-contains? requires string arguments")
 
             return substring in string_arg
 
@@ -1402,7 +1456,7 @@ class AIFPLEvaluator:
 
             string_arg, prefix = args
             if not isinstance(string_arg, str) or not isinstance(prefix, str):
-                raise AIFPLEvalError(f"string-prefix? requires string arguments")
+                raise AIFPLEvalError("string-prefix? requires string arguments")
 
             return string_arg.startswith(prefix)
 
@@ -1412,7 +1466,7 @@ class AIFPLEvaluator:
 
             string_arg, suffix = args
             if not isinstance(string_arg, str) or not isinstance(suffix, str):
-                raise AIFPLEvalError(f"string-suffix? requires string arguments")
+                raise AIFPLEvalError("string-suffix? requires string arguments")
 
             return string_arg.endswith(suffix)
 
@@ -1422,7 +1476,7 @@ class AIFPLEvaluator:
 
             for arg in args:
                 if not isinstance(arg, str):
-                    raise AIFPLEvalError(f"string=? requires string arguments")
+                    raise AIFPLEvalError("string=? requires string arguments")
 
             first = args[0]
             return all(arg == first for arg in args[1:])
@@ -1574,7 +1628,7 @@ class AIFPLEvaluator:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function '{operator}' requires exactly 1 argument, got {len(args)}")
 
-        arg = self._to_integer(args[0], operator)
+        _arg = self._to_integer(args[0], operator)
 
         # These functions are handled in _apply_string_function
         # This method is for integer operations that return integers
@@ -1582,8 +1636,6 @@ class AIFPLEvaluator:
 
     def _apply_mathematical_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> Union[int, float, complex]:
         """Apply mathematical operators."""
-        op_type = op_def['type']
-
         if operator == '+':
             if not args:
                 return op_def.get('identity', 0)
@@ -1602,6 +1654,7 @@ class AIFPLEvaluator:
             result = promoted_args[0]
             for arg in promoted_args[1:]:
                 result -= arg
+
             return result
 
         if operator == '*':
@@ -1613,6 +1666,7 @@ class AIFPLEvaluator:
             result = promoted_args[0]
             for arg in promoted_args[1:]:
                 result *= arg
+
             return result
 
         if operator == '/':
@@ -1629,6 +1683,7 @@ class AIFPLEvaluator:
             result = promoted_args[0]
             for arg in promoted_args[1:]:
                 result /= arg
+
             return result
 
         if operator == '//':
@@ -1662,26 +1717,30 @@ class AIFPLEvaluator:
         if operator == 'sin':
             if len(args) != 1:
                 raise AIFPLEvalError(f"sin requires exactly 1 argument, got {len(args)}")
+
             return cmath.sin(args[0]) if isinstance(args[0], complex) else math.sin(args[0])
 
         if operator == 'cos':
             if len(args) != 1:
                 raise AIFPLEvalError(f"cos requires exactly 1 argument, got {len(args)}")
+
             return cmath.cos(args[0]) if isinstance(args[0], complex) else math.cos(args[0])
 
         if operator == 'tan':
             if len(args) != 1:
                 raise AIFPLEvalError(f"tan requires exactly 1 argument, got {len(args)}")
+
             return cmath.tan(args[0]) if isinstance(args[0], complex) else math.tan(args[0])
 
         if operator == 'log':
             if len(args) != 1:
                 raise AIFPLEvalError(f"log requires exactly 1 argument, got {len(args)}")
+
             arg = args[0]
             if isinstance(arg, complex) or (isinstance(arg, (int, float)) and arg < 0):
                 return cmath.log(arg)
-            else:
-                return math.log(arg)
+
+            return math.log(arg)
 
         if operator == 'log10':
             if len(args) != 1:
@@ -1689,12 +1748,13 @@ class AIFPLEvaluator:
             arg = args[0]
             if isinstance(arg, complex) or (isinstance(arg, (int, float)) and arg < 0):
                 return cmath.log10(arg)
-            else:
-                return math.log10(arg)
+
+            return math.log10(arg)
 
         if operator == 'exp':
             if len(args) != 1:
                 raise AIFPLEvalError(f"exp requires exactly 1 argument, got {len(args)}")
+
             return cmath.exp(args[0]) if isinstance(args[0], complex) else math.exp(args[0])
 
         if operator == 'sqrt':
@@ -1703,38 +1763,44 @@ class AIFPLEvaluator:
             arg = args[0]
             if isinstance(arg, complex) or (isinstance(arg, (int, float)) and arg < 0):
                 return cmath.sqrt(arg)
-            else:
-                return math.sqrt(arg)
+
+            return math.sqrt(arg)
 
         if operator == 'abs':
             if len(args) != 1:
                 raise AIFPLEvalError(f"abs requires exactly 1 argument, got {len(args)}")
+
             return abs(args[0])
 
         if operator == 'min':
             if not args:
                 raise AIFPLEvalError("min requires at least 1 argument")
+
             return min(args)
 
         if operator == 'max':
             if not args:
                 raise AIFPLEvalError("max requires at least 1 argument")
+
             return max(args)
 
         # Complex number functions
         if operator == 'real':
             if len(args) != 1:
                 raise AIFPLEvalError(f"real requires exactly 1 argument, got {len(args)}")
+
             return self._extract_real_part(args[0])
 
         if operator == 'imag':
             if len(args) != 1:
                 raise AIFPLEvalError(f"imag requires exactly 1 argument, got {len(args)}")
+
             return self._extract_imaginary_part(args[0])
 
         if operator == 'complex':
             if len(args) != 2:
                 raise AIFPLEvalError(f"complex requires exactly 2 arguments, got {len(args)}")
+
             real_part, imag_part = args
             return complex(real_part, imag_part)
 
@@ -1971,7 +2037,10 @@ class AIFPLEvaluator:
 
         return None
 
-    def simplify_result(self, result: Union[int, float, complex, str, bool, list]) -> Union[int, float, complex, str, bool, list]:
+    def simplify_result(
+        self,
+        result: Union[int, float, complex, str, bool, list, LambdaFunction]
+    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """Simplify complex results to real numbers when imaginary part is negligible."""
         if isinstance(result, complex):
             # If imaginary part is effectively zero, return just the real part
@@ -2004,21 +2073,28 @@ class AIFPLEvaluator:
         for char in s:
             if char == '"':
                 result.append('\\"')
+
             elif char == '\\':
                 result.append('\\\\')
+
             elif char == '\n':
                 result.append('\\n')
+
             elif char == '\t':
                 result.append('\\t')
+
             elif char == '\r':
                 result.append('\\r')
+
             elif ord(char) < 32:  # Other control characters
                 result.append(f'\\u{ord(char):04x}')
+
             else:
                 result.append(char)  # Keep Unicode as-is
+
         return ''.join(result)
 
-    def format_result(self, result: Union[int, float, complex, str, bool, list]) -> str:
+    def format_result(self, result: Union[int, float, complex, str, bool, list, LambdaFunction]) -> str:
         """
         Format result for display, using LISP conventions for lists and booleans.
 

@@ -14,7 +14,7 @@ class LambdaFunction:
     closure_env: 'Environment'
     name: Optional[str] = None  # For debugging/error messages
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
         """
         Make LambdaFunction callable for Python's callable() function.
 
@@ -175,7 +175,7 @@ class CallStack:
         expression: str
         position: int
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize empty call stack."""
         self.frames: List[CallStack.CallFrame] = []
 
@@ -206,6 +206,7 @@ class CallStack:
         """
         if self.frames:
             return self.frames.pop()
+
         return None
 
     def peek(self) -> Optional[CallFrame]:
@@ -251,6 +252,7 @@ class CallStack:
             args_str = ", ".join(f"{k}={repr(v)}" for k, v in frame.arguments.items())
             if args_str:
                 lines.append(f"{indent}{frame.function_name}({args_str})")
+
             else:
                 lines.append(f"{indent}{frame.function_name}()")
 
