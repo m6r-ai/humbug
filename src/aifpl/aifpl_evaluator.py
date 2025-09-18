@@ -297,10 +297,23 @@ class AIFPLEvaluator:
         current_env = env
 
         while True:
+            # FIXED: Special handling for unknown operators
+            # Check if the function is a string (symbol) and not a known operator
+            if isinstance(current_call.function, str):
+                func_name = current_call.function
+                # If it's not a known operator and not in the environment, it's an unknown operator
+                if func_name not in self.OPERATORS and not current_env.has_binding(func_name):
+                    raise AIFPLEvalError(f"Unknown operator: '{func_name}'")
+
             # Evaluate the function expression
             try:
                 func_value = self._evaluate_expression(current_call.function, current_env, depth)
             except AIFPLEvalError as e:
+                # FIXED: Improve error message for unknown operators
+                if "Undefined variable" in str(e) and isinstance(current_call.function, str):
+                    func_name = current_call.function
+                    if func_name not in self.OPERATORS:
+                        raise AIFPLEvalError(f"Unknown operator: '{func_name}'") from e
                 raise AIFPLEvalError(f"Error evaluating function expression: {e}") from e
 
             # Handle different types of functions

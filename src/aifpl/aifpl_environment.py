@@ -89,6 +89,24 @@ class Environment:
         else:
             raise AIFPLEvalError(f"Undefined variable: '{name}'. No bindings available in current scope")
 
+    def has_binding(self, name: str) -> bool:
+        """
+        Check if a variable has a binding in this environment or parent environments.
+
+        Args:
+            name: Variable name to check
+
+        Returns:
+            True if variable has a binding, False otherwise
+        """
+        if name in self.bindings:
+            return True
+
+        if self.parent is not None:
+            return self.parent.has_binding(name)
+
+        return False
+
     def is_defined(self, name: str) -> bool:
         """
         Check if a variable is defined in this environment or parent environments.

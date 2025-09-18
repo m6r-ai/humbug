@@ -2,7 +2,7 @@
 
 import pytest
 
-from aifpl import AIFPL, AIFPLEvalError
+from aifpl import AIFPL, AIFPLEvalError, AIFPLParseError
 
 
 class TestFunctional:
@@ -27,10 +27,10 @@ class TestFunctional:
     def test_lambda_parameter_validation(self, aifpl):
         """Test lambda parameter validation."""
         # Duplicate parameters should cause error
-        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLParseError, match="Duplicate lambda parameters"):
             aifpl.evaluate('(lambda (x x) (+ x x))')
         
-        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLParseError, match="Duplicate lambda parameters"):
             aifpl.evaluate('(lambda (x y x) (+ x y))')
 
     def test_lambda_arity_checking(self, aifpl):
@@ -96,10 +96,10 @@ class TestFunctional:
 
     def test_let_duplicate_binding_error(self, aifpl):
         """Test that duplicate binding names in let cause error."""
-        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
+        with pytest.raises(AIFPLParseError, match="Duplicate let binding variables"):
             aifpl.evaluate('(let ((x 1) (x 2)) x)')
         
-        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
+        with pytest.raises(AIFPLParseError, match="Duplicate let binding variables"):
             aifpl.evaluate('(let ((x 1) (y 2) (x 3)) (+ x y))')
 
     def test_lambda_closures(self, aifpl, helpers):
@@ -504,12 +504,12 @@ class TestFunctional:
         string_processing = '''
         (fold (lambda (acc s) (+ acc (string-length s)))
               0
-              (filter (lambda (s) (string-contains? s "e"))
+              (filter (lambda (s) (string-contains? s "E"))
                       (map (lambda (s) (string-upcase s))
                            (list "hello" "world" "test" "code"))))
         '''
         # Map to uppercase: "HELLO", "WORLD", "TEST", "CODE"
-        # Filter containing "e": "HELLO", "TEST", "CODE"
+        # Filter containing "E": "HELLO", "TEST", "CODE"
         # Sum lengths: 5 + 4 + 4 = 13
         helpers.assert_evaluates_to(aifpl, string_processing, '13')
 
