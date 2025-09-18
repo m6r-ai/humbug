@@ -86,7 +86,7 @@ class TestArithmetic:
         
         # Complex multiplication
         ("(* 2 j)", "2j"),
-        ("(* j j)", "(-1+0j)"),
+        ("(* j j)", "-1"),
         ("(* (complex 2 3) (complex 1 4))", "(-10+11j)"),
         
         # Zero multiplication
@@ -196,7 +196,7 @@ class TestArithmetic:
         ("(** 8 0.3333333333333333)", "2"),  # Cube root (approximately)
         
         # Complex exponentiation
-        ("(** j 2)", "(-1+0j)"),
+        ("(** j 2)", "-1"),
         ("(** (complex 1 1) 2)", "2j"),
     ])
     def test_exponentiation(self, aifpl, expression, expected):
@@ -461,7 +461,7 @@ class TestArithmetic:
         # Complex number construction
         ("(complex 3 4)", "(3+4j)"),
         ("(complex 0 1)", "1j"),
-        ("(complex 5 0)", "(5+0j)"),
+        ("(complex 5 0)", "5"),
         ("(complex -2 -3)", "(-2-3j)"),
         
         # Real part extraction

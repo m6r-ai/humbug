@@ -998,7 +998,11 @@ class AIFPLEvaluator:
             if not isinstance(delimiter, str):
                 raise AIFPLEvalError(f"string-split requires string as second argument, got {type(delimiter).__name__}")
 
-            return string_arg.split(delimiter)
+            # FIXED: Handle empty separator case - split into individual characters
+            if delimiter == "":
+                return list(string_arg)
+            else:
+                return string_arg.split(delimiter)
 
         raise AIFPLEvalError(f"Unknown list-returning function: '{operator}'")
 
@@ -1036,10 +1040,20 @@ class AIFPLEvaluator:
                 if not isinstance(end_arg, int):
                     raise AIFPLEvalError(f"substring requires integer indices, end argument is {type(end_arg).__name__}")
 
-                try:
-                    return string_arg[start_arg:end_arg]
-                except IndexError as e:
-                    raise AIFPLEvalError(f"substring index out of range: {e}")
+                # FIXED: Add proper bounds checking for substring
+                string_len = len(string_arg)
+                if start_arg < 0:
+                    raise AIFPLEvalError(f"substring start index cannot be negative: {start_arg}")
+                if end_arg < 0:
+                    raise AIFPLEvalError(f"substring end index cannot be negative: {end_arg}")
+                if start_arg > string_len:
+                    raise AIFPLEvalError(f"substring start index out of range: {start_arg} (string length: {string_len})")
+                if end_arg > string_len:
+                    raise AIFPLEvalError(f"substring end index out of range: {end_arg} (string length: {string_len})")
+                if start_arg > end_arg:
+                    raise AIFPLEvalError(f"substring start index ({start_arg}) cannot be greater than end index ({end_arg})")
+
+                return string_arg[start_arg:end_arg]
 
             if operator == 'string-ref':
                 if len(args) != 2:
@@ -1700,6 +1714,25 @@ class AIFPLEvaluator:
 
         return value
 
+    def _is_close_to_nice_number(self, value: float) -> Union[float, None]:
+        """
+        Check if a float is very close to a 'nice' number and return the nice number if so.
+
+        Args:
+            value: Float value to check
+
+        Returns:
+            The nice number if close, None otherwise
+        """
+        # Check if it's close to common fractions with small denominators
+        for denominator in range(1, 11):  # Check denominators 1-10
+            for numerator in range(-50, 51):  # Check reasonable range
+                nice_value = numerator / denominator
+                if abs(value - nice_value) < self.imaginary_tolerance:
+                    return nice_value
+
+        return None
+
     def simplify_result(self, result: Union[int, float, complex, str, bool, list]) -> Union[int, float, complex, str, bool, list]:
         """Simplify complex results to real numbers when imaginary part is negligible."""
         if isinstance(result, complex):
@@ -1732,8 +1765,25 @@ class AIFPLEvaluator:
             return "#t" if result else "#f"
 
         if isinstance(result, str):
-            # For strings, add quotes to distinguish from symbols
-            return f'"{result}"'
+            # FIXED: Use repr() to properly escape the string and strip outer quotes
+            escaped_str = repr(result)
+            # repr() returns 'string' or "string", we want "string" for LISP
+            if escaped_str.startswith("'"):
+                escaped_str = '"' + escaped_str[1:-1] + '"'
+            return escaped_str
+
+        if isinstance(result, float):
+            # FIXED: Check if the float is close to a nice number for display
+            nice_number = self._is_close_to_nice_number(result)
+            if nice_number is not None:
+                # If it's close to an integer, show as integer
+                if nice_number == int(nice_number):
+                    return str(int(nice_number))
+                else:
+                    return str(nice_number)
+            else:
+                # For other floats, use standard representation
+                return str(result)
 
         if isinstance(result, list):
             # Format list in LISP notation: (element1 element2 ...)

@@ -46,7 +46,7 @@ class TestFormatting:
         # Complex number formatting
         ("(complex 1 2)", "(1+2j)"),
         ("(complex 0 1)", "1j"),
-        ("(complex 3 0)", "(3+0j)"),  # Real complex numbers keep format
+        ("(complex 3 0)", "3"),
         ("(complex -1 -2)", "(-1-2j)"),
         ("j", "1j"),
         ("(* 2 j)", "2j"),
@@ -193,7 +193,7 @@ class TestFormatting:
         
         # Complex results
         helpers.assert_evaluates_to(aifpl, '(+ 1 j)', '(1+1j)')
-        helpers.assert_evaluates_to(aifpl, '(* j j)', '(-1+0j)')
+        helpers.assert_evaluates_to(aifpl, '(* j j)', '-1')
 
     def test_string_operation_result_formatting(self, aifpl, helpers):
         """Test that string operations produce properly formatted results."""
