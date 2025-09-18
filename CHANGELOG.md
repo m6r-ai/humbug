@@ -9,6 +9,7 @@ New features:
   restricted to a pure functional language and has simplifications around things like string processing so there is no
   character atom type.  The functionality is a significant superset of the previous calculator AI tool which has now been
   removed as a consequence.
+- As we have a new language, added an AIFPL syntax highlighter (this makes the docs render correctly).
 
 Bug fixes:
 
