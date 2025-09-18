@@ -5,9 +5,9 @@ from syntax.lexer import Lexer, LexerState, Token, TokenType
 
 
 @dataclass
-class SchemeLexerState(LexerState):
+class AIFPLLexerState(LexerState):
     """
-    State information for the Scheme lexer.
+    State information for the AIFPL lexer.
 
     Attributes:
         in_comment: Indicates if we're currently parsing a multi-line comment
@@ -15,11 +15,11 @@ class SchemeLexerState(LexerState):
     in_comment: bool = False
 
 
-class SchemeLexer(Lexer):
+class AIFPLLexer(Lexer):
     """
-    Lexer for R5RS Scheme code.
+    Lexer for AIFPL code.
 
-    This lexer handles Scheme-specific syntax including identifiers, numbers,
+    This lexer handles AIFPL-specific syntax including identifiers, numbers,
     strings, and special forms.
     """
 
@@ -27,7 +27,7 @@ class SchemeLexer(Lexer):
         super().__init__()
         self._in_comment = False
 
-    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> SchemeLexerState:
+    def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> AIFPLLexerState:
         """
         Lex all the tokens in the input.
 
@@ -41,8 +41,8 @@ class SchemeLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            assert isinstance(prev_lexer_state, SchemeLexerState), \
-                f"Expected SchemeLexerState, got {type(prev_lexer_state).__name__}"
+            assert isinstance(prev_lexer_state, AIFPLLexerState), \
+                f"Expected AIFPLLexerState, got {type(prev_lexer_state).__name__}"
             self._in_comment = prev_lexer_state.in_comment
 
         if self._in_comment:
@@ -51,7 +51,7 @@ class SchemeLexer(Lexer):
         if not self._in_comment:
             self._inner_lex()
 
-        lexer_state = SchemeLexerState()
+        lexer_state = AIFPLLexerState()
         lexer_state.in_comment = self._in_comment
         return lexer_state
 
@@ -96,7 +96,6 @@ class SchemeLexer(Lexer):
         Read a hash token which could be:
         - Boolean (#t, #f)
         - Character (#\\x)
-        - Vector (#(...))
         - Binary/octal/decimal/hex (#b, #o, #d, #x)
         - Block comment (#| ... |#)
         """
@@ -120,26 +119,6 @@ class SchemeLexer(Lexer):
         # Handle block comments
         if ch == '|':
             self._read_multiline_comment(2)
-            return
-
-        # Handle characters
-        if ch == '\\':
-            self._position += 2
-            while (self._position < self._input_len and
-                   not self._is_delimiter(self._input[self._position])):
-                self._position += 1
-
-            self._tokens.append(Token(
-                type=TokenType.CHARACTER,
-                value=self._input[start:self._position],
-                start=start
-            ))
-            return
-
-        # Handle vectors
-        if ch == '(':
-            self._position += 2
-            self._tokens.append(Token(type=TokenType.VECTOR_START, value='#(', start=start))
             return
 
         # Handle number bases
@@ -219,7 +198,7 @@ class SchemeLexer(Lexer):
         """
         Read an identifier token.
 
-        In Scheme, identifiers can contain letters, digits, and special characters.
+        In AIFPL, identifiers can contain letters, digits, and special characters.
         They cannot start with a digit and are case-insensitive.
         """
         start = self._position
@@ -371,7 +350,7 @@ class SchemeLexer(Lexer):
 
     def _is_special_form(self, value: str) -> bool:
         """
-        Check if a given value is a Scheme special form.
+        Check if a given value is a AIFPL special form.
 
         Args:
             value: The string to check
@@ -380,9 +359,6 @@ class SchemeLexer(Lexer):
             True if the value is a special form, False otherwise
         """
         special_forms = {
-            'let-syntax', 'letrec-syntax', 'syntax-rules', 'define-syntax',
-            'else', '=>', 'define', 'unquote-splicing', 'unquote',
-            'quote', 'lambda', 'if', 'set!', 'begin', 'cond', 'and', 'or', 'case',
-            'let', 'let*', 'letrec', 'do', 'delay', 'quasiquote'
+            'if'
         }
         return value.lower() in special_forms

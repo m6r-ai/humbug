@@ -73,12 +73,12 @@ except AIFPLError as e:
 
 AIFPL supports conditional evaluation with lazy evaluation of branches:
 
-```lisp
+```aifpl
 (if condition then-expr else-expr)
 ```
 
 **Basic Examples:**
-```lisp
+```aifpl
 (if (> 5 3) "greater" "less")         ; → "greater"
 (if (= 1 2) (+ 1 1) (* 2 2))          ; → 4
 (if #t "true branch" "false branch")  ; → "true branch"
@@ -86,14 +86,14 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ```
 
 **Lazy Evaluation (Key Feature):**
-```lisp
+```aifpl
 (if #t 42 (/ 1 0))                    ; → 42 (no division by zero error)
 (if #f (undefined-symbol) "safe")     ; → "safe" (no undefined symbol error)
 (if (> x 0) (/ 100 x) "undefined")    ; Safe division
 ```
 
 **Practical Examples:**
-```lisp
+```aifpl
 ; Safe list operations
 (if (null? my-list) "empty" (first my-list))
 
@@ -112,7 +112,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ```
 
 **Nested Conditionals:**
-```lisp
+```aifpl
 (if (> x 0)
     (if (> x 10) "big positive" "small positive")
     (if (< x -10) "big negative" "small negative or zero"))
@@ -177,8 +177,8 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ### List Operations
 
 #### List Construction and Manipulation
-```lisp
-(list 1 2 3)                          ; → (1 2 3)
+```aifpl
+(list 1 2 3)                           ; → (1 2 3)
 (list "a" "b" "c")                     ; → ("a" "b" "c")
 (list 1 "hello" #t)                    ; → (1 "hello" #t) [mixed types]
 (list)                                 ; → () [empty list]
@@ -188,7 +188,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ```
 
 #### List Access and Properties
-```lisp
+```aifpl
 (first (list 1 2 3))                  ; → 1
 (rest (list 1 2 3))                   ; → (2 3)
 (list-ref (list "a" "b" "c") 1)       ; → "b" (0-indexed)
@@ -202,7 +202,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ```
 
 #### List Equality
-```lisp
+```aifpl
 (= (list 1 2) (list 1 2))             ; → #t
 (= (list 1 2) (list 1 3))             ; → #f
 (= (list 1 2) (list 1 2 3))           ; → #f
@@ -211,7 +211,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ### String Operations
 
 #### String Construction and Conversion
-```lisp
+```aifpl
 (string-append "hello" " " "world")   ; → "hello world"
 (number->string 42)                   ; → "42"
 (number->string 3.14)                 ; → "3.14"
@@ -220,20 +220,20 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ```
 
 #### String Information and Access
-```lisp
+```aifpl
 (string-length "hello")               ; → 5
 (string-ref "hello" 1)                ; → "e" (character at index 1)
 (substring "hello" 1 4)               ; → "ell" (start=1, end=4 exclusive)
 ```
 
 #### String Manipulation
-```lisp
+```aifpl
 (string-upcase "hello")               ; → "HELLO"
 (string-downcase "HELLO")             ; → "hello"
 ```
 
 #### String Predicates
-```lisp
+```aifpl
 (string-contains? "hello world" "world")  ; → #t
 (string-prefix? "hello" "he")             ; → #t
 (string-suffix? "hello" "lo")             ; → #t
@@ -244,13 +244,13 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ### String-List Integration
 
 #### String-List Conversion
-```lisp
+```aifpl
 (string->list "hello")                ; → ("h" "e" "l" "l" "o")
 (list->string (list "h" "e" "l" "l" "o"))  ; → "hello"
 ```
 
 #### String Splitting and Joining
-```lisp
+```aifpl
 (string-split "name,age,city" ",")    ; → ("name" "age" "city")
 (string-split "hello world" " ")      ; → ("hello" "world")
 (string-join (list "hello" "world") " ")  ; → "hello world"
@@ -261,7 +261,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 
 String literals use double quotes and support escape sequences:
 
-```lisp
+```aifpl
 "hello world"                         ; Basic string
 "She said \"Hello!\""                 ; Escaped quotes
 "Line 1\nLine 2"                      ; Newline
@@ -282,7 +282,7 @@ String literals use double quotes and support escape sequences:
 The `real` and `imag` functions extract components from any numeric value:
 
 **Real Part Extraction:**
-```lisp
+```aifpl
 (real 42)              ; → 42
 (real 3.14)            ; → 3.14
 (real (complex 3 4))   ; → 3
@@ -290,7 +290,7 @@ The `real` and `imag` functions extract components from any numeric value:
 ```
 
 **Imaginary Part Extraction:**
-```lisp
+```aifpl
 (imag 42)              ; → 0
 (imag 3.14)            ; → 0
 (imag (complex 3 4))   ; → 4
@@ -298,7 +298,7 @@ The `real` and `imag` functions extract components from any numeric value:
 ```
 
 **With Expressions:**
-```lisp
+```aifpl
 (real (+ (complex 1 2) (complex 3 4)))  ; → 4
 (imag (sqrt -1))                        ; → 1
 (real (* j j))                          ; → -1
@@ -322,7 +322,7 @@ AIFPL has a strict type system with the following types:
 
 ### Examples of Type Strictness
 
-```lisp
+```aifpl
 ; Valid - same types
 (+ 1 2 3)                             ; → 6 (all integers)
 (string-append "hello" " " "world")   ; → "hello world" (all strings)
@@ -368,7 +368,7 @@ AIFPL has a strict type system with the following types:
 ## Common Usage Patterns
 
 ### Conditional Processing
-```lisp
+```aifpl
 ; Safe division
 (if (= divisor 0) "undefined" (/ dividend divisor))
 
@@ -392,7 +392,7 @@ AIFPL has a strict type system with the following types:
 ```
 
 ### String Processing
-```lisp
+```aifpl
 ; Split CSV data and process
 (string-split "name,age,city" ",")              ; → ("name" "age" "city")
 (first (string-split "John,25,NYC" ","))        ; → "John"
@@ -409,7 +409,7 @@ AIFPL has a strict type system with the following types:
 ```
 
 ### Character-Level Processing
-```lisp
+```aifpl
 ; Convert to characters, process, convert back
 (string->list "hello")                          ; → ("h" "e" "l" "l" "o")
 (reverse (string->list "hello"))                ; → ("o" "l" "l" "e" "h")
@@ -417,11 +417,11 @@ AIFPL has a strict type system with the following types:
 ```
 
 ### Data Structure Manipulation
-```lisp
+```aifpl
 ; Build complex data structures
 (list (list "name" "John") (list "age" 25))     ; → (("name" "John") ("age" 25))
-(first (list (list 1 2) (list 3 4)))           ; → (1 2)
-(rest (first (list (list 1 2 3) (list 4 5))))  ; → (2 3)
+(first (list (list 1 2) (list 3 4)))            ; → (1 2)
+(rest (first (list (list 1 2 3) (list 4 5))))   ; → (2 3)
 
 ; Conditional data processing
 (if (member? "error" status-list)
@@ -492,12 +492,16 @@ tool = AIFPL()
 
 try:
     result = tool.evaluate(expression)
+
 except AIFPLTokenError as e:
     print(f"Tokenization error: {e}")
+
 except AIFPLParseError as e:
     print(f"Parsing error: {e}")
+
 except AIFPLEvalError as e:
     print(f"Evaluation error: {e}")
+
 except AIFPLError as e:
     print(f"General AIFPL error: {e}")
 ```
