@@ -42,7 +42,7 @@ class AIFPLEvaluator:
         '<=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
         '>=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
 
-        # Boolean operators - FIXED: Add lazy evaluation support
+        # Boolean operators
         'and': {'type': 'special', 'min_args': 0, 'identity': True, 'boolean_only': True, 'lazy_evaluation': True},
         'or': {'type': 'special', 'min_args': 0, 'identity': False, 'boolean_only': True, 'lazy_evaluation': True},
         'not': {'type': 'unary', 'boolean_only': True},
@@ -194,6 +194,11 @@ class AIFPLEvaluator:
     def _evaluate_expression(self, expr: SExpression, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
         """Internal expression evaluation with type dispatch."""
 
+        # Check depth limit at the start of every expression evaluation
+        if depth > self.max_depth:
+            stack_trace = self.call_stack.format_stack_trace()
+            raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
+
         # Atom evaluation (literals only - NOT symbols)
         if isinstance(expr, (int, float, complex, bool)):
             return expr
@@ -297,7 +302,6 @@ class AIFPLEvaluator:
         current_env = env
 
         while True:
-            # FIXED: Special handling for unknown operators
             # Check if the function is a string (symbol) and not a known operator
             if isinstance(current_call.function, str):
                 func_name = current_call.function
@@ -309,7 +313,6 @@ class AIFPLEvaluator:
             try:
                 func_value = self._evaluate_expression(current_call.function, current_env, depth)
             except AIFPLEvalError as e:
-                # FIXED: Improve error message for unknown operators
                 if "Undefined variable" in str(e) and isinstance(current_call.function, str):
                     func_name = current_call.function
                     if func_name not in self.OPERATORS:
@@ -336,8 +339,12 @@ class AIFPLEvaluator:
                     return result
 
             elif isinstance(func_value, str):
-                # Built-in operator/function - FIXED: Increment depth
-                return self._apply_builtin_operator(func_value, current_call.arguments, current_env, depth + 1)
+                # String literals that evaluate to strings should not be treated as operators
+                if isinstance(current_call.function, str):
+                    # This is a symbol (identifier), so it can be a built-in operator
+                    return self._apply_builtin_operator(func_value, current_call.arguments, current_env, depth + 1)
+                # This is a string literal, so it's not a function
+                raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
 
             else:
                 raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
@@ -1825,12 +1832,10 @@ class AIFPLEvaluator:
             return "#t" if result else "#f"
 
         if isinstance(result, str):
-            # FIXED: Use custom escaping that preserves Unicode
             escaped_content = self._escape_string_for_lisp(result)
             return f'"{escaped_content}"'
 
         if isinstance(result, float):
-            # FIXED: Check if the float is close to a nice number for display
             nice_number = self._is_close_to_nice_number(result)
             if nice_number is not None:
                 # If it's close to an integer, show as integer
