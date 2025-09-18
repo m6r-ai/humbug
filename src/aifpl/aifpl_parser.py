@@ -1,7 +1,7 @@
 """Parser for AIFPL expressions."""
 
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Union, Tuple
 
 from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
@@ -9,7 +9,46 @@ from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 
 # S-Expression types
 Atom = Union[int, float, complex, str, bool]
-SExpression = Union[Atom, List['SExpression']]
+
+
+@dataclass
+class StringLiteral:
+    """Wrapper to distinguish string literals from symbols."""
+    value: str
+
+    def __str__(self) -> str:
+        return self.value
+
+    def __repr__(self) -> str:
+        return f'StringLiteral({self.value!r})'
+
+
+@dataclass
+class LambdaExpr:
+    """Lambda expression AST node."""
+    parameters: List[str]
+    body: 'SExpression'
+    position: int = 0
+
+
+@dataclass
+class LetExpr:
+    """Let expression AST node."""
+    bindings: List[Tuple[str, 'SExpression']]
+    body: 'SExpression'
+    position: int = 0
+
+
+@dataclass
+class FunctionCall:
+    """Function call AST node."""
+    function: 'SExpression'
+    arguments: List['SExpression']
+    position: int = 0
+
+
+# Updated S-Expression type to include new nodes and StringLiteral
+SExpression = Union[Atom, StringLiteral, List['SExpression'], LambdaExpr, LetExpr, FunctionCall]
 
 
 @dataclass
@@ -73,7 +112,7 @@ class AIFPLParser:
         raise AIFPLParseError(f"Unexpected token: {self.current_token.value} at position {self.current_token.position}")
 
     def _parse_list(self, start_pos: int) -> ParsedExpression:
-        """Parse (operator arg1 arg2 ...)"""
+        """Parse (operator arg1 arg2 ...) or special forms."""
         self._consume(AIFPLTokenType.LPAREN)
 
         elements = []
@@ -88,10 +127,108 @@ class AIFPLParser:
         end_pos = self.current_token.position
         self._consume(AIFPLTokenType.RPAREN)
 
+        # Handle empty lists - return as empty Python list
         if not elements:
-            raise AIFPLParseError(f"Empty list at position {start_pos}")
+            return ParsedExpression([], start_pos, end_pos)
 
-        return ParsedExpression(elements, start_pos, end_pos)
+        # Check for special forms first
+        if isinstance(elements[0], str):
+            if elements[0] == "lambda":
+                lambda_expr = self._parse_lambda_form(elements, start_pos)
+                return ParsedExpression(lambda_expr, start_pos, end_pos)
+            elif elements[0] == "let":
+                let_expr = self._parse_let_form(elements, start_pos)
+                return ParsedExpression(let_expr, start_pos, end_pos)
+
+        # Regular function call - create FunctionCall object
+        func_call = FunctionCall(
+            function=elements[0],
+            arguments=elements[1:],
+            position=start_pos
+        )
+        return ParsedExpression(func_call, start_pos, end_pos)
+
+    def _parse_lambda_form(self, elements: List[SExpression], start_pos: int) -> LambdaExpr:
+        """Parse (lambda (param1 param2 ...) body)."""
+        if len(elements) != 3:
+            raise AIFPLParseError(f"Lambda expression requires exactly 3 elements: (lambda (params...) body) at position {start_pos}")
+
+        # Parse parameter list - handle the case where it might be a FunctionCall or empty list
+        param_expr = elements[1]
+
+        # Handle different parameter list formats
+        if isinstance(param_expr, FunctionCall):
+            # For lambda parameters, we expect (param1 param2 ...) which becomes FunctionCall(param1, [param2, ...])
+            parameters = [param_expr.function] + param_expr.arguments
+        elif isinstance(param_expr, list):
+            # This handles empty parameter lists: () -> []
+            parameters = param_expr
+        else:
+            # Single parameter without parentheses (not standard but handle gracefully)
+            if isinstance(param_expr, str):
+                parameters = [param_expr]
+            else:
+                raise AIFPLParseError(f"Lambda parameter list must be a list or symbol, got {type(param_expr).__name__} at position {start_pos}")
+
+        # Validate parameters are all strings
+        for param in parameters:
+            if not isinstance(param, str):
+                raise AIFPLParseError(f"Lambda parameter must be a symbol, got {type(param).__name__} at position {start_pos}")
+
+        # Check for duplicate parameters
+        if len(parameters) != len(set(parameters)):
+            duplicates = [p for p in parameters if parameters.count(p) > 1]
+            raise AIFPLParseError(f"Duplicate lambda parameters: {duplicates} at position {start_pos}")
+
+        body = elements[2]
+
+        return LambdaExpr(parameters=parameters, body=body, position=start_pos)
+
+    def _parse_let_form(self, elements: List[SExpression], start_pos: int) -> LetExpr:
+        """Parse (let ((var1 val1) (var2 val2) ...) body)."""
+        if len(elements) != 3:
+            raise AIFPLParseError(f"Let expression requires exactly 3 elements: (let ((bindings...)) body) at position {start_pos}")
+
+        # Parse binding list - handle the case where it might be a FunctionCall
+        binding_expr = elements[1]
+
+        # Convert FunctionCall back to list for binding lists
+        if isinstance(binding_expr, FunctionCall):
+            # For let bindings, we expect ((var1 val1) (var2 val2) ...) which becomes FunctionCall((var1 val1), [(var2 val2), ...])
+            binding_list = [binding_expr.function] + binding_expr.arguments
+        elif isinstance(binding_expr, list):
+            binding_list = binding_expr
+        else:
+            raise AIFPLParseError(f"Let binding list must be a list, got {type(binding_expr).__name__} at position {start_pos}")
+
+        bindings = []
+        for binding in binding_list:
+            # Each binding might also be a FunctionCall
+            if isinstance(binding, FunctionCall):
+                # (var val) becomes FunctionCall(var, [val])
+                if len(binding.arguments) != 1:
+                    raise AIFPLParseError(f"Let binding must be a list of 2 elements: (var value) at position {start_pos}")
+                var_name = binding.function
+                var_value = binding.arguments[0]
+            elif isinstance(binding, list) and len(binding) == 2:
+                var_name, var_value = binding
+            else:
+                raise AIFPLParseError(f"Let binding must be a list of 2 elements: (var value) at position {start_pos}")
+
+            if not isinstance(var_name, str):
+                raise AIFPLParseError(f"Let binding variable must be a symbol, got {type(var_name).__name__} at position {start_pos}")
+
+            bindings.append((var_name, var_value))
+
+        # Check for duplicate binding names
+        var_names = [name for name, _ in bindings]
+        if len(var_names) != len(set(var_names)):
+            duplicates = [name for name in var_names if var_names.count(name) > 1]
+            raise AIFPLParseError(f"Duplicate let binding variables: {duplicates} at position {start_pos}")
+
+        body = elements[2]
+
+        return LetExpr(bindings=bindings, body=body, position=start_pos)
 
     def _parse_atom(self, start_pos: int) -> ParsedExpression:
         """Parse an atomic value (number, string, boolean, or symbol)."""
@@ -101,7 +238,12 @@ class AIFPLParser:
         self._advance()
 
         end_pos = start_pos + token.length
-        return ParsedExpression(token.value, start_pos, end_pos)
+
+        # Wrap string tokens in StringLiteral to distinguish from symbols
+        if token.type == AIFPLTokenType.STRING:
+            return ParsedExpression(StringLiteral(token.value), start_pos, end_pos)
+        else:
+            return ParsedExpression(token.value, start_pos, end_pos)
 
     def _consume(self, expected_type: AIFPLTokenType) -> None:
         """Consume a token of the expected type."""
@@ -120,6 +262,5 @@ class AIFPLParser:
         self.pos += 1
         if self.pos < len(self.tokens):
             self.current_token = self.tokens[self.pos]
-
         else:
             self.current_token = None

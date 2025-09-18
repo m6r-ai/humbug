@@ -2,10 +2,11 @@
 
 import cmath
 import math
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_parser import SExpression
+from aifpl.aifpl_parser import SExpression, LambdaExpr, LetExpr, FunctionCall, StringLiteral
+from aifpl.aifpl_environment import Environment, LambdaFunction, TailCall, CallStack
 
 
 class AIFPLEvaluator:
@@ -118,6 +119,17 @@ class AIFPLEvaluator:
         'list->string': {'type': 'unary', 'list_operation': True, 'converts_to_string': True},
         'string-split': {'type': 'binary', 'string_only': True, 'returns_list': True},
         'string-join': {'type': 'binary', 'list_operation': True, 'converts_to_string': True},
+
+        # Functional iteration operations
+        'map': {'type': 'binary', 'higher_order': True},
+        'filter': {'type': 'binary', 'higher_order': True},
+        'fold': {'type': 'ternary', 'higher_order': True},
+        'range': {'type': 'variadic', 'min_args': 2, 'max_args': 3, 'higher_order': True},
+        'find': {'type': 'binary', 'higher_order': True},
+        'any?': {'type': 'binary', 'higher_order': True, 'returns_boolean': True},
+        'all?': {'type': 'binary', 'higher_order': True, 'returns_boolean': True},
+        'take': {'type': 'binary', 'list_operation': True},
+        'drop': {'type': 'binary', 'list_operation': True},
     }
 
     # Tolerance for considering imaginary part as zero
@@ -133,13 +145,17 @@ class AIFPLEvaluator:
         """
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
+        self.call_stack = CallStack()
+        # TODO: Add call_chain tracking for mutual recursion support
+        # self.call_chain: List[LambdaFunction] = []
 
-    def evaluate(self, expr: SExpression, depth: int = 0) -> Union[int, float, complex, str, bool, list]:
+    def evaluate(self, expr: SExpression, env: Optional[Environment] = None, depth: int = 0) -> Union[int, float, complex, str, bool, list]:
         """
         Recursively evaluate AST.
 
         Args:
             expr: Expression to evaluate
+            env: Environment for variable lookups
             depth: Current recursion depth
 
         Returns:
@@ -149,36 +165,338 @@ class AIFPLEvaluator:
             AIFPLEvalError: If evaluation fails
         """
         if depth > self.max_depth:
-            raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})")
+            stack_trace = self.call_stack.format_stack_trace()
+            raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
 
-        # Atom evaluation
-        if isinstance(expr, (int, float, complex, str, bool)):
+        # Create global environment if none provided
+        if env is None:
+            env = Environment(name="global")
+            # Add constants to global environment
+            for name, value in self.CONSTANTS.items():
+                env.define(name, value)
+
+            # Add built-in operators to global environment as strings (operator names)
+            # This allows symbol lookup to succeed, and the evaluator will handle them as built-ins
+            for operator_name in self.OPERATORS.keys():
+                env.define(operator_name, operator_name)
+
+        try:
+            return self._evaluate_expression(expr, env, depth)
+        except AIFPLEvalError:
+            # Re-raise AIFPL errors as-is
+            raise
+        except Exception as e:
+            # Wrap other exceptions with context
+            stack_trace = self.call_stack.format_stack_trace()
+            raise AIFPLEvalError(f"Unexpected error during evaluation: {e}\nCall stack:\n{stack_trace}") from e
+
+    def _evaluate_expression(self, expr: SExpression, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+        """Internal expression evaluation with type dispatch."""
+
+        # Atom evaluation (literals only - NOT symbols)
+        if isinstance(expr, (int, float, complex, bool)):
             return expr
 
+        # String literal evaluation - return the string value directly
+        if isinstance(expr, StringLiteral):
+            return expr.value
+
+        # Symbol lookup (strings that represent variable names)
         if isinstance(expr, str):
-            # Symbol lookup (constants)
-            if expr in self.CONSTANTS:
-                return self.CONSTANTS[expr]
+            try:
+                return env.lookup(expr)
+            except AIFPLEvalError as e:
+                # Add more context to symbol lookup errors
+                stack_trace = self.call_stack.format_stack_trace()
+                if stack_trace.strip() != "(no function calls)":
+                    raise AIFPLEvalError(f"{e}\nCall stack:\n{stack_trace}") from e
+                else:
+                    raise
 
-            raise AIFPLEvalError(f"Unknown symbol: '{expr}'")
+        # Lambda expression
+        if isinstance(expr, LambdaExpr):
+            return LambdaFunction(
+                parameters=expr.parameters,
+                body=expr.body,
+                closure_env=env,
+                name="<lambda>"
+            )
 
-        # List evaluation
+        # Let expression
+        if isinstance(expr, LetExpr):
+            return self._evaluate_let_expression(expr, env, depth + 1)
+
+        # Function call
+        if isinstance(expr, FunctionCall):
+            return self._evaluate_function_call(expr, env, depth + 1)
+
+        # Legacy list evaluation (for backwards compatibility)
         if isinstance(expr, list):
             if not expr:
                 raise AIFPLEvalError("Cannot evaluate empty list")
 
-            operator = expr[0]
-            args = expr[1:]
-
-            if not isinstance(operator, str):
-                raise AIFPLEvalError(f"Operator must be a symbol, got {type(operator).__name__}")
-
-            return self._apply_operator(operator, args, depth + 1)
+            # Convert to FunctionCall for consistent handling
+            func_call = FunctionCall(
+                function=expr[0],
+                arguments=expr[1:],
+                position=0
+            )
+            return self._evaluate_function_call(func_call, env, depth + 1)
 
         raise AIFPLEvalError(f"Invalid expression type: {type(expr).__name__}")
 
-    def _apply_operator(self, operator: str, args: List[SExpression], depth: int) -> Union[int, float, complex, str, bool, list]:
-        """Apply an operator to its arguments."""
+    def _evaluate_let_expression(self, let_expr: LetExpr, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+        """
+        Evaluate let expression with sequential binding.
+
+        Args:
+            let_expr: Let expression to evaluate
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Result of evaluating the let body
+        """
+        # Create new environment for let bindings
+        let_env = env.create_child("let")
+
+        # Sequential binding: each binding can reference previous ones
+        for var_name, var_expr in let_expr.bindings:
+            try:
+                var_value = self._evaluate_expression(var_expr, let_env, depth)
+                let_env.define(var_name, var_value)
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(f"Error evaluating let binding '{var_name}': {e}") from e
+
+        # Evaluate body in the let environment
+        return self._evaluate_expression(let_expr.body, let_env, depth)
+
+    def _evaluate_function_call(self, func_call: FunctionCall, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+        """
+        Evaluate function call with tail call optimization.
+
+        Args:
+            func_call: Function call to evaluate
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Result of the function call
+        """
+        # Check if this is a tail call that can be optimized
+        return self._evaluate_tail_optimized_call(func_call, env, depth)
+
+    def _evaluate_tail_optimized_call(self, func_call: FunctionCall, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+        """
+        Evaluate function call with tail call optimization.
+
+        This method uses iteration instead of recursion for tail calls to prevent stack overflow.
+        """
+        current_call = func_call
+        current_env = env
+
+        while True:
+            # Evaluate the function expression
+            try:
+                func_value = self._evaluate_expression(current_call.function, current_env, depth)
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(f"Error evaluating function expression: {e}") from e
+
+            # Handle different types of functions
+            if isinstance(func_value, LambdaFunction):
+                # User-defined function call
+                result = self._call_lambda_function(func_value, current_call.arguments, current_env, depth)
+
+                # Check if result is a tail call
+                if isinstance(result, TailCall):
+                    # Continue the loop with the tail call
+                    current_call = FunctionCall(
+                        function=result.function,
+                        arguments=result.arguments,
+                        position=current_call.position
+                    )
+                    current_env = result.environment
+                    continue
+                else:
+                    # Regular result, return it
+                    return result
+
+            elif isinstance(func_value, str):
+                # Built-in operator/function
+                return self._apply_builtin_operator(func_value, current_call.arguments, current_env, depth)
+
+            else:
+                raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
+
+    def _call_lambda_function(self, func: LambdaFunction, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list, TailCall]:
+        """
+        Call a lambda function with given arguments.
+
+        Args:
+            func: Lambda function to call
+            args: Argument expressions
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Function result or TailCall for optimization
+        """
+        # Check arity
+        if len(args) != len(func.parameters):
+            raise AIFPLEvalError(
+                f"Function expects {len(func.parameters)} arguments, got {len(args)}. "
+                f"Parameters: {func.parameters}"
+            )
+
+        # Evaluate arguments in current environment
+        try:
+            arg_values = [self._evaluate_expression(arg, env, depth) for arg in args]
+        except AIFPLEvalError as e:
+            raise AIFPLEvalError(f"Error evaluating function arguments: {e}") from e
+
+        # Create new environment for function execution
+        func_env = func.closure_env.create_child(f"{func.name}-call")
+
+        # Bind parameters to arguments
+        param_bindings = {}
+        for param, arg_value in zip(func.parameters, arg_values):
+            func_env.define(param, arg_value)
+            param_bindings[param] = arg_value
+
+        # Add call frame to stack for error reporting
+        self.call_stack.push(
+            function_name=func.name or "<lambda>",
+            arguments=param_bindings,
+            expression=str(func.body) if hasattr(func.body, '__str__') else "<body>"
+        )
+
+        try:
+            # Enable tail call optimization
+            result = self._evaluate_with_tail_detection(func.body, func_env, depth, func)
+            return result
+
+        finally:
+            # Always pop the call frame
+            self.call_stack.pop()
+
+    def _is_tail_call(self, expr: SExpression) -> bool:
+        """
+        Check if an expression could be a tail call.
+
+        This is a simple check - actual tail position analysis happens elsewhere.
+        Only FunctionCall objects can be tail calls.
+        """
+        return isinstance(expr, FunctionCall)
+
+    def _is_in_tail_position(self, expr: SExpression, context_expr: SExpression) -> bool:
+        """
+        Check if an expression is in tail position within a context.
+
+        Tail position means the result of expr becomes the result of context_expr.
+        """
+        # For if expressions, both then and else branches are in tail position
+        if isinstance(context_expr, FunctionCall) and isinstance(context_expr.function, str):
+            if context_expr.function == 'if' and len(context_expr.arguments) == 3:
+                then_branch = context_expr.arguments[1]
+                else_branch = context_expr.arguments[2]
+                return expr == then_branch or expr == else_branch
+
+        # For let expressions, the body is in tail position
+        if isinstance(context_expr, LetExpr):
+            return expr == context_expr.body
+
+        # For lambda expressions, the body is in tail position
+        if isinstance(context_expr, LambdaExpr):
+            return expr == context_expr.body
+
+        return False
+
+    def _is_recursive_call(self, func_value: LambdaFunction, call_chain: List[LambdaFunction]) -> bool:
+        """
+        Check if a function call is recursive (simple or mutual).
+
+        Args:
+            func_value: The function being called
+            call_chain: List of functions currently being executed
+
+        Returns:
+            True if this is a recursive call
+        """
+        # Simple recursion: calling the same function
+        if call_chain and func_value == call_chain[-1]:
+            return True
+
+        # Mutual recursion: calling any function in the current call chain
+        return func_value in call_chain
+
+    def _evaluate_with_tail_detection(self, expr: SExpression, env: Environment, depth: int, current_function: LambdaFunction) -> Union[int, float, complex, str, bool, list, TailCall]:
+        """
+        Evaluate an expression with tail call detection.
+
+        Args:
+            expr: Expression to evaluate
+            env: Environment
+            depth: Current depth
+            current_function: The function we're currently executing
+
+        Returns:
+            Either a regular result or a TailCall object for optimization
+        """
+        # Handle if expressions specially - branches are in tail position
+        if isinstance(expr, FunctionCall) and isinstance(expr.function, str) and expr.function == 'if':
+            if len(expr.arguments) != 3:
+                raise AIFPLEvalError(f"if requires exactly 3 arguments, got {len(expr.arguments)}")
+
+            condition_expr, then_expr, else_expr = expr.arguments
+
+            # Evaluate condition (not in tail position)
+            condition = self._evaluate_expression(condition_expr, env, depth)
+
+            if not isinstance(condition, bool):
+                raise AIFPLEvalError(f"if requires boolean condition, got {type(condition).__name__}")
+
+            # Evaluate chosen branch (in tail position)
+            if condition:
+                return self._evaluate_with_tail_detection(then_expr, env, depth, current_function)
+            else:
+                return self._evaluate_with_tail_detection(else_expr, env, depth, current_function)
+
+        # Handle function calls - check for tail calls
+        elif isinstance(expr, FunctionCall):
+            # Evaluate the function
+            func_value = self._evaluate_expression(expr.function, env, depth)
+
+            # If it's a lambda function, check for recursion
+            if isinstance(func_value, LambdaFunction):
+                # Get current call chain from call stack
+                call_chain = []
+                for frame in self.call_stack.frames:
+                    # This is a simple heuristic - in a full implementation,
+                    # we'd need to track LambdaFunction objects more carefully
+                    if hasattr(frame, 'function_object'):
+                        call_chain.append(frame.function_object)
+
+                # For now, simple recursion detection: same function
+                if func_value == current_function:
+                    # This is a tail recursive call!
+                    return TailCall(
+                        function=expr.function,
+                        arguments=expr.arguments,
+                        environment=env
+                    )
+                else:
+                    # Not recursive, evaluate normally
+                    return self._evaluate_function_call(expr, env, depth)
+            else:
+                # Built-in function, evaluate normally
+                return self._evaluate_function_call(expr, env, depth)
+
+        # For other expressions, evaluate normally
+        else:
+            return self._evaluate_expression(expr, env, depth)
+
+    def _apply_builtin_operator(self, operator: str, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+        """Apply built-in operators and functions."""
         if operator not in self.OPERATORS:
             raise AIFPLEvalError(f"Unknown operator: '{operator}'")
 
@@ -187,10 +505,17 @@ class AIFPLEvaluator:
         # Handle special forms that require lazy evaluation
         if op_def.get('type') == 'special':
             if operator == 'if':
-                return self._apply_if_conditional(args, depth)
+                return self._apply_if_conditional(args, env, depth)
+
+        # Handle higher-order functions (map, filter, fold, etc.)
+        if op_def.get('higher_order'):
+            return self._apply_higher_order_function(operator, args, env, depth)
 
         # For regular operators, evaluate arguments first
-        evaluated_args = [self.evaluate(arg, depth) for arg in args]
+        try:
+            evaluated_args = [self._evaluate_expression(arg, env, depth) for arg in args]
+        except AIFPLEvalError as e:
+            raise AIFPLEvalError(f"Error evaluating arguments for '{operator}': {e}") from e
 
         # Check argument count
         self._validate_arity(operator, op_def, evaluated_args)
@@ -243,12 +568,189 @@ class AIFPLEvaluator:
         # Handle regular mathematical operations
         return self._apply_mathematical_operator(operator, op_def, evaluated_args)
 
-    def _apply_if_conditional(self, args: List[SExpression], depth: int) -> Union[int, float, complex, str, bool, list]:
+    def _apply_higher_order_function(self, operator: str, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+        """Apply higher-order functions like map, filter, fold."""
+        if operator == 'map':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"map requires exactly 2 arguments (function, list), got {len(args)}")
+
+            func_expr, list_expr = args
+
+            # Evaluate the list
+            list_value = self._evaluate_expression(list_expr, env, depth)
+            if not isinstance(list_value, list):
+                raise AIFPLEvalError(f"map requires list as second argument, got {type(list_value).__name__}")
+
+            # Apply function to each element
+            result = []
+            for item in list_value:
+                # Create a function call for each item
+                item_call = FunctionCall(function=func_expr, arguments=[item], position=0)
+                item_result = self._evaluate_function_call(item_call, env, depth + 1)
+                result.append(item_result)
+
+            return result
+
+        elif operator == 'filter':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"filter requires exactly 2 arguments (predicate, list), got {len(args)}")
+
+            pred_expr, list_expr = args
+
+            # Evaluate the list
+            list_value = self._evaluate_expression(list_expr, env, depth)
+            if not isinstance(list_value, list):
+                raise AIFPLEvalError(f"filter requires list as second argument, got {type(list_value).__name__}")
+
+            # Filter elements based on predicate
+            result = []
+            for item in list_value:
+                # Create a function call for each item
+                pred_call = FunctionCall(function=pred_expr, arguments=[item], position=0)
+                pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
+
+                if not isinstance(pred_result, bool):
+                    raise AIFPLEvalError(f"filter predicate must return boolean, got {type(pred_result).__name__}")
+
+                if pred_result:
+                    result.append(item)
+
+            return result
+
+        elif operator == 'fold':
+            if len(args) != 3:
+                raise AIFPLEvalError(f"fold requires exactly 3 arguments (function, initial, list), got {len(args)}")
+
+            func_expr, init_expr, list_expr = args
+
+            # Evaluate initial value and list
+            accumulator = self._evaluate_expression(init_expr, env, depth)
+            list_value = self._evaluate_expression(list_expr, env, depth)
+            if not isinstance(list_value, list):
+                raise AIFPLEvalError(f"fold requires list as third argument, got {type(list_value).__name__}")
+
+            # Fold over the list
+            for item in list_value:
+                # Create a function call with accumulator and current item
+                fold_call = FunctionCall(function=func_expr, arguments=[accumulator, item], position=0)
+                accumulator = self._evaluate_function_call(fold_call, env, depth + 1)
+
+            return accumulator
+
+        elif operator == 'range':
+            # Evaluate arguments
+            evaluated_args = [self._evaluate_expression(arg, env, depth) for arg in args]
+
+            if len(evaluated_args) == 2:
+                start, end = evaluated_args
+                step = 1
+            elif len(evaluated_args) == 3:
+                start, end, step = evaluated_args
+            else:
+                raise AIFPLEvalError(f"range requires 2 or 3 arguments (start, end[, step]), got {len(evaluated_args)}")
+
+            # Validate arguments
+            for i, arg in enumerate([start, end, step]):
+                if not isinstance(arg, (int, float)):
+                    raise AIFPLEvalError(f"range argument {i+1} must be numeric, got {type(arg).__name__}")
+
+            # Convert to integers
+            start, end, step = int(start), int(end), int(step)
+
+            if step == 0:
+                raise AIFPLEvalError("range step cannot be zero")
+
+            # Generate range
+            if step > 0:
+                return list(range(start, end, step))
+            else:
+                return list(range(start, end, step))
+
+        elif operator == 'find':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"find requires exactly 2 arguments (predicate, list), got {len(args)}")
+
+            pred_expr, list_expr = args
+
+            # Evaluate the list
+            list_value = self._evaluate_expression(list_expr, env, depth)
+            if not isinstance(list_value, list):
+                raise AIFPLEvalError(f"find requires list as second argument, got {type(list_value).__name__}")
+
+            # Find first element matching predicate
+            for item in list_value:
+                # Create a function call for each item
+                pred_call = FunctionCall(function=pred_expr, arguments=[item], position=0)
+                pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
+
+                if not isinstance(pred_result, bool):
+                    raise AIFPLEvalError(f"find predicate must return boolean, got {type(pred_result).__name__}")
+
+                if pred_result:
+                    return item
+
+            return False  # Return #f if not found
+
+        elif operator == 'any?':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"any? requires exactly 2 arguments (predicate, list), got {len(args)}")
+
+            pred_expr, list_expr = args
+
+            # Evaluate the list
+            list_value = self._evaluate_expression(list_expr, env, depth)
+            if not isinstance(list_value, list):
+                raise AIFPLEvalError(f"any? requires list as second argument, got {type(list_value).__name__}")
+
+            # Check if any element matches predicate
+            for item in list_value:
+                # Create a function call for each item
+                pred_call = FunctionCall(function=pred_expr, arguments=[item], position=0)
+                pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
+
+                if not isinstance(pred_result, bool):
+                    raise AIFPLEvalError(f"any? predicate must return boolean, got {type(pred_result).__name__}")
+
+                if pred_result:
+                    return True
+
+            return False
+
+        elif operator == 'all?':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"all? requires exactly 2 arguments (predicate, list), got {len(args)}")
+
+            pred_expr, list_expr = args
+
+            # Evaluate the list
+            list_value = self._evaluate_expression(list_expr, env, depth)
+            if not isinstance(list_value, list):
+                raise AIFPLEvalError(f"all? requires list as second argument, got {type(list_value).__name__}")
+
+            # Check if all elements match predicate
+            for item in list_value:
+                # Create a function call for each item
+                pred_call = FunctionCall(function=pred_expr, arguments=[item], position=0)
+                pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
+
+                if not isinstance(pred_result, bool):
+                    raise AIFPLEvalError(f"all? predicate must return boolean, got {type(pred_result).__name__}")
+
+                if not pred_result:
+                    return False
+
+            return True
+
+        else:
+            raise AIFPLEvalError(f"Higher-order function '{operator}' not yet implemented")
+
+    def _apply_if_conditional(self, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
         """
         Handle if conditional with lazy evaluation of branches.
 
         Args:
             args: List of unevaluated arguments [condition, then-expr, else-expr]
+            env: Current environment
             depth: Current recursion depth
 
         Returns:
@@ -263,7 +765,7 @@ class AIFPLEvaluator:
         condition_expr, then_expr, else_expr = args
 
         # Evaluate condition first
-        condition = self.evaluate(condition_expr, depth)
+        condition = self._evaluate_expression(condition_expr, env, depth)
 
         # Validate condition is boolean
         if not isinstance(condition, bool):
@@ -271,9 +773,9 @@ class AIFPLEvaluator:
 
         # Lazy evaluation: only evaluate the chosen branch
         if condition:
-            return self.evaluate(then_expr, depth)
-
-        return self.evaluate(else_expr, depth)
+            return self._evaluate_expression(then_expr, env, depth)
+        else:
+            return self._evaluate_expression(else_expr, env, depth)
 
     def _validate_arity(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> None:
         """Validate argument count for an operator."""
@@ -291,455 +793,379 @@ class AIFPLEvaluator:
 
         if op_type == 'variadic':
             min_args = op_def.get('min_args', 0)
+            max_args = op_def.get('max_args')
+
             if arg_count < min_args:
                 raise AIFPLEvalError(f"Operator '{operator}' requires at least {min_args} arguments, got {arg_count}")
 
-    def _apply_list_operator(self, operator: str, args: List[Any]) -> Union[list, bool, Any]:
-        """Apply list operations."""
-        if operator == 'list':
-            # Create a new list from arguments (heterogeneous allowed)
-            return list(args)
-
-        if operator == 'cons':
-            element, list_arg = args
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list as second argument, got {type(list_arg).__name__}")
-
-            return [element] + list_arg
-
-        if operator == 'append':
-            # All arguments must be lists
-            for i, arg in enumerate(args):
-                if not isinstance(arg, list):
-                    raise AIFPLEvalError(
-                        f"Operator '{operator}' requires list arguments, got {type(arg).__name__} at position {i}"
-                    )
-
-            result = []
-            for list_arg in args:
-                result.extend(list_arg)
-
-            return result
-
-        if operator == 'reverse':
-            list_arg = args[0]
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
-
-            return list(reversed(list_arg))
-
-        if operator == 'first':
-            list_arg = args[0]
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
-
-            if not list_arg:
-                raise AIFPLEvalError("Cannot get first element of empty list")
-
-            return list_arg[0]
-
-        if operator == 'rest':
-            list_arg = args[0]
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
-
-            if not list_arg:
-                raise AIFPLEvalError("Cannot get rest of empty list")
-
-            return list_arg[1:]
-
-        if operator == 'list-ref':
-            list_arg, index_arg = args
-
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list as first argument, got {type(list_arg).__name__}")
-
-            index = self._to_integer(index_arg, operator)
-
-            if index < 0 or index >= len(list_arg):
-                raise AIFPLEvalError(f"List index {index} out of bounds for list of length {len(list_arg)}")
-
-            return list_arg[index]
-
-        if operator == 'length':
-            list_arg = args[0]
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
-
-            return len(list_arg)
-
-        if operator == 'null?':
-            list_arg = args[0]
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
-
-            return len(list_arg) == 0
-
-        if operator == 'member?':
-            element, list_arg = args
-
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list as second argument, got {type(list_arg).__name__}")
-
-            return element in list_arg
-
-        if operator == 'list->string':
-            list_arg = args[0]
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list argument, got {type(list_arg).__name__}")
-
-            # All elements must be strings
-            for i, element in enumerate(list_arg):
-                if not isinstance(element, str):
-                    raise AIFPLEvalError(
-                        f"Operator '{operator}' requires list of strings, got {type(element).__name__} at position {i}"
-                    )
-
-            return ''.join(list_arg)
-
-        if operator == 'string-join':
-            list_arg, separator_arg = args
-
-            if not isinstance(list_arg, list):
-                raise AIFPLEvalError(f"Operator '{operator}' requires list as first argument, got {type(list_arg).__name__}")
-
-            if not isinstance(separator_arg, str):
-                raise AIFPLEvalError(
-                    f"Operator '{operator}' requires string as second argument, got {type(separator_arg).__name__}"
-                )
-
-            # All list elements must be strings
-            for i, element in enumerate(list_arg):
-                if not isinstance(element, str):
-                    raise AIFPLEvalError(
-                        f"Operator '{operator}' requires list of strings, got {type(element).__name__} at position {i}"
-                    )
-
-            return separator_arg.join(list_arg)
-
-        raise AIFPLEvalError(f"Unknown list operator: '{operator}'")
-
-    def _apply_list_returning_function(self, operator: str, args: List[Any]) -> list:
-        """Apply functions that return lists."""
-        if operator == 'string->list':
-            string_arg = args[0]
-            if not isinstance(string_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(string_arg).__name__}")
-
-            return list(string_arg)
-
-        if operator == 'string-split':
-            string_arg, separator_arg = args
-
-            if not isinstance(string_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
-
-            if not isinstance(separator_arg, str):
-                raise AIFPLEvalError(
-                    f"Operator '{operator}' requires string as second argument, got {type(separator_arg).__name__}"
-                )
-
-            if not separator_arg:
-                raise AIFPLEvalError("String separator cannot be empty")
-
-            return string_arg.split(separator_arg)
-
-        raise AIFPLEvalError(f"Unknown list-returning function: '{operator}'")
+            if max_args is not None and arg_count > max_args:
+                raise AIFPLEvalError(f"Operator '{operator}' accepts at most {max_args} arguments, got {arg_count}")
 
     def _apply_string_function(self, operator: str, args: List[Any]) -> str:
         """Apply functions that return strings."""
-        arg = args[0]
-
-        # Convert to integer for base conversion
-        int_arg = self._to_integer(arg, operator)
-
         if operator == 'bin':
-            return bin(int_arg)
+            if len(args) != 1:
+                raise AIFPLEvalError(f"bin requires exactly 1 argument, got {len(args)}")
+            arg = self._to_integer(args[0], operator)
+            return bin(arg)
 
         if operator == 'hex':
-            return hex(int_arg)
+            if len(args) != 1:
+                raise AIFPLEvalError(f"hex requires exactly 1 argument, got {len(args)}")
+            arg = self._to_integer(args[0], operator)
+            return hex(arg)
 
         if operator == 'oct':
-            return oct(int_arg)
+            if len(args) != 1:
+                raise AIFPLEvalError(f"oct requires exactly 1 argument, got {len(args)}")
+            arg = self._to_integer(args[0], operator)
+            return oct(arg)
 
         raise AIFPLEvalError(f"Unknown string function: '{operator}'")
 
     def _apply_conversion_to_string(self, operator: str, args: List[Any]) -> str:
         """Apply functions that convert values to strings."""
         if operator == 'number->string':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"number->string requires exactly 1 argument, got {len(args)}")
+
             arg = args[0]
-            if isinstance(arg, (int, float, complex)):
-                return str(arg)
+            if not isinstance(arg, (int, float, complex)):
+                raise AIFPLEvalError(f"number->string requires numeric argument, got {type(arg).__name__}")
 
-            raise AIFPLEvalError(f"Operator '{operator}' requires numeric argument, got {type(arg).__name__}")
+            return str(arg)
 
-        raise AIFPLEvalError(f"Unknown conversion function: '{operator}'")
+        if operator == 'list->string':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"list->string requires exactly 1 argument, got {len(args)}")
+
+            arg = args[0]
+            if not isinstance(arg, list):
+                raise AIFPLEvalError(f"list->string requires list argument, got {type(arg).__name__}")
+
+            # Convert list of characters to string
+            try:
+                return ''.join(str(item) for item in arg)
+            except Exception as e:
+                raise AIFPLEvalError(f"Cannot convert list to string: {e}")
+
+        if operator == 'string-join':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"string-join requires exactly 2 arguments, got {len(args)}")
+
+            string_list, separator = args
+            if not isinstance(string_list, list):
+                raise AIFPLEvalError(f"string-join requires list as first argument, got {type(string_list).__name__}")
+
+            if not isinstance(separator, str):
+                raise AIFPLEvalError(f"string-join requires string as second argument, got {type(separator).__name__}")
+
+            # Ensure all list elements are strings
+            str_items = []
+            for item in string_list:
+                if not isinstance(item, str):
+                    raise AIFPLEvalError(f"string-join requires list of strings, found {type(item).__name__}")
+                str_items.append(item)
+
+            return separator.join(str_items)
+
+        raise AIFPLEvalError(f"Unknown string conversion function: '{operator}'")
+
+    def _apply_list_returning_function(self, operator: str, args: List[Any]) -> list:
+        """Apply functions that return lists."""
+        if operator == 'string->list':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"string->list requires exactly 1 argument, got {len(args)}")
+
+            arg = args[0]
+            if not isinstance(arg, str):
+                raise AIFPLEvalError(f"string->list requires string argument, got {type(arg).__name__}")
+
+            return list(arg)
+
+        if operator == 'string-split':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"string-split requires exactly 2 arguments, got {len(args)}")
+
+            string_arg, delimiter = args
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"string-split requires string as first argument, got {type(string_arg).__name__}")
+
+            if not isinstance(delimiter, str):
+                raise AIFPLEvalError(f"string-split requires string as second argument, got {type(delimiter).__name__}")
+
+            return string_arg.split(delimiter)
+
+        raise AIFPLEvalError(f"Unknown list-returning function: '{operator}'")
 
     def _apply_boolean_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> bool:
         """Apply boolean operators."""
-        # Validate all arguments are booleans
+        # Validate all arguments are boolean
         for i, arg in enumerate(args):
             if not isinstance(arg, bool):
-                raise AIFPLEvalError(f"Operator '{operator}' requires boolean arguments, got {type(arg).__name__} at position {i}")
+                raise AIFPLEvalError(f"Operator '{operator}' requires boolean arguments, argument {i+1} is {type(arg).__name__}")
 
         if operator == 'and':
-            if not args and 'identity' in op_def:
-                return op_def['identity']
-
+            if not args:
+                return op_def.get('identity', True)
             return all(args)
 
         if operator == 'or':
-            if not args and 'identity' in op_def:
-                return op_def['identity']
-
+            if not args:
+                return op_def.get('identity', False)
             return any(args)
 
         if operator == 'not':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"not requires exactly 1 argument, got {len(args)}")
             return not args[0]
 
         raise AIFPLEvalError(f"Unknown boolean operator: '{operator}'")
 
     def _apply_string_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> Union[str, int, float, bool]:
-        """Apply string operators."""
+        """Apply string operations."""
+        # Validate all arguments are strings (except for some operations)
+        for i, arg in enumerate(args):
+            if not isinstance(arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string arguments, argument {i+1} is {type(arg).__name__}")
+
         if operator == 'string-append':
-            if not args and 'identity' in op_def:
-                return op_def['identity']
-
-            # Validate all arguments are strings
-            for i, arg in enumerate(args):
-                if not isinstance(arg, str):
-                    raise AIFPLEvalError(
-                        f"Operator '{operator}' requires string arguments, got {type(arg).__name__} at position {i}"
-                    )
-
+            if not args:
+                return op_def.get('identity', '')
             return ''.join(args)
 
         if operator == 'string-length':
-            arg = args[0]
-            if not isinstance(arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(arg).__name__}")
-
-            return len(arg)
+            if len(args) != 1:
+                raise AIFPLEvalError(f"string-length requires exactly 1 argument, got {len(args)}")
+            return len(args[0])
 
         if operator == 'substring':
+            if len(args) != 3:
+                raise AIFPLEvalError(f"substring requires exactly 3 arguments, got {len(args)}")
+
             string_arg, start_arg, end_arg = args
 
-            if not isinstance(string_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+            # Convert start and end to integers (they might be passed as strings)
+            try:
+                start = int(start_arg) if isinstance(start_arg, str) else start_arg
+                end = int(end_arg) if isinstance(end_arg, str) else end_arg
+            except ValueError:
+                raise AIFPLEvalError(f"substring requires integer indices")
 
-            start = self._to_integer(start_arg, operator)
-            end = self._to_integer(end_arg, operator)
-
-            # Validate indices
-            if start < 0:
-                raise AIFPLEvalError(f"String index cannot be negative: {start}")
-
-            if end < start:
-                raise AIFPLEvalError(f"End index ({end}) cannot be less than start index ({start})")
-
-            if start > len(string_arg):
-                raise AIFPLEvalError(f"Start index ({start}) beyond string length ({len(string_arg)})")
-
-            return string_arg[start:end]
-
-        if operator == 'string-upcase':
-            arg = args[0]
-            if not isinstance(arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(arg).__name__}")
-
-            return arg.upper()
-
-        if operator == 'string-downcase':
-            arg = args[0]
-            if not isinstance(arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(arg).__name__}")
-
-            return arg.lower()
-
-        if operator == 'string-ref':
-            string_arg, index_arg = args
-
-            if not isinstance(string_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
-
-            index = self._to_integer(index_arg, operator)
-
-            if index < 0 or index >= len(string_arg):
-                raise AIFPLEvalError(f"String index {index} out of range for string of length {len(string_arg)}")
-
-            return string_arg[index]
-
-        if operator == 'string->number':
-            arg = args[0]
-            if not isinstance(arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string argument, got {type(arg).__name__}")
-
-            # Try to parse as number
-            arg = arg.strip()
+            if not isinstance(start, int) or not isinstance(end, int):
+                raise AIFPLEvalError(f"substring requires integer indices, got start: {type(start).__name__}, end: {type(end).__name__}")
 
             try:
-                # Try integer first
-                if '.' not in arg and 'e' not in arg.lower():
-                    return int(arg)
+                return string_arg[start:end]
+            except IndexError as e:
+                raise AIFPLEvalError(f"substring index out of range: {e}")
 
-                return float(arg)
+        if operator == 'string-upcase':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"string-upcase requires exactly 1 argument, got {len(args)}")
+            return args[0].upper()
 
-            except ValueError as e:
-                raise AIFPLEvalError(f"Cannot convert string '{arg}' to number") from e
+        if operator == 'string-downcase':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"string-downcase requires exactly 1 argument, got {len(args)}")
+            return args[0].lower()
 
-        # String predicates
-        if operator == 'string-contains?':
-            string_arg, substring_arg = args
+        if operator == 'string-ref':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"string-ref requires exactly 2 arguments, got {len(args)}")
 
-            if not isinstance(string_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+            string_arg, index_arg = args
 
-            if not isinstance(substring_arg, str):
-                raise AIFPLEvalError(
-                    f"Operator '{operator}' requires string as second argument, got {type(substring_arg).__name__}"
-                )
+            # Convert index to integer (might be passed as string)
+            try:
+                index = int(index_arg) if isinstance(index_arg, str) else index_arg
+            except ValueError:
+                raise AIFPLEvalError(f"string-ref requires integer index")
 
-            return substring_arg in string_arg
+            if not isinstance(index, int):
+                raise AIFPLEvalError(f"string-ref requires integer index, got {type(index).__name__}")
 
-        if operator == 'string-prefix?':
-            string_arg, prefix_arg = args
+            try:
+                return string_arg[index]
+            except IndexError:
+                raise AIFPLEvalError(f"string-ref index out of range: {index}")
 
-            if not isinstance(string_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
+        if operator == 'string->number':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"string->number requires exactly 1 argument, got {len(args)}")
 
-            if not isinstance(prefix_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as second argument, got {type(prefix_arg).__name__}")
-
-            return string_arg.startswith(prefix_arg)
-
-        if operator == 'string-suffix?':
-            string_arg, suffix_arg = args
-
-            if not isinstance(string_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, got {type(string_arg).__name__}")
-
-            if not isinstance(suffix_arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string as second argument, got {type(suffix_arg).__name__}")
-
-            return string_arg.endswith(suffix_arg)
-
-        if operator == 'string=?':
-            # Validate all arguments are strings
-            for i, arg in enumerate(args):
-                if not isinstance(arg, str):
-                    raise AIFPLEvalError(
-                        f"Operator '{operator}' requires string arguments, got {type(arg).__name__} at position {i}"
-                    )
-
-            # Check if all strings are equal
-            return all(arg == args[0] for arg in args[1:])
+            string_arg = args[0]
+            try:
+                # Try to parse as integer first
+                if '.' not in string_arg and 'e' not in string_arg.lower() and 'j' not in string_arg.lower():
+                    return int(string_arg)
+                # Try complex number
+                elif 'j' in string_arg.lower():
+                    return complex(string_arg)
+                # Otherwise float
+                else:
+                    return float(string_arg)
+            except ValueError:
+                raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg}'")
 
         raise AIFPLEvalError(f"Unknown string operator: '{operator}'")
 
     def _apply_boolean_returning_operator(self, operator: str, args: List[Any]) -> bool:
-        """Apply operators that return booleans (including comparisons and predicates)."""
-        # Handle list? predicate specially
+        """Apply operators that return boolean values."""
+        if operator in ('=', '<', '>', '<=', '>='):
+            if len(args) < 2:
+                raise AIFPLEvalError(f"Operator '{operator}' requires at least 2 arguments, got {len(args)}")
+
+            # Handle equality separately (works with all types)
+            if operator == '=':
+                first = args[0]
+                return all(arg == first for arg in args[1:])
+
+            # For comparison operators, ensure all arguments are numeric
+            for i, arg in enumerate(args):
+                if isinstance(arg, (str, bool, list)):
+                    raise AIFPLEvalError(f"Operator '{operator}' requires numeric arguments, argument {i+1} is {type(arg).__name__}")
+
+            # Check comparison chain
+            for i in range(len(args) - 1):
+                left, right = args[i], args[i + 1]
+
+                if operator == '<' and not (left < right):
+                    return False
+                elif operator == '>' and not (left > right):
+                    return False
+                elif operator == '<=' and not (left <= right):
+                    return False
+                elif operator == '>=' and not (left >= right):
+                    return False
+
+            return True
+
+        # String predicates
+        if operator == 'string-contains?':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"string-contains? requires exactly 2 arguments, got {len(args)}")
+
+            string_arg, substring = args
+            if not isinstance(string_arg, str) or not isinstance(substring, str):
+                raise AIFPLEvalError(f"string-contains? requires string arguments")
+
+            return substring in string_arg
+
+        if operator == 'string-prefix?':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"string-prefix? requires exactly 2 arguments, got {len(args)}")
+
+            string_arg, prefix = args
+            if not isinstance(string_arg, str) or not isinstance(prefix, str):
+                raise AIFPLEvalError(f"string-prefix? requires string arguments")
+
+            return string_arg.startswith(prefix)
+
+        if operator == 'string-suffix?':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"string-suffix? requires exactly 2 arguments, got {len(args)}")
+
+            string_arg, suffix = args
+            if not isinstance(string_arg, str) or not isinstance(suffix, str):
+                raise AIFPLEvalError(f"string-suffix? requires string arguments")
+
+            return string_arg.endswith(suffix)
+
+        if operator == 'string=?':
+            if len(args) < 2:
+                raise AIFPLEvalError(f"string=? requires at least 2 arguments, got {len(args)}")
+
+            for arg in args:
+                if not isinstance(arg, str):
+                    raise AIFPLEvalError(f"string=? requires string arguments")
+
+            first = args[0]
+            return all(arg == first for arg in args[1:])
+
+        # List predicates
+        if operator == 'null?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"null? requires exactly 1 argument, got {len(args)}")
+
+            arg = args[0]
+            if not isinstance(arg, list):
+                raise AIFPLEvalError(f"null? requires list argument, got {type(arg).__name__}")
+
+            return len(arg) == 0
+
         if operator == 'list?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"list? requires exactly 1 argument, got {len(args)}")
+
             return isinstance(args[0], list)
 
-        # Handle list equality specially
-        if operator == '=' and any(isinstance(arg, list) for arg in args):
-            # All arguments must be lists for list comparison
-            for arg in args:
-                if not isinstance(arg, list):
-                    raise AIFPLEvalError(f"Cannot compare list with {type(arg).__name__}")
+        if operator == 'member?':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"member? requires exactly 2 arguments, got {len(args)}")
 
-            # Check if all lists are equal
-            return all(arg == args[0] for arg in args[1:])
+            item, list_arg = args
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"member? requires list as second argument, got {type(list_arg).__name__}")
 
-        # Filter out string, boolean, and list arguments for numeric comparisons
-        for arg in args:
-            if isinstance(arg, (str, bool, list)):
-                if isinstance(arg, list):
-                    raise AIFPLEvalError(f"Comparison operator '{operator}' cannot compare lists (only equality '=' works)")
+            return item in list_arg
 
-                raise AIFPLEvalError(f"Comparison operator '{operator}' cannot operate on {type(arg).__name__} arguments")
-
-        # Promote types to common type
-        promoted_args = self._promote_types(*args)
-
-        try:
-            if operator == '=':
-                return all(arg == promoted_args[0] for arg in promoted_args[1:])
-
-            if operator == '<':
-                return all(promoted_args[i] < promoted_args[i + 1] for i in range(len(promoted_args) - 1))
-
-            if operator == '>':
-                return all(promoted_args[i] > promoted_args[i + 1] for i in range(len(promoted_args) - 1))
-
-            if operator == '<=':
-                return all(promoted_args[i] <= promoted_args[i + 1] for i in range(len(promoted_args) - 1))
-
-            if operator == '>=':
-                return all(promoted_args[i] >= promoted_args[i + 1] for i in range(len(promoted_args) - 1))
-
-            raise AIFPLEvalError(f"Unknown comparison operator: '{operator}'")
-
-        except TypeError as e:
-            raise AIFPLEvalError(f"Cannot compare values in '{operator}': {e}") from e
+        raise AIFPLEvalError(f"Unknown boolean-returning operator: '{operator}'")
 
     def _apply_bitwise_operator(self, operator: str, args: List[Any]) -> int:
         """Apply bitwise operators (require integer arguments)."""
         # Convert all arguments to integers
-        int_args = [self._to_integer(arg, operator) for arg in args]
+        int_args = []
+        for i, arg in enumerate(args):
+            try:
+                int_arg = self._to_integer(arg, operator)
+                int_args.append(int_arg)
+            except AIFPLEvalError:
+                raise AIFPLEvalError(f"Operator '{operator}' requires integer arguments, argument {i+1} is {type(arg).__name__}")
 
         if operator == 'bit-or':
             result = int_args[0]
             for arg in int_args[1:]:
                 result |= arg
-
             return result
 
         if operator == 'bit-and':
             result = int_args[0]
             for arg in int_args[1:]:
                 result &= arg
-
             return result
 
         if operator == 'bit-xor':
             result = int_args[0]
             for arg in int_args[1:]:
                 result ^= arg
-
             return result
 
         if operator == 'bit-not':
+            if len(int_args) != 1:
+                raise AIFPLEvalError(f"bit-not requires exactly 1 argument, got {len(int_args)}")
             return ~int_args[0]
 
         if operator == 'bit-shift-left':
-            left, right = int_args
-            if right < 0:
-                raise AIFPLEvalError("Shift count cannot be negative")
-
-            if right > 64:
-                raise AIFPLEvalError("Shift count too large (max 64)")
-
-            return left << right
+            if len(int_args) != 2:
+                raise AIFPLEvalError(f"bit-shift-left requires exactly 2 arguments, got {len(int_args)}")
+            return int_args[0] << int_args[1]
 
         if operator == 'bit-shift-right':
-            left, right = int_args
-            if right < 0:
-                raise AIFPLEvalError("Shift count cannot be negative")
-
-            if right > 64:
-                raise AIFPLEvalError("Shift count too large (max 64)")
-
-            return left >> right
+            if len(int_args) != 2:
+                raise AIFPLEvalError(f"bit-shift-right requires exactly 2 arguments, got {len(int_args)}")
+            return int_args[0] >> int_args[1]
 
         raise AIFPLEvalError(f"Unknown bitwise operator: '{operator}'")
 
     def _apply_real_only_function(self, operator: str, args: List[Any]) -> Union[int, float]:
         """Apply functions that only work with real numbers."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"Function '{operator}' requires exactly 1 argument, got {len(args)}")
+
         arg = args[0]
 
-        # Convert complex to real if imaginary part is negligible
+        # Extract real part if complex
         if isinstance(arg, complex):
             if abs(arg.imag) >= self.imaginary_tolerance:
                 raise AIFPLEvalError(f"Function '{operator}' does not support complex numbers")
@@ -757,164 +1183,322 @@ class AIFPLEvaluator:
         raise AIFPLEvalError(f"Unknown real-only function: '{operator}'")
 
     def _apply_integer_only_function(self, operator: str, args: List[Any]) -> int:
-        """Apply functions that only work with integers."""
-        arg = args[0]
-        return self._to_integer(arg, operator)
+        """Apply functions that require integer arguments."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"Function '{operator}' requires exactly 1 argument, got {len(args)}")
+
+        arg = self._to_integer(args[0], operator)
+
+        # These functions are handled in _apply_string_function
+        # This method is for integer operations that return integers
+        raise AIFPLEvalError(f"Unknown integer-only function: '{operator}'")
 
     def _apply_mathematical_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> Union[int, float, complex]:
-        """Apply regular mathematical operators with type promotion."""
-        if not args and 'identity' in op_def:
-            return op_def['identity']
+        """Apply mathematical operators."""
+        op_type = op_def['type']
 
-        # Promote types to common type
-        promoted_args = self._promote_types(*args)
+        if operator == '+':
+            if not args:
+                return op_def.get('identity', 0)
 
-        try:
-            if operator == '+':
-                return sum(promoted_args)
+            # Promote types and sum
+            promoted_args = self._promote_types(*args)
+            return sum(promoted_args)
 
-            if operator == '-':
-                if len(promoted_args) == 1:
-                    return -promoted_args[0]
+        if operator == '-':
+            if len(args) == 1:
+                # Unary minus
+                return -args[0]
 
-                result = promoted_args[0]
-                for arg in promoted_args[1:]:
-                    result -= arg
+            # Variadic subtraction
+            promoted_args = self._promote_types(*args)
+            result = promoted_args[0]
+            for arg in promoted_args[1:]:
+                result -= arg
+            return result
 
-                return result
+        if operator == '*':
+            if not args:
+                return op_def.get('identity', 1)
 
-            if operator == '*':
-                result = promoted_args[0] if promoted_args else 1
-                for arg in promoted_args[1:]:
-                    result *= arg
+            # Promote types and multiply
+            promoted_args = self._promote_types(*args)
+            result = promoted_args[0]
+            for arg in promoted_args[1:]:
+                result *= arg
+            return result
 
-                return result
+        if operator == '/':
+            if len(args) < 2:
+                raise AIFPLEvalError(f"Division requires at least 2 arguments, got {len(args)}")
 
-            if operator == '/':
-                result = promoted_args[0]
-                for arg in promoted_args[1:]:
-                    if arg == 0:
-                        raise ZeroDivisionError("Division by zero")
+            # Check for division by zero
+            for i, arg in enumerate(args[1:], 1):
+                if arg == 0:
+                    raise AIFPLEvalError(f"Division by zero at argument {i+1}")
 
-                    result /= arg
+            # Promote types and divide
+            promoted_args = self._promote_types(*args)
+            result = promoted_args[0]
+            for arg in promoted_args[1:]:
+                result /= arg
+            return result
 
-                return result
+        if operator == '//':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"Floor division requires exactly 2 arguments, got {len(args)}")
 
-            if operator == '//':
-                a, b = promoted_args
-                if b == 0:
-                    raise ZeroDivisionError("Division by zero")
+            left, right = args
+            if right == 0:
+                raise AIFPLEvalError("Division by zero")
 
-                return a // b
+            return left // right
 
-            if operator == '%':
-                a, b = promoted_args
-                if b == 0:
-                    raise ZeroDivisionError("Modulo by zero")
+        if operator == '%':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"Modulo requires exactly 2 arguments, got {len(args)}")
 
-                return a % b
+            left, right = args
+            if right == 0:
+                raise AIFPLEvalError("Modulo by zero")
 
-            if operator == '**':
-                a, b = promoted_args
-                return a ** b
+            return left % right
 
-            if operator == 'pow':
-                a, b = promoted_args
-                return pow(a, b)
+        if operator == '**' or operator == 'pow':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"Power requires exactly 2 arguments, got {len(args)}")
 
-            if operator == 'sin':
-                return cmath.sin(promoted_args[0])
+            base, exponent = args
+            return base ** exponent
 
-            if operator == 'cos':
-                return cmath.cos(promoted_args[0])
+        # Mathematical functions
+        if operator == 'sin':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"sin requires exactly 1 argument, got {len(args)}")
+            return cmath.sin(args[0]) if isinstance(args[0], complex) else math.sin(args[0])
 
-            if operator == 'tan':
-                return cmath.tan(promoted_args[0])
+        if operator == 'cos':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"cos requires exactly 1 argument, got {len(args)}")
+            return cmath.cos(args[0]) if isinstance(args[0], complex) else math.cos(args[0])
 
-            if operator == 'log':
-                return cmath.log(promoted_args[0])
+        if operator == 'tan':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"tan requires exactly 1 argument, got {len(args)}")
+            return cmath.tan(args[0]) if isinstance(args[0], complex) else math.tan(args[0])
 
-            if operator == 'log10':
-                return cmath.log10(promoted_args[0])
+        if operator == 'log':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"log requires exactly 1 argument, got {len(args)}")
+            arg = args[0]
+            if isinstance(arg, complex) or (isinstance(arg, (int, float)) and arg < 0):
+                return cmath.log(arg)
+            else:
+                return math.log(arg)
 
-            if operator == 'exp':
-                return cmath.exp(promoted_args[0])
+        if operator == 'log10':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"log10 requires exactly 1 argument, got {len(args)}")
+            arg = args[0]
+            if isinstance(arg, complex) or (isinstance(arg, (int, float)) and arg < 0):
+                return cmath.log10(arg)
+            else:
+                return math.log10(arg)
 
-            if operator == 'sqrt':
-                return cmath.sqrt(promoted_args[0])
+        if operator == 'exp':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"exp requires exactly 1 argument, got {len(args)}")
+            return cmath.exp(args[0]) if isinstance(args[0], complex) else math.exp(args[0])
 
-            if operator == 'abs':
-                return abs(promoted_args[0])
+        if operator == 'sqrt':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"sqrt requires exactly 1 argument, got {len(args)}")
+            arg = args[0]
+            if isinstance(arg, complex) or (isinstance(arg, (int, float)) and arg < 0):
+                return cmath.sqrt(arg)
+            else:
+                return math.sqrt(arg)
 
-            if operator == 'min':
-                return min(promoted_args)
+        if operator == 'abs':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"abs requires exactly 1 argument, got {len(args)}")
+            return abs(args[0])
 
-            if operator == 'max':
-                return max(promoted_args)
+        if operator == 'min':
+            if not args:
+                raise AIFPLEvalError("min requires at least 1 argument")
+            return min(args)
 
-            if operator == 'complex':
-                real, imag = promoted_args
-                return complex(real, imag)
+        if operator == 'max':
+            if not args:
+                raise AIFPLEvalError("max requires at least 1 argument")
+            return max(args)
 
-            if operator == 'real':
-                return self._extract_real_part(promoted_args[0])
+        # Complex number functions
+        if operator == 'real':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"real requires exactly 1 argument, got {len(args)}")
+            return self._extract_real_part(args[0])
 
-            if operator == 'imag':
-                return self._extract_imaginary_part(promoted_args[0])
+        if operator == 'imag':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"imag requires exactly 1 argument, got {len(args)}")
+            return self._extract_imaginary_part(args[0])
 
-            raise AIFPLEvalError(f"Unknown mathematical operator: '{operator}'")
+        if operator == 'complex':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"complex requires exactly 2 arguments, got {len(args)}")
+            real_part, imag_part = args
+            return complex(real_part, imag_part)
 
-        except ZeroDivisionError as e:
-            raise AIFPLEvalError(f"Division by zero error in '{operator}': {e}") from e
+        raise AIFPLEvalError(f"Unknown mathematical operator: '{operator}'")
 
-        except (ValueError, OverflowError) as e:
-            raise AIFPLEvalError(f"Mathematical error in '{operator}': {e}") from e
+    def _apply_list_operator(self, operator: str, args: List[Any]) -> Union[list, bool, Any]:
+        """Apply list operations."""
+        if operator == 'list':
+            return list(args)
+
+        if operator == 'cons':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"cons requires exactly 2 arguments, got {len(args)}")
+
+            item, list_arg = args
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"cons requires list as second argument, got {type(list_arg).__name__}")
+
+            return [item] + list_arg
+
+        if operator == 'append':
+            if len(args) < 2:
+                raise AIFPLEvalError(f"append requires at least 2 arguments, got {len(args)}")
+
+            # Validate all arguments are lists
+            for i, arg in enumerate(args):
+                if not isinstance(arg, list):
+                    raise AIFPLEvalError(f"append requires list arguments, argument {i+1} is {type(arg).__name__}")
+
+            # Concatenate all lists
+            result = []
+            for list_arg in args:
+                result.extend(list_arg)
+            return result
+
+        if operator == 'reverse':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"reverse requires exactly 1 argument, got {len(args)}")
+
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"reverse requires list argument, got {type(list_arg).__name__}")
+
+            return list(reversed(list_arg))
+
+        if operator == 'first':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"first requires exactly 1 argument, got {len(args)}")
+
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"first requires list argument, got {type(list_arg).__name__}")
+
+            if not list_arg:
+                raise AIFPLEvalError("Cannot get first element of empty list")
+
+            return list_arg[0]
+
+        if operator == 'rest':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"rest requires exactly 1 argument, got {len(args)}")
+
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"rest requires list argument, got {type(list_arg).__name__}")
+
+            if not list_arg:
+                raise AIFPLEvalError("Cannot get rest of empty list")
+
+            return list_arg[1:]
+
+        if operator == 'list-ref':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"list-ref requires exactly 2 arguments, got {len(args)}")
+
+            list_arg, index = args
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"list-ref requires list as first argument, got {type(list_arg).__name__}")
+
+            index = self._to_integer(index, operator)
+
+            try:
+                return list_arg[index]
+            except IndexError:
+                raise AIFPLEvalError(f"list-ref index out of range: {index}")
+
+        if operator == 'length':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"length requires exactly 1 argument, got {len(args)}")
+
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"length requires list argument, got {type(list_arg).__name__}")
+
+            return len(list_arg)
+
+        if operator == 'take':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"take requires exactly 2 arguments, got {len(args)}")
+
+            n, list_arg = args
+
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"take requires list as second argument, got {type(list_arg).__name__}")
+
+            n = self._to_integer(n, operator)
+            if n < 0:
+                raise AIFPLEvalError(f"take count cannot be negative: {n}")
+
+            return list_arg[:n]
+
+        if operator == 'drop':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"drop requires exactly 2 arguments, got {len(args)}")
+
+            n, list_arg = args
+
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"drop requires list as second argument, got {type(list_arg).__name__}")
+
+            n = self._to_integer(n, operator)
+            if n < 0:
+                raise AIFPLEvalError(f"drop count cannot be negative: {n}")
+
+            return list_arg[n:]
+
+        # Boolean-returning list operations are handled in _apply_boolean_returning_operator
+        raise AIFPLEvalError(f"Unknown list operator: '{operator}'")
 
     def _extract_real_part(self, value: Union[int, float, complex]) -> Union[int, float]:
-        """
-        Extract the real part of a number, returning the most specific type.
-
-        Args:
-            value: Numeric value to extract real part from
-
-        Returns:
-            Real part as int or float
-        """
+        """Extract the real part of a number."""
         if isinstance(value, complex):
             real_part = value.real
-            # If the imaginary part is below tolerance, we might want to simplify
-            # but we still return the real part with its original precision
+            # Convert to int if it's a whole number
             if isinstance(real_part, float) and real_part.is_integer():
                 return int(real_part)
-
             return real_part
 
-        # For real numbers, return as-is (int or float)
+        # For real numbers, return as-is
         return value
 
     def _extract_imaginary_part(self, value: Union[int, float, complex]) -> Union[int, float]:
-        """
-        Extract the imaginary part of a number, returning the most specific type.
-
-        Args:
-            value: Numeric value to extract imaginary part from
-
-        Returns:
-            Imaginary part as int or float
-        """
+        """Extract the imaginary part of a number."""
         if isinstance(value, complex):
             imag_part = value.imag
-            # Apply tolerance check - if below threshold, return 0 (int)
-            if abs(imag_part) < self.imaginary_tolerance:
-                return 0
-
-            # Otherwise return the imaginary part, simplifying to int if possible
+            # Convert to int if it's a whole number
             if isinstance(imag_part, float) and imag_part.is_integer():
                 return int(imag_part)
-
             return imag_part
 
-        # For real numbers, imaginary part is always 0 (int)
+        # For real numbers, imaginary part is 0
         return 0
 
     def _promote_types(self, *values: Any) -> tuple:
@@ -991,6 +1575,11 @@ class AIFPLEvaluator:
                 formatted_elements.append(self.format_result(element))
 
             return f"({' '.join(formatted_elements)})"
+
+        if isinstance(result, LambdaFunction):
+            # Format lambda functions
+            param_str = " ".join(result.parameters)
+            return f"<lambda ({param_str})>"
 
         # For other types, use standard string representation
         return str(result)
