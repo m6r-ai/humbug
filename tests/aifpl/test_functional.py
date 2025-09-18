@@ -280,10 +280,10 @@ class TestFunctional:
 
     def test_range_argument_count(self, aifpl):
         """Test that range accepts 2 or 3 arguments."""
-        with pytest.raises(AIFPLEvalError, match="requires 2 or 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match="range requires 2 or 3 arguments"):
             aifpl.evaluate('(range 1)')
         
-        with pytest.raises(AIFPLEvalError, match="requires 2 or 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match="range requires 2 or 3 arguments"):
             aifpl.evaluate('(range 1 5 2 extra)')
 
     @pytest.mark.parametrize("expression,expected", [

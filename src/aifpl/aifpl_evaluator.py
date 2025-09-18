@@ -467,6 +467,11 @@ class AIFPLEvaluator:
         Returns:
             Either a regular result or a TailCall object for optimization
         """
+        # FIXED: Check depth limit here too - this is where the deep recursion happens
+        if depth > self.max_depth:
+            stack_trace = self.call_stack.format_stack_trace()
+            raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
+
         # Handle if expressions specially - branches are in tail position
         if isinstance(expr, FunctionCall) and isinstance(expr.function, str) and expr.function == 'if':
             if len(expr.arguments) != 3:
@@ -475,21 +480,21 @@ class AIFPLEvaluator:
             condition_expr, then_expr, else_expr = expr.arguments
 
             # Evaluate condition (not in tail position)
-            condition = self._evaluate_expression(condition_expr, env, depth)
+            condition = self._evaluate_expression(condition_expr, env, depth + 1)
 
             if not isinstance(condition, bool):
                 raise AIFPLEvalError(f"if requires boolean condition, got {type(condition).__name__}")
 
             # Evaluate chosen branch (in tail position)
             if condition:
-                return self._evaluate_with_tail_detection(then_expr, env, depth, current_function)
+                return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
             else:
-                return self._evaluate_with_tail_detection(else_expr, env, depth, current_function)
+                return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
 
         # Handle function calls - check for tail calls
         elif isinstance(expr, FunctionCall):
             # Evaluate the function
-            func_value = self._evaluate_expression(expr.function, env, depth)
+            func_value = self._evaluate_expression(expr.function, env, depth + 1)
 
             # If it's a lambda function, check for recursion (simple or mutual)
             if isinstance(func_value, LambdaFunction):
@@ -504,14 +509,14 @@ class AIFPLEvaluator:
                 else:
                     # FIXED: Not recursive, but still use tail-optimized mechanism
                     # Don't fall back to regular recursion!
-                    return self._call_lambda_function(func_value, expr.arguments, env, depth)
+                    return self._call_lambda_function(func_value, expr.arguments, env, depth + 1)
             else:
                 # Built-in function, evaluate normally - FIXED: Increment depth
                 return self._evaluate_function_call(expr, env, depth + 1)
 
         # For other expressions, evaluate normally
         else:
-            return self._evaluate_expression(expr, env, depth)
+            return self._evaluate_expression(expr, env, depth + 1)
 
     def _python_value_to_ast_node(self, value: Any) -> SExpression:
         """
@@ -752,7 +757,11 @@ class AIFPLEvaluator:
             return accumulator
 
         elif operator == 'range':
-            # Evaluate arguments
+            # FIXED: Check arity BEFORE evaluating arguments
+            if len(args) < 2 or len(args) > 3:
+                raise AIFPLEvalError(f"range requires 2 or 3 arguments (start, end[, step]), got {len(args)}")
+
+            # Now evaluate arguments
             evaluated_args = [self._evaluate_expression(arg, env, depth) for arg in args]
 
             if len(evaluated_args) == 2:
@@ -761,6 +770,7 @@ class AIFPLEvaluator:
             elif len(evaluated_args) == 3:
                 start, end, step = evaluated_args
             else:
+                # This should never happen due to the check above, but keep for safety
                 raise AIFPLEvalError(f"range requires 2 or 3 arguments (start, end[, step]), got {len(evaluated_args)}")
 
             # Validate arguments
