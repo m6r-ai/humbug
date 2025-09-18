@@ -29,9 +29,12 @@ class AIFPLAITool(AITool):
         return AIToolDefinition(
             name="AIFPL",
             description=(
-                "The AIFPL (AI Functional Programming Language) calculator uses LISP-like (S expression) syntax for "
+                "The AIFPL (AI Functional Programming Language) tool offers a LISP-like (S expression) syntax for "
                 "mathematical expressions, string/boolean operations, list manipulation, conditional evaluation, "
                 "and functional programming with lambda expressions and iteration. "
+                "It is ideal for everything from simple calculations to complex algorithms. "
+                "The language is a pure functional langage with no side effects so it does not require user approvals "
+                "to use it. "
                 "Syntax: (operator arg1 arg2 ...)\n\n"
 
                 "Supported operations:\n"
