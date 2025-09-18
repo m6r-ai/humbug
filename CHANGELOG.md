@@ -2,6 +2,14 @@
 
 ## v0.26 (2025-09-xx)
 
+New features:
+
+- Humbug now features a simple new functional programming language designed for LLMs to use (AIFPL, short for "AI
+  functional programming language").  This is scheme-like, but doesn't attempt to implement all of scheme.  It's deliberately
+  restricted to a pure functional language and has simplifications around things like string processing so there is no
+  character atom type.  The functionality is a significant superset of the previous calculator AI tool which has now been
+  removed as a consequence.
+
 Bug fixes:
 
 - The system AI tool was not escaping control characters in a way the terminal could handle so things like backspace,
