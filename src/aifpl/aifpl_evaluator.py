@@ -116,9 +116,9 @@ class AIFPLEvaluator:
 
         # String-list conversion
         'string->list': {'type': 'unary', 'string_only': True, 'returns_list': True},
-        'list->string': {'type': 'unary', 'list_operation': True, 'converts_to_string': True},
+        'list->string': {'type': 'unary', 'converts_to_string': True},
         'string-split': {'type': 'binary', 'string_only': True, 'returns_list': True},
-        'string-join': {'type': 'binary', 'list_operation': True, 'converts_to_string': True},
+        'string-join': {'type': 'binary', 'converts_to_string': True},
 
         # Functional iteration operations
         'map': {'type': 'binary', 'higher_order': True},
@@ -525,6 +525,10 @@ class AIFPLEvaluator:
         # Check argument count
         self._validate_arity(operator, op_def, evaluated_args)
 
+        # FIXED: Handle operations that return booleans FIRST (before string_only check)
+        if op_def.get('returns_boolean'):
+            return self._apply_boolean_returning_operator(operator, evaluated_args)
+
         # Handle list operations
         if op_def.get('list_operation'):
             return self._apply_list_operator(operator, evaluated_args)
@@ -545,13 +549,9 @@ class AIFPLEvaluator:
         if op_def.get('boolean_only'):
             return self._apply_boolean_operator(operator, op_def, evaluated_args)
 
-        # Handle string-only operations
+        # Handle string-only operations (now only for non-boolean returning functions)
         if op_def.get('string_only'):
             return self._apply_string_operator(operator, op_def, evaluated_args)
-
-        # Handle operations that return booleans
-        if op_def.get('returns_boolean'):
-            return self._apply_boolean_returning_operator(operator, evaluated_args)
 
         # Filter out string, boolean, and list arguments for mathematical operations
         for arg in evaluated_args:
@@ -929,10 +929,48 @@ class AIFPLEvaluator:
 
     def _apply_string_operator(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> Union[str, int, float, bool]:
         """Apply string operations."""
-        # Validate all arguments are strings (except for some operations)
-        for i, arg in enumerate(args):
-            if not isinstance(arg, str):
-                raise AIFPLEvalError(f"Operator '{operator}' requires string arguments, argument {i+1} is {type(arg).__name__}")
+        # Special handling for functions that need integer indices
+        if operator in ('substring', 'string-ref'):
+            # First argument must be string
+            if not isinstance(args[0], str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string as first argument, argument 1 is {type(args[0]).__name__}")
+
+            if operator == 'substring':
+                if len(args) != 3:
+                    raise AIFPLEvalError(f"substring requires exactly 3 arguments, got {len(args)}")
+
+                string_arg, start_arg, end_arg = args
+
+                # Convert start and end to integers (they might be passed as integers)
+                if not isinstance(start_arg, int):
+                    raise AIFPLEvalError(f"substring requires integer indices, start argument is {type(start_arg).__name__}")
+                if not isinstance(end_arg, int):
+                    raise AIFPLEvalError(f"substring requires integer indices, end argument is {type(end_arg).__name__}")
+
+                try:
+                    return string_arg[start_arg:end_arg]
+                except IndexError as e:
+                    raise AIFPLEvalError(f"substring index out of range: {e}")
+
+            if operator == 'string-ref':
+                if len(args) != 2:
+                    raise AIFPLEvalError(f"string-ref requires exactly 2 arguments, got {len(args)}")
+
+                string_arg, index_arg = args
+
+                # Index must be integer
+                if not isinstance(index_arg, int):
+                    raise AIFPLEvalError(f"string-ref requires integer index, got {type(index_arg).__name__}")
+
+                try:
+                    return string_arg[index_arg]
+                except IndexError:
+                    raise AIFPLEvalError(f"string-ref index out of range: {index_arg}")
+        else:
+            # For other string operations, validate all arguments are strings
+            for i, arg in enumerate(args):
+                if not isinstance(arg, str):
+                    raise AIFPLEvalError(f"Operator '{operator}' requires string arguments, argument {i+1} is {type(arg).__name__}")
 
         if operator == 'string-append':
             if not args:
@@ -944,27 +982,6 @@ class AIFPLEvaluator:
                 raise AIFPLEvalError(f"string-length requires exactly 1 argument, got {len(args)}")
             return len(args[0])
 
-        if operator == 'substring':
-            if len(args) != 3:
-                raise AIFPLEvalError(f"substring requires exactly 3 arguments, got {len(args)}")
-
-            string_arg, start_arg, end_arg = args
-
-            # Convert start and end to integers (they might be passed as strings)
-            try:
-                start = int(start_arg) if isinstance(start_arg, str) else start_arg
-                end = int(end_arg) if isinstance(end_arg, str) else end_arg
-            except ValueError:
-                raise AIFPLEvalError(f"substring requires integer indices")
-
-            if not isinstance(start, int) or not isinstance(end, int):
-                raise AIFPLEvalError(f"substring requires integer indices, got start: {type(start).__name__}, end: {type(end).__name__}")
-
-            try:
-                return string_arg[start:end]
-            except IndexError as e:
-                raise AIFPLEvalError(f"substring index out of range: {e}")
-
         if operator == 'string-upcase':
             if len(args) != 1:
                 raise AIFPLEvalError(f"string-upcase requires exactly 1 argument, got {len(args)}")
@@ -974,26 +991,6 @@ class AIFPLEvaluator:
             if len(args) != 1:
                 raise AIFPLEvalError(f"string-downcase requires exactly 1 argument, got {len(args)}")
             return args[0].lower()
-
-        if operator == 'string-ref':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"string-ref requires exactly 2 arguments, got {len(args)}")
-
-            string_arg, index_arg = args
-
-            # Convert index to integer (might be passed as string)
-            try:
-                index = int(index_arg) if isinstance(index_arg, str) else index_arg
-            except ValueError:
-                raise AIFPLEvalError(f"string-ref requires integer index")
-
-            if not isinstance(index, int):
-                raise AIFPLEvalError(f"string-ref requires integer index, got {type(index).__name__}")
-
-            try:
-                return string_arg[index]
-            except IndexError:
-                raise AIFPLEvalError(f"string-ref index out of range: {index}")
 
         if operator == 'string->number':
             if len(args) != 1:
