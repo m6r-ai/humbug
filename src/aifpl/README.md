@@ -15,6 +15,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Local bindings**: `let` expressions for sequential variable binding
 - **Higher-order functions**: `map`, `filter`, `fold`, `range`, and more for functional programming
 - **Tail call optimization**: Automatic optimization for recursive and mutually recursive functions
+- **Type predicates**: Built-in functions to check value types
 - **Number formats**: Integers, floats, complex numbers, hex (0xFF), binary (0b1010), octal (0o755)
 - **String literals**: `"hello world"` with escape sequences
 - **Boolean literals**: `#t` (true) and `#f` (false)
@@ -486,7 +487,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 
 ; List processing
 (if (member? "target" search-list)
-    (string-append "Found at position " (number->string (find-index "target" search-list)))
+    (string-append "Found at position " (number->string (position "target" search-list)))
     "Not found")
 ```
 
@@ -512,12 +513,54 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 - `(** 2 3)` → `8` (exponentiation)
 
 ### Comparison Operations
-- `(= 1 1)` → `#t`
-- `(= 1 2)` → `#f`
-- `(< 1 2)` → `#t`
-- `(> 3 2)` → `#t`
-- `(<= 1 1)` → `#t`
-- `(>= 2 1)` → `#t`
+
+#### Equality and Inequality
+```aifpl
+; Equality - all values must be equal
+(= 1 1)                               ; → #t
+(= 1 2)                               ; → #f
+(= 1 1 1)                             ; → #t (all equal)
+(= 1 2 3)                             ; → #f (not all equal)
+
+; Inequality - any values not equal
+(!= 1 2)                              ; → #t (any inequality)
+(!= 1 1)                              ; → #f (all equal)
+(!= 1 2 3)                            ; → #t (not all equal)
+(!= 1 1 1)                            ; → #f (all equal)
+```
+
+#### Numeric Comparisons
+```aifpl
+; Comparison chains (all must satisfy the relationship)
+(< 1 2)                               ; → #t
+(< 1 2 3)                             ; → #t (1 < 2 < 3)
+(< 1 3 2)                             ; → #f (3 is not < 2)
+
+(> 3 2)                               ; → #t
+(> 3 2 1)                             ; → #t (3 > 2 > 1)
+
+(<= 1 1)                              ; → #t
+(<= 1 2 2)                            ; → #t (1 ≤ 2 ≤ 2)
+
+(>= 2 1)                              ; → #t
+(>= 3 2 2)                            ; → #t (3 ≥ 2 ≥ 2)
+```
+
+#### Mixed Type Equality
+```aifpl
+; Numeric types can be compared for equality
+(= 1 1.0)                             ; → #t (int/float equivalence)
+(= 2 (+ 1.0 1.0))                     ; → #t (numeric equivalence)
+
+; Different non-numeric types are never equal
+(= "hello" 5)                         ; → #f
+(= #t 1)                              ; → #f
+(= (list 1 2) "12")                   ; → #f
+
+; Lists are compared element by element
+(= (list 1 2) (list 1 2))             ; → #t
+(= (list 1 2) (list 1 3))             ; → #f
+```
 
 ### Boolean Operations
 - `(and #t #f)` → `#f`
@@ -526,6 +569,90 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 - `(or #f #f)` → `#f`
 - `(not #t)` → `#f`
 - `(not #f)` → `#t`
+
+### Type Predicates
+
+AIFPL provides comprehensive type checking functions:
+
+#### Basic Type Predicates
+```aifpl
+; Number type checking (excludes booleans)
+(number? 42)                          ; → #t
+(number? 3.14)                        ; → #t
+(number? (+ 1 j))                     ; → #t (complex)
+(number? #t)                          ; → #f (booleans are not numbers)
+(number? "42")                        ; → #f
+
+; Specific numeric type checking
+(integer? 42)                         ; → #t
+(integer? 3.14)                       ; → #f
+(integer? #t)                         ; → #f (booleans excluded)
+
+(float? 3.14)                         ; → #t
+(float? 42)                           ; → #f
+(float? (/ 1 2))                      ; → #t (division produces float)
+
+(complex? (+ 1 j))                    ; → #t
+(complex? 42)                         ; → #f
+(complex? 3.14)                       ; → #f
+```
+
+#### Other Type Predicates
+```aifpl
+; String type checking
+(string? "hello")                     ; → #t
+(string? 42)                          ; → #f
+(string? (number->string 42))         ; → #t
+
+; Boolean type checking
+(boolean? #t)                         ; → #t
+(boolean? #f)                         ; → #t
+(boolean? 1)                          ; → #f
+(boolean? 0)                          ; → #f
+
+; Function type checking
+(function? (lambda (x) (* x 2)))      ; → #t
+(function? +)                         ; → #f (built-in operators are not functions)
+(function? "hello")                   ; → #f
+
+; List type checking (already existed)
+(list? (list 1 2 3))                 ; → #t
+(list? "hello")                       ; → #f
+(list? ())                            ; → #t (empty list)
+```
+
+#### Type Predicate Usage Patterns
+```aifpl
+; Conditional type handling
+(let ((process-value (lambda (x)
+                       (if (number? x)
+                           (* x 2)
+                           (if (string? x)
+                               (string-upcase x)
+                               "unknown type")))))
+  (list (process-value 5)             ; → 10
+        (process-value "hello")       ; → "HELLO"
+        (process-value #t)))          ; → "unknown type"
+
+; Type validation
+(let ((validate-numbers (lambda (lst)
+                          (if (all? number? lst)
+                              (fold + 0 lst)
+                              "error: non-numeric values found"))))
+  (list (validate-numbers (list 1 2 3))      ; → 6
+        (validate-numbers (list 1 "x" 3))))  ; → "error: non-numeric values found"
+
+; Polymorphic operations
+(let ((safe-length (lambda (x)
+                     (if (string? x)
+                         (string-length x)
+                         (if (list? x)
+                             (length x)
+                             "not a sequence")))))
+  (list (safe-length "hello")         ; → 5
+        (safe-length (list 1 2 3))    ; → 3
+        (safe-length 42)))            ; → "not a sequence"
+```
 
 ### Mathematical Functions
 - `(sin (* pi 0.5))` → `1`
@@ -570,6 +697,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ```aifpl
 (first (list 1 2 3))                  ; → 1
 (rest (list 1 2 3))                   ; → (2 3)
+(last (list 1 2 3))                   ; → 3
 (list-ref (list "a" "b" "c") 1)       ; → "b" (0-indexed)
 (length (list 1 2 3))                 ; → 3
 (null? (list))                        ; → #t
@@ -578,6 +706,45 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 (list? "hello")                       ; → #f
 (member? 2 (list 1 2 3))              ; → #t
 (member? 5 (list 1 2 3))              ; → #f
+```
+
+#### List Utilities
+```aifpl
+; Remove all occurrences of an element
+(remove 2 (list 1 2 3 2 4))           ; → (1 3 4)
+(remove "x" (list "a" "x" "b" "x"))   ; → ("a" "b")
+(remove 5 (list 1 2 3))               ; → (1 2 3) (no change if not found)
+
+; Find index of first occurrence
+(position 2 (list 1 2 3))             ; → 1 (0-based index)
+(position "b" (list "a" "b" "c"))     ; → 1
+(position 5 (list 1 2 3))             ; → #f (not found, consistent with find)
+(position 2 (list 1 2 3 2))           ; → 1 (first occurrence)
+```
+
+#### List Utility Usage Patterns
+```aifpl
+; Clean and process data
+(let ((data (list 1 -2 3 -4 5))
+      (negatives (list -2 -4)))
+  (let ((cleaned (fold (lambda (acc neg) (remove neg acc)) data negatives))
+        (doubled (map (lambda (x) (* x 2)) cleaned)))
+    doubled))                          ; → (2 6 10)
+
+; Find and replace pattern
+(let ((find-and-process (lambda (item lst)
+                          (let ((pos (position item lst)))
+                            (if pos
+                                (string-append "Found " (number->string item) 
+                                             " at position " (number->string pos))
+                                "Not found")))))
+  (list (find-and-process 3 (list 1 2 3 4))    ; → "Found 3 at position 2"
+        (find-and-process 5 (list 1 2 3 4))))  ; → "Not found"
+
+; List difference using remove
+(let ((list-difference (lambda (list1 list2)
+                         (fold remove list1 list2))))
+  (list-difference (list 1 2 3 4 5) (list 2 4)))  ; → (1 3 5)
 ```
 
 #### List Equality
@@ -609,6 +776,34 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 ```aifpl
 (string-upcase "hello")               ; → "HELLO"
 (string-downcase "HELLO")             ; → "hello"
+(string-trim "  hello  ")             ; → "hello"
+(string-replace "hello world" "world" "AIFPL")  ; → "hello AIFPL"
+(string-replace "banana" "a" "o")     ; → "bonono" (non-overlapping)
+(string-replace "test" "x" "y")       ; → "test" (no change if not found)
+```
+
+#### String Manipulation Usage Patterns
+```aifpl
+; Clean and normalize text
+(let ((normalize-text (lambda (text)
+                        (let ((trimmed (string-trim text))
+                              (lower (string-downcase trimmed)))
+                          (string-replace lower " " "-")))))
+  (normalize-text "  Hello World  "))  ; → "hello-world"
+
+; Template replacement
+(let ((template "Hello {name}, you have {count} messages")
+      (replace-template (lambda (tmpl name count)
+                          (let ((with-name (string-replace tmpl "{name}" name)))
+                            (string-replace with-name "{count}" (number->string count))))))
+  (replace-template template "Alice" 5))  ; → "Hello Alice, you have 5 messages"
+
+; Multiple replacements
+(let ((clean-text (lambda (text)
+                     (let ((step1 (string-replace text "bad" "good"))
+                           (step2 (string-replace step1 "ugly" "pretty")))
+                       (string-replace step2 "wrong" "right")))))
+  (clean-text "bad ugly wrong text"))     ; → "good pretty right text"
 ```
 
 #### String Predicates
@@ -728,6 +923,10 @@ AIFPL has a strict type system with the following types:
 (let ((f (lambda (x) (* x 2)))) (f 5))  ; → 10
 (list (lambda (x) (+ x 1)) (lambda (x) (* x 2)))  ; → (<lambda (x)> <lambda (x)>)
 
+; Valid - type checking with predicates
+(if (number? x) (* x 2) "not a number")
+(filter string? (list 1 "hello" #t "world"))  ; → ("hello" "world")
+
 ; Invalid - type mismatch
 (+ 1 "hello")                         ; Error: cannot add number and string
 (and #t 1)                            ; Error: 'and' requires boolean arguments
@@ -834,6 +1033,42 @@ AIFPL has a strict type system with the following types:
   (tree-sum (list 1 (list 2 3) (list (list 4 5) 6))))  ; → 21
 ```
 
+### Type-Safe Programming Patterns
+```aifpl
+; Polymorphic function with type checking
+(let ((safe-process (lambda (value)
+                      (if (number? value)
+                          (* value value)
+                          (if (string? value)
+                              (string-upcase value)
+                              (if (list? value)
+                                  (length value)
+                                  "unknown type"))))))
+  (map safe-process (list 5 "hello" (list 1 2 3) #t)))  ; → (25 "HELLO" 3 "unknown type")
+
+; Type validation pipeline
+(let ((validate-input (lambda (data)
+                        (if (list? data)
+                            (if (all? number? data)
+                                (fold + 0 data)
+                                "error: non-numeric data")
+                            "error: not a list"))))
+  (list (validate-input (list 1 2 3))        ; → 6
+        (validate-input (list 1 "x" 3))      ; → "error: non-numeric data"
+        (validate-input "not a list")))      ; → "error: not a list"
+
+; Mixed type list processing
+(let ((categorize (lambda (items)
+                    (let ((numbers (filter number? items))
+                          (strings (filter string? items))
+                          (booleans (filter boolean? items)))
+                      (list (list "numbers" numbers)
+                            (list "strings" strings)
+                            (list "booleans" booleans))))))
+  (categorize (list 1 "hello" #t 3.14 "world" #f)))
+; → (("numbers" (1 3.14)) ("strings" ("hello" "world")) ("booleans" (#t #f)))
+```
+
 ### String Processing
 ```aifpl
 ; Split CSV data and process
@@ -849,6 +1084,13 @@ AIFPL has a strict type system with the following types:
 (if (> (string-length text) 10)
     (string-append (substring text 0 10) "...")
     text)
+
+; Advanced text processing with new operators
+(let ((clean-and-format (lambda (text)
+                          (let ((trimmed (string-trim text))
+                                (normalized (string-replace trimmed "  " " ")))
+                            (string-upcase normalized)))))
+  (clean-and-format "  hello    world  "))      ; → "HELLO  WORLD"
 ```
 
 ### Character-Level Processing
@@ -870,6 +1112,16 @@ AIFPL has a strict type system with the following types:
 (if (member? "error" status-list)
     (list "status" "error" "failed")
     (list "status" "ok" "success"))
+
+; Advanced list manipulation with new operators
+(let ((data (list 1 2 3 2 4 2 5))
+      (target 2))
+  (let ((cleaned (remove target data))
+        (position-info (position target data)))
+    (list "original" data 
+          "cleaned" cleaned 
+          "first-position" position-info)))
+; → ("original" (1 2 3 2 4 2 5) "cleaned" (1 3 4 5) "first-position" 1)
 ```
 
 ## Advanced Features
@@ -936,10 +1188,13 @@ Functions capture their lexical environment, creating closures:
 ; Safe operations with defaults
 (let ((safe-head (lambda (lst default)
                    (if (null? lst) default (first lst))))
+      (safe-tail (lambda (lst default)
+                   (if (null? lst) default (last lst))))
       (safe-divide (lambda (x y default)
                      (if (= y 0) default (/ x y)))))
   (list (safe-head (list) "empty")
-        (safe-divide 10 0 "undefined")))    ; → ("empty" "undefined")
+        (safe-tail (list 1 2 3) "empty")
+        (safe-divide 10 0 "undefined")))    ; → ("empty" 3 "undefined")
 ```
 
 ## Design Principles
@@ -999,6 +1254,16 @@ print(f"Boolean: {bool_result}")  # Boolean: True
 
 formatted_bool = tool.evaluate_and_format('(member? 2 (list 1 2 3))')
 print(f"Formatted Boolean: {formatted_bool}")  # Formatted Boolean: #t
+
+# New operators results
+inequality_result = tool.evaluate('(!= 1 2 3)')
+print(f"Inequality: {inequality_result}")  # Inequality: True
+
+type_check = tool.evaluate('(number? 42)')
+print(f"Type check: {type_check}")  # Type check: True
+
+position_result = tool.evaluate('(position "world" (list "hello" "world"))')
+print(f"Position: {position_result}")  # Position: 1
 ```
 
 ### Error Handling Patterns
@@ -1054,5 +1319,18 @@ recursive_expr = '''
                        acc
                        (factorial (- n 1) (* n acc))))))
   (factorial 20 1))
+'''
+
+# Using new operators for data processing
+advanced_processing = '''
+(let ((data (list "  hello  " "WORLD" "test" "  EXAMPLE  "))
+      (clean-normalize (lambda (text)
+                         (string-downcase (string-trim text)))))
+  (let ((cleaned (map clean-normalize data))
+        (filtered (remove "test" cleaned))
+        (positions (map (lambda (item) 
+                          (position item cleaned)) 
+                       filtered)))
+    (list "cleaned" cleaned "filtered" filtered "positions" positions)))
 '''
 ```
