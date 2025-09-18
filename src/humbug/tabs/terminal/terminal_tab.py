@@ -552,12 +552,12 @@ class TerminalTab(TabBase):
             process_name=process_name,
         )
 
-    async def send_command(self, command: str) -> None:
+    async def send_keystrokes(self, keystrokes: str) -> None:
         """
-        Send command to terminal process.
+        Send keystrokes to terminal process.
 
         Args:
-            command: Command string to send
+            keystrokes: Keystrokes string to send
 
         Raises:
             RuntimeError: If terminal process is not available or not running
@@ -568,6 +568,6 @@ class TerminalTab(TabBase):
         if not self._running:
             raise RuntimeError("Terminal is not running")
 
-        # Send command with newline to execute it
-        command_bytes = (command + '\n').encode('utf-8')
-        await self._terminal_process.write_data(command_bytes)
+        # Send keystrokes with newline to execute it
+        keystrokes_bytes = keystrokes.encode('utf-8')
+        await self._terminal_process.write_data(keystrokes_bytes)

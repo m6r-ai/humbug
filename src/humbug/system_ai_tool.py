@@ -118,9 +118,9 @@ class SystemAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
-                    name="input",
+                    name="keystrokes",
                     type="string",
-                    description="Input to write to terminal (for write_terminal operation)",
+                    description="Keystrokes to send to terminal (for write_terminal operation)",
                     required=False
                 ),
                 AIToolParameter(
@@ -223,13 +223,16 @@ class SystemAITool(AITool):
                 description="Move a tab to a specific column by index - there are a maximum of 6 columns"
             ),
             "write_terminal": AIToolOperationDefinition(
-                name="write_terminal_input",
+                name="write_terminal",
                 handler=self._write_terminal,
-                allowed_parameters={"tab_id", "input"},
-                required_parameters={"tab_id", "input"},
-                description="Write input to a terminal tab, given its ID. "
-                    "This will be processed as a series of interactive key strokes. "
-                    "You must use `\\u####` format to send any control characters (ASCII values less than 0x20)"
+                allowed_parameters={"tab_id", "keystrokes"},
+                required_parameters={"tab_id", "keystrokes"},
+                description="Send keystrokes to a terminal tab, given its ID. "
+                    "You may send more than one keystroke at a time by submitting them as a string. "
+                    "The string is not terminated with a newline automatically, so if you want to execute a command "
+                    "you must include appropriate end-of-line control characters. "
+                    "You MUST use `\\u####` format to send any control characters (ASCII values less than 0x20), "
+                    "inluding newline (\\u000a), carriage return (\\u000d), tab (\\u0009), and escape (\\u001b). "
             ),
             "read_terminal": AIToolOperationDefinition(
                 name="read_terminal",
@@ -953,45 +956,45 @@ class SystemAITool(AITool):
         """Write to a terminal."""
         arguments = tool_call.arguments
 
-        # Get and validate input
-        raw_input = arguments.get("input")
-        if not raw_input or not isinstance(raw_input, str):
-            raise AIToolExecutionError("'input' must be a non-empty string")
+        # Get and validate keystrokes
+        raw_keystrokes = arguments.get("keystrokes")
+        if not raw_keystrokes or not isinstance(raw_keystrokes, str):
+            raise AIToolExecutionError("'keystrokes' must be a non-empty string")
 
         # Process escape sequences from AI - convert literal Unicode escapes to actual characters
-        processed_input = self._process_ai_escape_sequences(raw_input)
+        processed_keystrokes = self._process_ai_escape_sequences(raw_keystrokes)
 
         # Get terminal tab
         terminal_tab = self._get_terminal_tab(arguments)
         tab_id = terminal_tab.tab_id()
 
-        # Build authorization context - show original input for transparency
-        context = f"Send input to terminal (tab {tab_id}): '{raw_input}'"
-        if processed_input != raw_input:
-            context += f"\n(will be processed as: '{processed_input!r}')"
+        # Build authorization context - show original keystrokes for transparency
+        context = f"Send keystrokes to terminal (tab {tab_id}): '{raw_keystrokes}'"
+        if processed_keystrokes != raw_keystrokes:
+            context += f"\n(will be processed as: '{processed_keystrokes!r}')"
 
         # Request authorization - commands can be destructive
         authorized = await request_authorization("system", arguments, context, True)
         if not authorized:
-            raise AIToolAuthorizationDenied(f"User denied permission to send input: {raw_input}")
+            raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_keystrokes}")
 
         try:
-            await terminal_tab.send_command(processed_input)
+            await terminal_tab.send_keystrokes(processed_keystrokes)
 
             # Log the operation
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI sent command to terminal: '{raw_input}'\ntab ID: {tab_id}"
+                f"AI sent keystrokes to terminal: '{raw_keystrokes}'\ntab ID: {tab_id}"
             )
 
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Input sent to terminal {tab_id}: '{input}'"
+                content=f"Keystrokes sent to terminal {tab_id}: '{raw_keystrokes}'"
             )
 
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to send input to terminal: {str(e)}") from e
+            raise AIToolExecutionError(f"Failed to send keystrokes to terminal: {str(e)}") from e
 
     async def _read_terminal(
         self,
