@@ -37,6 +37,7 @@ class AIFPLEvaluator:
 
         # Comparison operators
         '=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
+        '!=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
         '<': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
         '>': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
         '<=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
@@ -90,6 +91,8 @@ class AIFPLEvaluator:
         'string-ref': {'type': 'binary', 'string_only': True},
         'string->number': {'type': 'unary', 'string_only': True},
         'number->string': {'type': 'unary', 'converts_to_string': True},
+        'string-trim': {'type': 'unary', 'string_only': True},
+        'string-replace': {'type': 'ternary', 'string_only': True},
 
         # String predicates
         'string-contains?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
@@ -106,6 +109,7 @@ class AIFPLEvaluator:
         # List access and properties
         'first': {'type': 'unary', 'list_operation': True},
         'rest': {'type': 'unary', 'list_operation': True},
+        'last': {'type': 'unary', 'list_operation': True},
         'list-ref': {'type': 'binary', 'list_operation': True},
         'length': {'type': 'unary', 'list_operation': True},
 
@@ -114,11 +118,24 @@ class AIFPLEvaluator:
         'list?': {'type': 'unary', 'returns_boolean': True},
         'member?': {'type': 'binary', 'list_operation': True, 'returns_boolean': True},
 
+        # List utilities
+        'remove': {'type': 'binary', 'list_operation': True},
+        'position': {'type': 'binary', 'returns_boolean_or_value': True},
+
         # String-list conversion
         'string->list': {'type': 'unary', 'string_only': True, 'returns_list': True},
         'list->string': {'type': 'unary', 'converts_to_string': True},
         'string-split': {'type': 'binary', 'string_only': True, 'returns_list': True},
         'string-join': {'type': 'binary', 'converts_to_string': True},
+
+        # Type predicates
+        'number?': {'type': 'unary', 'returns_boolean': True},
+        'integer?': {'type': 'unary', 'returns_boolean': True},
+        'float?': {'type': 'unary', 'returns_boolean': True},
+        'complex?': {'type': 'unary', 'returns_boolean': True},
+        'string?': {'type': 'unary', 'returns_boolean': True},
+        'boolean?': {'type': 'unary', 'returns_boolean': True},
+        'function?': {'type': 'unary', 'returns_boolean': True},
 
         # Functional iteration operations
         'map': {'type': 'binary', 'higher_order': True},
@@ -251,7 +268,12 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Invalid expression type: {type(expr).__name__}")
 
-    def _evaluate_let_expression(self, let_expr: LetExpr, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+    def _evaluate_let_expression(
+        self,
+        let_expr: LetExpr,
+        env: Environment,
+        depth: int
+    ) -> Union[int, float, complex, str, bool, list]:
         """
         Evaluate let expression with sequential binding.
 
@@ -277,7 +299,12 @@ class AIFPLEvaluator:
         # Evaluate body in the let environment
         return self._evaluate_expression(let_expr.body, let_env, depth)
 
-    def _evaluate_function_call(self, func_call: FunctionCall, env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+    def _evaluate_function_call(
+        self,
+        func_call: FunctionCall,
+        env: Environment,
+        depth: int
+    ) -> Union[int, float, complex, str, bool, list]:
         """
         Evaluate function call with tail call optimization.
 
@@ -349,7 +376,13 @@ class AIFPLEvaluator:
             else:
                 raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
 
-    def _call_lambda_function(self, func: LambdaFunction, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list, TailCall]:
+    def _call_lambda_function(
+        self,
+        func: LambdaFunction,
+        args: List[SExpression],
+        env: Environment,
+        depth: int
+    ) -> Union[int, float, complex, str, bool, list, TailCall]:
         """
         Call a lambda function with given arguments.
 
@@ -391,7 +424,7 @@ class AIFPLEvaluator:
             expression=str(func.body) if hasattr(func.body, '__str__') else "<body>"
         )
 
-        # NEW: Track function in call chain for mutual recursion detection
+        # Track function in call chain for mutual recursion detection
         self.call_chain.append(func)
 
         try:
@@ -402,7 +435,8 @@ class AIFPLEvaluator:
         finally:
             # Always pop the call frame and remove from call chain
             self.call_stack.pop()
-            # NEW: Remove function from call chain
+
+            # Remove function from call chain
             if self.call_chain and self.call_chain[-1] is func:
                 self.call_chain.pop()
 
@@ -495,8 +529,8 @@ class AIFPLEvaluator:
             # Evaluate chosen branch (in tail position)
             if condition:
                 return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
-            else:
-                return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
+
+            return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
 
         # Handle function calls - check for tail calls
         elif isinstance(expr, FunctionCall):
@@ -513,13 +547,12 @@ class AIFPLEvaluator:
                         arguments=expr.arguments,
                         environment=env
                     )
-                else:
-                    # FIXED: Not recursive, but still use tail-optimized mechanism
-                    # Don't fall back to regular recursion!
-                    return self._call_lambda_function(func_value, expr.arguments, env, depth + 1)
-            else:
-                # Built-in function, evaluate normally - FIXED: Increment depth
-                return self._evaluate_function_call(expr, env, depth + 1)
+
+                # Don't fall back to regular recursion!
+                return self._call_lambda_function(func_value, expr.arguments, env, depth + 1)
+
+            # Built-in function, evaluate normally
+            return self._evaluate_function_call(expr, env, depth + 1)
 
         # For other expressions, evaluate normally
         else:
@@ -540,16 +573,17 @@ class AIFPLEvaluator:
         """
         if isinstance(value, str):
             return StringLiteral(value)
-        elif isinstance(value, (int, float, complex, bool)):
+
+        if isinstance(value, (int, float, complex, bool)):
             return value
-        elif isinstance(value, list):
-            # FIXED: For lists, create a FunctionCall to (list ...)
+
+        if isinstance(value, list):
             # Convert each element recursively
             list_elements = [self._python_value_to_ast_node(item) for item in value]
             return FunctionCall(function="list", arguments=list_elements, position=0)
-        else:
-            # For other types (like LambdaFunction), return as-is
-            return value
+
+        # For other types (like LambdaFunction), return as-is
+        return value
 
     def _apply_builtin_operator(self, operator: str, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
         """Apply built-in operators and functions."""
@@ -562,9 +596,11 @@ class AIFPLEvaluator:
         if op_def.get('type') == 'special':
             if operator == 'if':
                 return self._apply_if_conditional(args, env, depth)
-            elif operator == 'and':
+
+            if operator == 'and':
                 return self._apply_and_short_circuit(args, env, depth)
-            elif operator == 'or':
+
+            if operator == 'or':
                 return self._apply_or_short_circuit(args, env, depth)
 
         # Handle higher-order functions (map, filter, fold, etc.)
@@ -574,11 +610,16 @@ class AIFPLEvaluator:
         # For regular operators, evaluate arguments first - FIXED: Increment depth
         try:
             evaluated_args = [self._evaluate_expression(arg, env, depth + 1) for arg in args]
+
         except AIFPLEvalError as e:
             raise AIFPLEvalError(f"Error evaluating arguments for '{operator}': {e}") from e
 
         # Check argument count
         self._validate_arity(operator, op_def, evaluated_args)
+
+        # Handle special mixed return types (position function)
+        if op_def.get('returns_boolean_or_value'):
+            return self._apply_mixed_return_operator(operator, evaluated_args)
 
         # FIXED: Handle operations that return booleans FIRST (before string_only check)
         if op_def.get('returns_boolean'):
@@ -627,6 +668,25 @@ class AIFPLEvaluator:
 
         # Handle regular mathematical operations
         return self._apply_mathematical_operator(operator, op_def, evaluated_args)
+
+    def _apply_mixed_return_operator(self, operator: str, args: List[Any]) -> Union[int, bool]:
+        """Apply operators that return mixed types (like position)."""
+        if operator == 'position':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"position requires exactly 2 arguments, got {len(args)}")
+
+            item, list_arg = args
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"position requires list as second argument, got {type(list_arg).__name__}")
+
+            # Find first occurrence using same equality semantics as =
+            for i, list_item in enumerate(list_arg):
+                if self._values_equal(item, list_item):
+                    return i
+
+            return False  # Return #f if not found (consistent with find)
+
+        raise AIFPLEvalError(f"Unknown mixed return operator: '{operator}'")
 
     def _apply_and_short_circuit(self, args: List[SExpression], env: Environment, depth: int) -> bool:
         """
@@ -690,7 +750,13 @@ class AIFPLEvaluator:
         # All arguments were False
         return False
 
-    def _apply_higher_order_function(self, operator: str, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
+    def _apply_higher_order_function(
+        self,
+        operator: str,
+        args: List[SExpression],
+        env: Environment,
+        depth: int
+    ) -> Union[int, float, complex, str, bool, list]:
         """Apply higher-order functions like map, filter, fold."""
         if operator == 'map':
             if len(args) != 2:
@@ -714,7 +780,7 @@ class AIFPLEvaluator:
 
             return result
 
-        elif operator == 'filter':
+        if operator == 'filter':
             if len(args) != 2:
                 raise AIFPLEvalError(f"filter requires exactly 2 arguments (predicate, list), got {len(args)}")
 
@@ -741,7 +807,7 @@ class AIFPLEvaluator:
 
             return result
 
-        elif operator == 'fold':
+        if operator == 'fold':
             if len(args) != 3:
                 raise AIFPLEvalError(f"fold requires exactly 3 arguments (function, initial, list), got {len(args)}")
 
@@ -763,7 +829,7 @@ class AIFPLEvaluator:
 
             return accumulator
 
-        elif operator == 'range':
+        if operator == 'range':
             # FIXED: Check arity BEFORE evaluating arguments
             if len(args) < 2 or len(args) > 3:
                 raise AIFPLEvalError(f"range requires 2 or 3 arguments (start, end[, step]), got {len(args)}")
@@ -774,8 +840,10 @@ class AIFPLEvaluator:
             if len(evaluated_args) == 2:
                 start, end = evaluated_args
                 step = 1
+
             elif len(evaluated_args) == 3:
                 start, end, step = evaluated_args
+
             else:
                 # This should never happen due to the check above, but keep for safety
                 raise AIFPLEvalError(f"range requires 2 or 3 arguments (start, end[, step]), got {len(evaluated_args)}")
@@ -792,12 +860,9 @@ class AIFPLEvaluator:
                 raise AIFPLEvalError("range step cannot be zero")
 
             # Generate range
-            if step > 0:
-                return list(range(start, end, step))
-            else:
-                return list(range(start, end, step))
+            return list(range(start, end, step))
 
-        elif operator == 'find':
+        if operator == 'find':
             if len(args) != 2:
                 raise AIFPLEvalError(f"find requires exactly 2 arguments (predicate, list), got {len(args)}")
 
@@ -823,7 +888,7 @@ class AIFPLEvaluator:
 
             return False  # Return #f if not found
 
-        elif operator == 'any?':
+        if operator == 'any?':
             if len(args) != 2:
                 raise AIFPLEvalError(f"any? requires exactly 2 arguments (predicate, list), got {len(args)}")
 
@@ -849,7 +914,7 @@ class AIFPLEvaluator:
 
             return False
 
-        elif operator == 'all?':
+        if operator == 'all?':
             if len(args) != 2:
                 raise AIFPLEvalError(f"all? requires exactly 2 arguments (predicate, list), got {len(args)}")
 
@@ -875,8 +940,7 @@ class AIFPLEvaluator:
 
             return True
 
-        else:
-            raise AIFPLEvalError(f"Higher-order function '{operator}' not yet implemented")
+        raise AIFPLEvalError(f"Higher-order function '{operator}' not yet implemented")
 
     def _apply_if_conditional(self, args: List[SExpression], env: Environment, depth: int) -> Union[int, float, complex, str, bool, list]:
         """
@@ -908,8 +972,8 @@ class AIFPLEvaluator:
         # Lazy evaluation: only evaluate the chosen branch - FIXED: Increment depth
         if condition:
             return self._evaluate_expression(then_expr, env, depth + 1)
-        else:
-            return self._evaluate_expression(else_expr, env, depth + 1)
+
+        return self._evaluate_expression(else_expr, env, depth + 1)
 
     def _validate_arity(self, operator: str, op_def: Dict[str, Any], args: List[Any]) -> None:
         """Validate argument count for an operator."""
@@ -980,6 +1044,7 @@ class AIFPLEvaluator:
             # Convert list of characters to string
             try:
                 return ''.join(str(item) for item in arg)
+
             except Exception as e:
                 raise AIFPLEvalError(f"Cannot convert list to string: {e}")
 
@@ -1031,8 +1096,8 @@ class AIFPLEvaluator:
             # FIXED: Handle empty separator case - split into individual characters
             if delimiter == "":
                 return list(string_arg)
-            else:
-                return string_arg.split(delimiter)
+
+            return string_arg.split(delimiter)
 
         raise AIFPLEvalError(f"Unknown list-returning function: '{operator}'")
 
@@ -1067,6 +1132,7 @@ class AIFPLEvaluator:
                 # Convert start and end to integers (they might be passed as integers)
                 if not isinstance(start_arg, int):
                     raise AIFPLEvalError(f"substring requires integer indices, start argument is {type(start_arg).__name__}")
+
                 if not isinstance(end_arg, int):
                     raise AIFPLEvalError(f"substring requires integer indices, end argument is {type(end_arg).__name__}")
 
@@ -1074,12 +1140,16 @@ class AIFPLEvaluator:
                 string_len = len(string_arg)
                 if start_arg < 0:
                     raise AIFPLEvalError(f"substring start index cannot be negative: {start_arg}")
+
                 if end_arg < 0:
                     raise AIFPLEvalError(f"substring end index cannot be negative: {end_arg}")
+
                 if start_arg > string_len:
                     raise AIFPLEvalError(f"substring start index out of range: {start_arg} (string length: {string_len})")
+
                 if end_arg > string_len:
                     raise AIFPLEvalError(f"substring end index out of range: {end_arg} (string length: {string_len})")
+
                 if start_arg > end_arg:
                     raise AIFPLEvalError(f"substring start index ({start_arg}) cannot be greater than end index ({end_arg})")
 
@@ -1099,15 +1169,43 @@ class AIFPLEvaluator:
                 string_len = len(string_arg)
                 if index_arg < 0:
                     raise AIFPLEvalError(f"string-ref index out of range: {index_arg}")
+
                 if index_arg >= string_len:
                     raise AIFPLEvalError(f"string-ref index out of range: {index_arg}")
 
                 return string_arg[index_arg]
-        else:
-            # For other string operations, validate all arguments are strings
-            for i, arg in enumerate(args):
-                if not isinstance(arg, str):
-                    raise AIFPLEvalError(f"Operator '{operator}' requires string arguments, argument {i+1} is {type(arg).__name__}")
+
+        if operator == 'string-trim':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"string-trim requires exactly 1 argument, got {len(args)}")
+
+            string_arg = args[0]
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"string-trim requires string argument, got {type(string_arg).__name__}")
+
+            return string_arg.strip()
+
+        if operator == 'string-replace':
+            if len(args) != 3:
+                raise AIFPLEvalError(f"string-replace requires exactly 3 arguments, got {len(args)}")
+
+            string_arg, old_str, new_str = args
+            if not isinstance(string_arg, str):
+                raise AIFPLEvalError(f"string-replace requires string as first argument, got {type(string_arg).__name__}")
+
+            if not isinstance(old_str, str):
+                raise AIFPLEvalError(f"string-replace requires string as second argument, got {type(old_str).__name__}")
+
+            if not isinstance(new_str, str):
+                raise AIFPLEvalError(f"string-replace requires string as third argument, got {type(new_str).__name__}")
+
+            # Non-overlapping replacement using Python's replace method
+            return string_arg.replace(old_str, new_str)
+
+        # For other string operations, validate all arguments are strings
+        for i, arg in enumerate(args):
+            if not isinstance(arg, str):
+                raise AIFPLEvalError(f"Operator '{operator}' requires string arguments, argument {i+1} is {type(arg).__name__}")
 
         if operator == 'string-append':
             if not args:
@@ -1171,6 +1269,27 @@ class AIFPLEvaluator:
 
         return True
 
+    def _strict_inequality_check(self, args: List[Any]) -> bool:
+        """
+        Perform not-equal check - returns true if any inequality exists.
+
+        Args:
+            args: List of values to compare for inequality
+
+        Returns:
+            True if any values are not equal under AIFPL equality rules
+        """
+        if len(args) < 2:
+            return False  # Vacuous case: single argument is equal to itself
+
+        # Check if any pair is not equal
+        for i in range(len(args)):
+            for j in range(i + 1, len(args)):
+                if not self._values_equal(args[i], args[j]):
+                    return True
+
+        return False  # All values are equal
+
     def _values_equal(self, a: Any, b: Any) -> bool:
         """
         Check if two values are equal under AIFPL equality rules.
@@ -1231,13 +1350,17 @@ class AIFPLEvaluator:
 
     def _apply_boolean_returning_operator(self, operator: str, args: List[Any]) -> bool:
         """Apply operators that return boolean values."""
-        if operator in ('=', '<', '>', '<=', '>='):
+        if operator in ('=', '!=', '<', '>', '<=', '>='):
             if len(args) < 2:
                 raise AIFPLEvalError(f"Operator '{operator}' requires at least 2 arguments, got {len(args)}")
 
             # Handle equality with strict type checking
             if operator == '=':
                 return self._strict_equality_check(args)
+
+            # Handle inequality with strict type checking
+            if operator == '!=':
+                return self._strict_inequality_check(args)
 
             # For comparison operators, ensure all arguments are numeric
             for i, arg in enumerate(args):
@@ -1250,11 +1373,14 @@ class AIFPLEvaluator:
 
                 if operator == '<' and not (left < right):
                     return False
-                elif operator == '>' and not (left > right):
+
+                if operator == '>' and not (left > right):
                     return False
-                elif operator == '<=' and not (left <= right):
+
+                if operator == '<=' and not (left <= right):
                     return False
-                elif operator == '>=' and not (left >= right):
+
+                if operator == '>=' and not (left >= right):
                     return False
 
             return True
@@ -1327,6 +1453,49 @@ class AIFPLEvaluator:
                 raise AIFPLEvalError(f"member? requires list as second argument, got {type(list_arg).__name__}")
 
             return item in list_arg
+
+        # Type predicates
+        if operator == 'number?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"number? requires exactly 1 argument, got {len(args)}")
+
+            return self._is_numeric(args[0])
+
+        if operator == 'integer?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"integer? requires exactly 1 argument, got {len(args)}")
+
+            return isinstance(args[0], int) and not isinstance(args[0], bool)
+
+        if operator == 'float?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"float? requires exactly 1 argument, got {len(args)}")
+
+            return isinstance(args[0], float)
+
+        if operator == 'complex?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"complex? requires exactly 1 argument, got {len(args)}")
+
+            return isinstance(args[0], complex)
+
+        if operator == 'string?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"string? requires exactly 1 argument, got {len(args)}")
+
+            return isinstance(args[0], str)
+
+        if operator == 'boolean?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"boolean? requires exactly 1 argument, got {len(args)}")
+
+            return isinstance(args[0], bool)
+
+        if operator == 'function?':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"function? requires exactly 1 argument, got {len(args)}")
+
+            return isinstance(args[0], LambdaFunction)
 
         raise AIFPLEvalError(f"Unknown boolean-returning operator: '{operator}'")
 
@@ -1637,6 +1806,20 @@ class AIFPLEvaluator:
 
             return list_arg[1:]
 
+        # NEW: last operator
+        if operator == 'last':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"last requires exactly 1 argument, got {len(args)}")
+
+            list_arg = args[0]
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"last requires list argument, got {type(list_arg).__name__}")
+
+            if not list_arg:
+                raise AIFPLEvalError("Cannot get last element of empty list")
+
+            return list_arg[-1]
+
         if operator == 'list-ref':
             if len(args) != 2:
                 raise AIFPLEvalError(f"list-ref requires exactly 2 arguments, got {len(args)}")
@@ -1665,6 +1848,23 @@ class AIFPLEvaluator:
                 raise AIFPLEvalError(f"length requires list argument, got {type(list_arg).__name__}")
 
             return len(list_arg)
+
+        # NEW: remove operator
+        if operator == 'remove':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"remove requires exactly 2 arguments, got {len(args)}")
+
+            item, list_arg = args
+            if not isinstance(list_arg, list):
+                raise AIFPLEvalError(f"remove requires list as second argument, got {type(list_arg).__name__}")
+
+            # Remove all occurrences using same equality semantics as =
+            result = []
+            for list_item in list_arg:
+                if not self._values_equal(item, list_item):
+                    result.append(list_item)
+
+            return result
 
         if operator == 'take':
             if len(args) != 2:
