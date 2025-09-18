@@ -16,26 +16,26 @@ class TestArithmetic:
         ("(+ 1 2)", "3"),
         ("(+ 1 2 3)", "6"),
         ("(+ 1 2 3 4)", "10"),
-        
+
         # Addition identity (empty)
         ("(+)", "0"),
-        
+
         # Single argument
         ("(+ 5)", "5"),
-        
+
         # Type promotion int -> float
         ("(+ 1 2.5)", "3.5"),
         ("(+ 1.5 2)", "3.5"),
         ("(+ 1.1 2.2)", "3.3"),
-        
+
         # Type promotion int/float -> complex
         ("(+ 1 j)", "(1+1j)"),
         ("(+ 2.5 j)", "(2.5+1j)"),
         ("(+ j 3)", "(3+1j)"),
-        
+
         # Complex addition
         ("(+ (complex 1 2) (complex 3 4))", "(4+6j)"),
-        
+
         # Negative numbers
         ("(+ -1 2)", "1"),
         ("(+ 1 -2)", "-1"),
@@ -49,19 +49,19 @@ class TestArithmetic:
         # Basic subtraction
         ("(- 5 3)", "2"),
         ("(- 10 3 2)", "5"),  # Left associative: ((10 - 3) - 2)
-        
+
         # Unary minus
         ("(- 5)", "-5"),
         ("(- -3)", "3"),
-        
+
         # Type promotion
         ("(- 5.5 2)", "3.5"),
         ("(- 5 2.5)", "2.5"),
-        
+
         # Complex subtraction
         ("(- (complex 5 3) (complex 2 1))", "(3+2j)"),
         ("(- 5 j)", "(5-1j)"),
-        
+
         # Multiple arguments
         ("(- 10 1 2 3)", "4"),  # ((((10 - 1) - 2) - 3)
     ])
@@ -73,26 +73,26 @@ class TestArithmetic:
         # Basic multiplication
         ("(* 2 3)", "6"),
         ("(* 2 3 4)", "24"),
-        
+
         # Multiplication identity (empty)
         ("(*)", "1"),
-        
+
         # Single argument
         ("(* 7)", "7"),
-        
+
         # Type promotion
         ("(* 2 3.5)", "7"),
         ("(* 2.5 4)", "10"),
-        
+
         # Complex multiplication
         ("(* 2 j)", "2j"),
         ("(* j j)", "-1"),
         ("(* (complex 2 3) (complex 1 4))", "(-10+11j)"),
-        
+
         # Zero multiplication
         ("(* 5 0)", "0"),
         ("(* 0 5)", "0"),
-        
+
         # Negative numbers
         ("(* -2 3)", "-6"),
         ("(* 2 -3)", "-6"),
@@ -107,19 +107,19 @@ class TestArithmetic:
         ("(/ 6 2)", "3"),
         ("(/ 8 4)", "2"),
         ("(/ 7 2)", "3.5"),  # Integer division becomes float
-        
+
         # Multiple arguments (left associative)
         ("(/ 24 2 3)", "4"),  # ((24 / 2) / 3)
         ("(/ 100 5 2)", "10"),  # ((100 / 5) / 2)
-        
+
         # Type promotion
         ("(/ 5.0 2)", "2.5"),
         ("(/ 10 2.5)", "4"),
-        
+
         # Complex division
         ("(/ (complex 4 2) (complex 1 1))", "(3-1j)"),
         ("(/ 6 j)", "-6j"),
-        
+
         # Fraction results
         ("(/ 1 3)", "0.3333333333333333"),
     ])
@@ -131,7 +131,7 @@ class TestArithmetic:
         """Test that division by zero raises appropriate error."""
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
             aifpl.evaluate("(/ 1 0)")
-        
+
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
             aifpl.evaluate("(/ 5 2 0)")
 
@@ -142,7 +142,7 @@ class TestArithmetic:
         ("(// -7 2)", "-4"),  # Floor division rounds down
         ("(// 7 -2)", "-4"),
         ("(// -7 -2)", "3"),
-        
+
         # Float inputs
         ("(// 7.5 2)", "3"),
         ("(// 7 2.0)", "3"),
@@ -161,12 +161,12 @@ class TestArithmetic:
         ("(% 7 3)", "1"),
         ("(% 8 3)", "2"),
         ("(% 9 3)", "0"),
-        
+
         # Negative numbers
         ("(% -7 3)", "2"),  # Python modulo behavior
         ("(% 7 -3)", "-2"),
         ("(% -7 -3)", "-1"),
-        
+
         # Float inputs
         ("(% 7.5 3)", "1.5"),
         ("(% 7 3.0)", "1"),
@@ -186,15 +186,15 @@ class TestArithmetic:
         ("(** 3 2)", "9"),
         ("(** 5 0)", "1"),
         ("(** 0 5)", "0"),
-        
+
         # Negative exponents
         ("(** 2 -1)", "0.5"),
         ("(** 4 -2)", "0.0625"),
-        
+
         # Float exponents
         ("(** 4 0.5)", "2"),  # Square root
         ("(** 8 0.3333333333333333)", "2"),  # Cube root (approximately)
-        
+
         # Complex exponentiation
         ("(** j 2)", "-1"),
         ("(** (complex 1 1) 2)", "2j"),
@@ -270,7 +270,7 @@ class TestArithmetic:
         ("(sqrt 9)", "3"),
         ("(sqrt 16)", "4"),
         ("(sqrt 2)", str(math.sqrt(2))),
-        
+
         # Square root of zero
         ("(sqrt 0)", "0"),
     ])
@@ -297,7 +297,7 @@ class TestArithmetic:
         ("(abs 0)", "0"),
         ("(abs 3.14)", "3.14"),
         ("(abs -3.14)", "3.14"),
-        
+
         # Complex absolute value (magnitude)
         ("(abs (complex 3 4))", "5"),  # |3+4i| = 5
         ("(abs j)", "1"),  # |i| = 1
@@ -314,13 +314,13 @@ class TestArithmetic:
         ("(round 2.5)", "2"),  # Python rounds to even
         ("(round -3.2)", "-3"),
         ("(round -3.7)", "-4"),
-        
+
         # Floor function
         ("(floor 3.2)", "3"),
         ("(floor 3.7)", "3"),
         ("(floor -3.2)", "-4"),
         ("(floor -3.7)", "-4"),
-        
+
         # Ceiling function
         ("(ceil 3.2)", "4"),
         ("(ceil 3.7)", "4"),
@@ -335,10 +335,10 @@ class TestArithmetic:
         """Test that rounding functions reject complex numbers."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(round (complex 1 2))")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(floor j)")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(ceil (complex 3 4))")
 
@@ -349,7 +349,7 @@ class TestArithmetic:
         ("(min 5 2 8 1 9)", "1"),
         ("(min -3 -1 -5)", "-5"),
         ("(min 3.14 2.71)", "2.71"),
-        
+
         # Max function
         ("(max 1)", "1"),
         ("(max 3 1 4)", "4"),
@@ -365,7 +365,7 @@ class TestArithmetic:
         """Test that min/max with no arguments raises error."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(min)")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(max)")
 
@@ -374,16 +374,16 @@ class TestArithmetic:
         ("(bit-or 5 3)", "7"),  # 101 | 011 = 111
         ("(bit-or 1 2 4)", "7"),  # 001 | 010 | 100 = 111
         ("(bit-or 0 0)", "0"),
-        
+
         # Bitwise AND
         ("(bit-and 5 3)", "1"),  # 101 & 011 = 001
         ("(bit-and 7 3 1)", "1"),  # 111 & 011 & 001 = 001
         ("(bit-and 5 2)", "0"),  # 101 & 010 = 000
-        
+
         # Bitwise XOR
         ("(bit-xor 5 3)", "6"),  # 101 ^ 011 = 110
         ("(bit-xor 7 3 1)", "5"),  # ((111 ^ 011) ^ 001) = (100 ^ 001) = 101
-        
+
         # Bitwise NOT
         ("(bit-not 0)", "-1"),  # Two's complement
         ("(bit-not -1)", "0"),
@@ -398,7 +398,7 @@ class TestArithmetic:
         ("(bit-shift-left 1 3)", "8"),  # 1 << 3 = 8
         ("(bit-shift-left 5 2)", "20"),  # 5 << 2 = 20
         ("(bit-shift-left 0 5)", "0"),  # 0 << 5 = 0
-        
+
         # Right shift
         ("(bit-shift-right 8 3)", "1"),  # 8 >> 3 = 1
         ("(bit-shift-right 20 2)", "5"),  # 20 >> 2 = 5
@@ -413,13 +413,13 @@ class TestArithmetic:
         """Test that bitwise operations require integer arguments."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(bit-or 1.5 2)")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(bit-and 1 2.5)")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(bit-xor (complex 1 2) 3)")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(bit-not 3.14)")
 
@@ -429,13 +429,13 @@ class TestArithmetic:
         ("(bin 5)", '"0b101"'),
         ("(bin 255)", '"0b11111111"'),
         ("(bin -1)", '"-0b1"'),
-        
+
         # Hexadecimal conversion
         ("(hex 0)", '"0x0"'),
         ("(hex 15)", '"0xf"'),
         ("(hex 255)", '"0xff"'),
         ("(hex -1)", '"-0x1"'),
-        
+
         # Octal conversion
         ("(oct 0)", '"0o0"'),
         ("(oct 8)", '"0o10"'),
@@ -450,10 +450,10 @@ class TestArithmetic:
         """Test that base conversion functions require integer arguments."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(bin 3.14)")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(hex 2.5)")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(oct (complex 1 2))")
 
@@ -463,13 +463,13 @@ class TestArithmetic:
         ("(complex 0 1)", "1j"),
         ("(complex 5 0)", "5"),
         ("(complex -2 -3)", "(-2-3j)"),
-        
+
         # Real part extraction
         ("(real (complex 3 4))", "3"),
         ("(real 42)", "42"),
         ("(real 3.14)", "3.14"),
         ("(real j)", "0"),
-        
+
         # Imaginary part extraction
         ("(imag (complex 3 4))", "4"),
         ("(imag 42)", "0"),
@@ -486,17 +486,17 @@ class TestArithmetic:
         ("0x10", "16"),
         ("0xABC", "2748"),
         ("0xff", "255"),  # Lowercase
-        
+
         # Binary literals
         ("0b1010", "10"),
         ("0b11111111", "255"),
         ("0B1010", "10"),  # Uppercase
-        
+
         # Octal literals
         ("0o777", "511"),
         ("0o10", "8"),
         ("0O777", "511"),  # Uppercase
-        
+
         # Scientific notation
         ("1e2", "100"),
         ("1.5e2", "150"),
@@ -512,11 +512,11 @@ class TestArithmetic:
         # String arguments
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(+ 1 "hello")')
-        
+
         # Boolean arguments
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(* 2 #t)")
-        
+
         # List arguments
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(- 5 (list 1 2))")
@@ -526,17 +526,17 @@ class TestArithmetic:
         # Binary operators
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(// 1)")  # Floor division needs 2 args
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(% 1)")  # Modulo needs 2 args
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(** 1)")  # Exponentiation needs 2 args
-        
+
         # Unary operators
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(abs)")  # abs needs 1 arg
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(abs 1 2)")  # abs takes only 1 arg
 
@@ -544,7 +544,7 @@ class TestArithmetic:
         """Test that division requires at least 2 arguments."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(/)")
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(/ 5)")
 

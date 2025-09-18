@@ -14,15 +14,15 @@ class TestLists:
         ('(list 1)', '(1)'),
         ('(list 1 2)', '(1 2)'),
         ('(list 1 2 3)', '(1 2 3)'),
-        
+
         # Mixed type lists
         ('(list 1 "hello" #t)', '(1 "hello" #t)'),
         ('(list "a" 2 #f 3.14)', '("a" 2 #f 3.14)'),
-        
+
         # Nested lists
         ('(list (list 1 2) (list 3 4))', '((1 2) (3 4))'),
         ('(list 1 (list 2 3) 4)', '(1 (2 3) 4)'),
-        
+
         # Lists with complex numbers
         ('(list (complex 1 2) j)', '((1+2j) 1j)'),
     ])
@@ -35,11 +35,11 @@ class TestLists:
         result = aifpl.evaluate('(list 1 2 3)')
         assert result == [1, 2, 3]
         assert isinstance(result, list)
-        
+
         # Mixed types
         result = aifpl.evaluate('(list 1 "hello" #t)')
         assert result == [1, "hello", True]
-        
+
         # Nested lists
         result = aifpl.evaluate('(list (list 1 2) (list 3 4))')
         assert result == [[1, 2], [3, 4]]
@@ -49,13 +49,13 @@ class TestLists:
         ('(cons 1 (list 2 3))', '(1 2 3)'),
         ('(cons "hello" (list "world"))', '("hello" "world")'),
         ('(cons #t (list #f))', '(#t #f)'),
-        
+
         # Cons with empty list
         ('(cons 1 (list))', '(1)'),
-        
+
         # Cons with mixed types
         ('(cons 1 (list "hello" #t))', '(1 "hello" #t)'),
-        
+
         # Nested cons
         ('(cons (list 1 2) (list (list 3 4)))', '((1 2) (3 4))'),
     ])
@@ -67,7 +67,7 @@ class TestLists:
         """Test that cons requires a list as the second argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(cons 1 2)')  # Second arg must be list
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(cons 1 "hello")')  # Second arg must be list
 
@@ -77,14 +77,14 @@ class TestLists:
         ('(append (list) (list 1 2))', '(1 2)'),
         ('(append (list 1 2) (list))', '(1 2)'),
         ('(append (list) (list))', '()'),
-        
+
         # Multiple list append
         ('(append (list 1) (list 2) (list 3))', '(1 2 3)'),
         ('(append (list 1 2) (list 3 4) (list 5 6))', '(1 2 3 4 5 6)'),
-        
+
         # Mixed type append
         ('(append (list 1 "hello") (list #t 3.14))', '(1 "hello" #t 3.14)'),
-        
+
         # Nested list append
         ('(append (list (list 1 2)) (list (list 3 4)))', '((1 2) (3 4))'),
     ])
@@ -96,10 +96,10 @@ class TestLists:
         """Test that append requires all arguments to be lists."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(append (list 1 2) 3)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(append "hello" (list 1 2))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(append (list 1) #t (list 2))')
 
@@ -107,7 +107,7 @@ class TestLists:
         """Test that append requires at least 2 arguments."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(append)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(append (list 1 2))')
 
@@ -116,10 +116,10 @@ class TestLists:
         ('(reverse (list 1 2 3))', '(3 2 1)'),
         ('(reverse (list))', '()'),
         ('(reverse (list 1))', '(1)'),
-        
+
         # Mixed type reverse
         ('(reverse (list 1 "hello" #t))', '(#t "hello" 1)'),
-        
+
         # Nested list reverse (only reverses top level)
         ('(reverse (list (list 1 2) (list 3 4)))', '((3 4) (1 2))'),
     ])
@@ -131,7 +131,7 @@ class TestLists:
         """Test that reverse requires a list argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(reverse "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(reverse 42)')
 
@@ -155,7 +155,7 @@ class TestLists:
         """Test that first requires a list argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(first "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(first 42)')
 
@@ -179,7 +179,7 @@ class TestLists:
         """Test that rest requires a list argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(rest "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(rest 42)')
 
@@ -188,12 +188,12 @@ class TestLists:
         ('(list-ref (list "a" "b" "c") 0)', '"a"'),
         ('(list-ref (list "a" "b" "c") 1)', '"b"'),
         ('(list-ref (list "a" "b" "c") 2)', '"c"'),
-        
+
         # Mixed type list reference
         ('(list-ref (list 1 "hello" #t) 0)', '1'),
         ('(list-ref (list 1 "hello" #t) 1)', '"hello"'),
         ('(list-ref (list 1 "hello" #t) 2)', '#t'),
-        
+
         # Nested list reference
         ('(list-ref (list (list 1 2) (list 3 4)) 0)', '(1 2)'),
         ('(list-ref (list (list 1 2) (list 3 4)) 1)', '(3 4)'),
@@ -206,7 +206,7 @@ class TestLists:
         """Test list-ref with invalid indices."""
         with pytest.raises(AIFPLEvalError, match="index out of range"):
             aifpl.evaluate('(list-ref (list 1 2 3) 3)')  # Index too high
-        
+
         with pytest.raises(AIFPLEvalError, match="index out of range"):
             aifpl.evaluate('(list-ref (list 1 2 3) -1)')  # Negative index
 
@@ -214,7 +214,7 @@ class TestLists:
         """Test that list-ref requires a list as first argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list-ref "hello" 0)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list-ref 42 0)')
 
@@ -222,7 +222,7 @@ class TestLists:
         """Test that list-ref requires integer index."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list-ref (list 1 2 3) "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list-ref (list 1 2 3) 1.5)')
 
@@ -232,7 +232,7 @@ class TestLists:
         ('(length (list 1))', '1'),
         ('(length (list 1 2 3))', '3'),
         ('(length (list 1 "hello" #t 3.14))', '4'),
-        
+
         # Length of nested lists (only counts top-level elements)
         ('(length (list (list 1 2) (list 3 4 5)))', '2'),
     ])
@@ -244,7 +244,7 @@ class TestLists:
         """Test that length requires a list argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(length "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(length 42)')
 
@@ -262,7 +262,7 @@ class TestLists:
         """Test that null? requires a list argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(null? "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(null? 42)')
 
@@ -287,13 +287,13 @@ class TestLists:
         ('(member? "test" (list "hello" "world"))', '#f'),
         ('(member? #t (list #t #f))', '#t'),
         ('(member? #f (list #t))', '#f'),
-        
+
         # Member with mixed types
         ('(member? 1 (list 1 "hello" #t))', '#t'),
         ('(member? "hello" (list 1 "hello" #t))', '#t'),
         ('(member? #t (list 1 "hello" #t))', '#t'),
         ('(member? 42 (list 1 "hello" #t))', '#f'),
-        
+
         # Member with nested lists
         ('(member? (list 1 2) (list (list 1 2) (list 3 4)))', '#t'),
         ('(member? (list 5 6) (list (list 1 2) (list 3 4)))', '#f'),
@@ -306,7 +306,7 @@ class TestLists:
         """Test that member? requires a list as second argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(member? 1 "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(member? 1 42)')
 
@@ -317,10 +317,10 @@ class TestLists:
         ('(take 3 (list 1 2 3 4 5))', '(1 2 3)'),
         ('(take 5 (list 1 2 3 4 5))', '(1 2 3 4 5)'),
         ('(take 10 (list 1 2 3))', '(1 2 3)'),  # Take more than available
-        
+
         # Take with mixed types
         ('(take 2 (list 1 "hello" #t 3.14))', '(1 "hello")'),
-        
+
         # Take from empty list
         ('(take 0 (list))', '()'),
         ('(take 5 (list))', '()'),  # Take from empty list returns empty
@@ -338,7 +338,7 @@ class TestLists:
         """Test that take requires a list as second argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(take 2 "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(take 2 42)')
 
@@ -346,7 +346,7 @@ class TestLists:
         """Test that take requires integer count."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(take "hello" (list 1 2 3))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(take 2.5 (list 1 2 3))')
 
@@ -357,10 +357,10 @@ class TestLists:
         ('(drop 3 (list 1 2 3 4 5))', '(4 5)'),
         ('(drop 5 (list 1 2 3 4 5))', '()'),
         ('(drop 10 (list 1 2 3))', '()'),  # Drop more than available
-        
+
         # Drop with mixed types
         ('(drop 2 (list 1 "hello" #t 3.14))', '(#t 3.14)'),
-        
+
         # Drop from empty list
         ('(drop 0 (list))', '()'),
         ('(drop 5 (list))', '()'),  # Drop from empty list returns empty
@@ -378,7 +378,7 @@ class TestLists:
         """Test that drop requires a list as second argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(drop 2 "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(drop 2 42)')
 
@@ -386,7 +386,7 @@ class TestLists:
         """Test that drop requires integer count."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(drop "hello" (list 1 2 3))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(drop 2.5 (list 1 2 3))')
 
@@ -397,15 +397,15 @@ class TestLists:
         ('(= (list 1 2 3) (list 1 2 3))', '#t'),
         ('(= (list 1 2) (list 1 2 3))', '#f'),  # Different lengths
         ('(= (list 1 2 3) (list 1 3 2))', '#f'),  # Different order
-        
+
         # Mixed type list equality
         ('(= (list 1 "hello" #t) (list 1 "hello" #t))', '#t'),
         ('(= (list 1 "hello") (list 1 "world"))', '#f'),
-        
+
         # Nested list equality
         ('(= (list (list 1 2) (list 3 4)) (list (list 1 2) (list 3 4)))', '#t'),
         ('(= (list (list 1 2)) (list (list 1 3)))', '#f'),
-        
+
         # Multiple list equality
         ('(= (list 1 2) (list 1 2) (list 1 2))', '#t'),
         ('(= (list 1 2) (list 1 2) (list 1 3))', '#f'),
@@ -418,13 +418,13 @@ class TestLists:
         """Test that lists don't support comparison operators other than =."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(< (list 1 2) (list 3 4))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(> (list 1 2) (list 3 4))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(<= (list 1 2) (list 3 4))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(>= (list 1 2) (list 3 4))')
 
@@ -432,13 +432,13 @@ class TestLists:
         """Test that lists don't support arithmetic operations."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(+ (list 1 2) (list 3 4))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(* (list 1 2) 3)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(- (list 5 6) (list 1 2))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(/ (list 10) (list 2))')
 
@@ -447,28 +447,28 @@ class TestLists:
         # cons requires exactly 2 arguments
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(cons 1)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(cons 1 (list 2) (list 3))')
-        
+
         # first requires exactly 1 argument
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(first)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(first (list 1) (list 2))')
-        
+
         # list-ref requires exactly 2 arguments
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list-ref (list 1 2 3))')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list-ref (list 1) 0 1)')
-        
+
         # take requires exactly 2 arguments
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(take 3)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(take 3 (list 1 2) (list 3 4))')
 
@@ -480,39 +480,39 @@ class TestLists:
             '(reverse (append (list 1 2) (list 3 4)))',
             '(4 3 2 1)'
         )
-        
+
         # First of rest
         helpers.assert_evaluates_to(
             aifpl,
             '(first (rest (list 1 2 3 4)))',
             '2'
         )
-        
+
         # Length of reverse (should be same)
         helpers.assert_evaluates_to(
             aifpl,
             '(length (reverse (list 1 2 3 4 5)))',
             '5'
         )
-        
+
         # Nested list operations
         helpers.assert_evaluates_to(
             aifpl,
             '(first (first (list (list 1 2) (list 3 4))))',
             '1'
         )
-        
+
         # Take and drop complementarity
         original_list = '(list 1 2 3 4 5)'
         take_expr = f'(take 3 {original_list})'
         drop_expr = f'(drop 3 {original_list})'
-        
+
         take_result = aifpl.evaluate_and_format(take_expr)
         drop_result = aifpl.evaluate_and_format(drop_expr)
-        
+
         assert take_result == '(1 2 3)'
         assert drop_result == '(4 5)'
-        
+
         # Append take and drop should reconstruct original
         reconstruct_expr = f'(append (take 3 {original_list}) (drop 3 {original_list}))'
         helpers.assert_evaluates_to(aifpl, reconstruct_expr, '(1 2 3 4 5)')
@@ -530,24 +530,24 @@ class TestLists:
           (list 1 2 3)
         )
         '''
-        
+
         result = aifpl.evaluate_and_format(complex_list)
         expected = '(42 3.14 (1+2j) "hello" #t #f (1 2 3))'
         assert result == expected
-        
+
         # Test operations on this complex list
         helpers.assert_evaluates_to(
             aifpl,
             f'(length {complex_list})',
             '7'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             f'(first {complex_list})',
             '42'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             f'(list-ref {complex_list} 3)',
@@ -558,20 +558,20 @@ class TestLists:
         """Test operations on deeply nested lists."""
         # Create a deeply nested list structure
         nested_expr = '(list (list (list 1 2) (list 3 4)) (list (list 5 6) (list 7 8)))'
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             nested_expr,
             '(((1 2) (3 4)) ((5 6) (7 8)))'
         )
-        
+
         # Access nested elements
         helpers.assert_evaluates_to(
             aifpl,
             f'(first (first {nested_expr}))',
             '(1 2)'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             f'(first (first (first {nested_expr})))',
@@ -581,35 +581,35 @@ class TestLists:
     def test_list_identity_operations(self, aifpl, helpers):
         """Test operations that should preserve list identity."""
         test_list = '(list 1 2 3 4 5)'
-        
+
         # Reverse twice should give original
         helpers.assert_evaluates_to(
             aifpl,
             f'(reverse (reverse {test_list}))',
             '(1 2 3 4 5)'
         )
-        
+
         # Take all elements should give original
         helpers.assert_evaluates_to(
             aifpl,
             f'(take (length {test_list}) {test_list})',
             '(1 2 3 4 5)'
         )
-        
+
         # Drop zero elements should give original
         helpers.assert_evaluates_to(
             aifpl,
             f'(drop 0 {test_list})',
             '(1 2 3 4 5)'
         )
-        
+
         # Append empty list should give original
         helpers.assert_evaluates_to(
             aifpl,
             f'(append {test_list} (list))',
             '(1 2 3 4 5)'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             f'(append (list) {test_list})',

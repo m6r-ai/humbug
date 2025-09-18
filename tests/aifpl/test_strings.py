@@ -13,7 +13,7 @@ class TestStrings:
         ('"hello"', '"hello"'),
         ('""', '""'),  # Empty string
         ('"hello world"', '"hello world"'),
-        
+
         # Strings with spaces
         ('"  hello  "', '"  hello  "'),
         ('"\\thello\\n"', '"\\thello\\n"'),  # Tabs and newlines preserved in output
@@ -29,13 +29,13 @@ class TestStrings:
         ('"\\n"', '\n'),  # Newline
         ('"\\t"', '\t'),  # Tab
         ('"\\r"', '\r'),  # Carriage return
-        
+
         # Unicode escape sequences
         ('"\\u0041"', 'A'),  # Unicode A
         ('"\\u03B1"', 'α'),  # Greek alpha
         ('"\\u03B2"', 'β'),  # Greek beta
         ('"\\u03B3"', 'γ'),  # Greek gamma
-        
+
         # Combined escapes
         ('"Hello\\nWorld"', 'Hello\nWorld'),
         ('"Quote: \\""', 'Quote: "'),
@@ -50,16 +50,16 @@ class TestStrings:
         # Basic Unicode
         ('"Hello 世界"', 'Hello 世界'),
         ('"Café naïve"', 'Café naïve'),
-        
+
         # Emoji (4-byte UTF-8)
         ('"Hello 👋"', 'Hello 👋'),
         ('"🌍 World"', '🌍 World'),
-        
+
         # Mixed ASCII and Unicode
         ('"résumé"', 'résumé'),
         ('"Москва"', 'Москва'),  # Russian
         ('"北京"', '北京'),  # Chinese
-        
+
         # Unicode via escape sequences
         ('"\\u4F60\\u597D"', '你好'),  # "Hello" in Chinese
     ])
@@ -72,16 +72,16 @@ class TestStrings:
         # Basic string append
         ('(string-append "hello" " " "world")', '"hello world"'),
         ('(string-append "a" "b" "c")', '"abc"'),
-        
+
         # Empty string handling
         ('(string-append)', '""'),  # Identity case
         ('(string-append "")', '""'),
         ('(string-append "" "hello")', '"hello"'),
         ('(string-append "hello" "")', '"hello"'),
-        
+
         # Many arguments
         ('(string-append "a" "b" "c" "d" "e")', '"abcde"'),
-        
+
         # Unicode strings
         ('(string-append "Hello " "世界")', '"Hello 世界"'),
     ])
@@ -94,12 +94,12 @@ class TestStrings:
         ('(string-length "hello")', '5'),
         ('(string-length "")', '0'),
         ('(string-length "a")', '1'),
-        
+
         # Unicode length (character count, not byte count)
         ('(string-length "世界")', '2'),
         ('(string-length "café")', '4'),
         ('(string-length "👋")', '1'),  # Single emoji
-        
+
         # Strings with escape sequences
         ('(string-length "hello\\nworld")', '11'),  # Includes the newline
         ('(string-length "\\t")', '1'),  # Tab is one character
@@ -114,11 +114,11 @@ class TestStrings:
         ('(substring "hello" 0 5)', '"hello"'),  # Full string
         ('(substring "hello" 0 1)', '"h"'),  # First character
         ('(substring "hello" 4 5)', '"o"'),  # Last character
-        
+
         # Empty substring
         ('(substring "hello" 2 2)', '""'),  # Empty range
         ('(substring "hello" 0 0)', '""'),  # Empty range at start
-        
+
         # Unicode substrings
         ('(substring "世界你好" 1 3)', '"界你"'),
         ('(substring "café" 1 3)', '"af"'),
@@ -133,7 +133,7 @@ class TestStrings:
         # Let's test the current behavior
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(substring "hello" 0 10)')  # End beyond string
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(substring "hello" -1 3)')  # Negative start
 
@@ -143,12 +143,12 @@ class TestStrings:
         ('(string-upcase "Hello World")', '"HELLO WORLD"'),
         ('(string-upcase "")', '""'),
         ('(string-upcase "ALREADY UPPER")', '"ALREADY UPPER"'),
-        
+
         ('(string-downcase "HELLO")', '"hello"'),
         ('(string-downcase "Hello World")', '"hello world"'),
         ('(string-downcase "")', '""'),
         ('(string-downcase "already lower")', '"already lower"'),
-        
+
         # Unicode case conversion
         ('(string-upcase "café")', '"CAFÉ"'),
         ('(string-downcase "CAFÉ")', '"café"'),
@@ -162,7 +162,7 @@ class TestStrings:
         ('(string-ref "hello" 0)', '"h"'),
         ('(string-ref "hello" 1)', '"e"'),
         ('(string-ref "hello" 4)', '"o"'),
-        
+
         # Unicode character reference
         ('(string-ref "世界" 0)', '"世"'),
         ('(string-ref "世界" 1)', '"界"'),
@@ -176,7 +176,7 @@ class TestStrings:
         """Test string-ref with invalid indices."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-ref "hello" 5)')  # Index out of range
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-ref "hello" -1)')  # Negative index
 
@@ -189,7 +189,7 @@ class TestStrings:
         ('(string-contains? "hello" "")', '#t'),  # Empty string is contained
         ('(string-contains? "" "")', '#t'),  # Empty contains empty
         ('(string-contains? "" "a")', '#f'),  # Empty doesn\'t contain non-empty
-        
+
         # Unicode contains
         ('(string-contains? "Hello 世界" "世界")', '#t'),
         ('(string-contains? "café" "fé")', '#t'),
@@ -205,7 +205,7 @@ class TestStrings:
         ('(string-prefix? "hello world" "")', '#t'),  # Empty prefix
         ('(string-prefix? "hello world" "world")', '#f'),  # Not at start
         ('(string-prefix? "hello" "hello world")', '#f'),  # Prefix longer than string
-        
+
         # Unicode prefix
         ('(string-prefix? "世界你好" "世界")', '#t'),
         ('(string-prefix? "café" "ca")', '#t'),
@@ -221,7 +221,7 @@ class TestStrings:
         ('(string-suffix? "hello world" "")', '#t'),  # Empty suffix
         ('(string-suffix? "hello world" "hello")', '#f'),  # Not at end
         ('(string-suffix? "hello" "hello world")', '#f'),  # Suffix longer than string
-        
+
         # Unicode suffix
         ('(string-suffix? "世界你好" "你好")', '#t'),
         ('(string-suffix? "café" "é")', '#t'),
@@ -235,14 +235,14 @@ class TestStrings:
         ('(string=? "hello" "hello")', '#t'),
         ('(string=? "hello" "world")', '#f'),
         ('(string=? "" "")', '#t'),
-        
+
         # Multiple arguments (all must be equal)
         ('(string=? "hello" "hello" "hello")', '#t'),
         ('(string=? "hello" "hello" "world")', '#f'),
-        
+
         # Case sensitive
         ('(string=? "Hello" "hello")', '#f'),
-        
+
         # Unicode equality
         ('(string=? "世界" "世界")', '#t'),
         ('(string=? "café" "cafe")', '#f'),  # Different characters
@@ -257,11 +257,11 @@ class TestStrings:
         ('(string->number "3.14")', '3.14'),
         ('(string->number "-5")', '-5'),
         ('(string->number "0")', '0'),
-        
+
         # Scientific notation
         ('(string->number "1e2")', '100'),
         ('(string->number "1.5e-2")', '0.015'),
-        
+
         # Complex numbers
         ('(string->number "1+2j")', '(1+2j)'),
         ('(string->number "3j")', '3j'),
@@ -274,10 +274,10 @@ class TestStrings:
         """Test string->number with invalid number strings."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string->number "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string->number "12.34.56")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string->number "")')
 
@@ -287,7 +287,7 @@ class TestStrings:
         ('(number->string 3.14)', '"3.14"'),
         ('(number->string -5)', '"-5"'),
         ('(number->string 0)', '"0"'),
-        
+
         # Complex numbers
         ('(number->string (complex 1 2))', '"(1+2j)"'),
         ('(number->string j)', '"1j"'),
@@ -301,7 +301,7 @@ class TestStrings:
         ('(string->list "hello")', '("h" "e" "l" "l" "o")'),
         ('(string->list "")', '()'),
         ('(string->list "a")', '("a")'),
-        
+
         # Unicode string to list
         ('(string->list "世界")', '("世" "界")'),
         ('(string->list "café")', '("c" "a" "f" "é")'),
@@ -315,7 +315,7 @@ class TestStrings:
         ('(list->string (list "h" "e" "l" "l" "o"))', '"hello"'),
         ('(list->string (list))', '""'),
         ('(list->string (list "a"))', '"a"'),
-        
+
         # Unicode list to string
         ('(list->string (list "世" "界"))', '"世界"'),
         ('(list->string (list "c" "a" "f" "é"))', '"café"'),
@@ -335,12 +335,12 @@ class TestStrings:
         ('(string-split "a,b,c" ",")', '("a" "b" "c")'),
         ('(string-split "hello world" " ")', '("hello" "world")'),
         ('(string-split "one::two::three" "::")', '("one" "two" "three")'),
-        
+
         # Edge cases
         ('(string-split "" ",")', '("")'),  # Empty string splits to list with empty string
         ('(string-split "hello" "")', '("h" "e" "l" "l" "o")'),  # Split on empty delimiter
         ('(string-split "no-delimiters" ",")', '("no-delimiters")'),  # No delimiter found
-        
+
         # Unicode split
         ('(string-split "世界,你好" ",")', '("世界" "你好")'),
     ])
@@ -353,12 +353,12 @@ class TestStrings:
         ('(string-join (list "hello" "world") " ")', '"hello world"'),
         ('(string-join (list "a" "b" "c") ",")', '"a,b,c"'),
         ('(string-join (list "one" "two" "three") "::")', '"one::two::three"'),
-        
+
         # Edge cases
         ('(string-join (list) ",")', '""'),  # Empty list
         ('(string-join (list "hello") ",")', '"hello"'),  # Single element
         ('(string-join (list "a" "b") "")', '"ab"'),  # Empty separator
-        
+
         # Unicode join
         ('(string-join (list "世界" "你好") " ")', '"世界 你好"'),
     ])
@@ -376,25 +376,25 @@ class TestStrings:
         # string-append with non-strings
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-append "hello" 42)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-append #t "world")')
-        
+
         # string-length with non-string
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-length 42)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-length (list "h" "i"))')
-        
+
         # substring with non-string
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(substring 42 0 1)')
-        
+
         # string-upcase/downcase with non-string
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-upcase 42)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-downcase #t)')
 
@@ -402,13 +402,13 @@ class TestStrings:
         """Test that string predicates require string arguments."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-contains? 42 "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-prefix? "hello" 42)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-suffix? #t "world")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string=? "hello" 42)')
 
@@ -417,15 +417,15 @@ class TestStrings:
         # string->number requires string
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string->number 42)')
-        
+
         # number->string requires number
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(number->string "hello")')
-        
+
         # string->list requires string
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string->list 42)')
-        
+
         # list->string requires list
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list->string "hello")')
@@ -435,14 +435,14 @@ class TestStrings:
         # string-split requires strings
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-split 42 ",")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-split "hello" 42)')
-        
+
         # string-join requires list and string
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-join "hello" ",")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-join (list "a" "b") 42)')
 
@@ -451,21 +451,21 @@ class TestStrings:
         # Functions requiring exactly 1 argument
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-length)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-length "hello" "world")')
-        
+
         # Functions requiring exactly 2 arguments
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-contains? "hello")')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-ref "hello")')
-        
+
         # Functions requiring exactly 3 arguments
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(substring "hello" 1)')
-        
+
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(substring "hello")')
 
@@ -478,7 +478,7 @@ class TestStrings:
             '"café"',
             '"世界"',
         ]
-        
+
         for string_expr in test_strings:
             # string -> list -> string should be identity
             round_trip = f'(list->string (string->list {string_expr}))'
@@ -501,14 +501,14 @@ class TestStrings:
             '(string-append (string-upcase "hello") " " (string-downcase "WORLD"))',
             '"HELLO world"'
         )
-        
+
         # Nested string operations
         helpers.assert_evaluates_to(
             aifpl,
             '(string-length (string-append "hello" " " "world"))',
             '11'
         )
-        
+
         # String operations with conversions
         helpers.assert_evaluates_to(
             aifpl,

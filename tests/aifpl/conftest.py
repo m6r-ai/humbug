@@ -1,9 +1,9 @@
 """Shared fixtures and utilities for AIFPL tests."""
 
 import pytest
-from typing import Any, Callable
+from typing import Any
 
-from aifpl import AIFPL, AIFPLError
+from aifpl import AIFPL
 
 
 @pytest.fixture
@@ -22,39 +22,39 @@ def aifpl_custom():
 
 class AIFPLTestHelpers:
     """Helper utilities for AIFPL testing."""
-    
+
     @staticmethod
     def assert_lisp_format(result: str, expected: str) -> None:
         """Assert that LISP-formatted result matches expected format."""
         assert result == expected, f"Expected LISP format '{expected}', got '{result}'"
-    
+
     @staticmethod
     def assert_evaluates_to(aifpl: AIFPL, expression: str, expected: str) -> None:
         """Assert that expression evaluates to expected LISP-formatted result."""
         result = aifpl.evaluate_and_format(expression)
         AIFPLTestHelpers.assert_lisp_format(result, expected)
-    
+
     @staticmethod
     def assert_python_result(aifpl: AIFPL, expression: str, expected: Any) -> None:
         """Assert that expression evaluates to expected Python object."""
         result = aifpl.evaluate(expression)
         assert result == expected, f"Expected Python result {expected!r}, got {result!r}"
-    
+
     @staticmethod
     def build_nested_expression(operator: str, depth: int, base_value: str = "1") -> str:
         """Build deeply nested expression for recursion testing."""
         if depth <= 0:
             return base_value
-        
+
         inner = AIFPLTestHelpers.build_nested_expression(operator, depth - 1, base_value)
         return f"({operator} {base_value} {inner})"
-    
+
     @staticmethod
     def build_list_expression(elements: list) -> str:
         """Build a list expression from Python elements."""
         if not elements:
             return "(list)"
-        
+
         element_strs = []
         for elem in elements:
             if isinstance(elem, str):
@@ -65,7 +65,7 @@ class AIFPLTestHelpers:
                 element_strs.append(AIFPLTestHelpers.build_list_expression(elem))
             else:
                 element_strs.append(str(elem))
-        
+
         return f"(list {' '.join(element_strs)})"
 
 

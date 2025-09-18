@@ -12,18 +12,18 @@ class TestConditionals:
         # Basic if expressions
         ('(if #t "yes" "no")', '"yes"'),
         ('(if #f "yes" "no")', '"no"'),
-        
+
         # If with numeric conditions
         ('(if (> 5 3) "greater" "less")', '"greater"'),
         ('(if (< 5 3) "greater" "less")', '"less"'),
         ('(if (= 5 5) "equal" "not equal")', '"equal"'),
-        
+
         # If with different result types
         ('(if #t 42 0)', '42'),
         ('(if #f 42 0)', '0'),
         ('(if #t (list 1 2) (list 3 4))', '(1 2)'),
         ('(if #f (list 1 2) (list 3 4))', '(3 4)'),
-        
+
         # If with complex expressions in branches
         ('(if #t (+ 1 2) (* 3 4))', '3'),
         ('(if #f (+ 1 2) (* 3 4))', '12'),
@@ -37,14 +37,14 @@ class TestConditionals:
         # Division by zero in unused branch should not cause error
         result = aifpl.evaluate_and_format('(if #t 42 (/ 1 0))')
         assert result == '42'
-        
+
         result = aifpl.evaluate_and_format('(if #f (/ 1 0) 24)')
         assert result == '24'
-        
+
         # Undefined symbol in unused branch should not cause error
         result = aifpl.evaluate_and_format('(if #t "safe" undefined-symbol)')
         assert result == '"safe"'
-        
+
         result = aifpl.evaluate_and_format('(if #f undefined-symbol "safe")')
         assert result == '"safe"'
 
@@ -53,7 +53,7 @@ class TestConditionals:
         # Safe list operations
         result = aifpl.evaluate_and_format('(if (null? (list)) "empty" (first (list)))')
         assert result == '"empty"'
-        
+
         # The false branch would cause an error if evaluated
         result = aifpl.evaluate_and_format('(if (> 10 5) "big" (first (list)))')
         assert result == '"big"'
@@ -62,13 +62,13 @@ class TestConditionals:
         """Test that if expressions require boolean conditions."""
         with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
             aifpl.evaluate('(if 1 "yes" "no")')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
             aifpl.evaluate('(if "hello" "yes" "no")')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
             aifpl.evaluate('(if (list 1 2) "yes" "no")')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
             aifpl.evaluate('(if 0 "yes" "no")')  # 0 is not false in AIFPL
 
@@ -76,10 +76,10 @@ class TestConditionals:
         """Test that if expressions require exactly 3 arguments."""
         with pytest.raises(AIFPLEvalError, match="requires exactly 3 arguments"):
             aifpl.evaluate('(if #t "yes")')  # Missing else branch
-        
+
         with pytest.raises(AIFPLEvalError, match="requires exactly 3 arguments"):
             aifpl.evaluate('(if #t)')  # Missing both branches
-        
+
         with pytest.raises(AIFPLEvalError, match="requires exactly 3 arguments"):
             aifpl.evaluate('(if #t "yes" "no" "extra")')  # Too many arguments
 
@@ -88,7 +88,7 @@ class TestConditionals:
         ('(if #t (if #t "inner-true" "inner-false") "outer-false")', '"inner-true"'),
         ('(if #t (if #f "inner-true" "inner-false") "outer-false")', '"inner-false"'),
         ('(if #f (if #t "inner-true" "inner-false") "outer-false")', '"outer-false"'),
-        
+
         # Complex nested conditions
         ('(if (> 10 5) (if (< 3 7) "both-true" "first-true-second-false") "first-false")', '"both-true"'),
         ('(if (> 10 5) (if (> 3 7) "both-true" "first-true-second-false") "first-false")', '"first-true-second-false"'),
@@ -103,7 +103,7 @@ class TestConditionals:
         # Inner if should not be evaluated if outer condition is false
         result = aifpl.evaluate_and_format('(if #f (if undefined-condition "inner" "inner") "outer")')
         assert result == '"outer"'
-        
+
         # Only the chosen inner branch should be evaluated
         result = aifpl.evaluate_and_format('(if #t (if #t "chosen" (/ 1 0)) "not-chosen")')
         assert result == '"chosen"'
@@ -117,7 +117,7 @@ class TestConditionals:
         ('(and #t #f)', '#f'),
         ('(and #f #t)', '#f'),
         ('(and #f #f)', '#f'),
-        
+
         # Multiple arguments
         ('(and #t #t #t)', '#t'),
         ('(and #t #t #f)', '#f'),
@@ -136,7 +136,7 @@ class TestConditionals:
         ('(or #t #f)', '#t'),
         ('(or #f #t)', '#t'),
         ('(or #f #f)', '#f'),
-        
+
         # Multiple arguments
         ('(or #f #f #f)', '#f'),
         ('(or #f #f #t)', '#t'),
@@ -160,24 +160,24 @@ class TestConditionals:
         # AND with non-boolean arguments
         with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
             aifpl.evaluate('(and #t 1)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
             aifpl.evaluate('(and "hello" #t)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
             aifpl.evaluate('(and #t (list 1 2))')
-        
+
         # OR with non-boolean arguments
         with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
             aifpl.evaluate('(or #f 1)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
             aifpl.evaluate('(or "hello" #f)')
-        
+
         # NOT with non-boolean arguments
         with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
             aifpl.evaluate('(not 1)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
             aifpl.evaluate('(not "hello")')
 
@@ -185,7 +185,7 @@ class TestConditionals:
         """Test that NOT requires exactly one argument."""
         with pytest.raises(AIFPLEvalError, match="takes exactly 1 argument"):
             aifpl.evaluate('(not)')
-        
+
         with pytest.raises(AIFPLEvalError, match="takes exactly 1 argument"):
             aifpl.evaluate('(not #t #f)')
 
@@ -196,27 +196,27 @@ class TestConditionals:
         ('(= 1 1 1)', '#t'),
         ('(= 1 1 2)', '#f'),
         ('(= 5 5 5 5)', '#t'),
-        
+
         # Mixed numeric types
         ('(= 1 1.0)', '#t'),
         ('(= 2 2.0)', '#t'),
         ('(= 3.14 3.14)', '#t'),
-        
+
         # String equality
         ('(= "hello" "hello")', '#t'),
         ('(= "hello" "world")', '#f'),
         ('(= "test" "test" "test")', '#t'),
-        
+
         # Boolean equality
         ('(= #t #t)', '#t'),
         ('(= #f #f)', '#t'),
         ('(= #t #f)', '#f'),
-        
+
         # List equality
         ('(= (list 1 2) (list 1 2))', '#t'),
         ('(= (list 1 2) (list 2 1))', '#f'),
         ('(= (list) (list))', '#t'),
-        
+
         # Complex number equality
         ('(= (complex 1 2) (complex 1 2))', '#t'),
         ('(= (complex 1 2) (complex 2 1))', '#f'),
@@ -229,7 +229,7 @@ class TestConditionals:
         """Test that equality requires at least 2 arguments."""
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
             aifpl.evaluate('(=)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
             aifpl.evaluate('(= 1)')
 
@@ -240,21 +240,21 @@ class TestConditionals:
         ('(< 1 1)', '#f'),
         ('(< 1 2 3)', '#t'),  # Chain: 1 < 2 < 3
         ('(< 1 3 2)', '#f'),  # Chain fails: 3 < 2 is false
-        
+
         # Less than or equal
         ('(<= 1 2)', '#t'),
         ('(<= 2 1)', '#f'),
         ('(<= 1 1)', '#t'),  # Equal case
         ('(<= 1 1 2)', '#t'),
         ('(<= 1 2 1)', '#f'),
-        
+
         # Greater than
         ('(> 2 1)', '#t'),
         ('(> 1 2)', '#f'),
         ('(> 1 1)', '#f'),
         ('(> 3 2 1)', '#t'),  # Chain: 3 > 2 > 1
         ('(> 3 1 2)', '#f'),  # Chain fails: 1 > 2 is false
-        
+
         # Greater than or equal
         ('(>= 2 1)', '#t'),
         ('(>= 1 2)', '#f'),
@@ -278,20 +278,20 @@ class TestConditionals:
         # Less than with non-numeric arguments
         with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
             aifpl.evaluate('(< "hello" "world")')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
             aifpl.evaluate('(< 1 #t)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
             aifpl.evaluate('(< (list 1) (list 2))')
-        
+
         # Other comparison operators
         with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
             aifpl.evaluate('(> "a" "b")')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
             aifpl.evaluate('(<= #t #f)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
             aifpl.evaluate('(>= (list 1) (list 2))')
 
@@ -299,13 +299,13 @@ class TestConditionals:
         """Test that comparison operations require at least 2 arguments."""
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
             aifpl.evaluate('(<)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
             aifpl.evaluate('(< 1)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
             aifpl.evaluate('(>)')
-        
+
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
             aifpl.evaluate('(> 5)')
 
@@ -317,20 +317,20 @@ class TestConditionals:
             '(= (not (and #t #f)) (or (not #t) (not #f)))',
             '#t'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             '(= (not (or #t #f)) (and (not #t) (not #f)))',
             '#t'
         )
-        
+
         # Complex nested boolean logic
         helpers.assert_evaluates_to(
             aifpl,
             '(and (or #t #f) (not #f))',
             '#t'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             '(or (and #t #f) (and #t #t))',
@@ -345,20 +345,20 @@ class TestConditionals:
             '(if (> 10 0) (/ 20 10) "undefined")',
             '2'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             '(if (= 0 0) "zero" "not zero")',
             '"zero"'
         )
-        
+
         # Multiple conditions
         helpers.assert_evaluates_to(
             aifpl,
             '(if (and (> 5 3) (< 2 4)) "both true" "at least one false")',
             '"both true"'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             '(if (or (> 5 10) (< 2 4)) "at least one true" "both false")',
@@ -373,13 +373,13 @@ class TestConditionals:
             '(if (null? (list)) "empty" "not empty")',
             '"empty"'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             '(if (member? 2 (list 1 2 3)) "found" "not found")',
             '"found"'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             '(if (list? (list 1 2)) "is list" "not list")',
@@ -393,13 +393,13 @@ class TestConditionals:
             '(if (string-contains? "hello world" "world") "found" "not found")',
             '"found"'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             '(if (string-prefix? "hello" "he") "has prefix" "no prefix")',
             '"has prefix"'
         )
-        
+
         helpers.assert_evaluates_to(
             aifpl,
             '(if (string=? "test" "test") "equal" "not equal")',
@@ -411,19 +411,19 @@ class TestConditionals:
         # Return different numbers
         helpers.assert_evaluates_to(aifpl, '(if #t 42 3.14)', '42')
         helpers.assert_evaluates_to(aifpl, '(if #f 42 3.14)', '3.14')
-        
+
         # Return different strings
         helpers.assert_evaluates_to(aifpl, '(if #t "hello" "world")', '"hello"')
         helpers.assert_evaluates_to(aifpl, '(if #f "hello" "world")', '"world"')
-        
+
         # Return different booleans
         helpers.assert_evaluates_to(aifpl, '(if #t #t #f)', '#t')
         helpers.assert_evaluates_to(aifpl, '(if #f #t #f)', '#f')
-        
+
         # Return different lists
         helpers.assert_evaluates_to(aifpl, '(if #t (list 1 2) (list 3 4))', '(1 2)')
         helpers.assert_evaluates_to(aifpl, '(if #f (list 1 2) (list 3 4))', '(3 4)')
-        
+
         # Return different types (mixed)
         helpers.assert_evaluates_to(aifpl, '(if #t 42 "hello")', '42')
         helpers.assert_evaluates_to(aifpl, '(if #f 42 "hello")', '"hello"')
@@ -439,7 +439,7 @@ class TestConditionals:
             "first false")
         '''
         helpers.assert_evaluates_to(aifpl, nested_expr, '"all true"')
-        
+
         # Complex decision tree
         decision_tree = '''
         (if (> 15 10)
@@ -460,14 +460,14 @@ class TestConditionals:
             '(if (= 5 0) (/ 10 5) "divisor is zero")',
             '"divisor is zero"'
         )
-        
+
         # Empty list access prevention
         helpers.assert_evaluates_to(
             aifpl,
             '(if (null? (list)) "list is empty" (first (list)))',
             '"list is empty"'
         )
-        
+
         # Invalid string index prevention
         helpers.assert_evaluates_to(
             aifpl,
@@ -480,7 +480,7 @@ class TestConditionals:
         # AND short-circuit: if first is false, don't evaluate second
         result = aifpl.evaluate_and_format('(and #f (/ 1 0))')  # Should not cause division by zero
         assert result == '#f'
-        
+
         # OR short-circuit: if first is true, don't evaluate second
         result = aifpl.evaluate_and_format('(or #t (/ 1 0))')  # Should not cause division by zero
         assert result == '#t'
@@ -490,10 +490,10 @@ class TestConditionals:
         # All comparisons in chain must be true
         helpers.assert_evaluates_to(aifpl, '(< 1 2 3 4 5)', '#t')
         helpers.assert_evaluates_to(aifpl, '(< 1 2 5 4)', '#f')  # 5 < 4 is false
-        
+
         helpers.assert_evaluates_to(aifpl, '(> 5 4 3 2 1)', '#t')
         helpers.assert_evaluates_to(aifpl, '(> 5 4 1 3)', '#f')  # 1 > 3 is false
-        
+
         helpers.assert_evaluates_to(aifpl, '(<= 1 1 2 2 3)', '#t')
         helpers.assert_evaluates_to(aifpl, '(>= 3 2 2 1 1)', '#t')
 
@@ -504,7 +504,7 @@ class TestConditionals:
         helpers.assert_evaluates_to(aifpl, '(= #t 1)', '#f')
         helpers.assert_evaluates_to(aifpl, '(= #f 0)', '#f')
         helpers.assert_evaluates_to(aifpl, '(= (list 1) 1)', '#f')
-        
+
         # Complex numbers and reals
         helpers.assert_evaluates_to(aifpl, '(= 5 (complex 5 0))', '#t')  # Should be equal
         helpers.assert_evaluates_to(aifpl, '(= 5 (complex 5 1))', '#f')  # Should not be equal
