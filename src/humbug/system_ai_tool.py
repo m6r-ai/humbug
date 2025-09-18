@@ -240,7 +240,9 @@ class SystemAITool(AITool):
                 allowed_parameters={"tab_id", "lines"},
                 required_parameters={"tab_id"},
                 description="Read the current terminal buffer (ouput display) content, given its tab ID. "
-                    "This returns the raw content of the terminal display"
+                    "This returns the raw content of the terminal display. "
+                    "The terminal can have over 10k lines of text and that's far too much content so you must "
+                    "think carefully about the number of `lines` you need to request."
             ),
             "get_terminal_status": AIToolOperationDefinition(
                 name="get_terminal_status",
