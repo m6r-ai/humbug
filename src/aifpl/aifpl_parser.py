@@ -24,7 +24,7 @@ class StringLiteral:
 
 
 @dataclass
-class LambdaExpr:
+class AIFPLLambdaExpr:
     """Lambda expression AST node."""
     parameters: List[str]
     body: 'SExpression'
@@ -32,7 +32,7 @@ class LambdaExpr:
 
 
 @dataclass
-class LetExpr:
+class AIFPLLetExpr:
     """Let expression AST node."""
     bindings: List[Tuple[str, 'SExpression']]
     body: 'SExpression'
@@ -48,11 +48,11 @@ class FunctionCall:
 
 
 # Updated S-Expression type to include new nodes and StringLiteral
-SExpression = Union[Atom, StringLiteral, List['SExpression'], LambdaExpr, LetExpr, FunctionCall]
+SExpression = Union[Atom, StringLiteral, List['SExpression'], AIFPLLambdaExpr, AIFPLLetExpr, FunctionCall]
 
 
 @dataclass
-class ParsedExpression:
+class AIFPLParsedExpression:
     """Wrapper to track position info for error reporting."""
     expr: SExpression
     start_pos: int
@@ -73,7 +73,7 @@ class AIFPLParser:
         self.pos = 0
         self.current_token: AIFPLToken | None = tokens[0] if tokens else None
 
-    def parse(self) -> ParsedExpression:
+    def parse(self) -> AIFPLParsedExpression:
         """
         Parse tokens into AST.
 
@@ -95,7 +95,7 @@ class AIFPLParser:
 
         return expr
 
-    def _parse_expression(self) -> ParsedExpression:
+    def _parse_expression(self) -> AIFPLParsedExpression:
         """Parse a single expression (atom or list)."""
         if self.current_token is None:
             raise AIFPLParseError("Unexpected end of input, expected expression")
@@ -111,7 +111,7 @@ class AIFPLParser:
 
         raise AIFPLParseError(f"Unexpected token: {self.current_token.value} at position {self.current_token.position}")
 
-    def _parse_list(self, start_pos: int) -> ParsedExpression:
+    def _parse_list(self, start_pos: int) -> AIFPLParsedExpression:
         """Parse (operator arg1 arg2 ...) or special forms."""
         self._consume(AIFPLTokenType.LPAREN)
 
@@ -130,17 +130,17 @@ class AIFPLParser:
 
         # Handle empty lists - return as empty Python list
         if not elements:
-            return ParsedExpression([], start_pos, end_pos)
+            return AIFPLParsedExpression([], start_pos, end_pos)
 
         # Check for special forms first
         if isinstance(elements[0], str):
             if elements[0] == "lambda":
                 lambda_expr = self._parse_lambda_form(elements, start_pos)
-                return ParsedExpression(lambda_expr, start_pos, end_pos)
+                return AIFPLParsedExpression(lambda_expr, start_pos, end_pos)
 
             if elements[0] == "let":
                 let_expr = self._parse_let_form(elements, start_pos)
-                return ParsedExpression(let_expr, start_pos, end_pos)
+                return AIFPLParsedExpression(let_expr, start_pos, end_pos)
 
         # Regular function call - create FunctionCall object
         func_call = FunctionCall(
@@ -148,9 +148,9 @@ class AIFPLParser:
             arguments=elements[1:],
             position=start_pos
         )
-        return ParsedExpression(func_call, start_pos, end_pos)
+        return AIFPLParsedExpression(func_call, start_pos, end_pos)
 
-    def _parse_lambda_form(self, elements: List[SExpression], start_pos: int) -> LambdaExpr:
+    def _parse_lambda_form(self, elements: List[SExpression], start_pos: int) -> AIFPLLambdaExpr:
         """Parse (lambda (param1 param2 ...) body)."""
         if len(elements) != 3:
             raise AIFPLParseError(
@@ -197,9 +197,9 @@ class AIFPLParser:
 
         body = elements[2]
 
-        return LambdaExpr(parameters=parameters, body=body, position=start_pos)
+        return AIFPLLambdaExpr(parameters=parameters, body=body, position=start_pos)
 
-    def _parse_let_form(self, elements: List[SExpression], start_pos: int) -> LetExpr:
+    def _parse_let_form(self, elements: List[SExpression], start_pos: int) -> AIFPLLetExpr:
         """Parse (let ((var1 val1) (var2 val2) ...) body)."""
         if len(elements) != 3:
             raise AIFPLParseError(f"Let expression requires exactly 3 elements: (let ((bindings...)) body) at position {start_pos}")
@@ -248,9 +248,9 @@ class AIFPLParser:
 
         body = elements[2]
 
-        return LetExpr(bindings=bindings, body=body, position=start_pos)
+        return AIFPLLetExpr(bindings=bindings, body=body, position=start_pos)
 
-    def _parse_atom(self, start_pos: int) -> ParsedExpression:
+    def _parse_atom(self, start_pos: int) -> AIFPLParsedExpression:
         """Parse an atomic value (number, string, boolean, or symbol)."""
         assert self.current_token is not None, "_parse_atom called with None token"
 
@@ -261,9 +261,9 @@ class AIFPLParser:
 
         # Wrap string tokens in StringLiteral to distinguish from symbols
         if token.type == AIFPLTokenType.STRING:
-            return ParsedExpression(StringLiteral(token.value), start_pos, end_pos)
+            return AIFPLParsedExpression(StringLiteral(token.value), start_pos, end_pos)
 
-        return ParsedExpression(token.value, start_pos, end_pos)
+        return AIFPLParsedExpression(token.value, start_pos, end_pos)
 
     def _consume(self, expected_type: AIFPLTokenType) -> None:
         """Consume a token of the expected type."""

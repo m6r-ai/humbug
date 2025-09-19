@@ -5,7 +5,7 @@ import math
 from typing import Any, Dict, List, Union, Optional
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_parser import SExpression, LambdaExpr, LetExpr, FunctionCall, StringLiteral
+from aifpl.aifpl_parser import SExpression, AIFPLLambdaExpr, AIFPLLetExpr, FunctionCall, StringLiteral
 from aifpl.aifpl_environment import AIFPLEnvironment, LambdaFunction, TailCall, CallStack
 
 
@@ -250,7 +250,7 @@ class AIFPLEvaluator:
                 raise
 
         # Lambda expression
-        if isinstance(expr, LambdaExpr):
+        if isinstance(expr, AIFPLLambdaExpr):
             return LambdaFunction(
                 parameters=expr.parameters,
                 body=expr.body,
@@ -259,7 +259,7 @@ class AIFPLEvaluator:
             )
 
         # Let expression
-        if isinstance(expr, LetExpr):
+        if isinstance(expr, AIFPLLetExpr):
             return self._evaluate_let_expression(expr, env, depth + 1)
 
         # Function call
@@ -283,7 +283,7 @@ class AIFPLEvaluator:
 
     def _evaluate_let_expression(
         self,
-        let_expr: LetExpr,
+        let_expr: AIFPLLetExpr,
         env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
@@ -481,11 +481,11 @@ class AIFPLEvaluator:
                 return expr in (then_branch, else_branch)
 
         # For let expressions, the body is in tail position
-        if isinstance(context_expr, LetExpr):
+        if isinstance(context_expr, AIFPLLetExpr):
             return expr == context_expr.body
 
         # For lambda expressions, the body is in tail position
-        if isinstance(context_expr, LambdaExpr):
+        if isinstance(context_expr, AIFPLLambdaExpr):
             return expr == context_expr.body
 
         return False
