@@ -11,7 +11,7 @@ from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_parser import AIFPLParser, ParsedExpression, LambdaExpr, LetExpr, FunctionCall, StringLiteral
 from aifpl.aifpl_evaluator import AIFPLEvaluator
-from aifpl.aifpl_environment import Environment, LambdaFunction, TailCall, CallStack
+from aifpl.aifpl_environment import AIFPLEnvironment, LambdaFunction, TailCall, CallStack
 
 
 __all__ = [
@@ -19,5 +19,5 @@ __all__ = [
     "AIFPLError", "AIFPLTokenError", "AIFPLParseError", "AIFPLEvalError",
     "AIFPLToken", "AIFPLTokenType", 
     "AIFPLTokenizer", "AIFPLParser", "ParsedExpression", "LambdaExpr", "LetExpr", "FunctionCall", "StringLiteral",
-    "AIFPLEvaluator", "Environment", "LambdaFunction", "TailCall", "CallStack"
+    "AIFPLEvaluator", "AIFPLEnvironment", "LambdaFunction", "TailCall", "CallStack"
 ]

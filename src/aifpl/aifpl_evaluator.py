@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Union, Optional
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_parser import SExpression, LambdaExpr, LetExpr, FunctionCall, StringLiteral
-from aifpl.aifpl_environment import Environment, LambdaFunction, TailCall, CallStack
+from aifpl.aifpl_environment import AIFPLEnvironment, LambdaFunction, TailCall, CallStack
 
 
 class AIFPLEvaluator:
@@ -170,7 +170,7 @@ class AIFPLEvaluator:
     def evaluate(
         self,
         expr: SExpression,
-        env: Optional[Environment] = None,
+        env: Optional[AIFPLEnvironment] = None,
         depth: int = 0
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
@@ -193,7 +193,7 @@ class AIFPLEvaluator:
 
         # Create global environment if none provided
         if env is None:
-            env = Environment(name="global")
+            env = AIFPLEnvironment(name="global")
             # Add constants to global environment
             for name, value in self.CONSTANTS.items():
                 env.define(name, value)
@@ -218,7 +218,7 @@ class AIFPLEvaluator:
     def _evaluate_expression(
         self,
         expr: SExpression,
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """Internal expression evaluation with type dispatch."""
@@ -284,7 +284,7 @@ class AIFPLEvaluator:
     def _evaluate_let_expression(
         self,
         let_expr: LetExpr,
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
@@ -315,7 +315,7 @@ class AIFPLEvaluator:
     def _evaluate_function_call(
         self,
         func_call: FunctionCall,
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
@@ -335,7 +335,7 @@ class AIFPLEvaluator:
     def _evaluate_tail_optimized_call(
         self,
         func_call: FunctionCall,
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """
@@ -398,7 +398,7 @@ class AIFPLEvaluator:
         self,
         func: LambdaFunction,
         args: List[SExpression],
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction, TailCall]:
         """
@@ -516,7 +516,7 @@ class AIFPLEvaluator:
     def _evaluate_with_tail_detection(
         self,
         expr: SExpression,
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int,
         current_function: LambdaFunction
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction, TailCall]:
@@ -611,7 +611,7 @@ class AIFPLEvaluator:
         self,
         operator: str,
         args: List[SExpression],
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """Apply built-in operators and functions."""
@@ -716,7 +716,7 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown mixed return operator: '{operator}'")
 
-    def _apply_and_short_circuit(self, args: List[SExpression], env: Environment, depth: int) -> bool:
+    def _apply_and_short_circuit(self, args: List[SExpression], env: AIFPLEnvironment, depth: int) -> bool:
         """
         Handle AND with short-circuit evaluation.
 
@@ -747,7 +747,7 @@ class AIFPLEvaluator:
         # All arguments were True
         return True
 
-    def _apply_or_short_circuit(self, args: List[SExpression], env: Environment, depth: int) -> bool:
+    def _apply_or_short_circuit(self, args: List[SExpression], env: AIFPLEnvironment, depth: int) -> bool:
         """
         Handle OR with short-circuit evaluation.
 
@@ -782,7 +782,7 @@ class AIFPLEvaluator:
         self,
         operator: str,
         args: List[SExpression],
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """Apply higher-order functions like map, filter, fold."""
@@ -977,7 +977,7 @@ class AIFPLEvaluator:
     def _apply_if_conditional(
         self,
         args: List[SExpression],
-        env: Environment,
+        env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
         """

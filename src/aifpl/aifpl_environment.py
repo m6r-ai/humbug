@@ -11,7 +11,7 @@ class LambdaFunction:
     """Represents a user-defined lambda function."""
     parameters: List[str]
     body: Any  # SExpression, but avoiding circular import
-    closure_env: 'Environment'
+    closure_env: 'AIFPLEnvironment'
     name: Optional[str] = None  # For debugging/error messages
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
@@ -29,10 +29,10 @@ class TailCall:
     """Represents a tail call to be optimized."""
     function: Any  # SExpression
     arguments: List[Any]  # List[SExpression]
-    environment: 'Environment'
+    environment: 'AIFPLEnvironment'
 
 
-class Environment:
+class AIFPLEnvironment:
     """
     Environment for variable and function bindings with lexical scoping.
 
@@ -40,7 +40,7 @@ class Environment:
     but not vice versa.
     """
 
-    def __init__(self, parent: Optional['Environment'] = None, name: str = "anonymous"):
+    def __init__(self, parent: Optional['AIFPLEnvironment'] = None, name: str = "anonymous"):
         """
         Initialize environment.
 
@@ -143,7 +143,7 @@ class Environment:
 
         return available
 
-    def create_child(self, name: str = "child") -> 'Environment':
+    def create_child(self, name: str = "child") -> 'AIFPLEnvironment':
         """
         Create a child environment with this environment as parent.
 
@@ -153,13 +153,13 @@ class Environment:
         Returns:
             New child environment
         """
-        return Environment(parent=self, name=name)
+        return AIFPLEnvironment(parent=self, name=name)
 
     def __repr__(self) -> str:
         """String representation for debugging."""
         local_bindings = list(self.bindings.keys())
         parent_info = f" (parent: {self.parent.name})" if self.parent else ""
-        return f"Environment({self.name}: {local_bindings}{parent_info})"
+        return f"AIFPLEnvironment({self.name}: {local_bindings}{parent_info})"
 
 
 class CallStack:
