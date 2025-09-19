@@ -8,7 +8,7 @@ from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 
 
 # S-Expression types
-Atom = Union[int, float, complex, str, bool]
+AIFPLAtom = Union[int, float, complex, str, bool]
 
 
 @dataclass
@@ -27,34 +27,34 @@ class AIFPLStringLiteral:
 class AIFPLLambdaExpr:
     """Lambda expression AST node."""
     parameters: List[str]
-    body: 'SExpression'
+    body: 'AIFPLSExpression'
     position: int = 0
 
 
 @dataclass
 class AIFPLLetExpr:
     """Let expression AST node."""
-    bindings: List[Tuple[str, 'SExpression']]
-    body: 'SExpression'
+    bindings: List[Tuple[str, 'AIFPLSExpression']]
+    body: 'AIFPLSExpression'
     position: int = 0
 
 
 @dataclass
 class AIFPLFunctionCall:
     """Function call AST node."""
-    function: 'SExpression'
-    arguments: List['SExpression']
+    function: 'AIFPLSExpression'
+    arguments: List['AIFPLSExpression']
     position: int = 0
 
 
 # Updated S-Expression type to include new nodes and AIFPLStringLiteral
-SExpression = Union[Atom, AIFPLStringLiteral, List['SExpression'], AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall]
+AIFPLSExpression = Union[AIFPLAtom, AIFPLStringLiteral, List['AIFPLSExpression'], AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall]
 
 
 @dataclass
 class AIFPLParsedExpression:
     """Wrapper to track position info for error reporting."""
-    expr: SExpression
+    expr: AIFPLSExpression
     start_pos: int
     end_pos: int
 
@@ -150,7 +150,7 @@ class AIFPLParser:
         )
         return AIFPLParsedExpression(func_call, start_pos, end_pos)
 
-    def _parse_lambda_form(self, elements: List[SExpression], start_pos: int) -> AIFPLLambdaExpr:
+    def _parse_lambda_form(self, elements: List[AIFPLSExpression], start_pos: int) -> AIFPLLambdaExpr:
         """Parse (lambda (param1 param2 ...) body)."""
         if len(elements) != 3:
             raise AIFPLParseError(
@@ -161,7 +161,7 @@ class AIFPLParser:
         param_expr = elements[1]
 
         # Extract parameters and ensure they're all strings
-        raw_parameters: List[SExpression] = []
+        raw_parameters: List[AIFPLSExpression] = []
 
         # Handle different parameter list formats
         if isinstance(param_expr, AIFPLFunctionCall):
@@ -199,7 +199,7 @@ class AIFPLParser:
 
         return AIFPLLambdaExpr(parameters=parameters, body=body, position=start_pos)
 
-    def _parse_let_form(self, elements: List[SExpression], start_pos: int) -> AIFPLLetExpr:
+    def _parse_let_form(self, elements: List[AIFPLSExpression], start_pos: int) -> AIFPLLetExpr:
         """Parse (let ((var1 val1) (var2 val2) ...) body)."""
         if len(elements) != 3:
             raise AIFPLParseError(f"Let expression requires exactly 3 elements: (let ((bindings...)) body) at position {start_pos}")
@@ -209,10 +209,13 @@ class AIFPLParser:
 
         # Convert AIFPLFunctionCall back to list for binding lists
         if isinstance(binding_expr, AIFPLFunctionCall):
-            # For let bindings, we expect ((var1 val1) (var2 val2) ...) which becomes AIFPLFunctionCall((var1 val1), [(var2 val2), ...])
+            # For let bindings, we expect ((var1 val1) (var2 val2) ...)
+            # which becomes AIFPLFunctionCall((var1 val1), [(var2 val2), ...])
             binding_list = [binding_expr.function] + binding_expr.arguments
+
         elif isinstance(binding_expr, list):
             binding_list = binding_expr
+
         else:
             raise AIFPLParseError(f"Let binding list must be a list, got {type(binding_expr).__name__} at position {start_pos}")
 

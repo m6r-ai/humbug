@@ -10,7 +10,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 class AIFPLLambdaFunction:
     """Represents a user-defined lambda function."""
     parameters: List[str]
-    body: Any  # SExpression, but avoiding circular import
+    body: Any  # AIFPLSExpression, but avoiding circular import
     closure_env: 'AIFPLEnvironment'
     name: Optional[str] = None  # For debugging/error messages
 
@@ -27,8 +27,8 @@ class AIFPLLambdaFunction:
 @dataclass
 class AIFPLTailCall:
     """Represents a tail call to be optimized."""
-    function: Any  # SExpression
-    arguments: List[Any]  # List[SExpression]
+    function: Any  # AIFPLSExpression
+    arguments: List[Any]  # List[AIFPLSExpression]
     environment: 'AIFPLEnvironment'
 
 

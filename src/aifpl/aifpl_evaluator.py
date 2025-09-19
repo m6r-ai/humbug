@@ -5,7 +5,7 @@ import math
 from typing import Any, Dict, List, Union, Optional
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_parser import SExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall, AIFPLStringLiteral
+from aifpl.aifpl_parser import AIFPLSExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall, AIFPLStringLiteral
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLLambdaFunction, AIFPLTailCall, AIFPLCallStack
 
 
@@ -169,7 +169,7 @@ class AIFPLEvaluator:
 
     def evaluate(
         self,
-        expr: SExpression,
+        expr: AIFPLSExpression,
         env: Optional[AIFPLEnvironment] = None,
         depth: int = 0
     ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
@@ -217,7 +217,7 @@ class AIFPLEvaluator:
 
     def _evaluate_expression(
         self,
-        expr: SExpression,
+        expr: AIFPLSExpression,
         env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
@@ -397,7 +397,7 @@ class AIFPLEvaluator:
     def _call_lambda_function(
         self,
         func: AIFPLLambdaFunction,
-        args: List[SExpression],
+        args: List[AIFPLSExpression],
         env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction, AIFPLTailCall]:
@@ -458,7 +458,7 @@ class AIFPLEvaluator:
             if self.call_chain and self.call_chain[-1] is func:
                 self.call_chain.pop()
 
-    def _is_tail_call(self, expr: SExpression) -> bool:
+    def _is_tail_call(self, expr: AIFPLSExpression) -> bool:
         """
         Check if an expression could be a tail call.
 
@@ -467,7 +467,7 @@ class AIFPLEvaluator:
         """
         return isinstance(expr, AIFPLFunctionCall)
 
-    def _is_in_tail_position(self, expr: SExpression, context_expr: SExpression) -> bool:
+    def _is_in_tail_position(self, expr: AIFPLSExpression, context_expr: AIFPLSExpression) -> bool:
         """
         Check if an expression is in tail position within a context.
 
@@ -515,7 +515,7 @@ class AIFPLEvaluator:
 
     def _evaluate_with_tail_detection(
         self,
-        expr: SExpression,
+        expr: AIFPLSExpression,
         env: AIFPLEnvironment,
         depth: int,
         current_function: AIFPLLambdaFunction
@@ -580,7 +580,7 @@ class AIFPLEvaluator:
         # For other expressions, evaluate normally
         return self._evaluate_expression(expr, env, depth + 1)
 
-    def _python_value_to_ast_node(self, value: Any) -> SExpression:
+    def _python_value_to_ast_node(self, value: Any) -> AIFPLSExpression:
         """
         Convert a Python value to the appropriate AST node type.
 
@@ -610,7 +610,7 @@ class AIFPLEvaluator:
     def _apply_builtin_operator(
         self,
         operator: str,
-        args: List[SExpression],
+        args: List[AIFPLSExpression],
         env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
@@ -716,7 +716,7 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown mixed return operator: '{operator}'")
 
-    def _apply_and_short_circuit(self, args: List[SExpression], env: AIFPLEnvironment, depth: int) -> bool:
+    def _apply_and_short_circuit(self, args: List[AIFPLSExpression], env: AIFPLEnvironment, depth: int) -> bool:
         """
         Handle AND with short-circuit evaluation.
 
@@ -747,7 +747,7 @@ class AIFPLEvaluator:
         # All arguments were True
         return True
 
-    def _apply_or_short_circuit(self, args: List[SExpression], env: AIFPLEnvironment, depth: int) -> bool:
+    def _apply_or_short_circuit(self, args: List[AIFPLSExpression], env: AIFPLEnvironment, depth: int) -> bool:
         """
         Handle OR with short-circuit evaluation.
 
@@ -781,7 +781,7 @@ class AIFPLEvaluator:
     def _apply_higher_order_function(
         self,
         operator: str,
-        args: List[SExpression],
+        args: List[AIFPLSExpression],
         env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
@@ -976,7 +976,7 @@ class AIFPLEvaluator:
 
     def _apply_if_conditional(
         self,
-        args: List[SExpression],
+        args: List[AIFPLSExpression],
         env: AIFPLEnvironment,
         depth: int
     ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
