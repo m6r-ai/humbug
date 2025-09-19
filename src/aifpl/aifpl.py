@@ -5,7 +5,7 @@ from typing import Union
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
-from aifpl.aifpl_environment import LambdaFunction
+from aifpl.aifpl_environment import AIFPLLambdaFunction
 
 
 class AIFPL:
@@ -27,7 +27,7 @@ class AIFPL:
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
 
-    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """
         Evaluate an AIFPL expression.
 

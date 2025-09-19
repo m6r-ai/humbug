@@ -12,7 +12,7 @@ Atom = Union[int, float, complex, str, bool]
 
 
 @dataclass
-class StringLiteral:
+class AIFPLStringLiteral:
     """Wrapper to distinguish string literals from symbols."""
     value: str
 
@@ -20,7 +20,7 @@ class StringLiteral:
         return self.value
 
     def __repr__(self) -> str:
-        return f'StringLiteral({self.value!r})'
+        return f'AIFPLStringLiteral({self.value!r})'
 
 
 @dataclass
@@ -40,15 +40,15 @@ class AIFPLLetExpr:
 
 
 @dataclass
-class FunctionCall:
+class AIFPLFunctionCall:
     """Function call AST node."""
     function: 'SExpression'
     arguments: List['SExpression']
     position: int = 0
 
 
-# Updated S-Expression type to include new nodes and StringLiteral
-SExpression = Union[Atom, StringLiteral, List['SExpression'], AIFPLLambdaExpr, AIFPLLetExpr, FunctionCall]
+# Updated S-Expression type to include new nodes and AIFPLStringLiteral
+SExpression = Union[Atom, AIFPLStringLiteral, List['SExpression'], AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall]
 
 
 @dataclass
@@ -142,8 +142,8 @@ class AIFPLParser:
                 let_expr = self._parse_let_form(elements, start_pos)
                 return AIFPLParsedExpression(let_expr, start_pos, end_pos)
 
-        # Regular function call - create FunctionCall object
-        func_call = FunctionCall(
+        # Regular function call - create AIFPLFunctionCall object
+        func_call = AIFPLFunctionCall(
             function=elements[0],
             arguments=elements[1:],
             position=start_pos
@@ -157,15 +157,15 @@ class AIFPLParser:
                 f"Lambda expression requires exactly 3 elements: (lambda (params...) body) at position {start_pos}"
             )
 
-        # Parse parameter list - handle the case where it might be a FunctionCall or empty list
+        # Parse parameter list - handle the case where it might be a AIFPLFunctionCall or empty list
         param_expr = elements[1]
 
         # Extract parameters and ensure they're all strings
         raw_parameters: List[SExpression] = []
 
         # Handle different parameter list formats
-        if isinstance(param_expr, FunctionCall):
-            # For lambda parameters, we expect (param1 param2 ...) which becomes FunctionCall(param1, [param2, ...])
+        if isinstance(param_expr, AIFPLFunctionCall):
+            # For lambda parameters, we expect (param1 param2 ...) which becomes AIFPLFunctionCall(param1, [param2, ...])
             raw_parameters = [param_expr.function] + param_expr.arguments
 
         elif isinstance(param_expr, list):
@@ -204,12 +204,12 @@ class AIFPLParser:
         if len(elements) != 3:
             raise AIFPLParseError(f"Let expression requires exactly 3 elements: (let ((bindings...)) body) at position {start_pos}")
 
-        # Parse binding list - handle the case where it might be a FunctionCall
+        # Parse binding list - handle the case where it might be a AIFPLFunctionCall
         binding_expr = elements[1]
 
-        # Convert FunctionCall back to list for binding lists
-        if isinstance(binding_expr, FunctionCall):
-            # For let bindings, we expect ((var1 val1) (var2 val2) ...) which becomes FunctionCall((var1 val1), [(var2 val2), ...])
+        # Convert AIFPLFunctionCall back to list for binding lists
+        if isinstance(binding_expr, AIFPLFunctionCall):
+            # For let bindings, we expect ((var1 val1) (var2 val2) ...) which becomes AIFPLFunctionCall((var1 val1), [(var2 val2), ...])
             binding_list = [binding_expr.function] + binding_expr.arguments
         elif isinstance(binding_expr, list):
             binding_list = binding_expr
@@ -218,9 +218,9 @@ class AIFPLParser:
 
         bindings = []
         for binding in binding_list:
-            # Each binding might also be a FunctionCall
-            if isinstance(binding, FunctionCall):
-                # (var val) becomes FunctionCall(var, [val])
+            # Each binding might also be a AIFPLFunctionCall
+            if isinstance(binding, AIFPLFunctionCall):
+                # (var val) becomes AIFPLFunctionCall(var, [val])
                 if len(binding.arguments) != 1:
                     raise AIFPLParseError(f"Let binding must be a list of 2 elements: (var value) at position {start_pos}")
 
@@ -259,9 +259,9 @@ class AIFPLParser:
 
         end_pos = start_pos + token.length
 
-        # Wrap string tokens in StringLiteral to distinguish from symbols
+        # Wrap string tokens in AIFPLStringLiteral to distinguish from symbols
         if token.type == AIFPLTokenType.STRING:
-            return AIFPLParsedExpression(StringLiteral(token.value), start_pos, end_pos)
+            return AIFPLParsedExpression(AIFPLStringLiteral(token.value), start_pos, end_pos)
 
         return AIFPLParsedExpression(token.value, start_pos, end_pos)
 

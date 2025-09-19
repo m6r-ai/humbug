@@ -1243,7 +1243,7 @@ print(f"Formatted: {formatted}")  # Formatted: (1 2 3)
 
 # Function results
 func_result = tool.evaluate('(lambda (x) (* x x))')
-print(f"Function: {func_result}")  # Function: <aifpl.aifpl_environment.LambdaFunction object>
+print(f"Function: {func_result}")  # Function: <aifpl.aifpl_environment.AIFPLLambdaFunction object>
 
 formatted_func = tool.evaluate_and_format('(lambda (x) (* x x))')
 print(f"Formatted Function: {formatted_func}")  # Formatted Function: <lambda (x)>

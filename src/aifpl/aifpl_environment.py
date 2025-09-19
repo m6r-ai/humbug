@@ -7,7 +7,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 
 
 @dataclass
-class LambdaFunction:
+class AIFPLLambdaFunction:
     """Represents a user-defined lambda function."""
     parameters: List[str]
     body: Any  # SExpression, but avoiding circular import
@@ -16,16 +16,16 @@ class LambdaFunction:
 
     def __call__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Make LambdaFunction callable for Python's callable() function.
+        Make AIFPLLambdaFunction callable for Python's callable() function.
 
         This is just to satisfy the callable() check in tests.
         Actual function calling is handled by the evaluator.
         """
-        raise RuntimeError("LambdaFunction objects should be called through the evaluator, not directly")
+        raise RuntimeError("AIFPLLambdaFunction objects should be called through the evaluator, not directly")
 
 
 @dataclass
-class TailCall:
+class AIFPLTailCall:
     """Represents a tail call to be optimized."""
     function: Any  # SExpression
     arguments: List[Any]  # List[SExpression]
@@ -162,7 +162,7 @@ class AIFPLEnvironment:
         return f"AIFPLEnvironment({self.name}: {local_bindings}{parent_info})"
 
 
-class CallStack:
+class AIFPLCallStack:
     """
     Call stack for tracking function calls and providing detailed error messages.
     """
@@ -177,7 +177,7 @@ class CallStack:
 
     def __init__(self) -> None:
         """Initialize empty call stack."""
-        self.frames: List[CallStack.CallFrame] = []
+        self.frames: List[AIFPLCallStack.CallFrame] = []
 
     def push(self, function_name: str, arguments: Dict[str, Any], expression: str = "", position: int = 0) -> None:
         """
@@ -189,7 +189,7 @@ class CallStack:
             expression: String representation of the expression
             position: Position in source code
         """
-        frame = CallStack.CallFrame(
+        frame = AIFPLCallStack.CallFrame(
             function_name=function_name,
             arguments=arguments,
             expression=expression,
@@ -263,4 +263,4 @@ class CallStack:
 
     def __repr__(self) -> str:
         """String representation for debugging."""
-        return f"CallStack(depth={len(self.frames)})"
+        return f"AIFPLCallStack(depth={len(self.frames)})"

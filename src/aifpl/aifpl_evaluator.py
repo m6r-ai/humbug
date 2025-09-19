@@ -5,8 +5,8 @@ import math
 from typing import Any, Dict, List, Union, Optional
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_parser import SExpression, AIFPLLambdaExpr, AIFPLLetExpr, FunctionCall, StringLiteral
-from aifpl.aifpl_environment import AIFPLEnvironment, LambdaFunction, TailCall, CallStack
+from aifpl.aifpl_parser import SExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall, AIFPLStringLiteral
+from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLLambdaFunction, AIFPLTailCall, AIFPLCallStack
 
 
 class AIFPLEvaluator:
@@ -162,17 +162,17 @@ class AIFPLEvaluator:
         """
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
-        self.call_stack = CallStack()
+        self.call_stack = AIFPLCallStack()
 
         # NEW: Add call chain tracking for mutual recursion detection
-        self.call_chain: List[LambdaFunction] = []
+        self.call_chain: List[AIFPLLambdaFunction] = []
 
     def evaluate(
         self,
         expr: SExpression,
         env: Optional[AIFPLEnvironment] = None,
         depth: int = 0
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """
         Recursively evaluate AST.
 
@@ -220,7 +220,7 @@ class AIFPLEvaluator:
         expr: SExpression,
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """Internal expression evaluation with type dispatch."""
 
         # Check depth limit at the start of every expression evaluation
@@ -233,7 +233,7 @@ class AIFPLEvaluator:
             return expr
 
         # String literal evaluation - return the string value directly
-        if isinstance(expr, StringLiteral):
+        if isinstance(expr, AIFPLStringLiteral):
             return expr.value
 
         # Symbol lookup (strings that represent variable names)
@@ -251,7 +251,7 @@ class AIFPLEvaluator:
 
         # Lambda expression
         if isinstance(expr, AIFPLLambdaExpr):
-            return LambdaFunction(
+            return AIFPLLambdaFunction(
                 parameters=expr.parameters,
                 body=expr.body,
                 closure_env=env,
@@ -263,7 +263,7 @@ class AIFPLEvaluator:
             return self._evaluate_let_expression(expr, env, depth + 1)
 
         # Function call
-        if isinstance(expr, FunctionCall):
+        if isinstance(expr, AIFPLFunctionCall):
             return self._evaluate_function_call(expr, env, depth + 1)
 
         # Legacy list evaluation (for backwards compatibility)
@@ -271,8 +271,8 @@ class AIFPLEvaluator:
             if not expr:
                 raise AIFPLEvalError("Cannot evaluate empty list")
 
-            # Convert to FunctionCall for consistent handling
-            func_call = FunctionCall(
+            # Convert to AIFPLFunctionCall for consistent handling
+            func_call = AIFPLFunctionCall(
                 function=expr[0],
                 arguments=expr[1:],
                 position=0
@@ -286,7 +286,7 @@ class AIFPLEvaluator:
         let_expr: AIFPLLetExpr,
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """
         Evaluate let expression with sequential binding.
 
@@ -314,10 +314,10 @@ class AIFPLEvaluator:
 
     def _evaluate_function_call(
         self,
-        func_call: FunctionCall,
+        func_call: AIFPLFunctionCall,
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """
         Evaluate function call with tail call optimization.
 
@@ -334,10 +334,10 @@ class AIFPLEvaluator:
 
     def _evaluate_tail_optimized_call(
         self,
-        func_call: FunctionCall,
+        func_call: AIFPLFunctionCall,
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """
         Evaluate function call with tail call optimization.
 
@@ -365,14 +365,14 @@ class AIFPLEvaluator:
                 raise AIFPLEvalError(f"Error evaluating function expression: {e}") from e
 
             # Handle different types of functions
-            if isinstance(func_value, LambdaFunction):
+            if isinstance(func_value, AIFPLLambdaFunction):
                 # User-defined function call
                 result = self._call_lambda_function(func_value, current_call.arguments, current_env, depth)
 
                 # Check if result is a tail call
-                if isinstance(result, TailCall):
+                if isinstance(result, AIFPLTailCall):
                     # Continue the loop with the tail call
-                    current_call = FunctionCall(
+                    current_call = AIFPLFunctionCall(
                         function=result.function,
                         arguments=result.arguments,
                         position=current_call.position
@@ -396,11 +396,11 @@ class AIFPLEvaluator:
 
     def _call_lambda_function(
         self,
-        func: LambdaFunction,
+        func: AIFPLLambdaFunction,
         args: List[SExpression],
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction, TailCall]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction, AIFPLTailCall]:
         """
         Call a lambda function with given arguments.
 
@@ -411,7 +411,7 @@ class AIFPLEvaluator:
             depth: Current recursion depth
 
         Returns:
-            Function result or TailCall for optimization
+            Function result or AIFPLTailCall for optimization
         """
         # Check arity
         if len(args) != len(func.parameters):
@@ -463,9 +463,9 @@ class AIFPLEvaluator:
         Check if an expression could be a tail call.
 
         This is a simple check - actual tail position analysis happens elsewhere.
-        Only FunctionCall objects can be tail calls.
+        Only AIFPLFunctionCall objects can be tail calls.
         """
-        return isinstance(expr, FunctionCall)
+        return isinstance(expr, AIFPLFunctionCall)
 
     def _is_in_tail_position(self, expr: SExpression, context_expr: SExpression) -> bool:
         """
@@ -474,7 +474,7 @@ class AIFPLEvaluator:
         Tail position means the result of expr becomes the result of context_expr.
         """
         # For if expressions, both then and else branches are in tail position
-        if isinstance(context_expr, FunctionCall) and isinstance(context_expr.function, str):
+        if isinstance(context_expr, AIFPLFunctionCall) and isinstance(context_expr.function, str):
             if context_expr.function == 'if' and len(context_expr.arguments) == 3:
                 then_branch = context_expr.arguments[1]
                 else_branch = context_expr.arguments[2]
@@ -490,7 +490,7 @@ class AIFPLEvaluator:
 
         return False
 
-    def _is_recursive_call(self, func_value: LambdaFunction, call_chain: List[LambdaFunction]) -> bool:
+    def _is_recursive_call(self, func_value: AIFPLLambdaFunction, call_chain: List[AIFPLLambdaFunction]) -> bool:
         """
         Check if a function call is recursive (simple or mutual).
 
@@ -506,7 +506,7 @@ class AIFPLEvaluator:
             return True
 
         # Mutual recursion: calling any function in the current call chain
-        # Use object identity comparison since LambdaFunction objects are unique
+        # Use object identity comparison since AIFPLLambdaFunction objects are unique
         for chain_func in call_chain:
             if func_value is chain_func:
                 return True
@@ -518,8 +518,8 @@ class AIFPLEvaluator:
         expr: SExpression,
         env: AIFPLEnvironment,
         depth: int,
-        current_function: LambdaFunction
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction, TailCall]:
+        current_function: AIFPLLambdaFunction
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction, AIFPLTailCall]:
         """
         Evaluate an expression with tail call detection.
 
@@ -530,14 +530,14 @@ class AIFPLEvaluator:
             current_function: The function we're currently executing
 
         Returns:
-            Either a regular result or a TailCall object for optimization
+            Either a regular result or a AIFPLTailCall object for optimization
         """
         if depth > self.max_depth:
             stack_trace = self.call_stack.format_stack_trace()
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
 
         # Handle if expressions specially - branches are in tail position
-        if isinstance(expr, FunctionCall) and isinstance(expr.function, str) and expr.function == 'if':
+        if isinstance(expr, AIFPLFunctionCall) and isinstance(expr.function, str) and expr.function == 'if':
             if len(expr.arguments) != 3:
                 raise AIFPLEvalError(f"if requires exactly 3 arguments, got {len(expr.arguments)}")
 
@@ -556,16 +556,16 @@ class AIFPLEvaluator:
             return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
 
         # Handle function calls - check for tail calls
-        if isinstance(expr, FunctionCall):
+        if isinstance(expr, AIFPLFunctionCall):
             # Evaluate the function
             func_value = self._evaluate_expression(expr.function, env, depth + 1)
 
             # If it's a lambda function, check for recursion (simple or mutual)
-            if isinstance(func_value, LambdaFunction):
+            if isinstance(func_value, AIFPLLambdaFunction):
                 # Use the call chain we're tracking
                 if self._is_recursive_call(func_value, self.call_chain):
                     # This is a recursive call (simple or mutual)!
-                    return TailCall(
+                    return AIFPLTailCall(
                         function=expr.function,
                         arguments=expr.arguments,
                         environment=env
@@ -594,7 +594,7 @@ class AIFPLEvaluator:
             Appropriate AST node
         """
         if isinstance(value, str):
-            return StringLiteral(value)
+            return AIFPLStringLiteral(value)
 
         if isinstance(value, (int, float, complex, bool)):
             return value
@@ -602,9 +602,9 @@ class AIFPLEvaluator:
         if isinstance(value, list):
             # Convert each element recursively
             list_elements = [self._python_value_to_ast_node(item) for item in value]
-            return FunctionCall(function="list", arguments=list_elements, position=0)
+            return AIFPLFunctionCall(function="list", arguments=list_elements, position=0)
 
-        # For other types (like LambdaFunction), return as-is
+        # For other types (like AIFPLLambdaFunction), return as-is
         return value
 
     def _apply_builtin_operator(
@@ -613,7 +613,7 @@ class AIFPLEvaluator:
         args: List[SExpression],
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """Apply built-in operators and functions."""
         if operator not in self.OPERATORS:
             raise AIFPLEvalError(f"Unknown operator: '{operator}'")
@@ -784,7 +784,7 @@ class AIFPLEvaluator:
         args: List[SExpression],
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """Apply higher-order functions like map, filter, fold."""
         if operator == 'map':
             if len(args) != 2:
@@ -801,7 +801,7 @@ class AIFPLEvaluator:
             result = []
             for item in list_value:
                 item_ast = self._python_value_to_ast_node(item)
-                item_call = FunctionCall(function=func_expr, arguments=[item_ast], position=0)
+                item_call = AIFPLFunctionCall(function=func_expr, arguments=[item_ast], position=0)
                 item_result = self._evaluate_function_call(item_call, env, depth + 1)
                 result.append(item_result)
 
@@ -822,7 +822,7 @@ class AIFPLEvaluator:
             result = []
             for item in list_value:
                 item_ast = self._python_value_to_ast_node(item)
-                pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
+                pred_call = AIFPLFunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, bool):
@@ -849,7 +849,7 @@ class AIFPLEvaluator:
             for item in list_value:
                 acc_ast = self._python_value_to_ast_node(accumulator)
                 item_ast = self._python_value_to_ast_node(item)
-                fold_call = FunctionCall(function=func_expr, arguments=[acc_ast, item_ast], position=0)
+                fold_call = AIFPLFunctionCall(function=func_expr, arguments=[acc_ast, item_ast], position=0)
                 accumulator = self._evaluate_function_call(fold_call, env, depth + 1)
 
             return accumulator
@@ -911,7 +911,7 @@ class AIFPLEvaluator:
             # Find first element matching predicate
             for item in list_value:
                 item_ast = self._python_value_to_ast_node(item)
-                pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
+                pred_call = AIFPLFunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, bool):
@@ -936,7 +936,7 @@ class AIFPLEvaluator:
             # Check if any element matches predicate
             for item in list_value:
                 item_ast = self._python_value_to_ast_node(item)
-                pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
+                pred_call = AIFPLFunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, bool):
@@ -961,7 +961,7 @@ class AIFPLEvaluator:
             # Check if all elements match predicate
             for item in list_value:
                 item_ast = self._python_value_to_ast_node(item)
-                pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
+                pred_call = AIFPLFunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, bool):
@@ -979,7 +979,7 @@ class AIFPLEvaluator:
         args: List[SExpression],
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """
         Handle if conditional with lazy evaluation of branches.
 
@@ -1543,7 +1543,7 @@ class AIFPLEvaluator:
             if len(args) != 1:
                 raise AIFPLEvalError(f"function? requires exactly 1 argument, got {len(args)}")
 
-            return isinstance(args[0], LambdaFunction)
+            return isinstance(args[0], AIFPLLambdaFunction)
 
         raise AIFPLEvalError(f"Unknown boolean-returning operator: '{operator}'")
 
@@ -2043,8 +2043,8 @@ class AIFPLEvaluator:
 
     def simplify_result(
         self,
-        result: Union[int, float, complex, str, bool, list, LambdaFunction]
-    ) -> Union[int, float, complex, str, bool, list, LambdaFunction]:
+        result: Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]
+    ) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
         """Simplify complex results to real numbers when imaginary part is negligible."""
         if isinstance(result, complex):
             # If imaginary part is effectively zero, return just the real part
@@ -2098,7 +2098,7 @@ class AIFPLEvaluator:
 
         return ''.join(result)
 
-    def format_result(self, result: Union[int, float, complex, str, bool, list, LambdaFunction]) -> str:
+    def format_result(self, result: Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]) -> str:
         """
         Format result for display, using LISP conventions for lists and booleans.
 
@@ -2138,7 +2138,7 @@ class AIFPLEvaluator:
 
             return f"({' '.join(formatted_elements)})"
 
-        if isinstance(result, LambdaFunction):
+        if isinstance(result, AIFPLLambdaFunction):
             # Format lambda functions
             param_str = " ".join(result.parameters)
             return f"<lambda ({param_str})>"
