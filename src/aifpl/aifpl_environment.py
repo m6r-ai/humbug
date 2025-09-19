@@ -82,7 +82,7 @@ class Environment:
             return self.parent.lookup(name)
 
         # Create helpful error message with available bindings
-        available = self._get_available_bindings()
+        available = self.get_available_bindings()
         if available:
             available_str = ", ".join(f"'{name}'" for name in sorted(available))
             raise AIFPLEvalError(f"Undefined variable: '{name}'. Available bindings: {available_str}")
@@ -134,12 +134,12 @@ class Environment:
         """
         return self.bindings.copy()
 
-    def _get_available_bindings(self) -> List[str]:
+    def get_available_bindings(self) -> List[str]:
         """Get all available binding names in this environment chain."""
         available = list(self.bindings.keys())
 
         if self.parent is not None:
-            available.extend(self.parent._get_available_bindings())
+            available.extend(self.parent.get_available_bindings())
 
         return available
 

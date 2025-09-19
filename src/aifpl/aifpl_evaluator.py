@@ -167,7 +167,6 @@ class AIFPLEvaluator:
         # NEW: Add call chain tracking for mutual recursion detection
         self.call_chain: List[LambdaFunction] = []
 
-    # FIXED: Updated return type to include LambdaFunction
     def evaluate(
         self,
         expr: SExpression,
@@ -250,7 +249,7 @@ class AIFPLEvaluator:
 
                 raise
 
-        # Lambda expression - FIXED: Now allowed in return type
+        # Lambda expression
         if isinstance(expr, LambdaExpr):
             return LambdaFunction(
                 parameters=expr.parameters,
@@ -533,7 +532,6 @@ class AIFPLEvaluator:
         Returns:
             Either a regular result or a TailCall object for optimization
         """
-        # FIXED: Check depth limit here too - this is where the deep recursion happens
         if depth > self.max_depth:
             stack_trace = self.call_stack.format_stack_trace()
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
@@ -637,7 +635,7 @@ class AIFPLEvaluator:
         if op_def.get('higher_order'):
             return self._apply_higher_order_function(operator, args, env, depth)
 
-        # For regular operators, evaluate arguments first - FIXED: Increment depth
+        # For regular operators, evaluate arguments first
         try:
             evaluated_args = [self._evaluate_expression(arg, env, depth + 1) for arg in args]
 
@@ -651,7 +649,7 @@ class AIFPLEvaluator:
         if op_def.get('returns_boolean_or_value'):
             return self._apply_mixed_return_operator(operator, evaluated_args)
 
-        # FIXED: Handle operations that return booleans FIRST (before string_only check)
+        # FHandle operations that return booleans FIRST (before string_only check)
         if op_def.get('returns_boolean'):
             return self._apply_boolean_returning_operator(operator, evaluated_args)
 
@@ -802,7 +800,6 @@ class AIFPLEvaluator:
             # Apply function to each element
             result = []
             for item in list_value:
-                # FIXED: Convert Python values to appropriate AST nodes
                 item_ast = self._python_value_to_ast_node(item)
                 item_call = FunctionCall(function=func_expr, arguments=[item_ast], position=0)
                 item_result = self._evaluate_function_call(item_call, env, depth + 1)
@@ -824,7 +821,6 @@ class AIFPLEvaluator:
             # Filter elements based on predicate
             result = []
             for item in list_value:
-                # FIXED: Convert Python values to appropriate AST nodes
                 item_ast = self._python_value_to_ast_node(item)
                 pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
@@ -851,7 +847,6 @@ class AIFPLEvaluator:
 
             # Fold over the list
             for item in list_value:
-                # FIXED: Convert Python values to appropriate AST nodes
                 acc_ast = self._python_value_to_ast_node(accumulator)
                 item_ast = self._python_value_to_ast_node(item)
                 fold_call = FunctionCall(function=func_expr, arguments=[acc_ast, item_ast], position=0)
@@ -860,7 +855,7 @@ class AIFPLEvaluator:
             return accumulator
 
         if operator == 'range':
-            # FIXED: Check arity BEFORE evaluating arguments
+            # Check arity BEFORE evaluating arguments
             if len(args) < 2 or len(args) > 3:
                 raise AIFPLEvalError(f"range requires 2 or 3 arguments (start, end[, step]), got {len(args)}")
 
@@ -915,7 +910,6 @@ class AIFPLEvaluator:
 
             # Find first element matching predicate
             for item in list_value:
-                # FIXED: Convert Python values to appropriate AST nodes
                 item_ast = self._python_value_to_ast_node(item)
                 pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
@@ -941,7 +935,6 @@ class AIFPLEvaluator:
 
             # Check if any element matches predicate
             for item in list_value:
-                # FIXED: Convert Python values to appropriate AST nodes
                 item_ast = self._python_value_to_ast_node(item)
                 pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
@@ -967,7 +960,6 @@ class AIFPLEvaluator:
 
             # Check if all elements match predicate
             for item in list_value:
-                # FIXED: Convert Python values to appropriate AST nodes
                 item_ast = self._python_value_to_ast_node(item)
                 pred_call = FunctionCall(function=pred_expr, arguments=[item_ast], position=0)
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
@@ -1006,15 +998,13 @@ class AIFPLEvaluator:
             raise AIFPLEvalError(f"Operator 'if' requires exactly 3 arguments (condition, then, else), got {len(args)}")
 
         condition_expr, then_expr, else_expr = args
-
-        # Evaluate condition first - FIXED: Increment depth
         condition = self._evaluate_expression(condition_expr, env, depth + 1)
 
         # Validate condition is boolean
         if not isinstance(condition, bool):
             raise AIFPLEvalError(f"Operator 'if' requires boolean condition, got {type(condition).__name__}")
 
-        # Lazy evaluation: only evaluate the chosen branch - FIXED: Increment depth
+        # Lazy evaluation: only evaluate the chosen branch
         if condition:
             return self._evaluate_expression(then_expr, env, depth + 1)
 
@@ -1138,7 +1128,7 @@ class AIFPLEvaluator:
             if not isinstance(delimiter, str):
                 raise AIFPLEvalError(f"string-split requires string as second argument, got {type(delimiter).__name__}")
 
-            # FIXED: Handle empty separator case - split into individual characters
+            # Handle empty separator case - split into individual characters
             if delimiter == "":
                 return list(string_arg)
 
@@ -1160,7 +1150,6 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Unknown boolean operator: '{operator}'")
 
-    # FIXED: Updated return type to include complex
     def _apply_string_operator(
         self,
         operator: str,
@@ -1189,7 +1178,6 @@ class AIFPLEvaluator:
                 if not isinstance(end_arg, int):
                     raise AIFPLEvalError(f"substring requires integer indices, end argument is {type(end_arg).__name__}")
 
-                # FIXED: Add proper bounds checking for substring
                 string_len = len(string_arg)
                 if start_arg < 0:
                     raise AIFPLEvalError(f"substring start index cannot be negative: {start_arg}")
@@ -1218,7 +1206,6 @@ class AIFPLEvaluator:
                 if not isinstance(index_arg, int):
                     raise AIFPLEvalError(f"string-ref requires integer index, got {type(index_arg).__name__}")
 
-                # FIXED: Add bounds checking for string-ref
                 string_len = len(string_arg)
                 if index_arg < 0:
                     raise AIFPLEvalError(f"string-ref index out of range: {index_arg}")
@@ -1342,9 +1329,9 @@ class AIFPLEvaluator:
             return False  # Vacuous case: single argument is equal to itself
 
         # Check if any pair is not equal
-        for i in range(len(args)):
+        for i, arg_i in enumerate(args):
             for j in range(i + 1, len(args)):
-                if not self._values_equal(args[i], args[j]):
+                if not self._values_equal(arg_i, args[j]):
                     return True
 
         return False  # All values are equal
@@ -1378,7 +1365,7 @@ class AIFPLEvaluator:
 
     def _is_numeric(self, value: Any) -> bool:
         """Check if a value is a numeric type (excluding booleans)."""
-        # FIXED: Exclude booleans explicitly since bool is a subclass of int in Python
+        # Exclude booleans explicitly since bool is a subclass of int in Python
         return isinstance(value, (int, float, complex)) and not isinstance(value, bool)
 
     def _numeric_equal(self, a: Union[int, float, complex], b: Union[int, float, complex]) -> bool:
@@ -1913,10 +1900,10 @@ class AIFPLEvaluator:
 
             index = self._to_integer(index, operator)
 
-            # FIXED: Add bounds checking for list-ref including negative indices
             list_len = len(list_arg)
             if index < 0:
                 raise AIFPLEvalError(f"list-ref index out of range: {index}")
+
             if index >= list_len:
                 raise AIFPLEvalError(f"list-ref index out of range: {index}")
 
