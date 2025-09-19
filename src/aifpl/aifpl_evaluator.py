@@ -201,20 +201,21 @@ class AIFPLEvaluator:
 
             # Add built-in operators to global environment as strings (operator names)
             # This allows symbol lookup to succeed, and the evaluator will handle them as built-ins
-            for operator_name in self.OPERATORS.keys():
+            for operator_name in self.OPERATORS:
                 env.define(operator_name, operator_name)
 
         try:
             return self._evaluate_expression(expr, env, depth)
+
         except AIFPLEvalError:
             # Re-raise AIFPL errors as-is
             raise
+
         except Exception as e:
             # Wrap other exceptions with context
             stack_trace = self.call_stack.format_stack_trace()
             raise AIFPLEvalError(f"Unexpected error during evaluation: {e}\nCall stack:\n{stack_trace}") from e
 
-    # FIXED: Updated return type to include LambdaFunction
     def _evaluate_expression(
         self,
         expr: SExpression,
@@ -240,13 +241,14 @@ class AIFPLEvaluator:
         if isinstance(expr, str):
             try:
                 return env.lookup(expr)
+
             except AIFPLEvalError as e:
                 # Add more context to symbol lookup errors
                 stack_trace = self.call_stack.format_stack_trace()
                 if stack_trace.strip() != "(no function calls)":
                     raise AIFPLEvalError(f"{e}\nCall stack:\n{stack_trace}") from e
-                else:
-                    raise
+
+                raise
 
         # Lambda expression - FIXED: Now allowed in return type
         if isinstance(expr, LambdaExpr):
@@ -378,20 +380,20 @@ class AIFPLEvaluator:
                     )
                     current_env = result.environment
                     continue
-                else:
-                    # Regular result, return it
-                    return result
 
-            elif isinstance(func_value, str):
+                # Regular result, return it
+                return result
+
+            if isinstance(func_value, str):
                 # String literals that evaluate to strings should not be treated as operators
                 if isinstance(current_call.function, str):
                     # This is a symbol (identifier), so it can be a built-in operator
                     return self._apply_builtin_operator(func_value, current_call.arguments, current_env, depth + 1)
+
                 # This is a string literal, so it's not a function
                 raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
 
-            else:
-                raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
+            raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
 
     def _call_lambda_function(
         self,
@@ -477,7 +479,7 @@ class AIFPLEvaluator:
             if context_expr.function == 'if' and len(context_expr.arguments) == 3:
                 then_branch = context_expr.arguments[1]
                 else_branch = context_expr.arguments[2]
-                return expr == then_branch or expr == else_branch
+                return expr in (then_branch, else_branch)
 
         # For let expressions, the body is in tail position
         if isinstance(context_expr, LetExpr):
@@ -556,7 +558,7 @@ class AIFPLEvaluator:
             return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
 
         # Handle function calls - check for tail calls
-        elif isinstance(expr, FunctionCall):
+        if isinstance(expr, FunctionCall):
             # Evaluate the function
             func_value = self._evaluate_expression(expr.function, env, depth + 1)
 
@@ -578,8 +580,7 @@ class AIFPLEvaluator:
             return self._evaluate_function_call(expr, env, depth + 1)
 
         # For other expressions, evaluate normally
-        else:
-            return self._evaluate_expression(expr, env, depth + 1)
+        return self._evaluate_expression(expr, env, depth + 1)
 
     def _python_value_to_ast_node(self, value: Any) -> SExpression:
         """
@@ -1090,7 +1091,7 @@ class AIFPLEvaluator:
                 return ''.join(str(item) for item in arg)
 
             except Exception as e:
-                raise AIFPLEvalError(f"Cannot convert list to string: {e}")
+                raise AIFPLEvalError(f"Cannot convert list to string: {e}") from e
 
         if operator == 'string-join':
             if len(args) != 2:
@@ -1262,21 +1263,25 @@ class AIFPLEvaluator:
         if operator == 'string-append':
             if not args:
                 return op_def.get('identity', '')
+
             return ''.join(args)
 
         if operator == 'string-length':
             if len(args) != 1:
                 raise AIFPLEvalError(f"string-length requires exactly 1 argument, got {len(args)}")
+
             return len(args[0])
 
         if operator == 'string-upcase':
             if len(args) != 1:
                 raise AIFPLEvalError(f"string-upcase requires exactly 1 argument, got {len(args)}")
+
             return args[0].upper()
 
         if operator == 'string-downcase':
             if len(args) != 1:
                 raise AIFPLEvalError(f"string-downcase requires exactly 1 argument, got {len(args)}")
+
             return args[0].lower()
 
         if operator == 'string->number':
@@ -1288,14 +1293,16 @@ class AIFPLEvaluator:
                 # Try to parse as integer first
                 if '.' not in string_arg and 'e' not in string_arg.lower() and 'j' not in string_arg.lower():
                     return int(string_arg)
-                # Try complex number - FIXED: This can return complex which is now allowed
-                elif 'j' in string_arg.lower():
+
+                # Try complex number
+                if 'j' in string_arg.lower():
                     return complex(string_arg)
+
                 # Otherwise float
-                else:
-                    return float(string_arg)
-            except ValueError:
-                raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg}'")
+                return float(string_arg)
+
+            except ValueError as e:
+                raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg}'") from e
 
         raise AIFPLEvalError(f"Unknown string operator: '{operator}'")
 
@@ -1561,40 +1568,49 @@ class AIFPLEvaluator:
             try:
                 int_arg = self._to_integer(arg, operator)
                 int_args.append(int_arg)
-            except AIFPLEvalError:
-                raise AIFPLEvalError(f"Operator '{operator}' requires integer arguments, argument {i+1} is {type(arg).__name__}")
+
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(
+                    f"Operator '{operator}' requires integer arguments, argument {i+1} is {type(arg).__name__}"
+                ) from e
 
         if operator == 'bit-or':
             result = int_args[0]
             for arg in int_args[1:]:
                 result |= arg
+
             return result
 
         if operator == 'bit-and':
             result = int_args[0]
             for arg in int_args[1:]:
                 result &= arg
+
             return result
 
         if operator == 'bit-xor':
             result = int_args[0]
             for arg in int_args[1:]:
                 result ^= arg
+
             return result
 
         if operator == 'bit-not':
             if len(int_args) != 1:
                 raise AIFPLEvalError(f"bit-not requires exactly 1 argument, got {len(int_args)}")
+
             return ~int_args[0]
 
         if operator == 'bit-shift-left':
             if len(int_args) != 2:
                 raise AIFPLEvalError(f"bit-shift-left requires exactly 2 arguments, got {len(int_args)}")
+
             return int_args[0] << int_args[1]
 
         if operator == 'bit-shift-right':
             if len(int_args) != 2:
                 raise AIFPLEvalError(f"bit-shift-right requires exactly 2 arguments, got {len(int_args)}")
+
             return int_args[0] >> int_args[1]
 
         raise AIFPLEvalError(f"Unknown bitwise operator: '{operator}'")
@@ -1610,6 +1626,7 @@ class AIFPLEvaluator:
         if isinstance(arg, complex):
             if abs(arg.imag) >= self.imaginary_tolerance:
                 raise AIFPLEvalError(f"Function '{operator}' does not support complex numbers")
+
             arg = arg.real
 
         if operator == 'round':
@@ -1706,7 +1723,7 @@ class AIFPLEvaluator:
 
             return left % right
 
-        if operator == '**' or operator == 'pow':
+        if operator in ['**', 'pow']:
             if len(args) != 2:
                 raise AIFPLEvalError(f"Power requires exactly 2 arguments, got {len(args)}")
 
@@ -2117,11 +2134,11 @@ class AIFPLEvaluator:
                 # If it's close to an integer, show as integer
                 if nice_number == int(nice_number):
                     return str(int(nice_number))
-                else:
-                    return str(nice_number)
-            else:
-                # For other floats, use standard representation
-                return str(result)
+
+                return str(nice_number)
+
+            # For other floats, use standard representation
+            return str(result)
 
         if isinstance(result, list):
             # Format list in LISP notation: (element1 element2 ...)

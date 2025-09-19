@@ -142,7 +142,8 @@ class AIFPLAITool(AITool):
                 "Recursive Function Patterns:\n"
                 "- Tail recursion supported with automatic optimization to prevent stack overflow\n"
                 "- (let ((factorial (lambda (n acc) (if (<= n 1) acc (factorial (- n 1) (* n acc)))))) (factorial 5 1)) → 120\n"
-                "- (let ((sum-list (lambda (lst acc) (if (null? lst) acc (sum-list (rest lst) (+ acc (first lst))))))) (sum-list (list 1 2 3 4) 0)) → 10\n"
+                "- (let ((sum-list (lambda (lst acc) (if (null? lst) acc (sum-list (rest lst) "
+                "(+ acc (first lst))))))) (sum-list (list 1 2 3 4) 0)) → 10\n"
                 "- Always prefer tail-recursive patterns for large data processing\n"
                 "- Use functional iteration (map, filter, fold) instead of explicit recursion when possible\n\n"
 

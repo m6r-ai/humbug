@@ -86,8 +86,8 @@ class Environment:
         if available:
             available_str = ", ".join(f"'{name}'" for name in sorted(available))
             raise AIFPLEvalError(f"Undefined variable: '{name}'. Available bindings: {available_str}")
-        else:
-            raise AIFPLEvalError(f"Undefined variable: '{name}'. No bindings available in current scope")
+
+        raise AIFPLEvalError(f"Undefined variable: '{name}'. No bindings available in current scope")
 
     def has_binding(self, name: str) -> bool:
         """
