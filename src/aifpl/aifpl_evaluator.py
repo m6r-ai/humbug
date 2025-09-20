@@ -5,7 +5,7 @@ import math
 from typing import Any, Dict, List, Union, Optional
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_parser import AIFPLSExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall, AIFPLStringLiteral
+from aifpl.aifpl_parser import AIFPLSExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall, AIFPLSymbol
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLLambdaFunction, AIFPLTailCall, AIFPLCallStack
 
 
@@ -164,7 +164,7 @@ class AIFPLEvaluator:
         self.imaginary_tolerance = imaginary_tolerance
         self.call_stack = AIFPLCallStack()
 
-        # NEW: Add call chain tracking for mutual recursion detection
+        # Add call chain tracking for mutual recursion detection
         self.call_chain: List[AIFPLLambdaFunction] = []
 
     def evaluate(
@@ -228,18 +228,14 @@ class AIFPLEvaluator:
             stack_trace = self.call_stack.format_stack_trace()
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
 
-        # Atom evaluation (literals only - NOT symbols)
-        if isinstance(expr, (int, float, complex, bool)):
+        # Atom evaluation - now includes string literals
+        if isinstance(expr, (int, float, complex, bool, str)):
             return expr
 
-        # String literal evaluation - return the string value directly
-        if isinstance(expr, AIFPLStringLiteral):
-            return expr.value
-
-        # Symbol lookup (strings that represent variable names)
-        if isinstance(expr, str):
+        # Symbol lookup
+        if isinstance(expr, AIFPLSymbol):
             try:
-                return env.lookup(expr)
+                return env.lookup(expr.name)
 
             except AIFPLEvalError as e:
                 # Add more context to symbol lookup errors
@@ -347,9 +343,9 @@ class AIFPLEvaluator:
         current_env = env
 
         while True:
-            # Check if the function is a string (symbol) and not a known operator
-            if isinstance(current_call.function, str):
-                func_name = current_call.function
+            # Check if the function is a symbol and not a known operator
+            if isinstance(current_call.function, AIFPLSymbol):
+                func_name = current_call.function.name
                 # If it's not a known operator and not in the environment, it's an unknown operator
                 if func_name not in self.OPERATORS and not current_env.has_binding(func_name):
                     raise AIFPLEvalError(f"Unknown operator: '{func_name}'")
@@ -358,8 +354,8 @@ class AIFPLEvaluator:
             try:
                 func_value = self._evaluate_expression(current_call.function, current_env, depth)
             except AIFPLEvalError as e:
-                if "Undefined variable" in str(e) and isinstance(current_call.function, str):
-                    func_name = current_call.function
+                if "Undefined variable" in str(e) and isinstance(current_call.function, AIFPLSymbol):
+                    func_name = current_call.function.name
                     if func_name not in self.OPERATORS:
                         raise AIFPLEvalError(f"Unknown operator: '{func_name}'") from e
                 raise AIFPLEvalError(f"Error evaluating function expression: {e}") from e
@@ -383,14 +379,10 @@ class AIFPLEvaluator:
                 # Regular result, return it
                 return result
 
-            if isinstance(func_value, str):
-                # String literals that evaluate to strings should not be treated as operators
-                if isinstance(current_call.function, str):
-                    # This is a symbol (identifier), so it can be a built-in operator
-                    return self._apply_builtin_operator(func_value, current_call.arguments, current_env, depth + 1)
-
-                # This is a string literal, so it's not a function
-                raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
+            # FIXED: Only treat strings as operators if they came from symbol lookups
+            if isinstance(func_value, str) and isinstance(current_call.function, AIFPLSymbol):
+                # Built-in operator (symbols evaluate to their name strings)
+                return self._apply_builtin_operator(func_value, current_call.arguments, current_env, depth + 1)
 
             raise AIFPLEvalError(f"Cannot call non-function value: {type(func_value).__name__}")
 
@@ -474,8 +466,9 @@ class AIFPLEvaluator:
         Tail position means the result of expr becomes the result of context_expr.
         """
         # For if expressions, both then and else branches are in tail position
-        if isinstance(context_expr, AIFPLFunctionCall) and isinstance(context_expr.function, str):
-            if context_expr.function == 'if' and len(context_expr.arguments) == 3:
+        if isinstance(context_expr, AIFPLFunctionCall) and isinstance(context_expr.function, (str, AIFPLSymbol)):
+            func_name = context_expr.function if isinstance(context_expr.function, str) else context_expr.function.name
+            if func_name == 'if' and len(context_expr.arguments) == 3:
                 then_branch = context_expr.arguments[1]
                 else_branch = context_expr.arguments[2]
                 return expr in (then_branch, else_branch)
@@ -537,23 +530,25 @@ class AIFPLEvaluator:
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
 
         # Handle if expressions specially - branches are in tail position
-        if isinstance(expr, AIFPLFunctionCall) and isinstance(expr.function, str) and expr.function == 'if':
-            if len(expr.arguments) != 3:
-                raise AIFPLEvalError(f"if requires exactly 3 arguments, got {len(expr.arguments)}")
+        if isinstance(expr, AIFPLFunctionCall) and isinstance(expr.function, (str, AIFPLSymbol)):
+            func_name = expr.function if isinstance(expr.function, str) else expr.function.name
+            if func_name == 'if':
+                if len(expr.arguments) != 3:
+                    raise AIFPLEvalError(f"if requires exactly 3 arguments, got {len(expr.arguments)}")
 
-            condition_expr, then_expr, else_expr = expr.arguments
+                condition_expr, then_expr, else_expr = expr.arguments
 
-            # Evaluate condition (not in tail position)
-            condition = self._evaluate_expression(condition_expr, env, depth + 1)
+                # Evaluate condition (not in tail position)
+                condition = self._evaluate_expression(condition_expr, env, depth + 1)
 
-            if not isinstance(condition, bool):
-                raise AIFPLEvalError(f"if requires boolean condition, got {type(condition).__name__}")
+                if not isinstance(condition, bool):
+                    raise AIFPLEvalError(f"if requires boolean condition, got {type(condition).__name__}")
 
-            # Evaluate chosen branch (in tail position)
-            if condition:
-                return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
+                # Evaluate chosen branch (in tail position)
+                if condition:
+                    return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
 
-            return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
+                return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
 
         # Handle function calls - check for tail calls
         if isinstance(expr, AIFPLFunctionCall):
@@ -593,8 +588,9 @@ class AIFPLEvaluator:
         Returns:
             Appropriate AST node
         """
+        # String values are now direct atoms
         if isinstance(value, str):
-            return AIFPLStringLiteral(value)
+            return value
 
         if isinstance(value, (int, float, complex, bool)):
             return value
@@ -602,7 +598,7 @@ class AIFPLEvaluator:
         if isinstance(value, list):
             # Convert each element recursively
             list_elements = [self._python_value_to_ast_node(item) for item in value]
-            return AIFPLFunctionCall(function="list", arguments=list_elements, position=0)
+            return AIFPLFunctionCall(function=AIFPLSymbol("list"), arguments=list_elements, position=0)
 
         # For other types (like AIFPLLambdaFunction), return as-is
         return value
@@ -649,7 +645,7 @@ class AIFPLEvaluator:
         if op_def.get('returns_boolean_or_value'):
             return self._apply_mixed_return_operator(operator, evaluated_args)
 
-        # FHandle operations that return booleans FIRST (before string_only check)
+        # Handle operations that return booleans FIRST (before string_only check)
         if op_def.get('returns_boolean'):
             return self._apply_boolean_returning_operator(operator, evaluated_args)
 
@@ -1876,7 +1872,7 @@ class AIFPLEvaluator:
 
             return list_arg[1:]
 
-        # NEW: last operator
+        # last operator
         if operator == 'last':
             if len(args) != 1:
                 raise AIFPLEvalError(f"last requires exactly 1 argument, got {len(args)}")
@@ -1919,7 +1915,7 @@ class AIFPLEvaluator:
 
             return len(list_arg)
 
-        # NEW: remove operator
+        # remove operator
         if operator == 'remove':
             if len(args) != 2:
                 raise AIFPLEvalError(f"remove requires exactly 2 arguments, got {len(args)}")

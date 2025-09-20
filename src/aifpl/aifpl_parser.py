@@ -7,20 +7,21 @@ from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 
 
-# S-Expression types
+# Clean atom definition - only self-evaluating values
 AIFPLAtom = Union[int, float, complex, str, bool]
 
 
 @dataclass
-class AIFPLStringLiteral:
-    """Wrapper to distinguish string literals from symbols."""
-    value: str
+class AIFPLSymbol:
+    """Symbol that requires environment lookup."""
+    name: str
+    position: int = 0
 
     def __str__(self) -> str:
-        return self.value
+        return self.name
 
     def __repr__(self) -> str:
-        return f'AIFPLStringLiteral({self.value!r})'
+        return f'AIFPLSymbol({self.name!r})'
 
 
 @dataclass
@@ -47,8 +48,15 @@ class AIFPLFunctionCall:
     position: int = 0
 
 
-# Updated S-Expression type to include new nodes and AIFPLStringLiteral
-AIFPLSExpression = Union[AIFPLAtom, AIFPLStringLiteral, List['AIFPLSExpression'], AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall]
+# Updated S-Expression type to include AIFPLSymbol and exclude AIFPLStringLiteral
+AIFPLSExpression = Union[
+    AIFPLAtom,
+    AIFPLSymbol,
+    List['AIFPLSExpression'],
+    AIFPLLambdaExpr,
+    AIFPLLetExpr,
+    AIFPLFunctionCall
+]
 
 
 @dataclass
@@ -133,12 +141,12 @@ class AIFPLParser:
             return AIFPLParsedExpression([], start_pos, end_pos)
 
         # Check for special forms first
-        if isinstance(elements[0], str):
-            if elements[0] == "lambda":
+        if isinstance(elements[0], AIFPLSymbol):
+            if elements[0].name == "lambda":
                 lambda_expr = self._parse_lambda_form(elements, start_pos)
                 return AIFPLParsedExpression(lambda_expr, start_pos, end_pos)
 
-            if elements[0] == "let":
+            if elements[0].name == "let":
                 let_expr = self._parse_let_form(elements, start_pos)
                 return AIFPLParsedExpression(let_expr, start_pos, end_pos)
 
@@ -174,21 +182,20 @@ class AIFPLParser:
 
         else:
             # Single parameter without parentheses (not standard but handle gracefully)
-            if isinstance(param_expr, str):
-                raw_parameters = [param_expr]
-
-            else:
+            if not isinstance(param_expr, AIFPLSymbol):
                 raise AIFPLParseError(
                     f"Lambda parameter list must be a list or symbol, got {type(param_expr).__name__} at position {start_pos}"
                 )
 
-        # Validate parameters are all strings and convert them
+            raw_parameters = [param_expr]
+
+        # Validate parameters are all symbols and convert them
         parameters: List[str] = []
         for param in raw_parameters:
-            if not isinstance(param, str):
+            if not isinstance(param, AIFPLSymbol):
                 raise AIFPLParseError(f"Lambda parameter must be a symbol, got {type(param).__name__} at position {start_pos}")
 
-            parameters.append(param)
+            parameters.append(param.name)
 
         # Check for duplicate parameters
         if len(parameters) != len(set(parameters)):
@@ -236,12 +243,12 @@ class AIFPLParser:
             else:
                 raise AIFPLParseError(f"Let binding must be a list of 2 elements: (var value) at position {start_pos}")
 
-            if not isinstance(var_name, str):
+            if not isinstance(var_name, AIFPLSymbol):
                 raise AIFPLParseError(
                     f"Let binding variable must be a symbol, got {type(var_name).__name__} at position {start_pos}"
                 )
 
-            bindings.append((var_name, var_value))
+            bindings.append((var_name.name, var_value))
 
         # Check for duplicate binding names
         var_names = [name for name, _ in bindings]
@@ -262,10 +269,14 @@ class AIFPLParser:
 
         end_pos = start_pos + token.length
 
-        # Wrap string tokens in AIFPLStringLiteral to distinguish from symbols
-        if token.type == AIFPLTokenType.STRING:
-            return AIFPLParsedExpression(AIFPLStringLiteral(token.value), start_pos, end_pos)
+        if token.type == AIFPLTokenType.SYMBOL:
+            return AIFPLParsedExpression(
+                AIFPLSymbol(token.value, start_pos),
+                start_pos,
+                end_pos
+            )
 
+        # Other atoms (numbers, booleans) remain unchanged
         return AIFPLParsedExpression(token.value, start_pos, end_pos)
 
     def _consume(self, expected_type: AIFPLTokenType) -> None:
