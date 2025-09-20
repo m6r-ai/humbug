@@ -1,66 +1,36 @@
 """Environment management for AIFPL variable and function scoping."""
 
-from typing import Any, Dict, Optional, List
-from dataclasses import dataclass
+from typing import Any, Dict, Optional, List, Tuple
+from dataclasses import dataclass, field, replace
 
 from aifpl.aifpl_error import AIFPLEvalError
 
 
-@dataclass
-class AIFPLLambdaFunction:
-    """Represents a user-defined lambda function."""
-    parameters: List[str]
-    body: Any  # AIFPLSExpression, but avoiding circular import
-    closure_env: 'AIFPLEnvironment'
-    name: Optional[str] = None  # For debugging/error messages
-
-    def __call__(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Make AIFPLLambdaFunction callable for Python's callable() function.
-
-        This is just to satisfy the callable() check in tests.
-        Actual function calling is handled by the evaluator.
-        """
-        raise RuntimeError("AIFPLLambdaFunction objects should be called through the evaluator, not directly")
-
-
-@dataclass
-class AIFPLTailCall:
-    """Represents a tail call to be optimized."""
-    function: Any  # AIFPLSExpression
-    arguments: List[Any]  # List[AIFPLSExpression]
-    environment: 'AIFPLEnvironment'
-
-
+@dataclass(frozen=True)
 class AIFPLEnvironment:
     """
-    Environment for variable and function bindings with lexical scoping.
+    Immutable environment for variable and function bindings with lexical scoping.
 
     Supports nested scopes where inner environments can access outer bindings
     but not vice versa.
     """
+    bindings: Dict[str, Any] = field(default_factory=dict)  # Any = AIFPLValue, avoiding circular import
+    parent: Optional['AIFPLEnvironment'] = None
+    name: str = "anonymous"
 
-    def __init__(self, parent: Optional['AIFPLEnvironment'] = None, name: str = "anonymous"):
+    def define(self, name: str, value: Any) -> 'AIFPLEnvironment':
         """
-        Initialize environment.
-
-        Args:
-            parent: Parent environment for lexical scoping
-            name: Name for debugging purposes
-        """
-        self.parent = parent
-        self.name = name
-        self.bindings: Dict[str, Any] = {}
-
-    def define(self, name: str, value: Any) -> None:
-        """
-        Define a variable in this environment.
+        Return new environment with a variable defined.
 
         Args:
             name: Variable name
-            value: Variable value
+            value: Variable value (AIFPLValue)
+
+        Returns:
+            New environment with the binding added
         """
-        self.bindings[name] = value
+        new_bindings = {**self.bindings, name: value}
+        return AIFPLEnvironment(new_bindings, self.parent, self.name)
 
     def lookup(self, name: str) -> Any:
         """
@@ -117,13 +87,7 @@ class AIFPLEnvironment:
         Returns:
             True if variable is defined, False otherwise
         """
-        if name in self.bindings:
-            return True
-
-        if self.parent is not None:
-            return self.parent.is_defined(name)
-
-        return False
+        return self.has_binding(name)
 
     def get_local_bindings(self) -> Dict[str, Any]:
         """
@@ -153,13 +117,54 @@ class AIFPLEnvironment:
         Returns:
             New child environment
         """
-        return AIFPLEnvironment(parent=self, name=name)
+        return AIFPLEnvironment({}, self, name)
 
     def __repr__(self) -> str:
         """String representation for debugging."""
         local_bindings = list(self.bindings.keys())
         parent_info = f" (parent: {self.parent.name})" if self.parent else ""
         return f"AIFPLEnvironment({self.name}: {local_bindings}{parent_info})"
+
+
+@dataclass(frozen=True)
+class AIFPLFunction:
+    """
+    Represents a user-defined function (lambda).
+
+    This is now an immutable value that can be stored in environments
+    and passed around as a first-class value.
+    """
+    parameters: Tuple[str, ...]
+    body: Any  # AIFPLSExpression, avoiding circular import
+    closure_env: AIFPLEnvironment
+    name: Optional[str] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+    def with_name(self, name: str) -> 'AIFPLFunction':
+        """Return a new function with the given name."""
+        return replace(self, name=name)
+
+    def with_metadata(self, **kwargs) -> 'AIFPLFunction':
+        """Return a new function with additional metadata."""
+        new_metadata = {**self.metadata, **kwargs}
+        return replace(self, metadata=new_metadata)
+
+    def __call__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Make AIFPLFunction callable for Python's callable() function.
+
+        This is just to satisfy the callable() check in tests.
+        Actual function calling is handled by the evaluator.
+        """
+        raise RuntimeError("AIFPLFunction objects should be called through the evaluator, not directly")
+
+
+@dataclass(frozen=True)
+class AIFPLTailCall:
+    """Represents a tail call to be optimized."""
+    function: Any  # AIFPLSExpression
+    arguments: List[Any]  # List[AIFPLSExpression]
+    environment: AIFPLEnvironment
 
 
 class AIFPLCallStack:

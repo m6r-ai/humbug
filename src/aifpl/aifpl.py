@@ -5,7 +5,8 @@ from typing import Union
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
-from aifpl.aifpl_environment import AIFPLLambdaFunction
+from aifpl.aifpl_environment import AIFPLFunction
+from aifpl.aifpl_value import AIFPLValue
 
 
 class AIFPL:
@@ -27,15 +28,15 @@ class AIFPL:
         self.max_depth = max_depth
         self.imaginary_tolerance = imaginary_tolerance
 
-    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLLambdaFunction]:
+    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
         """
-        Evaluate an AIFPL expression.
+        Evaluate an AIFPL expression and return Python-compatible result.
 
         Args:
             expression: AIFPL expression string to evaluate
 
         Returns:
-            The result of evaluating the expression
+            The result of evaluating the expression converted to Python types
 
         Raises:
             AIFPLTokenError: If tokenization fails
@@ -58,7 +59,10 @@ class AIFPL:
         result = evaluator.evaluate(parsed.expr)
 
         # Simplify the result
-        return evaluator.simplify_result(result)
+        simplified = evaluator.simplify_result(result)
+
+        # Convert to Python types for backward compatibility
+        return self._aifpl_value_to_python(simplified)
 
     def evaluate_and_format(self, expression: str) -> str:
         """
@@ -93,3 +97,20 @@ class AIFPL:
         # Simplify and format the result
         simplified = evaluator.simplify_result(result)
         return evaluator.format_result(simplified)
+
+    def _aifpl_value_to_python(self, value: AIFPLValue) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
+        """
+        Convert AIFPLValue to Python types for backward compatibility.
+
+        Args:
+            value: AIFPLValue to convert
+
+        Returns:
+            Python equivalent of the value
+        """
+        if isinstance(value, AIFPLFunction):
+            # Functions are returned as-is for backward compatibility
+            return value
+
+        # Use the value's to_python method
+        return value.to_python()

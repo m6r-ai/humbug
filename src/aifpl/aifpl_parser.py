@@ -5,23 +5,7 @@ from typing import List, Union, Tuple
 
 from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
-
-
-# Clean atom definition - only self-evaluating values
-AIFPLAtom = Union[int, float, complex, str, bool]
-
-
-@dataclass
-class AIFPLSymbol:
-    """Symbol that requires environment lookup."""
-    name: str
-    position: int = 0
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return f'AIFPLSymbol({self.name!r})'
+from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
 
 
 @dataclass
@@ -48,11 +32,9 @@ class AIFPLFunctionCall:
     position: int = 0
 
 
-# Updated S-Expression type to include AIFPLSymbol and exclude AIFPLStringLiteral
+# S-Expression type now includes all AIFPLValue types and special forms
 AIFPLSExpression = Union[
-    AIFPLAtom,
-    AIFPLSymbol,
-    List['AIFPLSExpression'],
+    AIFPLValue,
     AIFPLLambdaExpr,
     AIFPLLetExpr,
     AIFPLFunctionCall
@@ -136,9 +118,10 @@ class AIFPLParser:
         end_pos = self.current_token.position
         self._consume(AIFPLTokenType.RPAREN)
 
-        # Handle empty lists - return as empty Python list
+        # Handle empty lists - return as AIFPLList
         if not elements:
-            return AIFPLParsedExpression([], start_pos, end_pos)
+            empty_list = AIFPLList()
+            return AIFPLParsedExpression(empty_list, start_pos, end_pos)
 
         # Check for special forms first
         if isinstance(elements[0], AIFPLSymbol):
@@ -165,10 +148,10 @@ class AIFPLParser:
                 f"Lambda expression requires exactly 3 elements: (lambda (params...) body) at position {start_pos}"
             )
 
-        # Parse parameter list - handle the case where it might be a AIFPLFunctionCall or empty list
+        # Parse parameter list
         param_expr = elements[1]
 
-        # Extract parameters and ensure they're all strings
+        # Extract parameters and ensure they're all symbols
         raw_parameters: List[AIFPLSExpression] = []
 
         # Handle different parameter list formats
@@ -176,9 +159,9 @@ class AIFPLParser:
             # For lambda parameters, we expect (param1 param2 ...) which becomes AIFPLFunctionCall(param1, [param2, ...])
             raw_parameters = [param_expr.function] + param_expr.arguments
 
-        elif isinstance(param_expr, list):
-            # This handles empty parameter lists: () -> []
-            raw_parameters = param_expr
+        elif isinstance(param_expr, AIFPLList):
+            # Empty parameter lists: () -> AIFPLList([])
+            raw_parameters = list(param_expr.elements)
 
         else:
             # Single parameter without parentheses (not standard but handle gracefully)
@@ -211,24 +194,24 @@ class AIFPLParser:
         if len(elements) != 3:
             raise AIFPLParseError(f"Let expression requires exactly 3 elements: (let ((bindings...)) body) at position {start_pos}")
 
-        # Parse binding list - handle the case where it might be a AIFPLFunctionCall
+        # Parse binding list
         binding_expr = elements[1]
 
-        # Convert AIFPLFunctionCall back to list for binding lists
+        # Convert to list of binding expressions
         if isinstance(binding_expr, AIFPLFunctionCall):
             # For let bindings, we expect ((var1 val1) (var2 val2) ...)
             # which becomes AIFPLFunctionCall((var1 val1), [(var2 val2), ...])
             binding_list = [binding_expr.function] + binding_expr.arguments
 
-        elif isinstance(binding_expr, list):
-            binding_list = binding_expr
+        elif isinstance(binding_expr, AIFPLList):
+            binding_list = list(binding_expr.elements)
 
         else:
             raise AIFPLParseError(f"Let binding list must be a list, got {type(binding_expr).__name__} at position {start_pos}")
 
         bindings = []
         for binding in binding_list:
-            # Each binding might also be a AIFPLFunctionCall
+            # Each binding might be a AIFPLFunctionCall or AIFPLList
             if isinstance(binding, AIFPLFunctionCall):
                 # (var val) becomes AIFPLFunctionCall(var, [val])
                 if len(binding.arguments) != 1:
@@ -237,8 +220,8 @@ class AIFPLParser:
                 var_name = binding.function
                 var_value = binding.arguments[0]
 
-            elif isinstance(binding, list) and len(binding) == 2:
-                var_name, var_value = binding
+            elif isinstance(binding, AIFPLList) and binding.length() == 2:
+                var_name, var_value = binding.elements
 
             else:
                 raise AIFPLParseError(f"Let binding must be a list of 2 elements: (var value) at position {start_pos}")
@@ -261,7 +244,7 @@ class AIFPLParser:
         return AIFPLLetExpr(bindings=bindings, body=body, position=start_pos)
 
     def _parse_atom(self, start_pos: int) -> AIFPLParsedExpression:
-        """Parse an atomic value (number, string, boolean, or symbol)."""
+        """Parse an atomic value and convert to appropriate AIFPLValue."""
         assert self.current_token is not None, "_parse_atom called with None token"
 
         token = self.current_token
@@ -269,15 +252,24 @@ class AIFPLParser:
 
         end_pos = start_pos + token.length
 
+        # Convert tokens to appropriate AIFPLValue types
         if token.type == AIFPLTokenType.SYMBOL:
-            return AIFPLParsedExpression(
-                AIFPLSymbol(token.value, start_pos),
-                start_pos,
-                end_pos
-            )
+            symbol_value = AIFPLSymbol(token.value, start_pos)
+            return AIFPLParsedExpression(symbol_value, start_pos, end_pos)
 
-        # Other atoms (numbers, booleans) remain unchanged
-        return AIFPLParsedExpression(token.value, start_pos, end_pos)
+        if token.type == AIFPLTokenType.NUMBER:
+            number_value = AIFPLNumber(token.value)
+            return AIFPLParsedExpression(number_value, start_pos, end_pos)
+
+        if token.type == AIFPLTokenType.STRING:
+            string_value = AIFPLString(token.value)
+            return AIFPLParsedExpression(string_value, start_pos, end_pos)
+
+        if token.type == AIFPLTokenType.BOOLEAN:
+            boolean_value = AIFPLBoolean(token.value)
+            return AIFPLParsedExpression(boolean_value, start_pos, end_pos)
+
+        raise AIFPLParseError(f"Unexpected token type: {token.type}")
 
     def _consume(self, expected_type: AIFPLTokenType) -> None:
         """Consume a token of the expected type."""
