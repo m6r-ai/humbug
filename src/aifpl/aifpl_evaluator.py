@@ -252,9 +252,9 @@ class AIFPLEvaluator:
             stack_trace = self.call_stack.format_stack_trace()
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
 
-        # AIFPLValue evaluation (atoms)
-        if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
-            # Self-evaluating atoms
+        # AIFPLValue evaluation - handle all value types that should self-evaluate
+        if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLFunction, AIFPLBuiltinFunction)):
+            # Self-evaluating values
             return expr
 
         # Symbol lookup
@@ -270,7 +270,7 @@ class AIFPLEvaluator:
 
                 raise
 
-        # List evaluation - check for special forms
+        # List evaluation - check for special forms FIRST before any symbol evaluation
         if isinstance(expr, AIFPLList):
             # Empty list evaluates to itself
             if expr.is_empty():
@@ -279,6 +279,7 @@ class AIFPLEvaluator:
             # Non-empty list - check first element for special forms
             first_elem = expr.first()
             if isinstance(first_elem, AIFPLSymbol):
+                # Handle special forms BEFORE attempting any symbol lookup
                 if first_elem.name == "lambda":
                     return self._evaluate_lambda_form(expr, env, depth + 1)
 
@@ -688,28 +689,38 @@ class AIFPLEvaluator:
             stack_trace = self.call_stack.format_stack_trace()
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
 
-        # Handle if expressions specially - branches are in tail position
+        # Handle special forms that can appear in tail position
         if isinstance(expr, AIFPLList) and not expr.is_empty():
             first_elem = expr.first()
-            if isinstance(first_elem, AIFPLSymbol) and first_elem.name == 'if':
-                if expr.length() != 4:
-                    raise AIFPLEvalError(f"if requires exactly 3 arguments, got {expr.length() - 1}")
+            if isinstance(first_elem, AIFPLSymbol):
+                # Handle if expressions specially - branches are in tail position
+                if first_elem.name == 'if':
+                    if expr.length() != 4:
+                        raise AIFPLEvalError(f"if requires exactly 3 arguments, got {expr.length() - 1}")
 
-                condition_expr = expr.get(1)
-                then_expr = expr.get(2)
-                else_expr = expr.get(3)
+                    condition_expr = expr.get(1)
+                    then_expr = expr.get(2)
+                    else_expr = expr.get(3)
 
-                # Evaluate condition (not in tail position)
-                condition = self._evaluate_expression(condition_expr, env, depth + 1)
+                    # Evaluate condition (not in tail position)
+                    condition = self._evaluate_expression(condition_expr, env, depth + 1)
 
-                if not isinstance(condition, AIFPLBoolean):
-                    raise AIFPLEvalError(f"if requires boolean condition, got {condition.type_name()}")
+                    if not isinstance(condition, AIFPLBoolean):
+                        raise AIFPLEvalError(f"if requires boolean condition, got {condition.type_name()}")
 
-                # Evaluate chosen branch (in tail position)
-                if condition.value:
-                    return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
+                    # Evaluate chosen branch (in tail position)
+                    if condition.value:
+                        return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
 
-                return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
+                    return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
+
+                # Handle lambda expressions - they are NOT tail calls, just return the function
+                elif first_elem.name == 'lambda':
+                    return self._evaluate_lambda_form(expr, env, depth + 1)
+
+                # Handle let expressions - body is in tail position
+                elif first_elem.name == 'let':
+                    return self._evaluate_let_form(expr, env, depth + 1)
 
         # Handle function calls - check for tail calls
         if isinstance(expr, AIFPLList) and not expr.is_empty():
@@ -1779,13 +1790,9 @@ class AIFPLEvaluator:
 
             func_expr, init_expr, list_expr = args
 
-            # Evaluate the function, initial value and list
-            func_value = self._evaluate_expression(func_expr, env, depth + 1)
+            # Evaluate the initial value and list
             accumulator = self._evaluate_expression(init_expr, env, depth + 1)
             list_value = self._evaluate_expression(list_expr, env, depth + 1)
-
-            if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
-                raise AIFPLEvalError(f"fold requires function as first argument, got {func_value.type_name()}")
 
             if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(f"fold requires list as third argument, got {list_value.type_name()}")
@@ -1793,13 +1800,8 @@ class AIFPLEvaluator:
             # Fold over the list
             for item in list_value.elements:
                 # Create a function call with accumulator and item as arguments
-                if isinstance(func_value, AIFPLBuiltinFunction):
-                    # For built-in functions, create a list to call
-                    fold_call = AIFPLList((AIFPLSymbol(func_value.name), accumulator, item))
-                else:
-                    # For user functions, use the function expression
-                    fold_call = AIFPLList((func_expr, accumulator, item))
-
+                # Note: accumulator and item are already evaluated values
+                fold_call = AIFPLList((func_expr, accumulator, item))
                 accumulator = self._evaluate_function_call(fold_call, env, depth + 1)
 
             return accumulator
