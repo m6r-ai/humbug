@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional, List
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_error import AIFPLEvalError
+from aifpl.aifpl_value import AIFPLValue, AIFPLRecursivePlaceholder
 
 
 @dataclass(frozen=True)
@@ -14,11 +15,11 @@ class AIFPLEnvironment:
     Supports nested scopes where inner environments can access outer bindings
     but not vice versa.
     """
-    bindings: Dict[str, Any] = field(default_factory=dict)  # Any = AIFPLValue, avoiding circular import
+    bindings: Dict[str, AIFPLValue] = field(default_factory=dict)
     parent: Optional['AIFPLEnvironment'] = None
     name: str = "anonymous"
 
-    def define(self, name: str, value: Any) -> 'AIFPLEnvironment':
+    def define(self, name: str, value: AIFPLValue) -> 'AIFPLEnvironment':
         """
         Return new environment with a variable defined.
 
@@ -32,7 +33,7 @@ class AIFPLEnvironment:
         new_bindings = {**self.bindings, name: value}
         return AIFPLEnvironment(new_bindings, self.parent, self.name)
 
-    def lookup(self, name: str) -> Any:
+    def lookup(self, name: str) -> AIFPLValue:
         """
         Look up a variable in this environment or parent environments.
 
@@ -49,7 +50,7 @@ class AIFPLEnvironment:
             value = self.bindings[name]
 
             # Handle recursive placeholders
-            if hasattr(value, 'get_resolved_value'):
+            if isinstance(value, AIFPLRecursivePlaceholder):
                 return value.get_resolved_value()
 
             return value
@@ -95,7 +96,7 @@ class AIFPLEnvironment:
         """
         return self.has_binding(name)
 
-    def get_local_bindings(self) -> Dict[str, Any]:
+    def get_local_bindings(self) -> Dict[str, AIFPLValue]:
         """
         Get bindings defined in this environment only (not parents).
 
@@ -149,7 +150,7 @@ class AIFPLCallStack:
     class CallFrame:
         """Represents a single function call frame."""
         function_name: str
-        arguments: Dict[str, Any]
+        arguments: Dict[str, AIFPLValue]
         expression: str
         position: int
 
@@ -157,7 +158,7 @@ class AIFPLCallStack:
         """Initialize empty call stack."""
         self.frames: List[AIFPLCallStack.CallFrame] = []
 
-    def push(self, function_name: str, arguments: Dict[str, Any], expression: str = "", position: int = 0) -> None:
+    def push(self, function_name: str, arguments: Dict[str, AIFPLValue], expression: str = "", position: int = 0) -> None:
         """
         Push a new call frame onto the stack.
 
