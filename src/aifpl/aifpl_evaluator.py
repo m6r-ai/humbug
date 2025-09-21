@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Union, Optional
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_parser import AIFPLSExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall
-from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLFunction, AIFPLTailCall, AIFPLCallStack
-from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLRecursivePlaceholder
+from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLTailCall, AIFPLCallStack
+from aifpl.aifpl_value import (
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction
+)
 from aifpl.aifpl_evaluator_operators import AIFPLOperatorMixin
 from aifpl.aifpl_dependency_analyzer import DependencyAnalyzer, BindingGroup
 
@@ -804,7 +806,7 @@ class AIFPLEvaluator(AIFPLOperatorMixin):
 
         raise AIFPLEvalError(f"Unknown mixed return operator: '{operator}'")
 
-    def _apply_boolean_returning_operator(self, operator: str, args: List[AIFPLValue]) -> AIFPLBoolean:
+    def _apply_boolean_returning_operator(self, operator: str, args: List[AIFPLValue]) -> AIFPLValue:
         """Apply operators that return boolean values."""
         if operator in ('=', '!='):
             if len(args) < 2:
@@ -1117,23 +1119,24 @@ class AIFPLEvaluator(AIFPLOperatorMixin):
                 if not isinstance(end_val, AIFPLNumber):
                     raise AIFPLEvalError(f"range argument 2 must be numeric, got {end_val.type_name()}")
 
-                start_int = int(start_val.value)
-                end_int = int(end_val.value)
+                start_int = self._ensure_integer(start_val, "range")
+                end_int = self._ensure_integer(end_val, "range")
                 step_int = 1
 
             else:
                 start_val, end_val, step_val = evaluated_args
                 if not isinstance(start_val, AIFPLNumber):
                     raise AIFPLEvalError(f"range argument 1 must be numeric, got {start_val.type_name()}")
+
                 if not isinstance(end_val, AIFPLNumber):
                     raise AIFPLEvalError(f"range argument 2 must be numeric, got {end_val.type_name()}")
 
                 if not isinstance(step_val, AIFPLNumber):
                     raise AIFPLEvalError(f"range argument 3 must be numeric, got {step_val.type_name()}")
 
-                start_int = int(start_val.value)
-                end_int = int(end_val.value)
-                step_int = int(step_val.value)
+                start_int = self._ensure_integer(start_val, "range")
+                end_int = self._ensure_integer(end_val, "range")
+                step_int = self._ensure_integer(step_val, "range")
 
             if step_int == 0:
                 raise AIFPLEvalError("range step cannot be zero")

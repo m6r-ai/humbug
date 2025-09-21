@@ -1,7 +1,7 @@
 """Environment management for AIFPL variable and function scoping."""
 
-from typing import Any, Dict, Optional, List, Tuple
-from dataclasses import dataclass, field, replace
+from typing import Any, Dict, Optional, List
+from dataclasses import dataclass
 
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -14,9 +14,14 @@ class AIFPLEnvironment:
     Supports nested scopes where inner environments can access outer bindings
     but not vice versa.
     """
-    bindings: Dict[str, Any] = field(default_factory=dict)  # Any = AIFPLValue, avoiding circular import
+    bindings: Dict[str, Any] = None  # Any = AIFPLValue, avoiding circular import
     parent: Optional['AIFPLEnvironment'] = None
     name: str = "anonymous"
+
+    def __post_init__(self) -> None:
+        """Initialize bindings if None."""
+        if self.bindings is None:
+            object.__setattr__(self, 'bindings', {})
 
     def define(self, name: str, value: Any) -> 'AIFPLEnvironment':
         """
@@ -133,39 +138,6 @@ class AIFPLEnvironment:
 
 
 @dataclass(frozen=True)
-class AIFPLFunction:
-    """
-    Represents a user-defined function (lambda).
-
-    This is now an immutable value that can be stored in environments
-    and passed around as a first-class value.
-    """
-    parameters: Tuple[str, ...]
-    body: Any  # AIFPLSExpression, avoiding circular import
-    closure_env: AIFPLEnvironment
-    name: Optional[str] = None
-    metadata: Dict[str, Any] = field(default_factory=dict)
-
-    def with_name(self, name: str) -> 'AIFPLFunction':
-        """Return a new function with the given name."""
-        return replace(self, name=name)
-
-    def with_metadata(self, **kwargs) -> 'AIFPLFunction':
-        """Return a new function with additional metadata."""
-        new_metadata = {**self.metadata, **kwargs}
-        return replace(self, metadata=new_metadata)
-
-    def __call__(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Make AIFPLFunction callable for Python's callable() function.
-
-        This is just to satisfy the callable() check in tests.
-        Actual function calling is handled by the evaluator.
-        """
-        raise RuntimeError("AIFPLFunction objects should be called through the evaluator, not directly")
-
-
-@dataclass(frozen=True)
 class AIFPLTailCall:
     """Represents a tail call to be optimized."""
     function: Any  # AIFPLSExpression
@@ -208,7 +180,7 @@ class AIFPLCallStack:
         )
         self.frames.append(frame)
 
-    def pop(self) -> Optional[CallFrame]:
+    def pop(self) -> Optional['AIFPLCallStack.CallFrame']:
         """
         Pop the top call frame from the stack.
 
@@ -217,10 +189,9 @@ class AIFPLCallStack:
         """
         if self.frames:
             return self.frames.pop()
-
         return None
 
-    def peek(self) -> Optional[CallFrame]:
+    def peek(self) -> Optional['AIFPLCallStack.CallFrame']:
         """
         Peek at the top call frame without removing it.
 
@@ -263,7 +234,6 @@ class AIFPLCallStack:
             args_str = ", ".join(f"{k}={repr(v)}" for k, v in frame.arguments.items())
             if args_str:
                 lines.append(f"{indent}{frame.function_name}({args_str})")
-
             else:
                 lines.append(f"{indent}{frame.function_name}()")
 

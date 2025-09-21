@@ -2,10 +2,15 @@
 
 import cmath
 import math
-from typing import List
+from typing import List, Protocol
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList
+
+
+class HasImaginaryTolerance(Protocol):
+    """Protocol for classes that have imaginary_tolerance attribute."""
+    imaginary_tolerance: float
 
 
 class AIFPLOperatorMixin:
@@ -44,7 +49,20 @@ class AIFPLOperatorMixin:
         if not isinstance(value, AIFPLNumber) or not value.is_integer():
             raise AIFPLEvalError(f"Operator '{operator}' requires integer arguments, got {value.type_name()}")
 
-        return int(value.value)
+        # Type narrowing: we know value.value is int here
+        assert isinstance(value.value, int), "is_integer() should guarantee int type"
+        return value.value
+
+    def _ensure_real_number(self, value: AIFPLValue, operator: str) -> int | float:
+        """Ensure value is a real number (int or float), raise error if complex."""
+        if not isinstance(value, AIFPLNumber):
+            raise AIFPLEvalError(f"Operator '{operator}' requires numeric arguments, got {value.type_name()}")
+
+        if isinstance(value.value, complex):
+            raise AIFPLEvalError(f"Operator '{operator}' does not support complex numbers")
+
+        # Type narrowing: we know value.value is int or float here
+        return value.value
 
     def _apply_string_operator(self, operator: str, op_def: dict, args: List[AIFPLValue]) -> AIFPLValue:
         """Apply string operations."""
@@ -323,7 +341,7 @@ class AIFPLOperatorMixin:
 
         raise AIFPLEvalError(f"Unknown bitwise operator: '{operator}'")
 
-    def _apply_real_only_function(self, operator: str, args: List[AIFPLValue]) -> AIFPLNumber:
+    def _apply_real_only_function(self: HasImaginaryTolerance, operator: str, args: List[AIFPLValue]) -> AIFPLNumber:
         """Apply functions that only work with real numbers."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function '{operator}' requires exactly 1 argument, got {len(args)}")
@@ -404,21 +422,25 @@ class AIFPLOperatorMixin:
             if len(num_args) != 2:
                 raise AIFPLEvalError(f"Floor division requires exactly 2 arguments, got {len(num_args)}")
 
-            left, right = num_args[0].value, num_args[1].value
-            if right == 0:
+            left_val = self._ensure_real_number(num_args[0], operator)
+            right_val = self._ensure_real_number(num_args[1], operator)
+
+            if right_val == 0:
                 raise AIFPLEvalError("Division by zero")
 
-            return AIFPLNumber(left // right)
+            return AIFPLNumber(left_val // right_val)
 
         if operator == '%':
             if len(num_args) != 2:
                 raise AIFPLEvalError(f"Modulo requires exactly 2 arguments, got {len(num_args)}")
 
-            left, right = num_args[0].value, num_args[1].value
-            if right == 0:
+            left_val = self._ensure_real_number(num_args[0], operator)
+            right_val = self._ensure_real_number(num_args[1], operator)
+
+            if right_val == 0:
                 raise AIFPLEvalError("Modulo by zero")
 
-            return AIFPLNumber(left % right)
+            return AIFPLNumber(left_val % right_val)
 
         if operator in ['**', 'pow']:
             if len(num_args) != 2:
@@ -485,13 +507,25 @@ class AIFPLOperatorMixin:
             if not num_args:
                 raise AIFPLEvalError("min requires at least 1 argument")
 
-            return AIFPLNumber(min(arg.value for arg in num_args))
+            # Use type narrowing to handle only real numbers for min/max
+            real_values = []
+            for arg in num_args:
+                real_val = self._ensure_real_number(arg, operator)
+                real_values.append(real_val)
+
+            return AIFPLNumber(min(real_values))
 
         if operator == 'max':
             if not num_args:
                 raise AIFPLEvalError("max requires at least 1 argument")
 
-            return AIFPLNumber(max(arg.value for arg in num_args))
+            # Use type narrowing to handle only real numbers for min/max
+            real_values = []
+            for arg in num_args:
+                real_val = self._ensure_real_number(arg, operator)
+                real_values.append(real_val)
+
+            return AIFPLNumber(max(real_values))
 
         # Complex number functions
         if operator == 'real':

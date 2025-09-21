@@ -108,13 +108,13 @@ class DependencyAnalyzer:
             List of sets, each representing a strongly connected component
         """
         index_counter = [0]
-        stack = []
-        lowlinks = {}
-        index = {}
-        on_stack = {}
-        result = []
+        stack: List[str] = []
+        lowlinks: Dict[str, int] = {}
+        index: Dict[str, int] = {}
+        on_stack: Dict[str, bool] = {}
+        result: List[Set[str]] = []
 
-        def strongconnect(node):
+        def strongconnect(node: str) -> None:
             index[node] = index_counter[0]
             lowlinks[node] = index_counter[0]
             index_counter[0] += 1
@@ -132,7 +132,7 @@ class DependencyAnalyzer:
 
             # If node is a root, pop the stack and create SCC
             if lowlinks[node] == index[node]:
-                component = set()
+                component: Set[str] = set()
                 while True:
                     w = stack.pop()
                     on_stack[w] = False
@@ -151,16 +151,16 @@ class DependencyAnalyzer:
     def _topological_sort_groups(self, groups: List[BindingGroup]) -> List[BindingGroup]:
         """Sort binding groups in topological order."""
         # Create mapping from group names to groups
-        name_to_group = {}
+        name_to_group: Dict[str, BindingGroup] = {}
         for group in groups:
             for name in group.names:
                 name_to_group[name] = group
 
         # Build dependency graph between groups
-        group_deps = {}
+        group_deps: Dict[int, Set[int]] = {}
         for group in groups:
             group_id = id(group)  # Use object id as unique identifier
-            deps = set()
+            deps: Set[int] = set()
             for dep_name in group.depends_on:
                 if dep_name in name_to_group:
                     deps.add(id(name_to_group[dep_name]))
@@ -168,12 +168,12 @@ class DependencyAnalyzer:
             group_deps[group_id] = deps
 
         # Topological sort
-        visited = set()
-        temp_visited = set()
-        result = []
-        group_by_id = {id(group): group for group in groups}
+        visited: Set[int] = set()
+        temp_visited: Set[int] = set()
+        result: List[BindingGroup] = []
+        group_by_id: Dict[int, BindingGroup] = {id(group): group for group in groups}
 
-        def visit(group_id):
+        def visit(group_id: int) -> None:
             if group_id in temp_visited:
                 raise ValueError("Circular dependency detected")
 
