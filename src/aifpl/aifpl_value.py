@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -257,7 +257,7 @@ class AIFPLList(AIFPLValue):
         new_elements = tuple(elem for elem in self.elements if elem != value)
         return AIFPLList(new_elements)
 
-    def position(self, value: AIFPLValue) -> Optional[int]:
+    def position(self, value: AIFPLValue) -> int | None:
         """Find the first position of a value, or None if not found."""
         for i, elem in enumerate(self.elements):
             if elem == value:
@@ -285,7 +285,7 @@ class AIFPLFunction(AIFPLValue):
     parameters: Tuple[str, ...]
     body: AIFPLValue
     closure_env: Any  # AIFPLEnvironment, avoiding circular import
-    name: Optional[str] = None
+    name: str | None = None
 
     def to_python(self) -> 'AIFPLFunction':
         """Functions return themselves as Python values."""
@@ -318,7 +318,7 @@ class AIFPLRecursivePlaceholder(AIFPLValue):
 
     def __init__(self, name: str):
         self._name = name
-        self._resolved_value: Optional[AIFPLValue] = None
+        self._resolved_value: AIFPLValue | None = None
 
     def resolve(self, value: AIFPLValue) -> None:
         """Resolve the placeholder to an actual value."""

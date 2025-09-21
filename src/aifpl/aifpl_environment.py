@@ -1,6 +1,6 @@
 """Environment management for AIFPL variable and function scoping."""
 
-from typing import Dict, Optional, List
+from typing import Dict, List
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_error import AIFPLEvalError
@@ -16,7 +16,7 @@ class AIFPLEnvironment:
     but not vice versa.
     """
     bindings: Dict[str, AIFPLValue] = field(default_factory=dict)
-    parent: Optional['AIFPLEnvironment'] = None
+    parent: 'AIFPLEnvironment | None' = None
     name: str = "anonymous"
 
     def define(self, name: str, value: AIFPLValue) -> 'AIFPLEnvironment':
@@ -176,7 +176,7 @@ class AIFPLCallStack:
         )
         self.frames.append(frame)
 
-    def pop(self) -> Optional['AIFPLCallStack.CallFrame']:
+    def pop(self) -> 'AIFPLCallStack.CallFrame | None':
         """
         Pop the top call frame from the stack.
 
@@ -188,7 +188,7 @@ class AIFPLCallStack:
 
         return None
 
-    def peek(self) -> Optional['AIFPLCallStack.CallFrame']:
+    def peek(self) -> 'AIFPLCallStack.CallFrame | None':
         """
         Peek at the top call frame without removing it.
 

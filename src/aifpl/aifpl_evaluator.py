@@ -2,7 +2,7 @@
 
 import cmath
 import math
-from typing import Any, Dict, List, Union, Optional, Tuple
+from typing import Any, Dict, List, Union, Tuple
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLTailCall, AIFPLCallStack
@@ -193,7 +193,7 @@ class AIFPLEvaluator:
     def evaluate(
         self,
         expr: AIFPLValue,
-        env: Optional[AIFPLEnvironment] = None,
+        env: AIFPLEnvironment | None = None,
         depth: int = 0
     ) -> AIFPLValue:
         """
@@ -2187,7 +2187,7 @@ class AIFPLEvaluator:
 
         return ''.join(result)
 
-    def _is_close_to_nice_number(self, value: float) -> Optional[float]:
+    def _is_close_to_nice_number(self, value: float) -> float | None:
         """Check if a float is very close to a 'nice' number and return the nice number if so."""
         # Check if it's close to common fractions with small denominators
         for denominator in range(1, 11):  # Check denominators 1-10
