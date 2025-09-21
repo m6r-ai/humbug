@@ -111,62 +111,62 @@ class TestErrors:
             aifpl.evaluate("(+ 1 2) (+ 3 4)")
 
     def test_invalid_lambda_syntax_parse_error(self, aifpl):
-        """Test that invalid lambda syntax causes parse errors."""
-        with pytest.raises(AIFPLParseError, match="Lambda expression requires exactly 3 elements"):
+        """Test that invalid lambda syntax causes evaluation errors (pure list approach)."""
+        with pytest.raises(AIFPLEvalError, match="Lambda expression requires exactly 3 elements"):
             aifpl.evaluate("(lambda)")
 
-        with pytest.raises(AIFPLParseError, match="Lambda expression requires exactly 3 elements"):
+        with pytest.raises(AIFPLEvalError, match="Lambda expression requires exactly 3 elements"):
             aifpl.evaluate("(lambda (x))")  # Missing body
 
-        with pytest.raises(AIFPLParseError, match="Lambda expression requires exactly 3 elements"):
+        with pytest.raises(AIFPLEvalError, match="Lambda expression requires exactly 3 elements"):
             aifpl.evaluate("(lambda (x) (+ x 1) extra)")  # Too many elements
 
     def test_invalid_lambda_parameters_parse_error(self, aifpl):
-        """Test that invalid lambda parameters cause parse errors."""
-        with pytest.raises(AIFPLParseError, match="Lambda parameter must be a symbol"):
+        """Test that invalid lambda parameters cause evaluation errors (pure list approach)."""
+        with pytest.raises(AIFPLEvalError, match="Lambda parameter must be a symbol"):
             aifpl.evaluate("(lambda (1) (+ 1 1))")  # Number as parameter
 
-        with pytest.raises(AIFPLParseError, match="Lambda parameter must be a symbol"):
+        with pytest.raises(AIFPLEvalError, match="Lambda parameter must be a symbol"):
             aifpl.evaluate('(lambda ("x") (+ x 1))')  # String as parameter
 
     def test_duplicate_lambda_parameters_parse_error(self, aifpl):
-        """Test that duplicate lambda parameters cause parse errors."""
-        with pytest.raises(AIFPLParseError, match="Duplicate lambda parameters"):
+        """Test that duplicate lambda parameters cause evaluation errors (pure list approach)."""
+        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
             aifpl.evaluate("(lambda (x x) (+ x x))")
 
-        with pytest.raises(AIFPLParseError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
             aifpl.evaluate("(lambda (x y x) (+ x y))")
 
     def test_invalid_let_syntax_parse_error(self, aifpl):
-        """Test that invalid let syntax causes parse errors."""
-        with pytest.raises(AIFPLParseError, match="Let expression requires exactly 3 elements"):
+        """Test that invalid let syntax causes evaluation errors (pure list approach)."""
+        with pytest.raises(AIFPLEvalError, match="Let expression requires exactly 3 elements"):
             aifpl.evaluate("(let)")
 
-        with pytest.raises(AIFPLParseError, match="Let expression requires exactly 3 elements"):
+        with pytest.raises(AIFPLEvalError, match="Let expression requires exactly 3 elements"):
             aifpl.evaluate("(let ((x 1)))")  # Missing body
 
     def test_invalid_let_binding_syntax_parse_error(self, aifpl):
-        """Test that invalid let binding syntax causes parse errors."""
-        with pytest.raises(AIFPLParseError, match="Let binding must be a list of 2 elements"):
+        """Test that invalid let binding syntax causes evaluation errors (pure list approach)."""
+        with pytest.raises(AIFPLEvalError, match="Let binding must be a list of 2 elements"):
             aifpl.evaluate("(let ((x)) x)")  # Binding without value
 
-        with pytest.raises(AIFPLParseError, match="Let binding must be a list of 2 elements"):
+        with pytest.raises(AIFPLEvalError, match="Let binding must be a list of 2 elements"):
             aifpl.evaluate("(let ((x 1 2)) x)")  # Binding with too many elements
 
     def test_invalid_let_binding_variable_parse_error(self, aifpl):
-        """Test that invalid let binding variables cause parse errors."""
-        with pytest.raises(AIFPLParseError, match="Let binding variable must be a symbol"):
+        """Test that invalid let binding variables cause evaluation errors (pure list approach)."""
+        with pytest.raises(AIFPLEvalError, match="Let binding variable must be a symbol"):
             aifpl.evaluate("(let ((1 5)) 1)")  # Number as variable
 
-        with pytest.raises(AIFPLParseError, match="Let binding variable must be a symbol"):
+        with pytest.raises(AIFPLEvalError, match="Let binding variable must be a symbol"):
             aifpl.evaluate('(let (("x" 5)) x)')  # String as variable
 
     def test_duplicate_let_binding_variables_parse_error(self, aifpl):
-        """Test that duplicate let binding variables cause parse errors."""
-        with pytest.raises(AIFPLParseError, match="Duplicate let binding variables"):
+        """Test that duplicate let binding variables cause evaluation errors (pure list approach)."""
+        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
             aifpl.evaluate("(let ((x 1) (x 2)) x)")
 
-        with pytest.raises(AIFPLParseError, match="Duplicate let binding variables"):
+        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
             aifpl.evaluate("(let ((x 1) (y 2) (x 3)) (+ x y))")
 
     # ========== Evaluation Errors ==========

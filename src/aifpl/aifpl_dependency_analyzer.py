@@ -3,8 +3,8 @@
 from typing import Dict, List, Set, Tuple
 from dataclasses import dataclass
 
-from aifpl.aifpl_parser import AIFPLSExpression, AIFPLFunctionCall, AIFPLLambdaExpr, AIFPLLetExpr
-from aifpl.aifpl_value import AIFPLSymbol
+from aifpl.aifpl_parser import AIFPLSExpression
+from aifpl.aifpl_value import AIFPLSymbol, AIFPLList
 
 
 @dataclass
@@ -71,30 +71,63 @@ class DependencyAnalyzer:
         if isinstance(expr, AIFPLSymbol):
             free_vars.add(expr.name)
 
-        elif isinstance(expr, AIFPLFunctionCall):
-            free_vars.update(self._find_free_variables(expr.function))
-            for arg in expr.arguments:
-                free_vars.update(self._find_free_variables(arg))
+        elif isinstance(expr, AIFPLList):
+            if not expr.is_empty():
+                first_elem = expr.first()
 
-        elif isinstance(expr, AIFPLLambdaExpr):
-            # Find free variables in body, excluding parameters
-            body_vars = self._find_free_variables(expr.body)
-            param_names = set(expr.parameters)
-            free_vars.update(body_vars - param_names)
+                # Handle special forms
+                if isinstance(first_elem, AIFPLSymbol):
+                    if first_elem.name == "lambda":
+                        # (lambda (params...) body)
+                        if expr.length() == 3:
+                            param_list = expr.get(1)
+                            body = expr.get(2)
 
-        elif isinstance(expr, AIFPLLetExpr):
-            # Handle nested lets
-            binding_names = {name for name, _ in expr.bindings}
+                            # Extract parameter names
+                            param_names = set()
+                            if isinstance(param_list, AIFPLList):
+                                for param in param_list.elements:
+                                    if isinstance(param, AIFPLSymbol):
+                                        param_names.add(param.name)
 
-            # Free variables in binding expressions
-            for _, binding_expr in expr.bindings:
-                free_vars.update(self._find_free_variables(binding_expr))
+                            # Find free variables in body, excluding parameters
+                            body_vars = self._find_free_variables(body)
+                            free_vars.update(body_vars - param_names)
 
-            # Free variables in body, excluding bound names
-            body_vars = self._find_free_variables(expr.body)
-            free_vars.update(body_vars - binding_names)
+                        return free_vars
 
-        # For other expression types (numbers, strings, lists, etc.), no free variables
+                    elif first_elem.name == "let":
+                        # (let ((var1 val1) (var2 val2) ...) body)
+                        if expr.length() == 3:
+                            binding_list = expr.get(1)
+                            body = expr.get(2)
+
+                            binding_names = set()
+
+                            # Process bindings
+                            if isinstance(binding_list, AIFPLList):
+                                for binding in binding_list.elements:
+                                    if isinstance(binding, AIFPLList) and binding.length() == 2:
+                                        var_name = binding.get(0)
+                                        var_value = binding.get(1)
+
+                                        if isinstance(var_name, AIFPLSymbol):
+                                            binding_names.add(var_name.name)
+
+                                        # Free variables in binding expressions
+                                        free_vars.update(self._find_free_variables(var_value))
+
+                            # Free variables in body, excluding bound names
+                            body_vars = self._find_free_variables(body)
+                            free_vars.update(body_vars - binding_names)
+
+                        return free_vars
+
+                # Regular list - process all elements
+                for elem in expr.elements:
+                    free_vars.update(self._find_free_variables(elem))
+
+        # For other expression types (numbers, strings, booleans, etc.), no free variables
         return free_vars
 
     def _find_strongly_connected_components(self, graph: Dict[str, Set[str]]) -> List[Set[str]]:

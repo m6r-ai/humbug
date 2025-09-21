@@ -1,44 +1,15 @@
 """Parser for AIFPL expressions."""
 
 from dataclasses import dataclass
-from typing import List, Union, Tuple
+from typing import List, Union
 
 from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
 
 
-@dataclass
-class AIFPLLambdaExpr:
-    """Lambda expression AST node."""
-    parameters: List[str]
-    body: 'AIFPLSExpression'
-    position: int = 0
-
-
-@dataclass
-class AIFPLLetExpr:
-    """Let expression AST node."""
-    bindings: List[Tuple[str, 'AIFPLSExpression']]
-    body: 'AIFPLSExpression'
-    position: int = 0
-
-
-@dataclass
-class AIFPLFunctionCall:
-    """Function call AST node."""
-    function: 'AIFPLSExpression'
-    arguments: List['AIFPLSExpression']
-    position: int = 0
-
-
-# S-Expression type now includes all AIFPLValue types and special forms
-AIFPLSExpression = Union[
-    AIFPLValue,
-    AIFPLLambdaExpr,
-    AIFPLLetExpr,
-    AIFPLFunctionCall
-]
+# S-Expression type is now just AIFPLValue - everything is data
+AIFPLSExpression = AIFPLValue
 
 
 @dataclass
@@ -50,7 +21,7 @@ class AIFPLParsedExpression:
 
 
 class AIFPLParser:
-    """Parses tokens into an Abstract Syntax Tree."""
+    """Parses tokens into an Abstract Syntax Tree using pure list representation."""
 
     def __init__(self, tokens: List[AIFPLToken]):
         """
@@ -102,7 +73,7 @@ class AIFPLParser:
         raise AIFPLParseError(f"Unexpected token: {self.current_token.value} at position {self.current_token.position}")
 
     def _parse_list(self, start_pos: int) -> AIFPLParsedExpression:
-        """Parse (operator arg1 arg2 ...) or special forms."""
+        """Parse (element1 element2 ...) - everything is just a list."""
         self._consume(AIFPLTokenType.LPAREN)
 
         elements = []
@@ -118,130 +89,10 @@ class AIFPLParser:
         end_pos = self.current_token.position
         self._consume(AIFPLTokenType.RPAREN)
 
-        # Handle empty lists - return as AIFPLList
-        if not elements:
-            empty_list = AIFPLList()
-            return AIFPLParsedExpression(empty_list, start_pos, end_pos)
-
-        # Check for special forms first
-        if isinstance(elements[0], AIFPLSymbol):
-            if elements[0].name == "lambda":
-                lambda_expr = self._parse_lambda_form(elements, start_pos)
-                return AIFPLParsedExpression(lambda_expr, start_pos, end_pos)
-
-            if elements[0].name == "let":
-                let_expr = self._parse_let_form(elements, start_pos)
-                return AIFPLParsedExpression(let_expr, start_pos, end_pos)
-
-        # Regular function call - create AIFPLFunctionCall object
-        func_call = AIFPLFunctionCall(
-            function=elements[0],
-            arguments=elements[1:],
-            position=start_pos
-        )
-        return AIFPLParsedExpression(func_call, start_pos, end_pos)
-
-    def _parse_lambda_form(self, elements: List[AIFPLSExpression], start_pos: int) -> AIFPLLambdaExpr:
-        """Parse (lambda (param1 param2 ...) body)."""
-        if len(elements) != 3:
-            raise AIFPLParseError(
-                f"Lambda expression requires exactly 3 elements: (lambda (params...) body) at position {start_pos}"
-            )
-
-        # Parse parameter list
-        param_expr = elements[1]
-
-        # Extract parameters and ensure they're all symbols
-        raw_parameters: List[AIFPLSExpression] = []
-
-        # Handle different parameter list formats
-        if isinstance(param_expr, AIFPLFunctionCall):
-            # For lambda parameters, we expect (param1 param2 ...) which becomes AIFPLFunctionCall(param1, [param2, ...])
-            raw_parameters = [param_expr.function] + param_expr.arguments
-
-        elif isinstance(param_expr, AIFPLList):
-            # Empty parameter lists: () -> AIFPLList([])
-            raw_parameters = list(param_expr.elements)
-
-        else:
-            # Single parameter without parentheses (not standard but handle gracefully)
-            if not isinstance(param_expr, AIFPLSymbol):
-                raise AIFPLParseError(
-                    f"Lambda parameter list must be a list or symbol, got {type(param_expr).__name__} at position {start_pos}"
-                )
-
-            raw_parameters = [param_expr]
-
-        # Validate parameters are all symbols and convert them
-        parameters: List[str] = []
-        for param in raw_parameters:
-            if not isinstance(param, AIFPLSymbol):
-                raise AIFPLParseError(f"Lambda parameter must be a symbol, got {type(param).__name__} at position {start_pos}")
-
-            parameters.append(param.name)
-
-        # Check for duplicate parameters
-        if len(parameters) != len(set(parameters)):
-            duplicates = [p for p in parameters if parameters.count(p) > 1]
-            raise AIFPLParseError(f"Duplicate lambda parameters: {duplicates} at position {start_pos}")
-
-        body = elements[2]
-
-        return AIFPLLambdaExpr(parameters=parameters, body=body, position=start_pos)
-
-    def _parse_let_form(self, elements: List[AIFPLSExpression], start_pos: int) -> AIFPLLetExpr:
-        """Parse (let ((var1 val1) (var2 val2) ...) body)."""
-        if len(elements) != 3:
-            raise AIFPLParseError(f"Let expression requires exactly 3 elements: (let ((bindings...)) body) at position {start_pos}")
-
-        # Parse binding list
-        binding_expr = elements[1]
-
-        # Convert to list of binding expressions
-        if isinstance(binding_expr, AIFPLFunctionCall):
-            # For let bindings, we expect ((var1 val1) (var2 val2) ...)
-            # which becomes AIFPLFunctionCall((var1 val1), [(var2 val2), ...])
-            binding_list = [binding_expr.function] + binding_expr.arguments
-
-        elif isinstance(binding_expr, AIFPLList):
-            binding_list = list(binding_expr.elements)
-
-        else:
-            raise AIFPLParseError(f"Let binding list must be a list, got {type(binding_expr).__name__} at position {start_pos}")
-
-        bindings = []
-        for binding in binding_list:
-            # Each binding might be a AIFPLFunctionCall or AIFPLList
-            if isinstance(binding, AIFPLFunctionCall):
-                # (var val) becomes AIFPLFunctionCall(var, [val])
-                if len(binding.arguments) != 1:
-                    raise AIFPLParseError(f"Let binding must be a list of 2 elements: (var value) at position {start_pos}")
-
-                var_name = binding.function
-                var_value = binding.arguments[0]
-
-            elif isinstance(binding, AIFPLList) and binding.length() == 2:
-                var_name, var_value = binding.elements
-
-            else:
-                raise AIFPLParseError(f"Let binding must be a list of 2 elements: (var value) at position {start_pos}")
-
-            if not isinstance(var_name, AIFPLSymbol):
-                raise AIFPLParseError(
-                    f"Let binding variable must be a symbol, got {type(var_name).__name__} at position {start_pos}"
-                )
-
-            bindings.append((var_name.name, var_value))
-
-        # Check for duplicate binding names
-        var_names = [name for name, _ in bindings]
-        if len(var_names) != len(set(var_names)):
-            duplicates = [name for name in var_names if var_names.count(name) > 1]
-            raise AIFPLParseError(f"Duplicate let binding variables: {duplicates} at position {start_pos}")
-
-        body = elements[2]
-
-        return AIFPLLetExpr(bindings=bindings, body=body, position=start_pos)
+        # Create AIFPLList - no special handling for lambda, let, function calls
+        # Everything is just data (lists and atoms)
+        list_value = AIFPLList(tuple(elements))
+        return AIFPLParsedExpression(list_value, start_pos, end_pos)
 
     def _parse_atom(self, start_pos: int) -> AIFPLParsedExpression:
         """Parse an atomic value and convert to appropriate AIFPLValue."""

@@ -25,12 +25,12 @@ class TestFunctional:
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_lambda_parameter_validation(self, aifpl):
-        """Test lambda parameter validation."""
+        """Test lambda parameter validation (pure list approach - evaluation errors)."""
         # Duplicate parameters should cause error
-        with pytest.raises(AIFPLParseError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
             aifpl.evaluate('(lambda (x x) (+ x x))')
 
-        with pytest.raises(AIFPLParseError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
             aifpl.evaluate('(lambda (x y x) (+ x y))')
 
     def test_lambda_arity_checking(self, aifpl):
@@ -95,11 +95,11 @@ class TestFunctional:
         )
 
     def test_let_duplicate_binding_error(self, aifpl):
-        """Test that duplicate binding names in let cause error."""
-        with pytest.raises(AIFPLParseError, match="Duplicate let binding variables"):
+        """Test that duplicate binding names in let cause error (pure list approach - evaluation errors)."""
+        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
             aifpl.evaluate('(let ((x 1) (x 2)) x)')
 
-        with pytest.raises(AIFPLParseError, match="Duplicate let binding variables"):
+        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
             aifpl.evaluate('(let ((x 1) (y 2) (x 3)) (+ x y))')
 
     def test_lambda_closures(self, aifpl, helpers):

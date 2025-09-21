@@ -16,7 +16,7 @@ from aifpl.aifpl_value import (
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_parser import (
-    AIFPLParser, AIFPLParsedExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall
+    AIFPLParser, AIFPLParsedExpression, AIFPLSExpression
 )
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLTailCall, AIFPLCallStack
@@ -36,8 +36,7 @@ __all__ = [
 
     # Lower-level components
     "AIFPLToken", "AIFPLTokenType", 
-    "AIFPLTokenizer", "AIFPLParser", "AIFPLParsedExpression", "AIFPLLambdaExpr",
-    "AIFPLLetExpr", "AIFPLFunctionCall",
+    "AIFPLTokenizer", "AIFPLParser", "AIFPLParsedExpression", "AIFPLSExpression",
     "AIFPLEvaluator", "AIFPLEnvironment", "AIFPLTailCall", "AIFPLCallStack",
     "DependencyAnalyzer", "BindingGroup"
 ]

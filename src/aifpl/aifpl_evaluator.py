@@ -1,11 +1,11 @@
-"""Evaluator for AIFPL Abstract Syntax Trees using AIFPLValue hierarchy."""
+"""Evaluator for AIFPL Abstract Syntax Trees using pure list representation."""
 
 import cmath
 import math
-from typing import Any, Dict, List, Union, Optional
+from typing import Any, Dict, List, Union, Optional, Tuple
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_parser import AIFPLSExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall
+from aifpl.aifpl_parser import AIFPLSExpression
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLTailCall, AIFPLCallStack
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction
@@ -13,8 +13,31 @@ from aifpl.aifpl_value import (
 from aifpl.aifpl_dependency_analyzer import DependencyAnalyzer, BindingGroup
 
 
+class AIFPLBuiltinFunction(AIFPLValue):
+    """Represents a built-in function/operator that can be used in higher-order contexts."""
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def to_python(self) -> str:
+        return self.name
+
+    @classmethod
+    def from_python(cls, value: str) -> 'AIFPLBuiltinFunction':
+        return cls(value)
+
+    def type_name(self) -> str:
+        return "builtin-function"
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, AIFPLBuiltinFunction) and self.name == other.name
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name))
+
+
 class AIFPLEvaluator:
-    """Evaluates AIFPL Abstract Syntax Trees using AIFPLValue objects."""
+    """Evaluates AIFPL Abstract Syntax Trees using pure list representation."""
 
     # Mathematical constants
     CONSTANTS = {
@@ -199,10 +222,10 @@ class AIFPLEvaluator:
             for name, value in self.CONSTANTS.items():
                 env = env.define(name, value)
 
-            # Add built-in operators to global environment as strings (operator names)
-            # This allows symbol lookup to succeed, and the evaluator will handle them as built-ins
+            # Add built-in operators to global environment as builtin function objects
+            # This allows symbol lookup to succeed, and they can be used in higher-order contexts
             for operator_name in self.OPERATORS:
-                env = env.define(operator_name, AIFPLString(operator_name))
+                env = env.define(operator_name, AIFPLBuiltinFunction(operator_name))
 
         try:
             return self._evaluate_expression(expr, env, depth)
@@ -247,32 +270,147 @@ class AIFPLEvaluator:
 
                 raise
 
-        # List evaluation - just return the list as-is
+        # List evaluation - check for special forms
         if isinstance(expr, AIFPLList):
-            return expr
+            # Empty list evaluates to itself
+            if expr.is_empty():
+                return expr
 
-        # Lambda expression
-        if isinstance(expr, AIFPLLambdaExpr):
-            return AIFPLFunction(
-                parameters=tuple(expr.parameters),
-                body=expr.body,
-                closure_env=env,
-                name="<lambda>"
-            )
+            # Non-empty list - check first element for special forms
+            first_elem = expr.first()
+            if isinstance(first_elem, AIFPLSymbol):
+                if first_elem.name == "lambda":
+                    return self._evaluate_lambda_form(expr, env, depth + 1)
 
-        # Let expression
-        if isinstance(expr, AIFPLLetExpr):
-            return self._evaluate_let_expression(expr, env, depth + 1)
+                if first_elem.name == "let":
+                    return self._evaluate_let_form(expr, env, depth + 1)
 
-        # Function call
-        if isinstance(expr, AIFPLFunctionCall):
+                # Regular function call (including built-ins and user functions)
+                return self._evaluate_function_call(expr, env, depth + 1)
+
+            # First element is not a symbol - evaluate as function call anyway
             return self._evaluate_function_call(expr, env, depth + 1)
 
         raise AIFPLEvalError(f"Invalid expression type: {type(expr).__name__}")
 
+    def _evaluate_lambda_form(
+        self,
+        lambda_list: AIFPLList,
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLFunction:
+        """
+        Evaluate (lambda (param1 param2 ...) body) form.
+
+        Args:
+            lambda_list: List representing lambda expression
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            AIFPLFunction object
+        """
+        if lambda_list.length() != 3:
+            raise AIFPLEvalError(
+                f"Lambda expression requires exactly 3 elements: (lambda (params...) body), got {lambda_list.length()}"
+            )
+
+        # Extract parameter list
+        param_expr = lambda_list.get(1)
+
+        # Extract parameters and ensure they're all symbols
+        raw_parameters: List[AIFPLValue] = []
+
+        if isinstance(param_expr, AIFPLList):
+            # (param1 param2 ...) or ()
+            raw_parameters = list(param_expr.elements)
+
+        else:
+            # Single parameter without parentheses (not standard but handle gracefully)
+            if not isinstance(param_expr, AIFPLSymbol):
+                raise AIFPLEvalError(
+                    f"Lambda parameter list must be a list or symbol, got {type(param_expr).__name__}"
+                )
+
+            raw_parameters = [param_expr]
+
+        # Validate parameters are all symbols and convert them
+        parameters: List[str] = []
+        for param in raw_parameters:
+            if not isinstance(param, AIFPLSymbol):
+                raise AIFPLEvalError(f"Lambda parameter must be a symbol, got {type(param).__name__}")
+
+            parameters.append(param.name)
+
+        # Check for duplicate parameters
+        if len(parameters) != len(set(parameters)):
+            duplicates = [p for p in parameters if parameters.count(p) > 1]
+            raise AIFPLEvalError(f"Duplicate lambda parameters: {duplicates}")
+
+        body = lambda_list.get(2)
+
+        return AIFPLFunction(
+            parameters=tuple(parameters),
+            body=body,
+            closure_env=env,
+            name="<lambda>"
+        )
+
+    def _evaluate_let_form(
+        self,
+        let_list: AIFPLList,
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLValue:
+        """
+        Evaluate (let ((var1 val1) (var2 val2) ...) body) form.
+
+        Args:
+            let_list: List representing let expression
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Result of evaluating the let body
+        """
+        if let_list.length() != 3:
+            raise AIFPLEvalError(f"Let expression requires exactly 3 elements: (let ((bindings...)) body), got {let_list.length()}")
+
+        # Parse binding list
+        binding_expr = let_list.get(1)
+
+        if not isinstance(binding_expr, AIFPLList):
+            raise AIFPLEvalError(f"Let binding list must be a list, got {type(binding_expr).__name__}")
+
+        bindings = []
+        for binding in binding_expr.elements:
+            if not isinstance(binding, AIFPLList) or binding.length() != 2:
+                raise AIFPLEvalError(f"Let binding must be a list of 2 elements: (var value)")
+
+            var_name_expr = binding.get(0)
+            var_value_expr = binding.get(1)
+
+            if not isinstance(var_name_expr, AIFPLSymbol):
+                raise AIFPLEvalError(
+                    f"Let binding variable must be a symbol, got {type(var_name_expr).__name__}"
+                )
+
+            bindings.append((var_name_expr.name, var_value_expr))
+
+        # Check for duplicate binding names
+        var_names = [name for name, _ in bindings]
+        if len(var_names) != len(set(var_names)):
+            duplicates = [name for name in var_names if var_names.count(name) > 1]
+            raise AIFPLEvalError(f"Duplicate let binding variables: {duplicates}")
+
+        body = let_list.get(2)
+
+        return self._evaluate_let_expression(bindings, body, env, depth)
+
     def _evaluate_let_expression(
         self,
-        let_expr: AIFPLLetExpr,
+        bindings: List[Tuple[str, AIFPLSExpression]],
+        body: AIFPLSExpression,
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLValue:
@@ -280,7 +418,8 @@ class AIFPLEvaluator:
         Evaluate let expression with automatic recursion detection.
 
         Args:
-            let_expr: Let expression to evaluate
+            bindings: List of (name, expression) tuples
+            body: Body expression to evaluate
             env: Current environment
             depth: Current recursion depth
 
@@ -289,7 +428,7 @@ class AIFPLEvaluator:
         """
         # Analyze dependencies
         analyzer = DependencyAnalyzer()
-        binding_groups = analyzer.analyze_let_bindings(let_expr.bindings)
+        binding_groups = analyzer.analyze_let_bindings(bindings)
 
         # Evaluate groups in order
         current_env = env.create_child("let")
@@ -302,7 +441,7 @@ class AIFPLEvaluator:
                 current_env = self._evaluate_sequential_binding_group(group, current_env, depth)
 
         # Evaluate body in the final environment
-        return self._evaluate_expression(let_expr.body, current_env, depth)
+        return self._evaluate_expression(body, current_env, depth)
 
     def _evaluate_sequential_binding_group(
         self,
@@ -362,7 +501,7 @@ class AIFPLEvaluator:
 
     def _evaluate_function_call(
         self,
-        func_call: AIFPLFunctionCall,
+        func_list: AIFPLList,
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLValue:
@@ -370,7 +509,7 @@ class AIFPLEvaluator:
         Evaluate function call with tail call optimization.
 
         Args:
-            func_call: Function call to evaluate
+            func_list: List representing function call
             env: Current environment
             depth: Current recursion depth
 
@@ -378,11 +517,11 @@ class AIFPLEvaluator:
             Result of the function call
         """
         # Check if this is a tail call that can be optimized
-        return self._evaluate_tail_optimized_call(func_call, env, depth)
+        return self._evaluate_tail_optimized_call(func_list, env, depth)
 
     def _evaluate_tail_optimized_call(
         self,
-        func_call: AIFPLFunctionCall,
+        func_list: AIFPLList,
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLValue:
@@ -391,23 +530,29 @@ class AIFPLEvaluator:
 
         This method uses iteration instead of recursion for tail calls to prevent stack overflow.
         """
-        current_call = func_call
+        current_call = func_list
         current_env = env
 
         while True:
+            if current_call.is_empty():
+                raise AIFPLEvalError("Cannot call empty list")
+
+            func_expr = current_call.first()
+            arg_exprs = list(current_call.elements[1:])
+
             # Check if the function is a symbol and not a known operator
-            if isinstance(current_call.function, AIFPLSymbol):
-                func_name = current_call.function.name
+            if isinstance(func_expr, AIFPLSymbol):
+                func_name = func_expr.name
                 # If it's not a known operator and not in the environment, it's an unknown operator
                 if func_name not in self.OPERATORS and not current_env.has_binding(func_name):
                     raise AIFPLEvalError(f"Unknown operator: '{func_name}'")
 
             # Evaluate the function expression
             try:
-                func_value = self._evaluate_expression(current_call.function, current_env, depth)
+                func_value = self._evaluate_expression(func_expr, current_env, depth)
             except AIFPLEvalError as e:
-                if "Undefined variable" in str(e) and isinstance(current_call.function, AIFPLSymbol):
-                    func_name = current_call.function.name
+                if "Undefined variable" in str(e) and isinstance(func_expr, AIFPLSymbol):
+                    func_name = func_expr.name
                     if func_name not in self.OPERATORS:
                         raise AIFPLEvalError(f"Unknown operator: '{func_name}'") from e
                 raise AIFPLEvalError(f"Error evaluating function expression: {e}") from e
@@ -415,25 +560,21 @@ class AIFPLEvaluator:
             # Handle different types of functions
             if isinstance(func_value, AIFPLFunction):
                 # User-defined function call
-                result = self._call_lambda_function(func_value, current_call.arguments, current_env, depth)
+                result = self._call_lambda_function(func_value, arg_exprs, current_env, depth)
 
                 # Check if result is a tail call
                 if isinstance(result, AIFPLTailCall):
                     # Continue the loop with the tail call
-                    current_call = AIFPLFunctionCall(
-                        function=result.function,
-                        arguments=result.arguments,
-                        position=current_call.position
-                    )
+                    current_call = AIFPLList((result.function,) + tuple(result.arguments))
                     current_env = result.environment
                     continue
 
                 # Regular result, return it
                 return result
 
-            # Built-in operator (symbols evaluate to their name strings)
-            if isinstance(func_value, AIFPLString) and isinstance(current_call.function, AIFPLSymbol):
-                return self._apply_builtin_operator(func_value.value, current_call.arguments, current_env, depth + 1)
+            # Built-in operator 
+            if isinstance(func_value, AIFPLBuiltinFunction) and isinstance(func_expr, AIFPLSymbol):
+                return self._apply_builtin_operator(func_value.name, arg_exprs, current_env, depth + 1)
 
             raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
 
@@ -548,13 +689,15 @@ class AIFPLEvaluator:
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
 
         # Handle if expressions specially - branches are in tail position
-        if isinstance(expr, AIFPLFunctionCall) and isinstance(expr.function, AIFPLSymbol):
-            func_name = expr.function.name
-            if func_name == 'if':
-                if len(expr.arguments) != 3:
-                    raise AIFPLEvalError(f"if requires exactly 3 arguments, got {len(expr.arguments)}")
+        if isinstance(expr, AIFPLList) and not expr.is_empty():
+            first_elem = expr.first()
+            if isinstance(first_elem, AIFPLSymbol) and first_elem.name == 'if':
+                if expr.length() != 4:
+                    raise AIFPLEvalError(f"if requires exactly 3 arguments, got {expr.length() - 1}")
 
-                condition_expr, then_expr, else_expr = expr.arguments
+                condition_expr = expr.get(1)
+                then_expr = expr.get(2)
+                else_expr = expr.get(3)
 
                 # Evaluate condition (not in tail position)
                 condition = self._evaluate_expression(condition_expr, env, depth + 1)
@@ -569,23 +712,26 @@ class AIFPLEvaluator:
                 return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
 
         # Handle function calls - check for tail calls
-        if isinstance(expr, AIFPLFunctionCall):
+        if isinstance(expr, AIFPLList) and not expr.is_empty():
             # Evaluate the function
-            func_value = self._evaluate_expression(expr.function, env, depth + 1)
+            func_expr = expr.first()
+            func_value = self._evaluate_expression(func_expr, env, depth + 1)
 
             # If it's a lambda function, check for recursion (simple or mutual)
             if isinstance(func_value, AIFPLFunction):
                 # Use the call chain we're tracking
                 if self._is_recursive_call(func_value, self.call_chain):
                     # This is a recursive call (simple or mutual)!
+                    arg_exprs = list(expr.elements[1:])
                     return AIFPLTailCall(
-                        function=expr.function,
-                        arguments=expr.arguments,
+                        function=func_expr,
+                        arguments=arg_exprs,
                         environment=env
                     )
 
                 # Don't fall back to regular recursion!
-                return self._call_lambda_function(func_value, expr.arguments, env, depth + 1)
+                arg_exprs = list(expr.elements[1:])
+                return self._call_lambda_function(func_value, arg_exprs, env, depth + 1)
 
             # Built-in function, evaluate normally
             return self._evaluate_function_call(expr, env, depth + 1)
@@ -928,7 +1074,7 @@ class AIFPLEvaluator:
             return AIFPLBoolean(isinstance(args[0], AIFPLList))
 
         if operator == 'function?':
-            return AIFPLBoolean(isinstance(args[0], AIFPLFunction))
+            return AIFPLBoolean(isinstance(args[0], (AIFPLFunction, AIFPLBuiltinFunction)))
 
         # List predicates
         if operator == 'null?':
@@ -1595,7 +1741,7 @@ class AIFPLEvaluator:
             result_elements = []
             for item in list_value.elements:
                 # Create a function call with the item as argument
-                item_call = AIFPLFunctionCall(function=func_expr, arguments=[item], position=0)
+                item_call = AIFPLList((func_expr, item))
                 item_result = self._evaluate_function_call(item_call, env, depth + 1)
                 result_elements.append(item_result)
 
@@ -1616,7 +1762,7 @@ class AIFPLEvaluator:
             result_elements = []
             for item in list_value.elements:
                 # Create a function call with the item as argument
-                pred_call = AIFPLFunctionCall(function=pred_expr, arguments=[item], position=0)
+                pred_call = AIFPLList((pred_expr, item))
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, AIFPLBoolean):
@@ -1633,16 +1779,27 @@ class AIFPLEvaluator:
 
             func_expr, init_expr, list_expr = args
 
-            # Evaluate initial value and list
+            # Evaluate the function, initial value and list
+            func_value = self._evaluate_expression(func_expr, env, depth + 1)
             accumulator = self._evaluate_expression(init_expr, env, depth + 1)
             list_value = self._evaluate_expression(list_expr, env, depth + 1)
+
+            if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+                raise AIFPLEvalError(f"fold requires function as first argument, got {func_value.type_name()}")
+
             if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(f"fold requires list as third argument, got {list_value.type_name()}")
 
             # Fold over the list
             for item in list_value.elements:
                 # Create a function call with accumulator and item as arguments
-                fold_call = AIFPLFunctionCall(function=func_expr, arguments=[accumulator, item], position=0)
+                if isinstance(func_value, AIFPLBuiltinFunction):
+                    # For built-in functions, create a list to call
+                    fold_call = AIFPLList((AIFPLSymbol(func_value.name), accumulator, item))
+                else:
+                    # For user functions, use the function expression
+                    fold_call = AIFPLList((func_expr, accumulator, item))
+
                 accumulator = self._evaluate_function_call(fold_call, env, depth + 1)
 
             return accumulator
@@ -1704,7 +1861,7 @@ class AIFPLEvaluator:
             # Find first element matching predicate
             for item in list_value.elements:
                 # Create a function call with the item as argument
-                pred_call = AIFPLFunctionCall(function=pred_expr, arguments=[item], position=0)
+                pred_call = AIFPLList((pred_expr, item))
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, AIFPLBoolean):
@@ -1729,7 +1886,7 @@ class AIFPLEvaluator:
             # Check if any element matches predicate
             for item in list_value.elements:
                 # Create a function call with the item as argument
-                pred_call = AIFPLFunctionCall(function=pred_expr, arguments=[item], position=0)
+                pred_call = AIFPLList((pred_expr, item))
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, AIFPLBoolean):
@@ -1754,7 +1911,7 @@ class AIFPLEvaluator:
             # Check if all elements match predicate
             for item in list_value.elements:
                 # Create a function call with the item as argument
-                pred_call = AIFPLFunctionCall(function=pred_expr, arguments=[item], position=0)
+                pred_call = AIFPLList((pred_expr, item))
                 pred_result = self._evaluate_function_call(pred_call, env, depth + 1)
 
                 if not isinstance(pred_result, AIFPLBoolean):
@@ -1829,6 +1986,10 @@ class AIFPLEvaluator:
             # Format lambda functions
             param_str = " ".join(result.parameters)
             return f"<lambda ({param_str})>"
+
+        if isinstance(result, AIFPLBuiltinFunction):
+            # Format builtin functions
+            return f"<builtin {result.name}>"
 
         # For other types, use standard string representation
         return str(result)

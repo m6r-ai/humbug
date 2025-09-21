@@ -4,6 +4,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 
 ## Features
 
+- **Pure list representation**: Everything is data - true homoiconicity like traditional Lisp
 - **S-expression syntax**: `(operator arg1 arg2 ...)`
 - **Mathematical operations**: Arithmetic, trigonometry, logarithms, bitwise operations
 - **String operations**: Manipulation, searching, conversion with full UTF-8 support
@@ -24,7 +25,16 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Result simplification**: Complex numbers with negligible imaginary parts become real
 - **Comments**: `;` introduces comments
 
-## Package Structure
+## Architecture
+
+AIFPL uses a **pure list representation** for all code, following traditional Lisp philosophy:
+
+- **Everything is data**: Code and data have identical representation (`AIFPLValue` objects)
+- **No special AST nodes**: Lambda expressions, let expressions, and function calls are all just lists
+- **Homoiconic**: The same data structures represent both code and data
+- **Simple and consistent**: One unified representation for all expressions
+
+### Package Structure
 
 ```
 src/aifpl/
@@ -33,10 +43,18 @@ src/aifpl/
 ├── aifpl_error.py           # Exception classes
 ├── aifpl_token.py           # Token types and definitions
 ├── aifpl_tokenizer.py       # Tokenizer implementation
-├── aifpl_parser.py          # Parser and AST definitions
+├── aifpl_parser.py          # Parser (creates AIFPLValue objects)
 ├── aifpl_evaluator.py       # Expression evaluator
-└── aifpl_environment.py     # Environment and function management
+├── aifpl_environment.py     # Environment and function management
+├── aifpl_value.py           # Value hierarchy (AIFPLValue types)
+└── aifpl_dependency_analyzer.py  # Let binding dependency analysis
 ```
+
+### Core Types
+
+- **AIFPLValue**: Base class for all values (numbers, strings, booleans, symbols, lists, functions)
+- **AIFPLSExpression**: Type alias for `AIFPLValue` (everything is a value)
+- **No special AST nodes**: Eliminated `AIFPLLambdaExpr`, `AIFPLLetExpr`, `AIFPLFunctionCall`
 
 ## Usage
 
@@ -957,6 +975,32 @@ AIFPL has a strict type system with the following types:
 4. **Arity checking**: Function calls must provide exact number of parameters
 5. **Identity equality**: Each lambda creates a unique function object
 
+## Pure List Representation Benefits
+
+The pure list approach provides several advantages:
+
+1. **True homoiconicity**: Code and data have identical representation
+2. **Simpler architecture**: Only `AIFPLValue` types, no special AST nodes
+3. **Traditional Lisp semantics**: Everything is data, following Lisp philosophy
+4. **Easier to understand**: One consistent representation for all expressions
+5. **Future extensibility**: Natural foundation for features like macros
+6. **Reduced complexity**: Fewer types, simpler parser, more straightforward evaluator
+
+### Internal Representation Examples
+
+```aifpl
+; Lambda expression: (lambda (x) (* x x))
+; Represented as: AIFPLList([AIFPLSymbol("lambda"), AIFPLList([AIFPLSymbol("x")]), AIFPLList([...])])
+
+; Let expression: (let ((x 5)) (+ x 1))
+; Represented as: AIFPLList([AIFPLSymbol("let"), AIFPLList([AIFPLList([...])]), ...])
+
+; Function call: (+ 1 2 3)
+; Represented as: AIFPLList([AIFPLSymbol("+"), AIFPLNumber(1), AIFPLNumber(2), AIFPLNumber(3)])
+```
+
+The evaluator recognizes special forms by examining the first element of lists, maintaining the traditional Lisp approach where syntax is determined by structure, not by special types.
+
 ## Common Usage Patterns
 
 ### Functional Data Processing
@@ -1199,16 +1243,18 @@ Functions capture their lexical environment, creating closures:
 
 ## Design Principles
 
-1. **Functional Programming**: First-class functions, immutable data, no side effects
-2. **Lexical Scoping**: Variables resolved in their definition environment
-3. **Tail Call Optimization**: Automatic optimization for recursive patterns
-4. **Type Safety**: Comprehensive type hints and strict type checking
-5. **Error Handling**: Detailed error messages with position information
-6. **Performance**: Efficient evaluation with automatic optimizations
-7. **LISP Compatibility**: Following traditional LISP semantics where applicable
-8. **Lazy Evaluation**: Conditionals and boolean operators use lazy evaluation
-9. **Independence**: No dependencies on external packages
-10. **Simplicity**: Direct S-expression evaluation without over-engineering
+1. **Pure List Representation**: Everything is data, following traditional Lisp philosophy
+2. **Functional Programming**: First-class functions, immutable data, no side effects
+3. **Lexical Scoping**: Variables resolved in their definition environment
+4. **Tail Call Optimization**: Automatic optimization for recursive patterns
+5. **Type Safety**: Comprehensive type hints and strict type checking
+6. **Error Handling**: Detailed error messages with position information
+7. **Performance**: Efficient evaluation with automatic optimizations
+8. **LISP Compatibility**: Following traditional LISP semantics where applicable
+9. **Lazy Evaluation**: Conditionals and boolean operators use lazy evaluation
+10. **Independence**: No dependencies on external packages
+11. **Simplicity**: Direct S-expression evaluation without over-engineering
+12. **Homoiconicity**: Code and data use identical representations
 
 ## Exception Hierarchy
 
