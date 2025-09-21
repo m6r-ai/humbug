@@ -1,6 +1,5 @@
 """Parser for AIFPL expressions."""
 
-from dataclasses import dataclass
 from typing import List
 
 from aifpl.aifpl_error import AIFPLParseError
@@ -10,14 +9,6 @@ from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean
 
 # S-Expression type is now just AIFPLValue - everything is data
 AIFPLSExpression = AIFPLValue
-
-
-@dataclass
-class AIFPLParsedExpression:
-    """Wrapper to track position info for error reporting."""
-    expr: AIFPLSExpression
-    start_pos: int
-    end_pos: int
 
 
 class AIFPLParser:
@@ -34,12 +25,12 @@ class AIFPLParser:
         self.pos = 0
         self.current_token: AIFPLToken | None = tokens[0] if tokens else None
 
-    def parse(self) -> AIFPLParsedExpression:
+    def parse(self) -> AIFPLValue:
         """
         Parse tokens into AST.
 
         Returns:
-            Parsed expression tree
+            Parsed expression
 
         Raises:
             AIFPLParseError: If parsing fails
@@ -56,7 +47,7 @@ class AIFPLParser:
 
         return expr
 
-    def _parse_expression(self) -> AIFPLParsedExpression:
+    def _parse_expression(self) -> AIFPLValue:
         """Parse a single expression (atom or list)."""
         if self.current_token is None:
             raise AIFPLParseError("Unexpected end of input, expected expression")
@@ -68,11 +59,11 @@ class AIFPLParser:
 
         if self.current_token.type in (AIFPLTokenType.NUMBER, AIFPLTokenType.SYMBOL,
                                        AIFPLTokenType.STRING, AIFPLTokenType.BOOLEAN):
-            return self._parse_atom(start_pos)
+            return self._parse_atom()
 
         raise AIFPLParseError(f"Unexpected token: {self.current_token.value} at position {self.current_token.position}")
 
-    def _parse_list(self, start_pos: int) -> AIFPLParsedExpression:
+    def _parse_list(self, start_pos: int) -> AIFPLList:
         """Parse (element1 element2 ...) - everything is just a list."""
         self._consume(AIFPLTokenType.LPAREN)
 
@@ -81,44 +72,36 @@ class AIFPLParser:
             if self.current_token.type == AIFPLTokenType.EOF:
                 raise AIFPLParseError(f"Unclosed parenthesis starting at position {start_pos}")
 
-            elements.append(self._parse_expression().expr)
+            elements.append(self._parse_expression())
 
         if self.current_token is None:
             raise AIFPLParseError(f"Unterminated list starting at position {start_pos}, expected ')'")
 
-        end_pos = self.current_token.position
         self._consume(AIFPLTokenType.RPAREN)
 
         # Create AIFPLList - no special handling for lambda, let, function calls
         # Everything is just data (lists and atoms)
-        list_value = AIFPLList(tuple(elements))
-        return AIFPLParsedExpression(list_value, start_pos, end_pos)
+        return AIFPLList(tuple(elements))
 
-    def _parse_atom(self, start_pos: int) -> AIFPLParsedExpression:
+    def _parse_atom(self) -> AIFPLValue:
         """Parse an atomic value and convert to appropriate AIFPLValue."""
         assert self.current_token is not None, "_parse_atom called with None token"
 
         token = self.current_token
         self._advance()
 
-        end_pos = start_pos + token.length
-
         # Convert tokens to appropriate AIFPLValue types
         if token.type == AIFPLTokenType.SYMBOL:
-            symbol_value = AIFPLSymbol(token.value, start_pos)
-            return AIFPLParsedExpression(symbol_value, start_pos, end_pos)
+            return AIFPLSymbol(token.value, token.position)
 
         if token.type == AIFPLTokenType.NUMBER:
-            number_value = AIFPLNumber(token.value)
-            return AIFPLParsedExpression(number_value, start_pos, end_pos)
+            return AIFPLNumber(token.value)
 
         if token.type == AIFPLTokenType.STRING:
-            string_value = AIFPLString(token.value)
-            return AIFPLParsedExpression(string_value, start_pos, end_pos)
+            return AIFPLString(token.value)
 
         if token.type == AIFPLTokenType.BOOLEAN:
-            boolean_value = AIFPLBoolean(token.value)
-            return AIFPLParsedExpression(boolean_value, start_pos, end_pos)
+            return AIFPLBoolean(token.value)
 
         raise AIFPLParseError(f"Unexpected token type: {token.type}")
 

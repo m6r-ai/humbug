@@ -48,14 +48,14 @@ class AIFPL:
 
         # Phase 2: Parsing
         parser = AIFPLParser(tokens)
-        parsed = parser.parse()
+        parsed_expr = parser.parse()
 
         # Phase 3: Evaluation
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
         )
-        result = evaluator.evaluate(parsed.expr)
+        result = evaluator.evaluate(parsed_expr)
 
         # Simplify the result
         simplified = evaluator.simplify_result(result)
@@ -84,14 +84,14 @@ class AIFPL:
 
         # Phase 2: Parsing
         parser = AIFPLParser(tokens)
-        parsed = parser.parse()
+        parsed_expr = parser.parse()
 
         # Phase 3: Evaluation
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
         )
-        result = evaluator.evaluate(parsed.expr)
+        result = evaluator.evaluate(parsed_expr)
 
         # Simplify and format the result
         simplified = evaluator.simplify_result(result)

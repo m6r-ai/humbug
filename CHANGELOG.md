@@ -19,6 +19,7 @@ Bug fixes:
   content.
 - Correctly clear down empty line tracking when the terminal display is cleared.
 - The Scheme lexer had a subtle bug that could cause the system to block.
+- Resolve a problem when terminal tabs were moved between columns.
 
 ## v0.25 (2025-09-10)
 
