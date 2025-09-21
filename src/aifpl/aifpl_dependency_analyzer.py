@@ -96,7 +96,7 @@ class DependencyAnalyzer:
 
                         return free_vars
 
-                    elif first_elem.name == "let":
+                    if first_elem.name == "let":
                         # (let ((var1 val1) (var2 val2) ...) body)
                         if expr.length() == 3:
                             binding_list = expr.get(1)

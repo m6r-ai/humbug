@@ -887,11 +887,11 @@ class AIFPLEvaluator:
                     return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
 
                 # Handle lambda expressions - they are NOT tail calls, just return the function
-                elif first_elem.name == 'lambda':
+                if first_elem.name == 'lambda':
                     return self._evaluate_lambda_form(expr, env, depth + 1)
 
                 # Handle let expressions - body is in tail position
-                elif first_elem.name == 'let':
+                if first_elem.name == 'let':
                     return self._evaluate_let_form(expr, env, depth + 1)
 
         # Handle function calls - check for tail calls
