@@ -1,7 +1,7 @@
 """Environment management for AIFPL variable and function scoping."""
 
 from typing import Any, Dict, Optional, List
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -14,14 +14,9 @@ class AIFPLEnvironment:
     Supports nested scopes where inner environments can access outer bindings
     but not vice versa.
     """
-    bindings: Dict[str, Any] = None  # Any = AIFPLValue, avoiding circular import
+    bindings: Dict[str, Any] = field(default_factory=dict)  # Any = AIFPLValue, avoiding circular import
     parent: Optional['AIFPLEnvironment'] = None
     name: str = "anonymous"
-
-    def __post_init__(self) -> None:
-        """Initialize bindings if None."""
-        if self.bindings is None:
-            object.__setattr__(self, 'bindings', {})
 
     def define(self, name: str, value: Any) -> 'AIFPLEnvironment':
         """
@@ -189,6 +184,7 @@ class AIFPLCallStack:
         """
         if self.frames:
             return self.frames.pop()
+
         return None
 
     def peek(self) -> Optional['AIFPLCallStack.CallFrame']:
@@ -200,6 +196,7 @@ class AIFPLCallStack:
         """
         if self.frames:
             return self.frames[-1]
+
         return None
 
     def is_empty(self) -> bool:
@@ -234,6 +231,7 @@ class AIFPLCallStack:
             args_str = ", ".join(f"{k}={repr(v)}" for k, v in frame.arguments.items())
             if args_str:
                 lines.append(f"{indent}{frame.function_name}({args_str})")
+
             else:
                 lines.append(f"{indent}{frame.function_name}()")
 

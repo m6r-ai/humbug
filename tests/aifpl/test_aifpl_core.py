@@ -13,13 +13,13 @@ class TestAIFPLCore:
         """Test AIFPL initializes with default parameters."""
         aifpl = AIFPL()
         assert aifpl.max_depth == 100
-        assert aifpl.imaginary_tolerance == 1e-10
+        assert aifpl.floating_point_tolerance == 1e-10
 
     def test_aifpl_custom_initialization(self, aifpl_custom):
         """Test AIFPL initializes with custom parameters."""
-        aifpl = aifpl_custom(max_depth=200, imaginary_tolerance=1e-12)
+        aifpl = aifpl_custom(max_depth=200, floating_point_tolerance=1e-12)
         assert aifpl.max_depth == 200
-        assert aifpl.imaginary_tolerance == 1e-12
+        assert aifpl.floating_point_tolerance == 1e-12
 
     def test_evaluate_returns_python_objects(self, aifpl):
         """Test that evaluate() returns Python objects."""
@@ -148,19 +148,19 @@ class TestAIFPLCore:
         result = aifpl_normal.evaluate(deep_expr)
         assert result == 7
 
-    def test_imaginary_tolerance_configuration_effect(self, aifpl_custom):
-        """Test that imaginary_tolerance affects complex number simplification."""
+    def test_floating_point_tolerance_configuration_effect(self, aifpl_custom):
+        """Test that floating_point_tolerance affects complex number simplification."""
         # Create complex number with tiny imaginary part
         expr = "(+ 5 (* 1e-15 j))"  # 5 + 1e-15i
 
         # With default tolerance (1e-10), should simplify to real
-        aifpl_default = aifpl_custom(imaginary_tolerance=1e-10)
+        aifpl_default = aifpl_custom(floating_point_tolerance=1e-10)
         result = aifpl_default.evaluate(expr)
         assert result == 5  # Should be simplified to real
         assert isinstance(result, (int, float))
 
         # With very strict tolerance (1e-20), should remain complex
-        aifpl_strict = aifpl_custom(imaginary_tolerance=1e-20)
+        aifpl_strict = aifpl_custom(floating_point_tolerance=1e-20)
         result = aifpl_strict.evaluate(expr)
         assert isinstance(result, complex)
         assert abs(result.imag - 1e-15) < 1e-20

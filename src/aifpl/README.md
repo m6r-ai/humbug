@@ -52,7 +52,7 @@ result = tool.evaluate("(+ 1 2 3)")  # Returns: 6
 ### With Configuration
 
 ```python
-tool = AIFPL(max_depth=200, imaginary_tolerance=1e-12)
+tool = AIFPL(max_depth=200, floating_point_tolerance=1e-12)
 result = tool.evaluate("(sin (* pi 0.5))")  # Returns: 1
 ```
 
@@ -1226,7 +1226,7 @@ Functions capture their lexical environment, creating closures:
 tool = AIFPL(max_depth=500)
 
 # Adjust tolerance for complex number simplification
-tool = AIFPL(imaginary_tolerance=1e-15)
+tool = AIFPL(floating_point_tolerance=1e-15)
 ```
 
 ### Working with Results

@@ -59,7 +59,7 @@ class TestFormatting:
     def test_complex_number_simplification(self, aifpl_custom):
         """Test that complex numbers with negligible imaginary parts are simplified."""
         # Test with default tolerance
-        aifpl_default = aifpl_custom(imaginary_tolerance=1e-10)
+        aifpl_default = aifpl_custom(floating_point_tolerance=1e-10)
 
         # Very small imaginary part should be simplified
         result = aifpl_default.evaluate_and_format("(+ 5 (* 1e-15 j))")

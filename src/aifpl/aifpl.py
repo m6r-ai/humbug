@@ -16,16 +16,16 @@ class AIFPL:
     It coordinates tokenization, parsing, and evaluation phases.
     """
 
-    def __init__(self, max_depth: int = 100, imaginary_tolerance: float = 1e-10):
+    def __init__(self, max_depth: int = 100, floating_point_tolerance: float = 1e-10):
         """
         Initialize AIFPL calculator.
 
         Args:
             max_depth: Maximum recursion depth for expression evaluation
-            imaginary_tolerance: Tolerance for considering imaginary part as zero
+            floating_point_tolerance: Tolerance for floating point comparisons and simplifications
         """
         self.max_depth = max_depth
-        self.imaginary_tolerance = imaginary_tolerance
+        self.floating_point_tolerance = floating_point_tolerance
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
         """
@@ -53,7 +53,7 @@ class AIFPL:
         # Phase 3: Evaluation
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
-            imaginary_tolerance=self.imaginary_tolerance
+            floating_point_tolerance=self.floating_point_tolerance
         )
         result = evaluator.evaluate(parsed.expr)
 
@@ -89,7 +89,7 @@ class AIFPL:
         # Phase 3: Evaluation
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
-            imaginary_tolerance=self.imaginary_tolerance
+            floating_point_tolerance=self.floating_point_tolerance
         )
         result = evaluator.evaluate(parsed.expr)
 

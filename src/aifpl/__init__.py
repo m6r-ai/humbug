@@ -31,8 +31,8 @@ __all__ = [
     "AIFPLError", "AIFPLTokenError", "AIFPLParseError", "AIFPLEvalError",
 
     # Value types
-    "AIFPLValue", "AIFPLNumber", "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList", "AIFPLRecursivePlaceholder", "AIFPLFunction",
-    "python_to_aifpl_value", "aifpl_value_to_python",
+    "AIFPLValue", "AIFPLNumber", "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList",
+    "AIFPLRecursivePlaceholder", "AIFPLFunction", "python_to_aifpl_value", "aifpl_value_to_python",
 
     # Lower-level components
     "AIFPLToken", "AIFPLTokenType", 
