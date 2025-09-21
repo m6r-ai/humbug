@@ -15,9 +15,7 @@ from aifpl.aifpl_value import (
 # Lower-level components (for advanced usage)
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
-from aifpl.aifpl_parser import (
-    AIFPLParser, AIFPLSExpression
-)
+from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLTailCall, AIFPLCallStack
 from aifpl.aifpl_dependency_analyzer import DependencyAnalyzer, BindingGroup
@@ -35,8 +33,7 @@ __all__ = [
     "AIFPLRecursivePlaceholder", "AIFPLFunction", "python_to_aifpl_value", "aifpl_value_to_python",
 
     # Lower-level components
-    "AIFPLToken", "AIFPLTokenType", 
-    "AIFPLTokenizer", "AIFPLParser", "AIFPLSExpression",
+    "AIFPLToken", "AIFPLTokenType", "AIFPLTokenizer", "AIFPLParser",
     "AIFPLEvaluator", "AIFPLEnvironment", "AIFPLTailCall", "AIFPLCallStack",
     "DependencyAnalyzer", "BindingGroup"
 ]

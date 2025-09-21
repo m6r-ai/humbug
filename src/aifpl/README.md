@@ -53,8 +53,6 @@ src/aifpl/
 ### Core Types
 
 - **AIFPLValue**: Base class for all values (numbers, strings, booleans, symbols, lists, functions)
-- **AIFPLSExpression**: Type alias for `AIFPLValue` (everything is a value)
-- **No special AST nodes**: Eliminated `AIFPLLambdaExpr`, `AIFPLLetExpr`, `AIFPLFunctionCall`
 
 ## Usage
 

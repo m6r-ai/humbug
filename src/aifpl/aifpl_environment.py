@@ -1,6 +1,6 @@
 """Environment management for AIFPL variable and function scoping."""
 
-from typing import Any, Dict, Optional, List
+from typing import Dict, Optional, List
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_error import AIFPLEvalError
@@ -136,8 +136,8 @@ class AIFPLEnvironment:
 @dataclass(frozen=True)
 class AIFPLTailCall:
     """Represents a tail call to be optimized."""
-    function: Any  # AIFPLSExpression
-    arguments: List[Any]  # List[AIFPLSExpression]
+    function: AIFPLValue
+    arguments: List[AIFPLValue]
     environment: AIFPLEnvironment
 
 

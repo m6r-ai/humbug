@@ -7,10 +7,6 @@ from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
 
 
-# S-Expression type is now just AIFPLValue - everything is data
-AIFPLSExpression = AIFPLValue
-
-
 class AIFPLParser:
     """Parses tokens into an Abstract Syntax Tree using pure list representation."""
 

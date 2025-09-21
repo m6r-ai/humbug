@@ -3,15 +3,14 @@
 from typing import Dict, List, Set, Tuple
 from dataclasses import dataclass
 
-from aifpl.aifpl_parser import AIFPLSExpression
-from aifpl.aifpl_value import AIFPLSymbol, AIFPLList
+from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList
 
 
 @dataclass
 class BindingGroup:
     """Represents a group of bindings that should be evaluated together."""
     names: Set[str]
-    bindings: List[Tuple[str, AIFPLSExpression]]
+    bindings: List[Tuple[str, AIFPLValue]]
     is_recursive: bool
     depends_on: Set[str]  # Other groups this depends on
 
@@ -19,7 +18,7 @@ class BindingGroup:
 class DependencyAnalyzer:
     """Analyzes dependencies in let bindings to determine evaluation strategy."""
 
-    def analyze_let_bindings(self, bindings: List[Tuple[str, AIFPLSExpression]]) -> List[BindingGroup]:
+    def analyze_let_bindings(self, bindings: List[Tuple[str, AIFPLValue]]) -> List[BindingGroup]:
         """
         Analyze let bindings and group them by dependencies.
 
@@ -64,7 +63,7 @@ class DependencyAnalyzer:
         # Step 4: Sort groups in topological order
         return self._topological_sort_groups(groups)
 
-    def _find_free_variables(self, expr: AIFPLSExpression) -> Set[str]:
+    def _find_free_variables(self, expr: AIFPLValue) -> Set[str]:
         """Find all free variables (symbols) in an expression."""
         free_vars = set()
 

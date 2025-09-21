@@ -5,7 +5,6 @@ import math
 from typing import Any, Dict, List, Union, Optional, Tuple
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_parser import AIFPLSExpression
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLTailCall, AIFPLCallStack
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction
@@ -193,7 +192,7 @@ class AIFPLEvaluator:
 
     def evaluate(
         self,
-        expr: AIFPLSExpression,
+        expr: AIFPLValue,
         env: Optional[AIFPLEnvironment] = None,
         depth: int = 0
     ) -> AIFPLValue:
@@ -241,7 +240,7 @@ class AIFPLEvaluator:
 
     def _evaluate_expression(
         self,
-        expr: AIFPLSExpression,
+        expr: AIFPLValue,
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLValue:
@@ -410,8 +409,8 @@ class AIFPLEvaluator:
 
     def _evaluate_let_expression(
         self,
-        bindings: List[Tuple[str, AIFPLSExpression]],
-        body: AIFPLSExpression,
+        bindings: List[Tuple[str, AIFPLValue]],
+        body: AIFPLValue,
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLValue:
@@ -582,7 +581,7 @@ class AIFPLEvaluator:
     def _call_lambda_function(
         self,
         func: AIFPLFunction,
-        args: List[AIFPLSExpression],
+        args: List[AIFPLValue],
         env: AIFPLEnvironment,
         depth: int
     ) -> Union[AIFPLValue, AIFPLTailCall]:
@@ -645,7 +644,7 @@ class AIFPLEvaluator:
 
     def _call_function_with_evaluated_args(
         self,
-        func_expr: AIFPLSExpression,
+        func_expr: AIFPLValue,
         arg_values: List[AIFPLValue],
         env: AIFPLEnvironment,
         depth: int
@@ -840,7 +839,7 @@ class AIFPLEvaluator:
 
     def _evaluate_with_tail_detection(
         self,
-        expr: AIFPLSExpression,
+        expr: AIFPLValue,
         env: AIFPLEnvironment,
         depth: int,
         current_function: AIFPLFunction
@@ -925,7 +924,7 @@ class AIFPLEvaluator:
     def _apply_builtin_operator(
         self,
         operator: str,
-        args: List[AIFPLSExpression],
+        args: List[AIFPLValue],
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLValue:
@@ -1014,7 +1013,7 @@ class AIFPLEvaluator:
 
     def _apply_if_conditional(
         self,
-        args: List[AIFPLSExpression],
+        args: List[AIFPLValue],
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLValue:
@@ -1048,7 +1047,7 @@ class AIFPLEvaluator:
 
         return self._evaluate_expression(else_expr, env, depth + 1)
 
-    def _apply_and_short_circuit(self, args: List[AIFPLSExpression], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
+    def _apply_and_short_circuit(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
         """Handle AND with short-circuit evaluation."""
         # Empty AND returns True (identity)
         if not args:
@@ -1069,7 +1068,7 @@ class AIFPLEvaluator:
         # All arguments were True
         return AIFPLBoolean(True)
 
-    def _apply_or_short_circuit(self, args: List[AIFPLSExpression], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
+    def _apply_or_short_circuit(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
         """Handle OR with short-circuit evaluation."""
         # Empty OR returns False (identity)
         if not args:
@@ -1904,7 +1903,7 @@ class AIFPLEvaluator:
     def _apply_higher_order_function(
         self,
         operator: str,
-        args: List[AIFPLSExpression],
+        args: List[AIFPLValue],
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLValue:

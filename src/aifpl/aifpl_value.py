@@ -283,7 +283,7 @@ class AIFPLFunction(AIFPLValue):
     and passed around as a value.
     """
     parameters: Tuple[str, ...]
-    body: Any  # AIFPLSExpression, avoiding circular import
+    body: AIFPLValue
     closure_env: Any  # AIFPLEnvironment, avoiding circular import
     name: Optional[str] = None
 
