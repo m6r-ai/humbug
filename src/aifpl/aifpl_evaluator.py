@@ -6,8 +6,9 @@ from typing import Any, Dict, List, Union, Optional
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_parser import AIFPLSExpression, AIFPLLambdaExpr, AIFPLLetExpr, AIFPLFunctionCall
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLFunction, AIFPLTailCall, AIFPLCallStack
-from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
+from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLRecursivePlaceholder
 from aifpl.aifpl_evaluator_operators import AIFPLOperatorMixin
+from aifpl.aifpl_dependency_analyzer import DependencyAnalyzer, BindingGroup
 
 
 class AIFPLEvaluator(AIFPLOperatorMixin):
@@ -277,7 +278,7 @@ class AIFPLEvaluator(AIFPLOperatorMixin):
         depth: int
     ) -> AIFPLValue:
         """
-        Evaluate let expression with sequential binding.
+        Evaluate let expression with automatic recursion detection.
 
         Args:
             let_expr: Let expression to evaluate
@@ -287,20 +288,78 @@ class AIFPLEvaluator(AIFPLOperatorMixin):
         Returns:
             Result of evaluating the let body
         """
-        # Create new environment for let bindings
-        let_env = env.create_child("let")
+        # Analyze dependencies
+        analyzer = DependencyAnalyzer()
+        binding_groups = analyzer.analyze_let_bindings(let_expr.bindings)
 
-        # Sequential binding: each binding can reference previous ones
-        for var_name, var_expr in let_expr.bindings:
+        # Evaluate groups in order
+        current_env = env.create_child("let")
+
+        for group in binding_groups:
+            if group.is_recursive:
+                current_env = self._evaluate_recursive_binding_group(group, current_env, depth)
+
+            else:
+                current_env = self._evaluate_sequential_binding_group(group, current_env, depth)
+
+        # Evaluate body in the final environment
+        return self._evaluate_expression(let_expr.body, current_env, depth)
+
+    def _evaluate_sequential_binding_group(
+        self,
+        group: BindingGroup,
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLEnvironment:
+        """Evaluate a non-recursive binding group sequentially."""
+        current_env = env
+
+        for name, expr in group.bindings:
             try:
-                var_value = self._evaluate_expression(var_expr, let_env, depth)
-                let_env = let_env.define(var_name, var_value)
+                value = self._evaluate_expression(expr, current_env, depth + 1)
+                current_env = current_env.define(name, value)
 
             except AIFPLEvalError as e:
-                raise AIFPLEvalError(f"Error evaluating let binding '{var_name}': {e}") from e
+                raise AIFPLEvalError(f"Error evaluating let binding '{name}': {e}") from e
 
-        # Evaluate body in the let environment
-        return self._evaluate_expression(let_expr.body, let_env, depth)
+        return current_env
+
+    def _evaluate_recursive_binding_group(
+        self,
+        group: BindingGroup,
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLEnvironment:
+        """Evaluate a recursive binding group using recursive placeholders."""
+        # Step 1: Create environment with recursive placeholders
+        recursive_env = env
+        placeholders = {}
+
+        for name, _ in group.bindings:
+            placeholder = AIFPLRecursivePlaceholder(name)
+            placeholders[name] = placeholder
+            recursive_env = recursive_env.define(name, placeholder)
+
+        # Step 2: Evaluate all binding expressions in the recursive environment
+        resolved_values = {}
+        for name, expr in group.bindings:
+            try:
+                value = self._evaluate_expression(expr, recursive_env, depth + 1)
+                resolved_values[name] = value
+
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(f"Error evaluating recursive let binding '{name}': {e}") from e
+
+        # Step 3: Update placeholders with resolved values
+        for name, placeholder in placeholders.items():
+            placeholder.resolve(resolved_values[name])
+
+        # Step 4: Create final environment with resolved values
+        final_env = env
+        for name, value in resolved_values.items():
+            final_env = final_env.define(name, value)
+
+        return final_env
 
     def _evaluate_function_call(
         self,

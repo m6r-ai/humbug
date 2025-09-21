@@ -8,7 +8,7 @@ from aifpl.aifpl_error import AIFPLError, AIFPLTokenError, AIFPLParseError, AIFP
 
 # Value types (new hierarchy)
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList,
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLRecursivePlaceholder,
     python_to_aifpl_value, aifpl_value_to_python
 )
 
@@ -20,6 +20,7 @@ from aifpl.aifpl_parser import (
 )
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLFunction, AIFPLTailCall, AIFPLCallStack
+from aifpl.aifpl_dependency_analyzer import DependencyAnalyzer, BindingGroup
 
 
 __all__ = [
@@ -30,12 +31,13 @@ __all__ = [
     "AIFPLError", "AIFPLTokenError", "AIFPLParseError", "AIFPLEvalError",
 
     # Value types
-    "AIFPLValue", "AIFPLNumber", "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList",
+    "AIFPLValue", "AIFPLNumber", "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList", "AIFPLRecursivePlaceholder",
     "python_to_aifpl_value", "aifpl_value_to_python",
 
     # Lower-level components
     "AIFPLToken", "AIFPLTokenType", 
     "AIFPLTokenizer", "AIFPLParser", "AIFPLParsedExpression", "AIFPLLambdaExpr",
     "AIFPLLetExpr", "AIFPLFunctionCall",
-    "AIFPLEvaluator", "AIFPLEnvironment", "AIFPLFunction", "AIFPLTailCall", "AIFPLCallStack"
+    "AIFPLEvaluator", "AIFPLEnvironment", "AIFPLFunction", "AIFPLTailCall", "AIFPLCallStack",
+    "DependencyAnalyzer", "BindingGroup"
 ]

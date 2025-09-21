@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+from aifpl.aifpl_error import AIFPLEvalError
+
 
 class AIFPLValue(ABC):
     """
@@ -24,23 +26,19 @@ class AIFPLValue(ABC):
     @abstractmethod
     def to_python(self) -> Any:
         """Convert to Python value for operations."""
-        pass
 
     @classmethod
     @abstractmethod
     def from_python(cls, value: Any, **metadata) -> 'AIFPLValue':
         """Create AIFPL value from Python value."""
-        pass
 
     @abstractmethod
     def type_name(self) -> str:
         """Return AIFPL type name for error messages."""
-        pass
 
     @abstractmethod
     def with_metadata(self, **kwargs) -> 'AIFPLValue':
         """Return new value with additional metadata."""
-        pass
 
     def __eq__(self, other) -> bool:
         """
@@ -90,7 +88,7 @@ class AIFPLValue(ABC):
         """Prevent modification after initialization."""
         if hasattr(self, '_initialized'):
             raise AttributeError(f"Cannot modify immutable {type(self).__name__}")
- 
+
         object.__setattr__(self, name, value)
 
     def _mark_initialized(self) -> None:
@@ -376,6 +374,52 @@ class AIFPLList(AIFPLValue):
     def drop(self, n: int) -> 'AIFPLList':
         """Drop the first n elements."""
         return AIFPLList(self.elements[n:]).with_metadata(**self.metadata)
+
+
+class AIFPLRecursivePlaceholder(AIFPLValue):
+    """Placeholder for recursive bindings that resolves to actual value when accessed."""
+
+    def __init__(self, name: str):
+        super().__init__()
+        self._name = name
+        self._resolved_value: Optional[AIFPLValue] = None
+        self._resolving = False  # Prevent infinite recursion during resolution
+        self._mark_initialized()
+
+    def resolve(self, value: AIFPLValue) -> None:
+        """Resolve the placeholder to an actual value."""
+        # We need to bypass the immutability check for this special case
+        object.__setattr__(self, '_resolved_value', value)
+
+    def get_resolved_value(self) -> AIFPLValue:
+        """Get the resolved value, handling recursive calls."""
+        if self._resolved_value is None:
+            raise AIFPLEvalError(f"Recursive placeholder '{self._name}' accessed before resolution")
+
+        return self._resolved_value
+
+    def to_python(self) -> Any:
+        return self.get_resolved_value().to_python()
+
+    @classmethod
+    def from_python(cls, value: Any, **metadata) -> 'AIFPLRecursivePlaceholder':
+        raise ValueError("Cannot create AIFPLRecursivePlaceholder from Python value")
+
+    def type_name(self) -> str:
+        return f"recursive-placeholder({self._name})"
+
+    def with_metadata(self, **kwargs) -> 'AIFPLRecursivePlaceholder':
+        # Placeholders don't support metadata
+        return self
+
+    def __eq__(self, other) -> bool:
+        if isinstance(other, AIFPLRecursivePlaceholder):
+            return self._name == other._name
+
+        return self.get_resolved_value() == other
+
+    def __hash__(self) -> int:
+        return hash((type(self), self._name))
 
 
 def python_to_aifpl_value(value: Any) -> AIFPLValue:

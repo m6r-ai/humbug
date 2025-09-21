@@ -2,7 +2,7 @@
 
 import pytest
 
-from aifpl import AIFPL, AIFPLError, AIFPLTokenError, AIFPLParseError, AIFPLEvalError
+from aifpl import AIFPLError, AIFPLTokenError, AIFPLParseError, AIFPLEvalError
 
 
 class TestErrors:
@@ -403,10 +403,20 @@ class TestErrors:
         with pytest.raises(AIFPLEvalError, match="Cannot call non-function value"):
             aifpl.evaluate("(#t 1 2)")
 
-    def test_empty_list_evaluation_error(self, aifpl):
-        """Test that empty list evaluation causes error."""
-        with pytest.raises(AIFPLEvalError, match="Cannot evaluate empty list"):
-            aifpl.evaluate("()")
+    def test_empty_list_evaluation_works(self, aifpl):
+        """Test that empty list evaluation works correctly (no longer an error)."""
+        # Empty list should evaluate to itself
+        result = aifpl.evaluate("()")
+        assert result == []  # Python representation of empty list
+
+        # Empty list should format correctly
+        formatted = aifpl.evaluate_and_format("()")
+        assert formatted == "()"
+
+        # Empty list should work with list operations
+        assert aifpl.evaluate("(length ())") == 0
+        assert aifpl.evaluate("(null? ())") is True
+        assert aifpl.evaluate("(list? ())") is True
 
     # ========== Error Message Quality Tests ==========
 

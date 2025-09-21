@@ -46,7 +46,13 @@ class AIFPLEnvironment:
             AIFPLEvalError: If variable is not found
         """
         if name in self.bindings:
-            return self.bindings[name]
+            value = self.bindings[name]
+
+            # Handle recursive placeholders
+            if hasattr(value, 'get_resolved_value'):
+                return value.get_resolved_value()
+
+            return value
 
         if self.parent is not None:
             return self.parent.lookup(name)
