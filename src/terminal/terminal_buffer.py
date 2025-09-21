@@ -232,8 +232,8 @@ class TerminalBuffer:
             history_scrollback=self._history_scrollback,
             max_cursor_row=self._max_cursor_row,
             dimensions={
-                'rows': self.rows,
-                'cols': self.cols
+                'rows': self._rows,
+                'cols': self._cols
             }
         )
 
