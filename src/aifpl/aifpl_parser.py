@@ -1,7 +1,7 @@
 """Parser for AIFPL expressions."""
 
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List
 
 from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
