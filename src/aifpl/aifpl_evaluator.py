@@ -817,66 +817,65 @@ class AIFPLEvaluator:
             stack_trace = self.call_stack.format_stack_trace()
             raise AIFPLEvalError(f"Expression too deeply nested (max depth: {self.max_depth})\nCall stack:\n{stack_trace}")
 
-        # Handle special forms that can appear in tail position
-        if isinstance(expr, AIFPLList) and not expr.is_empty():
-            first_elem = expr.first()
-            if isinstance(first_elem, AIFPLSymbol):
-                # Handle if expressions specially - branches are in tail position
-                if first_elem.name == 'if':
-                    if expr.length() != 4:
-                        raise AIFPLEvalError(f"if requires exactly 3 arguments, got {expr.length() - 1}")
+        # If this isn't a list, evaluate normally
+        if not isinstance(expr, AIFPLList):
+            return self._evaluate_expression(expr, env, depth + 1)
 
-                    condition_expr = expr.get(1)
-                    then_expr = expr.get(2)
-                    else_expr = expr.get(3)
+        # If this list is empty, evaluate normally
+        if expr.is_empty():
+            return self._evaluate_expression(expr, env, depth + 1)
 
-                    # Evaluate condition (not in tail position)
-                    condition = self._evaluate_expression(condition_expr, env, depth + 1)
+        first_elem = expr.first()
+        if isinstance(first_elem, AIFPLSymbol):
+            # Handle if expressions specially - branches are in tail position
+            if first_elem.name == 'if':
+                if expr.length() != 4:
+                    raise AIFPLEvalError(f"if requires exactly 3 arguments, got {expr.length() - 1}")
 
-                    if not isinstance(condition, AIFPLBoolean):
-                        raise AIFPLEvalError(f"if requires boolean condition, got {condition.type_name()}")
+                condition_expr = expr.get(1)
+                then_expr = expr.get(2)
+                else_expr = expr.get(3)
 
-                    # Evaluate chosen branch (in tail position)
-                    if condition.value:
-                        return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
+                # Evaluate condition (not in tail position)
+                condition = self._evaluate_expression(condition_expr, env, depth + 1)
 
-                    return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
+                if not isinstance(condition, AIFPLBoolean):
+                    raise AIFPLEvalError(f"if requires boolean condition, got {condition.type_name()}")
 
-                # Handle lambda expressions - they are NOT tail calls, just return the function
-                if first_elem.name == 'lambda':
-                    return self._evaluate_lambda_form(expr, env, depth + 1)
+                # Evaluate chosen branch (in tail position)
+                if condition.value:
+                    return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
 
-                # Handle let expressions - body is in tail position
-                if first_elem.name == 'let':
-                    return self._evaluate_let_form(expr, env, depth + 1)
+                return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
 
-        # Handle function calls - check for tail calls
-        if isinstance(expr, AIFPLList) and not expr.is_empty():
-            # Evaluate the function
-            func_expr = expr.first()
-            func_value = self._evaluate_expression(func_expr, env, depth + 1)
+            # Handle lambda expressions - they are NOT tail calls, just return the function
+            if first_elem.name == 'lambda':
+                return self._evaluate_lambda_form(expr, env, depth + 1)
 
-            # If it's a lambda function, check for recursion (simple or mutual)
-            if isinstance(func_value, AIFPLFunction):
-                # Use the call chain we're tracking
-                if self._is_recursive_call(func_value, self.call_chain):
-                    # This is a recursive call (simple or mutual)!
-                    arg_exprs = list(expr.elements[1:])
-                    return AIFPLTailCall(
-                        function=func_expr,
-                        arguments=arg_exprs,
-                        environment=env
-                    )
+            # Handle let expressions - body is in tail position
+            if first_elem.name == 'let':
+                return self._evaluate_let_form(expr, env, depth + 1)
 
-                # Don't fall back to regular recursion!
-                arg_exprs = list(expr.elements[1:])
-                return self._call_lambda_function(func_value, arg_exprs, env, depth + 1)
+        # Check for tail calls
+        func_value = self._evaluate_expression(first_elem, env, depth + 1)
 
-            # Built-in function, evaluate normally
+        # If it's not a lambda function, evaluate normally
+        if not isinstance(func_value, AIFPLFunction):
             return self._evaluate_function_call(expr, env, depth + 1)
 
-        # For other expressions, evaluate normally
-        return self._evaluate_expression(expr, env, depth + 1)
+        # Check for recursion (simple or mutual)
+        if self._is_recursive_call(func_value, self.call_chain):
+            # This is a recursive call (simple or mutual)!
+            arg_exprs = list(expr.elements[1:])
+            return AIFPLTailCall(
+                function=first_elem,
+                arguments=arg_exprs,
+                environment=env
+            )
+
+        # Not a recursive call, evaluate normally
+        arg_exprs = list(expr.elements[1:])
+        return self._call_lambda_function(func_value, arg_exprs, env, depth + 1)
 
     def _apply_builtin_operator(
         self,
