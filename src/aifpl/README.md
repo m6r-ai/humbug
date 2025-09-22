@@ -5,7 +5,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 ## Features
 
 - **Pure list representation**: Everything is data - true homoiconicity like traditional Lisp
-- **S-expression syntax**: `(operator arg1 arg2 ...)`
+- **S-expression syntax**: `(function-or-operator arg1 arg2 ...)`
 - **Mathematical operations**: Arithmetic, trigonometry, logarithms, bitwise operations
 - **String operations**: Manipulation, searching, conversion with full UTF-8 support
 - **Boolean operations**: Logic operations with strict type checking
@@ -628,7 +628,7 @@ AIFPL provides comprehensive type checking functions:
 
 ; Function type checking
 (function? (lambda (x) (* x 2)))      ; → #t
-(function? +)                         ; → #f (built-in operators are not functions)
+(function? +)                         ; → #t
 (function? "hello")                   ; → #f
 
 ; List type checking (already existed)
@@ -1127,7 +1127,7 @@ The evaluator recognizes special forms by examining the first element of lists, 
     (string-append (substring text 0 10) "...")
     text)
 
-; Advanced text processing with new operators
+; Advanced text processing
 (let ((clean-and-format (lambda (text)
                           (let ((trimmed (string-trim text))
                                 (normalized (string-replace trimmed "  " " ")))
@@ -1155,7 +1155,7 @@ The evaluator recognizes special forms by examining the first element of lists, 
     (list "status" "error" "failed")
     (list "status" "ok" "success"))
 
-; Advanced list manipulation with new operators
+; Advanced list manipulation 
 (let ((data (list 1 2 3 2 4 2 5))
       (target 2))
   (let ((cleaned (remove target data))
@@ -1299,7 +1299,6 @@ print(f"Boolean: {bool_result}")  # Boolean: True
 formatted_bool = tool.evaluate_and_format('(member? 2 (list 1 2 3))')
 print(f"Formatted Boolean: {formatted_bool}")  # Formatted Boolean: #t
 
-# New operators results
 inequality_result = tool.evaluate('(!= 1 2 3)')
 print(f"Inequality: {inequality_result}")  # Inequality: True
 
@@ -1365,7 +1364,6 @@ recursive_expr = '''
   (factorial 20 1))
 '''
 
-# Using new operators for data processing
 advanced_processing = '''
 (let ((data (list "  hello  " "WORLD" "test" "  EXAMPLE  "))
       (clean-normalize (lambda (text)

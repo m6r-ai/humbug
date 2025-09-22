@@ -179,12 +179,12 @@ class TestErrors:
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
             aifpl.evaluate("(+ 1 undefined-var)")
 
-    def test_undefined_operator_eval_error(self, aifpl):
-        """Test that undefined operators cause evaluation errors."""
-        with pytest.raises(AIFPLEvalError, match="Unknown operator"):
+    def test_undefined_function_eval_error(self, aifpl):
+        """Test that undefined functions cause evaluation errors."""
+        with pytest.raises(AIFPLEvalError, match="Unknown function"):
             aifpl.evaluate("(unknown-op 1 2)")
 
-        with pytest.raises(AIFPLEvalError, match="Unknown operator"):
+        with pytest.raises(AIFPLEvalError, match="Unknown function"):
             aifpl.evaluate("(invalid-function)")
 
     def test_division_by_zero_eval_error(self, aifpl):
