@@ -493,20 +493,6 @@ class AIFPLEvaluator:
         Returns:
             Result of the function call
         """
-        # Check if this is a tail call that can be optimized
-        return self._evaluate_tail_optimized_call(func_list, env, depth)
-
-    def _evaluate_tail_optimized_call(
-        self,
-        func_list: AIFPLList,
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """
-        Evaluate function call with tail call optimization.
-
-        This method uses iteration instead of recursion for tail calls to prevent stack overflow.
-        """
         current_call = func_list
         current_env = env
 
