@@ -313,6 +313,29 @@ class AIFPLFunction(AIFPLValue):
         raise RuntimeError("AIFPLFunction objects should be called through the evaluator, not directly")
 
 
+class AIFPLBuiltinFunction(AIFPLValue):
+    """Represents a built-in function/operator that can be used in higher-order contexts."""
+
+    def __init__(self, name: str):
+        self.name = name
+
+    def to_python(self) -> str:
+        return self.name
+
+    @classmethod
+    def from_python(cls, value: str) -> 'AIFPLBuiltinFunction':
+        return cls(value)
+
+    def type_name(self) -> str:
+        return "builtin-function"
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, AIFPLBuiltinFunction) and self.name == other.name
+
+    def __hash__(self) -> int:
+        return hash((type(self), self.name))
+
+
 class AIFPLRecursivePlaceholder(AIFPLValue):
     """Placeholder for recursive bindings that resolves to actual value when accessed."""
 

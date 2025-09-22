@@ -7,7 +7,7 @@ from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList
 
 
 @dataclass
-class BindingGroup:
+class AIFPLBindingGroup:
     """Represents a group of bindings that should be evaluated together."""
     names: Set[str]
     bindings: List[Tuple[str, AIFPLValue]]
@@ -15,15 +15,15 @@ class BindingGroup:
     depends_on: Set[str]  # Other groups this depends on
 
 
-class DependencyAnalyzer:
+class AIFPLDependencyAnalyzer:
     """Analyzes dependencies in let bindings to determine evaluation strategy."""
 
-    def analyze_let_bindings(self, bindings: List[Tuple[str, AIFPLValue]]) -> List[BindingGroup]:
+    def analyze_let_bindings(self, bindings: List[Tuple[str, AIFPLValue]]) -> List[AIFPLBindingGroup]:
         """
         Analyze let bindings and group them by dependencies.
 
         Returns:
-            List of BindingGroup objects in topological order
+            List of AIFPLBindingGroup objects in topological order
         """
         # Step 1: Find what variables each binding references
         dependencies = {}
@@ -38,7 +38,7 @@ class DependencyAnalyzer:
         # Step 2: Find strongly connected components (recursive groups)
         scc_groups = self._find_strongly_connected_components(dependencies)
 
-        # Step 3: Create BindingGroup objects
+        # Step 3: Create AIFPLBindingGroup objects
         groups = []
         binding_dict = dict(bindings)
 
@@ -53,7 +53,7 @@ class DependencyAnalyzer:
             for name in group_names:
                 external_deps.update(dependencies[name] - group_names)
 
-            groups.append(BindingGroup(
+            groups.append(AIFPLBindingGroup(
                 names=group_names,
                 bindings=group_bindings,
                 is_recursive=is_recursive,
@@ -180,10 +180,10 @@ class DependencyAnalyzer:
 
         return result
 
-    def _topological_sort_groups(self, groups: List[BindingGroup]) -> List[BindingGroup]:
+    def _topological_sort_groups(self, groups: List[AIFPLBindingGroup]) -> List[AIFPLBindingGroup]:
         """Sort binding groups in topological order."""
         # Create mapping from group names to groups
-        name_to_group: Dict[str, BindingGroup] = {}
+        name_to_group: Dict[str, AIFPLBindingGroup] = {}
         for group in groups:
             for name in group.names:
                 name_to_group[name] = group
@@ -202,8 +202,8 @@ class DependencyAnalyzer:
         # Topological sort
         visited: Set[int] = set()
         temp_visited: Set[int] = set()
-        result: List[BindingGroup] = []
-        group_by_id: Dict[int, BindingGroup] = {id(group): group for group in groups}
+        result: List[AIFPLBindingGroup] = []
+        group_by_id: Dict[int, AIFPLBindingGroup] = {id(group): group for group in groups}
 
         def visit(group_id: int) -> None:
             if group_id in temp_visited:

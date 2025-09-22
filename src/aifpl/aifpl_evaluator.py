@@ -7,32 +7,10 @@ from typing import Any, Dict, List, Union, Tuple
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLTailCall, AIFPLCallStack
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
+    AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction
 )
-from aifpl.aifpl_dependency_analyzer import DependencyAnalyzer, BindingGroup
-
-
-class AIFPLBuiltinFunction(AIFPLValue):
-    """Represents a built-in function/operator that can be used in higher-order contexts."""
-
-    def __init__(self, name: str):
-        self.name = name
-
-    def to_python(self) -> str:
-        return self.name
-
-    @classmethod
-    def from_python(cls, value: str) -> 'AIFPLBuiltinFunction':
-        return cls(value)
-
-    def type_name(self) -> str:
-        return "builtin-function"
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, AIFPLBuiltinFunction) and self.name == other.name
-
-    def __hash__(self) -> int:
-        return hash((type(self), self.name))
+from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
 
 
 class AIFPLEvaluator:
@@ -427,7 +405,7 @@ class AIFPLEvaluator:
             Result of evaluating the let body
         """
         # Analyze dependencies
-        analyzer = DependencyAnalyzer()
+        analyzer = AIFPLDependencyAnalyzer()
         binding_groups = analyzer.analyze_let_bindings(bindings)
 
         # Evaluate groups in order
@@ -445,7 +423,7 @@ class AIFPLEvaluator:
 
     def _evaluate_sequential_binding_group(
         self,
-        group: BindingGroup,
+        group: AIFPLBindingGroup,
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLEnvironment:
@@ -464,7 +442,7 @@ class AIFPLEvaluator:
 
     def _evaluate_recursive_binding_group(
         self,
-        group: BindingGroup,
+        group: AIFPLBindingGroup,
         env: AIFPLEnvironment,
         depth: int
     ) -> AIFPLEnvironment:
