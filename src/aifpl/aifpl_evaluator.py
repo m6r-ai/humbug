@@ -1,16 +1,26 @@
 """Evaluator for AIFPL Abstract Syntax Trees using pure list representation."""
 
 import cmath
+from dataclasses import dataclass
 import math
-from typing import Any, Dict, List, Union, Tuple
+from typing import Any, Dict, List, Union
 
+from aifpl.aifpl_call_stack import AIFPLCallStack
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_environment import AIFPLEnvironment, AIFPLTailCall, AIFPLCallStack
+from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
     AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
+
+
+@dataclass(frozen=True)
+class AIFPLTailCall:
+    """Represents a tail call to be optimized."""
+    function: AIFPLValue
+    arguments: List[AIFPLValue]
+    environment: AIFPLEnvironment
 
 
 class AIFPLEvaluator:
@@ -276,7 +286,6 @@ class AIFPLEvaluator:
         if_list: AIFPLList,
         env: AIFPLEnvironment,
         depth: int,
-        current_function: AIFPLFunction
     ) -> AIFPLValue | AIFPLTailCall:
         """
         Evaluate (if condition then else) form.
@@ -303,9 +312,9 @@ class AIFPLEvaluator:
 
         # Evaluate chosen branch (in tail position)
         if condition.value:
-            return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
+            return self._evaluate_with_tail_detection(then_expr, env, depth + 1)
 
-        return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
+        return self._evaluate_with_tail_detection(else_expr, env, depth + 1)
 
     def _evaluate_lambda_form(
         self,
@@ -419,27 +428,6 @@ class AIFPLEvaluator:
 
         body = let_list.get(2)
 
-        return self._evaluate_let_expression(bindings, body, env, depth)
-
-    def _evaluate_let_expression(
-        self,
-        bindings: List[Tuple[str, AIFPLValue]],
-        body: AIFPLValue,
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """
-        Evaluate let expression with automatic recursion detection.
-
-        Args:
-            bindings: List of (name, expression) tuples
-            body: Body expression to evaluate
-            env: Current environment
-            depth: Current recursion depth
-
-        Returns:
-            Result of evaluating the let body
-        """
         # Analyze dependencies
         analyzer = AIFPLDependencyAnalyzer()
         binding_groups = analyzer.analyze_let_bindings(bindings)
@@ -624,7 +612,7 @@ class AIFPLEvaluator:
 
         try:
             # Enable tail call optimization with mutual recursion support
-            result = self._evaluate_with_tail_detection(func.body, func_env, depth, func)
+            result = self._evaluate_with_tail_detection(func.body, func_env, depth)
             return result
 
         finally:
@@ -835,7 +823,6 @@ class AIFPLEvaluator:
         expr: AIFPLValue,
         env: AIFPLEnvironment,
         depth: int,
-        current_function: AIFPLFunction
     ) -> Union[AIFPLValue, AIFPLTailCall]:
         """
         Evaluate an expression with tail call detection.
@@ -844,7 +831,6 @@ class AIFPLEvaluator:
             expr: Expression to evaluate
             env: Environment
             depth: Current depth
-            current_function: The function we're currently executing
 
         Returns:
             Either a regular result or a AIFPLTailCall object for optimization
@@ -865,7 +851,7 @@ class AIFPLEvaluator:
         if isinstance(first_elem, AIFPLSymbol):
             # Handle if expressions specially - branches are in tail position
             if first_elem.name == 'if':
-                return self._evaluate_if_form(expr, env, depth + 1, current_function)
+                return self._evaluate_if_form(expr, env, depth + 1)
 
             # Handle lambda expressions - they are NOT tail calls, just return the function
             if first_elem.name == 'lambda':
