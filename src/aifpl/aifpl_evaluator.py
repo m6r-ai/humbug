@@ -271,6 +271,42 @@ class AIFPLEvaluator:
 
         raise AIFPLEvalError(f"Invalid expression type: {type(expr).__name__}")
 
+    def _evaluate_if_form(
+        self,
+        if_list: AIFPLList,
+        env: AIFPLEnvironment,
+        depth: int,
+        current_function: AIFPLFunction
+    ) -> AIFPLValue | AIFPLTailCall:
+        """
+        Evaluate (if condition then else) form.
+
+        Args:
+            if_list: List representing if expression
+            env: Current environment
+            depth: Current recursion depth
+        Returns:
+            Result of evaluating the if expression
+        """
+        if if_list.length() != 4:
+            raise AIFPLEvalError(f"if requires exactly 3 arguments, got {if_list.length() - 1}")
+
+        condition_expr = if_list.get(1)
+        then_expr = if_list.get(2)
+        else_expr = if_list.get(3)
+
+        # Evaluate condition (not in tail position)
+        condition = self._evaluate_expression(condition_expr, env, depth + 1)
+
+        if not isinstance(condition, AIFPLBoolean):
+            raise AIFPLEvalError(f"if requires boolean condition, got {condition.type_name()}")
+
+        # Evaluate chosen branch (in tail position)
+        if condition.value:
+            return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
+
+        return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
+
     def _evaluate_lambda_form(
         self,
         lambda_list: AIFPLList,
@@ -283,7 +319,7 @@ class AIFPLEvaluator:
         Args:
             lambda_list: List representing lambda expression
             env: Current environment
-            depth: Current recursion depth
+            _depth: Current recursion depth
 
         Returns:
             AIFPLFunction object
@@ -829,24 +865,7 @@ class AIFPLEvaluator:
         if isinstance(first_elem, AIFPLSymbol):
             # Handle if expressions specially - branches are in tail position
             if first_elem.name == 'if':
-                if expr.length() != 4:
-                    raise AIFPLEvalError(f"if requires exactly 3 arguments, got {expr.length() - 1}")
-
-                condition_expr = expr.get(1)
-                then_expr = expr.get(2)
-                else_expr = expr.get(3)
-
-                # Evaluate condition (not in tail position)
-                condition = self._evaluate_expression(condition_expr, env, depth + 1)
-
-                if not isinstance(condition, AIFPLBoolean):
-                    raise AIFPLEvalError(f"if requires boolean condition, got {condition.type_name()}")
-
-                # Evaluate chosen branch (in tail position)
-                if condition.value:
-                    return self._evaluate_with_tail_detection(then_expr, env, depth + 1, current_function)
-
-                return self._evaluate_with_tail_detection(else_expr, env, depth + 1, current_function)
+                return self._evaluate_if_form(expr, env, depth + 1, current_function)
 
             # Handle lambda expressions - they are NOT tail calls, just return the function
             if first_elem.name == 'lambda':
