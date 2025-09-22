@@ -503,21 +503,14 @@ class AIFPLEvaluator:
             func_expr = current_call.first()
             arg_exprs = list(current_call.elements[1:])
 
-            # Check if the function is a symbol and not a known operator
-            if isinstance(func_expr, AIFPLSymbol):
-                func_name = func_expr.name
-                # If it's not a known operator and not in the environment, it's an unknown operator
-                if func_name not in self.OPERATORS and not current_env.has_binding(func_name):
-                    raise AIFPLEvalError(f"Unknown operator: '{func_name}'")
-
             # Evaluate the function expression
             try:
                 func_value = self._evaluate_expression(func_expr, current_env, depth)
+
             except AIFPLEvalError as e:
                 if "Undefined variable" in str(e) and isinstance(func_expr, AIFPLSymbol):
-                    func_name = func_expr.name
-                    if func_name not in self.OPERATORS:
-                        raise AIFPLEvalError(f"Unknown operator: '{func_name}'") from e
+                    raise AIFPLEvalError(f"Unknown operator: '{func_expr.name}'") from e
+
                 raise AIFPLEvalError(f"Error evaluating function expression: {e}") from e
 
             # Handle different types of functions
