@@ -81,7 +81,7 @@ class AIFPLTokenizer:
                 i += length
                 continue
 
-            # Symbols (operators, functions, constants)
+            # Symbols (variables, parameters, functions, constants)
             if self._is_symbol_start(expression[i]):
                 symbol, length = self._read_symbol(expression, i)
                 tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, i, length))

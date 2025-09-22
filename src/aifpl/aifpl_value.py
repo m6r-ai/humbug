@@ -314,7 +314,7 @@ class AIFPLFunction(AIFPLValue):
 
 
 class AIFPLBuiltinFunction(AIFPLValue):
-    """Represents a built-in function/operator that can be used in higher-order contexts."""
+    """Represents a built-in function that can be used in higher-order contexts."""
 
     def __init__(self, name: str):
         self.name = name
