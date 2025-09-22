@@ -330,7 +330,7 @@ class AIFPLEvaluator:
         return AIFPLFunction(
             parameters=tuple(parameters),
             body=body,
-            closure_env=env,
+            closure_environment=env,
             name="<lambda>"
         )
 
@@ -409,8 +409,7 @@ class AIFPLEvaluator:
         binding_groups = analyzer.analyze_let_bindings(bindings)
 
         # Evaluate groups in order
-        current_env = env.create_child("let")
-
+        current_env = AIFPLEnvironment(bindings={}, parent=env, name="let")
         for group in binding_groups:
             if group.is_recursive:
                 current_env = self._evaluate_recursive_binding_group(group, current_env, depth)
@@ -585,11 +584,12 @@ class AIFPLEvaluator:
         # Evaluate arguments in current environment
         try:
             arg_values = [self._evaluate_expression(arg, env, depth) for arg in args]
+
         except AIFPLEvalError as e:
             raise AIFPLEvalError(f"Error evaluating function arguments: {e}") from e
 
         # Create new environment for function execution
-        func_env = func.closure_env.create_child(f"{func.name}-call")
+        func_env = AIFPLEnvironment(bindings={}, parent=func.closure_environment, name=f"{func.name}-call")
 
         # Bind parameters to arguments
         param_bindings = {}
@@ -682,7 +682,7 @@ class AIFPLEvaluator:
             )
 
         # Create new environment for function execution
-        func_env = func.closure_env.create_child(f"{func.name}-call")
+        func_env = AIFPLEnvironment(bindings={}, parent=func.closure_environment, name=f"{func.name}-call")
 
         # Bind parameters to arguments
         param_bindings = {}

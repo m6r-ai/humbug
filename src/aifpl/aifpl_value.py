@@ -284,7 +284,7 @@ class AIFPLFunction(AIFPLValue):
     """
     parameters: Tuple[str, ...]
     body: AIFPLValue
-    closure_env: Any  # AIFPLEnvironment, avoiding circular import
+    closure_environment: Any  # AIFPLEnvironment, avoiding circular import (this circularity is intentional!)
     name: str | None = None
 
     def to_python(self) -> 'AIFPLFunction':

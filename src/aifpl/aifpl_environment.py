@@ -114,18 +114,6 @@ class AIFPLEnvironment:
 
         return available
 
-    def create_child(self, name: str = "child") -> 'AIFPLEnvironment':
-        """
-        Create a child environment with this environment as parent.
-
-        Args:
-            name: Name for the child environment (for debugging)
-
-        Returns:
-            New child environment
-        """
-        return AIFPLEnvironment({}, self, name)
-
     def __repr__(self) -> str:
         """String representation for debugging."""
         local_bindings = list(self.bindings.keys())
