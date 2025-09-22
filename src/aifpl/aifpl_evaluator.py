@@ -539,8 +539,13 @@ class AIFPLEvaluator:
 
             # Handle different types of functions
             if isinstance(func_value, AIFPLFunction):
-                # User-defined function call
-                result = self._call_lambda_function(func_value, arg_exprs, current_env, depth)
+                try:
+                    arg_values = [self._evaluate_expression(arg, current_env, depth) for arg in arg_exprs]
+
+                except AIFPLEvalError as e:
+                    raise AIFPLEvalError(f"Error evaluating function arguments: {e}") from e
+
+                result = self._call_lambda_function(func_value, arg_values, current_env, depth)
 
                 # Check if result is a tail call
                 if isinstance(result, AIFPLTailCall):
@@ -554,42 +559,63 @@ class AIFPLEvaluator:
 
             # Built-in operator
             if isinstance(func_value, AIFPLBuiltinFunction) and isinstance(func_expr, AIFPLSymbol):
-                return self._call_builtin_operator(func_value.name, arg_exprs, current_env, depth + 1)
+                if func_expr.name not in self.OPERATORS:
+                    raise AIFPLEvalError(f"Unknown operator: '{func_expr.name}'")
+
+                op_def: Dict[str, Any] = self.OPERATORS[func_expr.name]
+
+                # Handle special forms that require lazy evaluation
+                if op_def.get('type') == 'special':
+                    if func_expr.name == 'if':
+                        return self._apply_if_conditional(arg_exprs, current_env, depth)
+
+                    if func_expr.name == 'and':
+                        return self._apply_and_short_circuit(arg_exprs, current_env, depth)
+
+                    if func_expr.name == 'or':
+                        return self._apply_or_short_circuit(arg_exprs, current_env, depth)
+
+                # Handle higher-order functions (map, filter, fold, etc.)
+                if op_def.get('higher_order'):
+                    return self._apply_higher_order_function(func_expr.name, arg_exprs, current_env, depth)
+
+                # For regular operators, evaluate arguments first
+                try:
+                    evaluated_args = [self._evaluate_expression(arg, current_env, depth + 1) for arg in arg_exprs]
+
+                except AIFPLEvalError as e:
+                    raise AIFPLEvalError(f"Error evaluating arguments for '{func_expr.name}': {e}") from e
+
+                # Delegate to common implementation
+                return self._call_builtin_operator(func_expr.name, evaluated_args, current_env, depth)
 
             raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
 
     def _call_lambda_function(
         self,
         func: AIFPLFunction,
-        args: List[AIFPLValue],
-        env: AIFPLEnvironment,
+        arg_values: List[AIFPLValue],
+        _env: AIFPLEnvironment,
         depth: int
     ) -> Union[AIFPLValue, AIFPLTailCall]:
         """
-        Call a lambda function with given arguments.
+        Common logic for calling a lambda function with evaluated argument values.
 
         Args:
             func: Lambda function to call
-            args: Argument expressions
-            env: Current environment
+            arg_values: Already-evaluated argument values
+            env: Current environment (used for closure environment context)
             depth: Current recursion depth
 
         Returns:
             Function result or AIFPLTailCall for optimization
         """
         # Check arity
-        if len(args) != len(func.parameters):
+        if len(arg_values) != len(func.parameters):
             raise AIFPLEvalError(
-                f"Function expects {len(func.parameters)} arguments, got {len(args)}. "
+                f"Function expects {len(func.parameters)} arguments, got {len(arg_values)}. "
                 f"Parameters: {list(func.parameters)}"
             )
-
-        # Evaluate arguments in current environment
-        try:
-            arg_values = [self._evaluate_expression(arg, env, depth) for arg in args]
-
-        except AIFPLEvalError as e:
-            raise AIFPLEvalError(f"Error evaluating function arguments: {e}") from e
 
         # Create new environment for function execution
         func_env = AIFPLEnvironment(bindings={}, parent=func.closure_environment, name=f"{func.name}-call")
@@ -626,195 +652,12 @@ class AIFPLEvaluator:
     def _call_builtin_operator(
         self,
         operator: str,
-        args: List[AIFPLValue],
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """Apply built-in operators and functions."""
-        if operator not in self.OPERATORS:
-            raise AIFPLEvalError(f"Unknown operator: '{operator}'")
-
-        op_def: Dict[str, Any] = self.OPERATORS[operator]
-
-        # Handle special forms that require lazy evaluation
-        if op_def.get('type') == 'special':
-            if operator == 'if':
-                return self._apply_if_conditional(args, env, depth)
-
-            if operator == 'and':
-                return self._apply_and_short_circuit(args, env, depth)
-
-            if operator == 'or':
-                return self._apply_or_short_circuit(args, env, depth)
-
-        # Handle higher-order functions (map, filter, fold, etc.)
-        if op_def.get('higher_order'):
-            return self._apply_higher_order_function(operator, args, env, depth)
-
-        # For regular operators, evaluate arguments first
-        try:
-            evaluated_args = [self._evaluate_expression(arg, env, depth + 1) for arg in args]
-
-        except AIFPLEvalError as e:
-            raise AIFPLEvalError(f"Error evaluating arguments for '{operator}': {e}") from e
-
-        # Check argument count
-        self._validate_arity(operator, op_def, evaluated_args)
-
-        # Handle special mixed return types (position function)
-        if op_def.get('returns_boolean_or_value'):
-            return self._apply_mixed_return_operator(operator, evaluated_args)
-
-        # Handle operations that return booleans FIRST (before string_only check)
-        if op_def.get('returns_boolean'):
-            return self._apply_boolean_returning_operator(operator, evaluated_args)
-
-        # Handle list operations
-        if op_def.get('list_operation'):
-            return self._apply_list_operator(operator, evaluated_args)
-
-        # Handle special cases that return strings
-        if op_def.get('returns_string'):
-            return self._apply_string_function(operator, evaluated_args)
-
-        # Handle functions that convert to strings
-        if op_def.get('converts_to_string'):
-            return self._apply_conversion_to_string(operator, evaluated_args)
-
-        # Handle functions that return lists
-        if op_def.get('returns_list'):
-            return self._apply_list_returning_function(operator, evaluated_args)
-
-        # Handle boolean-only operations (only NOT now, since AND/OR are special)
-        if op_def.get('boolean_only'):
-            return self._apply_boolean_operator(operator, evaluated_args)
-
-        # Handle string-only operations (now only for non-boolean returning functions)
-        if op_def.get('string_only'):
-            return self._apply_string_operator(operator, op_def, evaluated_args)
-
-        # Filter out string, boolean, and list arguments for mathematical operations
-        for arg in evaluated_args:
-            if isinstance(arg, (AIFPLString, AIFPLBoolean, AIFPLList)):
-                raise AIFPLEvalError(f"Operator '{operator}' cannot operate on {arg.type_name()} arguments")
-
-        # Handle bitwise operations (require integers)
-        if op_def.get('bitwise'):
-            return self._apply_bitwise_operator(operator, evaluated_args)
-
-        # Handle real-only operations
-        if op_def.get('real_only'):
-            return self._apply_real_only_function(operator, evaluated_args)
-
-        # Handle integer-only operations
-        if op_def.get('integer_only'):
-            return self._apply_integer_only_function(operator, evaluated_args)
-
-        # Handle regular mathematical operations
-        return self._apply_mathematical_operator(operator, op_def, evaluated_args)
-
-    def _call_function_with_evaluated_args(
-        self,
-        func_expr: AIFPLValue,
-        arg_values: List[AIFPLValue],
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """
-        Call a function with already-evaluated arguments.
-
-        This is used by higher-order functions where arguments are already AIFPLValue objects.
-
-        Args:
-            func_expr: Function expression (unevaluated)
-            arg_values: Already-evaluated argument values
-            env: Current environment
-            depth: Current recursion depth
-
-        Returns:
-            Function result
-        """
-        # Evaluate the function expression
-        func_value = self._evaluate_expression(func_expr, env, depth)
-
-        # Handle different types of functions
-        if isinstance(func_value, AIFPLFunction):
-            # User-defined function call with pre-evaluated arguments
-            return self._call_lambda_function_with_values(func_value, arg_values, env, depth)
-
-        # Built-in operator with pre-evaluated arguments
-        if isinstance(func_value, AIFPLBuiltinFunction):
-            return self._call_builtin_operator_with_values(func_value.name, arg_values, env, depth)
-
-        raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
-
-    def _call_lambda_function_with_values(
-        self,
-        func: AIFPLFunction,
-        arg_values: List[AIFPLValue],
-        _env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """
-        Call a lambda function with already-evaluated argument values.
-
-        Args:
-            func: Lambda function to call
-            arg_values: Already-evaluated argument values
-            env: Current environment
-            depth: Current recursion depth
-
-        Returns:
-            Function result
-        """
-        # Check arity
-        if len(arg_values) != len(func.parameters):
-            raise AIFPLEvalError(
-                f"Function expects {len(func.parameters)} arguments, got {len(arg_values)}. "
-                f"Parameters: {list(func.parameters)}"
-            )
-
-        # Create new environment for function execution
-        func_env = AIFPLEnvironment(bindings={}, parent=func.closure_environment, name=f"{func.name}-call")
-
-        # Bind parameters to arguments
-        param_bindings = {}
-        for param, arg_value in zip(func.parameters, arg_values):
-            func_env = func_env.define(param, arg_value)
-            param_bindings[param] = arg_value
-
-        # Add call frame to stack for error reporting
-        self.call_stack.push(
-            function_name=func.name or "<lambda>",
-            arguments=param_bindings,
-            expression=str(func.body) if hasattr(func.body, '__str__') else "<body>"
-        )
-
-        # Track function in call chain for mutual recursion detection
-        self.call_chain.append(func)
-
-        try:
-            # Evaluate function body
-            result = self._evaluate_expression(func.body, func_env, depth + 1)
-            return result
-
-        finally:
-            # Always pop the call frame and remove from call chain
-            self.call_stack.pop()
-
-            # Remove function from call chain
-            if self.call_chain and self.call_chain[-1] is func:
-                self.call_chain.pop()
-
-    def _call_builtin_operator_with_values(
-        self,
-        operator: str,
         arg_values: List[AIFPLValue],
         _env: AIFPLEnvironment,
         _depth: int
     ) -> AIFPLValue:
         """
-        Apply built-in operator with already-evaluated argument values.
+        Common logic for applying built-in operators with evaluated argument values.
 
         Args:
             operator: Operator name
@@ -884,6 +727,48 @@ class AIFPLEvaluator:
 
         # Handle regular mathematical operations
         return self._apply_mathematical_operator(operator, op_def, arg_values)
+
+    def _call_function_with_evaluated_args(
+        self,
+        func_expr: AIFPLValue,
+        arg_values: List[AIFPLValue],
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLValue:
+        """
+        Call a function with already-evaluated arguments.
+
+        This is used by higher-order functions where arguments are already AIFPLValue objects.
+
+        Args:
+            func_expr: Function expression (unevaluated)
+            arg_values: Already-evaluated argument values
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Function result
+        """
+        # Evaluate the function expression
+        func_value = self._evaluate_expression(func_expr, env, depth)
+
+        # Handle different types of functions
+        if isinstance(func_value, AIFPLFunction):
+            # User-defined function call with pre-evaluated arguments
+            result = self._call_lambda_function(func_value, arg_values, env, depth)
+
+            # For higher-order functions, we don't want tail call optimization
+            if isinstance(result, AIFPLTailCall):
+                # This shouldn't happen in higher-order contexts, but handle it gracefully
+                raise AIFPLEvalError("Unexpected tail call in higher-order function context")
+
+            return result
+
+        # Built-in operator with pre-evaluated arguments
+        if isinstance(func_value, AIFPLBuiltinFunction):
+            return self._call_builtin_operator(func_value.name, arg_values, env, depth)
+
+        raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
 
     def _is_recursive_call(self, func_value: AIFPLFunction, call_chain: List[AIFPLFunction]) -> bool:
         """
@@ -959,18 +844,16 @@ class AIFPLEvaluator:
             return self._evaluate_function_call(expr, env, depth + 1)
 
         # Check for recursion (simple or mutual)
-        if self._is_recursive_call(func_value, self.call_chain):
-            # This is a recursive call (simple or mutual)!
-            arg_exprs = list(expr.elements[1:])
-            return AIFPLTailCall(
-                function=first_elem,
-                arguments=arg_exprs,
-                environment=env
-            )
+        if not self._is_recursive_call(func_value, self.call_chain):
+            return self._evaluate_function_call(expr, env, depth + 1)
 
-        # Not a recursive call, evaluate normally
+        # This is a recursive call (simple or mutual)!
         arg_exprs = list(expr.elements[1:])
-        return self._call_lambda_function(func_value, arg_exprs, env, depth + 1)
+        return AIFPLTailCall(
+            function=first_elem,
+            arguments=arg_exprs,
+            environment=env
+        )
 
     def _apply_if_conditional(
         self,
