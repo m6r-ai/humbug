@@ -554,7 +554,7 @@ class AIFPLEvaluator:
 
             # Built-in operator
             if isinstance(func_value, AIFPLBuiltinFunction) and isinstance(func_expr, AIFPLSymbol):
-                return self._apply_builtin_operator(func_value.name, arg_exprs, current_env, depth + 1)
+                return self._call_builtin_operator(func_value.name, arg_exprs, current_env, depth + 1)
 
             raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
 
@@ -623,6 +623,96 @@ class AIFPLEvaluator:
             if self.call_chain and self.call_chain[-1] is func:
                 self.call_chain.pop()
 
+    def _call_builtin_operator(
+        self,
+        operator: str,
+        args: List[AIFPLValue],
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLValue:
+        """Apply built-in operators and functions."""
+        if operator not in self.OPERATORS:
+            raise AIFPLEvalError(f"Unknown operator: '{operator}'")
+
+        op_def: Dict[str, Any] = self.OPERATORS[operator]
+
+        # Handle special forms that require lazy evaluation
+        if op_def.get('type') == 'special':
+            if operator == 'if':
+                return self._apply_if_conditional(args, env, depth)
+
+            if operator == 'and':
+                return self._apply_and_short_circuit(args, env, depth)
+
+            if operator == 'or':
+                return self._apply_or_short_circuit(args, env, depth)
+
+        # Handle higher-order functions (map, filter, fold, etc.)
+        if op_def.get('higher_order'):
+            return self._apply_higher_order_function(operator, args, env, depth)
+
+        # For regular operators, evaluate arguments first
+        try:
+            evaluated_args = [self._evaluate_expression(arg, env, depth + 1) for arg in args]
+
+        except AIFPLEvalError as e:
+            raise AIFPLEvalError(f"Error evaluating arguments for '{operator}': {e}") from e
+
+        # Check argument count
+        self._validate_arity(operator, op_def, evaluated_args)
+
+        # Handle special mixed return types (position function)
+        if op_def.get('returns_boolean_or_value'):
+            return self._apply_mixed_return_operator(operator, evaluated_args)
+
+        # Handle operations that return booleans FIRST (before string_only check)
+        if op_def.get('returns_boolean'):
+            return self._apply_boolean_returning_operator(operator, evaluated_args)
+
+        # Handle list operations
+        if op_def.get('list_operation'):
+            return self._apply_list_operator(operator, evaluated_args)
+
+        # Handle special cases that return strings
+        if op_def.get('returns_string'):
+            return self._apply_string_function(operator, evaluated_args)
+
+        # Handle functions that convert to strings
+        if op_def.get('converts_to_string'):
+            return self._apply_conversion_to_string(operator, evaluated_args)
+
+        # Handle functions that return lists
+        if op_def.get('returns_list'):
+            return self._apply_list_returning_function(operator, evaluated_args)
+
+        # Handle boolean-only operations (only NOT now, since AND/OR are special)
+        if op_def.get('boolean_only'):
+            return self._apply_boolean_operator(operator, evaluated_args)
+
+        # Handle string-only operations (now only for non-boolean returning functions)
+        if op_def.get('string_only'):
+            return self._apply_string_operator(operator, op_def, evaluated_args)
+
+        # Filter out string, boolean, and list arguments for mathematical operations
+        for arg in evaluated_args:
+            if isinstance(arg, (AIFPLString, AIFPLBoolean, AIFPLList)):
+                raise AIFPLEvalError(f"Operator '{operator}' cannot operate on {arg.type_name()} arguments")
+
+        # Handle bitwise operations (require integers)
+        if op_def.get('bitwise'):
+            return self._apply_bitwise_operator(operator, evaluated_args)
+
+        # Handle real-only operations
+        if op_def.get('real_only'):
+            return self._apply_real_only_function(operator, evaluated_args)
+
+        # Handle integer-only operations
+        if op_def.get('integer_only'):
+            return self._apply_integer_only_function(operator, evaluated_args)
+
+        # Handle regular mathematical operations
+        return self._apply_mathematical_operator(operator, op_def, evaluated_args)
+
     def _call_function_with_evaluated_args(
         self,
         func_expr: AIFPLValue,
@@ -654,7 +744,7 @@ class AIFPLEvaluator:
 
         # Built-in operator with pre-evaluated arguments
         if isinstance(func_value, AIFPLBuiltinFunction):
-            return self._apply_builtin_operator_with_values(func_value.name, arg_values, env, depth)
+            return self._call_builtin_operator_with_values(func_value.name, arg_values, env, depth)
 
         raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
 
@@ -716,7 +806,7 @@ class AIFPLEvaluator:
             if self.call_chain and self.call_chain[-1] is func:
                 self.call_chain.pop()
 
-    def _apply_builtin_operator_with_values(
+    def _call_builtin_operator_with_values(
         self,
         operator: str,
         arg_values: List[AIFPLValue],
@@ -881,96 +971,6 @@ class AIFPLEvaluator:
         # Not a recursive call, evaluate normally
         arg_exprs = list(expr.elements[1:])
         return self._call_lambda_function(func_value, arg_exprs, env, depth + 1)
-
-    def _apply_builtin_operator(
-        self,
-        operator: str,
-        args: List[AIFPLValue],
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """Apply built-in operators and functions."""
-        if operator not in self.OPERATORS:
-            raise AIFPLEvalError(f"Unknown operator: '{operator}'")
-
-        op_def: Dict[str, Any] = self.OPERATORS[operator]
-
-        # Handle special forms that require lazy evaluation
-        if op_def.get('type') == 'special':
-            if operator == 'if':
-                return self._apply_if_conditional(args, env, depth)
-
-            if operator == 'and':
-                return self._apply_and_short_circuit(args, env, depth)
-
-            if operator == 'or':
-                return self._apply_or_short_circuit(args, env, depth)
-
-        # Handle higher-order functions (map, filter, fold, etc.)
-        if op_def.get('higher_order'):
-            return self._apply_higher_order_function(operator, args, env, depth)
-
-        # For regular operators, evaluate arguments first
-        try:
-            evaluated_args = [self._evaluate_expression(arg, env, depth + 1) for arg in args]
-
-        except AIFPLEvalError as e:
-            raise AIFPLEvalError(f"Error evaluating arguments for '{operator}': {e}") from e
-
-        # Check argument count
-        self._validate_arity(operator, op_def, evaluated_args)
-
-        # Handle special mixed return types (position function)
-        if op_def.get('returns_boolean_or_value'):
-            return self._apply_mixed_return_operator(operator, evaluated_args)
-
-        # Handle operations that return booleans FIRST (before string_only check)
-        if op_def.get('returns_boolean'):
-            return self._apply_boolean_returning_operator(operator, evaluated_args)
-
-        # Handle list operations
-        if op_def.get('list_operation'):
-            return self._apply_list_operator(operator, evaluated_args)
-
-        # Handle special cases that return strings
-        if op_def.get('returns_string'):
-            return self._apply_string_function(operator, evaluated_args)
-
-        # Handle functions that convert to strings
-        if op_def.get('converts_to_string'):
-            return self._apply_conversion_to_string(operator, evaluated_args)
-
-        # Handle functions that return lists
-        if op_def.get('returns_list'):
-            return self._apply_list_returning_function(operator, evaluated_args)
-
-        # Handle boolean-only operations (only NOT now, since AND/OR are special)
-        if op_def.get('boolean_only'):
-            return self._apply_boolean_operator(operator, evaluated_args)
-
-        # Handle string-only operations (now only for non-boolean returning functions)
-        if op_def.get('string_only'):
-            return self._apply_string_operator(operator, op_def, evaluated_args)
-
-        # Filter out string, boolean, and list arguments for mathematical operations
-        for arg in evaluated_args:
-            if isinstance(arg, (AIFPLString, AIFPLBoolean, AIFPLList)):
-                raise AIFPLEvalError(f"Operator '{operator}' cannot operate on {arg.type_name()} arguments")
-
-        # Handle bitwise operations (require integers)
-        if op_def.get('bitwise'):
-            return self._apply_bitwise_operator(operator, evaluated_args)
-
-        # Handle real-only operations
-        if op_def.get('real_only'):
-            return self._apply_real_only_function(operator, evaluated_args)
-
-        # Handle integer-only operations
-        if op_def.get('integer_only'):
-            return self._apply_integer_only_function(operator, evaluated_args)
-
-        # Handle regular mathematical operations
-        return self._apply_mathematical_operator(operator, op_def, evaluated_args)
 
     def _apply_if_conditional(
         self,
