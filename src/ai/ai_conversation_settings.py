@@ -56,15 +56,6 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-3-5-sonnet-20241022": AIModel(
-            name="claude-3-5-sonnet-20241022",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
         "claude-opus-4-1-20250805": AIModel(
             name="claude-opus-4-1-20250805",
             provider="anthropic",
