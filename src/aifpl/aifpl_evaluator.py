@@ -3,7 +3,7 @@
 import cmath
 from dataclasses import dataclass
 import math
-from typing import Any, Dict, List, Union
+from typing import List, Union
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
 from aifpl.aifpl_error import AIFPLEvalError
@@ -35,133 +35,61 @@ class AIFPLEvaluator:
         'false': AIFPLBoolean(False),
     }
 
-    # Built-in function definitions
-    BUILTIN_FUNCTIONS: Dict[str, Dict[str, Any]] = {
-        # Conditional operator
-        'if': {'type': 'special', 'args': 3, 'lazy_evaluation': True},
+    # List of all builtin functions for environment setup
+    BUILTIN_FUNCTION_NAMES = [
+        # Special forms (handled separately)
+        'if', 'and', 'or',
 
         # Arithmetic functions
-        '+': {'type': 'variadic', 'min_args': 0, 'identity': 0},
-        '-': {'type': 'variadic', 'min_args': 1},
-        '*': {'type': 'variadic', 'min_args': 0, 'identity': 1},
-        '/': {'type': 'variadic', 'min_args': 2},
-        '//': {'type': 'binary'},
-        '%': {'type': 'binary'},
-        '**': {'type': 'binary'},
+        '+', '-', '*', '/', '//', '%', '**',
 
         # Comparison functions
-        '=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
-        '!=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
-        '<': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
-        '>': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
-        '<=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
-        '>=': {'type': 'variadic', 'min_args': 2, 'returns_boolean': True},
+        '=', '!=', '<', '>', '<=', '>=',
 
         # Boolean functions
-        'and': {'type': 'special', 'min_args': 0, 'identity': True, 'boolean_only': True, 'lazy_evaluation': True},
-        'or': {'type': 'special', 'min_args': 0, 'identity': False, 'boolean_only': True, 'lazy_evaluation': True},
-        'not': {'type': 'unary', 'boolean_only': True},
+        'not',
 
         # Bitwise functions
-        'bit-or': {'type': 'variadic', 'min_args': 2, 'bitwise': True},
-        'bit-and': {'type': 'variadic', 'min_args': 2, 'bitwise': True},
-        'bit-xor': {'type': 'variadic', 'min_args': 2, 'bitwise': True},
-        'bit-not': {'type': 'unary', 'bitwise': True},
-        'bit-shift-left': {'type': 'binary', 'bitwise': True},
-        'bit-shift-right': {'type': 'binary', 'bitwise': True},
+        'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
 
         # Mathematical functions
-        'sin': {'type': 'unary'},
-        'cos': {'type': 'unary'},
-        'tan': {'type': 'unary'},
-        'log': {'type': 'unary'},
-        'log10': {'type': 'unary'},
-        'exp': {'type': 'unary'},
-        'sqrt': {'type': 'unary'},
-        'abs': {'type': 'unary'},
-        'round': {'type': 'unary', 'real_only': True},
-        'floor': {'type': 'unary', 'real_only': True},
-        'ceil': {'type': 'unary', 'real_only': True},
-        'min': {'type': 'variadic', 'min_args': 1},
-        'max': {'type': 'variadic', 'min_args': 1},
-        'pow': {'type': 'binary'},
+        'sin', 'cos', 'tan', 'log', 'log10', 'exp', 'sqrt', 'abs', 'round', 'floor', 'ceil',
+        'min', 'max', 'pow',
 
         # Base conversion functions
-        'bin': {'type': 'unary', 'integer_only': True, 'returns_string': True},
-        'hex': {'type': 'unary', 'integer_only': True, 'returns_string': True},
-        'oct': {'type': 'unary', 'integer_only': True, 'returns_string': True},
+        'bin', 'hex', 'oct',
 
         # Complex number functions
-        'real': {'type': 'unary'},
-        'imag': {'type': 'unary'},
-        'complex': {'type': 'binary'},
+        'real', 'imag', 'complex',
 
         # String functions
-        'string-append': {'type': 'variadic', 'min_args': 0, 'identity': '', 'string_only': True},
-        'string-length': {'type': 'unary', 'string_only': True},
-        'substring': {'type': 'ternary', 'string_only': True},
-        'string-upcase': {'type': 'unary', 'string_only': True},
-        'string-downcase': {'type': 'unary', 'string_only': True},
-        'string-ref': {'type': 'binary', 'string_only': True},
-        'string->number': {'type': 'unary', 'string_only': True},
-        'number->string': {'type': 'unary', 'converts_to_string': True},
-        'string-trim': {'type': 'unary', 'string_only': True},
-        'string-replace': {'type': 'ternary', 'string_only': True},
+        'string-append', 'string-length', 'substring', 'string-upcase', 'string-downcase',
+        'string-ref', 'string->number', 'number->string', 'string-trim', 'string-replace',
 
         # String predicates
-        'string-contains?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
-        'string-prefix?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
-        'string-suffix?': {'type': 'binary', 'string_only': True, 'returns_boolean': True},
-        'string=?': {'type': 'variadic', 'min_args': 2, 'string_only': True, 'returns_boolean': True},
+        'string-contains?', 'string-prefix?', 'string-suffix?', 'string=?',
 
         # List construction and manipulation functions
-        'list': {'type': 'variadic', 'min_args': 0, 'list_operation': True},
-        'cons': {'type': 'binary', 'list_operation': True},
-        'append': {'type': 'variadic', 'min_args': 2, 'list_operation': True},
-        'reverse': {'type': 'unary', 'list_operation': True},
+        'list', 'cons', 'append', 'reverse',
 
         # List access and property functions
-        'first': {'type': 'unary', 'list_operation': True},
-        'rest': {'type': 'unary', 'list_operation': True},
-        'last': {'type': 'unary', 'list_operation': True},
-        'list-ref': {'type': 'binary', 'list_operation': True},
-        'length': {'type': 'unary', 'list_operation': True},
+        'first', 'rest', 'last', 'list-ref', 'length',
 
         # List predicates
-        'null?': {'type': 'unary', 'list_operation': True, 'returns_boolean': True},
-        'list?': {'type': 'unary', 'returns_boolean': True},
-        'member?': {'type': 'binary', 'list_operation': True, 'returns_boolean': True},
+        'null?', 'list?', 'member?',
 
         # List utilities
-        'remove': {'type': 'binary', 'list_operation': True},
-        'position': {'type': 'binary', 'returns_boolean_or_value': True},
+        'remove', 'position',
 
         # String-list conversion functions
-        'string->list': {'type': 'unary', 'string_only': True, 'returns_list': True},
-        'list->string': {'type': 'unary', 'converts_to_string': True},
-        'string-split': {'type': 'binary', 'string_only': True, 'returns_list': True},
-        'string-join': {'type': 'binary', 'converts_to_string': True},
+        'string->list', 'list->string', 'string-split', 'string-join',
 
         # Type predicates
-        'number?': {'type': 'unary', 'returns_boolean': True},
-        'integer?': {'type': 'unary', 'returns_boolean': True},
-        'float?': {'type': 'unary', 'returns_boolean': True},
-        'complex?': {'type': 'unary', 'returns_boolean': True},
-        'string?': {'type': 'unary', 'returns_boolean': True},
-        'boolean?': {'type': 'unary', 'returns_boolean': True},
-        'function?': {'type': 'unary', 'returns_boolean': True},
+        'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'function?',
 
         # Functional iterators
-        'map': {'type': 'binary', 'higher_order': True},
-        'filter': {'type': 'binary', 'higher_order': True},
-        'fold': {'type': 'ternary', 'higher_order': True},
-        'range': {'type': 'variadic', 'min_args': 2, 'max_args': 3, 'higher_order': True},
-        'find': {'type': 'binary', 'higher_order': True},
-        'any?': {'type': 'binary', 'higher_order': True, 'returns_boolean': True},
-        'all?': {'type': 'binary', 'higher_order': True, 'returns_boolean': True},
-        'take': {'type': 'binary', 'list_operation': True},
-        'drop': {'type': 'binary', 'list_operation': True},
-    }
+        'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?', 'take', 'drop',
+    ]
 
     def __init__(self, max_depth: int = 100, floating_point_tolerance: float = 1e-10):
         """
@@ -211,7 +139,7 @@ class AIFPLEvaluator:
 
             # Add built-in functions to global environment.  This allows symbol lookup to succeed, and they
             # can be used in higher-order contexts
-            for builtin_function_name in self.BUILTIN_FUNCTIONS:
+            for builtin_function_name in self.BUILTIN_FUNCTION_NAMES:
                 env = env.define(builtin_function_name, AIFPLBuiltinFunction(builtin_function_name))
 
         try:
@@ -559,35 +487,32 @@ class AIFPLEvaluator:
 
             # Built-in function
             if isinstance(func_value, AIFPLBuiltinFunction) and isinstance(func_expr, AIFPLSymbol):
-                if func_expr.name not in self.BUILTIN_FUNCTIONS:
-                    raise AIFPLEvalError(f"Unknown function: '{func_expr.name}'")
-
-                op_def: Dict[str, Any] = self.BUILTIN_FUNCTIONS[func_expr.name]
+                function_name = func_expr.name
 
                 # Handle special forms that require lazy evaluation
-                if op_def.get('type') == 'special':
-                    if func_expr.name == 'if':
+                if function_name in ['if', 'and', 'or']:
+                    if function_name == 'if':
                         return self._apply_if_conditional(arg_exprs, current_env, depth)
 
-                    if func_expr.name == 'and':
+                    if function_name == 'and':
                         return self._apply_and_short_circuit(arg_exprs, current_env, depth)
 
-                    if func_expr.name == 'or':
+                    if function_name == 'or':
                         return self._apply_or_short_circuit(arg_exprs, current_env, depth)
 
                 # Handle higher-order functions (map, filter, fold, etc.)
-                if op_def.get('higher_order'):
-                    return self._apply_higher_order_function(func_expr.name, arg_exprs, current_env, depth)
+                if function_name in ['map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']:
+                    return self._apply_higher_order_function(function_name, arg_exprs, current_env, depth)
 
                 # For regular functions, evaluate arguments first
                 try:
                     evaluated_args = [self._evaluate_expression(arg, current_env, depth + 1) for arg in arg_exprs]
 
                 except AIFPLEvalError as e:
-                    raise AIFPLEvalError(f"Error evaluating arguments for '{func_expr.name}': {e}") from e
+                    raise AIFPLEvalError(f"Error evaluating arguments for '{function_name}': {e}") from e
 
-                # Delegate to common implementation
-                return self._call_builtin_function(func_expr.name, evaluated_args, current_env, depth)
+                # Call the specific builtin function
+                return self._call_builtin_function(function_name, evaluated_args, current_env, depth)
 
             raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
 
@@ -652,11 +577,11 @@ class AIFPLEvaluator:
         self,
         function_name: str,
         arg_values: List[AIFPLValue],
-        _env: AIFPLEnvironment,
-        _depth: int
+        env: AIFPLEnvironment,
+        depth: int
     ) -> AIFPLValue:
         """
-        Common logic for applying built-in functions with evaluated argument values.
+        Dispatch to specific builtin function implementation.
 
         Args:
             function_name: Function name
@@ -667,65 +592,69 @@ class AIFPLEvaluator:
         Returns:
             Operation result
         """
-        if function_name not in self.BUILTIN_FUNCTIONS:
-            raise AIFPLEvalError(f"Unknown function: '{function_name}'")
+        # Create comprehensive mapping of function names to method names
+        method_name_map = {
+            # Arithmetic operators
+            '+': '_builtin_plus',
+            '-': '_builtin_minus',
+            '*': '_builtin_star',
+            '/': '_builtin_slash',
+            '//': '_builtin_slash_slash',
+            '%': '_builtin_percent',
+            '**': '_builtin_star_star',
 
-        op_def: Dict[str, Any] = self.BUILTIN_FUNCTIONS[function_name]
+            # Comparison operators
+            '=': '_builtin_eq',
+            '!=': '_builtin_bang_eq',
+            '<': '_builtin_lt',
+            '>': '_builtin_gt',
+            '<=': '_builtin_lte',
+            '>=': '_builtin_gte',
 
-        # Check argument count
-        self._validate_arity(function_name, op_def, arg_values)
+            # String conversion functions
+            'string->number': '_builtin_string_to_number',
+            'number->string': '_builtin_number_to_string',
+            'string->list': '_builtin_string_to_list',
+            'list->string': '_builtin_list_to_string',
 
-        # Handle special mixed return types (position function)
-        if op_def.get('returns_boolean_or_value'):
-            return self._apply_mixed_return_builtin_function(function_name, arg_values)
+            # String predicates
+            'string-contains?': '_builtin_string_contains_p',
+            'string-prefix?': '_builtin_string_prefix_p',
+            'string-suffix?': '_builtin_string_suffix_p',
+            'string=?': '_builtin_string_eq_p',
 
-        # Handle operations that return booleans FIRST (before string_only check)
-        if op_def.get('returns_boolean'):
-            return self._apply_boolean_returning_builtin_function(function_name, arg_values)
+            # List predicates
+            'null?': '_builtin_null_p',
+            'list?': '_builtin_list_p',
+            'member?': '_builtin_member_p',
 
-        # Handle list operations
-        if op_def.get('list_operation'):
-            return self.apply_list_builtin_function(function_name, arg_values)
+            # Type predicates
+            'number?': '_builtin_number_p',
+            'integer?': '_builtin_integer_p',
+            'float?': '_builtin_float_p',
+            'complex?': '_builtin_complex_p',
+            'string?': '_builtin_string_p',
+            'boolean?': '_builtin_boolean_p',
+            'function?': '_builtin_function_p',
 
-        # Handle special cases that return strings
-        if op_def.get('returns_string'):
-            return self._apply_string_function(function_name, arg_values)
+            # Higher-order predicates
+            'any?': '_builtin_any_p',
+            'all?': '_builtin_all_p',
+        }
 
-        # Handle functions that convert to strings
-        if op_def.get('converts_to_string'):
-            return self._apply_conversion_to_string(function_name, arg_values)
+        # Check for direct mapping first
+        if function_name in method_name_map:
+            method_name = method_name_map[function_name]
 
-        # Handle functions that return lists
-        if op_def.get('returns_list'):
-            return self._apply_list_returning_function(function_name, arg_values)
+        else:
+            # Convert function name to method name using standard rules
+            method_name = f"_builtin_{function_name.replace('-', '_').replace('?', '_p').replace('!', '_bang')}"
 
-        # Handle boolean-only operations (only NOT now, since AND/OR are special)
-        if op_def.get('boolean_only'):
-            return self._apply_boolean_builtin_function(function_name, arg_values)
+        if hasattr(self, method_name):
+            method = getattr(self, method_name)
+            return method(arg_values, env, depth)
 
-        # Handle string-only operations (now only for non-boolean returning functions)
-        if op_def.get('string_only'):
-            return self._apply_string_builtin_function(function_name, op_def, arg_values)
-
-        # Filter out string, boolean, and list arguments for mathematical operations
-        for arg in arg_values:
-            if isinstance(arg, (AIFPLString, AIFPLBoolean, AIFPLList)):
-                raise AIFPLEvalError(f"Function '{function_name}' cannot operate on {arg.type_name()} arguments")
-
-        # Handle bitwise operations (require integers)
-        if op_def.get('bitwise'):
-            return self._apply_bitwise_function(function_name, arg_values)
-
-        # Handle real-only operations
-        if op_def.get('real_only'):
-            return self._apply_real_only_function(function_name, arg_values)
-
-        # Handle integer-only operations
-        if op_def.get('integer_only'):
-            return self._apply_integer_only_function(function_name, arg_values)
-
-        # Handle regular mathematical operations
-        return self._apply_mathematical_function(function_name, op_def, arg_values)
+        raise AIFPLEvalError(f"Unknown function: '{function_name}'")
 
     def _call_function_with_evaluated_args(
         self,
@@ -932,823 +861,6 @@ class AIFPLEvaluator:
         # All arguments were False
         return AIFPLBoolean(False)
 
-    def _validate_arity(self, function_name: str, op_def: Dict[str, Any], args: List[AIFPLValue]) -> None:
-        """Validate argument count for a function."""
-        op_type = op_def['type']
-        arg_count = len(args)
-
-        if op_type == 'unary' and arg_count != 1:
-            raise AIFPLEvalError(f"Function '{function_name}' takes exactly 1 argument, got {arg_count}")
-
-        if op_type == 'binary' and arg_count != 2:
-            raise AIFPLEvalError(f"Function '{function_name}' takes exactly 2 arguments, got {arg_count}")
-
-        if op_type == 'ternary' and arg_count != 3:
-            raise AIFPLEvalError(f"Function '{function_name}' takes exactly 3 arguments, got {arg_count}")
-
-        if op_type == 'variadic':
-            min_args = op_def.get('min_args', 0)
-            max_args = op_def.get('max_args')
-
-            if arg_count < min_args:
-                raise AIFPLEvalError(f"Function '{function_name}' requires at least {min_args} arguments, got {arg_count}")
-
-            if max_args is not None and arg_count > max_args:
-                raise AIFPLEvalError(f"Function '{function_name}' accepts at most {max_args} arguments, got {arg_count}")
-
-    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber:
-        """Ensure value is a number, raise error if not."""
-        if not isinstance(value, AIFPLNumber):
-            raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
-
-        return value
-
-    def _ensure_string(self, value: AIFPLValue, function_name: str) -> AIFPLString:
-        """Ensure value is a string, raise error if not."""
-        if not isinstance(value, AIFPLString):
-            raise AIFPLEvalError(f"Function '{function_name}' requires string arguments, got {value.type_name()}")
-
-        return value
-
-    def _ensure_boolean(self, value: AIFPLValue, function_name: str) -> AIFPLBoolean:
-        """Ensure value is a boolean, raise error if not."""
-        if not isinstance(value, AIFPLBoolean):
-            raise AIFPLEvalError(f"Function '{function_name}' requires boolean arguments, got {value.type_name()}")
-
-        return value
-
-    def _ensure_list(self, value: AIFPLValue, function_name: str) -> AIFPLList:
-        """Ensure value is a list, raise error if not."""
-        if not isinstance(value, AIFPLList):
-            raise AIFPLEvalError(f"Function '{function_name}' requires list arguments, got {value.type_name()}")
-
-        return value
-
-    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
-        """Ensure value is an integer, raise error if not."""
-        if not isinstance(value, AIFPLNumber) or not value.is_integer():
-            raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
-
-        # Type narrowing: we know value.value is int here
-        assert isinstance(value.value, int), "is_integer() should guarantee int type"
-        return value.value
-
-    def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> Union[int, float]:
-        """Ensure value is a real number (int or float), raise error if complex."""
-        if not isinstance(value, AIFPLNumber):
-            raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
-
-        if isinstance(value.value, complex):
-            raise AIFPLEvalError(f"Function '{function_name}' does not support complex numbers")
-
-        # Type narrowing: we know value.value is int or float here
-        return value.value
-
-    def _apply_mixed_return_builtin_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLValue:
-        """Apply functions that return mixed types (like position)."""
-        if function_name == 'position':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"position requires exactly 2 arguments, got {len(args)}")
-
-            item, list_arg = args
-            list_val = self._ensure_list(list_arg, function_name)
-
-            pos = list_val.position(item)
-            if pos is not None:
-                return AIFPLNumber(pos)
-
-            return AIFPLBoolean(False)
-
-        raise AIFPLEvalError(f"Unknown mixed return function: '{function_name}'")
-
-    def _apply_boolean_returning_builtin_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLValue:
-        """Apply functions that return boolean values."""
-        if function_name in ('=', '!='):
-            if len(args) < 2:
-                raise AIFPLEvalError(f"Function '{function_name}' requires at least 2 arguments, got {len(args)}")
-
-            if function_name == '=':
-                # All values must be equal
-                first = args[0]
-                return AIFPLBoolean(all(first == arg for arg in args[1:]))
-
-            if function_name == '!=':
-                # Any values not equal
-                for i, arg_i in enumerate(args):
-                    for j in range(i + 1, len(args)):
-                        if arg_i != args[j]:
-                            return AIFPLBoolean(True)
-
-                return AIFPLBoolean(False)
-
-        if function_name in ('<', '>', '<=', '>='):
-            if len(args) < 2:
-                raise AIFPLEvalError(f"Function '{function_name}' requires at least 2 arguments, got {len(args)}")
-
-            # Ensure all arguments are numeric and real (not complex)
-            for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLNumber):
-                    raise AIFPLEvalError(
-                        f"Function '{function_name}' requires numeric arguments, argument {i+1} is {arg.type_name()}"
-                    )
-
-                if isinstance(arg.value, complex):
-                    raise AIFPLEvalError(f"Function '{function_name}' does not support complex numbers")
-
-            # Check comparison chain - now we know all values are real numbers
-            for i in range(len(args) - 1):
-                left_arg, right_arg = args[i], args[i + 1]
-                assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
-                # Type narrowing: we've ensured these are not complex
-                left_val = left_arg.value
-                right_val = right_arg.value
-                assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
-
-                if function_name == '<' and not left_val < right_val:
-                    return AIFPLBoolean(False)
-
-                if function_name == '>' and not left_val > right_val:
-                    return AIFPLBoolean(False)
-
-                if function_name == '<=' and not left_val <= right_val:
-                    return AIFPLBoolean(False)
-
-                if function_name == '>=' and not left_val >= right_val:
-                    return AIFPLBoolean(False)
-
-            return AIFPLBoolean(True)
-
-        # Type predicates
-        if function_name == 'number?':
-            return AIFPLBoolean(isinstance(args[0], AIFPLNumber))
-
-        if function_name == 'integer?':
-            return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_integer())
-
-        if function_name == 'float?':
-            return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_float())
-
-        if function_name == 'complex?':
-            return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_complex())
-
-        if function_name == 'string?':
-            return AIFPLBoolean(isinstance(args[0], AIFPLString))
-
-        if function_name == 'boolean?':
-            return AIFPLBoolean(isinstance(args[0], AIFPLBoolean))
-
-        if function_name == 'list?':
-            return AIFPLBoolean(isinstance(args[0], AIFPLList))
-
-        if function_name == 'function?':
-            return AIFPLBoolean(isinstance(args[0], (AIFPLFunction, AIFPLBuiltinFunction)))
-
-        # List predicates
-        if function_name == 'null?':
-            list_val = self._ensure_list(args[0], function_name)
-            return AIFPLBoolean(list_val.is_empty())
-
-        if function_name == 'member?':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"member? requires exactly 2 arguments, got {len(args)}")
-
-            item, list_arg = args
-            list_val = self._ensure_list(list_arg, function_name)
-            return AIFPLBoolean(list_val.contains(item))
-
-        # String predicates - these are implemented in this class
-        if function_name in ('string-contains?', 'string-prefix?', 'string-suffix?', 'string=?'):
-            return self._apply_string_builtin_function(function_name, self.BUILTIN_FUNCTIONS[function_name], args)
-
-        raise AIFPLEvalError(f"Unknown boolean-returning function: '{function_name}'")
-
-    def apply_list_builtin_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLValue:
-        """Apply list function."""
-        if function_name == 'list':
-            return AIFPLList(tuple(args))
-
-        if function_name == 'cons':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"cons requires exactly 2 arguments, got {len(args)}")
-
-            item, list_arg = args
-            list_val = self._ensure_list(list_arg, function_name)
-            return list_val.cons(item)
-
-        if function_name == 'append':
-            if len(args) < 2:
-                raise AIFPLEvalError(f"append requires at least 2 arguments, got {len(args)}")
-
-            # Validate all arguments are lists
-            list_vals = [self._ensure_list(arg, function_name) for arg in args]
-
-            # Concatenate all lists
-            result = list_vals[0]
-            for list_val in list_vals[1:]:
-                result = result.append_list(list_val)
-
-            return result
-
-        if function_name == 'reverse':
-            list_val = self._ensure_list(args[0], function_name)
-            return list_val.reverse()
-
-        if function_name == 'first':
-            list_val = self._ensure_list(args[0], function_name)
-            try:
-                return list_val.first()
-
-            except IndexError as e:
-                raise AIFPLEvalError(str(e)) from e
-
-        if function_name == 'rest':
-            list_val = self._ensure_list(args[0], function_name)
-            try:
-                return list_val.rest()
-
-            except IndexError as e:
-                raise AIFPLEvalError(str(e)) from e
-
-        if function_name == 'last':
-            list_val = self._ensure_list(args[0], function_name)
-            try:
-                return list_val.last()
-
-            except IndexError as e:
-                raise AIFPLEvalError(str(e)) from e
-
-        if function_name == 'list-ref':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"list-ref requires exactly 2 arguments, got {len(args)}")
-
-            list_val = self._ensure_list(args[0], function_name)
-            index = self._ensure_integer(args[1], function_name)
-
-            # Check for negative index (not allowed in AIFPL)
-            if index < 0:
-                raise AIFPLEvalError(f"list-ref index out of range: {index}")
-
-            try:
-                return list_val.get(index)
-
-            except IndexError as e:
-                raise AIFPLEvalError(f"list-ref index out of range: {index}") from e
-
-        if function_name == 'length':
-            list_val = self._ensure_list(args[0], function_name)
-            return AIFPLNumber(list_val.length())
-
-        if function_name == 'remove':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"remove requires exactly 2 arguments, got {len(args)}")
-
-            item, list_arg = args
-            list_val = self._ensure_list(list_arg, function_name)
-            return list_val.remove_all(item)
-
-        if function_name == 'take':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"take requires exactly 2 arguments, got {len(args)}")
-
-            n = self._ensure_integer(args[0], function_name)
-            list_val = self._ensure_list(args[1], function_name)
-            if n < 0:
-                raise AIFPLEvalError(f"take count cannot be negative: {n}")
-
-            return list_val.take(n)
-
-        if function_name == 'drop':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"drop requires exactly 2 arguments, got {len(args)}")
-
-            n = self._ensure_integer(args[0], function_name)
-            list_val = self._ensure_list(args[1], function_name)
-            if n < 0:
-                raise AIFPLEvalError(f"drop count cannot be negative: {n}")
-
-            return list_val.drop(n)
-
-        raise AIFPLEvalError(f"Unknown list function: '{function_name}'")
-
-    def _apply_boolean_builtin_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLValue:
-        """Apply boolean function."""
-        if function_name == 'not':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"not requires exactly 1 argument, got {len(args)}")
-
-            bool_val = self._ensure_boolean(args[0], function_name)
-            return AIFPLBoolean(not bool_val.value)
-
-        raise AIFPLEvalError(f"Unknown boolean function: '{function_name}'")
-
-    def _apply_string_builtin_function(self, function_name: str, op_def: dict, args: List[AIFPLValue]) -> AIFPLValue:
-        """Apply string function."""
-        if function_name == 'string-append':
-            if not args:
-                return AIFPLString(op_def.get('identity', ''))
-
-            # Ensure all arguments are strings
-            string_args = [self._ensure_string(arg, function_name) for arg in args]
-            result = ''.join(arg.value for arg in string_args)
-            return AIFPLString(result)
-
-        if function_name == 'string-length':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"string-length requires exactly 1 argument, got {len(args)}")
-
-            string_arg = self._ensure_string(args[0], function_name)
-            return AIFPLNumber(len(string_arg.value))
-
-        if function_name == 'string-upcase':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"string-upcase requires exactly 1 argument, got {len(args)}")
-
-            string_arg = self._ensure_string(args[0], function_name)
-            return AIFPLString(string_arg.value.upper())
-
-        if function_name == 'string-downcase':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"string-downcase requires exactly 1 argument, got {len(args)}")
-
-            string_arg = self._ensure_string(args[0], function_name)
-            return AIFPLString(string_arg.value.lower())
-
-        if function_name == 'string-trim':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"string-trim requires exactly 1 argument, got {len(args)}")
-
-            string_arg = self._ensure_string(args[0], function_name)
-            return AIFPLString(string_arg.value.strip())
-
-        if function_name == 'string-replace':
-            if len(args) != 3:
-                raise AIFPLEvalError(f"string-replace requires exactly 3 arguments, got {len(args)}")
-
-            string_arg, old_str, new_str = [self._ensure_string(arg, function_name) for arg in args]
-            result = string_arg.value.replace(old_str.value, new_str.value)
-            return AIFPLString(result)
-
-        if function_name == 'substring':
-            if len(args) != 3:
-                raise AIFPLEvalError(f"substring requires exactly 3 arguments, got {len(args)}")
-
-            string_arg = self._ensure_string(args[0], function_name)
-            start_idx = self._ensure_integer(args[1], function_name)
-            end_idx = self._ensure_integer(args[2], function_name)
-
-            string_len = len(string_arg.value)
-            if start_idx < 0:
-                raise AIFPLEvalError(f"substring start index cannot be negative: {start_idx}")
-
-            if end_idx < 0:
-                raise AIFPLEvalError(f"substring end index cannot be negative: {end_idx}")
-
-            if start_idx > string_len:
-                raise AIFPLEvalError(f"substring start index out of range: {start_idx} (string length: {string_len})")
-
-            if end_idx > string_len:
-                raise AIFPLEvalError(f"substring end index out of range: {end_idx} (string length: {string_len})")
-
-            if start_idx > end_idx:
-                raise AIFPLEvalError(f"substring start index ({start_idx}) cannot be greater than end index ({end_idx})")
-
-            return AIFPLString(string_arg.value[start_idx:end_idx])
-
-        if function_name == 'string-ref':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"string-ref requires exactly 2 arguments, got {len(args)}")
-
-            string_arg = self._ensure_string(args[0], function_name)
-            index = self._ensure_integer(args[1], function_name)
-
-            # Check for negative index (not allowed in AIFPL)
-            if index < 0:
-                raise AIFPLEvalError(f"string-ref index out of range: {index}")
-
-            string_len = len(string_arg.value)
-            if index >= string_len:
-                raise AIFPLEvalError(f"string-ref index out of range: {index}")
-
-            return AIFPLString(string_arg.value[index])
-
-        if function_name == 'string->number':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"string->number requires exactly 1 argument, got {len(args)}")
-            string_arg = self._ensure_string(args[0], function_name)
-
-            try:
-                # Try to parse as integer first
-                if '.' not in string_arg.value and 'e' not in string_arg.value.lower() and 'j' not in string_arg.value.lower():
-                    return AIFPLNumber(int(string_arg.value))
-
-                # Try complex number
-                if 'j' in string_arg.value.lower():
-                    return AIFPLNumber(complex(string_arg.value))
-
-                # Otherwise float
-                return AIFPLNumber(float(string_arg.value))
-
-            except ValueError as e:
-                raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg.value}'") from e
-
-        # String predicates
-        if function_name == 'string-contains?':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"string-contains? requires exactly 2 arguments, got {len(args)}")
-
-            string_arg, substring = [self._ensure_string(arg, function_name) for arg in args]
-            return AIFPLBoolean(substring.value in string_arg.value)
-
-        if function_name == 'string-prefix?':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"string-prefix? requires exactly 2 arguments, got {len(args)}")
-
-            string_arg, prefix = [self._ensure_string(arg, function_name) for arg in args]
-            return AIFPLBoolean(string_arg.value.startswith(prefix.value))
-
-        if function_name == 'string-suffix?':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"string-suffix? requires exactly 2 arguments, got {len(args)}")
-
-            string_arg, suffix = [self._ensure_string(arg, function_name) for arg in args]
-            return AIFPLBoolean(string_arg.value.endswith(suffix.value))
-
-        if function_name == 'string=?':
-            if len(args) < 2:
-                raise AIFPLEvalError(f"string=? requires at least 2 arguments, got {len(args)}")
-
-            string_args = [self._ensure_string(arg, function_name) for arg in args]
-            first_val = string_args[0].value
-            return AIFPLBoolean(all(arg.value == first_val for arg in string_args[1:]))
-
-        raise AIFPLEvalError(f"Unknown string function: '{function_name}'")
-
-    def _apply_conversion_to_string(self, function_name: str, args: List[AIFPLValue]) -> AIFPLString:
-        """Apply functions that convert values to strings."""
-        if function_name == 'number->string':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"number->string requires exactly 1 argument, got {len(args)}")
-
-            num_arg = self._ensure_number(args[0], function_name)
-            return AIFPLString(str(num_arg.value))
-
-        if function_name == 'list->string':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"list->string requires exactly 1 argument, got {len(args)}")
-
-            list_arg = self._ensure_list(args[0], function_name)
-
-            try:
-                return AIFPLString(''.join(str(elem.to_python()) for elem in list_arg.elements))
-
-            except Exception as e:
-                raise AIFPLEvalError(f"Cannot convert list to string: {e}") from e
-
-        if function_name == 'string-join':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"string-join requires exactly 2 arguments, got {len(args)}")
-
-            list_arg = self._ensure_list(args[0], function_name)
-            separator = self._ensure_string(args[1], function_name)
-
-            # Ensure all list elements are strings
-            str_items = []
-            for item in list_arg.elements:
-                if not isinstance(item, AIFPLString):
-                    raise AIFPLEvalError(f"string-join requires list of strings, found {item.type_name()}")
-
-                str_items.append(item.value)
-
-            return AIFPLString(separator.value.join(str_items))
-
-        raise AIFPLEvalError(f"Unknown string conversion function: '{function_name}'")
-
-    def _apply_list_returning_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLList:
-        """Apply functions that return lists."""
-        if function_name == 'string->list':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"string->list requires exactly 1 argument, got {len(args)}")
-
-            string_arg = self._ensure_string(args[0], function_name)
-            elements = tuple(AIFPLString(char) for char in string_arg.value)
-            return AIFPLList(elements)
-
-        if function_name == 'string-split':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"string-split requires exactly 2 arguments, got {len(args)}")
-
-            string_arg, delimiter = [self._ensure_string(arg, function_name) for arg in args]
-
-            # Handle empty separator case - split into individual characters
-            if delimiter.value == "":
-                return self._apply_list_returning_function('string->list', [string_arg])
-
-            parts = string_arg.value.split(delimiter.value)
-            elements = tuple(AIFPLString(part) for part in parts)
-            return AIFPLList(elements)
-
-        raise AIFPLEvalError(f"Unknown list-returning function: '{function_name}'")
-
-    def _apply_string_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLString:
-        """Apply functions that return strings."""
-        if function_name == 'bin':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"bin requires exactly 1 argument, got {len(args)}")
-
-            int_val = self._ensure_integer(args[0], function_name)
-            return AIFPLString(bin(int_val))
-
-        if function_name == 'hex':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"hex requires exactly 1 argument, got {len(args)}")
-
-            int_val = self._ensure_integer(args[0], function_name)
-            return AIFPLString(hex(int_val))
-
-        if function_name == 'oct':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"oct requires exactly 1 argument, got {len(args)}")
-
-            int_val = self._ensure_integer(args[0], function_name)
-            return AIFPLString(oct(int_val))
-
-        raise AIFPLEvalError(f"Unknown string function: '{function_name}'")
-
-    def _apply_bitwise_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLNumber:
-        """Apply bitwise functions (require integer arguments)."""
-        # Convert all arguments to integers
-        int_args = [self._ensure_integer(arg, function_name) for arg in args]
-
-        if function_name == 'bit-or':
-            result = int_args[0]
-            for arg in int_args[1:]:
-                result |= arg
-
-            return AIFPLNumber(result)
-
-        if function_name == 'bit-and':
-            result = int_args[0]
-            for arg in int_args[1:]:
-                result &= arg
-
-            return AIFPLNumber(result)
-
-        if function_name == 'bit-xor':
-            result = int_args[0]
-            for arg in int_args[1:]:
-                result ^= arg
-
-            return AIFPLNumber(result)
-
-        if function_name == 'bit-not':
-            if len(int_args) != 1:
-                raise AIFPLEvalError(f"bit-not requires exactly 1 argument, got {len(int_args)}")
-
-            return AIFPLNumber(~int_args[0])
-
-        if function_name == 'bit-shift-left':
-            if len(int_args) != 2:
-                raise AIFPLEvalError(f"bit-shift-left requires exactly 2 arguments, got {len(int_args)}")
-
-            return AIFPLNumber(int_args[0] << int_args[1])
-
-        if function_name == 'bit-shift-right':
-            if len(int_args) != 2:
-                raise AIFPLEvalError(f"bit-shift-right requires exactly 2 arguments, got {len(int_args)}")
-
-            return AIFPLNumber(int_args[0] >> int_args[1])
-
-        raise AIFPLEvalError(f"Unknown bitwise function: '{function_name}'")
-
-    def _apply_real_only_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLNumber:
-        """Apply functions that only work with real numbers."""
-        if len(args) != 1:
-            raise AIFPLEvalError(f"Function '{function_name}' requires exactly 1 argument, got {len(args)}")
-
-        num_arg = self._ensure_number(args[0], function_name)
-
-        # Extract real part if complex
-        if isinstance(num_arg.value, complex):
-            if abs(num_arg.value.imag) >= self.floating_point_tolerance:
-                raise AIFPLEvalError(f"Function '{function_name}' does not support complex numbers")
-
-            # Fix type narrowing issue by being explicit about the type
-            val = num_arg.value.real
-            # Ensure val is Union[int, float] not float
-            if not isinstance(val, (int, float)):
-                val = float(val)
-
-        else:
-            val = num_arg.value
-
-        if function_name == 'round':
-            return AIFPLNumber(round(val))
-
-        if function_name == 'floor':
-            return AIFPLNumber(math.floor(val))
-
-        if function_name == 'ceil':
-            return AIFPLNumber(math.ceil(val))
-
-        raise AIFPLEvalError(f"Unknown real-only function: '{function_name}'")
-
-    def _apply_integer_only_function(self, function_name: str, args: List[AIFPLValue]) -> AIFPLValue:
-        """Apply functions that require integer arguments."""
-        # These are handled in _apply_string_function for base conversions
-        raise AIFPLEvalError(f"Unknown integer-only function: '{function_name}'")
-
-    def _apply_mathematical_function(self, function_name: str, op_def: dict, args: List[AIFPLValue]) -> AIFPLNumber:
-        """Apply mathematical functions - enhanced version."""
-        # Ensure all args are numbers
-        num_args = [self._ensure_number(arg, function_name) for arg in args]
-
-        if function_name == '+':
-            if not num_args:
-                return AIFPLNumber(op_def.get('identity', 0))
-
-            result = sum(arg.value for arg in num_args)
-            return AIFPLNumber(result)
-
-        if function_name == '-':
-            if len(num_args) == 1:
-                return AIFPLNumber(-num_args[0].value)
-
-            result = num_args[0].value
-            for arg in num_args[1:]:
-                result -= arg.value
-
-            return AIFPLNumber(result)
-
-        if function_name == '*':
-            if not num_args:
-                return AIFPLNumber(op_def.get('identity', 1))
-
-            result = num_args[0].value
-            for arg in num_args[1:]:
-                result *= arg.value
-
-            return AIFPLNumber(result)
-
-        if function_name == '/':
-            # Check for division by zero
-            for i, arg in enumerate(num_args[1:], 1):
-                if arg.value == 0:
-                    raise AIFPLEvalError(f"Division by zero at argument {i+1}")
-
-            result = num_args[0].value
-            for arg in num_args[1:]:
-                result /= arg.value
-
-            return AIFPLNumber(result)
-
-        if function_name == '//':
-            if len(num_args) != 2:
-                raise AIFPLEvalError(f"Floor division requires exactly 2 arguments, got {len(num_args)}")
-
-            left_val = self._ensure_real_number(num_args[0], function_name)
-            right_val = self._ensure_real_number(num_args[1], function_name)
-
-            if right_val == 0:
-                raise AIFPLEvalError("Division by zero")
-
-            return AIFPLNumber(left_val // right_val)
-
-        if function_name == '%':
-            if len(num_args) != 2:
-                raise AIFPLEvalError(f"Modulo requires exactly 2 arguments, got {len(num_args)}")
-
-            left_val = self._ensure_real_number(num_args[0], function_name)
-            right_val = self._ensure_real_number(num_args[1], function_name)
-
-            if right_val == 0:
-                raise AIFPLEvalError("Modulo by zero")
-
-            return AIFPLNumber(left_val % right_val)
-
-        if function_name in ['**', 'pow']:
-            if len(num_args) != 2:
-                raise AIFPLEvalError(f"Power requires exactly 2 arguments, got {len(num_args)}")
-
-            base, exponent = num_args[0].value, num_args[1].value
-            return AIFPLNumber(base ** exponent)
-
-        # Mathematical functions
-        if function_name == 'abs':
-            return AIFPLNumber(abs(num_args[0].value))
-
-        if function_name == 'sin':
-            val = num_args[0].value
-
-            if isinstance(val, complex):
-                return AIFPLNumber(cmath.sin(val))
-
-            return AIFPLNumber(math.sin(val))
-
-        if function_name == 'cos':
-            val = num_args[0].value
-            if isinstance(val, complex):
-                return AIFPLNumber(cmath.cos(val))
-
-            return AIFPLNumber(math.cos(val))
-
-        if function_name == 'tan':
-            val = num_args[0].value
-            if isinstance(val, complex):
-                return AIFPLNumber(cmath.tan(val))
-
-            return AIFPLNumber(math.tan(val))
-
-        if function_name == 'log':
-            val = num_args[0].value
-            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
-                return AIFPLNumber(cmath.log(val))
-
-            return AIFPLNumber(math.log(val))
-
-        if function_name == 'log10':
-            val = num_args[0].value
-            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
-                return AIFPLNumber(cmath.log10(val))
-
-            return AIFPLNumber(math.log10(val))
-
-        if function_name == 'exp':
-            val = num_args[0].value
-            if isinstance(val, complex):
-                return AIFPLNumber(cmath.exp(val))
-
-            return AIFPLNumber(math.exp(val))
-
-        if function_name == 'sqrt':
-            val = num_args[0].value
-            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
-                return AIFPLNumber(cmath.sqrt(val))
-
-            return AIFPLNumber(math.sqrt(val))
-
-        if function_name == 'min':
-            if not num_args:
-                raise AIFPLEvalError("min requires at least 1 argument")
-
-            # Use type narrowing to handle only real numbers for min/max
-            real_values = []
-            for arg in num_args:
-                real_val = self._ensure_real_number(arg, function_name)
-                real_values.append(real_val)
-
-            return AIFPLNumber(min(real_values))
-
-        if function_name == 'max':
-            if not num_args:
-                raise AIFPLEvalError("max requires at least 1 argument")
-
-            # Use type narrowing to handle only real numbers for min/max
-            real_values = []
-            for arg in num_args:
-                real_val = self._ensure_real_number(arg, function_name)
-                real_values.append(real_val)
-
-            return AIFPLNumber(max(real_values))
-
-        # Complex number functions
-        if function_name == 'real':
-            val = num_args[0].value
-            if isinstance(val, complex):
-                real_part = val.real
-                # Convert to int if it's a whole number
-                if isinstance(real_part, float) and real_part.is_integer():
-                    return AIFPLNumber(int(real_part))
-
-                return AIFPLNumber(real_part)
-
-            # For real numbers, return as-is
-            return num_args[0]
-
-        if function_name == 'imag':
-            val = num_args[0].value
-            if isinstance(val, complex):
-                imag_part = val.imag
-                # Convert to int if it's a whole number
-                if isinstance(imag_part, float) and imag_part.is_integer():
-                    return AIFPLNumber(int(imag_part))
-
-                return AIFPLNumber(imag_part)
-
-            # For real numbers, imaginary part is 0
-            return AIFPLNumber(0)
-
-        if function_name == 'complex':
-            if len(num_args) != 2:
-                raise AIFPLEvalError(f"complex requires exactly 2 arguments, got {len(num_args)}")
-
-            if not isinstance(num_args[0].value, (int, float)) or not isinstance(num_args[1].value, (int, float)):
-                raise AIFPLEvalError("complex arguments must be real numbers")
-
-            real_part, imag_part = num_args[0].value, num_args[1].value
-            return AIFPLNumber(complex(real_part, imag_part))
-
-        raise AIFPLEvalError(f"Unknown mathematical function: '{function_name}'")
-
     def _apply_higher_order_function(
         self,
         function_name: str,
@@ -1938,6 +1050,1045 @@ class AIFPLEvaluator:
             return AIFPLBoolean(True)
 
         raise AIFPLEvalError(f"Higher-order function '{function_name}' not yet implemented")
+
+    def _builtin_plus(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement + operation."""
+        if not args:
+            return AIFPLNumber(0)
+
+        # Ensure all args are numbers
+        num_args = [self._ensure_number(arg, "+") for arg in args]
+        result = sum(arg.value for arg in num_args)
+        return AIFPLNumber(result)
+
+    def _builtin_minus(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement - operation."""
+        if len(args) == 0:
+            raise AIFPLEvalError("Function '-' requires at least 1 argument, got 0")
+
+        num_args = [self._ensure_number(arg, "-") for arg in args]
+
+        if len(args) == 1:
+            return AIFPLNumber(-num_args[0].value)
+
+        result = num_args[0].value
+        for arg in num_args[1:]:
+            result -= arg.value
+
+        return AIFPLNumber(result)
+
+    def _builtin_star(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement * operation."""
+        if not args:
+            return AIFPLNumber(1)
+
+        num_args = [self._ensure_number(arg, "*") for arg in args]
+        result = num_args[0].value
+        for arg in num_args[1:]:
+            result *= arg.value
+
+        return AIFPLNumber(result)
+
+    def _builtin_slash(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement / operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError("Function '/' requires at least 2 arguments, got " + str(len(args)))
+
+        num_args = [self._ensure_number(arg, "/") for arg in args]
+
+        # Check for division by zero
+        for i, arg in enumerate(num_args[1:], 1):
+            if arg.value == 0:
+                raise AIFPLEvalError(f"Division by zero at argument {i+1}")
+
+        result = num_args[0].value
+        for arg in num_args[1:]:
+            result /= arg.value
+
+        return AIFPLNumber(result)
+
+    def _builtin_slash_slash(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement // (floor division) operation."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"Floor division takes exactly 2 arguments, got {len(args)}")
+
+        left_val = self._ensure_real_number(args[0], "//")
+        right_val = self._ensure_real_number(args[1], "//")
+
+        if right_val == 0:
+            raise AIFPLEvalError("Division by zero")
+
+        return AIFPLNumber(left_val // right_val)
+
+    def _builtin_percent(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement % (modulo) operation."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"Modulo takes exactly 2 arguments, got {len(args)}")
+
+        left_val = self._ensure_real_number(args[0], "%")
+        right_val = self._ensure_real_number(args[1], "%")
+
+        if right_val == 0:
+            raise AIFPLEvalError("Modulo by zero")
+
+        return AIFPLNumber(left_val % right_val)
+
+    def _builtin_star_star(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement ** (exponentiation) operation."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"Power takes exactly 2 arguments, got {len(args)}")
+
+        base = self._ensure_number(args[0], "**")
+        exponent = self._ensure_number(args[1], "**")
+        return AIFPLNumber(base.value ** exponent.value)
+
+    def _builtin_eq(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement = (equality) operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"Function '=' requires at least 2 arguments, got {len(args)}")
+
+        # All values must be equal
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _builtin_bang_eq(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement != (inequality) operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"Function '!=' requires at least 2 arguments, got {len(args)}")
+
+        # Any values not equal
+        for i, arg_i in enumerate(args):
+            for j in range(i + 1, len(args)):
+                if arg_i != args[j]:
+                    return AIFPLBoolean(True)
+
+        return AIFPLBoolean(False)
+
+    def _builtin_lt(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement < (less than) operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"Function '<' requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are numeric and real (not complex)
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLNumber):
+                raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+1} is {arg.type_name()}")
+
+            if isinstance(arg.value, complex):
+                raise AIFPLEvalError("Function '<' does not support complex numbers")
+
+        # Check comparison chain
+        for i in range(len(args) - 1):
+            left_arg, right_arg = args[i], args[i + 1]
+            assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
+            left_val = left_arg.value
+            right_val = right_arg.value
+            assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
+
+            if not left_val < right_val:
+                return AIFPLBoolean(False)
+
+        return AIFPLBoolean(True)
+
+    def _builtin_gt(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement > (greater than) operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"Function '>' requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are numeric and real (not complex)
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLNumber):
+                raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+1} is {arg.type_name()}")
+
+            if isinstance(arg.value, complex):
+                raise AIFPLEvalError("Function '>' does not support complex numbers")
+
+        # Check comparison chain
+        for i in range(len(args) - 1):
+            left_arg, right_arg = args[i], args[i + 1]
+            assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
+            left_val = left_arg.value
+            right_val = right_arg.value
+            assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
+
+            if not left_val > right_val:
+                return AIFPLBoolean(False)
+
+        return AIFPLBoolean(True)
+
+    def _builtin_lte(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement <= (less than or equal) operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"Function '<=' requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are numeric and real (not complex)
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLNumber):
+                raise AIFPLEvalError(f"Function '<=' requires numeric arguments, argument {i+1} is {arg.type_name()}")
+
+            if isinstance(arg.value, complex):
+                raise AIFPLEvalError("Function '<=' does not support complex numbers")
+
+        # Check comparison chain
+        for i in range(len(args) - 1):
+            left_arg, right_arg = args[i], args[i + 1]
+            assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
+            left_val = left_arg.value
+            right_val = right_arg.value
+            assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
+
+            if not left_val <= right_val:
+                return AIFPLBoolean(False)
+
+        return AIFPLBoolean(True)
+
+    def _builtin_gte(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement >= (greater than or equal) operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"Function '>=' requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are numeric and real (not complex)
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLNumber):
+                raise AIFPLEvalError(f"Function '>=' requires numeric arguments, argument {i+1} is {arg.type_name()}")
+
+            if isinstance(arg.value, complex):
+                raise AIFPLEvalError("Function '>=' does not support complex numbers")
+
+        # Check comparison chain
+        for i in range(len(args) - 1):
+            left_arg, right_arg = args[i], args[i + 1]
+            assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
+            left_val = left_arg.value
+            right_val = right_arg.value
+            assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
+
+            if not left_val >= right_val:
+                return AIFPLBoolean(False)
+
+        return AIFPLBoolean(True)
+
+    def _builtin_not(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement not operation."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"not takes exactly 1 argument, got {len(args)}")
+
+        bool_val = self._ensure_boolean(args[0], "not")
+        return AIFPLBoolean(not bool_val.value)
+
+    def _builtin_bit_or(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement bit-or operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"bit-or requires at least 2 arguments, got {len(args)}")
+
+        int_args = [self._ensure_integer(arg, "bit-or") for arg in args]
+        result = int_args[0]
+        for arg in int_args[1:]:
+            result |= arg
+
+        return AIFPLNumber(result)
+
+    def _builtin_bit_and(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement bit-and operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"bit-and requires at least 2 arguments, got {len(args)}")
+
+        int_args = [self._ensure_integer(arg, "bit-and") for arg in args]
+        result = int_args[0]
+        for arg in int_args[1:]:
+            result &= arg
+
+        return AIFPLNumber(result)
+
+    def _builtin_bit_xor(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement bit-xor operation."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"bit-xor requires at least 2 arguments, got {len(args)}")
+
+        int_args = [self._ensure_integer(arg, "bit-xor") for arg in args]
+        result = int_args[0]
+        for arg in int_args[1:]:
+            result ^= arg
+
+        return AIFPLNumber(result)
+
+    def _builtin_bit_not(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement bit-not operation."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"bit-not takes exactly 1 argument, got {len(args)}")
+
+        int_val = self._ensure_integer(args[0], "bit-not")
+        return AIFPLNumber(~int_val)
+
+    def _builtin_bit_shift_left(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement bit-shift-left operation."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"bit-shift-left takes exactly 2 arguments, got {len(args)}")
+
+        value = self._ensure_integer(args[0], "bit-shift-left")
+        shift = self._ensure_integer(args[1], "bit-shift-left")
+        return AIFPLNumber(value << shift)
+
+    def _builtin_bit_shift_right(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement bit-shift-right operation."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"bit-shift-right takes exactly 2 arguments, got {len(args)}")
+
+        value = self._ensure_integer(args[0], "bit-shift-right")
+        shift = self._ensure_integer(args[1], "bit-shift-right")
+        return AIFPLNumber(value >> shift)
+
+    def _builtin_sin(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement sin function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"sin takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "sin")
+        val = num_val.value
+
+        if isinstance(val, complex):
+            return AIFPLNumber(cmath.sin(val))
+
+        return AIFPLNumber(math.sin(val))
+
+    def _builtin_cos(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement cos function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"cos takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "cos")
+        val = num_val.value
+
+        if isinstance(val, complex):
+            return AIFPLNumber(cmath.cos(val))
+
+        return AIFPLNumber(math.cos(val))
+
+    def _builtin_tan(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement tan function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"tan takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "tan")
+        val = num_val.value
+
+        if isinstance(val, complex):
+            return AIFPLNumber(cmath.tan(val))
+
+        return AIFPLNumber(math.tan(val))
+
+    def _builtin_log(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement log (natural logarithm) function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"log takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "log")
+        val = num_val.value
+
+        if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
+            return AIFPLNumber(cmath.log(val))
+
+        return AIFPLNumber(math.log(val))
+
+    def _builtin_log10(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement log10 function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"log10 takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "log10")
+        val = num_val.value
+
+        if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
+            return AIFPLNumber(cmath.log10(val))
+
+        return AIFPLNumber(math.log10(val))
+
+    def _builtin_exp(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement exp function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"exp takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "exp")
+        val = num_val.value
+
+        if isinstance(val, complex):
+            return AIFPLNumber(cmath.exp(val))
+
+        return AIFPLNumber(math.exp(val))
+
+    def _builtin_sqrt(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement sqrt function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"sqrt takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "sqrt")
+        val = num_val.value
+
+        if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
+            return AIFPLNumber(cmath.sqrt(val))
+
+        return AIFPLNumber(math.sqrt(val))
+
+    def _builtin_abs(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement abs function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"abs takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "abs")
+        return AIFPLNumber(abs(num_val.value))
+
+    def _builtin_round(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement round function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"round takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "round")
+
+        # Extract real part if complex
+        if isinstance(num_val.value, complex):
+            if abs(num_val.value.imag) >= self.floating_point_tolerance:
+                raise AIFPLEvalError("Function 'round' does not support complex numbers")
+
+            val = num_val.value.real
+        else:
+            val = num_val.value
+
+        return AIFPLNumber(round(val))
+
+    def _builtin_floor(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement floor function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"floor takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "floor")
+
+        # Extract real part if complex
+        if isinstance(num_val.value, complex):
+            if abs(num_val.value.imag) >= self.floating_point_tolerance:
+                raise AIFPLEvalError("Function 'floor' does not support complex numbers")
+
+            val = num_val.value.real
+        else:
+            val = num_val.value
+
+        return AIFPLNumber(math.floor(val))
+
+    def _builtin_ceil(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement ceil function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"ceil takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "ceil")
+
+        # Extract real part if complex
+        if isinstance(num_val.value, complex):
+            if abs(num_val.value.imag) >= self.floating_point_tolerance:
+                raise AIFPLEvalError("Function 'ceil' does not support complex numbers")
+
+            val = num_val.value.real
+        else:
+            val = num_val.value
+
+        return AIFPLNumber(math.ceil(val))
+
+    def _builtin_min(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement min function."""
+        if not args:
+            raise AIFPLEvalError("min requires at least 1 argument, got 0")
+
+        # Use type narrowing to handle only real numbers for min/max
+        real_values = []
+        for arg in args:
+            real_val = self._ensure_real_number(arg, "min")
+            real_values.append(real_val)
+
+        return AIFPLNumber(min(real_values))
+
+    def _builtin_max(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement max function."""
+        if not args:
+            raise AIFPLEvalError("max requires at least 1 argument, got 0")
+
+        # Use type narrowing to handle only real numbers for min/max
+        real_values = []
+        for arg in args:
+            real_val = self._ensure_real_number(arg, "max")
+            real_values.append(real_val)
+
+        return AIFPLNumber(max(real_values))
+
+    def _builtin_pow(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement pow function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"pow takes exactly 2 arguments, got {len(args)}")
+
+        base = self._ensure_number(args[0], "pow")
+        exponent = self._ensure_number(args[1], "pow")
+        return AIFPLNumber(base.value ** exponent.value)
+
+    def _builtin_bin(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement bin function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"bin takes exactly 1 argument, got {len(args)}")
+
+        int_val = self._ensure_integer(args[0], "bin")
+        return AIFPLString(bin(int_val))
+
+    def _builtin_hex(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement hex function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"hex takes exactly 1 argument, got {len(args)}")
+
+        int_val = self._ensure_integer(args[0], "hex")
+        return AIFPLString(hex(int_val))
+
+    def _builtin_oct(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement oct function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"oct takes exactly 1 argument, got {len(args)}")
+
+        int_val = self._ensure_integer(args[0], "oct")
+        return AIFPLString(oct(int_val))
+
+    def _builtin_real(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement real function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"real takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "real")
+        val = num_val.value
+
+        if isinstance(val, complex):
+            real_part = val.real
+            # Convert to int if it's a whole number
+            if isinstance(real_part, float) and real_part.is_integer():
+                return AIFPLNumber(int(real_part))
+
+            return AIFPLNumber(real_part)
+
+        # For real numbers, return as-is
+        return num_val
+
+    def _builtin_imag(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement imag function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"imag takes exactly 1 argument, got {len(args)}")
+
+        num_val = self._ensure_number(args[0], "imag")
+        val = num_val.value
+
+        if isinstance(val, complex):
+            imag_part = val.imag
+            # Convert to int if it's a whole number
+            if isinstance(imag_part, float) and imag_part.is_integer():
+                return AIFPLNumber(int(imag_part))
+
+            return AIFPLNumber(imag_part)
+
+        # For real numbers, imaginary part is 0
+        return AIFPLNumber(0)
+
+    def _builtin_complex(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement complex function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"complex takes exactly 2 arguments, got {len(args)}")
+
+        real_val = self._ensure_number(args[0], "complex")
+        imag_val = self._ensure_number(args[1], "complex")
+
+        if not isinstance(real_val.value, (int, float)) or not isinstance(imag_val.value, (int, float)):
+            raise AIFPLEvalError("complex arguments must be real numbers")
+
+        real_part, imag_part = real_val.value, imag_val.value
+        return AIFPLNumber(complex(real_part, imag_part))
+
+    def _builtin_string_append(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-append function."""
+        if not args:
+            return AIFPLString("")
+
+        # Ensure all arguments are strings
+        string_args = [self._ensure_string(arg, "string-append") for arg in args]
+        result = ''.join(arg.value for arg in string_args)
+        return AIFPLString(result)
+
+    def _builtin_string_length(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-length function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"string-length takes exactly 1 argument, got {len(args)}")
+
+        string_arg = self._ensure_string(args[0], "string-length")
+        return AIFPLNumber(len(string_arg.value))
+
+    def _builtin_substring(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement substring function."""
+        if len(args) != 3:
+            raise AIFPLEvalError(f"substring takes exactly 3 arguments, got {len(args)}")
+
+        string_arg = self._ensure_string(args[0], "substring")
+        start_idx = self._ensure_integer(args[1], "substring")
+        end_idx = self._ensure_integer(args[2], "substring")
+
+        string_len = len(string_arg.value)
+        if start_idx < 0:
+            raise AIFPLEvalError(f"substring start index cannot be negative: {start_idx}")
+
+        if end_idx < 0:
+            raise AIFPLEvalError(f"substring end index cannot be negative: {end_idx}")
+
+        if start_idx > string_len:
+            raise AIFPLEvalError(f"substring start index out of range: {start_idx} (string length: {string_len})")
+
+        if end_idx > string_len:
+            raise AIFPLEvalError(f"substring end index out of range: {end_idx} (string length: {string_len})")
+
+        if start_idx > end_idx:
+            raise AIFPLEvalError(f"substring start index ({start_idx}) cannot be greater than end index ({end_idx})")
+
+        return AIFPLString(string_arg.value[start_idx:end_idx])
+
+    def _builtin_string_upcase(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-upcase function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"string-upcase takes exactly 1 argument, got {len(args)}")
+
+        string_arg = self._ensure_string(args[0], "string-upcase")
+        return AIFPLString(string_arg.value.upper())
+
+    def _builtin_string_downcase(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-downcase function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"string-downcase takes exactly 1 argument, got {len(args)}")
+
+        string_arg = self._ensure_string(args[0], "string-downcase")
+        return AIFPLString(string_arg.value.lower())
+
+    def _builtin_string_ref(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-ref function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"string-ref takes exactly 2 arguments, got {len(args)}")
+
+        string_arg = self._ensure_string(args[0], "string-ref")
+        index = self._ensure_integer(args[1], "string-ref")
+
+        # Check for negative index (not allowed in AIFPL)
+        if index < 0:
+            raise AIFPLEvalError(f"string-ref index out of range: {index}")
+
+        string_len = len(string_arg.value)
+        if index >= string_len:
+            raise AIFPLEvalError(f"string-ref index out of range: {index}")
+
+        return AIFPLString(string_arg.value[index])
+
+    def _builtin_string_to_number(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string->number function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"string->number takes exactly 1 argument, got {len(args)}")
+
+        string_arg = self._ensure_string(args[0], "string->number")
+
+        try:
+            # Try to parse as integer first
+            if '.' not in string_arg.value and 'e' not in string_arg.value.lower() and 'j' not in string_arg.value.lower():
+                return AIFPLNumber(int(string_arg.value))
+
+            # Try complex number
+            if 'j' in string_arg.value.lower():
+                return AIFPLNumber(complex(string_arg.value))
+
+            # Otherwise float
+            return AIFPLNumber(float(string_arg.value))
+
+        except ValueError as e:
+            raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg.value}'") from e
+
+    def _builtin_number_to_string(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement number->string function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"number->string takes exactly 1 argument, got {len(args)}")
+
+        num_arg = self._ensure_number(args[0], "number->string")
+        return AIFPLString(str(num_arg.value))
+
+    def _builtin_string_trim(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-trim function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"string-trim takes exactly 1 argument, got {len(args)}")
+
+        string_arg = self._ensure_string(args[0], "string-trim")
+        return AIFPLString(string_arg.value.strip())
+
+    def _builtin_string_replace(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-replace function."""
+        if len(args) != 3:
+            raise AIFPLEvalError(f"string-replace takes exactly 3 arguments, got {len(args)}")
+
+        string_arg, old_str, new_str = [self._ensure_string(arg, "string-replace") for arg in args]
+        result = string_arg.value.replace(old_str.value, new_str.value)
+        return AIFPLString(result)
+
+    def _builtin_string_contains_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-contains? function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"string-contains? takes exactly 2 arguments, got {len(args)}")
+
+        string_arg, substring = [self._ensure_string(arg, "string-contains?") for arg in args]
+        return AIFPLBoolean(substring.value in string_arg.value)
+
+    def _builtin_string_prefix_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-prefix? function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"string-prefix? takes exactly 2 arguments, got {len(args)}")
+
+        string_arg, prefix = [self._ensure_string(arg, "string-prefix?") for arg in args]
+        return AIFPLBoolean(string_arg.value.startswith(prefix.value))
+
+    def _builtin_string_suffix_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-suffix? function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"string-suffix? takes exactly 2 arguments, got {len(args)}")
+
+        string_arg, suffix = [self._ensure_string(arg, "string-suffix?") for arg in args]
+        return AIFPLBoolean(string_arg.value.endswith(suffix.value))
+
+    def _builtin_string_eq_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string=? function."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"string=? requires at least 2 arguments, got {len(args)}")
+
+        string_args = [self._ensure_string(arg, "string=?") for arg in args]
+        first_val = string_args[0].value
+        return AIFPLBoolean(all(arg.value == first_val for arg in string_args[1:]))
+
+    def _builtin_list(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement list constructor."""
+        return AIFPLList(tuple(args))
+
+    def _builtin_cons(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement cons function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"cons takes exactly 2 arguments, got {len(args)}")
+
+        item, list_arg = args
+        list_val = self._ensure_list(list_arg, "cons")
+        return list_val.cons(item)
+
+    def _builtin_append(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement append function."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"append requires at least 2 arguments, got {len(args)}")
+
+        # Validate all arguments are lists
+        list_vals = [self._ensure_list(arg, "append") for arg in args]
+
+        # Concatenate all lists
+        result = list_vals[0]
+        for list_val in list_vals[1:]:
+            result = result.append_list(list_val)
+
+        return result
+
+    def _builtin_reverse(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement reverse function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"reverse takes exactly 1 argument, got {len(args)}")
+
+        list_val = self._ensure_list(args[0], "reverse")
+        return list_val.reverse()
+
+    def _builtin_first(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement first function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"first takes exactly 1 argument, got {len(args)}")
+
+        list_val = self._ensure_list(args[0], "first")
+        try:
+            return list_val.first()
+
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+    def _builtin_rest(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement rest function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"rest takes exactly 1 argument, got {len(args)}")
+
+        list_val = self._ensure_list(args[0], "rest")
+        try:
+            return list_val.rest()
+
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+    def _builtin_last(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement last function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"last takes exactly 1 argument, got {len(args)}")
+
+        list_val = self._ensure_list(args[0], "last")
+        try:
+            return list_val.last()
+
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+    def _builtin_list_ref(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement list-ref function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"list-ref takes exactly 2 arguments, got {len(args)}")
+
+        list_val = self._ensure_list(args[0], "list-ref")
+        index = self._ensure_integer(args[1], "list-ref")
+
+        # Check for negative index (not allowed in AIFPL)
+        if index < 0:
+            raise AIFPLEvalError(f"list-ref index out of range: {index}")
+
+        try:
+            return list_val.get(index)
+
+        except IndexError as e:
+            raise AIFPLEvalError(f"list-ref index out of range: {index}") from e
+
+    def _builtin_length(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement length function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"length takes exactly 1 argument, got {len(args)}")
+
+        list_val = self._ensure_list(args[0], "length")
+        return AIFPLNumber(list_val.length())
+
+    def _builtin_null_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement null? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"null? takes exactly 1 argument, got {len(args)}")
+
+        list_val = self._ensure_list(args[0], "null?")
+        return AIFPLBoolean(list_val.is_empty())
+
+    def _builtin_list_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement list? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"list? takes exactly 1 argument, got {len(args)}")
+
+        return AIFPLBoolean(isinstance(args[0], AIFPLList))
+
+    def _builtin_member_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement member? function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"member? takes exactly 2 arguments, got {len(args)}")
+
+        item, list_arg = args
+        list_val = self._ensure_list(list_arg, "member?")
+        return AIFPLBoolean(list_val.contains(item))
+
+    def _builtin_remove(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement remove function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"remove takes exactly 2 arguments, got {len(args)}")
+
+        item, list_arg = args
+        list_val = self._ensure_list(list_arg, "remove")
+        return list_val.remove_all(item)
+
+    def _builtin_position(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement position function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"position takes exactly 2 arguments, got {len(args)}")
+
+        item, list_arg = args
+        list_val = self._ensure_list(list_arg, "position")
+
+        pos = list_val.position(item)
+        if pos is not None:
+            return AIFPLNumber(pos)
+
+        return AIFPLBoolean(False)
+
+    def _builtin_take(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement take function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"take takes exactly 2 arguments, got {len(args)}")
+
+        n = self._ensure_integer(args[0], "take")
+        list_val = self._ensure_list(args[1], "take")
+        if n < 0:
+            raise AIFPLEvalError(f"take count cannot be negative: {n}")
+
+        return list_val.take(n)
+
+    def _builtin_drop(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement drop function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"drop takes exactly 2 arguments, got {len(args)}")
+
+        n = self._ensure_integer(args[0], "drop")
+        list_val = self._ensure_list(args[1], "drop")
+        if n < 0:
+            raise AIFPLEvalError(f"drop count cannot be negative: {n}")
+
+        return list_val.drop(n)
+
+    def _builtin_string_to_list(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string->list function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"string->list takes exactly 1 argument, got {len(args)}")
+
+        string_arg = self._ensure_string(args[0], "string->list")
+        elements = tuple(AIFPLString(char) for char in string_arg.value)
+        return AIFPLList(elements)
+
+    def _builtin_list_to_string(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement list->string function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"list->string takes exactly 1 argument, got {len(args)}")
+
+        list_arg = self._ensure_list(args[0], "list->string")
+
+        try:
+            return AIFPLString(''.join(str(elem.to_python()) for elem in list_arg.elements))
+
+        except Exception as e:
+            raise AIFPLEvalError(f"Cannot convert list to string: {e}") from e
+
+    def _builtin_string_split(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-split function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"string-split takes exactly 2 arguments, got {len(args)}")
+
+        string_arg, delimiter = [self._ensure_string(arg, "string-split") for arg in args]
+
+        # Handle empty separator case - split into individual characters
+        if delimiter.value == "":
+            return self._builtin_string_to_list([string_arg], env, depth)
+
+        parts = string_arg.value.split(delimiter.value)
+        elements = tuple(AIFPLString(part) for part in parts)
+        return AIFPLList(elements)
+
+    def _builtin_string_join(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string-join function."""
+        if len(args) != 2:
+            raise AIFPLEvalError(f"string-join takes exactly 2 arguments, got {len(args)}")
+
+        list_arg = self._ensure_list(args[0], "string-join")
+        separator = self._ensure_string(args[1], "string-join")
+
+        # Ensure all list elements are strings
+        str_items = []
+        for item in list_arg.elements:
+            if not isinstance(item, AIFPLString):
+                raise AIFPLEvalError(f"string-join requires list of strings, found {item.type_name()}")
+
+            str_items.append(item.value)
+
+        return AIFPLString(separator.value.join(str_items))
+
+    def _builtin_number_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement number? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"number? takes exactly 1 argument, got {len(args)}")
+
+        return AIFPLBoolean(isinstance(args[0], AIFPLNumber))
+
+    def _builtin_integer_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement integer? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"integer? takes exactly 1 argument, got {len(args)}")
+
+        return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_integer())
+
+    def _builtin_float_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement float? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"float? takes exactly 1 argument, got {len(args)}")
+
+        return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_float())
+
+    def _builtin_complex_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement complex? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"complex? takes exactly 1 argument, got {len(args)}")
+
+        return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_complex())
+
+    def _builtin_string_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement string? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"string? takes exactly 1 argument, got {len(args)}")
+
+        return AIFPLBoolean(isinstance(args[0], AIFPLString))
+
+    def _builtin_boolean_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement boolean? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"boolean? takes exactly 1 argument, got {len(args)}")
+
+        return AIFPLBoolean(isinstance(args[0], AIFPLBoolean))
+
+    def _builtin_function_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement function? function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"function? takes exactly 1 argument, got {len(args)}")
+
+        return AIFPLBoolean(isinstance(args[0], (AIFPLFunction, AIFPLBuiltinFunction)))
+
+    def _builtin_any_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement any? function - delegated to higher-order function handler."""
+        return self._apply_higher_order_function('any?', args, env, depth)
+
+    def _builtin_all_p(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Implement all? function - delegated to higher-order function handler."""
+        return self._apply_higher_order_function('all?', args, env, depth)
+
+    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber:
+        """Ensure value is a number, raise error if not."""
+        if not isinstance(value, AIFPLNumber):
+            raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
+
+        return value
+
+    def _ensure_string(self, value: AIFPLValue, function_name: str) -> AIFPLString:
+        """Ensure value is a string, raise error if not."""
+        if not isinstance(value, AIFPLString):
+            raise AIFPLEvalError(f"Function '{function_name}' requires string arguments, got {value.type_name()}")
+
+        return value
+
+    def _ensure_boolean(self, value: AIFPLValue, function_name: str) -> AIFPLBoolean:
+        """Ensure value is a boolean, raise error if not."""
+        if not isinstance(value, AIFPLBoolean):
+            raise AIFPLEvalError(f"Function '{function_name}' requires boolean arguments, got {value.type_name()}")
+
+        return value
+
+    def _ensure_list(self, value: AIFPLValue, function_name: str) -> AIFPLList:
+        """Ensure value is a list, raise error if not."""
+        if not isinstance(value, AIFPLList):
+            raise AIFPLEvalError(f"Function '{function_name}' requires list arguments, got {value.type_name()}")
+
+        return value
+
+    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
+        """Ensure value is an integer, raise error if not."""
+        if not isinstance(value, AIFPLNumber) or not value.is_integer():
+            raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
+
+        # Type narrowing: we know value.value is int here
+        assert isinstance(value.value, int), "is_integer() should guarantee int type"
+        return value.value
+
+    def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> Union[int, float]:
+        """Ensure value is a real number (int or float), raise error if complex."""
+        if not isinstance(value, AIFPLNumber):
+            raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
+
+        if isinstance(value.value, complex):
+            raise AIFPLEvalError(f"Function '{function_name}' does not support complex numbers")
+
+        # Type narrowing: we know value.value is int or float here
+        return value.value
 
     def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
         """Simplify complex results to real numbers when imaginary part is negligible."""
