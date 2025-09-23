@@ -542,33 +542,33 @@ class AIFPLEvaluator:
 
                 raise AIFPLEvalError(f"Error evaluating function expression: {e}") from e
 
-            # Handle different types of functions - now unified!
-            if isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
-                # Check if this is a special form that needs unevaluated arguments
-                if isinstance(func_value, AIFPLBuiltinFunction) and self._is_special_form(func_value.name):
-                    # Special forms get unevaluated arguments
-                    return func_value.native_impl(arg_exprs, current_env, depth)
+            # We can only call functions!
+            if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+                raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
 
-                # Regular functions get evaluated arguments
-                try:
-                    arg_values = [self._evaluate_expression(arg, current_env, depth) for arg in arg_exprs]
+            # Check if this is a special form that needs unevaluated arguments
+            if isinstance(func_value, AIFPLBuiltinFunction) and self._is_special_form(func_value.name):
+                # Special forms get unevaluated arguments
+                return func_value.native_impl(arg_exprs, current_env, depth)
 
-                except AIFPLEvalError as e:
-                    raise AIFPLEvalError(f"Error evaluating function arguments: {e}") from e
+            # Regular functions get evaluated arguments
+            try:
+                arg_values = [self._evaluate_expression(arg, current_env, depth) for arg in arg_exprs]
 
-                result = self._call_function(func_value, arg_values, current_env, depth)
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(f"Error evaluating function arguments: {e}") from e
 
-                # Check if result is a tail call
-                if isinstance(result, AIFPLTailCall):
-                    # Continue the loop with the tail call
-                    current_call = AIFPLList((result.function,) + tuple(result.arguments))
-                    current_env = result.environment
-                    continue
+            result = self._call_function(func_value, arg_values, current_env, depth)
 
-                # Regular result, return it
-                return result
+            # Check if result is a tail call
+            if isinstance(result, AIFPLTailCall):
+                # Continue the loop with the tail call
+                current_call = AIFPLList((result.function,) + tuple(result.arguments))
+                current_env = result.environment
+                continue
 
-            raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
+            # Regular result, return it
+            return result
 
     def _is_special_form(self, function_name: str) -> bool:
         """Check if a function name is a special form that needs unevaluated arguments."""
@@ -1273,21 +1273,18 @@ class AIFPLEvaluator:
         # Evaluate the function expression
         func_value = self._evaluate_expression(func_expr, env, depth)
 
-        # Handle different types of functions
-        if isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
-            result = self._call_function(func_value, arg_values, env, depth)
+        # We can only call functions!
+        if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+            raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
 
-            # For higher-order functions, we don't want tail call optimization
-            if isinstance(result, AIFPLTailCall):
-                # This shouldn't happen in higher-order contexts, but handle it gracefully
-                raise AIFPLEvalError("Unexpected tail call in higher-order function context")
+        result = self._call_function(func_value, arg_values, env, depth)
 
-            return result
+        # For higher-order functions, we don't want tail call optimization
+        if isinstance(result, AIFPLTailCall):
+            # This shouldn't happen in higher-order contexts, but handle it gracefully
+            raise AIFPLEvalError("Unexpected tail call in higher-order function context")
 
-        raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
-
-    # Continue with all the other built-in function implementations...
-    # (I'll continue with the rest of the built-ins in the same pattern)
+        return result
 
     def _builtin_bit_or(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement bit-or operation."""
