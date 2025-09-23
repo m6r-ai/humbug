@@ -214,9 +214,14 @@ class AIFPLAITool(AITool):
 
         except AIFPLError as e:
             self._logger.warning("AIFPL error in expression '%s': %s", expression, str(e), exc_info=True)
+            # Check if this is a division by zero error specifically
+            error_msg = str(e).lower()
+            if "division by zero" in error_msg:
+                raise AIToolExecutionError("Division by zero") from e
             raise AIToolExecutionError(str(e)) from e
 
         except ZeroDivisionError as e:
+            # Handle the unlikely case where Python's ZeroDivisionError still gets through
             self._logger.warning("Division by zero in AIFPL expression '%s'", expression, exc_info=True)
             raise AIToolExecutionError("Division by zero") from e
 
