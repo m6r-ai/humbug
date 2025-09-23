@@ -88,7 +88,7 @@ class AIFPLEvaluator:
         'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'function?',
 
         # Functional iterators
-        'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?', 'take', 'drop',
+        'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?', 'take', 'drop'
     ]
 
     def __init__(self, max_depth: int = 100, floating_point_tolerance: float = 1e-10):
@@ -594,7 +594,7 @@ class AIFPLEvaluator:
         """
         # Create comprehensive mapping of function names to method names
         method_name_map = {
-            # Arithmetic operators
+            # Arithmetic functions
             '+': '_builtin_plus',
             '-': '_builtin_minus',
             '*': '_builtin_star',
@@ -603,7 +603,7 @@ class AIFPLEvaluator:
             '%': '_builtin_percent',
             '**': '_builtin_star_star',
 
-            # Comparison operators
+            # Comparison functions
             '=': '_builtin_eq',
             '!=': '_builtin_bang_eq',
             '<': '_builtin_lt',
@@ -611,11 +611,54 @@ class AIFPLEvaluator:
             '<=': '_builtin_lte',
             '>=': '_builtin_gte',
 
-            # String conversion functions
+            # Boolean functions
+            'not': '_builtin_not',
+
+            # Bitwise functions
+            'bit-or': '_builtin_bit_or',
+            'bit-and': '_builtin_bit_and',
+            'bit-xor': '_builtin_bit_xor',
+            'bit-not': '_builtin_bit_not',
+            'bit-shift-left': '_builtin_bit_shift_left',
+            'bit-shift-right': '_builtin_bit_shift_right',
+
+            # Mathematical functions
+            'sin': '_builtin_sin',
+            'cos': '_builtin_cos',
+            'tan': '_builtin_tan',
+            'log': '_builtin_log',
+            'log10': '_builtin_log10',
+            'exp': '_builtin_exp',
+            'sqrt': '_builtin_sqrt',
+            'abs': '_builtin_abs',
+            'round': '_builtin_round',
+            'floor': '_builtin_floor',
+            'ceil': '_builtin_ceil',
+            'min': '_builtin_min',
+            'max': '_builtin_max',
+            'pow': '_builtin_pow',
+
+            # Base conversion functions
+            'bin': '_builtin_bin',
+            'hex': '_builtin_hex',
+            'oct': '_builtin_oct',
+
+            # Complex number functions
+            'real': '_builtin_real',
+            'imag': '_builtin_imag',
+            'complex': '_builtin_complex',
+
+            # String functions
+            'string-append': '_builtin_string_append',
+            'string-length': '_builtin_string_length',
+            'substring': '_builtin_substring',
+            'string-upcase': '_builtin_string_upcase',
+            'string-downcase': '_builtin_string_downcase',
+            'string-ref': '_builtin_string_ref',
             'string->number': '_builtin_string_to_number',
             'number->string': '_builtin_number_to_string',
-            'string->list': '_builtin_string_to_list',
-            'list->string': '_builtin_list_to_string',
+            'string-trim': '_builtin_string_trim',
+            'string-replace': '_builtin_string_replace',
 
             # String predicates
             'string-contains?': '_builtin_string_contains_p',
@@ -623,10 +666,33 @@ class AIFPLEvaluator:
             'string-suffix?': '_builtin_string_suffix_p',
             'string=?': '_builtin_string_eq_p',
 
+            # List construction and manipulation functions
+            'list': '_builtin_list',
+            'cons': '_builtin_cons',
+            'append': '_builtin_append',
+            'reverse': '_builtin_reverse',
+
+            # List access and property functions
+            'first': '_builtin_first',
+            'rest': '_builtin_rest',
+            'last': '_builtin_last',
+            'list-ref': '_builtin_list_ref',
+            'length': '_builtin_length',
+
             # List predicates
             'null?': '_builtin_null_p',
             'list?': '_builtin_list_p',
             'member?': '_builtin_member_p',
+
+            # List utilities
+            'remove': '_builtin_remove',
+            'position': '_builtin_position',
+
+            # String conversion functions
+            'string->list': '_builtin_string_to_list',
+            'list->string': '_builtin_list_to_string',
+            'string-split': '_builtin_string_split',
+            'string-join': '_builtin_string_join',
 
             # Type predicates
             'number?': '_builtin_number_p',
@@ -637,9 +703,16 @@ class AIFPLEvaluator:
             'boolean?': '_builtin_boolean_p',
             'function?': '_builtin_function_p',
 
-            # Higher-order predicates
+            # Functional iterators
+            'map': '_builtin_map',
+            'filter': '_builtin_filter',
+            'fold': '_builtin_fold',
+            'range': '_builtin_range',
+            'find': '_builtin_find',
             'any?': '_builtin_any_p',
             'all?': '_builtin_all_p',
+            'take': '_builtin_take',
+            'drop': '_builtin_drop'
         }
 
         # Check for direct mapping first
