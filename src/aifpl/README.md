@@ -6,6 +6,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 
 - **Pure list representation**: Everything is data - true homoiconicity like traditional Lisp
 - **S-expression syntax**: `(function-or-operator arg1 arg2 ...)`
+- **Quote special form**: `(quote expr)` for preventing evaluation and creating data literals
 - **Mathematical operations**: Arithmetic, trigonometry, logarithms, bitwise operations
 - **String operations**: Manipulation, searching, conversion with full UTF-8 support
 - **Boolean operations**: Logic operations with strict type checking
@@ -92,6 +93,146 @@ except AIFPLError as e:
 ```
 
 ## Supported Operations
+
+### Quote - Data Literals and Code as Data
+
+The `quote` special form prevents evaluation of expressions, enabling true code-as-data manipulation:
+
+#### Basic Quote Syntax
+```aifpl
+(quote expr)
+```
+
+#### Quote Examples - Preventing Evaluation
+```aifpl
+; Without quote - expression gets evaluated
+(+ 1 2 3)                             ; → 6
+
+; With quote - expression returned as data
+(quote (+ 1 2 3))                     ; → (+ 1 2 3)
+
+; Quote symbols to prevent variable lookup
+(quote x)                             ; → x (the symbol itself)
+(quote hello)                         ; → hello (symbol, not variable lookup)
+```
+
+#### Quote with Lists - Creating Data Structures
+```aifpl
+; Create lists as pure data
+(quote (1 2 3))                       ; → (1 2 3) (list as data)
+(quote ())                            ; → () (empty list as data)
+
+; Create nested data structures
+(quote ((a 1) (b 2) (c 3)))           ; → ((a 1) (b 2) (c 3))
+
+; Mix quoted and unquoted in larger expressions
+(list (quote hello) (+ 1 2) (quote world))  ; → (hello 3 world)
+```
+
+#### Quote with Code Templates
+```aifpl
+; Store code as data for later use
+(let ((template (quote (if CONDITION THEN ELSE))))
+  template)                           ; → (if CONDITION THEN ELSE)
+
+; Create function templates
+(let ((lambda-template (quote (lambda (x) (* x x)))))
+  lambda-template)                    ; → (lambda (x) (* x x))
+
+; Store expressions in lists
+(let ((expressions (list (quote (+ 1 2)) 
+                        (quote (* 3 4))
+                        (quote (- 10 5)))))
+  expressions)                        ; → ((+ 1 2) (* 3 4) (- 10 5))
+```
+
+#### Symbolic Programming with Quote
+```aifpl
+; Manipulate code structure
+(let ((expr (quote (+ a b c))))
+  (first expr))                       ; → + (the operator symbol)
+
+(let ((expr (quote (lambda (x y) (+ x y)))))
+  (let ((params (first (rest expr)))
+        (body (first (rest (rest expr)))))
+    (list "params" params "body" body)))  ; → ("params" (x y) "body" (+ x y))
+
+; Build expressions programmatically
+(let ((op (quote +))
+      (args (quote (1 2 3))))
+  (cons op args))                     ; → (+ 1 2 3)
+```
+
+#### Quote vs. List Constructor
+```aifpl
+; Using list constructor - evaluates arguments
+(list + 1 2 3)                       ; → (<builtin +> 1 2 3)
+
+; Using quote - no evaluation
+(quote (+ 1 2 3))                     ; → (+ 1 2 3)
+
+; Mixed approach
+(list (quote +) 1 2 3)                ; → (+ 1 2 3)
+```
+
+#### Data Processing with Quoted Expressions
+```aifpl
+; Process a list of expressions
+(let ((exprs (list (quote (+ 1 2))
+                  (quote (* 3 4))
+                  (quote (/ 8 2)))))
+  (map (lambda (expr) (first expr)) exprs))  ; → (+ * /)
+
+; Extract operators and operands
+(let ((analyze-expr (lambda (expr)
+                      (if (and (list? expr) (not (null? expr)))
+                          (list "op" (first expr) "args" (rest expr))
+                          "not-a-compound-expr"))))
+  (map analyze-expr (list (quote (+ 1 2))
+                         (quote x)
+                         (quote (* a b c)))))
+; → (("op" + "args" (1 2)) "not-a-compound-expr" ("op" * "args" (a b c)))
+```
+
+#### Quote Enables Meta-Programming
+```aifpl
+; Create expressions that create expressions
+(let ((make-adder (lambda (n)
+                    (list (quote lambda) 
+                         (quote (x)) 
+                         (list (quote +) (quote x) n)))))
+  (make-adder 5))                     ; → (lambda (x) (+ x 5))
+
+; Template-based code generation
+(let ((make-predicate (lambda (op value)
+                        (list (quote lambda)
+                             (quote (x))
+                             (list op (quote x) value)))))
+  (list (make-predicate (quote >) 10)
+        (make-predicate (quote =) 0)))  ; → ((lambda (x) (> x 10)) (lambda (x) (= x 0)))
+```
+
+#### Homoiconicity in Action
+```aifpl
+; Code and data have the same representation
+(let ((code (quote (+ (* 2 3) 4)))
+      (data (list (quote +) (list (quote *) 2 3) 4)))
+  (= code data))                      ; → #t (they're identical!)
+
+; Manipulate code like any other data
+(let ((expr (quote (+ 1 2 3))))
+  (let ((reversed (reverse expr)))
+    reversed))                        ; → (3 2 1 +)
+
+; Transform code structures
+(let ((transform-ops (lambda (expr)
+                       (if (list? expr)
+                           (map transform-ops expr)
+                           (if (= expr (quote +))
+                               (quote *)
+                               expr)))))
+  (transform-ops (quote (+ 1 (+ 2 3)))))  ; → (* 1 (* 2 3))
+```
 
 ### Lambda Expressions and Anonymous Functions
 
@@ -943,6 +1084,10 @@ AIFPL has a strict type system with the following types:
 (if (number? x) (* x 2) "not a number")
 (filter string? (list 1 "hello" #t "world"))  ; → ("hello" "world")
 
+; Valid - quote for data literals
+(quote (+ 1 2 3))                     ; → (+ 1 2 3) (as data, not evaluation)
+(list (quote hello) (+ 1 2))          ; → (hello 3) (mixed quoted/unquoted)
+
 ; Invalid - type mismatch
 (+ 1 "hello")                         ; Error: cannot add number and string
 (and #t 1)                            ; Error: 'and' requires boolean arguments
@@ -995,11 +1140,38 @@ The pure list approach provides several advantages:
 
 ; Function call: (+ 1 2 3)
 ; Represented as: AIFPLList([AIFPLSymbol("+"), AIFPLNumber(1), AIFPLNumber(2), AIFPLNumber(3)])
+
+; Quote expression: (quote (+ 1 2))
+; Represented as: AIFPLList([AIFPLSymbol("quote"), AIFPLList([AIFPLSymbol("+"), AIFPLNumber(1), AIFPLNumber(2)])])
 ```
 
 The evaluator recognizes special forms by examining the first element of lists, maintaining the traditional Lisp approach where syntax is determined by structure, not by special types.
 
 ## Common Usage Patterns
+
+### Symbolic Programming with Quote
+```aifpl
+; Store and manipulate code as data
+(let ((expressions (list (quote (+ 1 2))
+                        (quote (* 3 4))
+                        (quote (- 10 5)))))
+  (map first expressions))                  ; → (+ * -) (extract operators)
+
+; Template-based programming
+(let ((make-comparison (lambda (op value)
+                         (list (quote lambda)
+                              (quote (x))
+                              (list op (quote x) value)))))
+  (list (make-comparison (quote >) 10)
+        (make-comparison (quote =) 0)))     ; → ((lambda (x) (> x 10)) (lambda (x) (= x 0)))
+
+; Code transformation
+(let ((negate-condition (lambda (expr)
+                          (if (and (list? expr) (= (first expr) (quote >)))
+                              (cons (quote <=) (rest expr))
+                              expr))))
+  (negate-condition (quote (> x 5))))       ; → (<= x 5)
+```
 
 ### Functional Data Processing
 ```aifpl
@@ -1307,6 +1479,13 @@ print(f"Type check: {type_check}")  # Type check: True
 
 position_result = tool.evaluate('(position "world" (list "hello" "world"))')
 print(f"Position: {position_result}")  # Position: 1
+
+# Quote results
+quote_result = tool.evaluate('(quote (+ 1 2 3))')
+print(f"Quote result: {quote_result}")  # Quote result: ['+', 1, 2, 3]
+
+formatted_quote = tool.evaluate_and_format('(quote (+ 1 2 3))')
+print(f"Formatted quote: {formatted_quote}")  # Formatted quote: (+ 1 2 3)
 ```
 
 ### Error Handling Patterns
@@ -1362,6 +1541,16 @@ recursive_expr = '''
                        acc
                        (factorial (- n 1) (* n acc))))))
   (factorial 20 1))
+'''
+
+# Quote-based symbolic programming
+symbolic_expr = '''
+(let ((expressions (list (quote (+ 1 2))
+                        (quote (* 3 4))
+                        (quote (- 10 5)))))
+  (let ((operators (map first expressions))
+        (operands (map rest expressions)))
+    (list "operators" operators "operands" operands)))
 '''
 
 advanced_processing = '''

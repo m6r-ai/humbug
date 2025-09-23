@@ -272,6 +272,9 @@ class AIFPLEvaluator:
             first_elem = expr.first()
             if isinstance(first_elem, AIFPLSymbol):
                 # Handle special forms BEFORE attempting any symbol lookup
+                if first_elem.name == "quote":
+                    return self._evaluate_quote_form(expr, env, depth + 1)
+
                 if first_elem.name == "lambda":
                     return self._evaluate_lambda_form(expr, env, depth + 1)
 
@@ -285,6 +288,29 @@ class AIFPLEvaluator:
             return self._evaluate_function_call(expr, env, depth + 1)
 
         raise AIFPLEvalError(f"Invalid expression type: {type(expr).__name__}")
+
+    def _evaluate_quote_form(
+        self,
+        quote_list: AIFPLList,
+        _env: AIFPLEnvironment,
+        _depth: int
+    ) -> AIFPLValue:
+        """
+        Evaluate (quote expr) form - returns expr without evaluation.
+
+        Args:
+            quote_list: List representing quote expression
+            _env: Current environment (unused for quote)
+            _depth: Current recursion depth (unused for quote)
+
+        Returns:
+            The quoted expression unevaluated
+        """
+        if quote_list.length() != 2:
+            raise AIFPLEvalError(f"quote requires exactly 1 argument, got {quote_list.length() - 1}")
+
+        # Return the quoted expression without evaluation
+        return quote_list.get(1)
 
     def _evaluate_if_form(
         self,
@@ -742,6 +768,10 @@ class AIFPLEvaluator:
 
         first_elem = expr.first()
         if isinstance(first_elem, AIFPLSymbol):
+            # Handle quote expressions - they are NOT tail calls, just return the quoted value
+            if first_elem.name == 'quote':
+                return self._evaluate_quote_form(expr, env, depth + 1)
+
             # Handle if expressions specially - branches are in tail position
             if first_elem.name == 'if':
                 return self._evaluate_if_form(expr, env, depth + 1)

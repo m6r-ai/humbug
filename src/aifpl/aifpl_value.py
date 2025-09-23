@@ -172,6 +172,20 @@ class AIFPLSymbol(AIFPLValue):
     def type_name(self) -> str:
         return "symbol"
 
+    def __eq__(self, other: Any) -> bool:
+        """
+        Symbols are equal if they have the same name, regardless of position.
+        Position is only used for error reporting, not semantic equality.
+        """
+        if not isinstance(other, AIFPLSymbol):
+            return False
+
+        return self.name == other.name
+
+    def __hash__(self) -> int:
+        """Hash based on name only, not position."""
+        return hash((type(self), self.name))
+
     def __str__(self) -> str:
         return self.name
 
