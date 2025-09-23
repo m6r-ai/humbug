@@ -5,7 +5,7 @@ import asyncio
 import pytest
 
 from ai_tool import AIToolCall, AIToolExecutionError
-from ai_tool.tools.calculator_ai_tool import CalculatorAITool
+from ai_tool.calculator.calculator_ai_tool import CalculatorAITool
 
 
 class TestCalculatorBitwiseOperations:

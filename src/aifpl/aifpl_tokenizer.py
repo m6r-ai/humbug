@@ -48,6 +48,12 @@ class AIFPLTokenizer:
                 i += 1
                 continue
 
+            # Quote character
+            if expression[i] == "'":
+                tokens.append(AIFPLToken(AIFPLTokenType.QUOTE, "'", i))
+                i += 1
+                continue
+
             # String literals
             if expression[i] == '"':
                 string_value, length = self._read_string(expression, i)

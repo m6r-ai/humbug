@@ -10,7 +10,7 @@ import zoneinfo
 import pytest
 
 from ai_tool import AIToolDefinition, AIToolParameter, AIToolExecutionError, AITool
-from ai_tool.tools.clock_ai_tool import ClockAITool
+from ai_tool.clock.clock_ai_tool import ClockAITool
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def clock_tool():
 def mock_datetime():
     """Fixture providing a mocked datetime for predictable testing."""
     mock_dt = datetime(2023, 12, 25, 14, 30, 45, 123456, tzinfo=timezone.utc)
-    with patch('ai_tool.tools.clock_ai_tool.datetime') as mock:
+    with patch('ai_tool.clock.clock_ai_tool.datetime') as mock:
         mock.now.return_value = mock_dt
         mock.fromtimestamp.return_value = mock_dt
         mock.fromisoformat.return_value = mock_dt
@@ -278,7 +278,7 @@ class TestAlarmOperation:
         current_time = datetime(2023, 12, 25, 14, 30, 45, 123456, tzinfo=timezone.utc)
         target_time = datetime(2023, 12, 25, 15, 30, 45, 123456, tzinfo=timezone.utc)  # 1 hour later
 
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.return_value = current_time
             mock_datetime.fromisoformat.return_value = target_time
 
@@ -298,7 +298,7 @@ class TestAlarmOperation:
         current_time = datetime(2023, 12, 25, 14, 30, 45, 123456, tzinfo=timezone.utc)
         target_timestamp = current_time.timestamp() + 1800  # 30 minutes later
 
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.return_value = current_time
             mock_datetime.fromtimestamp.return_value = datetime.fromtimestamp(target_timestamp, tz=timezone.utc)
 
@@ -317,7 +317,7 @@ class TestAlarmOperation:
         current_time = datetime(2023, 12, 25, 14, 30, 45, 123456, tzinfo=timezone.utc)
         past_time = datetime(2023, 12, 25, 13, 30, 45, 123456, tzinfo=timezone.utc)  # 1 hour ago
 
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.return_value = current_time
             mock_datetime.fromisoformat.return_value = past_time
 
@@ -338,7 +338,7 @@ class TestAlarmOperation:
         current_time = datetime(2023, 12, 25, 14, 30, 45, 123456, tzinfo=timezone.utc)
         target_time = datetime(2023, 12, 25, 14, 30, 46, 123456, tzinfo=timezone.utc)  # 1 second later
 
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.return_value = current_time
             mock_datetime.fromisoformat.return_value = target_time
 
@@ -369,7 +369,7 @@ class TestAlarmOperation:
 
     def test_execute_alarm_invalid_time_format(self, clock_tool, mock_authorization, make_tool_call):
         """Test alarm operation with invalid time format."""
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.fromisoformat.side_effect = ValueError("Invalid format")
 
             tool_call = make_tool_call("clock", {"operation": "alarm", "time": "invalid-time"})
@@ -385,7 +385,7 @@ class TestAlarmOperation:
         current_time = datetime(2023, 12, 25, 14, 30, 45, 123456, tzinfo=timezone.utc)
         target_time = datetime(2023, 12, 25, 15, 30, 45, 123456, tzinfo=timezone.utc)
 
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.return_value = current_time
             mock_datetime.fromisoformat.return_value = target_time
 
@@ -403,7 +403,7 @@ class TestAlarmOperation:
         current_time = datetime(2023, 12, 25, 14, 30, 45, 123456, tzinfo=timezone.utc)
         target_time = current_time + timedelta(seconds=time_offset_seconds)
 
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.return_value = current_time
             mock_datetime.fromisoformat.return_value = target_time
 
@@ -438,7 +438,7 @@ class TestClockAIToolErrorHandling:
 
     def test_execute_timezone_error(self, clock_tool, mock_authorization, make_tool_call):
         """Test handling of invalid timezone."""
-        with patch('ai_tool.tools.clock_ai_tool.zoneinfo.ZoneInfo') as mock_zoneinfo:
+        with patch('ai_tool.clock.clock_ai_tool.zoneinfo.ZoneInfo') as mock_zoneinfo:
             mock_zoneinfo.side_effect = zoneinfo.ZoneInfoNotFoundError("Invalid timezone")
 
             tool_call = make_tool_call("clock", {
@@ -451,7 +451,7 @@ class TestClockAIToolErrorHandling:
 
     def test_execute_datetime_system_error(self, clock_tool, mock_authorization, make_tool_call):
         """Test handling of system datetime errors."""
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.side_effect = OSError("System clock error")
 
             tool_call = make_tool_call("clock", {"operation": "get_time"})
@@ -461,7 +461,7 @@ class TestClockAIToolErrorHandling:
 
     def test_execute_unexpected_error_wrapped(self, clock_tool, mock_authorization, make_tool_call):
         """Test that unexpected errors are properly wrapped."""
-        with patch('ai_tool.tools.clock_ai_tool.datetime') as mock_datetime:
+        with patch('ai_tool.clock.clock_ai_tool.datetime') as mock_datetime:
             mock_datetime.now.side_effect = RuntimeError("Unexpected error")
 
             tool_call = make_tool_call("clock", {"operation": "get_time"})

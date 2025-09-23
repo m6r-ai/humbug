@@ -8,7 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from ai_tool import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError
-from ai_tool.tools.calculator_ai_tool import CalculatorAITool, SafeMathEvaluator
+from ai_tool.calculator.calculator_ai_tool import CalculatorAITool, SafeMathEvaluator
 
 
 @pytest.fixture

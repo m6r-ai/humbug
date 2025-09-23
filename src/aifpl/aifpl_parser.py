@@ -53,6 +53,9 @@ class AIFPLParser:
         if self.current_token.type == AIFPLTokenType.LPAREN:
             return self._parse_list(start_pos)
 
+        if self.current_token.type == AIFPLTokenType.QUOTE:
+            return self._parse_quoted_expression()
+
         if self.current_token.type in (AIFPLTokenType.NUMBER, AIFPLTokenType.SYMBOL,
                                        AIFPLTokenType.STRING, AIFPLTokenType.BOOLEAN):
             return self._parse_atom()
@@ -78,6 +81,30 @@ class AIFPLParser:
         # Create AIFPLList - no special handling for lambda, let, function calls
         # Everything is just data (lists and atoms)
         return AIFPLList(tuple(elements))
+
+    def _parse_quoted_expression(self) -> AIFPLList:
+        """
+        Parse 'expr and convert to (quote expr).
+
+        Returns:
+            AIFPLList representing (quote expr)
+
+        Raises:
+            AIFPLParseError: If quote is incomplete or malformed
+        """
+        quote_pos = self.current_token.position if self.current_token else 0
+        self._consume(AIFPLTokenType.QUOTE)
+
+        # Check if we have something to quote
+        if self.current_token is None or self.current_token.type == AIFPLTokenType.EOF:
+            raise AIFPLParseError(f"Incomplete quote at position {quote_pos}: expected expression after '")
+
+        # Parse the expression to be quoted
+        quoted_expr = self._parse_expression()
+
+        # Transform 'expr into (quote expr)
+        quote_symbol = AIFPLSymbol("quote", quote_pos)
+        return AIFPLList((quote_symbol, quoted_expr))
 
     def _parse_atom(self) -> AIFPLValue:
         """Parse an atomic value and convert to appropriate AIFPLValue."""

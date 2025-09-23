@@ -19,9 +19,9 @@ from metaphor import (
 )
 
 from ai_tool import AIToolManager
-from ai_tool.tools.aifpl_ai_tool import AIFPLAITool
-from ai_tool.tools.clock_ai_tool import ClockAITool
-from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
+from ai_tool.aifpl.aifpl_ai_tool import AIFPLAITool
+from ai_tool.clock.clock_ai_tool import ClockAITool
+from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole

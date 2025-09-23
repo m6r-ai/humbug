@@ -72,6 +72,7 @@ class TokenType(IntEnum):
     OPTION = auto()
     OPTION_VALUE = auto()
     PREPROCESSOR = auto()
+    QUOTE = auto()
     REGEXP = auto()
     RPAREN = auto()
     RUNE = auto()

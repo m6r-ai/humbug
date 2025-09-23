@@ -9,6 +9,7 @@ class AIFPLTokenType(Enum):
     """Token types for AIFPL expressions."""
     LPAREN = "("
     RPAREN = ")"
+    QUOTE = "'"
     SYMBOL = "SYMBOL"
     NUMBER = "NUMBER"
     STRING = "STRING"

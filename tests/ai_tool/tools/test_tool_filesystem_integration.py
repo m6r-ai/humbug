@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock, mock_open
 import pytest
 
 from ai_tool import AIToolExecutionError
-from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
+from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
 
 
 class TestFileSystemAIToolIntegration:

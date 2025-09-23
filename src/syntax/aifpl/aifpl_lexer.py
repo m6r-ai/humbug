@@ -66,6 +66,9 @@ class AIFPLLexer(Lexer):
         if ch in ('+', '-'):
             return self._read_number_or_identifier
 
+        if ch == "'":
+            return self._read_quote
+
         if self._is_digit(ch):
             return self._read_number
 
@@ -243,6 +246,14 @@ class AIFPLLexer(Lexer):
             start=start
         ))
 
+    def _read_quote(self) -> None:
+        """
+        Read a quote token.
+        """
+        start = self._position
+        self._position += 1
+        self._tokens.append(Token(type=TokenType.QUOTE, value="'", start=start))
+
     def _read_delimiter(self) -> None:
         """
         Read a delimiter token (parentheses or brackets).
@@ -289,6 +300,6 @@ class AIFPLLexer(Lexer):
             True if the value is a special form, False otherwise
         """
         special_forms = {
-            'and', 'if', 'let', 'lambda', 'or'
+            'and', 'if', 'let', 'lambda', 'or', 'quote'
         }
         return value.lower() in special_forms

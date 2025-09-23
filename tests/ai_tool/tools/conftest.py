@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from ai_tool import AIToolCall
-from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
+from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
 
 
 @pytest.fixture

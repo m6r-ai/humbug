@@ -10,7 +10,7 @@ import pytest
 from ai_tool import (
     AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError, AIToolCall
 )
-from ai_tool.tools.filesystem_ai_tool import FileSystemAITool
+from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
 
 
 class TestFileSystemAIToolDefinition:
