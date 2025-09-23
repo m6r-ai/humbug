@@ -11,6 +11,7 @@ New features:
   removed as a consequence.
 - As we have a new language, added an AIFPL syntax highlighter (this makes the docs render correctly).
 - Removed Claude Sonnet 3.5 support as that is now deprecated by Anthropic.
+- Removed the calculator tool.  The LLMs now have AIFPL so there's no need to carry two tools that can do calculations.
 
 Bug fixes:
 
