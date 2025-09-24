@@ -206,6 +206,7 @@ class TerminalTab(TabBase):
                             complete_data = utf8_buffer.add_data(data)
                             if complete_data:
                                 self._terminal_widget.put_data(complete_data)
+                                self.set_updated(True)
 
                     except EOFError:
                         # Terminal pipe closed/EOF reached
