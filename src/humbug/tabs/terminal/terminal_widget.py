@@ -408,13 +408,16 @@ class TerminalWidget(QAbstractScrollArea):
             btn_num = 32  # Default to button release
             if buttons & Qt.MouseButton.LeftButton:
                 btn_num = 32
+
             elif buttons & Qt.MouseButton.MiddleButton:
                 btn_num = 33
+
             elif buttons & Qt.MouseButton.RightButton:
                 btn_num = 34
 
             if self._state.mouse_tracking().sgr_mode:
                 report = f"\x1b[<{btn_num};{col + 1};{row + 1}M"
+
             else:
                 cb = 32 + btn_num
                 cx = 32 + min(255, col + 1)
@@ -1173,6 +1176,7 @@ class TerminalWidget(QAbstractScrollArea):
         """
         if highlights:
             self._search_highlights[row] = highlights
+
         else:
             self._search_highlights.pop(row, None)
 
