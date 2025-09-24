@@ -64,20 +64,6 @@ class SchemeParser(Parser):
                 self._tokens.append(token)
                 continue
 
-            # Handle opening parentheses
-            if token.type == TokenType.LPAREN:
-                continuation_state += 1
-                self._tokens.append(token)
-
-                next_token = lexer.peek_next_token()
-                if next_token and next_token.type == TokenType.IDENTIFIER:
-                    lexer.get_next_token()  # Consume the identifier
-                    next_token.type = TokenType.FUNCTION_OR_METHOD
-                    self._tokens.append(next_token)
-                    continue
-
-                continue
-
             # Handle closing parentheses
             if token.type == 'RPAREN':
                 if continuation_state > 0:

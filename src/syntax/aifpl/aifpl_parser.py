@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 from syntax.aifpl.aifpl_lexer import AIFPLLexer
-from syntax.lexer import TokenType
 from syntax.parser import Parser, ParserState
 from syntax.parser_registry import ParserRegistry
 from syntax.programming_language import ProgrammingLanguage
@@ -41,19 +40,6 @@ class AIFPLParser(Parser):
             token = lexer.get_next_token()
             if not token:
                 break
-
-            # Handle opening parentheses
-            if token.type == TokenType.LPAREN:
-                self._tokens.append(token)
-
-                next_token = lexer.peek_next_token()
-                if next_token and next_token.type == TokenType.IDENTIFIER:
-                    lexer.get_next_token()  # Consume the identifier
-                    next_token.type = TokenType.FUNCTION_OR_METHOD
-                    self._tokens.append(next_token)
-                    continue
-
-                continue
 
             self._tokens.append(token)
 
