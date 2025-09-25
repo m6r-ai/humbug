@@ -213,10 +213,10 @@ class TestAIFPLCore:
 
     def test_multiple_expressions_error(self, aifpl):
         """Test that multiple expressions in one call raise error."""
-        with pytest.raises(AIFPLParseError, match="Unexpected token after expression"):
+        with pytest.raises(AIFPLParseError, match=r"Unexpected token after complete expression"):
             aifpl.evaluate("1 2")
 
-        with pytest.raises(AIFPLParseError, match="Unexpected token after expression"):
+        with pytest.raises(AIFPLParseError, match=r"Unexpected token after complete expression"):
             aifpl.evaluate("(+ 1 2) (+ 3 4)")
 
     def test_exception_hierarchy(self):
@@ -227,10 +227,10 @@ class TestAIFPLCore:
 
         # Test that they can be instantiated
         token_error = AIFPLTokenError("test token error")
-        assert str(token_error) == "test token error"
+        assert "test token error" in str(token_error)
 
         parse_error = AIFPLParseError("test parse error")
-        assert str(parse_error) == "test parse error"
+        assert "test parse error" in str(parse_error)
 
         eval_error = AIFPLEvalError("test eval error")
-        assert str(eval_error) == "test eval error"
+        assert "test eval error" in str(eval_error)

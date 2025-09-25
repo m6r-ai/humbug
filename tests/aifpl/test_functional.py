@@ -27,10 +27,10 @@ class TestFunctional:
     def test_lambda_parameter_validation(self, aifpl):
         """Test lambda parameter validation (pure list approach - evaluation errors)."""
         # Duplicate parameters should cause error
-        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLEvalError, match=r"parameters must be unique"):
             aifpl.evaluate('(lambda (x x) (+ x x))')
 
-        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLEvalError, match=r"parameters must be unique"):
             aifpl.evaluate('(lambda (x y x) (+ x y))')
 
     def test_lambda_arity_checking(self, aifpl):
@@ -96,10 +96,10 @@ class TestFunctional:
 
     def test_let_duplicate_binding_error(self, aifpl):
         """Test that duplicate binding names in let cause error (pure list approach - evaluation errors)."""
-        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
+        with pytest.raises(AIFPLEvalError, match=r"variable names should be different"):
             aifpl.evaluate('(let ((x 1) (x 2)) x)')
 
-        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
+        with pytest.raises(AIFPLEvalError, match=r"variable names should be different"):
             aifpl.evaluate('(let ((x 1) (y 2) (x 3)) (+ x y))')
 
     def test_lambda_closures(self, aifpl, helpers):
@@ -160,14 +160,14 @@ class TestFunctional:
 
     def test_map_requires_function_and_list(self, aifpl):
         """Test that map requires exactly 2 arguments: function and list."""
-        with pytest.raises(AIFPLEvalError, match="requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 2 arguments"):
             aifpl.evaluate('(map (lambda (x) x))')
 
-        with pytest.raises(AIFPLEvalError, match="requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 2 arguments"):
             aifpl.evaluate('(map (lambda (x) x) (list 1 2) (list 3 4))')
 
         # Second argument must be list
-        with pytest.raises(AIFPLEvalError, match="requires list as second argument"):
+        with pytest.raises(AIFPLEvalError, match=r"must be.*list"):
             aifpl.evaluate('(map (lambda (x) x) 42)')
 
     @pytest.mark.parametrize("expression,expected", [
@@ -193,11 +193,11 @@ class TestFunctional:
 
     def test_filter_requires_function_and_list(self, aifpl):
         """Test that filter requires exactly 2 arguments: function and list."""
-        with pytest.raises(AIFPLEvalError, match="requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 2 arguments"):
             aifpl.evaluate('(filter (lambda (x) #t))')
 
         # Second argument must be list
-        with pytest.raises(AIFPLEvalError, match="requires list as second argument"):
+        with pytest.raises(AIFPLEvalError, match=r"must be.*list"):
             aifpl.evaluate('(filter (lambda (x) #t) 42)')
 
     def test_filter_predicate_must_return_boolean(self, aifpl):
@@ -230,14 +230,14 @@ class TestFunctional:
 
     def test_fold_requires_three_arguments(self, aifpl):
         """Test that fold requires exactly 3 arguments: function, initial, list."""
-        with pytest.raises(AIFPLEvalError, match="requires exactly 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 3 arguments"):
             aifpl.evaluate('(fold + 0)')
 
-        with pytest.raises(AIFPLEvalError, match="requires exactly 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 3 arguments"):
             aifpl.evaluate('(fold + 0 (list 1 2) extra)')
 
         # Third argument must be list
-        with pytest.raises(AIFPLEvalError, match="requires list as third argument"):
+        with pytest.raises(AIFPLEvalError, match=r"must be.*list"):
             aifpl.evaluate('(fold + 0 42)')
 
     @pytest.mark.parametrize("expression,expected", [
@@ -264,13 +264,13 @@ class TestFunctional:
 
     def test_range_requires_numeric_arguments(self, aifpl):
         """Test that range requires numeric arguments."""
-        with pytest.raises(AIFPLEvalError, match="must be numeric"):
+        with pytest.raises(AIFPLEvalError, match="must be.*number"):
             aifpl.evaluate('(range "hello" 5)')
 
-        with pytest.raises(AIFPLEvalError, match="must be numeric"):
+        with pytest.raises(AIFPLEvalError, match="must be.*number"):
             aifpl.evaluate('(range 1 "world")')
 
-        with pytest.raises(AIFPLEvalError, match="must be numeric"):
+        with pytest.raises(AIFPLEvalError, match="must be.*number"):
             aifpl.evaluate('(range 1 5 "step")')
 
     def test_range_zero_step_error(self, aifpl):
@@ -280,10 +280,10 @@ class TestFunctional:
 
     def test_range_argument_count(self, aifpl):
         """Test that range accepts 2 or 3 arguments."""
-        with pytest.raises(AIFPLEvalError, match="range requires 2 or 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*2 or 3 arguments"):
             aifpl.evaluate('(range 1)')
 
-        with pytest.raises(AIFPLEvalError, match="range requires 2 or 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*2 or 3 arguments"):
             aifpl.evaluate('(range 1 5 2 extra)')
 
     @pytest.mark.parametrize("expression,expected", [
@@ -309,11 +309,11 @@ class TestFunctional:
 
     def test_find_requires_function_and_list(self, aifpl):
         """Test that find requires exactly 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 2 arguments"):
             aifpl.evaluate('(find (lambda (x) #t))')
 
         # Second argument must be list
-        with pytest.raises(AIFPLEvalError, match="requires list as second argument"):
+        with pytest.raises(AIFPLEvalError, match=r"must be.*list"):
             aifpl.evaluate('(find (lambda (x) #t) 42)')
 
     def test_find_predicate_must_return_boolean(self, aifpl):
@@ -353,17 +353,17 @@ class TestFunctional:
 
     def test_any_all_require_function_and_list(self, aifpl):
         """Test that any? and all? require function and list arguments."""
-        with pytest.raises(AIFPLEvalError, match="requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 2 arguments"):
             aifpl.evaluate('(any? (lambda (x) #t))')
 
-        with pytest.raises(AIFPLEvalError, match="requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 2 arguments"):
             aifpl.evaluate('(all? (lambda (x) #t))')
 
         # Second argument must be list
-        with pytest.raises(AIFPLEvalError, match="requires list as second argument"):
+        with pytest.raises(AIFPLEvalError, match=r"must be.*list"):
             aifpl.evaluate('(any? (lambda (x) #t) 42)')
 
-        with pytest.raises(AIFPLEvalError, match="requires list as second argument"):
+        with pytest.raises(AIFPLEvalError, match=r"must be.*list"):
             aifpl.evaluate('(all? (lambda (x) #t) "hello")')
 
     def test_any_all_predicates_must_return_boolean(self, aifpl):

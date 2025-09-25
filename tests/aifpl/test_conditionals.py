@@ -60,27 +60,27 @@ class TestConditionals:
 
     def test_if_requires_boolean_condition(self, aifpl):
         """Test that if expressions require boolean conditions."""
-        with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
+        with pytest.raises(AIFPLEvalError, match=r"condition must be boolean"):
             aifpl.evaluate('(if 1 "yes" "no")')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
+        with pytest.raises(AIFPLEvalError, match=r"condition must be boolean"):
             aifpl.evaluate('(if "hello" "yes" "no")')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
+        with pytest.raises(AIFPLEvalError, match=r"condition must be boolean"):
             aifpl.evaluate('(if (list 1 2) "yes" "no")')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
+        with pytest.raises(AIFPLEvalError, match=r"condition must be boolean"):
             aifpl.evaluate('(if 0 "yes" "no")')  # 0 is not false in AIFPL
 
     def test_if_requires_exactly_three_arguments(self, aifpl):
         """Test that if expressions require exactly 3 arguments."""
-        with pytest.raises(AIFPLEvalError, match="requires exactly 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 3 arguments"):
             aifpl.evaluate('(if #t "yes")')  # Missing else branch
 
-        with pytest.raises(AIFPLEvalError, match="requires exactly 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 3 arguments"):
             aifpl.evaluate('(if #t)')  # Missing both branches
 
-        with pytest.raises(AIFPLEvalError, match="requires exactly 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 3 arguments"):
             aifpl.evaluate('(if #t "yes" "no" "extra")')  # Too many arguments
 
     @pytest.mark.parametrize("expression,expected", [
@@ -158,27 +158,27 @@ class TestConditionals:
     def test_boolean_operations_require_boolean_arguments(self, aifpl):
         """Test that boolean operations require boolean arguments."""
         # AND with non-boolean arguments
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
             aifpl.evaluate('(and #t 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
             aifpl.evaluate('(and "hello" #t)')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
             aifpl.evaluate('(and #t (list 1 2))')
 
         # OR with non-boolean arguments
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
             aifpl.evaluate('(or #f 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
             aifpl.evaluate('(or "hello" #f)')
 
         # NOT with non-boolean arguments
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"requires boolean arguments"):
             aifpl.evaluate('(not 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match=r"requires boolean arguments"):
             aifpl.evaluate('(not "hello")')
 
     def test_not_requires_exactly_one_argument(self, aifpl):
