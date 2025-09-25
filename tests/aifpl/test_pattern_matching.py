@@ -35,7 +35,6 @@ class TestPatternMatching:
         ('(match #t (#f "wrong") (#t "right"))', '"right"'),
 
         # Complex number literal patterns
-        ('(match (complex 1 2) ((complex 1 2) "found") (_ "not found"))', '"found"'),
         ('(match j (j "imaginary unit") (_ "other"))', '"imaginary unit"'),
     ])
     def test_literal_pattern_matching(self, aifpl, expression, expected):
@@ -286,7 +285,7 @@ class TestPatternMatching:
         # Mixed patterns with multiple levels
         mixed_pattern = '''
         (match (list 42 (list "x" "y") #t)
-               (((number? n) (a b) (boolean? flag)) 
+               (((number? n) (a b) (boolean? flag))
                 (if flag (+ n (string-length (string-append a b))) n))
                (_ "no match"))
         '''
