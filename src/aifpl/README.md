@@ -7,6 +7,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Pure list representation**: Everything is data - true homoiconicity like traditional Lisp
 - **S-expression syntax**: `(function-or-operator arg1 arg2 ...)`
 - **Quote special form**: `(quote expr)` and shortcut `'expr` for preventing evaluation and creating data literals
+- **Pattern matching**: Comprehensive pattern matching with structural and type-based patterns
 - **Mathematical operations**: Arithmetic, trigonometry, logarithms, bitwise operations
 - **String operations**: Manipulation, searching, conversion with full UTF-8 support
 - **Boolean operations**: Logic operations with strict type checking
@@ -477,6 +478,315 @@ Let expressions create local variable bindings with sequential evaluation and le
     (let ((total (sum-fn squared))
           (average (/ total (length squared))))
       (list "sum" total "average" average))))  ; → ("sum" 55 "average" 11)
+```
+
+### Pattern Matching
+
+Pattern matching provides a powerful way to destructure and analyze data based on its shape and content. It offers a concise alternative to nested conditionals and enables elegant functional programming patterns.
+
+#### Basic Pattern Matching Syntax
+```aifpl
+(match expression
+  (pattern1 result1)
+  (pattern2 result2)
+  ...
+  (_ default-result))  ; wildcard pattern (optional)
+```
+
+#### Literal Pattern Matching
+```aifpl
+; Match exact values
+(match 42
+  (42 "found the answer")
+  (0 "zero")
+  (_ "something else"))                     ; → "found the answer"
+
+; String literal matching
+(match "hello"
+  ("world" "greeting")
+  ("hello" "salutation")
+  (_ "unknown"))                            ; → "salutation"
+
+; Boolean literal matching
+(match #t
+  (#t "true value")
+  (#f "false value"))                       ; → "true value"
+```
+
+#### Variable Pattern Matching
+```aifpl
+; Bind values to variables
+(match 42
+  (x (* x 2)))                              ; → 84 (x is bound to 42)
+
+; Variable patterns always match
+(match "hello"
+  (greeting (string-upcase greeting)))      ; → "HELLO"
+
+; Multiple variable patterns (first match wins)
+(match 10
+  (x (+ x 1))
+  (y (* y 2)))                              ; → 11 (first pattern matches)
+```
+
+#### Wildcard Pattern Matching
+```aifpl
+; Wildcard matches anything without binding
+(match 42
+  (_ "matched something"))                  ; → "matched something"
+
+; Common use as default case
+(match "unknown"
+  ("hello" "greeting")
+  ("goodbye" "farewell")
+  (_ "unrecognized"))                       ; → "unrecognized"
+
+; Wildcard with computation
+(match (+ 10 20)
+  (_ "got a result"))                       ; → "got a result"
+```
+
+#### Type Pattern Matching
+```aifpl
+; Match by type with binding
+(match 42
+  ((number? n) (+ n 10))
+  ((string? s) (string-length s))
+  (_ "unknown type"))                       ; → 52
+
+; String type matching
+(match "hello world"
+  ((string? text) (string-upcase text))
+  (_ "not a string"))                       ; → "HELLO WORLD"
+
+; Boolean type matching
+(match #t
+  ((boolean? flag) (not flag))
+  (_ "not boolean"))                        ; → #f
+
+; List type matching
+(match (list 1 2 3)
+  ((list? items) (length items))
+  (_ "not a list"))                         ; → 3
+
+; Function type matching
+(match (lambda (x) (* x 2))
+  ((function? f) "it's a function")
+  (_ "not a function"))                     ; → "it's a function"
+```
+
+#### List Structure Pattern Matching
+```aifpl
+; Empty list matching
+(match (list)
+  (() "empty list")
+  (_ "non-empty"))                          ; → "empty list"
+
+; Fixed-length list matching
+(match (list 1 2 3)
+  ((a b c) (+ a b c))
+  (_ "wrong length"))                       ; → 6
+
+; Head-tail decomposition
+(match (list 1 2 3 4)
+  ((head . tail) (list "head" head "tail" tail))
+  (() "empty"))                             ; → ("head" 1 "tail" (2 3 4))
+
+; Single element list
+(match (list 42)
+  ((x) (* x 2))
+  (_ "not single element"))                 ; → 84
+
+; Two-element list
+(match (list "hello" "world")
+  ((first second) (string-append first " " second))
+  (_ "not a pair"))                         ; → "hello world"
+```
+
+#### Nested Pattern Matching
+```aifpl
+; Nested list patterns
+(match (list (list 1 2) 3)
+  (((a b) c) (+ a b c))
+  (_ "no match"))                           ; → 6
+
+; Deep nesting
+(match (list (list (list 1 2) 3) 4)
+  ((((x y) z) w) (+ x y z w))
+  (_ "no match"))                           ; → 10
+
+; Mixed literal and variable patterns
+(match (list "name" "Alice")
+  (("name" value) (string-append "Hello, " value))
+  (("age" value) (string-append "Age: " (number->string value)))
+  (_ "unknown field"))                      ; → "Hello, Alice"
+
+; Nested type patterns
+(match (list (list 1 2 3))
+  (((list? numbers)) (fold + 0 numbers))
+  (_ "not a list of numbers"))              ; → 6
+```
+
+#### Pattern Matching with Conditionals
+```aifpl
+; Combine patterns with guards (using nested match)
+(let ((classify-number (lambda (n)
+                         (match n
+                           ((number? x) 
+                            (match #t
+                              ((if (> x 0)) "positive")
+                              ((if (< x 0)) "negative")
+                              (_ "zero")))
+                           (_ "not a number")))))
+  (list (classify-number 5)
+        (classify-number -3)
+        (classify-number 0)
+        (classify-number "hello")))          ; → ("positive" "negative" "zero" "not a number")
+```
+
+#### Complex Data Structure Matching
+```aifpl
+; Process structured data
+(let ((process-person (lambda (person)
+                        (match person
+                          (("person" name age city)
+                           (string-append name " (" (number->string age) ") from " city))
+                          (("person" name age)
+                           (string-append name " (" (number->string age) ")"))
+                          (_ "invalid person data")))))
+  (list (process-person (list "person" "Alice" 30 "NYC"))
+        (process-person (list "person" "Bob" 25))
+        (process-person (list "invalid" "data"))))
+; → ("Alice (30) from NYC" "Bob (25)" "invalid person data")
+
+; Tree-like structure processing
+(let ((evaluate-expr (lambda (expr)
+                       (match expr
+                         (((number? n)) n)
+                         (("+" left right) (+ (evaluate-expr left) (evaluate-expr right)))
+                         (("*" left right) (* (evaluate-expr left) (evaluate-expr right)))
+                         (_ "invalid expression")))))
+  (evaluate-expr (list "+" (list 10) (list "*" (list 5) (list 3)))))  ; → 25
+```
+
+#### Pattern Matching vs. Conditional Chains
+```aifpl
+; Traditional nested conditionals
+(let ((process-traditional (lambda (data)
+                             (if (list? data)
+                                 (if (= (length data) 3)
+                                     (if (string? (first data))
+                                         (if (number? (first (rest data)))
+                                             (string-append (first data) ": " 
+                                                          (number->string (first (rest data))))
+                                             "second not number")
+                                         "first not string")
+                                     "wrong length")
+                                 "not a list"))))
+  (process-traditional (list "score" 95 "points")))  ; → "score: 95"
+
+; Equivalent pattern matching (much cleaner)
+(let ((process-pattern (lambda (data)
+                         (match data
+                           (((string? name) (number? value) extra) 
+                            (string-append name ": " (number->string value)))
+                           (_ "invalid format")))))
+  (process-pattern (list "score" 95 "points")))      ; → "score: 95"
+```
+
+#### Advanced Pattern Matching Examples
+```aifpl
+; List processing with patterns
+(let ((process-list (lambda (lst)
+                      (match lst
+                        (() "empty")
+                        ((x) (string-append "single: " (number->string x)))
+                        ((x y) (string-append "pair: " (number->string (+ x y))))
+                        ((head . tail) 
+                         (string-append "list of " (number->string (+ 1 (length tail))) " items"))))))
+  (list (process-list (list))
+        (process-list (list 42))
+        (process-list (list 1 2))
+        (process-list (list 1 2 3 4 5))))
+; → ("empty" "single: 42" "pair: 3" "list of 5 items")
+
+; Configuration processing
+(let ((process-config (lambda (config)
+                        (match config
+                          (("database" "mysql" host port)
+                           (string-append "MySQL at " host ":" (number->string port)))
+                          (("database" "postgres" host port db)
+                           (string-append "PostgreSQL " db " at " host ":" (number->string port)))
+                          (("cache" "redis" host)
+                           (string-append "Redis cache at " host))
+                          (_ "unknown configuration")))))
+  (list (process-config (list "database" "mysql" "localhost" 3306))
+        (process-config (list "database" "postgres" "db.example.com" 5432 "myapp"))
+        (process-config (list "cache" "redis" "cache.example.com"))
+        (process-config (list "unknown" "config"))))
+; → ("MySQL at localhost:3306" "PostgreSQL myapp at db.example.com:5432" "Redis cache at cache.example.com" "unknown configuration")
+
+; Recursive data structure processing
+(let ((json-to-string (lambda (json)
+                        (match json
+                          (((string? s)) (string-append "\"" s "\""))
+                          (((number? n)) (number->string n))
+                          (((boolean? b)) (if b "true" "false"))
+                          (("object" . pairs)
+                           (let ((pair-strings (map (lambda (pair)
+                                                     (match pair
+                                                       ((key value)
+                                                        (string-append "\"" key "\": " 
+                                                                     (json-to-string value)))
+                                                       (_ "invalid pair")))
+                                                   pairs)))
+                             (string-append "{" (string-join pair-strings ", ") "}")))
+                          (("array" . items)
+                           (string-append "[" 
+                                        (string-join (map json-to-string items) ", ") 
+                                        "]"))
+                          (_ "invalid JSON")))))
+  (json-to-string (list "object" 
+                       (list "name" (list "Alice"))
+                       (list "age" (list 30))
+                       (list "active" (list #t)))))
+; → "{\"name\": \"Alice\", \"age\": 30, \"active\": true}"
+```
+
+#### Pattern Matching Best Practices
+```aifpl
+; Order patterns from specific to general
+(let ((classify (lambda (x)
+                  (match x
+                    (0 "zero")              ; Most specific first
+                    (1 "one")
+                    ((number? n) "other number")  ; More general
+                    (_ "not a number")))))          ; Most general last
+  (list (classify 0) (classify 1) (classify 42) (classify "hello")))
+; → ("zero" "one" "other number" "not a number")
+
+; Use meaningful variable names in patterns
+(let ((format-person (lambda (data)
+                       (match data
+                         ((name age city) ; Clear variable names
+                          (string-append name " (" (number->string age) ") lives in " city))
+                         (_ "invalid person")))))
+  (format-person (list "Alice" 30 "Boston")))     ; → "Alice (30) lives in Boston"
+
+; Combine pattern matching with higher-order functions
+(let ((process-items (lambda (items)
+                       (map (lambda (item)
+                              (match item
+                                (("task" name priority)
+                                 (string-append name " [" priority "]"))
+                                (("note" content)
+                                 (string-append "Note: " content))
+                                (_ "unknown item")))
+                            items))))
+  (process-items (list (list "task" "Buy groceries" "high")
+                      (list "note" "Remember to call mom")
+                      (list "invalid" "item"))))
+; → ("Buy groceries [high]" "Note: Remember to call mom" "unknown item")
 ```
 
 ### Higher-Order Functions
@@ -1174,6 +1484,11 @@ AIFPL has a strict type system with the following types:
 (list (quote hello) (+ 1 2))          ; → (hello 3) (mixed quoted/unquoted)
 (list 'hello (+ 1 2))                 ; → (hello 3) (shortcut form)
 
+; Valid - pattern matching
+(match 42
+  ((number? n) (* n 2))
+  (_ "not a number"))                 ; → 84
+
 ; Invalid - type mismatch
 (+ 1 "hello")                         ; Error: cannot add number and string
 (and #t 1)                            ; Error: 'and' requires boolean arguments
@@ -1233,11 +1548,66 @@ The pure list approach provides several advantages:
 ; Single quote shortcut: '(+ 1 2)
 ; Represented as: AIFPLList([AIFPLSymbol("quote"), AIFPLList([AIFPLSymbol("+"), AIFPLNumber(1), AIFPLNumber(2)])])
 ; (Identical to the full quote form - the shortcut is purely syntactic sugar)
+
+; Match expression: (match x ((number? n) (* n 2)) (_ "not a number"))
+; Represented as: AIFPLList([AIFPLSymbol("match"), AIFPLSymbol("x"), AIFPLList([...]), ...])
 ```
 
 The evaluator recognizes special forms by examining the first element of lists, maintaining the traditional Lisp approach where syntax is determined by structure, not by special types.
 
 ## Common Usage Patterns
+
+### Pattern Matching for Data Processing
+```aifpl
+; Replace complex nested conditionals with pattern matching
+(let ((process-data (lambda (item)
+                      (match item
+                        (("user" name email) 
+                         (string-append "User: " name " (" email ")"))
+                        (("product" id price)
+                         (string-append "Product #" (number->string id) ": $" (number->string price)))
+                        (("order" id items total)
+                         (string-append "Order #" (number->string id) " (" 
+                                      (number->string (length items)) " items): $" 
+                                      (number->string total)))
+                        (_ "unknown data type")))))
+  (map process-data (list (list "user" "Alice" "alice@example.com")
+                         (list "product" 123 29.99)
+                         (list "order" 456 (list "item1" "item2") 59.98)
+                         (list "invalid" "data"))))
+; → ("User: Alice (alice@example.com)" "Product #123: $29.99" "Order #456 (2 items): $59.98" "unknown data type")
+
+; Type-based processing with pattern matching
+(let ((safe-operation (lambda (x y)
+                        (match (list x y)
+                          (((number? a) (number? b)) (+ a b))
+                          (((string? a) (string? b)) (string-append a " " b))
+                          (((list? a) (list? b)) (append a b))
+                          (_ "incompatible types")))))
+  (list (safe-operation 5 10)
+        (safe-operation "hello" "world")
+        (safe-operation (list 1 2) (list 3 4))
+        (safe-operation 5 "hello")))
+; → (15 "hello world" (1 2 3 4) "incompatible types")
+
+; Configuration parsing with patterns
+(let ((parse-config (lambda (config-list)
+                      (map (lambda (item)
+                             (match item
+                               (("server" host port)
+                                (list "server-config" host port))
+                               (("database" type connection-string)
+                                (list "db-config" type connection-string))
+                               (("feature" name enabled)
+                                (list "feature-toggle" name enabled))
+                               (_ (list "unknown-config" item))))
+                           config-list))))
+  (parse-config (list (list "server" "localhost" 8080)
+                     (list "database" "postgresql" "postgres://localhost/mydb")
+                     (list "feature" "new-ui" #t)
+                     (list "invalid" "config" "entry"))))
+; → (("server-config" "localhost" 8080) ("db-config" "postgresql" "postgres://localhost/mydb") ("feature-toggle" "new-ui" #t) ("unknown-config" ("invalid" "config" "entry")))
+```
 
 ### Symbolic Programming with Quote
 ```aifpl
@@ -1545,6 +1915,7 @@ Functions capture their lexical environment, creating closures:
 11. **Simplicity**: Direct S-expression evaluation without over-engineering
 12. **Homoiconicity**: Code and data use identical representations
 13. **Syntactic Sugar**: Single quote shortcut provides convenient syntax while maintaining pure list representation
+14. **Pattern Matching**: Comprehensive pattern matching for elegant data processing
 
 ## Exception Hierarchy
 
@@ -1612,6 +1983,13 @@ print(f"Formatted quote: {formatted_quote}")  # Formatted quote: (+ 1 2 3)
 
 formatted_shortcut = tool.evaluate_and_format("'(+ 1 2 3)")
 print(f"Formatted shortcut: {formatted_shortcut}")  # Formatted shortcut: (+ 1 2 3)
+
+# Pattern matching results
+pattern_result = tool.evaluate('(match 42 ((number? n) (* n 2)) (_ "not a number"))')
+print(f"Pattern match: {pattern_result}")  # Pattern match: 84
+
+complex_pattern = tool.evaluate('(match (list 1 2 3) ((a b c) (+ a b c)) (_ "no match"))')
+print(f"Complex pattern: {complex_pattern}")  # Complex pattern: 6
 ```
 
 ### Error Handling Patterns
@@ -1677,6 +2055,22 @@ symbolic_expr = '''
   (let ((operators (map first expressions))
         (operands (map rest expressions)))
     (list "operators" operators "operands" operands)))
+'''
+
+# Pattern matching for data processing
+pattern_matching_expr = '''
+(let ((process-items (lambda (items)
+                       (map (lambda (item)
+                              (match item
+                                (("person" name age) 
+                                 (string-append name " (" (number->string age) ")"))
+                                (("product" id price)
+                                 (string-append "Product " (number->string id) ": $" (number->string price)))
+                                (_ "unknown item")))
+                            items))))
+  (process-items (list (list "person" "Alice" 30)
+                      (list "product" 123 29.99)
+                      (list "invalid" "data"))))
 '''
 
 advanced_processing = '''

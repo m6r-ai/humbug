@@ -60,6 +60,7 @@ class AIFPLTokenizer:
                     tokens.append(AIFPLToken(AIFPLTokenType.STRING, string_value, i, length))
                     i += length
                     continue
+
                 except AIFPLTokenError as e:
                     # Convert to detailed error
                     if "Unterminated string" in str(e):
@@ -72,11 +73,13 @@ class AIFPLTokenizer:
                             suggestion="Add closing quote \" at the end of the string",
                             context="String literals must be enclosed in double quotes"
                         ) from e
-                    elif "Invalid escape sequence" in str(e):
+
+                    if "Invalid escape sequence" in str(e):
                         # Find the escape position
                         escape_pos = i + 1
                         while escape_pos < len(expression) and expression[escape_pos] != '\\':
                             escape_pos += 1
+
                         if escape_pos + 1 < len(expression):
                             bad_escape = expression[escape_pos:escape_pos+2]
                             raise AIFPLTokenError(
@@ -88,6 +91,7 @@ class AIFPLTokenizer:
                                 suggestion="Use valid escape sequences or remove backslash",
                                 context="Only specific escape sequences are supported in strings"
                             ) from e
+
                     raise  # Re-raise if not handled
 
             # Boolean literals (#t, #f) with validation for invalid patterns like #true, #false
@@ -99,12 +103,14 @@ class AIFPLTokenizer:
                         end = i + 2
                         while end < len(expression) and expression[end].isalnum():
                             end += 1
+
                         invalid_literal = expression[i:end]
 
                         suggestion = ""
                         if invalid_literal.lower() in ["#true", "#false"]:
                             correct = "#t" if "true" in invalid_literal.lower() else "#f"
                             suggestion = f"Use {correct} instead of {invalid_literal}"
+
                         else:
                             suggestion = "Use #t for true or #f for false"
 
@@ -142,6 +148,7 @@ class AIFPLTokenizer:
                     tokens.append(AIFPLToken(AIFPLTokenType.NUMBER, number, i, length))
                     i += length
                     continue
+
                 except AIFPLTokenError as e:
                     error_msg = str(e)
                     if "Invalid hexadecimal" in error_msg:
@@ -154,7 +161,8 @@ class AIFPLTokenizer:
                             suggestion="Add hex digits (0-9, A-F) after 0x",
                             context="Hexadecimal numbers need digits after the 0x prefix"
                         ) from e
-                    elif "Invalid binary" in error_msg:
+
+                    if "Invalid binary" in error_msg:
                         raise AIFPLTokenError(
                             message="Invalid binary number",
                             position=i,
@@ -164,7 +172,8 @@ class AIFPLTokenizer:
                             suggestion="Add binary digits (0 or 1) after 0b",
                             context="Binary numbers need digits after the 0b prefix"
                         ) from e
-                    elif "Invalid scientific notation" in error_msg:
+
+                    if "Invalid scientific notation" in error_msg:
                         raise AIFPLTokenError(
                             message="Invalid scientific notation",
                             position=i,
@@ -174,6 +183,7 @@ class AIFPLTokenizer:
                             suggestion="Add digits after the exponent marker (e/E)",
                             context="Scientific notation needs digits after e/E"
                         ) from e
+
                     raise  # Re-raise if not handled
 
             # Symbols (variables, parameters, functions, constants)
@@ -183,6 +193,7 @@ class AIFPLTokenizer:
                     tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, i, length))
                     i += length
                     continue
+
                 except AIFPLTokenError as e:
                     if "looks like malformed number" in str(e):
                         symbol_text = ""
@@ -200,6 +211,7 @@ class AIFPLTokenizer:
                             suggestion="If this should be a number, check the format. If a symbol, don't start with digits.",
                             context="Symbols cannot look like malformed numbers"
                         ) from e
+
                     raise  # Re-raise if not handled
 
             # Invalid character
@@ -223,6 +235,7 @@ class AIFPLTokenizer:
             if char_code < 32:
                 char_display = f"\\u{char_code:04x}"
                 context = "Control characters are not allowed except in strings"
+
             else:
                 char_display = char
                 context = "Only letters, digits, and specific symbols are allowed"
@@ -432,6 +445,7 @@ class AIFPLTokenizer:
             # Always use float for scientific notation or numbers with decimal points
             if 'e' in number_str.lower() or has_dot:
                 decimal_value: Union[int, float] = float(number_str)
+
             else:
                 decimal_value = int(number_str)
 
@@ -442,7 +456,7 @@ class AIFPLTokenizer:
 
     def _is_symbol_start(self, char: str) -> bool:
         """Check if character can start a symbol."""
-        return char.isalpha() or char in '+-*/%<>=!&|^~'
+        return char.isalpha() or char in '+-*/%<>=!&|^~_.'
 
     def _read_symbol(self, expression: str, start: int) -> tuple[str, int]:
         """
@@ -456,7 +470,7 @@ class AIFPLTokenizer:
         while i < len(expression):
             char = expression[i]
             # Symbol characters: letters, digits, hyphens, and operator chars
-            if char.isalnum() or char in '-+*/%<>=!&|^~?':
+            if char.isalnum() or char in '-+*/%<>=!&|^~?_.':
                 i += 1
 
             else:

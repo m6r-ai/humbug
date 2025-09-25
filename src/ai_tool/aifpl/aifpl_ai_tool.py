@@ -31,7 +31,7 @@ class AIFPLAITool(AITool):
             description=(
                 "The AIFPL (AI Functional Programming Language) tool offers a LISP-like (S expression) syntax for "
                 "mathematical expressions, string/boolean operations, list manipulation, conditional evaluation, "
-                "and functional programming with lambda expressions and iteration. "
+                "pattern matching, and functional programming with lambda expressions and iteration. "
                 "It is ideal for everything from simple calculations to complex algorithms. "
                 "The language is a pure functional langage with no side effects so it does not require user approvals "
                 "to use it (unlike other tools). "
@@ -111,6 +111,19 @@ class AIFPLAITool(AITool):
                 "- (fold func init list) → (fold + 0 (list 1 2 3 4)) → 10\n"
                 "- (range start end [step]) → (range 1 5) → (1 2 3 4)\n"
                 "- (find predicate list), (any? predicate list), (all? predicate list)\n\n"
+
+                "Pattern Matching:\n"
+                "- (match expression (pattern1 result1) (pattern2 result2) (_ default)) → powerful declarative dispatch\n"
+                "- Literal patterns: (match x (42 \"found\") (\"hello\" \"greeting\") (_ \"other\"))\n"
+                "- Variable binding: (match x ((number? n) (* n 2)) ((string? s) (string-upcase s)))\n"
+                "- Wildcard patterns: _ matches anything without binding\n"
+                "- Type patterns: (number? var), (string? var), (list? var), (boolean? var), (function? var)\n"
+                "- Empty list: (match lst (() \"empty\") ((x) \"singleton\") (_ \"multiple\"))\n"
+                "- List destructuring: (match lst ((a b c) (+ a b c)) ((head . tail) (cons head tail)))\n"
+                "- Nested patterns: (match data (((number? x) (string? y)) (list x y)) (_ \"no match\"))\n"
+                "- First match wins: patterns are tested in order, use specific patterns before general ones\n"
+                "- Example: (match data (42 \"answer\") ((number? n) (* n 2)) ((string? s) (string-upcase s)) "
+                "((head . tail) (list head (length tail))) (_ \"unknown\"))\n\n"
 
                 "Key Features:\n"
                 "- Pure functional: no side effects, immutable data\n"
