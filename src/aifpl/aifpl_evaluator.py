@@ -1,8 +1,8 @@
-"""Evaluator for AIFPL Abstract Syntax Trees using pure list representation."""
+"""Evaluator for AIFPL Abstract Syntax Trees with detailed error messages."""
 
 import math
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List, Union, Optional
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
@@ -14,6 +14,9 @@ from aifpl.aifpl_value import (
     AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
+from aifpl.aifpl_detailed_error import (
+    AIFPLDetailedEvalError, ErrorContext, ErrorMessageBuilder
+)
 
 
 @dataclass(frozen=True)
@@ -25,7 +28,7 @@ class AIFPLTailCall:
 
 
 class AIFPLEvaluator:
-    """Evaluates AIFPL Abstract Syntax Trees using pure list representation."""
+    """Evaluates AIFPL Abstract Syntax Trees using pure list representation with detailed error messages."""
 
     # Mathematical constants
     CONSTANTS = {
@@ -47,6 +50,8 @@ class AIFPLEvaluator:
         self.max_depth = max_depth
         self.floating_point_tolerance = floating_point_tolerance
         self.call_stack = AIFPLCallStack()
+        self.current_expression = ""  # Store original expression for context
+        self.message_builder = ErrorMessageBuilder()
 
         # Add call chain tracking for mutual recursion detection
         self.call_chain: List[AIFPLFunction] = []
@@ -57,6 +62,52 @@ class AIFPLEvaluator:
 
         # Create built-in functions with their native implementations
         self._builtin_functions = self._create_builtin_functions()
+
+    def set_expression_context(self, expression: str):
+        """Set the current expression for error context."""
+        self.current_expression = expression
+
+    def _create_detailed_error(
+        self,
+        message: str,
+        position: Optional[int] = None,
+        context: Optional[str] = None,
+        expected: Optional[str] = None,
+        received: Optional[str] = None,
+        suggestion: Optional[str] = None,
+        example: Optional[str] = None,
+        error_type: str = "general"
+    ) -> AIFPLDetailedEvalError:
+        """Create a detailed error with full context."""
+        
+        error_context = None
+        if position is not None and self.current_expression:
+            line, column = self.message_builder.position_to_line_column(
+                self.current_expression, position
+            )
+            expr_context = self.message_builder.get_expression_context(
+                self.current_expression, position
+            )
+            error_context = ErrorContext(
+                line=line,
+                column=column,
+                expression=expr_context,
+                position=position
+            )
+        
+        # Add common mistake suggestions if none provided
+        if not suggestion:
+            suggestion = self.message_builder.get_common_mistakes_suggestion(error_type, context or "")
+        
+        return AIFPLDetailedEvalError(
+            message=message,
+            context=context,
+            expected=expected,
+            received=received,
+            suggestion=suggestion,
+            example=example,
+            error_context=error_context
+        )
 
     def _create_builtin_functions(self) -> dict[str, AIFPLBuiltinFunction]:
         """Create all built-in functions with their native implementations."""
@@ -212,41 +263,6 @@ class AIFPLEvaluator:
         # Return the quoted expression without evaluation
         return quote_list.get(1)
 
-    def _evaluate_if_form(
-        self,
-        if_list: AIFPLList,
-        env: AIFPLEnvironment,
-        depth: int,
-    ) -> AIFPLValue | AIFPLTailCall:
-        """
-        Evaluate (if condition then else) form.
-
-        Args:
-            if_list: List representing if expression
-            env: Current environment
-            depth: Current recursion depth
-        Returns:
-            Result of evaluating the if expression
-        """
-        if if_list.length() != 4:
-            raise AIFPLEvalError(f"if requires exactly 3 arguments, got {if_list.length() - 1}")
-
-        condition_expr = if_list.get(1)
-        then_expr = if_list.get(2)
-        else_expr = if_list.get(3)
-
-        # Evaluate condition (not in tail position)
-        condition = self._evaluate_expression(condition_expr, env, depth + 1)
-
-        if not isinstance(condition, AIFPLBoolean):
-            raise AIFPLEvalError(f"if requires boolean condition, got {condition.type_name()}")
-
-        # Evaluate chosen branch (in tail position)
-        if condition.value:
-            return self._evaluate_expression_with_tail_detection(then_expr, env, depth + 1)
-
-        return self._evaluate_expression_with_tail_detection(else_expr, env, depth + 1)
-
     def _evaluate_lambda_form(
         self,
         lambda_list: AIFPLList,
@@ -254,7 +270,7 @@ class AIFPLEvaluator:
         _depth: int
     ) -> AIFPLFunction:
         """
-        Evaluate (lambda (param1 param2 ...) body) form.
+        Evaluate (lambda (param1 param2 ...) body) form with enhanced error messages.
 
         Args:
             lambda_list: List representing lambda expression
@@ -265,8 +281,13 @@ class AIFPLEvaluator:
             AIFPLFunction object
         """
         if lambda_list.length() != 3:
-            raise AIFPLEvalError(
-                f"Lambda expression requires exactly 3 elements: (lambda (params...) body), got {lambda_list.length()}"
+            raise self._create_detailed_error(
+                message="Lambda expression structure is incorrect",
+                received=f"Got {lambda_list.length()} elements: {self.format_result(lambda_list)}",
+                expected="Exactly 3 elements: (lambda (params...) body)",
+                example="(lambda (x y) (+ x y))",
+                suggestion="Lambda needs parameter list and body: (lambda (param1 param2 ...) body-expression)",
+                error_type="lambda_params"
             )
 
         # Extract parameter list
@@ -278,28 +299,43 @@ class AIFPLEvaluator:
         if isinstance(param_expr, AIFPLList):
             # (param1 param2 ...) or ()
             raw_parameters = list(param_expr.elements)
-
         else:
             # Single parameter without parentheses (not standard but handle gracefully)
             if not isinstance(param_expr, AIFPLSymbol):
-                raise AIFPLEvalError(
-                    f"Lambda parameter list must be a list or symbol, got {type(param_expr).__name__}"
+                raise self._create_detailed_error(
+                    message="Lambda parameter list must contain symbols",
+                    received=f"Parameter list: {self.format_result(param_expr)} ({param_expr.type_name()})",
+                    expected="List of symbols: (param1 param2 ...)",
+                    example="(lambda (x y z) (+ x y z))",
+                    suggestion="Parameters should be unquoted variable names",
+                    error_type="lambda_params"
                 )
-
             raw_parameters = [param_expr]
 
         # Validate parameters are all symbols and convert them
         parameters: List[str] = []
-        for param in raw_parameters:
+        for i, param in enumerate(raw_parameters):
             if not isinstance(param, AIFPLSymbol):
-                raise AIFPLEvalError(f"Lambda parameter must be a symbol, got {type(param).__name__}")
-
+                raise self._create_detailed_error(
+                    message=f"Lambda parameter {i+1} must be a symbol",
+                    received=f"Parameter {i+1}: {self.format_result(param)} ({param.type_name()})",
+                    expected="Unquoted symbol (variable name)",
+                    example="Correct: (lambda (x y) (+ x y))\nIncorrect: (lambda (\"x\" 1) ...)",
+                    suggestion="Use unquoted names: x, not \"x\" or 1",
+                    error_type="lambda_params"
+                )
             parameters.append(param.name)
 
         # Check for duplicate parameters
         if len(parameters) != len(set(parameters)):
             duplicates = [p for p in parameters if parameters.count(p) > 1]
-            raise AIFPLEvalError(f"Duplicate lambda parameters: {duplicates}")
+            raise self._create_detailed_error(
+                message="Lambda parameters must be unique",
+                received=f"Duplicate parameters: {duplicates}",
+                expected="All parameter names should be different",
+                example="Correct: (lambda (x y z) ...)\nIncorrect: (lambda (x y x) ...)",
+                suggestion="Use different names for each parameter"
+            )
 
         body = lambda_list.get(2)
 
@@ -317,7 +353,7 @@ class AIFPLEvaluator:
         depth: int
     ) -> AIFPLValue:
         """
-        Evaluate (let ((var1 val1) (var2 val2) ...) body) form.
+        Evaluate (let ((var1 val1) (var2 val2) ...) body) form with enhanced error messages.
 
         Args:
             let_list: List representing let expression
@@ -328,25 +364,61 @@ class AIFPLEvaluator:
             Result of evaluating the let body
         """
         if let_list.length() != 3:
-            raise AIFPLEvalError(f"Let expression requires exactly 3 elements: (let ((bindings...)) body), got {let_list.length()}")
+            raise self._create_detailed_error(
+                message="Let expression structure is incorrect",
+                received=f"Got {let_list.length()} elements: {self.format_result(let_list)}",
+                expected="Exactly 3 elements: (let ((bindings...)) body)",
+                example="(let ((x 5) (y 10)) (+ x y))",
+                suggestion="Let needs binding list and body: (let ((var1 val1) (var2 val2) ...) body)",
+                error_type="let_binding"
+            )
 
         # Parse binding list
         binding_expr = let_list.get(1)
 
         if not isinstance(binding_expr, AIFPLList):
-            raise AIFPLEvalError(f"Let binding list must be a list, got {type(binding_expr).__name__}")
+            raise self._create_detailed_error(
+                message="Let binding list must be a list",
+                received=f"Binding list: {self.format_result(binding_expr)} ({binding_expr.type_name()})",
+                expected="List of bindings: ((var1 val1) (var2 val2) ...)",
+                example="(let ((x 5) (y (* x 2))) (+ x y))",
+                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)",
+                error_type="let_binding"
+            )
 
         bindings = []
-        for binding in binding_expr.elements:
+        for i, binding in enumerate(binding_expr.elements):
             if not isinstance(binding, AIFPLList) or binding.length() != 2:
-                raise AIFPLEvalError("Let binding must be a list of 2 elements: (var value)")
+                if isinstance(binding, AIFPLList):
+                    raise self._create_detailed_error(
+                        message=f"Let binding {i+1} has wrong number of elements",
+                        received=f"Binding {i+1}: {self.format_result(binding)} (has {binding.length()} elements)",
+                        expected="Each binding needs exactly 2 elements: (variable value)",
+                        example="Correct: (x 5)\nIncorrect: (x) or (x 5 6)",
+                        suggestion="Each binding: (variable-name value-expression)",
+                        error_type="let_binding"
+                    )
+                else:
+                    raise self._create_detailed_error(
+                        message=f"Let binding {i+1} must be a list",
+                        received=f"Binding {i+1}: {self.format_result(binding)} ({binding.type_name()})",
+                        expected="List with variable and value: (var val)",
+                        example="Correct: (x 5)\nIncorrect: x or \"x\"",
+                        suggestion="Wrap each binding in parentheses: (variable value)",
+                        error_type="let_binding"
+                    )
 
             var_name_expr = binding.get(0)
             var_value_expr = binding.get(1)
 
             if not isinstance(var_name_expr, AIFPLSymbol):
-                raise AIFPLEvalError(
-                    f"Let binding variable must be a symbol, got {type(var_name_expr).__name__}"
+                raise self._create_detailed_error(
+                    message=f"Let binding {i+1} variable must be a symbol",
+                    received=f"Variable: {self.format_result(var_name_expr)} ({var_name_expr.type_name()})",
+                    expected="Unquoted symbol (variable name)",
+                    example="Correct: (x 5)\nIncorrect: (\"x\" 5) or (1 5)",
+                    suggestion="Use unquoted variable names: x, not \"x\"",
+                    error_type="let_binding"
                 )
 
             bindings.append((var_name_expr.name, var_value_expr))
@@ -355,7 +427,13 @@ class AIFPLEvaluator:
         var_names = [name for name, _ in bindings]
         if len(var_names) != len(set(var_names)):
             duplicates = [name for name in var_names if var_names.count(name) > 1]
-            raise AIFPLEvalError(f"Duplicate let binding variables: {duplicates}")
+            raise self._create_detailed_error(
+                message="Let binding variables must be unique",
+                received=f"Duplicate variables: {duplicates}",
+                expected="All variable names should be different",
+                example="Correct: (let ((x 1) (y 2)) ...)\nIncorrect: (let ((x 1) (x 2)) ...)",
+                suggestion="Use different names for each variable"
+            )
 
         body = let_list.get(2)
 
@@ -438,7 +516,7 @@ class AIFPLEvaluator:
         depth: int
     ) -> AIFPLValue:
         """
-        Evaluate function call with tail call optimization.
+        Evaluate function call with tail call optimization and enhanced error messages.
 
         Args:
             func_list: List representing function call
@@ -453,7 +531,13 @@ class AIFPLEvaluator:
 
         while True:
             if current_call.is_empty():
-                raise AIFPLEvalError("Cannot call empty list")
+                raise self._create_detailed_error(
+                    message="Cannot call empty list",
+                    received="Empty list: ()",
+                    expected="Function call: (function-name arg1 arg2 ...)",
+                    example="(+ 1 2 3) or (map (lambda (x) (* x 2)) (list 1 2 3))",
+                    suggestion="Put function name as first element of list"
+                )
 
             func_expr = current_call.first()
             arg_exprs = list(current_call.elements[1:])
@@ -461,16 +545,52 @@ class AIFPLEvaluator:
             # Evaluate the function expression
             try:
                 func_value = self._evaluate_expression(func_expr, current_env, depth)
-
             except AIFPLEvalError as e:
                 if "Undefined variable" in str(e) and isinstance(func_expr, AIFPLSymbol):
-                    raise AIFPLEvalError(f"Unknown function: '{func_expr.name}'") from e
+                    # Enhanced unknown function error
+                    available_functions = list(self._builtin_functions.keys())
+                    similar = self.message_builder.suggest_similar_functions(
+                        func_expr.name, available_functions
+                    )
+                    
+                    suggestion_text = ""
+                    if similar:
+                        suggestion_text = f"Did you mean: {', '.join(similar)}?"
+                    else:
+                        # Show some common functions
+                        common_funcs = ['+', '-', '*', '/', '=', '<', '>', 'list', 'map', 'filter', 'let', 'lambda']
+                        available_common = [f for f in common_funcs if f in available_functions]
+                        suggestion_text = f"Common functions: {', '.join(available_common[:8])}"
+                    
+                    example = self.message_builder.create_function_example(func_expr.name)
+                    
+                    raise self._create_detailed_error(
+                        message=f"Unknown function: '{func_expr.name}'",
+                        context=f"Available functions include: {', '.join(sorted(available_functions)[:10])}...",
+                        suggestion=suggestion_text,
+                        example=example,
+                        error_type="function_call"
+                    ) from e
 
-                raise AIFPLEvalError(f"Error evaluating function expression: {e}") from e
+                raise self._create_detailed_error(
+                    message="Error evaluating function expression",
+                    received=f"Function expression: {self.format_result(func_expr)}",
+                    context=str(e),
+                    suggestion="Check that the function name is spelled correctly",
+                    error_type="function_call"
+                ) from e
 
             # We can only call functions!
             if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
-                raise AIFPLEvalError(f"Cannot call non-function value: {func_value.type_name()}")
+                func_name = func_expr.name if isinstance(func_expr, AIFPLSymbol) else str(func_expr)
+                raise self._create_detailed_error(
+                    message="Cannot call non-function value",
+                    received=f"Trying to call: {self.format_result(func_value)} ({func_value.type_name()})",
+                    expected="Function (builtin or lambda)",
+                    example="(+ 1 2) calls function +\n(42 1 2) tries to call number 42",
+                    suggestion=f"'{func_name}' is not a function - check spelling or define it first",
+                    error_type="function_call"
+                )
 
             # Check if this is a special form that needs unevaluated arguments
             if isinstance(func_value, AIFPLBuiltinFunction) and self._is_special_form(func_value.name):
@@ -480,9 +600,14 @@ class AIFPLEvaluator:
             # Regular functions get evaluated arguments
             try:
                 arg_values = [self._evaluate_expression(arg, current_env, depth) for arg in arg_exprs]
-
             except AIFPLEvalError as e:
-                raise AIFPLEvalError(f"Error evaluating function arguments: {e}") from e
+                raise self._create_detailed_error(
+                    message="Error evaluating function arguments",
+                    context=str(e),
+                    received=f"Arguments: {[self.format_result(arg) for arg in arg_exprs]}",
+                    suggestion="Check each argument for syntax errors",
+                    error_type="function_call"
+                ) from e
 
             result = self._call_function(func_value, arg_values, current_env, depth)
 
@@ -535,7 +660,7 @@ class AIFPLEvaluator:
         depth: int
     ) -> Union[AIFPLValue, AIFPLTailCall]:
         """
-        Common logic for calling a lambda function with evaluated argument values.
+        Common logic for calling a lambda function with evaluated argument values and enhanced error messages.
 
         Args:
             func: Lambda function to call
@@ -546,11 +671,18 @@ class AIFPLEvaluator:
         Returns:
             Function result or AIFPLTailCall for optimization
         """
-        # Check arity
+        # Check arity with detailed error
         if len(arg_values) != len(func.parameters):
-            raise AIFPLEvalError(
-                f"Function expects {len(func.parameters)} arguments, got {len(arg_values)}. "
-                f"Parameters: {list(func.parameters)}"
+            param_list = ", ".join(func.parameters) if func.parameters else "(no parameters)"
+            arg_list = ", ".join(self.format_result(arg) for arg in arg_values) if arg_values else "(no arguments)"
+            
+            raise self._create_detailed_error(
+                message=f"Function '{func.name}' expects {len(func.parameters)} arguments, got {len(arg_values)}",
+                received=f"Arguments provided: {arg_list}",
+                expected=f"Parameters expected: {param_list}",
+                example=f"({func.name} {' '.join(['arg' + str(i+1) for i in range(len(func.parameters))])})" if func.parameters else f"({func.name})",
+                suggestion=f"Provide exactly {len(func.parameters)} argument{'s' if len(func.parameters) != 1 else ''}",
+                error_type="function_call"
             )
 
         # Create new environment for function execution
@@ -702,6 +834,41 @@ class AIFPLEvaluator:
             arguments=arg_exprs,
             environment=env
         )
+
+    def _evaluate_if_form(
+        self,
+        if_list: AIFPLList,
+        env: AIFPLEnvironment,
+        depth: int,
+    ) -> AIFPLValue | AIFPLTailCall:
+        """
+        Evaluate (if condition then else) form.
+
+        Args:
+            if_list: List representing if expression
+            env: Current environment
+            depth: Current recursion depth
+        Returns:
+            Result of evaluating the if expression
+        """
+        if if_list.length() != 4:
+            raise AIFPLEvalError(f"if requires exactly 3 arguments, got {if_list.length() - 1}")
+
+        condition_expr = if_list.get(1)
+        then_expr = if_list.get(2)
+        else_expr = if_list.get(3)
+
+        # Evaluate condition (not in tail position)
+        condition = self._evaluate_expression(condition_expr, env, depth + 1)
+
+        if not isinstance(condition, AIFPLBoolean):
+            raise AIFPLEvalError(f"if requires boolean condition, got {condition.type_name()}")
+
+        # Evaluate chosen branch (in tail position)
+        if condition.value:
+            return self._evaluate_expression_with_tail_detection(then_expr, env, depth + 1)
+
+        return self._evaluate_expression_with_tail_detection(else_expr, env, depth + 1)
 
     def _call_function_with_evaluated_args(
         self,

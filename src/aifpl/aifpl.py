@@ -1,7 +1,6 @@
-"""Main AIFPL (AI Functional Programming Language) class."""
+"""Main AIFPL (AI Functional Programming Language) class with enhanced error messages."""
 
 from typing import Union
-
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
@@ -10,15 +9,21 @@ from aifpl.aifpl_value import AIFPLValue, AIFPLFunction
 
 class AIFPL:
     """
-    AIFPL (AI Functional Programming Language) calculator with LISP-like syntax.
-
-    This class provides a high-level interface for evaluating AIFPL expressions.
-    It coordinates tokenization, parsing, and evaluation phases.
+    AIFPL (AI Functional Programming Language) calculator with LISP-like syntax and enhanced error messages.
+    
+    This version provides comprehensive error reporting with:
+    - Line and column numbers
+    - Context showing where the error occurred
+    - Clear explanations of what went wrong
+    - Suggestions for how to fix the problem
+    - Examples of correct usage
+    
+    Designed specifically to help LLMs understand and self-correct errors.
     """
 
     def __init__(self, max_depth: int = 100, floating_point_tolerance: float = 1e-10):
         """
-        Initialize AIFPL calculator.
+        Initialize enhanced AIFPL calculator.
 
         Args:
             max_depth: Maximum recursion depth for expression evaluation
@@ -29,7 +34,7 @@ class AIFPL:
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
         """
-        Evaluate an AIFPL expression and return Python-compatible result.
+        Evaluate an AIFPL expression with comprehensive enhanced error reporting.
 
         Args:
             expression: AIFPL expression string to evaluate
@@ -38,23 +43,27 @@ class AIFPL:
             The result of evaluating the expression converted to Python types
 
         Raises:
-            AIFPLTokenError: If tokenization fails
-            AIFPLParseError: If parsing fails
-            AIFPLEvalError: If evaluation fails
+            AIFPLDetailedTokenError: If tokenization fails (with line numbers and suggestions)
+            AIFPLDetailedParseError: If parsing fails (with line numbers and suggestions)
+            AIFPLDetailedEvalError: If evaluation fails (with line numbers and suggestions)
         """
-        # Phase 1: Tokenization
+        # Phase 1: Enhanced Tokenization
         tokenizer = AIFPLTokenizer()
         tokens = tokenizer.tokenize(expression)
 
-        # Phase 2: Parsing
-        parser = AIFPLParser(tokens)
+        # Phase 2: Enhanced Parsing
+        parser = AIFPLParser(tokens, expression)
         parsed_expr = parser.parse()
 
-        # Phase 3: Evaluation
+        # Phase 3: Enhanced Evaluation
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
         )
+        
+        # Set expression context for error reporting
+        evaluator.set_expression_context(expression)
+        
         result = evaluator.evaluate(parsed_expr)
 
         # Simplify the result
@@ -65,7 +74,7 @@ class AIFPL:
 
     def evaluate_and_format(self, expression: str) -> str:
         """
-        Evaluate an AIFPL expression and return formatted result.
+        Evaluate an AIFPL expression and return formatted result with comprehensive enhanced error reporting.
 
         Args:
             expression: AIFPL expression string to evaluate
@@ -74,23 +83,27 @@ class AIFPL:
             String representation of the result using LISP conventions
 
         Raises:
-            AIFPLTokenError: If tokenization fails
-            AIFPLParseError: If parsing fails
-            AIFPLEvalError: If evaluation fails
+            AIFPLDetailedTokenError: If tokenization fails (with line numbers and suggestions)
+            AIFPLDetailedParseError: If parsing fails (with line numbers and suggestions)
+            AIFPLDetailedEvalError: If evaluation fails (with line numbers and suggestions)
         """
-        # Phase 1: Tokenization
+        # Phase 1: Enhanced Tokenization
         tokenizer = AIFPLTokenizer()
         tokens = tokenizer.tokenize(expression)
 
-        # Phase 2: Parsing
-        parser = AIFPLParser(tokens)
+        # Phase 2: Enhanced Parsing
+        parser = AIFPLParser(tokens, expression)
         parsed_expr = parser.parse()
 
-        # Phase 3: Evaluation
+        # Phase 3: Enhanced Evaluation
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
         )
+        
+        # Set expression context for error reporting
+        evaluator.set_expression_context(expression)
+        
         result = evaluator.evaluate(parsed_expr)
 
         # Simplify and format the result

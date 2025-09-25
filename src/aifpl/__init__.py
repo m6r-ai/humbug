@@ -1,10 +1,14 @@
-"""AIFPL (AI Functional Programming Language) package."""
+"""AIFPL (AI Functional Programming Language) package with enhanced error messages."""
 
 # Main API
 from aifpl.aifpl import AIFPL
 
-# Exceptions (for error handling)
+# Exceptions (for error handling) - now with enhanced detailed versions
 from aifpl.aifpl_error import AIFPLError, AIFPLTokenError, AIFPLParseError, AIFPLEvalError
+from aifpl.aifpl_detailed_error import (
+    AIFPLDetailedError, AIFPLDetailedTokenError, AIFPLDetailedParseError, AIFPLDetailedEvalError,
+    ErrorContext, ErrorMessageBuilder
+)
 
 # Value types (new hierarchy)
 from aifpl.aifpl_value import (
@@ -24,8 +28,10 @@ __all__ = [
     # Main API
     "AIFPL",
 
-    # Exceptions
+    # Exceptions (both original and enhanced)
     "AIFPLError", "AIFPLTokenError", "AIFPLParseError", "AIFPLEvalError",
+    "AIFPLDetailedError", "AIFPLDetailedTokenError", "AIFPLDetailedParseError", "AIFPLDetailedEvalError",
+    "ErrorContext", "ErrorMessageBuilder",
 
     # Value types
     "AIFPLValue", "AIFPLNumber", "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList",
