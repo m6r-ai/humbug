@@ -87,6 +87,7 @@ class AIFPLEvaluator:
         builtins['find'] = AIFPLBuiltinFunction('find', self._builtin_find_special)
         builtins['any?'] = AIFPLBuiltinFunction('any?', self._builtin_any_p_special)
         builtins['all?'] = AIFPLBuiltinFunction('all?', self._builtin_all_p_special)
+        builtins['match'] = AIFPLBuiltinFunction('match', self._builtin_match_special)
 
         return builtins
 
@@ -959,7 +960,7 @@ class AIFPLEvaluator:
 
     def _is_special_form(self, function_name: str) -> bool:
         """Check if a function name is a special form that needs unevaluated arguments."""
-        return function_name in ['if', 'and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']
+        return function_name in ['if', 'and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?', 'match']
 
     def _call_function(
         self,
@@ -1734,6 +1735,25 @@ class AIFPLEvaluator:
                 ) from e
 
         return AIFPLBoolean(True)
+
+    def _builtin_match_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Handle match special form when called as a builtin function."""
+        if len(args) < 2:
+            raise AIFPLEvalError(
+                message="Match function has wrong number of arguments",
+                received=f"Got {len(args)} arguments",
+                expected="At least 2 arguments: (match value (pattern1 result1) ...)",
+                example="(match x (42 \"found\") (_ \"default\"))",
+                suggestion="Match needs a value to match and at least one pattern clause"
+            )
+
+        # Create a match list structure and delegate to the core match form evaluator
+        from aifpl.aifpl_value import AIFPLSymbol
+        match_symbol = AIFPLSymbol("match")
+        match_list = AIFPLList((match_symbol,) + tuple(args))
+
+        # Use the existing match form evaluator
+        return self._evaluate_match_form(match_list, env, depth)
 
     # Helper method for higher-order functions
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
