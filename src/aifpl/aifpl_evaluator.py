@@ -522,14 +522,12 @@ class AIFPLEvaluator:
         Returns:
             (True, new_env_with_bindings) if match succeeds, None if no match
         """
-        # LITERAL PATTERNS
         if isinstance(pattern, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
             if self._aifpl_equal(pattern, value):
                 return (True, env)
-            else:
-                return None
 
-        # VARIABLE PATTERNS
+            return None
+
         if isinstance(pattern, AIFPLSymbol):
             if pattern.name == "_":  # Wildcard - always matches, no binding
                 return (True, env)
@@ -538,23 +536,8 @@ class AIFPLEvaluator:
             new_env = env.define(pattern.name, value)
             return (True, new_env)
 
-        # LIST PATTERNS - Phase 1 + Phase 2
+        # LIST PATTERNS - Phase 1 + Phase 2 (purely structural)
         if isinstance(pattern, AIFPLList):
-            # Check if this might be a computed literal pattern first
-            if self._is_computed_literal_pattern(pattern):
-                try:
-                    # Evaluate the pattern to get the literal value
-                    computed_value = self._evaluate_expression(pattern, env, 0)
-                    # Now match against the computed literal
-                    if self._aifpl_equal(computed_value, value):
-                        return (True, env)
-
-                    return None
-
-                except AIFPLEvalError:
-                    # If evaluation fails, treat as regular list pattern
-                    pass
-
             return self._try_match_list_pattern(pattern, value, env)
 
         # Pattern type not supported
@@ -690,32 +673,6 @@ class AIFPLEvaluator:
             # Fallback to simple comparison
             return a.to_python() == b.to_python()
 
-    def _is_computed_literal_pattern(self, pattern: AIFPLList) -> bool:
-        """
-        Check if a list pattern represents a computed literal (like (complex 1 2)).
-        
-        Args:
-            pattern: List pattern to check
-            
-        Returns:
-            True if this looks like a computed literal pattern
-        """
-        if pattern.is_empty():
-            return False
-
-        first_elem = pattern.first()
-        if not isinstance(first_elem, AIFPLSymbol):
-            return False
-
-        # Known functions that produce literal values when called
-        literal_producing_functions = {
-            'complex', '+', '-', '*', '/', '//', '%', '**',
-            'string-append', 'number->string', 'string->number',
-            'not', 'and', 'or', '=', '!=', '<', '>', '<=', '>='
-        }
-
-        return first_elem.name in literal_producing_functions
-
     def _find_dot_position(self, pattern: AIFPLList) -> int | None:
         """
         Find the position of the dot symbol in a pattern.
@@ -730,6 +687,7 @@ class AIFPLEvaluator:
             element = pattern.get(i)
             if isinstance(element, AIFPLSymbol) and element.name == ".":
                 return i
+
         return None
 
     def _match_head_tail_pattern(
