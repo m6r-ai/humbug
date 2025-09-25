@@ -91,6 +91,20 @@ class AIFPLEvaluator:
 
         return builtins
 
+    # Helper methods for common type checking patterns
+    def _is_symbol_with_name(self, value: AIFPLValue, name: str) -> bool:
+        """Check if value is a symbol with the given name."""
+        return isinstance(value, AIFPLSymbol) and value.name == name
+
+    def _is_type_pattern(self, pattern: AIFPLValue) -> tuple[bool, str | None]:
+        """Check if pattern is a type pattern like (number? x), return (is_type_pattern, predicate_name)."""
+        if (isinstance(pattern, AIFPLList) and pattern.length() == 2):
+            first_elem = pattern.get(0)
+            if (isinstance(first_elem, AIFPLSymbol) and first_elem.name.endswith('?')):
+                return True, first_elem.name
+
+        return False, None
+
     def evaluate(
         self,
         expr: AIFPLValue,
@@ -197,16 +211,16 @@ class AIFPLEvaluator:
             first_elem = expr.first()
             if isinstance(first_elem, AIFPLSymbol):
                 # Handle special forms BEFORE attempting any symbol lookup
-                if first_elem.name == "quote":
+                if self._is_symbol_with_name(first_elem, "quote"):
                     return self._evaluate_quote_form(expr, env, depth + 1)
 
-                if first_elem.name == "lambda":
+                if self._is_symbol_with_name(first_elem, "lambda"):
                     return self._evaluate_lambda_form(expr, env, depth + 1)
 
-                if first_elem.name == "let":
+                if self._is_symbol_with_name(first_elem, "let"):
                     return self._evaluate_let_form(expr, env, depth + 1)
 
-                if first_elem.name == "match":
+                if self._is_symbol_with_name(first_elem, "match"):
                     return self._evaluate_match_form(expr, env, depth + 1)
 
                 # Regular function call (including built-ins and user functions)
@@ -579,12 +593,10 @@ class AIFPLEvaluator:
         Returns:
             (True, new_env_with_bindings) if match succeeds, None if no match
         """
-        # Type patterns
-        if (pattern.length() == 2 and
-            isinstance(pattern.get(0), AIFPLSymbol) and
-            pattern.get(0).name.endswith('?')):
-
-            type_predicate = pattern.get(0).name
+        # Type patterns - use helper method
+        is_type_pattern, type_predicate = self._is_type_pattern(pattern)
+        if is_type_pattern:
+            assert type_predicate is not None  # Type narrowing
             var_pattern = pattern.get(1)
 
             # Validate type pattern structure
@@ -691,7 +703,7 @@ class AIFPLEvaluator:
         """
         for i in range(pattern.length()):
             element = pattern.get(i)
-            if isinstance(element, AIFPLSymbol) and element.name == ".":
+            if self._is_symbol_with_name(element, "."):
                 return i
 
         return None
@@ -836,12 +848,10 @@ class AIFPLEvaluator:
         if pattern.is_empty():
             return
 
-        # Check for type patterns: (type? var)
-        if (pattern.length() == 2 and
-            isinstance(pattern.get(0), AIFPLSymbol) and
-            pattern.get(0).name.endswith('?')):
-
-            type_predicate = pattern.get(0).name
+        # Check for type patterns: (type? var) - use helper method
+        is_type_pattern, type_predicate = self._is_type_pattern(pattern)
+        if is_type_pattern:
+            assert type_predicate is not None  # Type narrowing
             var_pattern = pattern.get(1)
 
             # Validate type predicate is known
@@ -867,11 +877,9 @@ class AIFPLEvaluator:
             return
 
         # Check for malformed type patterns (wrong number of arguments)
-        if (pattern.length() != 2 and
-                isinstance(pattern.get(0), AIFPLSymbol) and
-                pattern.get(0).name.endswith('?') and
-                self._is_valid_type_predicate(pattern.get(0).name)):
-            type_predicate = pattern.get(0).name
+        first_elem = pattern.get(0)
+        if isinstance(first_elem, AIFPLSymbol) and self._is_valid_type_predicate(first_elem.name):
+            type_predicate = first_elem.name
             if pattern.length() == 1:
                 # Missing variable: (number?)
                 raise AIFPLEvalError(
@@ -882,20 +890,21 @@ class AIFPLEvaluator:
                     suggestion="Add a variable name after the type predicate"
                 )
 
-            # Too many variables: (number? x y)
-            raise AIFPLEvalError(
-                message="Invalid type pattern",
-                received=f"Type pattern: {self.format_result(pattern)} - too many variables",
-                expected="Type pattern with one variable: (type? var)",
-                example="(number? x) not (number? x y)",
-                suggestion="Use only one variable in type patterns"
-            )
+            if pattern.length() > 2:
+                # Too many variables: (number? x y)
+                raise AIFPLEvalError(
+                    message="Invalid type pattern",
+                    received=f"Type pattern: {self.format_result(pattern)} - too many variables",
+                    expected="Type pattern with one variable: (type? var)",
+                    example="(number? x) not (number? x y)",
+                    suggestion="Use only one variable in type patterns"
+                )
 
         # Check for cons patterns with dots
         dot_positions = []
         for i in range(pattern.length()):
             element = pattern.get(i)
-            if isinstance(element, AIFPLSymbol) and element.name == ".":
+            if self._is_symbol_with_name(element, "."):
                 dot_positions.append(i)
 
         if len(dot_positions) > 1:
@@ -924,7 +933,7 @@ class AIFPLEvaluator:
         for i in range(pattern.length()):
             element = pattern.get(i)
             # Skip dot symbols - they're structural, not patterns
-            if isinstance(element, AIFPLSymbol) and element.name == ".":
+            if self._is_symbol_with_name(element, "."):
                 continue
 
             self._validate_pattern_syntax(element)
@@ -1031,6 +1040,7 @@ class AIFPLEvaluator:
             # Evaluate the function expression
             try:
                 func_value = self._evaluate_expression(func_expr, current_env, depth)
+
             except AIFPLEvalError as e:
                 if "Undefined variable" in str(e) and isinstance(func_expr, AIFPLSymbol):
                     # Enhanced unknown function error
@@ -1042,6 +1052,7 @@ class AIFPLEvaluator:
                     suggestion_text = ""
                     if similar:
                         suggestion_text = f"Did you mean: {', '.join(similar)}?"
+
                     else:
                         # Show some common functions
                         common_funcs = ['+', '-', '*', '/', '=', '<', '>', 'list', 'map', 'filter', 'let', 'lambda']
@@ -1083,6 +1094,7 @@ class AIFPLEvaluator:
             # Regular functions get evaluated arguments
             try:
                 arg_values = [self._evaluate_expression(arg, current_env, depth) for arg in arg_exprs]
+
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
                     message="Error evaluating function arguments",
@@ -1296,19 +1308,19 @@ class AIFPLEvaluator:
         first_elem = expr.first()
         if isinstance(first_elem, AIFPLSymbol):
             # Handle quote expressions - they are NOT tail calls, just return the quoted value
-            if first_elem.name == 'quote':
+            if self._is_symbol_with_name(first_elem, 'quote'):
                 return self._evaluate_quote_form(expr, env, depth + 1)
 
             # Handle if expressions specially - branches are in tail position
-            if first_elem.name == 'if':
+            if self._is_symbol_with_name(first_elem, 'if'):
                 return self._evaluate_if_form(expr, env, depth + 1)
 
             # Handle lambda expressions - they are NOT tail calls, just return the function
-            if first_elem.name == 'lambda':
+            if self._is_symbol_with_name(first_elem, 'lambda'):
                 return self._evaluate_lambda_form(expr, env, depth + 1)
 
             # Handle let expressions - body is in tail position
-            if first_elem.name == 'let':
+            if self._is_symbol_with_name(first_elem, 'let'):
                 return self._evaluate_let_form(expr, env, depth + 1)
 
         # Check for tail calls
@@ -1592,6 +1604,7 @@ class AIFPLEvaluator:
 
                 if pred_result.value:
                     result_elements.append(item)
+
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
                     message=f"Error in filter predicate at element {i+1}",
@@ -1633,6 +1646,7 @@ class AIFPLEvaluator:
             try:
                 # Call function with already-evaluated arguments
                 accumulator = self._call_function_with_evaluated_args(func_expr, [accumulator, item], env, depth + 1)
+
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
                     message=f"Error in fold function at element {i+1}",
@@ -1770,6 +1784,7 @@ class AIFPLEvaluator:
 
                 if pred_result.value:
                     return item
+
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
                     message=f"Error in find predicate at element {i+1}",
@@ -1821,6 +1836,7 @@ class AIFPLEvaluator:
 
                 if pred_result.value:
                     return AIFPLBoolean(True)
+
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
                     message=f"Error in any? predicate at element {i+1}",
@@ -1872,6 +1888,7 @@ class AIFPLEvaluator:
 
                 if not pred_result.value:
                     return AIFPLBoolean(False)
+
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
                     message=f"Error in all? predicate at element {i+1}",
