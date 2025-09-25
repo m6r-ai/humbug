@@ -391,28 +391,28 @@ class TestPatternMatching:
     def test_match_requires_minimum_arguments(self, aifpl):
         """Test that match requires at least a value and one pattern."""
         # No arguments
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Match expression has wrong number of arguments"):
             aifpl.evaluate('(match)')
 
         # Only value, no patterns
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Match expression has wrong number of arguments"):
             aifpl.evaluate('(match 42)')
 
     def test_match_requires_pattern_value_pairs(self, aifpl):
         """Test that match requires pattern-value pairs."""
         # Odd number of pattern arguments (missing result for last pattern)
-        with pytest.raises(AIFPLEvalError, match="must have even number of pattern"):
+        with pytest.raises(AIFPLEvalError, match="Match clause 2 has wrong number of elements"):
             aifpl.evaluate('(match 42 (42 "found") (43))')
 
-        with pytest.raises(AIFPLEvalError, match="must have even number of pattern"):
+        with pytest.raises(AIFPLEvalError, match="Match clause 1 has wrong number of elements"):
             aifpl.evaluate('(match 42 (x))')
 
     def test_no_matching_pattern_error(self, aifpl):
         """Test error when no pattern matches."""
-        with pytest.raises(AIFPLEvalError, match="No matching pattern"):
+        with pytest.raises(AIFPLEvalError, match="No patterns matched in match expression"):
             aifpl.evaluate('(match 42 (43 "wrong") (44 "also wrong"))')
 
-        with pytest.raises(AIFPLEvalError, match="No matching pattern"):
+        with pytest.raises(AIFPLEvalError, match="No patterns matched in match expression"):
             aifpl.evaluate('(match "hello" ("world" "wrong") ("test" "also wrong"))')
 
     def test_invalid_pattern_syntax_errors(self, aifpl):
@@ -435,35 +435,43 @@ class TestPatternMatching:
 
     def test_invalid_variable_patterns(self, aifpl):
         """Test errors for invalid variable patterns."""
-        # Number as variable pattern
-        with pytest.raises(AIFPLEvalError, match="Pattern variable must be a symbol"):
-            aifpl.evaluate('(match 42 (1 "invalid") (_ "other"))')
-
-        # String as variable pattern in type pattern
+        # String as variable pattern in type pattern - this should fail validation
         with pytest.raises(AIFPLEvalError, match="Pattern variable must be a symbol"):
             aifpl.evaluate('(match 42 ((number? "x") "invalid") (_ "other"))')
 
     def test_list_pattern_length_mismatch(self, aifpl):
-        """Test that list patterns require correct length."""
-        # Pattern expects 3 elements, value has 2
-        with pytest.raises(AIFPLEvalError, match="No matching pattern"):
-            aifpl.evaluate('(match (list 1 2) ((a b c) "three") (_ "other"))')
+        """Test that list patterns with wrong length fall through to wildcard."""
+        # Pattern expects 3 elements, value has 2 - should match wildcard
+        result = aifpl.evaluate_and_format('(match (list 1 2) ((a b c) "three") (_ "other"))')
+        assert result == '"other"'
 
-        # Pattern expects 2 elements, value has 3
-        with pytest.raises(AIFPLEvalError, match="No matching pattern"):
-            aifpl.evaluate('(match (list 1 2 3) ((a b) "two") (_ "other"))')
+        # Pattern expects 2 elements, value has 3 - should match wildcard
+        result = aifpl.evaluate_and_format('(match (list 1 2 3) ((a b) "two") (_ "other"))')
+        assert result == '"other"'
+
+        # Test actual no-match error (no wildcard)
+        with pytest.raises(AIFPLEvalError, match="No patterns matched"):
+            aifpl.evaluate('(match (list 1 2) ((a b c) "three"))')
 
     def test_type_pattern_with_wrong_type(self, aifpl):
-        """Test type patterns with wrong types."""
-        # String doesn't match number? pattern
-        with pytest.raises(AIFPLEvalError, match="No matching pattern"):
-            aifpl.evaluate('(match "hello" ((number? n) "number") ((string? s) "never reached"))')
+        """Test type patterns with wrong types fall through correctly."""
+        # String doesn't match number? pattern, should match string? pattern
+        result = aifpl.evaluate_and_format('(match "hello" ((number? n) "number") ((string? s) "string"))')
+        assert result == '"string"'
+
+        # Test actual no-match error (no matching patterns)
+        with pytest.raises(AIFPLEvalError, match="No patterns matched"):
+            aifpl.evaluate('(match "hello" ((number? n) "number"))')
 
     def test_cons_pattern_with_non_list(self, aifpl):
-        """Test cons patterns with non-list values."""
-        # Number doesn't match cons pattern
-        with pytest.raises(AIFPLEvalError, match="No matching pattern"):
-            aifpl.evaluate('(match 42 ((head . tail) "list") (_ "other"))')
+        """Test cons patterns with non-list values fall through to wildcard."""
+        # Number doesn't match cons pattern, should match wildcard
+        result = aifpl.evaluate_and_format('(match 42 ((head . tail) "list") (_ "other"))')
+        assert result == '"other"'
+
+        # Test actual no-match error (no wildcard)
+        with pytest.raises(AIFPLEvalError, match="No patterns matched"):
+            aifpl.evaluate('(match 42 ((head . tail) "list"))')
 
     def test_error_in_pattern_result_evaluation(self, aifpl):
         """Test error handling in pattern result evaluation."""
@@ -627,4 +635,4 @@ class TestPatternMatching:
                                       (_ 0)))))
           (process-nested (list 10 "test" (list 5 "hi") 20)))
         '''
-        helpers.assert_evaluates_to(aifpl, recursive_pattern, '42')  # 10 + 4 + (5 + 2) + 20
+        helpers.assert_evaluates_to(aifpl, recursive_pattern, '41')  # 10 + 4 + (5 + 2) + 20

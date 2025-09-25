@@ -440,12 +440,12 @@ class AIFPLEvaluator:
     ) -> AIFPLValue:
         """
         Evaluate (match value (pattern1 result1) (pattern2 result2) ...) form.
-        
+
         Args:
             match_list: List representing match expression
             env: Current environment
             depth: Current recursion depth
-            
+
         Returns:
             Result of the first matching pattern
         """
@@ -458,16 +458,13 @@ class AIFPLEvaluator:
                 suggestion="Match needs a value to match and at least one pattern clause"
             )
 
-        # Evaluate the value to match against
-        value_to_match = self._evaluate_expression(match_list.get(1), env, depth + 1)
-
-        # Try each pattern clause in order
+        # Validate ALL pattern clauses upfront before any matching begins
         for i in range(2, match_list.length()):
             clause = match_list.get(i)
+            clause_num = i - 1
 
             # Validate clause structure: (pattern result)
             if not isinstance(clause, AIFPLList) or clause.length() != 2:
-                clause_num = i - 1
                 if isinstance(clause, AIFPLList):
                     raise AIFPLEvalError(
                         message=f"Match clause {clause_num} has wrong number of elements",
@@ -485,6 +482,26 @@ class AIFPLEvaluator:
                         suggestion="Wrap each clause in parentheses: (pattern result)"
                     )
 
+
+            # NEW: Validate pattern syntax
+            pattern = clause.get(0)
+            try:
+                self._validate_pattern_syntax(pattern)
+
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(
+                    message=f"Invalid pattern in clause {clause_num}",
+                    context=str(e),
+                    received=f"Pattern: {self.format_result(pattern)}",
+                    suggestion="Fix the pattern syntax before matching"
+                ) from e
+
+        # Evaluate the value to match against
+        value_to_match = self._evaluate_expression(match_list.get(1), env, depth + 1)
+
+        # Try each pattern clause in order
+        for i in range(2, match_list.length()):
+            clause = match_list.get(i)
             pattern = clause.get(0)
             result_expr = clause.get(1)
 
@@ -626,11 +643,11 @@ class AIFPLEvaluator:
     def _matches_type_predicate(self, value: AIFPLValue, type_pred: str) -> bool:
         """
         Check if value matches a type predicate.
-        
+
         Args:
             value: Value to check
             type_pred: Type predicate name (e.g., "number?", "string?")
-            
+
         Returns:
             True if value matches the predicate
         """
@@ -652,11 +669,11 @@ class AIFPLEvaluator:
     def _aifpl_equal(self, a: AIFPLValue, b: AIFPLValue) -> bool:
         """
         Check if two AIFPL values are equal using AIFPL equality rules.
-        
+
         Args:
             a: First value
             b: Second value
-            
+
         Returns:
             True if values are equal
         """
@@ -677,10 +694,10 @@ class AIFPLEvaluator:
     def _find_dot_position(self, pattern: AIFPLList) -> int | None:
         """
         Find the position of the dot symbol in a pattern.
-        
+
         Args:
             pattern: Pattern list to search
-            
+
         Returns:
             Index of the dot symbol, or None if not found
         """
@@ -700,13 +717,13 @@ class AIFPLEvaluator:
     ) -> tuple[bool, AIFPLEnvironment] | None:
         """
         Match a head/tail pattern like (a b . rest) against a list value.
-        
+
         Args:
             pattern: Pattern containing dot
             value: List value to match
             env: Current environment
             dot_position: Index of the dot in the pattern
-            
+
         Returns:
             (True, new_env) if match succeeds, None if no match
         """
@@ -772,10 +789,10 @@ class AIFPLEvaluator:
     def _is_valid_type_predicate(self, type_pred: str) -> bool:
         """
         Check if a type predicate is valid.
-        
+
         Args:
             type_pred: Type predicate to validate
-            
+
         Returns:
             True if valid type predicate
         """
@@ -784,6 +801,147 @@ class AIFPLEvaluator:
             'string?', 'boolean?', 'list?', 'function?', 'symbol?'
         }
         return type_pred in valid_predicates
+
+    def _validate_pattern_syntax(self, pattern: AIFPLValue) -> None:
+        """
+        Validate pattern syntax before matching begins.
+
+        Args:
+            pattern: Pattern to validate
+
+        Raises:
+            AIFPLEvalError: If pattern syntax is invalid
+        """
+        # Literals are always valid
+        if isinstance(pattern, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
+            return
+
+        # Variable patterns (symbols)
+        if isinstance(pattern, AIFPLSymbol):
+            return
+
+        # List patterns need deeper validation
+        if isinstance(pattern, AIFPLList):
+            self._validate_list_pattern_syntax(pattern)
+            return
+
+        # Other types are not valid patterns
+        raise AIFPLEvalError(
+            message="Pattern variable must be a symbol",
+            received=f"Pattern: {self.format_result(pattern)} ({pattern.type_name()})",
+            expected="Symbol, number, string, boolean, or list pattern",
+            example="Valid: x, 42, \"hello\", #t, (number? n), (a b . rest)",
+            suggestion="Use symbols for variables, literals for exact matches"
+        )
+
+    def _validate_list_pattern_syntax(self, pattern: AIFPLList) -> None:
+        """
+        Validate list pattern syntax.
+
+        Args:
+            pattern: List pattern to validate
+
+        Raises:
+            AIFPLEvalError: If pattern syntax is invalid
+        """
+        # Empty list is valid
+        if pattern.is_empty():
+            return
+
+        # Check for type patterns: (type? var)
+        if (pattern.length() == 2 and
+            isinstance(pattern.get(0), AIFPLSymbol) and
+            pattern.get(0).name.endswith('?')):
+
+            type_predicate = pattern.get(0).name
+            var_pattern = pattern.get(1)
+
+            # Validate type predicate is known
+            if not self._is_valid_type_predicate(type_predicate):
+                raise AIFPLEvalError(
+                    message="Invalid type pattern",
+                    received=f"Type pattern: ({type_predicate} {self.format_result(var_pattern)})",
+                    expected="Valid type predicate like number?, string?, list?, etc.",
+                    example="(number? n) or (string? s)",
+                    suggestion="Use a valid type predicate ending with ?"
+                )
+
+            # Variable in type pattern must be a symbol
+            if not isinstance(var_pattern, AIFPLSymbol):
+                raise AIFPLEvalError(
+                    message="Pattern variable must be a symbol",
+                    received=f"Variable in type pattern: {self.format_result(var_pattern)} ({var_pattern.type_name()})",
+                    expected="Symbol (variable name)",
+                    example="(number? x) not (number? 42) or (number? \"x\")",
+                    suggestion="Use unquoted variable names in type patterns"
+                )
+
+            return
+
+        # Check for malformed type patterns (wrong number of arguments)
+        if (pattern.length() != 2 and
+            isinstance(pattern.get(0), AIFPLSymbol) and
+            pattern.get(0).name.endswith('?') and
+            self._is_valid_type_predicate(pattern.get(0).name)):
+
+            type_predicate = pattern.get(0).name
+            if pattern.length() == 1:
+                # Missing variable: (number?)
+                raise AIFPLEvalError(
+                    message="Invalid type pattern",
+                    received=f"Type pattern: ({type_predicate}) - missing variable",
+                    expected="Type pattern with variable: (type? var)",
+                    example="(number? x) not (number?)",
+                    suggestion="Add a variable name after the type predicate"
+                )
+
+            # Too many variables: (number? x y)
+            raise AIFPLEvalError(
+                message="Invalid type pattern",
+                received=f"Type pattern: {self.format_result(pattern)} - too many variables",
+                expected="Type pattern with one variable: (type? var)",
+                example="(number? x) not (number? x y)",
+                suggestion="Use only one variable in type patterns"
+            )
+
+        # Check for cons patterns with dots
+        dot_positions = []
+        for i in range(pattern.length()):
+            element = pattern.get(i)
+            if isinstance(element, AIFPLSymbol) and element.name == ".":
+                dot_positions.append(i)
+
+        if len(dot_positions) > 1:
+            # Multiple dots: (a . b . c)
+            raise AIFPLEvalError(
+                message="Invalid cons pattern",
+                received=f"Pattern: {self.format_result(pattern)} - multiple dots",
+                expected="At most one dot in cons pattern",
+                example="(head . tail) or (a b . rest) not (a . b . c)",
+                suggestion="Use only one dot to separate head from tail"
+            )
+
+        if len(dot_positions) == 1:
+            dot_pos = dot_positions[0]
+            if dot_pos == 0:
+                # Dot at beginning: (. a b)
+                raise AIFPLEvalError(
+                    message="Invalid cons pattern",
+                    received=f"Pattern: {self.format_result(pattern)} - dot at beginning",
+                    expected="Elements before dot in cons pattern",
+                    example="(head . tail) or (a b . rest) not (. a b)",
+                    suggestion="Put at least one element before the dot"
+                )
+
+        # Recursively validate all elements
+        for i in range(pattern.length()):
+            element = pattern.get(i)
+            # Skip dot symbols - they're structural, not patterns
+            if isinstance(element, AIFPLSymbol) and element.name == ".":
+                continue
+
+            self._validate_pattern_syntax(element)
+
     def _evaluate_sequential_binding_group(
         self,
         group: AIFPLBindingGroup,
@@ -1748,7 +1906,6 @@ class AIFPLEvaluator:
             )
 
         # Create a match list structure and delegate to the core match form evaluator
-        from aifpl.aifpl_value import AIFPLSymbol
         match_symbol = AIFPLSymbol("match")
         match_list = AIFPLList((match_symbol,) + tuple(args))
 
