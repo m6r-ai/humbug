@@ -47,15 +47,12 @@ class AIFPL:
             AIFPLParseError: If parsing fails (with detailed context and suggestions)
             AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
         """
-        # Phase 1: Enhanced Tokenization
         tokenizer = AIFPLTokenizer()
         tokens = tokenizer.tokenize(expression)
 
-        # Phase 2: Enhanced Parsing
         parser = AIFPLParser(tokens, expression)
         parsed_expr = parser.parse()
 
-        # Phase 3: Enhanced Evaluation
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
@@ -87,15 +84,12 @@ class AIFPL:
             AIFPLParseError: If parsing fails (with detailed context and suggestions)
             AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
         """
-        # Phase 1: Enhanced Tokenization
         tokenizer = AIFPLTokenizer()
         tokens = tokenizer.tokenize(expression)
 
-        # Phase 2: Enhanced Parsing
         parser = AIFPLParser(tokens, expression)
         parsed_expr = parser.parse()
 
-        # Phase 3: Enhanced Evaluation
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance

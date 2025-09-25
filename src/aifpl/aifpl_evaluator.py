@@ -554,7 +554,6 @@ class AIFPLEvaluator:
             new_env = env.define(pattern.name, value)
             return (True, new_env)
 
-        # LIST PATTERNS - Phase 1 + Phase 2 (purely structural)
         if isinstance(pattern, AIFPLList):
             return self._try_match_list_pattern(pattern, value, env)
 
@@ -578,7 +577,7 @@ class AIFPLEvaluator:
         Returns:
             (True, new_env_with_bindings) if match succeeds, None if no match
         """
-        # TYPE PATTERNS: (type? var) - Phase 2
+        # Type patterns
         if (pattern.length() == 2 and
             isinstance(pattern.get(0), AIFPLSymbol) and
             pattern.get(0).name.endswith('?')):
@@ -603,7 +602,6 @@ class AIFPLEvaluator:
 
             return None
 
-        # STRUCTURAL LIST PATTERNS - Phase 1
         if not isinstance(value, AIFPLList):
             return None
 
@@ -614,7 +612,7 @@ class AIFPLEvaluator:
 
             return None
 
-        # HEAD/TAIL PATTERNS: Support both (head . tail) and (a b c . rest)
+        # Head/tail patterns: Support both (head . tail) and (a b c . rest)
         dot_position = self._find_dot_position(pattern)
         if dot_position is not None:
             return self._match_head_tail_pattern(pattern, value, env, dot_position)
