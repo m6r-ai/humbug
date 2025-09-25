@@ -60,7 +60,7 @@ class AIFPLEvaluator:
         # Create built-in functions with their native implementations
         self._builtin_functions = self._create_builtin_functions()
 
-    def set_expression_context(self, expression: str):
+    def set_expression_context(self, expression: str) -> None:
         """Set the current expression for error context."""
         self.current_expression = expression
 
@@ -181,7 +181,8 @@ class AIFPLEvaluator:
 
                 raise AIFPLEvalError(
                     message=f"Undefined variable: '{expr.name}'",
-                    context=f"Available variables: {', '.join(sorted(available_vars)[:10])}{'...' if len(available_vars) > 10 else ''}",
+                    context=f"Available variables: {', '.join(sorted(available_vars)[:10])}"
+                        "{'...' if len(available_vars) > 10 else ''}",
                     suggestion=f"Check spelling or define '{expr.name}' in a let binding",
                     example=f"(let (({expr.name} some-value)) ...)"
                 ) from e
@@ -502,6 +503,7 @@ class AIFPLEvaluator:
         # Try each pattern clause in order
         for i in range(2, match_list.length()):
             clause = match_list.get(i)
+            assert isinstance(clause, AIFPLList) and clause.length() == 2, "Clause structure validated earlier"
             pattern = clause.get(0)
             result_expr = clause.get(1)
 
@@ -675,19 +677,7 @@ class AIFPLEvaluator:
         Returns:
             True if values are equal
         """
-        # Use the existing equality logic from the collections functions
-        # This handles cross-numeric equality and other AIFPL-specific rules
-        try:
-            # Create temporary number values to use the existing equality function
-            collections = AIFPLCollectionsFunctions()
-
-            # Use the existing equality implementation
-            result = collections._builtin_equal([a, b], None, 0)
-            return isinstance(result, AIFPLBoolean) and result.value
-
-        except:
-            # Fallback to simple comparison
-            return a.to_python() == b.to_python()
+        return a.to_python() == b.to_python()
 
     def _find_dot_position(self, pattern: AIFPLList) -> int | None:
         """
@@ -878,10 +868,9 @@ class AIFPLEvaluator:
 
         # Check for malformed type patterns (wrong number of arguments)
         if (pattern.length() != 2 and
-            isinstance(pattern.get(0), AIFPLSymbol) and
-            pattern.get(0).name.endswith('?') and
-            self._is_valid_type_predicate(pattern.get(0).name)):
-
+                isinstance(pattern.get(0), AIFPLSymbol) and
+                pattern.get(0).name.endswith('?') and
+                self._is_valid_type_predicate(pattern.get(0).name)):
             type_predicate = pattern.get(0).name
             if pattern.length() == 1:
                 # Missing variable: (number?)
@@ -1178,7 +1167,8 @@ class AIFPLEvaluator:
                 message=f"Function '{func.name}' expects {len(func.parameters)} arguments, got {len(arg_values)}",
                 received=f"Arguments provided: {arg_list}",
                 expected=f"Parameters expected: {param_list}",
-                example=f"({func.name} {' '.join(['arg' + str(i+1) for i in range(len(func.parameters))])})" if func.parameters else f"({func.name})",
+                example=(f"({func.name} {' '.join(['arg' + str(i+1) for i in range(len(func.parameters))])})"
+                    if func.parameters else f"({func.name})"),
                 suggestion=f"Provide exactly {len(func.parameters)} argument{'s' if len(func.parameters) != 1 else ''}"
             )
 
