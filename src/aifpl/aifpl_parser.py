@@ -1,10 +1,7 @@
 """Parser for AIFPL expressions with detailed error messages."""
 
 from typing import List
-from aifpl.aifpl_detailed_error import (
-    AIFPLDetailedParseError, ErrorContext, ErrorMessageBuilder
-)
-from aifpl.aifpl_error import AIFPLParseError
+from aifpl.aifpl_error import AIFPLParseError, ErrorMessageBuilder
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
 
@@ -26,52 +23,6 @@ class AIFPLParser:
         self.expression = expression
         self.message_builder = ErrorMessageBuilder()
 
-    def _create_detailed_error(
-        self,
-        message: str,
-        position: int = None,
-        context: str = None,
-        expected: str = None,
-        received: str = None,
-        suggestion: str = None,
-        example: str = None,
-        error_type: str = "general"
-    ) -> AIFPLDetailedParseError:
-        """Create a detailed parse error with full context."""
-        
-        # Use current token position if none provided
-        if position is None and self.current_token:
-            position = self.current_token.position
-        
-        error_context = None
-        if position is not None and self.expression:
-            line, column = self.message_builder.position_to_line_column(
-                self.expression, position
-            )
-            expr_context = self.message_builder.get_expression_context(
-                self.expression, position
-            )
-            error_context = ErrorContext(
-                line=line,
-                column=column,
-                expression=expr_context,
-                position=position
-            )
-        
-        # Add common mistake suggestions if none provided
-        if not suggestion:
-            suggestion = self.message_builder.get_common_mistakes_suggestion(error_type, context or "")
-        
-        return AIFPLDetailedParseError(
-            message=message,
-            context=context,
-            expected=expected,
-            received=received,
-            suggestion=suggestion,
-            example=example,
-            error_context=error_context
-        )
-
     def parse(self) -> AIFPLValue:
         """
         Parse tokens into AST with detailed error reporting.
@@ -80,10 +31,10 @@ class AIFPLParser:
             Parsed expression
 
         Raises:
-            AIFPLDetailedParseError: If parsing fails with detailed context
+            AIFPLParseError: If parsing fails with detailed context
         """
         if self.current_token is None or self.current_token.type == AIFPLTokenType.EOF:
-            raise self._create_detailed_error(
+            raise AIFPLParseError(
                 message="Empty expression",
                 expected="Valid AIFPL expression",
                 example="(+ 1 2) or 42 or \"hello\"",
@@ -96,13 +47,13 @@ class AIFPLParser:
         if self.current_token is None or self.current_token.type != AIFPLTokenType.EOF:
             current_value = self.current_token.value if self.current_token else "EOF"
             current_pos = self.current_token.position if self.current_token else len(self.expression)
-            
-            raise self._create_detailed_error(
+
+            raise AIFPLParseError(
                 message="Unexpected token after complete expression",
                 position=current_pos,
                 received=f"Found: {current_value}",
                 expected="End of expression",
-                example="Correct: (+ 1 2)\nIncorrect: (+ 1 2) extra",
+                example="Correct: (+ 1 2)\\nIncorrect: (+ 1 2) extra",
                 suggestion="Remove extra tokens or combine into single expression",
                 context="Each evaluation can only handle one complete expression"
             )
@@ -112,7 +63,7 @@ class AIFPLParser:
     def _parse_expression(self) -> AIFPLValue:
         """Parse a single expression with detailed error reporting."""
         if self.current_token is None:
-            raise self._create_detailed_error(
+            raise AIFPLParseError(
                 message="Unexpected end of input",
                 expected="Valid expression (atom or list)",
                 example="42, \"hello\", (+ 1 2), or 'symbol",
@@ -135,15 +86,15 @@ class AIFPLParser:
         # Enhanced error for unexpected tokens
         token_value = self.current_token.value
         token_type = self.current_token.type.name
-        
+
         suggestions = {
             AIFPLTokenType.RPAREN: "Missing opening parenthesis '(' or extra closing parenthesis",
             AIFPLTokenType.EOF: "Expression ended unexpectedly"
         }
-        
+
         suggestion = suggestions.get(self.current_token.type, f"'{token_value}' is not a valid start of expression")
 
-        raise self._create_detailed_error(
+        raise AIFPLParseError(
             message=f"Unexpected token: {token_value}",
             position=start_pos,
             received=f"Token: {token_value} (type: {token_type})",
@@ -160,12 +111,12 @@ class AIFPLParser:
         elements = []
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             if self.current_token.type == AIFPLTokenType.EOF:
-                raise self._create_detailed_error(
+                raise AIFPLParseError(
                     message="Unclosed parenthesis",
                     position=start_pos,
                     received="Reached end of expression",
                     expected="Closing parenthesis ')'",
-                    example="Correct: (+ 1 2)\nIncorrect: (+ 1 2",
+                    example="Correct: (+ 1 2)\\nIncorrect: (+ 1 2",
                     suggestion="Add missing ')' at the end",
                     context=f"Opening '(' at position {start_pos} was never closed"
                 )
@@ -173,11 +124,11 @@ class AIFPLParser:
             elements.append(self._parse_expression())
 
         if self.current_token is None:
-            raise self._create_detailed_error(
+            raise AIFPLParseError(
                 message="Unterminated list - missing closing parenthesis",
                 position=start_pos,
                 expected="Closing parenthesis ')'",
-                example="Correct: (+ 1 2)\nIncorrect: (+ 1 2",
+                example="Correct: (+ 1 2)\\nIncorrect: (+ 1 2",
                 suggestion="Add ')' to close the list",
                 context=f"List starting at position {start_pos} was never closed"
             )
@@ -194,19 +145,19 @@ class AIFPLParser:
             AIFPLList representing (quote expr)
 
         Raises:
-            AIFPLDetailedParseError: If quote is incomplete or malformed
+            AIFPLParseError: If quote is incomplete or malformed
         """
         quote_pos = self.current_token.position if self.current_token else 0
         self._consume(AIFPLTokenType.QUOTE)
 
         # Check if we have something to quote
         if self.current_token is None or self.current_token.type == AIFPLTokenType.EOF:
-            raise self._create_detailed_error(
+            raise AIFPLParseError(
                 message="Incomplete quote expression",
                 position=quote_pos,
                 received="Quote symbol ' with nothing to quote",
                 expected="Expression after quote symbol",
-                example="Correct: '(a b c) or 'symbol\nIncorrect: ' (nothing after)",
+                example="Correct: '(a b c) or 'symbol\\nIncorrect: ' (nothing after)",
                 suggestion="Add an expression after the ' symbol",
                 context="Quote symbol must be followed by something to quote"
             )
@@ -238,12 +189,16 @@ class AIFPLParser:
         if token.type == AIFPLTokenType.BOOLEAN:
             return AIFPLBoolean(token.value)
 
-        raise AIFPLParseError(f"Unexpected token type: {token.type}")
+        raise AIFPLParseError(
+            message=f"Unexpected token type: {token.type}",
+            context="This is an internal parser error",
+            suggestion="Please report this issue"
+        )
 
     def _consume(self, expected_type: AIFPLTokenType) -> None:
         """Consume a token of the expected type with detailed error reporting."""
         if self.current_token is None:
-            raise self._create_detailed_error(
+            raise AIFPLParseError(
                 message="Unexpected end of input",
                 expected=f"Token of type {expected_type.value}",
                 example=f"Expected: {expected_type.value}",
@@ -254,16 +209,18 @@ class AIFPLParser:
         if self.current_token.type != expected_type:
             current_value = self.current_token.value
             current_pos = self.current_token.position
-            
+
             # Special handling for common mistakes
             if expected_type == AIFPLTokenType.RPAREN and self.current_token.type == AIFPLTokenType.EOF:
                 suggestion = "Add missing ')' to close parentheses"
+
             elif expected_type == AIFPLTokenType.LPAREN and self.current_token.type == AIFPLTokenType.RPAREN:
                 suggestion = "Check parentheses balance - may have extra ')'"
+
             else:
                 suggestion = f"Replace '{current_value}' with '{expected_type.value}'"
-            
-            raise self._create_detailed_error(
+
+            raise AIFPLParseError(
                 message=f"Expected {expected_type.value}, got {current_value}",
                 position=current_pos,
                 received=f"Found: {current_value}",

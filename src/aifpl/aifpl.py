@@ -10,14 +10,14 @@ from aifpl.aifpl_value import AIFPLValue, AIFPLFunction
 class AIFPL:
     """
     AIFPL (AI Functional Programming Language) calculator with LISP-like syntax and enhanced error messages.
-    
+
     This version provides comprehensive error reporting with:
-    - Line and column numbers
-    - Context showing where the error occurred
     - Clear explanations of what went wrong
+    - Context showing the problematic input
     - Suggestions for how to fix the problem
     - Examples of correct usage
-    
+    - Position information where helpful
+
     Designed specifically to help LLMs understand and self-correct errors.
     """
 
@@ -43,9 +43,9 @@ class AIFPL:
             The result of evaluating the expression converted to Python types
 
         Raises:
-            AIFPLDetailedTokenError: If tokenization fails (with line numbers and suggestions)
-            AIFPLDetailedParseError: If parsing fails (with line numbers and suggestions)
-            AIFPLDetailedEvalError: If evaluation fails (with line numbers and suggestions)
+            AIFPLTokenError: If tokenization fails (with detailed context and suggestions)
+            AIFPLParseError: If parsing fails (with detailed context and suggestions)
+            AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
         """
         # Phase 1: Enhanced Tokenization
         tokenizer = AIFPLTokenizer()
@@ -60,10 +60,10 @@ class AIFPL:
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
         )
-        
+
         # Set expression context for error reporting
         evaluator.set_expression_context(expression)
-        
+
         result = evaluator.evaluate(parsed_expr)
 
         # Simplify the result
@@ -83,9 +83,9 @@ class AIFPL:
             String representation of the result using LISP conventions
 
         Raises:
-            AIFPLDetailedTokenError: If tokenization fails (with line numbers and suggestions)
-            AIFPLDetailedParseError: If parsing fails (with line numbers and suggestions)
-            AIFPLDetailedEvalError: If evaluation fails (with line numbers and suggestions)
+            AIFPLTokenError: If tokenization fails (with detailed context and suggestions)
+            AIFPLParseError: If parsing fails (with detailed context and suggestions)
+            AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
         """
         # Phase 1: Enhanced Tokenization
         tokenizer = AIFPLTokenizer()
@@ -100,10 +100,10 @@ class AIFPL:
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
         )
-        
+
         # Set expression context for error reporting
         evaluator.set_expression_context(expression)
-        
+
         result = evaluator.evaluate(parsed_expr)
 
         # Simplify and format the result

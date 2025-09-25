@@ -10,7 +10,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 class AIFPLValue(ABC):
     """
     Abstract base class for all AIFPL values.
-    
+
     All AIFPL values are immutable.
     """
 
@@ -30,7 +30,7 @@ class AIFPLValue(ABC):
     def __eq__(self, other: Any) -> bool:
         """
         Implement AIFPL equality rules.
-        
+
         - Same types: use value equality
         - Numeric types: allow int/float/complex equivalence
         - Different non-numeric types: always False
@@ -335,7 +335,7 @@ class AIFPLBuiltinFunction(AIFPLValue):
     def __init__(self, name: str, native_impl: Callable):
         """
         Initialize a built-in function.
-        
+
         Args:
             name: Function name for display and error messages
             native_impl: Python callable that implements the function

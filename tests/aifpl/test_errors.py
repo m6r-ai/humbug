@@ -99,74 +99,74 @@ class TestErrors:
         with pytest.raises(AIFPLParseError, match="Unclosed parenthesis"):
             aifpl.evaluate("(* (+ 1 2) 3")
 
-        with pytest.raises(AIFPLParseError, match="Unexpected token after expression"):
+        with pytest.raises(AIFPLParseError, match="Unexpected token after complete expression"):
             aifpl.evaluate("+ 1 2)")
 
     def test_unexpected_token_after_expression_parse_error(self, aifpl):
         """Test that extra tokens after complete expression cause parse errors."""
-        with pytest.raises(AIFPLParseError, match="Unexpected token after expression"):
+        with pytest.raises(AIFPLParseError, match="Unexpected token after complete expression"):
             aifpl.evaluate("42 43")
 
-        with pytest.raises(AIFPLParseError, match="Unexpected token after expression"):
+        with pytest.raises(AIFPLParseError, match="Unexpected token after complete expression"):
             aifpl.evaluate("(+ 1 2) (+ 3 4)")
 
     def test_invalid_lambda_syntax_parse_error(self, aifpl):
         """Test that invalid lambda syntax causes evaluation errors (pure list approach)."""
-        with pytest.raises(AIFPLEvalError, match="Lambda expression requires exactly 3 elements"):
+        with pytest.raises(AIFPLEvalError, match="Lambda expression structure is incorrect"):
             aifpl.evaluate("(lambda)")
 
-        with pytest.raises(AIFPLEvalError, match="Lambda expression requires exactly 3 elements"):
+        with pytest.raises(AIFPLEvalError, match="Lambda expression structure is incorrect"):
             aifpl.evaluate("(lambda (x))")  # Missing body
 
-        with pytest.raises(AIFPLEvalError, match="Lambda expression requires exactly 3 elements"):
+        with pytest.raises(AIFPLEvalError, match="Lambda expression structure is incorrect"):
             aifpl.evaluate("(lambda (x) (+ x 1) extra)")  # Too many elements
 
     def test_invalid_lambda_parameters_parse_error(self, aifpl):
         """Test that invalid lambda parameters cause evaluation errors (pure list approach)."""
-        with pytest.raises(AIFPLEvalError, match="Lambda parameter must be a symbol"):
+        with pytest.raises(AIFPLEvalError, match="Lambda parameter .* must be a symbol"):
             aifpl.evaluate("(lambda (1) (+ 1 1))")  # Number as parameter
 
-        with pytest.raises(AIFPLEvalError, match="Lambda parameter must be a symbol"):
+        with pytest.raises(AIFPLEvalError, match="Lambda parameter .* must be a symbol"):
             aifpl.evaluate('(lambda ("x") (+ x 1))')  # String as parameter
 
     def test_duplicate_lambda_parameters_parse_error(self, aifpl):
         """Test that duplicate lambda parameters cause evaluation errors (pure list approach)."""
-        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLEvalError, match="Lambda parameters must be unique"):
             aifpl.evaluate("(lambda (x x) (+ x x))")
 
-        with pytest.raises(AIFPLEvalError, match="Duplicate lambda parameters"):
+        with pytest.raises(AIFPLEvalError, match="Lambda parameters must be unique"):
             aifpl.evaluate("(lambda (x y x) (+ x y))")
 
     def test_invalid_let_syntax_parse_error(self, aifpl):
         """Test that invalid let syntax causes evaluation errors (pure list approach)."""
-        with pytest.raises(AIFPLEvalError, match="Let expression requires exactly 3 elements"):
+        with pytest.raises(AIFPLEvalError, match="Let expression structure is incorrect"):
             aifpl.evaluate("(let)")
 
-        with pytest.raises(AIFPLEvalError, match="Let expression requires exactly 3 elements"):
+        with pytest.raises(AIFPLEvalError, match="Let expression structure is incorrect"):
             aifpl.evaluate("(let ((x 1)))")  # Missing body
 
     def test_invalid_let_binding_syntax_parse_error(self, aifpl):
         """Test that invalid let binding syntax causes evaluation errors (pure list approach)."""
-        with pytest.raises(AIFPLEvalError, match="Let binding must be a list of 2 elements"):
+        with pytest.raises(AIFPLEvalError, match="Let binding .* has wrong number of elements"):
             aifpl.evaluate("(let ((x)) x)")  # Binding without value
 
-        with pytest.raises(AIFPLEvalError, match="Let binding must be a list of 2 elements"):
+        with pytest.raises(AIFPLEvalError, match="Let binding .* has wrong number of elements"):
             aifpl.evaluate("(let ((x 1 2)) x)")  # Binding with too many elements
 
     def test_invalid_let_binding_variable_parse_error(self, aifpl):
         """Test that invalid let binding variables cause evaluation errors (pure list approach)."""
-        with pytest.raises(AIFPLEvalError, match="Let binding variable must be a symbol"):
+        with pytest.raises(AIFPLEvalError, match="Let binding .* variable must be a symbol"):
             aifpl.evaluate("(let ((1 5)) 1)")  # Number as variable
 
-        with pytest.raises(AIFPLEvalError, match="Let binding variable must be a symbol"):
+        with pytest.raises(AIFPLEvalError, match="Let binding .* variable must be a symbol"):
             aifpl.evaluate('(let (("x" 5)) x)')  # String as variable
 
     def test_duplicate_let_binding_variables_parse_error(self, aifpl):
         """Test that duplicate let binding variables cause evaluation errors (pure list approach)."""
-        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
+        with pytest.raises(AIFPLEvalError, match="Let binding variables must be unique"):
             aifpl.evaluate("(let ((x 1) (x 2)) x)")
 
-        with pytest.raises(AIFPLEvalError, match="Duplicate let binding variables"):
+        with pytest.raises(AIFPLEvalError, match="Let binding variables must be unique"):
             aifpl.evaluate("(let ((x 1) (y 2) (x 3)) (+ x y))")
 
     # ========== Evaluation Errors ==========
@@ -214,10 +214,10 @@ class TestErrors:
             aifpl.evaluate("(- 5 (list 1 2))")
 
         # Boolean operations with non-booleans
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match="must be boolean"):
             aifpl.evaluate("(and #t 1)")
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean arguments"):
+        with pytest.raises(AIFPLEvalError, match="must be boolean"):
             aifpl.evaluate('(or "hello" #f)')
 
         # String operations with non-strings
@@ -310,13 +310,13 @@ class TestErrors:
     def test_conditional_type_errors(self, aifpl):
         """Test that conditional expressions with wrong types cause evaluation errors."""
         # If condition must be boolean
-        with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
+        with pytest.raises(AIFPLEvalError, match="must be boolean"):
             aifpl.evaluate('(if 1 "yes" "no")')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
+        with pytest.raises(AIFPLEvalError, match="must be boolean"):
             aifpl.evaluate('(if "hello" "yes" "no")')
 
-        with pytest.raises(AIFPLEvalError, match="requires boolean condition"):
+        with pytest.raises(AIFPLEvalError, match="must be boolean"):
             aifpl.evaluate("(if (list 1 2) \"yes\" \"no\")")
 
     def test_string_conversion_errors(self, aifpl):
@@ -372,10 +372,10 @@ class TestErrors:
             aifpl.evaluate('(any? (lambda (x) "hello") (list 1 2 3))')
 
         # Higher-order functions require list arguments
-        with pytest.raises(AIFPLEvalError, match="requires list"):
+        with pytest.raises(AIFPLEvalError, match="must be a list"):
             aifpl.evaluate('(map (lambda (x) x) 42)')
 
-        with pytest.raises(AIFPLEvalError, match="requires list"):
+        with pytest.raises(AIFPLEvalError, match="must be a list"):
             aifpl.evaluate('(filter (lambda (x) #t) "hello")')
 
     def test_recursion_depth_limit_error(self, aifpl_custom):
@@ -442,7 +442,7 @@ class TestErrors:
             error_msg = str(e)
             assert "Undefined variable" in error_msg
             # Should mention available bindings (constants, operators)
-            assert "Available bindings" in error_msg or "pi" in error_msg
+            assert "Available variables" in error_msg or "pi" in error_msg
 
     def test_function_call_error_context(self, aifpl):
         """Test that function call errors provide parameter context."""

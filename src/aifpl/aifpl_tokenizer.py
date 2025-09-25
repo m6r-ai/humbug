@@ -1,57 +1,12 @@
 """Tokenizer for AIFPL expressions with detailed error messages."""
 
 from typing import List, Union
-from aifpl.aifpl_detailed_error import (
-    AIFPLDetailedTokenError, ErrorContext, ErrorMessageBuilder
-)
 from aifpl.aifpl_error import AIFPLTokenError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 
 
 class AIFPLTokenizer:
     """Tokenizes AIFPL expressions into tokens with detailed error messages."""
-
-    def __init__(self):
-        """Initialize tokenizer."""
-        self.message_builder = ErrorMessageBuilder()
-
-    def _create_detailed_error(
-        self,
-        message: str,
-        expression: str,
-        position: int,
-        context: str = None,
-        expected: str = None,
-        received: str = None,
-        suggestion: str = None,
-        example: str = None,
-        error_type: str = "general"
-    ) -> AIFPLDetailedTokenError:
-        """Create a detailed tokenization error with full context."""
-        
-        line, column = self.message_builder.position_to_line_column(expression, position)
-        expr_context = self.message_builder.get_expression_context(expression, position)
-        
-        error_context = ErrorContext(
-            line=line,
-            column=column,
-            expression=expr_context,
-            position=position
-        )
-        
-        # Add common mistake suggestions if none provided
-        if not suggestion:
-            suggestion = self.message_builder.get_common_mistakes_suggestion(error_type, context or "")
-        
-        return AIFPLDetailedTokenError(
-            message=message,
-            context=context,
-            expected=expected,
-            received=received,
-            suggestion=suggestion,
-            example=example,
-            error_context=error_context
-        )
 
     def tokenize(self, expression: str) -> List[AIFPLToken]:
         """
@@ -64,7 +19,7 @@ class AIFPLTokenizer:
             List of tokens
 
         Raises:
-            AIFPLDetailedTokenError: If tokenization fails with detailed context
+            AIFPLTokenError: If tokenization fails with detailed context
         """
         tokens = []
         i = 0
@@ -108,13 +63,12 @@ class AIFPLTokenizer:
                 except AIFPLTokenError as e:
                     # Convert to detailed error
                     if "Unterminated string" in str(e):
-                        raise self._create_detailed_error(
+                        raise AIFPLTokenError(
                             message="Unterminated string literal",
-                            expression=expression,
                             position=i,
                             received=f"String starting with: {expression[i:i+10]}...",
                             expected="Closing quote \" at end of string",
-                            example='Correct: "hello world"\nIncorrect: "hello world',
+                            example='Correct: "hello world"\\nIncorrect: "hello world',
                             suggestion="Add closing quote \" at the end of the string",
                             context="String literals must be enclosed in double quotes"
                         ) from e
@@ -125,13 +79,12 @@ class AIFPLTokenizer:
                             escape_pos += 1
                         if escape_pos + 1 < len(expression):
                             bad_escape = expression[escape_pos:escape_pos+2]
-                            raise self._create_detailed_error(
+                            raise AIFPLTokenError(
                                 message=f"Invalid escape sequence: {bad_escape}",
-                                expression=expression,
                                 position=escape_pos,
                                 received=f"Escape sequence: {bad_escape}",
                                 expected="Valid escape: \\n, \\t, \\r, \\\", \\\\, or \\uXXXX",
-                                example='Valid: "line1\\nline2" or "tab\\there"\nInvalid: "bad\\qsequence"',
+                                example='Valid: "line1\\nline2" or "tab\\there"\\nInvalid: "bad\\qsequence"',
                                 suggestion="Use valid escape sequences or remove backslash",
                                 context="Only specific escape sequences are supported in strings"
                             ) from e
@@ -147,21 +100,20 @@ class AIFPLTokenizer:
                         while end < len(expression) and expression[end].isalnum():
                             end += 1
                         invalid_literal = expression[i:end]
-                        
+
                         suggestion = ""
                         if invalid_literal.lower() in ["#true", "#false"]:
                             correct = "#t" if "true" in invalid_literal.lower() else "#f"
                             suggestion = f"Use {correct} instead of {invalid_literal}"
                         else:
                             suggestion = "Use #t for true or #f for false"
-                        
-                        raise self._create_detailed_error(
+
+                        raise AIFPLTokenError(
                             message=f"Invalid boolean literal: {invalid_literal}",
-                            expression=expression,
                             position=i,
                             received=f"Boolean literal: {invalid_literal}",
                             expected="Valid boolean: #t or #f",
-                            example="Correct: #t, #f\nIncorrect: #true, #false, #T, #F",
+                            example="Correct: #t, #f\\nIncorrect: #true, #false, #T, #F",
                             suggestion=suggestion,
                             context="AIFPL uses #t and #f for boolean values (not #true/#false)"
                         )
@@ -173,13 +125,12 @@ class AIFPLTokenizer:
 
                 # Invalid # sequence
                 invalid_char = expression[i + 1] if i + 1 < len(expression) else ""
-                raise self._create_detailed_error(
+                raise AIFPLTokenError(
                     message=f"Invalid boolean literal: #{invalid_char}",
-                    expression=expression,
                     position=i,
                     received=f"Found: #{invalid_char}",
                     expected="Valid boolean: #t or #f",
-                    example="Correct: #t (true), #f (false)\nIncorrect: #x, #1, #true",
+                    example="Correct: #t (true), #f (false)\\nIncorrect: #x, #1, #true",
                     suggestion="Use #t for true or #f for false",
                     context="# symbol must be followed by 't' or 'f' for booleans"
                 )
@@ -194,35 +145,32 @@ class AIFPLTokenizer:
                 except AIFPLTokenError as e:
                     error_msg = str(e)
                     if "Invalid hexadecimal" in error_msg:
-                        raise self._create_detailed_error(
+                        raise AIFPLTokenError(
                             message="Invalid hexadecimal number",
-                            expression=expression,
                             position=i,
                             received=f"Number format: {expression[i:i+6]}...",
                             expected="Hexadecimal digits after 0x: 0x1A2B",
-                            example="Correct: 0xFF, 0x123, 0xABCD\nIncorrect: 0x, 0xGHI",
+                            example="Correct: 0xFF, 0x123, 0xABCD\\nIncorrect: 0x, 0xGHI",
                             suggestion="Add hex digits (0-9, A-F) after 0x",
                             context="Hexadecimal numbers need digits after the 0x prefix"
                         ) from e
                     elif "Invalid binary" in error_msg:
-                        raise self._create_detailed_error(
+                        raise AIFPLTokenError(
                             message="Invalid binary number",
-                            expression=expression,
                             position=i,
                             received=f"Number format: {expression[i:i+6]}...",
                             expected="Binary digits after 0b: 0b1010",
-                            example="Correct: 0b101, 0b1111\nIncorrect: 0b, 0b123",
+                            example="Correct: 0b101, 0b1111\\nIncorrect: 0b, 0b123",
                             suggestion="Add binary digits (0 or 1) after 0b",
                             context="Binary numbers need digits after the 0b prefix"
                         ) from e
                     elif "Invalid scientific notation" in error_msg:
-                        raise self._create_detailed_error(
+                        raise AIFPLTokenError(
                             message="Invalid scientific notation",
-                            expression=expression,
                             position=i,
                             received=f"Number format: {expression[i:i+8]}...",
                             expected="Digits after e/E: 1.5e10 or 2E-3",
-                            example="Correct: 1e5, 2.5E-3, 1.0e+10\nIncorrect: 1e, 2E+",
+                            example="Correct: 1e5, 2.5E-3, 1.0e+10\\nIncorrect: 1e, 2E+",
                             suggestion="Add digits after the exponent marker (e/E)",
                             context="Scientific notation needs digits after e/E"
                         ) from e
@@ -242,14 +190,13 @@ class AIFPLTokenizer:
                         while j < len(expression) and not expression[j].isspace() and expression[j] not in "()":
                             symbol_text += expression[j]
                             j += 1
-                        
-                        raise self._create_detailed_error(
+
+                        raise AIFPLTokenError(
                             message=f"Invalid symbol: {symbol_text}",
-                            expression=expression,
                             position=i,
                             received=f"Symbol: {symbol_text}",
                             expected="Valid symbol name or number",
-                            example="Valid symbols: +, my-var, func?\nValid numbers: 42, -3.14",
+                            example="Valid symbols: +, my-var, func?\\nValid numbers: 42, -3.14",
                             suggestion="If this should be a number, check the format. If a symbol, don't start with digits.",
                             context="Symbols cannot look like malformed numbers"
                         ) from e
@@ -258,7 +205,7 @@ class AIFPLTokenizer:
             # Invalid character
             char = expression[i]
             char_code = ord(char)
-            
+
             # Provide helpful suggestions for common mistakes
             suggestions = {
                 '@': "@ is not valid in AIFPL - use symbols like 'at' or 'email'",
@@ -270,23 +217,22 @@ class AIFPLTokenizer:
                 '{': "Use parentheses ( ) for all grouping, not braces { }",
                 '}': "Use parentheses ( ) for all grouping, not braces { }",
             }
-            
+
             suggestion = suggestions.get(char, f"'{char}' is not a valid character in AIFPL")
-            
+
             if char_code < 32:
                 char_display = f"\\u{char_code:04x}"
                 context = "Control characters are not allowed except in strings"
             else:
                 char_display = char
                 context = "Only letters, digits, and specific symbols are allowed"
-            
-            raise self._create_detailed_error(
+
+            raise AIFPLTokenError(
                 message=f"Invalid character: {char_display}",
-                expression=expression,
                 position=i,
                 received=f"Character: {char_display} (code {char_code})",
                 expected="Valid AIFPL characters: letters, digits, +, -, *, /, etc.",
-                example="Valid: (+ 1 2), my-var, func?\nInvalid: @var, $value, [list]",
+                example="Valid: (+ 1 2), my-var, func?\\nInvalid: @var, $value, [list]",
                 suggestion=suggestion,
                 context=context
             )
