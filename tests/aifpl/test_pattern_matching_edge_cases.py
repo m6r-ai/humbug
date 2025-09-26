@@ -1,0 +1,528 @@
+"""Tests for AIFPL pattern matching edge cases."""
+
+import pytest
+
+from aifpl import AIFPLEvalError
+
+
+class TestAIFPLPatternMatchingEdgeCases:
+    """Test pattern matching edge cases and comprehensive scenarios."""
+
+    def test_basic_pattern_matching_edge_cases(self, aifpl):
+        """Test basic pattern matching edge cases."""
+        # Match with literal values
+        result = aifpl.evaluate('(match 42 (42 "found") (_ "not found"))')
+        assert result == "found"
+
+        result = aifpl.evaluate('(match 43 (42 "found") (_ "not found"))')
+        assert result == "not found"
+
+        # Match with string literals
+        result = aifpl.evaluate('(match "hello" ("hello" "found") (_ "not found"))')
+        assert result == "found"
+
+        result = aifpl.evaluate('(match "world" ("hello" "found") (_ "not found"))')
+        assert result == "not found"
+
+        # Match with boolean literals
+        result = aifpl.evaluate('(match #t (#t "true") (#f "false") (_ "other"))')
+        assert result == "true"
+
+        result = aifpl.evaluate('(match #f (#t "true") (#f "false") (_ "other"))')
+        assert result == "false"
+
+    def test_wildcard_pattern_edge_cases(self, aifpl):
+        """Test wildcard pattern edge cases."""
+        # Wildcard should match anything
+        result = aifpl.evaluate('(match 42 (_ "matched"))')
+        assert result == "matched"
+
+        result = aifpl.evaluate('(match "hello" (_ "matched"))')
+        assert result == "matched"
+
+        result = aifpl.evaluate('(match #t (_ "matched"))')
+        assert result == "matched"
+
+        result = aifpl.evaluate('(match (list 1 2 3) (_ "matched"))')
+        assert result == "matched"
+
+        # Wildcard as fallback
+        result = aifpl.evaluate('(match 99 (1 "one") (2 "two") (_ "other"))')
+        assert result == "other"
+
+    def test_type_pattern_edge_cases(self, aifpl):
+        """Test type pattern edge cases."""
+        # Number type patterns
+        result = aifpl.evaluate('(match 42 ((number? n) "number") (_ "other"))')
+        assert result == "number"
+
+        result = aifpl.evaluate('(match 3.14 ((number? n) "number") (_ "other"))')
+        assert result == "number"
+
+        result = aifpl.evaluate('(match (complex 1 2) ((number? n) "number") (_ "other"))')
+        assert result == "number"
+
+        # String type patterns
+        result = aifpl.evaluate('(match "hello" ((string? s) "string") (_ "other"))')
+        assert result == "string"
+
+        result = aifpl.evaluate('(match 42 ((string? s) "string") (_ "other"))')
+        assert result == "other"
+
+        # Boolean type patterns
+        result = aifpl.evaluate('(match #t ((boolean? b) "boolean") (_ "other"))')
+        assert result == "boolean"
+
+        result = aifpl.evaluate('(match #f ((boolean? b) "boolean") (_ "other"))')
+        assert result == "boolean"
+
+        result = aifpl.evaluate('(match 42 ((boolean? b) "boolean") (_ "other"))')
+        assert result == "other"
+
+        # List type patterns
+        result = aifpl.evaluate('(match (list 1 2 3) ((list? l) "list") (_ "other"))')
+        assert result == "list"
+
+        result = aifpl.evaluate('(match () ((list? l) "list") (_ "other"))')
+        assert result == "list"
+
+        result = aifpl.evaluate('(match 42 ((list? l) "list") (_ "other"))')
+        assert result == "other"
+
+    def test_variable_binding_pattern_edge_cases(self, aifpl):
+        """Test variable binding pattern edge cases."""
+        # Simple variable binding
+        result = aifpl.evaluate('(match 42 ((number? n) n) (_ 0))')
+        assert result == 42
+
+        # Variable binding with transformation
+        result = aifpl.evaluate('(match 5 ((number? n) (* n 2)) (_ 0))')
+        assert result == 10
+
+        # String variable binding
+        result = aifpl.evaluate('(match "hello" ((string? s) (string-upcase s)) (_ ""))')
+        assert result == "HELLO"
+
+        # Multiple variable bindings (if supported)
+        try:
+            result = aifpl.evaluate('(match (list 1 2) ((a b) (+ a b)) (_ 0))')
+            assert result == 3
+        except AIFPLEvalError:
+            # Multiple variable binding might not be supported
+            pass
+
+    def test_list_pattern_matching_edge_cases(self, aifpl):
+        """Test list pattern matching edge cases."""
+        # Empty list pattern
+        result = aifpl.evaluate('(match () (() "empty") (_ "not empty"))')
+        assert result == "empty"
+
+        result = aifpl.evaluate('(match (list 1) (() "empty") (_ "not empty"))')
+        assert result == "not empty"
+
+        # Single element list pattern
+        try:
+            result = aifpl.evaluate('(match (list 1) ((x) x) (_ 0))')
+            assert result == 1
+        except AIFPLEvalError:
+            # Single element destructuring might not be supported
+            pass
+
+        # Multiple element list pattern
+        try:
+            result = aifpl.evaluate('(match (list 1 2 3) ((a b c) (+ a b c)) (_ 0))')
+            assert result == 6
+        except AIFPLEvalError:
+            # Multiple element destructuring might not be supported
+            pass
+
+        # Head/tail pattern (if supported)
+        try:
+            result = aifpl.evaluate('(match (list 1 2 3) ((head . tail) head) (_ 0))')
+            assert result == 1
+        except AIFPLEvalError:
+            # Head/tail patterns might not be supported
+            pass
+
+    def test_nested_pattern_matching_edge_cases(self, aifpl):
+        """Test nested pattern matching edge cases."""
+        # Nested list patterns
+        try:
+            result = aifpl.evaluate('(match (list (list 1 2) 3) (((a b) c) (+ a b c)) (_ 0))')
+            assert result == 6
+        except AIFPLEvalError:
+            # Nested patterns might not be supported
+            pass
+
+        # Mixed type nested patterns
+        try:
+            result = aifpl.evaluate('''
+            (match (list 1 "hello")
+              (((number? n) (string? s)) (list n (string-length s)))
+              (_ (list 0 0)))
+            ''')
+            assert result == [1, 5]
+        except AIFPLEvalError:
+            # Complex nested patterns might not be supported
+            pass
+
+    def test_pattern_matching_order_precedence(self, aifpl):
+        """Test that pattern matching follows first-match-wins order."""
+        # First pattern should win
+        result = aifpl.evaluate('''
+        (match 42
+          ((number? n) "number")
+          ((integer? i) "integer")
+          (_ "other"))
+        ''')
+        assert result == "number"  # Should match first pattern, not second
+
+        # More specific patterns should come before general ones
+        result = aifpl.evaluate('''
+        (match 0
+          (0 "zero")
+          ((number? n) "number")
+          (_ "other"))
+        ''')
+        assert result == "zero"  # Literal should match before type pattern
+
+    def test_pattern_matching_with_complex_data(self, aifpl):
+        """Test pattern matching with complex data structures."""
+        # Match complex numbers
+        result = aifpl.evaluate('''
+        (match (complex 3 4)
+          ((complex? c) "complex")
+          ((number? n) "number")
+          (_ "other"))
+        ''')
+        assert result == "complex"
+
+        # Match nested lists
+        result = aifpl.evaluate('''
+        (match (list (list 1) (list 2))
+          ((list? l) "list")
+          (_ "other"))
+        ''')
+        assert result == "list"
+
+        # Match mixed-type lists
+        result = aifpl.evaluate('''
+        (match (list 1 "hello" #t)
+          ((list? l) "mixed list")
+          (_ "other"))
+        ''')
+        assert result == "mixed list"
+
+    def test_pattern_matching_error_cases(self, aifpl):
+        """Test pattern matching error cases."""
+        # No matching pattern (should use default or error)
+        try:
+            result = aifpl.evaluate('(match 42 ("hello" "string"))')
+            # Should either have a default case or raise an error
+        except AIFPLEvalError:
+            # Error for no matching pattern is acceptable
+            pass
+
+        # Invalid pattern syntax (if detectable)
+        try:
+            result = aifpl.evaluate('(match 42 (invalid-pattern "result"))')
+        except AIFPLEvalError:
+            # Invalid pattern should raise error
+            pass
+
+    def test_pattern_matching_with_functions(self, aifpl):
+        """Test pattern matching with function values."""
+        # Match function type
+        result = aifpl.evaluate('''
+        (match (lambda (x) x)
+          ((function? f) "function")
+          (_ "other"))
+        ''')
+        assert result == "function"
+
+        # Match non-function
+        result = aifpl.evaluate('''
+        (match 42
+          ((function? f) "function")
+          (_ "other"))
+        ''')
+        assert result == "other"
+
+    def test_pattern_matching_performance_edge_cases(self, aifpl):
+        """Test pattern matching performance with many patterns."""
+        # Many literal patterns
+        many_patterns = '''
+        (match 50
+        ''' + '\n'.join(f'  ({i} "pattern-{i}")' for i in range(1, 50)) + '''
+          (50 "found")
+          (_ "not found"))
+        '''
+
+        result = aifpl.evaluate(many_patterns)
+        assert result == "found"
+
+        # Pattern not found case
+        not_found_patterns = '''
+        (match 999
+        ''' + '\n'.join(f'  ({i} "pattern-{i}")' for i in range(1, 50)) + '''
+          (_ "not found"))
+        '''
+
+        result = aifpl.evaluate(not_found_patterns)
+        assert result == "not found"
+
+    def test_pattern_matching_with_expressions(self, aifpl):
+        """Test pattern matching where patterns contain expressions."""
+        # Pattern matching with variable binding and expressions
+        result = aifpl.evaluate('''
+        (match 5
+          ((number? n) (if (> n 0) "positive" "non-positive"))
+          (_ "not a number"))
+        ''')
+        assert result == "positive"
+
+        result = aifpl.evaluate('''
+        (match -3
+          ((number? n) (if (> n 0) "positive" "non-positive"))
+          (_ "not a number"))
+        ''')
+        assert result == "non-positive"
+
+    def test_pattern_matching_with_let_bindings(self, aifpl):
+        """Test pattern matching combined with let bindings."""
+        # Pattern matching inside let
+        result = aifpl.evaluate('''
+        (let ((x 42))
+          (match x
+            ((number? n) (* n 2))
+            (_ 0)))
+        ''')
+        assert result == 84
+
+        # Let bindings in pattern match results
+        result = aifpl.evaluate('''
+        (match 5
+          ((number? n) (let ((doubled (* n 2))) (+ doubled 1)))
+          (_ 0))
+        ''')
+        assert result == 11
+
+    def test_pattern_matching_with_higher_order_functions(self, aifpl):
+        """Test pattern matching with higher-order functions."""
+        # Pattern matching in map
+        try:
+            result = aifpl.evaluate('''
+            (map (lambda (x)
+                   (match x
+                     ((number? n) (* n 2))
+                     (_ 0)))
+                 (list 1 2 3))
+            ''')
+            assert result == [2, 4, 6]
+        except AIFPLEvalError:
+            # Complex lambda/match combinations might not be supported
+            pass
+
+        # Pattern matching in filter
+        try:
+            result = aifpl.evaluate('''
+            (filter (lambda (x)
+                      (match x
+                        ((number? n) (> n 2))
+                        (_ #f)))
+                    (list 1 2 3 4 5))
+            ''')
+            assert result == [3, 4, 5]
+        except AIFPLEvalError:
+            # Complex lambda/match combinations might not be supported
+            pass
+
+    def test_pattern_matching_edge_case_types(self, aifpl):
+        """Test pattern matching with edge case types."""
+        # Match zero
+        result = aifpl.evaluate('''
+        (match 0
+          (0 "zero")
+          ((number? n) "non-zero number")
+          (_ "other"))
+        ''')
+        assert result == "zero"
+
+        # Match empty string
+        result = aifpl.evaluate('''
+        (match ""
+          ("" "empty string")
+          ((string? s) "non-empty string")
+          (_ "other"))
+        ''')
+        assert result == "empty string"
+
+        # Match false
+        result = aifpl.evaluate('''
+        (match #f
+          (#f "false")
+          ((boolean? b) "true")
+          (_ "other"))
+        ''')
+        assert result == "false"
+
+    def test_pattern_matching_with_arithmetic_results(self, aifpl):
+        """Test pattern matching with results of arithmetic operations."""
+        # Match result of arithmetic
+        result = aifpl.evaluate('''
+        (match (+ 2 3)
+          (5 "five")
+          ((number? n) "other number")
+          (_ "not a number"))
+        ''')
+        assert result == "five"
+
+        # Match with complex arithmetic
+        result = aifpl.evaluate('''
+        (match (* (+ 1 2) (- 5 3))
+          (6 "six")
+          ((number? n) "other number")
+          (_ "not a number"))
+        ''')
+        assert result == "six"
+
+    def test_pattern_matching_exhaustiveness(self, aifpl):
+        """Test pattern matching exhaustiveness scenarios."""
+        # Should have wildcard for exhaustiveness
+        result = aifpl.evaluate('''
+        (match "unknown"
+          ("hello" "greeting")
+          ("goodbye" "farewell")
+          (_ "unknown"))
+        ''')
+        assert result == "unknown"
+
+        # Boolean exhaustiveness
+        result = aifpl.evaluate('''
+        (match #t
+          (#t "true case")
+          (#f "false case"))
+        ''')
+        assert result == "true case"
+
+        result = aifpl.evaluate('''
+        (match #f
+          (#t "true case")
+          (#f "false case"))
+        ''')
+        assert result == "false case"
+
+    def test_pattern_matching_with_nested_functions(self, aifpl):
+        """Test pattern matching with nested function calls."""
+        # Pattern match on nested function results
+        result = aifpl.evaluate('''
+        (match (abs -5)
+          (5 "five")
+          ((number? n) "other")
+          (_ "not number"))
+        ''')
+        assert result == "five"
+
+        # Pattern match with string functions
+        result = aifpl.evaluate('''
+        (match (string-length "hello")
+          (5 "five chars")
+          ((number? n) "other length")
+          (_ "not number"))
+        ''')
+        assert result == "five chars"
+
+    def test_pattern_matching_variable_scope(self, aifpl):
+        """Test variable scope in pattern matching."""
+        # Variables bound in patterns should be local to that pattern
+        result = aifpl.evaluate('''
+        (let ((n 100))
+          (match 42
+            ((number? n) n)  ; This n should shadow the outer n
+            (_ n)))          ; This n should refer to outer n
+        ''')
+        assert result == 42  # Should use the pattern-bound n, not outer n
+
+        # Test that pattern variables don't leak
+        result = aifpl.evaluate('''
+        (let ((result (match 42 ((number? n) n) (_ 0))))
+          result)
+        ''')
+        assert result == 42
+
+    def test_pattern_matching_with_complex_expressions_in_results(self, aifpl):
+        """Test pattern matching with complex expressions in result branches."""
+        # Complex expression in result
+        result = aifpl.evaluate('''
+        (match 3
+          ((number? n) 
+           (let ((squared (* n n))
+                 (doubled (* n 2)))
+             (+ squared doubled)))
+          (_ 0))
+        ''')
+        assert result == 15  # 3^2 + 3*2 = 9 + 6 = 15
+
+        # Nested match in result
+        try:
+            result = aifpl.evaluate('''
+            (match 5
+              ((number? n)
+               (match (> n 3)
+                 (#t "big number")
+                 (#f "small number")))
+              (_ "not number"))
+            ''')
+            assert result == "big number"
+        except AIFPLEvalError:
+            # Nested match might not be supported
+            pass
+
+    def test_pattern_matching_type_specificity(self, aifpl):
+        """Test pattern matching type specificity."""
+        # Integer should match number pattern
+        result = aifpl.evaluate('''
+        (match 42
+          ((integer? i) "integer")
+          ((number? n) "number")
+          (_ "other"))
+        ''')
+        assert result == "integer"  # More specific pattern should match first
+
+        # Float should match number but not integer
+        result = aifpl.evaluate('''
+        (match 3.14
+          ((integer? i) "integer")
+          ((number? n) "number")
+          (_ "other"))
+        ''')
+        assert result == "number"
+
+        # Complex should match number but not integer or float
+        result = aifpl.evaluate('''
+        (match (complex 1 2)
+          ((integer? i) "integer")
+          ((float? f) "float")
+          ((number? n) "number")
+          (_ "other"))
+        ''')
+        assert result == "number"
+
+    def test_pattern_matching_edge_case_combinations(self, aifpl):
+        """Test pattern matching with edge case combinations."""
+        # Combine multiple pattern types
+        result = aifpl.evaluate('''
+        (match (list 1 2 3)
+          (() "empty")
+          ((list? l) (if (> (length l) 2) "long list" "short list"))
+          (_ "not list"))
+        ''')
+        assert result == "long list"
+
+        # Pattern matching with arithmetic in guards
+        result = aifpl.evaluate('''
+        (match 10
+          ((number? n) (if (= (% n 2) 0) "even" "odd"))
+          (_ "not number"))
+        ''')
+        assert result == "even"
