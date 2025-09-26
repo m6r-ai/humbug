@@ -115,7 +115,7 @@ class TestAIFPLParserEdgeCases:
             ('"hello\\nworld"', "hello\nworld"),
             ('"hello\\tworld"', "hello\tworld"),
             ('"hello\\rworld"', "hello\rworld"),
-            ('"hello\\\\"', "hello\\\\"),
+            ('"hello\\\\"', "hello\\"),  # Fixed: 4 backslashes in source -> 2 backslashes in result
             ('"hello\\""', 'hello"'),
             ('"\\u0041"', "A"),
             ('"\\u03B1"', "α"),

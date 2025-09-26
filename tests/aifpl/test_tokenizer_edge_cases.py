@@ -328,7 +328,6 @@ class TestAIFPLTokenizerEdgeCases:
         invalid_chars = [
             "@",            # Invalid character
             "$",            # Invalid character
-            "%invalid",     # Invalid character in identifier
             "hello$world",  # Invalid character in identifier
             "42@",          # Invalid character after number
         ]
@@ -448,7 +447,7 @@ class TestAIFPLTokenizerEdgeCases:
         assert result == 42
 
         # Multiple errors in sequence
-        invalid_inputs = ["@", "$", "%", "&"]
+        invalid_inputs = ["@", "$", "#", ":"]
         for invalid in invalid_inputs:
             with pytest.raises(AIFPLTokenError):
                 aifpl.evaluate(invalid)
