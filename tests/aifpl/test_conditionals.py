@@ -298,6 +298,18 @@ class TestConditionals:
     def test_comparison_operations_require_at_least_two_arguments(self, aifpl):
         """Test that comparison operations require at least 2 arguments."""
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+            aifpl.evaluate('(=)')
+
+        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+            aifpl.evaluate('(= 1)')
+
+        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+            aifpl.evaluate('(!=)')
+
+        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+            aifpl.evaluate('(!= 1)')
+
+        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
             aifpl.evaluate('(<)')
 
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
@@ -308,6 +320,18 @@ class TestConditionals:
 
         with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
             aifpl.evaluate('(> 5)')
+
+        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+            aifpl.evaluate('(<=)')
+
+        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+            aifpl.evaluate('(<= 1)')
+
+        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+            aifpl.evaluate('(>=)')
+
+        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+            aifpl.evaluate('(>= 5)')
 
     def test_complex_boolean_expressions(self, aifpl, helpers):
         """Test complex combinations of boolean operations."""
