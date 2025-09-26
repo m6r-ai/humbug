@@ -53,26 +53,6 @@ class AIFPLCallStack:
 
         return None
 
-    def peek(self) -> 'AIFPLCallStack.CallFrame | None':
-        """
-        Peek at the top call frame without removing it.
-
-        Returns:
-            The top frame, or None if stack is empty
-        """
-        if self.frames:
-            return self.frames[-1]
-
-        return None
-
-    def is_empty(self) -> bool:
-        """Check if the call stack is empty."""
-        return len(self.frames) == 0
-
-    def depth(self) -> int:
-        """Get the current call stack depth."""
-        return len(self.frames)
-
     def format_stack_trace(self, max_frames: int = 10) -> str:
         """
         Format the call stack as a string for error messages.
