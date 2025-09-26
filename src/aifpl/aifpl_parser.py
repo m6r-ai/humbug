@@ -106,7 +106,7 @@ class AIFPLParser:
 
     def _parse_list(self, start_pos: int) -> AIFPLList:
         """Parse (element1 element2 ...) with detailed error reporting."""
-        self._consume(AIFPLTokenType.LPAREN)
+        self._advance()  # consume '('
 
         elements = []
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
@@ -133,7 +133,7 @@ class AIFPLParser:
                 context=f"List starting at position {start_pos} was never closed"
             )
 
-        self._consume(AIFPLTokenType.RPAREN)
+        self._advance()  # consume ')'
 
         return AIFPLList(tuple(elements))
 
@@ -148,7 +148,7 @@ class AIFPLParser:
             AIFPLParseError: If quote is incomplete or malformed
         """
         quote_pos = self.current_token.position if self.current_token else 0
-        self._consume(AIFPLTokenType.QUOTE)
+        self._advance()  # consume quote
 
         # Check if we have something to quote
         if self.current_token is None or self.current_token.type == AIFPLTokenType.EOF:
@@ -194,42 +194,6 @@ class AIFPLParser:
             context="This is an internal parser error",
             suggestion="Please report this issue"
         )
-
-    def _consume(self, expected_type: AIFPLTokenType) -> None:
-        """Consume a token of the expected type with detailed error reporting."""
-        if self.current_token is None:
-            raise AIFPLParseError(
-                message="Unexpected end of input",
-                expected=f"Token of type {expected_type.value}",
-                example=f"Expected: {expected_type.value}",
-                suggestion="Complete the expression",
-                context="Expression ended before required token"
-            )
-
-        if self.current_token.type != expected_type:
-            current_value = self.current_token.value
-            current_pos = self.current_token.position
-
-            # Special handling for common mistakes
-            if expected_type == AIFPLTokenType.RPAREN and self.current_token.type == AIFPLTokenType.EOF:
-                suggestion = "Add missing ')' to close parentheses"
-
-            elif expected_type == AIFPLTokenType.LPAREN and self.current_token.type == AIFPLTokenType.RPAREN:
-                suggestion = "Check parentheses balance - may have extra ')'"
-
-            else:
-                suggestion = f"Replace '{current_value}' with '{expected_type.value}'"
-
-            raise AIFPLParseError(
-                message=f"Expected {expected_type.value}, got {current_value}",
-                position=current_pos,
-                received=f"Found: {current_value}",
-                expected=f"Required: {expected_type.value}",
-                suggestion=suggestion,
-                context=f"Parser expected {expected_type.value} at this position"
-            )
-
-        self._advance()
 
     def _advance(self) -> None:
         """Move to the next token."""
