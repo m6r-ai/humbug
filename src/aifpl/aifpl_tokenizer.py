@@ -152,41 +152,7 @@ class AIFPLTokenizer:
                     continue
 
                 except AIFPLTokenError as e:
-                    error_msg = str(e)
-                    if "Invalid hexadecimal" in error_msg:
-                        raise AIFPLTokenError(
-                            message="Invalid hexadecimal number",
-                            position=i,
-                            received=f"Number format: {expression[i:i+6]}...",
-                            expected="Hexadecimal digits after 0x: 0x1A2B",
-                            example="Correct: 0xFF, 0x123, 0xABCD\\nIncorrect: 0x, 0xGHI",
-                            suggestion="Add hex digits (0-9, A-F) after 0x",
-                            context="Hexadecimal numbers need digits after the 0x prefix"
-                        ) from e
-
-                    if "Invalid binary" in error_msg:
-                        raise AIFPLTokenError(
-                            message="Invalid binary number",
-                            position=i,
-                            received=f"Number format: {expression[i:i+6]}...",
-                            expected="Binary digits after 0b: 0b1010",
-                            example="Correct: 0b101, 0b1111\\nIncorrect: 0b, 0b123",
-                            suggestion="Add binary digits (0 or 1) after 0b",
-                            context="Binary numbers need digits after the 0b prefix"
-                        ) from e
-
-                    if "Invalid scientific notation" in error_msg:
-                        raise AIFPLTokenError(
-                            message="Invalid scientific notation",
-                            position=i,
-                            received=f"Number format: {expression[i:i+8]}...",
-                            expected="Digits after e/E: 1.5e10 or 2E-3",
-                            example="Correct: 1e5, 2.5E-3, 1.0e+10\\nIncorrect: 1e, 2E+",
-                            suggestion="Add digits after the exponent marker (e/E)",
-                            context="Scientific notation needs digits after e/E"
-                        ) from e
-
-                    raise  # Re-raise if not handled
+                    raise e
 
             # Symbols (variables, parameters, functions, constants)
             if self._is_symbol_start(expression[i]):
@@ -354,120 +320,158 @@ class AIFPLTokenizer:
 
         return False
 
-    def _read_number(self, expression: str, start: int) -> tuple[Union[int, float, complex], int]:
+    def _is_delimiter(self, char: str) -> bool:
+        """Check if character is a LISP token delimiter."""
+        return char.isspace() or char in "()'\";,"
+
+    def _read_complete_token(self, expression: str, start: int) -> str:
         """
-        Read a number literal from the expression.
+        Read a complete token until delimiter, following LISP tokenization rules.
 
         Returns:
-            Tuple of (number_value, length_consumed)
+            The complete token string
         """
         i = start
 
-        # Handle negative sign
-        negative = False
-        if expression[i] == '-':
-            negative = True
-            i += 1
-
-        # Handle different number formats
-        if i < len(expression) and expression[i] == '0' and i + 1 < len(expression):
-            next_char = expression[i + 1].lower()
-
-            # Hexadecimal
-            if next_char == 'x':
-                i += 2
-                hex_start = i
-                while i < len(expression) and expression[i].lower() in '0123456789abcdef':
-                    i += 1
-
-                if i == hex_start:
-                    raise AIFPLTokenError(f"Invalid hexadecimal number at position {start}")
-
-                hex_value = int(expression[hex_start:i], 16)
-                return (-hex_value if negative else hex_value), i - start
-
-            # Binary
-            if next_char == 'b':
-                i += 2
-                bin_start = i
-                while i < len(expression) and expression[i] in '01':
-                    i += 1
-
-                if i == bin_start:
-                    raise AIFPLTokenError(f"Invalid binary number at position {start}")
-
-                bin_value = int(expression[bin_start:i], 2)
-                return (-bin_value if negative else bin_value), i - start
-
-            # Octal
-            if next_char == 'o':
-                i += 2
-                oct_start = i
-                while i < len(expression) and expression[i] in '01234567':
-                    i += 1
-
-                if i == oct_start:
-                    raise AIFPLTokenError(f"Invalid octal number at position {start}")
-
-                oct_value = int(expression[oct_start:i], 8)
-                return (-oct_value if negative else oct_value), i - start
-
-        # Regular decimal number (int, float, or scientific notation)
-        num_start = i
-        has_dot = False
-
-        # Handle leading decimal point (like .5)
-        if i < len(expression) and expression[i] == '.':
-            has_dot = True
-            i += 1
-
-        # Read the base number (digits and optional decimal point)
+        # Consume characters until we hit a delimiter
         while i < len(expression):
             char = expression[i]
-            if char.isdigit():
-                i += 1
-
-            elif char == '.' and not has_dot:
-                has_dot = True
-                i += 1
-
-            else:
+            if self._is_delimiter(char):
                 break
 
-        # Validate we have at least one digit
-        if i == num_start or (has_dot and expression[num_start] == '.' and i == num_start + 1):
-            raise AIFPLTokenError(f"Invalid number at position {start}")
+            i += 1
 
-        # Check for scientific notation (e or E)
-        if i < len(expression) and expression[i].lower() == 'e':
-            i += 1  # consume 'e' or 'E'
+        return expression[start:i]
 
-            # Optional sign after 'e'
-            if i < len(expression) and expression[i] in '+-':
-                i += 1  # consume '+' or '-'
+    def _is_valid_number(self, token: str) -> bool:
+        """
+        Check if a complete token is a valid number format.
 
-            # Must have digits after 'e' (and optional sign)
-            exponent_start = i
-            while i < len(expression) and expression[i].isdigit():
-                i += 1
+        Args:
+            token: The complete token string to validate
 
-            if i == exponent_start:
-                raise AIFPLTokenError(f"Invalid scientific notation: missing exponent digits at position {i}")
+        Returns:
+            True if the token represents a valid number
+        """
+        if not token:
+            return False
 
-        number_str = expression[num_start:i]
+        # Handle negative numbers
+        check_token = token
+        if token.startswith('-'):
+            if len(token) == 1:
+                return False  # Just a minus sign
 
+            check_token = token[1:]
+
+        # Try different number formats
+
+        # Hexadecimal
+        if check_token.startswith('0x') or check_token.startswith('0X'):
+            if len(check_token) <= 2:
+                return False
+
+            hex_part = check_token[2:]
+            return all(c in '0123456789abcdefABCDEF' for c in hex_part)
+
+        # Binary
+        if check_token.startswith('0b') or check_token.startswith('0B'):
+            if len(check_token) <= 2:
+                return False
+
+            bin_part = check_token[2:]
+            return all(c in '01' for c in bin_part)
+
+        # Octal
+        if check_token.startswith('0o') or check_token.startswith('0O'):
+            if len(check_token) <= 2:
+                return False
+
+            oct_part = check_token[2:]
+            return all(c in '01234567' for c in oct_part)
+
+        # Decimal numbers (int, float, scientific notation)
         try:
-            # Always use float for scientific notation or numbers with decimal points
-            if 'e' in number_str.lower() or has_dot:
-                decimal_value: Union[int, float] = float(number_str)
+            float(check_token)
+            return True
+
+        except ValueError:
+            return False
+
+    def _parse_number_value(self, token: str) -> Union[int, float]:
+        """
+        Parse a valid number token into its numeric value.
+
+        Args:
+            token: The complete valid number token
+
+        Returns:
+            The numeric value
+        """
+        # Handle negative numbers
+        negative = token.startswith('-')
+        if negative:
+            token = token[1:]
+
+        # Parse different formats
+        if token.startswith('0x') or token.startswith('0X'):
+            value = int(token, 16)
+
+        elif token.startswith('0b') or token.startswith('0B'):
+            value = int(token, 2)
+
+        elif token.startswith('0o') or token.startswith('0O'):
+            value = int(token, 8)
+
+        else:
+            # Decimal number - use float if it contains . or e/E, otherwise int
+            if '.' in token or 'e' in token.lower():
+                value = float(token)
 
             else:
-                decimal_value = int(number_str)
+                value = int(token)
 
-            return (-decimal_value if negative else decimal_value), i - start
+        return -value if negative else value
+
+    def _read_number(self, expression: str, start: int) -> tuple[Union[int, float, complex], int]:
+        """
+        Read a number literal from the expression using robust token boundary detection.
+
+        Returns:
+            Tuple of (number_value, length_consumed)
+
+        Raises:
+            AIFPLTokenError: If the token is not a valid number
+        """
+        # Get the complete token until delimiter
+        complete_token = self._read_complete_token(expression, start)
+
+        # Validate that this token is a valid number
+        if not self._is_valid_number(complete_token):
+            raise AIFPLTokenError(
+                message=f"Invalid number format: {complete_token}",
+                position=start,
+                received=f"Malformed number token: {complete_token}",
+                expected="Valid number format",
+                suggestion=f"Fix the number format: {complete_token}",
+                context="Token appears to be a number but contains invalid characters",
+                example="Valid: 1.23, .5, 42, 1e-10, 0xFF"
+            )
+
+        # Parse the valid number
+        try:
+            number_value = self._parse_number_value(complete_token)
+            return number_value, len(complete_token)
 
         except ValueError as e:
-            raise AIFPLTokenError(f"Invalid number format at position {start}: {e}") from e
+            raise AIFPLTokenError(
+                message=f"Invalid number format: {complete_token}",
+                position=start,
+                received=f"Unparseable number: {complete_token}",
+                expected="Valid numeric literal",
+                suggestion=f"Fix the number format: {complete_token}",
+                context=f"Number parsing failed: {str(e)}"
+            ) from e
 
     def _is_symbol_start(self, char: str) -> bool:
         """Check if character can start a symbol."""

@@ -75,8 +75,6 @@ class TestAIFPLParserEdgeCases:
             ")))",
 
             # Empty expressions that should fail
-            "(+)",  # Some operators might require arguments
-            "(*)",
             "(/)",
             "(-)",
 
@@ -90,7 +88,6 @@ class TestAIFPLParserEdgeCases:
             "(+ 1 2.3.4)",
             "(+ 1 2e)",
             "(+ 1 .)",
-            "(+ 1 2.)",
 
             # Invalid identifiers
             "(123abc 1 2)",

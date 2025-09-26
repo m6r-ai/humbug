@@ -75,10 +75,10 @@ class TestErrors:
 
     def test_malformed_scientific_notation_token_error(self, aifpl):
         """Test that malformed scientific notation causes tokenization errors."""
-        with pytest.raises(AIFPLTokenError, match="Invalid scientific notation"):
+        with pytest.raises(AIFPLTokenError, match="Invalid number format"):
             aifpl.evaluate("1e")  # Missing exponent
 
-        with pytest.raises(AIFPLTokenError, match="Invalid scientific notation"):
+        with pytest.raises(AIFPLTokenError, match="Invalid number format"):
             aifpl.evaluate("1.5e+")  # Missing exponent after sign
 
     # ========== Parsing Errors ==========
