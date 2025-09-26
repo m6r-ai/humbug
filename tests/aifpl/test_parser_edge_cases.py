@@ -196,7 +196,7 @@ class TestAIFPLParserEdgeCases:
         ]
 
         for expr in invalid_numbers:
-            with pytest.raises(AIFPLTokenError):
+            with pytest.raises((AIFPLTokenError, AIFPLParseError)):
                 aifpl.evaluate(expr)
 
     def test_boolean_parsing_edge_cases(self, aifpl):

@@ -34,6 +34,7 @@ class AIFPLTokenizer:
             if expression[i] == ';':
                 while i < len(expression) and expression[i] != '\n':
                     i += 1
+
                 continue
 
             # Parentheses
@@ -142,6 +143,7 @@ class AIFPLTokenizer:
                 )
 
             # Numbers (including complex, hex, binary, octal, scientific notation)
+            # Check numbers BEFORE symbols to handle .5 correctly
             if self._is_number_start(expression, i):
                 try:
                     number, length = self._read_number(expression, i)
@@ -333,9 +335,16 @@ class AIFPLTokenizer:
         if char.isdigit():
             return True
 
-        # Negative numbers
-        if char == '-' and pos + 1 < len(expression) and expression[pos + 1].isdigit():
+        # Decimal numbers starting with a dot (like .5) - ONLY if followed by digit
+        if char == '.' and pos + 1 < len(expression) and expression[pos + 1].isdigit():
             return True
+
+        # Negative numbers
+        if char == '-' and pos + 1 < len(expression):
+            next_char = expression[pos + 1]
+            # Negative digit or negative decimal starting with dot (only if followed by digit)
+            if next_char.isdigit() or (next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit()):
+                return True
 
         # Hex, binary, octal prefixes
         if char == '0' and pos + 1 < len(expression):
@@ -361,7 +370,7 @@ class AIFPLTokenizer:
             i += 1
 
         # Handle different number formats
-        if expression[i] == '0' and i + 1 < len(expression):
+        if i < len(expression) and expression[i] == '0' and i + 1 < len(expression):
             next_char = expression[i + 1].lower()
 
             # Hexadecimal
@@ -407,6 +416,11 @@ class AIFPLTokenizer:
         num_start = i
         has_dot = False
 
+        # Handle leading decimal point (like .5)
+        if i < len(expression) and expression[i] == '.':
+            has_dot = True
+            i += 1
+
         # Read the base number (digits and optional decimal point)
         while i < len(expression):
             char = expression[i]
@@ -420,7 +434,8 @@ class AIFPLTokenizer:
             else:
                 break
 
-        if i == num_start:
+        # Validate we have at least one digit
+        if i == num_start or (has_dot and expression[num_start] == '.' and i == num_start + 1):
             raise AIFPLTokenError(f"Invalid number at position {start}")
 
         # Check for scientific notation (e or E)
