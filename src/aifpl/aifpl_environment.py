@@ -66,45 +66,6 @@ class AIFPLEnvironment:
 
         raise AIFPLEvalError(f"Undefined variable: '{name}'. No bindings available in current scope")
 
-    def has_binding(self, name: str) -> bool:
-        """
-        Check if a variable has a binding in this environment or parent environments.
-
-        Args:
-            name: Variable name to check
-
-        Returns:
-            True if variable has a binding, False otherwise
-        """
-        if name in self.bindings:
-            return True
-
-        if self.parent is not None:
-            return self.parent.has_binding(name)
-
-        return False
-
-    def is_defined(self, name: str) -> bool:
-        """
-        Check if a variable is defined in this environment or parent environments.
-
-        Args:
-            name: Variable name to check
-
-        Returns:
-            True if variable is defined, False otherwise
-        """
-        return self.has_binding(name)
-
-    def get_local_bindings(self) -> Dict[str, AIFPLValue]:
-        """
-        Get bindings defined in this environment only (not parents).
-
-        Returns:
-            Dictionary of local bindings
-        """
-        return self.bindings.copy()
-
     def get_available_bindings(self) -> List[str]:
         """Get all available binding names in this environment chain."""
         available = list(self.bindings.keys())

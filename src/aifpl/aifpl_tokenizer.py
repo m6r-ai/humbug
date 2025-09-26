@@ -398,7 +398,7 @@ class AIFPLTokenizer:
         except ValueError:
             return False
 
-    def _parse_number_value(self, token: str) -> Union[int, float]:
+    def _parse_number_value(self, token: str) -> int | float:
         """
         Parse a valid number token into its numeric value.
 
@@ -415,7 +415,7 @@ class AIFPLTokenizer:
 
         # Parse different formats
         if token.startswith('0x') or token.startswith('0X'):
-            value = int(token, 16)
+            value: int | float = int(token, 16)
 
         elif token.startswith('0b') or token.startswith('0B'):
             value = int(token, 2)
