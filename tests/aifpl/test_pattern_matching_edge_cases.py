@@ -637,7 +637,7 @@ class TestAIFPLPatternMatchingEdgeCases:
 
         # Valid single element with tail
         result = aifpl.evaluate('(match (list 42) ((head . tail) (null? tail)))')
-        assert result == True
+        assert result
 
     def test_all_dot_validation_now_upfront(self, aifpl):
         """Test that all dot validation happens upfront, not during matching."""

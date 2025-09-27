@@ -433,6 +433,9 @@ class TestPatternMatching:
         with pytest.raises(AIFPLEvalError, match="Invalid cons pattern"):
             aifpl.evaluate('(match (list 1 2 3) ((. a b) "invalid") (_ "other"))')
 
+        with pytest.raises(AIFPLEvalError, match="Invalid type pattern"):
+            aifpl.evaluate('(match (3) ((number2? x) "invalid") (_ "other"))')
+
     def test_invalid_variable_patterns(self, aifpl):
         """Test errors for invalid variable patterns."""
         # String as variable pattern in type pattern - this should fail validation
