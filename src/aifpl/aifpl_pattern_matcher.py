@@ -112,30 +112,6 @@ class AIFPLPatternMatcher:
             suggestion="Add a wildcard pattern (_ result) as the last clause to catch all cases"
         )
 
-    def builtin_match_special(
-        self,
-        args: list[AIFPLValue],
-        env: AIFPLEnvironment,
-        depth: int,
-        evaluate_expression_func: Callable[[AIFPLValue, AIFPLEnvironment, int], AIFPLValue]
-    ) -> AIFPLValue:
-        """Handle match special form when called as a builtin function."""
-        if len(args) < 2:
-            raise AIFPLEvalError(
-                message="Match function has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="At least 2 arguments: (match value (pattern1 result1) ...)",
-                example="(match x (42 \"found\") (_ \"default\"))",
-                suggestion="Match needs a value to match and at least one pattern clause"
-            )
-
-        # Create a match list structure and delegate to the core match form evaluator
-        match_symbol = AIFPLSymbol("match")
-        match_list = AIFPLList((match_symbol,) + tuple(args))
-
-        # Use the existing match form evaluator
-        return self.evaluate_match_form(match_list, env, depth, evaluate_expression_func)
-
     def _try_match_pattern(
         self,
         pattern: AIFPLValue,

@@ -81,7 +81,6 @@ class AIFPLEvaluator:
             builtins[name] = AIFPLBuiltinFunction(name, impl)
 
         # Add higher-order functions (defined in this class)
-        builtins['if'] = AIFPLBuiltinFunction('if', self._builtin_if_special)
         builtins['and'] = AIFPLBuiltinFunction('and', self._builtin_and_special)
         builtins['or'] = AIFPLBuiltinFunction('or', self._builtin_or_special)
         builtins['map'] = AIFPLBuiltinFunction('map', self._builtin_map_special)
@@ -91,7 +90,6 @@ class AIFPLEvaluator:
         builtins['find'] = AIFPLBuiltinFunction('find', self._builtin_find_special)
         builtins['any?'] = AIFPLBuiltinFunction('any?', self._builtin_any_p_special)
         builtins['all?'] = AIFPLBuiltinFunction('all?', self._builtin_all_p_special)
-        builtins['match'] = AIFPLBuiltinFunction('match', self._builtin_match_special)
 
         return builtins
 
@@ -208,6 +206,9 @@ class AIFPLEvaluator:
                 # Handle special forms BEFORE attempting any symbol lookup
                 if self._is_symbol_with_name(first_elem, "quote"):
                     return self._evaluate_quote_form(expr, env, depth + 1)
+
+                if self._is_symbol_with_name(first_elem, 'if'):
+                    return self._evaluate_if_form(expr, env, depth + 1)
 
                 if self._is_symbol_with_name(first_elem, "lambda"):
                     return self._evaluate_lambda_form(expr, env, depth + 1)
@@ -621,7 +622,7 @@ class AIFPLEvaluator:
 
     def _is_special_form(self, function_name: str) -> bool:
         """Check if a function name is a special form that needs unevaluated arguments."""
-        return function_name in ['if', 'and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?', 'match']
+        return function_name in ['and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']
 
     def _call_function(
         self,
@@ -811,21 +812,21 @@ class AIFPLEvaluator:
 
         first_elem = expr.first()
         if isinstance(first_elem, AIFPLSymbol):
-            # Handle quote expressions - they are NOT tail calls, just return the quoted value
+                # Handle special forms BEFORE attempting any symbol lookup
             if self._is_symbol_with_name(first_elem, 'quote'):
                 return self._evaluate_quote_form(expr, env, depth + 1)
 
-            # Handle if expressions specially - branches are in tail position
             if self._is_symbol_with_name(first_elem, 'if'):
-                return self._evaluate_if_form(expr, env, depth + 1)
+                return self._evaluate_if_form_with_tail_detection(expr, env, depth + 1)
 
-            # Handle lambda expressions - they are NOT tail calls, just return the function
             if self._is_symbol_with_name(first_elem, 'lambda'):
                 return self._evaluate_lambda_form(expr, env, depth + 1)
 
-            # Handle let expressions - body is in tail position
             if self._is_symbol_with_name(first_elem, 'let'):
                 return self._evaluate_let_form(expr, env, depth + 1)
+
+            if self._is_symbol_with_name(first_elem, "match"):
+                return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
 
         # Check for tail calls
         func_value = self._evaluate_expression(first_elem, env, depth + 1)
@@ -847,6 +848,53 @@ class AIFPLEvaluator:
         )
 
     def _evaluate_if_form(
+        self,
+        if_list: AIFPLList,
+        env: AIFPLEnvironment,
+        depth: int,
+    ) -> AIFPLValue:
+        """
+        Evaluate (if condition then else) form.
+
+        Args:
+            if_list: List representing if expression
+            env: Current environment
+            depth: Current recursion depth
+        Returns:
+            Result of evaluating the if expression
+        """
+        if if_list.length() != 4:
+            raise AIFPLEvalError(
+                message="If expression has wrong number of arguments",
+                received=f"Got {if_list.length() - 1} arguments: {self.format_result(if_list)}",
+                expected="Exactly 3 arguments: (if condition then else)",
+                example="(if (> x 0) \"positive\" \"negative\")",
+                suggestion="If needs condition, then-branch, and else-branch"
+            )
+
+        condition_expr = if_list.get(1)
+        then_expr = if_list.get(2)
+        else_expr = if_list.get(3)
+
+        # Evaluate condition (not in tail position)
+        condition = self._evaluate_expression(condition_expr, env, depth + 1)
+
+        if not isinstance(condition, AIFPLBoolean):
+            raise AIFPLEvalError(
+                message="If condition must be boolean",
+                received=f"Condition: {self.format_result(condition)} ({condition.type_name()})",
+                expected="Boolean value (#t or #f)",
+                example="(if (> x 0) \"positive\" \"negative\")",
+                suggestion="Use comparison operators like =, <, >, or boolean functions like and, or"
+            )
+
+        # Evaluate chosen branch (in tail position)
+        if condition.value:
+            return self._evaluate_expression(then_expr, env, depth + 1)
+
+        return self._evaluate_expression(else_expr, env, depth + 1)
+
+    def _evaluate_if_form_with_tail_detection(
         self,
         if_list: AIFPLList,
         env: AIFPLEnvironment,
@@ -939,37 +987,6 @@ class AIFPLEvaluator:
             )
 
         return result
-
-    # Higher-order functions and special forms
-    def _builtin_if_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Handle if conditional with lazy evaluation of branches."""
-        if len(args) != 3:
-            raise AIFPLEvalError(
-                message="If expression has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="Exactly 3 arguments: (if condition then else)",
-                example="(if (> x 0) \"positive\" \"negative\")",
-                suggestion="If needs condition, then-branch, and else-branch"
-            )
-
-        condition_expr, then_expr, else_expr = args
-        condition = self._evaluate_expression(condition_expr, env, depth + 1)
-
-        # Validate condition is boolean
-        if not isinstance(condition, AIFPLBoolean):
-            raise AIFPLEvalError(
-                message="If condition must be boolean",
-                received=f"Condition: {self.format_result(condition)} ({condition.type_name()})",
-                expected="Boolean value (#t or #f)",
-                example="(if (> x 0) \"positive\" \"negative\")",
-                suggestion="Use comparison operators like =, <, >, or boolean functions like and, or"
-            )
-
-        # Lazy evaluation: only evaluate the chosen branch
-        if condition.value:
-            return self._evaluate_expression(then_expr, env, depth + 1)
-
-        return self._evaluate_expression(else_expr, env, depth + 1)
 
     def _builtin_and_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
         """Handle AND with short-circuit evaluation."""
@@ -1402,10 +1419,6 @@ class AIFPLEvaluator:
                 ) from e
 
         return AIFPLBoolean(True)
-
-    def _builtin_match_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Handle match special form when called as a builtin function."""
-        return self.pattern_matcher.builtin_match_special(args, env, depth, self._evaluate_expression)
 
     # Helper method for higher-order functions
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
