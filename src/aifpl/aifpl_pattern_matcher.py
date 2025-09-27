@@ -225,7 +225,7 @@ class AIFPLPatternMatcher:
         # Head/tail patterns: Support both (head . tail) and (a b c . rest)
         for dot_position in range(pattern.length()):
             element = pattern.get(dot_position)
-            if self._is_symbol_with_name(element, "."):
+            if isinstance(element, AIFPLSymbol) and element.name == ".":
                 return self._match_head_tail_pattern(pattern, value, env, dot_position)
 
         # Fixed-length list pattern: (p1 p2 p3 ...)
@@ -458,7 +458,7 @@ class AIFPLPatternMatcher:
         dot_positions = []
         for i in range(pattern.length()):
             element = pattern.get(i)
-            if self._is_symbol_with_name(element, "."):
+            if isinstance(element, AIFPLSymbol) and element.name == ".":
                 dot_positions.append(i)
 
         if len(dot_positions) > 1:
@@ -487,14 +487,10 @@ class AIFPLPatternMatcher:
         for i in range(pattern.length()):
             element = pattern.get(i)
             # Skip dot symbols - they're structural, not patterns
-            if self._is_symbol_with_name(element, "."):
+            if isinstance(element, AIFPLSymbol) and element.name == ".":
                 continue
 
             self._validate_pattern_syntax(element)
-
-    def _is_symbol_with_name(self, value: AIFPLValue, name: str) -> bool:
-        """Check if value is a symbol with the given name."""
-        return isinstance(value, AIFPLSymbol) and value.name == name
 
     def _is_type_pattern(self, pattern: AIFPLValue) -> str | None:
         """Check if pattern is a type pattern like (number? x), return (is_type_pattern, predicate_name)."""
