@@ -255,10 +255,6 @@ class AIFPLFunction(AIFPLValue):
     def type_name(self) -> str:
         return "function"
 
-    def with_name(self, name: str) -> 'AIFPLFunction':
-        """Return a new function with the given name."""
-        return replace(self, name=name)
-
 
 class AIFPLBuiltinFunction(AIFPLValue):
     """
