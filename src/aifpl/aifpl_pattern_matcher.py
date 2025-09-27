@@ -99,8 +99,7 @@ class AIFPLPatternMatcher:
 
             # Try to match the pattern
             match_result = self._try_match_pattern(pattern, value_to_match, env)
-
-            if match_result is not None:  # Pattern matched
+            if match_result is not None:
                 # Evaluate result in the match environment
                 return evaluate_expression_func(result_expr, match_result, depth + 1)
 
@@ -236,9 +235,7 @@ class AIFPLPatternMatcher:
         # Match each element in sequence
         current_env = env
         for i in range(pattern.length()):
-            element_result = self._try_match_pattern(
-                pattern.get(i), value.get(i), current_env
-            )
+            element_result = self._try_match_pattern(pattern.get(i), value.get(i), current_env)
             if element_result is None:
                 return None
 
