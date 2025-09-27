@@ -191,9 +191,8 @@ class AIFPLPatternMatcher:
             new_env_with_bindings if match succeeds, None if no match
         """
         # Type patterns - use helper method
-        is_type_pattern, type_predicate = self._is_type_pattern(pattern)
-        if is_type_pattern:
-            assert type_predicate is not None  # Type narrowing
+        type_predicate = self._is_type_pattern(pattern)
+        if type_predicate is not None:
             var_pattern = pattern.get(1)
 
             # Validate type pattern structure
@@ -421,9 +420,8 @@ class AIFPLPatternMatcher:
             return
 
         # Check for type patterns: (type? var) - use helper method
-        is_type_pattern, type_predicate = self._is_type_pattern(pattern)
-        if is_type_pattern:
-            assert type_predicate is not None  # Type narrowing
+        type_predicate = self._is_type_pattern(pattern)
+        if type_predicate is not None:
             var_pattern = pattern.get(1)
 
             # Validate type predicate is known
@@ -514,11 +512,11 @@ class AIFPLPatternMatcher:
         """Check if value is a symbol with the given name."""
         return isinstance(value, AIFPLSymbol) and value.name == name
 
-    def _is_type_pattern(self, pattern: AIFPLValue) -> tuple[bool, str | None]:
+    def _is_type_pattern(self, pattern: AIFPLValue) -> str | None:
         """Check if pattern is a type pattern like (number? x), return (is_type_pattern, predicate_name)."""
         if (isinstance(pattern, AIFPLList) and pattern.length() == 2):
             first_elem = pattern.get(0)
             if (isinstance(first_elem, AIFPLSymbol) and first_elem.name.endswith('?')):
-                return True, first_elem.name
+                return first_elem.name
 
-        return False, None
+        return None
