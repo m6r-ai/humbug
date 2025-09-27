@@ -622,8 +622,8 @@ class TestAIFPLPatternMatchingEdgeCases:
         with pytest.raises(AIFPLEvalError, match="No patterns matched"):
             aifpl.evaluate('(match (list 1) ((a b . rest) "matched"))')
 
-    def test_valid_dot_patterns_still_work(self, aifpl):
-        """Test that valid dot patterns still work correctly after refactoring."""
+    def test_valid_dot_patterns(self, aifpl):
+        """Test that valid dot patterns work."""
 
         # Valid head/tail patterns that should work
         result = aifpl.evaluate('(match (list 1 2 3) ((head . tail) head))')
@@ -639,8 +639,17 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('(match (list 42) ((head . tail) (null? tail)))')
         assert result
 
-    def test_all_dot_validation_now_upfront(self, aifpl):
-        """Test that all dot validation happens upfront, not during matching."""
+        result = aifpl.evaluate('(match (list 1 2 3) ((1 . tail) \"matched head\") (_ \"no match\"))')
+        assert result == "matched head"
+
+        result = aifpl.evaluate('(match (list 1 2 3) ((42 . tail) \"matched head\") (_ \"no match\"))')
+        assert result == "no match"
+
+        result = aifpl.evaluate('(match (list 1 \"hello\" \"world\") ((1 . (string? tail)) \"matched\") (_ \"no match\"))')
+        assert result == "no match"
+
+    def test_adot_pattern_failures(self, aifpl):
+        """Test dot pattern failures."""
 
         # All these should fail during pattern validation phase, not matching phase
 
