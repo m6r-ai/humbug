@@ -144,6 +144,7 @@ class AIFPLPatternMatcher:
     ) -> AIFPLEnvironment | None:
         """
         Try to match a pattern against a value.
+        Assumes pattern is syntactically valid (validation done upfront).
 
         Args:
             pattern: Pattern to match
@@ -181,6 +182,7 @@ class AIFPLPatternMatcher:
     ) -> AIFPLEnvironment | None:
         """
         Try to match a list pattern against a value.
+        Assumes pattern is syntactically valid (validation done upfront).
 
         Args:
             pattern: List pattern to match
@@ -190,20 +192,10 @@ class AIFPLPatternMatcher:
         Returns:
             new_env_with_bindings if match succeeds, None if no match
         """
-        # Type patterns - use helper method
+        # Type patterns
         type_predicate = self._is_type_pattern(pattern)
         if type_predicate is not None:
             var_pattern = pattern.get(1)
-
-            # Validate type pattern structure
-            if not self._is_valid_type_predicate(type_predicate):
-                raise AIFPLEvalError(
-                    message=f"Invalid type predicate: {type_predicate}",
-                    received=f"Type pattern: ({type_predicate} {self.format_result(var_pattern)})",
-                    expected="Valid type predicate like number?, string?, list?, etc.",
-                    example="(number? n) or (string? s)",
-                    suggestion="Use a valid type predicate ending with ?"
-                )
 
             # Check if value matches the type predicate
             if self._matches_type_predicate(value, type_predicate):
@@ -278,9 +270,10 @@ class AIFPLPatternMatcher:
     ) -> AIFPLEnvironment | None:
         """
         Match a head/tail pattern like (a b . rest) against a list value.
+        Assumes pattern is syntactically valid (validation done upfront).
 
         Args:
-            pattern: Pattern containing dot
+            pattern: Pattern containing dot (assumed valid)
             value: List value to match
             env: Current environment
             dot_position: Index of the dot in the pattern
@@ -288,36 +281,10 @@ class AIFPLPatternMatcher:
         Returns:
             new_env if match succeeds, None if no match
         """
-        # Validate dot pattern structure
-        if dot_position == 0:
-            raise AIFPLEvalError(
-                message="Invalid head/tail pattern: dot cannot be first element",
-                received=f"Pattern: {self.format_result(pattern)}",
-                expected="Pattern like (head . tail) or (a b . rest)",
-                example="(head . tail) or (first second . rest)",
-                suggestion="Put at least one element before the dot"
-            )
-
-        if dot_position == pattern.length() - 1:
-            raise AIFPLEvalError(
-                message="Invalid head/tail pattern: dot cannot be last element",
-                received=f"Pattern: {self.format_result(pattern)}",
-                expected="Pattern like (head . tail) or (a b . rest)",
-                example="(head . tail) or (first second . rest)",
-                suggestion="Put a tail pattern after the dot"
-            )
-
-        if dot_position != pattern.length() - 2:
-            raise AIFPLEvalError(
-                message="Invalid head/tail pattern: only one element allowed after dot",
-                received=f"Pattern: {self.format_result(pattern)}",
-                expected="Pattern like (head . tail) or (a b . rest)",
-                example="(head . tail) or (first second . rest)",
-                suggestion="Use only one tail variable after the dot"
-            )
-
-        # Check if we have enough elements in the value
+        # Pattern structure is assumed valid - no validation needed here
         num_head_elements = dot_position
+
+        # Check if we have enough elements in the value (semantic check)
         if value.length() < num_head_elements:
             return None
 
@@ -359,7 +326,8 @@ class AIFPLPatternMatcher:
 
     def _validate_pattern_syntax(self, pattern: AIFPLValue) -> None:
         """
-        Validate pattern syntax before matching begins.
+        Validate pattern syntax completely upfront before matching begins.
+        This is the single source of truth for pattern syntax validation.
 
         Args:
             pattern: Pattern to validate
@@ -403,7 +371,7 @@ class AIFPLPatternMatcher:
         if pattern.is_empty():
             return
 
-        # Check for type patterns: (type? var) - use helper method
+        # Check for type patterns: (type? var)
         type_predicate = self._is_type_pattern(pattern)
         if type_predicate is not None:
             var_pattern = pattern.get(1)
@@ -454,7 +422,7 @@ class AIFPLPatternMatcher:
                     suggestion="Use only one variable in type patterns"
                 )
 
-        # Check for cons patterns with dots
+        # Comprehensive dot pattern validation
         dot_positions = []
         for i in range(pattern.length()):
             element = pattern.get(i)
@@ -473,8 +441,9 @@ class AIFPLPatternMatcher:
 
         if len(dot_positions) == 1:
             dot_pos = dot_positions[0]
+
+            # Dot at beginning: (. a b)
             if dot_pos == 0:
-                # Dot at beginning: (. a b)
                 raise AIFPLEvalError(
                     message="Invalid cons pattern",
                     received=f"Pattern: {self.format_result(pattern)} - dot at beginning",
@@ -483,7 +452,27 @@ class AIFPLPatternMatcher:
                     suggestion="Put at least one element before the dot"
                 )
 
-        # Recursively validate all elements
+            # Dot at end: (a b .)
+            if dot_pos == pattern.length() - 1:
+                raise AIFPLEvalError(
+                    message="Invalid cons pattern",
+                    received=f"Pattern: {self.format_result(pattern)} - dot at end",
+                    expected="Pattern like (head . tail) or (a b . rest)",
+                    example="(head . tail) or (first second . rest)",
+                    suggestion="Put a tail pattern after the dot"
+                )
+
+            # Multiple elements after dot: (a . b c)
+            if dot_pos != pattern.length() - 2:
+                raise AIFPLEvalError(
+                    message="Invalid cons pattern",
+                    received=f"Pattern: {self.format_result(pattern)} - multiple elements after dot",
+                    expected="Pattern like (head . tail) or (a b . rest)",
+                    example="(head . tail) or (first second . rest)",
+                    suggestion="Use only one tail variable after the dot"
+                )
+
+        # Recursively validate all elements (except dots which are structural)
         for i in range(pattern.length()):
             element = pattern.get(i)
             # Skip dot symbols - they're structural, not patterns
@@ -493,7 +482,7 @@ class AIFPLPatternMatcher:
             self._validate_pattern_syntax(element)
 
     def _is_type_pattern(self, pattern: AIFPLValue) -> str | None:
-        """Check if pattern is a type pattern like (number? x), return (is_type_pattern, predicate_name)."""
+        """Check if pattern is a type pattern like (number? x), return predicate name or None."""
         if (isinstance(pattern, AIFPLList) and pattern.length() == 2):
             first_elem = pattern.get(0)
             if (isinstance(first_elem, AIFPLSymbol) and first_elem.name.endswith('?')):
