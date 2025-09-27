@@ -402,8 +402,9 @@ class AIFPLPatternMatcher:
         first_elem = pattern.get(0)
         if isinstance(first_elem, AIFPLSymbol) and self._is_valid_type_predicate(first_elem.name):
             type_predicate = first_elem.name
+
+            # Are we missing a variable?  e.g. (number?)
             if pattern.length() == 1:
-                # Missing variable: (number?)
                 raise AIFPLEvalError(
                     message="Invalid type pattern",
                     received=f"Type pattern: ({type_predicate}) - missing variable",
@@ -412,15 +413,14 @@ class AIFPLPatternMatcher:
                     suggestion="Add a variable name after the type predicate"
                 )
 
-            if pattern.length() > 2:
-                # Too many variables: (number? x y)
-                raise AIFPLEvalError(
-                    message="Invalid type pattern",
-                    received=f"Type pattern: {self.format_result(pattern)} - too many variables",
-                    expected="Type pattern with one variable: (type? var)",
-                    example="(number? x) not (number? x y)",
-                    suggestion="Use only one variable in type patterns"
-                )
+            # Do we have too many variables?  e.g. (number? x y)
+            raise AIFPLEvalError(
+                message="Invalid type pattern",
+                received=f"Type pattern: {self.format_result(pattern)} - too many variables",
+                expected="Type pattern with one variable: (type? var)",
+                example="(number? x) not (number? x y)",
+                suggestion="Use only one variable in type patterns"
+            )
 
         # Comprehensive dot pattern validation
         dot_positions = []
