@@ -636,3 +636,90 @@ class TestPatternMatching:
           (process-nested (list 10 "test" (list 5 "hi") 20)))
         '''
         helpers.assert_evaluates_to(aifpl, recursive_pattern, '41')  # 10 + 4 + (5 + 2) + 20
+
+    # ========== CORRECTED DOT PATTERN VALIDATION TESTS ==========
+
+    def test_dot_pattern_validation_comprehensive_fixed(self, aifpl):
+        """Comprehensive tests for dot pattern validation edge cases - updated for refactored code."""
+
+        # These tests target the validation logic that now happens entirely upfront
+        # in _validate_list_pattern_syntax (after refactoring)
+
+        # Test cases that should be caught by early validation
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2 3) ((. a b) "invalid"))')
+
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2 3) ((a . b . c) "invalid"))')
+
+        # Test cases that are now also caught by early validation (after refactoring)
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2) ((a .) "invalid"))')
+
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2 3) ((a . b c) "invalid"))')
+
+    def test_dot_pattern_error_specificity_fixed(self, aifpl):
+        """Test that dot pattern errors provide specific and helpful messages."""
+
+        # Test specific error message content for dot at end
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate('(match (list 1 2) ((head .) "test"))')
+
+        error = str(exc_info.value)
+        assert "Invalid pattern in clause 1" in error
+        assert "dot at end" in error
+
+        # Test specific error message content for multiple elements after dot
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate('(match (list 1 2 3) ((head . tail extra) "test"))')
+
+        error = str(exc_info.value)
+        assert "Invalid pattern in clause 1" in error
+        assert "multiple elements after dot" in error
+
+    def test_dot_pattern_validation_vs_matching_separation_fixed(self, aifpl):
+        """Test that validation errors are clearly separated from matching failures."""
+
+        # These should be validation errors (syntax problems)
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2) ((a .) "invalid"))')
+
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2 3) ((a . b c) "invalid"))')
+
+        # This should be a matching failure (semantic problem - not enough elements)
+        result = aifpl.evaluate_and_format('(match (list 1) ((a b . rest) "matched") (_ "no match"))')
+        assert result == '"no match"'
+
+        # This should be a no-patterns-matched error (semantic problem)
+        with pytest.raises(AIFPLEvalError, match="No patterns matched"):
+            aifpl.evaluate('(match (list 1) ((a b . rest) "matched"))')
+
+    def test_all_dot_validation_paths_covered_fixed(self, aifpl):
+        """Ensure all validation paths in dot pattern handling are tested."""
+
+        # All paths now go through early validation (after refactoring)
+
+        # Path 1: Early validation catches multiple dots
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2 3) ((a . b . c) "invalid"))')
+
+        # Path 2: Early validation catches dot at beginning
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2) ((. a) "invalid"))')
+
+        # Path 3: Early validation now catches dot at end (refactored!)
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1) ((a .) "invalid"))')
+
+        # Path 4: Early validation now catches multiple elements after dot (refactored!)
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern in clause 1"):
+            aifpl.evaluate('(match (list 1 2 3) ((a . b c) "invalid"))')
+
+        # Path 5: Valid dot patterns should work
+        result = aifpl.evaluate_and_format('(match (list 1 2 3) ((head . tail) head))')
+        assert result == '1'
+
+        result = aifpl.evaluate_and_format('(match (list 1 2 3 4) ((a b . rest) (length rest)))')
+        assert result == '2'
