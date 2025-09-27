@@ -259,10 +259,6 @@ class TestFormatting:
         lambda_expr = '(lambda (x) (* x 2))'
         result = aifpl.evaluate(lambda_expr)
 
-        # The result should be a function object
-        # We can't easily test the exact format, but we can test it's callable
-        assert callable(result)
-
         # When formatted for LISP output, should show as function representation
         formatted = aifpl.evaluate_and_format(lambda_expr)
         assert "lambda" in formatted.lower() or "<" in formatted

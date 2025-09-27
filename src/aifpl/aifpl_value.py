@@ -267,15 +267,6 @@ class AIFPLFunction(AIFPLValue):
         """Return a new function with the given name."""
         return replace(self, name=name)
 
-    def __call__(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Make AIFPLFunction callable for Python's callable() function.
-
-        This is just to satisfy the callable() check in tests.
-        Actual function calling is handled by the evaluator.
-        """
-        raise RuntimeError("AIFPLFunction objects should be called through the evaluator, not directly")
-
 
 class AIFPLBuiltinFunction(AIFPLValue):
     """
@@ -304,15 +295,6 @@ class AIFPLBuiltinFunction(AIFPLValue):
 
     def __hash__(self) -> int:
         return hash((type(self), self.name))
-
-    def __call__(self, *args: Any, **kwargs: Any) -> None:
-        """
-        Make AIFPLBuiltinFunction callable for Python's callable() function.
-
-        This is just to satisfy the callable() check in tests.
-        Actual function calling is handled by the evaluator.
-        """
-        raise RuntimeError("AIFPLBuiltinFunction objects should be called through the evaluator, not directly")
 
 
 class AIFPLRecursivePlaceholder(AIFPLValue):
