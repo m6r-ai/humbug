@@ -223,9 +223,10 @@ class AIFPLPatternMatcher:
             return None
 
         # Head/tail patterns: Support both (head . tail) and (a b c . rest)
-        dot_position = self._find_dot_position(pattern)
-        if dot_position is not None:
-            return self._match_head_tail_pattern(pattern, value, env, dot_position)
+        for dot_position in range(pattern.length()):
+            element = pattern.get(dot_position)
+            if self._is_symbol_with_name(element, "."):
+                return self._match_head_tail_pattern(pattern, value, env, dot_position)
 
         # Fixed-length list pattern: (p1 p2 p3 ...)
         if pattern.length() != value.length():
@@ -267,23 +268,6 @@ class AIFPLPatternMatcher:
 
         checker = type_checks.get(type_pred)
         return checker(value) if checker else False
-
-    def _find_dot_position(self, pattern: AIFPLList) -> int | None:
-        """
-        Find the position of the dot symbol in a pattern.
-
-        Args:
-            pattern: Pattern list to search
-
-        Returns:
-            Index of the dot symbol, or None if not found
-        """
-        for i in range(pattern.length()):
-            element = pattern.get(i)
-            if self._is_symbol_with_name(element, "."):
-                return i
-
-        return None
 
     def _match_head_tail_pattern(
         self,
