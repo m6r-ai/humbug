@@ -1,7 +1,7 @@
 """AIFPL Value hierarchy - immutable value types for the language."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any, List, Tuple, Union, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
@@ -67,11 +67,6 @@ class AIFPLValue(ABC):
 class AIFPLNumber(AIFPLValue):
     """Represents numeric values: integers, floats, complex numbers."""
     value: Union[int, float, complex]
-
-    def __post_init__(self) -> None:
-        """Validate that booleans are not treated as numbers."""
-        if isinstance(self.value, bool):
-            raise ValueError("Booleans are not numbers in AIFPL")
 
     def to_python(self) -> Union[int, float, complex]:
         return self.value
