@@ -381,22 +381,22 @@ class AIFPLEvaluator:
 
         bindings = []
         for i, binding in enumerate(binding_expr.elements):
-            if not isinstance(binding, AIFPLList) or binding.length() != 2:
-                if isinstance(binding, AIFPLList):
-                    raise AIFPLEvalError(
-                        message=f"Let binding {i+1} has wrong number of elements",
-                        received=f"Binding {i+1}: {self.format_result(binding)} (has {binding.length()} elements)",
-                        expected="Each binding needs exactly 2 elements: (variable value)",
-                        example="Correct: (x 5)\nIncorrect: (x) or (x 5 6)",
-                        suggestion="Each binding: (variable-name value-expression)"
-                    )
-
+            if not isinstance(binding, AIFPLList):
                 raise AIFPLEvalError(
                     message=f"Let binding {i+1} must be a list",
                     received=f"Binding {i+1}: {self.format_result(binding)} ({binding.type_name()})",
                     expected="List with variable and value: (var val)",
                     example="Correct: (x 5)\nIncorrect: x or \"x\"",
                     suggestion="Wrap each binding in parentheses: (variable value)"
+                )
+
+            if binding.length() != 2:
+                raise AIFPLEvalError(
+                    message=f"Let binding {i+1} has wrong number of elements",
+                    received=f"Binding {i+1}: {self.format_result(binding)} (has {binding.length()} elements)",
+                    expected="Each binding needs exactly 2 elements: (variable value)",
+                    example="Correct: (x 5)\nIncorrect: (x) or (x 5 6)",
+                    suggestion="Each binding: (variable-name value-expression)"
                 )
 
             var_name_expr = binding.get(0)
