@@ -296,6 +296,7 @@ class AIFPLEvaluator:
         if isinstance(param_expr, AIFPLList):
             # (param1 param2 ...) or ()
             raw_parameters = list(param_expr.elements)
+
         else:
             # Single parameter without parentheses (not standard but handle gracefully)
             if not isinstance(param_expr, AIFPLSymbol):
@@ -306,6 +307,7 @@ class AIFPLEvaluator:
                     example="(lambda (x y z) (+ x y z))",
                     suggestion="Parameters should be unquoted variable names"
                 )
+
             raw_parameters = [param_expr]
 
         # Validate parameters are all symbols and convert them
@@ -319,6 +321,7 @@ class AIFPLEvaluator:
                     example="Correct: (lambda (x y) (+ x y))\nIncorrect: (lambda (\"x\" 1) ...)",
                     suggestion="Use unquoted names: x, not \"x\" or 1"
                 )
+
             parameters.append(param.name)
 
         # Check for duplicate parameters
