@@ -247,3 +247,24 @@ class AIFPLRecursivePlaceholder(AIFPLValue):
 
     def type_name(self) -> str:
         return f"recursive-placeholder({self._name})"
+
+
+@dataclass(frozen=True)
+class AIFPLTailCall(AIFPLValue):
+    """
+    Represents a tail call to be optimized.
+
+    This is a special internal value type that represents a deferred function call
+    for tail call optimization. It should never be visible to user code and is
+    only used internally by the evaluator.
+    """
+    function: AIFPLValue
+    arguments: List[AIFPLValue]
+    environment: Any  # AIFPLEnvironment, avoiding circular import
+
+    def to_python(self) -> Any:
+        """Tail calls should never be converted to Python values."""
+        raise AIFPLEvalError("Internal error: AIFPLTailCall should never be converted to Python value")
+
+    def type_name(self) -> str:
+        return "tail-call"

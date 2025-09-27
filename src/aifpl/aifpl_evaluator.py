@@ -1,7 +1,6 @@
 """Evaluator for AIFPL Abstract Syntax Trees with detailed error messages."""
 
 import math
-from dataclasses import dataclass
 from typing import List
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
@@ -12,17 +11,9 @@ from aifpl.aifpl_math import AIFPLMathFunctions
 from aifpl.aifpl_pattern_matcher import AIFPLPatternMatcher
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
-    AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction
+    AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction, AIFPLTailCall
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
-
-
-@dataclass(frozen=True)
-class AIFPLTailCall:
-    """Represents a tail call to be optimized."""
-    function: AIFPLValue
-    arguments: List[AIFPLValue]
-    environment: AIFPLEnvironment
 
 
 class AIFPLEvaluator:
@@ -633,7 +624,7 @@ class AIFPLEvaluator:
         arg_values: List[AIFPLValue],
         env: AIFPLEnvironment,
         depth: int
-    ) -> AIFPLValue | AIFPLTailCall:
+    ) -> AIFPLValue:
         """
         Unified function calling mechanism for both user-defined and built-in functions.
 
@@ -665,7 +656,7 @@ class AIFPLEvaluator:
         arg_values: List[AIFPLValue],
         _env: AIFPLEnvironment,
         depth: int
-    ) -> AIFPLValue | AIFPLTailCall:
+    ) -> AIFPLValue:
         """
         Common logic for calling a lambda function with evaluated argument values and enhanced error messages.
 
@@ -785,7 +776,7 @@ class AIFPLEvaluator:
         expr: AIFPLValue,
         env: AIFPLEnvironment,
         depth: int,
-    ) -> AIFPLValue | AIFPLTailCall:
+    ) -> AIFPLValue:
         """
         Evaluate an expression with tail call detection.
 
@@ -902,7 +893,7 @@ class AIFPLEvaluator:
         if_list: AIFPLList,
         env: AIFPLEnvironment,
         depth: int,
-    ) -> AIFPLValue | AIFPLTailCall:
+    ) -> AIFPLValue:
         """
         Evaluate (if condition then else) form.
 
