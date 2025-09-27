@@ -62,10 +62,6 @@ class AIFPLValue(ABC):
         # Both are real numbers
         return self_val == other_val
 
-    def __hash__(self) -> int:
-        """Hash based on value."""
-        return hash((type(self), self.to_python()))
-
 
 @dataclass(frozen=True)
 class AIFPLNumber(AIFPLValue):
@@ -148,10 +144,6 @@ class AIFPLSymbol(AIFPLValue):
             return False
 
         return self.name == other.name
-
-    def __hash__(self) -> int:
-        """Hash based on name only, not position."""
-        return hash((type(self), self.name))
 
     def __str__(self) -> str:
         return self.name
@@ -293,9 +285,6 @@ class AIFPLBuiltinFunction(AIFPLValue):
     def __eq__(self, other: Any) -> bool:
         return isinstance(other, AIFPLBuiltinFunction) and self.name == other.name
 
-    def __hash__(self) -> int:
-        return hash((type(self), self.name))
-
 
 class AIFPLRecursivePlaceholder(AIFPLValue):
     """Placeholder for recursive bindings that resolves to actual value when accessed."""
@@ -326,6 +315,3 @@ class AIFPLRecursivePlaceholder(AIFPLValue):
             return self._name == other._name
 
         return self.get_resolved_value() == other
-
-    def __hash__(self) -> int:
-        return hash((type(self), self._name))
