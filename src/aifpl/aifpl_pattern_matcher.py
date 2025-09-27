@@ -101,10 +101,8 @@ class AIFPLPatternMatcher:
             match_result = self._try_match_pattern(pattern, value_to_match, env)
 
             if match_result is not None:  # Pattern matched
-                match_success, match_env = match_result
-                if match_success:
-                    # Evaluate result in the match environment
-                    return evaluate_expression_func(result_expr, match_env, depth + 1)
+                # Evaluate result in the match environment
+                return evaluate_expression_func(result_expr, match_result, depth + 1)
 
         # No patterns matched
         raise AIFPLEvalError(
@@ -144,7 +142,7 @@ class AIFPLPatternMatcher:
         pattern: AIFPLValue,
         value: AIFPLValue,
         env: AIFPLEnvironment
-    ) -> tuple[bool, AIFPLEnvironment] | None:
+    ) -> AIFPLEnvironment | None:
         """
         Try to match a pattern against a value.
 
@@ -154,21 +152,21 @@ class AIFPLPatternMatcher:
             env: Current environment
 
         Returns:
-            (True, new_env_with_bindings) if match succeeds, None if no match
+            new_env_with_bindings if match succeeds, None if no match
         """
         if isinstance(pattern, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
             if pattern.to_python() == value.to_python():
-                return (True, env)
+                return env
 
             return None
 
         if isinstance(pattern, AIFPLSymbol):
             if pattern.name == "_":  # Wildcard - always matches, no binding
-                return (True, env)
+                return env
 
             # Variable binding - bind the symbol to the value
             new_env = env.define(pattern.name, value)
-            return (True, new_env)
+            return new_env
 
         if isinstance(pattern, AIFPLList):
             return self._try_match_list_pattern(pattern, value, env)
@@ -181,7 +179,7 @@ class AIFPLPatternMatcher:
         pattern: AIFPLList,
         value: AIFPLValue,
         env: AIFPLEnvironment
-    ) -> tuple[bool, AIFPLEnvironment] | None:
+    ) -> AIFPLEnvironment | None:
         """
         Try to match a list pattern against a value.
 
@@ -191,7 +189,7 @@ class AIFPLPatternMatcher:
             env: Current environment
 
         Returns:
-            (True, new_env_with_bindings) if match succeeds, None if no match
+            new_env_with_bindings if match succeeds, None if no match
         """
         # Type patterns - use helper method
         is_type_pattern, type_predicate = self._is_type_pattern(pattern)
@@ -222,7 +220,7 @@ class AIFPLPatternMatcher:
         # Empty list pattern
         if pattern.is_empty():
             if value.is_empty():
-                return (True, env)
+                return env
 
             return None
 
@@ -244,13 +242,9 @@ class AIFPLPatternMatcher:
             if element_result is None:
                 return None
 
-            element_success, element_env = element_result
-            if not element_success:
-                return None
+            current_env = element_result
 
-            current_env = element_env
-
-        return (True, current_env)
+        return current_env
 
     def _matches_type_predicate(self, value: AIFPLValue, type_pred: str) -> bool:
         """
@@ -301,7 +295,7 @@ class AIFPLPatternMatcher:
         value: AIFPLList,
         env: AIFPLEnvironment,
         dot_position: int
-    ) -> tuple[bool, AIFPLEnvironment] | None:
+    ) -> AIFPLEnvironment | None:
         """
         Match a head/tail pattern like (a b . rest) against a list value.
 
@@ -312,7 +306,7 @@ class AIFPLPatternMatcher:
             dot_position: Index of the dot in the pattern
 
         Returns:
-            (True, new_env) if match succeeds, None if no match
+            new_env if match succeeds, None if no match
         """
         # Validate dot pattern structure
         if dot_position == 0:
@@ -350,17 +344,11 @@ class AIFPLPatternMatcher:
         # Match head elements
         current_env = env
         for i in range(num_head_elements):
-            head_result = self._try_match_pattern(
-                pattern.get(i), value.get(i), current_env
-            )
+            head_result = self._try_match_pattern(pattern.get(i), value.get(i), current_env)
             if head_result is None:
                 return None
 
-            head_success, head_env = head_result
-            if not head_success:
-                return None
-
-            current_env = head_env
+            current_env = head_result
 
         # Match tail (remaining elements as a list)
         tail_pattern = pattern.get(dot_position + 1)
