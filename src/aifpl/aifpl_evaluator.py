@@ -199,7 +199,7 @@ class AIFPLEvaluator:
                     return self._evaluate_quote_form(expr, env, depth + 1)
 
                 if self._is_symbol_with_name(first_elem, 'if'):
-                    return self._evaluate_if_form(expr, env, depth + 1)
+                    return self._evaluate_if_form(expr, env, depth + 1, False)
 
                 if self._is_symbol_with_name(first_elem, "lambda"):
                     return self._evaluate_lambda_form(expr, env, depth + 1)
@@ -811,7 +811,7 @@ class AIFPLEvaluator:
                 return self._evaluate_quote_form(expr, env, depth + 1)
 
             if self._is_symbol_with_name(first_elem, 'if'):
-                return self._evaluate_if_form_with_tail_detection(expr, env, depth + 1)
+                return self._evaluate_if_form(expr, env, depth + 1, True)
 
             if self._is_symbol_with_name(first_elem, 'lambda'):
                 return self._evaluate_lambda_form(expr, env, depth + 1)
@@ -846,6 +846,7 @@ class AIFPLEvaluator:
         if_list: AIFPLList,
         env: AIFPLEnvironment,
         depth: int,
+        in_tail_position: bool = False
     ) -> AIFPLValue:
         """
         Evaluate (if condition then else) form.
@@ -883,53 +884,12 @@ class AIFPLEvaluator:
             )
 
         # Evaluate chosen branch (in tail position)
-        if condition.value:
-            return self._evaluate_expression(then_expr, env, depth + 1)
+        if not in_tail_position:
+            if condition.value:
+                return self._evaluate_expression(then_expr, env, depth + 1)
 
-        return self._evaluate_expression(else_expr, env, depth + 1)
+            return self._evaluate_expression(else_expr, env, depth + 1)
 
-    def _evaluate_if_form_with_tail_detection(
-        self,
-        if_list: AIFPLList,
-        env: AIFPLEnvironment,
-        depth: int,
-    ) -> AIFPLValue:
-        """
-        Evaluate (if condition then else) form.
-
-        Args:
-            if_list: List representing if expression
-            env: Current environment
-            depth: Current recursion depth
-        Returns:
-            Result of evaluating the if expression
-        """
-        if if_list.length() != 4:
-            raise AIFPLEvalError(
-                message="If expression has wrong number of arguments",
-                received=f"Got {if_list.length() - 1} arguments: {self.format_result(if_list)}",
-                expected="Exactly 3 arguments: (if condition then else)",
-                example="(if (> x 0) \"positive\" \"negative\")",
-                suggestion="If needs condition, then-branch, and else-branch"
-            )
-
-        condition_expr = if_list.get(1)
-        then_expr = if_list.get(2)
-        else_expr = if_list.get(3)
-
-        # Evaluate condition (not in tail position)
-        condition = self._evaluate_expression(condition_expr, env, depth + 1)
-
-        if not isinstance(condition, AIFPLBoolean):
-            raise AIFPLEvalError(
-                message="If condition must be boolean",
-                received=f"Condition: {self.format_result(condition)} ({condition.type_name()})",
-                expected="Boolean value (#t or #f)",
-                example="(if (> x 0) \"positive\" \"negative\")",
-                suggestion="Use comparison operators like =, <, >, or boolean functions like and, or"
-            )
-
-        # Evaluate chosen branch (in tail position)
         if condition.value:
             return self._evaluate_expression_with_tail_detection(then_expr, env, depth + 1)
 
