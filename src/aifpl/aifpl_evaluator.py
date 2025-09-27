@@ -765,13 +765,13 @@ class AIFPLEvaluator:
             True if this is a recursive call (simple or mutual)
         """
         # Simple recursion: calling the same function
-        if call_chain and func_value == call_chain[-1]:
+        if call_chain and func_value.name == call_chain[-1].name:
             return True
 
         # Mutual recursion: calling any function in the current call chain
         # Use object identity comparison since AIFPLFunction objects are unique
         for chain_func in call_chain:
-            if func_value is chain_func:
+            if func_value.name == chain_func.name:
                 return True
 
         return False

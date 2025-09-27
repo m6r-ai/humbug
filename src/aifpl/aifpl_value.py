@@ -22,46 +22,6 @@ class AIFPLValue(ABC):
     def type_name(self) -> str:
         """Return AIFPL type name for error messages."""
 
-    def __eq__(self, other: Any) -> bool:
-        """
-        Implement AIFPL equality rules.
-
-        - Same types: use value equality
-        - Numeric types: allow int/float/complex equivalence
-        - Different non-numeric types: always False
-        """
-        if not isinstance(other, AIFPLValue):
-            return False
-
-        # Same type - compare values
-        if type(self) == type(other):
-            return self.to_python() == other.to_python()
-
-        # Both numeric - allow cross-type equality
-        if isinstance(self, AIFPLNumber) and isinstance(other, AIFPLNumber):
-            return self._numeric_equal(other)
-
-        # Different non-numeric types are never equal
-        return False
-
-    def _numeric_equal(self, other: 'AIFPLNumber') -> bool:
-        """Check numeric equality allowing type promotion."""
-        self_val = self.to_python()
-        other_val = other.to_python()
-
-        # Handle complex numbers specially
-        if isinstance(self_val, complex) or isinstance(other_val, complex):
-            complex_self = complex(self_val) if not isinstance(self_val, complex) else self_val
-            complex_other = complex(other_val) if not isinstance(other_val, complex) else other_val
-
-            # Use small tolerance for floating point comparison
-            real_equal = abs(complex_self.real - complex_other.real) < 1e-15
-            imag_equal = abs(complex_self.imag - complex_other.imag) < 1e-10
-            return real_equal and imag_equal
-
-        # Both are real numbers
-        return self_val == other_val
-
 
 @dataclass(frozen=True)
 class AIFPLNumber(AIFPLValue):
@@ -129,16 +89,6 @@ class AIFPLSymbol(AIFPLValue):
 
     def type_name(self) -> str:
         return "symbol"
-
-    def __eq__(self, other: Any) -> bool:
-        """
-        Symbols are equal if they have the same name, regardless of position.
-        Position is only used for error reporting, not semantic equality.
-        """
-        if not isinstance(other, AIFPLSymbol):
-            return False
-
-        return self.name == other.name
 
     def __str__(self) -> str:
         return self.name
@@ -273,9 +223,6 @@ class AIFPLBuiltinFunction(AIFPLValue):
     def type_name(self) -> str:
         return "builtin-function"
 
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, AIFPLBuiltinFunction) and self.name == other.name
-
 
 class AIFPLRecursivePlaceholder(AIFPLValue):
     """Placeholder for recursive bindings that resolves to actual value when accessed."""
@@ -300,9 +247,3 @@ class AIFPLRecursivePlaceholder(AIFPLValue):
 
     def type_name(self) -> str:
         return f"recursive-placeholder({self._name})"
-
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, AIFPLRecursivePlaceholder):
-            return self._name == other._name
-
-        return self.get_resolved_value() == other
