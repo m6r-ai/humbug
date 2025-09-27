@@ -18,11 +18,6 @@ class AIFPLValue(ABC):
     def to_python(self) -> Any:
         """Convert to Python value for operations."""
 
-    @classmethod
-    @abstractmethod
-    def from_python(cls, value: Any) -> 'AIFPLValue':
-        """Create AIFPL value from Python value."""
-
     @abstractmethod
     def type_name(self) -> str:
         """Return AIFPL type name for error messages."""
@@ -85,13 +80,6 @@ class AIFPLNumber(AIFPLValue):
     def to_python(self) -> Union[int, float, complex]:
         return self.value
 
-    @classmethod
-    def from_python(cls, value: Union[int, float, complex]) -> 'AIFPLNumber':
-        if isinstance(value, bool):
-            raise ValueError("Cannot create AIFPLNumber from boolean")
-
-        return cls(value)
-
     def type_name(self) -> str:
         if isinstance(self.value, int):
             return "integer"
@@ -122,13 +110,6 @@ class AIFPLString(AIFPLValue):
     def to_python(self) -> str:
         return self.value
 
-    @classmethod
-    def from_python(cls, value: str) -> 'AIFPLString':
-        if not isinstance(value, str):
-            raise ValueError(f"Cannot create AIFPLString from {type(value).__name__}")
-
-        return cls(value)
-
     def type_name(self) -> str:
         return "string"
 
@@ -140,13 +121,6 @@ class AIFPLBoolean(AIFPLValue):
 
     def to_python(self) -> bool:
         return self.value
-
-    @classmethod
-    def from_python(cls, value: bool) -> 'AIFPLBoolean':
-        if not isinstance(value, bool):
-            raise ValueError(f"Cannot create AIFPLBoolean from {type(value).__name__}")
-
-        return cls(value)
 
     def type_name(self) -> str:
         return "boolean"
@@ -161,13 +135,6 @@ class AIFPLSymbol(AIFPLValue):
     def to_python(self) -> str:
         """Symbols convert to their name string."""
         return self.name
-
-    @classmethod
-    def from_python(cls, value: str, position: int = 0) -> 'AIFPLSymbol':
-        if not isinstance(value, str):
-            raise ValueError(f"Cannot create AIFPLSymbol from {type(value).__name__}")
-
-        return cls(value, position)
 
     def type_name(self) -> str:
         return "symbol"
@@ -201,18 +168,6 @@ class AIFPLList(AIFPLValue):
     def to_python(self) -> List[Any]:
         """Convert to Python list with Python values."""
         return [elem.to_python() for elem in self.elements]
-
-    @classmethod
-    def from_python(cls, value: List[Any]) -> 'AIFPLList':
-        """Create AIFPLList from Python list, converting elements."""
-        if not isinstance(value, list):
-            raise ValueError(f"Cannot create AIFPLList from {type(value).__name__}")
-
-        elements = []
-        for item in value:
-            elements.append(python_to_aifpl_value(item))
-
-        return cls(tuple(elements))
 
     def type_name(self) -> str:
         return "list"
@@ -305,11 +260,6 @@ class AIFPLFunction(AIFPLValue):
         """Functions return themselves as Python values."""
         return self
 
-    @classmethod
-    def from_python(cls, value: Any) -> 'AIFPLFunction':
-        """Cannot create AIFPLFunction from Python values directly."""
-        raise ValueError("Cannot create AIFPLFunction from Python value")
-
     def type_name(self) -> str:
         return "function"
 
@@ -345,10 +295,6 @@ class AIFPLBuiltinFunction(AIFPLValue):
 
     def to_python(self) -> str:
         return self.name
-
-    @classmethod
-    def from_python(cls, value: str) -> 'AIFPLBuiltinFunction':
-        raise ValueError("Cannot create AIFPLBuiltinFunction from Python value directly")
 
     def type_name(self) -> str:
         return "builtin-function"
@@ -390,10 +336,6 @@ class AIFPLRecursivePlaceholder(AIFPLValue):
     def to_python(self) -> Any:
         return self.get_resolved_value().to_python()
 
-    @classmethod
-    def from_python(cls, value: Any) -> 'AIFPLRecursivePlaceholder':
-        raise ValueError("Cannot create AIFPLRecursivePlaceholder from Python value")
-
     def type_name(self) -> str:
         return f"recursive-placeholder({self._name})"
 
@@ -405,28 +347,3 @@ class AIFPLRecursivePlaceholder(AIFPLValue):
 
     def __hash__(self) -> int:
         return hash((type(self), self._name))
-
-
-def python_to_aifpl_value(value: Any) -> AIFPLValue:
-    """Convert a Python value to the appropriate AIFPLValue type."""
-    if isinstance(value, bool):
-        return AIFPLBoolean(value)
-
-    if isinstance(value, (int, float, complex)) and not isinstance(value, bool):
-        return AIFPLNumber(value)
-
-    if isinstance(value, str):
-        return AIFPLString(value)
-
-    if isinstance(value, list):
-        return AIFPLList.from_python(value)
-
-    if isinstance(value, AIFPLValue):
-        return value  # Already an AIFPL value
-
-    raise ValueError(f"Cannot convert Python value of type {type(value).__name__} to AIFPLValue")
-
-
-def aifpl_value_to_python(value: AIFPLValue) -> Any:
-    """Convert an AIFPLValue to its Python equivalent."""
-    return value.to_python()
