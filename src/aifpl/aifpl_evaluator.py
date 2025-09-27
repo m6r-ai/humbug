@@ -2,7 +2,7 @@
 
 import math
 from dataclasses import dataclass
-from typing import List, Union
+from typing import List
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
@@ -629,11 +629,11 @@ class AIFPLEvaluator:
 
     def _call_function(
         self,
-        func: Union[AIFPLFunction, AIFPLBuiltinFunction],
+        func: AIFPLFunction | AIFPLBuiltinFunction,
         arg_values: List[AIFPLValue],
         env: AIFPLEnvironment,
         depth: int
-    ) -> Union[AIFPLValue, AIFPLTailCall]:
+    ) -> AIFPLValue | AIFPLTailCall:
         """
         Unified function calling mechanism for both user-defined and built-in functions.
 
@@ -665,7 +665,7 @@ class AIFPLEvaluator:
         arg_values: List[AIFPLValue],
         _env: AIFPLEnvironment,
         depth: int
-    ) -> Union[AIFPLValue, AIFPLTailCall]:
+    ) -> AIFPLValue | AIFPLTailCall:
         """
         Common logic for calling a lambda function with evaluated argument values and enhanced error messages.
 
@@ -785,7 +785,7 @@ class AIFPLEvaluator:
         expr: AIFPLValue,
         env: AIFPLEnvironment,
         depth: int,
-    ) -> Union[AIFPLValue, AIFPLTailCall]:
+    ) -> AIFPLValue | AIFPLTailCall:
         """
         Evaluate an expression with tail call detection.
 
