@@ -210,10 +210,7 @@ class AIFPLEvaluator:
                 if self._is_symbol_with_name(first_elem, "match"):
                     return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
 
-                # Regular function call (including built-ins and user functions)
-                return self._evaluate_function_call(expr, env, depth + 1)
-
-            # First element is not a symbol - evaluate as function call anyway
+            # Evaluate as function call
             return self._evaluate_function_call(expr, env, depth + 1)
 
         raise AIFPLEvalError(
@@ -796,49 +793,77 @@ class AIFPLEvaluator:
                 suggestion="Reduce nesting depth or increase max_depth limit"
             )
 
+        # AIFPLValue evaluation - handle all value types that should self-evaluate
+        if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLFunction, AIFPLBuiltinFunction)):
+            # Self-evaluating values
+            return expr
+
+        # Symbol lookup
+        if isinstance(expr, AIFPLSymbol):
+            try:
+                return env.lookup(expr.name)
+
+            except AIFPLEvalError as e:
+                # Add more context to symbol lookup errors
+                stack_trace = self.call_stack.format_stack_trace()
+                available_vars = env.get_available_bindings()
+
+                raise AIFPLEvalError(
+                    message=f"Undefined variable: '{expr.name}'",
+                    context=f"Available variables: {', '.join(sorted(available_vars)[:10])}"
+                        "{'...' if len(available_vars) > 10 else ''}",
+                    suggestion=f"Check spelling or define '{expr.name}' in a let binding",
+                    example=f"(let (({expr.name} some-value)) ...)"
+                ) from e
+
         # If this isn't a list, evaluate normally
-        if not isinstance(expr, AIFPLList):
-            return self._evaluate_expression(expr, env, depth + 1)
+        if isinstance(expr, AIFPLList):
+            # Empty list evaluates to itself
+            if expr.is_empty():
+                return expr
 
-        # If this list is empty, evaluate normally
-        if expr.is_empty():
-            return self._evaluate_expression(expr, env, depth + 1)
+            first_elem = expr.first()
+            if isinstance(first_elem, AIFPLSymbol):
+                    # Handle special forms BEFORE attempting any symbol lookup
+                if self._is_symbol_with_name(first_elem, 'quote'):
+                    return self._evaluate_quote_form(expr, env, depth + 1)
 
-        first_elem = expr.first()
-        if isinstance(first_elem, AIFPLSymbol):
-                # Handle special forms BEFORE attempting any symbol lookup
-            if self._is_symbol_with_name(first_elem, 'quote'):
-                return self._evaluate_quote_form(expr, env, depth + 1)
+                if self._is_symbol_with_name(first_elem, 'if'):
+                    return self._evaluate_if_form(expr, env, depth + 1, True)
 
-            if self._is_symbol_with_name(first_elem, 'if'):
-                return self._evaluate_if_form(expr, env, depth + 1, True)
+                if self._is_symbol_with_name(first_elem, 'lambda'):
+                    return self._evaluate_lambda_form(expr, env, depth + 1)
 
-            if self._is_symbol_with_name(first_elem, 'lambda'):
-                return self._evaluate_lambda_form(expr, env, depth + 1)
+                if self._is_symbol_with_name(first_elem, 'let'):
+                    return self._evaluate_let_form(expr, env, depth + 1)
 
-            if self._is_symbol_with_name(first_elem, 'let'):
-                return self._evaluate_let_form(expr, env, depth + 1)
+                if self._is_symbol_with_name(first_elem, "match"):
+                    return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
 
-            if self._is_symbol_with_name(first_elem, "match"):
-                return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
+            # Check for tail calls
+            func_value = self._evaluate_expression(first_elem, env, depth + 1)
 
-        # Check for tail calls
-        func_value = self._evaluate_expression(first_elem, env, depth + 1)
+            # If it's not a lambda function, evaluate normally
+            if not isinstance(func_value, AIFPLFunction):
+                return self._evaluate_function_call(expr, env, depth + 1)
 
-        # If it's not a lambda function, evaluate normally
-        if not isinstance(func_value, AIFPLFunction):
-            return self._evaluate_function_call(expr, env, depth + 1)
+            # Check for recursion (simple or mutual)
+            if not self._is_recursive_call(func_value, self.call_chain):
+                return self._evaluate_function_call(expr, env, depth + 1)
 
-        # Check for recursion (simple or mutual)
-        if not self._is_recursive_call(func_value, self.call_chain):
-            return self._evaluate_function_call(expr, env, depth + 1)
+            # This is a recursive call (simple or mutual)!
+            arg_exprs = list(expr.elements[1:])
+            return AIFPLTailCall(
+                function=first_elem,
+                arguments=arg_exprs,
+                environment=env
+            )
 
-        # This is a recursive call (simple or mutual)!
-        arg_exprs = list(expr.elements[1:])
-        return AIFPLTailCall(
-            function=first_elem,
-            arguments=arg_exprs,
-            environment=env
+        raise AIFPLEvalError(
+            message=f"Invalid expression type: {type(expr).__name__}",
+            received=f"Expression: {self.format_result(expr)}",
+            expected="Number, string, boolean, symbol, list, or function",
+            suggestion="Check that your expression is properly formatted"
         )
 
     def _evaluate_if_form(

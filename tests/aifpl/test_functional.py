@@ -429,7 +429,7 @@ class TestFunctional:
         deep_recursion = '''
         (let ((count-down (lambda (n)
                            (if (<= n 0) "done" (count-down (- n 1))))))
-          (count-down 500))
+          (count-down 5000))
         '''
         result = aifpl.evaluate_and_format(deep_recursion)
         assert result == '"done"'
