@@ -2,7 +2,7 @@
 
 import pytest
 
-from aifpl import AIFPL, AIFPLEvalError, AIFPLParseError
+from aifpl import AIFPLEvalError
 
 
 class TestFunctional:
@@ -606,3 +606,146 @@ class TestFunctional:
               (my-func 5))))
         '''
         helpers.assert_evaluates_to(aifpl, nested_complex, '115')  # 100 + 10 + 5
+
+    def test_nested_lambdas_recursion_bug(self, aifpl, helpers):
+        """
+        Test cases that expose the _is_recursive_call bug.
+        
+        These tests fail with the original implementation due to false positive
+        recursion detection when nested lambdas have the same name ("<lambda>").
+        They should pass once the bug is fixed.
+        """
+
+        # Simple case: map with nested lambda
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(map (lambda (x) ((lambda (y) (* y 2)) x)) (list 1 2 3))',
+            '(2 4 6)'
+        )
+
+        # Filter with nested lambda
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(filter (lambda (x) ((lambda (y) (> y 0)) x)) (list -1 2 -3 4))',
+            '(2 4)'
+        )
+
+        # More complex case: conditional nested lambdas in map
+        helpers.assert_evaluates_to(
+            aifpl,
+            '''(let ((process-list (lambda (lst)
+                                    (map (lambda (x) 
+                                           (if (> x 0)
+                                               ((lambda (y) (* y y)) x)
+                                               ((lambda (z) (- z)) x)))
+                                         lst))))
+                 (process-list (list -2 3 -1 4)))''',
+            '(2 9 1 16)'
+        )
+
+        # Fold with nested lambda
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(fold (lambda (acc x) ((lambda (y) (+ acc y)) (* x 2))) 0 (list 1 2 3))',
+            '12'  # (0 + 2) + 4 + 6 = 12
+        )
+
+        # any? with nested lambda
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(any? (lambda (x) ((lambda (y) (> y 5)) x)) (list 1 3 7))',
+            '#t'
+        )
+
+        # all? with nested lambda
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(all? (lambda (x) ((lambda (y) (> y 0)) x)) (list 1 3 7))',
+            '#t'
+        )
+
+        # find with nested lambda
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(find (lambda (x) ((lambda (y) (= y 3)) x)) (list 1 3 7))',
+            '3'
+        )
+
+        # Complex nested structure with multiple levels
+        helpers.assert_evaluates_to(
+            aifpl,
+            '''(map (lambda (x) 
+                       (let ((helper (lambda (z) (* z 2))))
+                         ((lambda (w) (+ (helper w) 1)) x)))
+                   (list 1 2 3))''',
+            '(3 5 7)'  # For each x: helper(x) + 1 = (x*2) + 1
+        )
+
+        # Test that ensures actual recursive functions still work correctly
+        # (this should work both before and after the fix)
+        helpers.assert_evaluates_to(
+            aifpl,
+            '''(let ((factorial (lambda (n)
+                                (if (<= n 1) 
+                                    1 
+                                    (* n (factorial (- n 1)))))))
+                 (factorial 4))''',
+            '24'
+        )
+
+    def test_nested_lambdas_edge_cases(self, aifpl, helpers):
+        """
+        Additional edge cases for nested lambda recursion detection.
+
+        These test more subtle scenarios that could expose the bug.
+        """
+
+        # Three levels of nesting
+        helpers.assert_evaluates_to(
+            aifpl,
+            '''(map (lambda (x) 
+                       ((lambda (y) 
+                          ((lambda (z) (+ z 1)) (* y 2))) x))
+                   (list 1 2 3))''',
+            '(3 5 7)'
+        )
+
+        # Mix of named and anonymous functions
+        helpers.assert_evaluates_to(
+            aifpl,
+            '''(let ((named-func (lambda (x) (* x 3))))
+                 (map (lambda (x) 
+                        ((lambda (y) (+ y 1)) (named-func x)))
+                      (list 1 2 3)))''',
+            '(4 7 10)'  # For each x: (x*3) + 1
+        )
+
+        # Nested lambdas in different higher-order function contexts
+        helpers.assert_evaluates_to(
+            aifpl,
+            '''(let ((data (list 1 2 3 4 5)))
+                 (fold + 0 
+                       (filter (lambda (x) ((lambda (y) (> y 2)) x))
+                               (map (lambda (x) ((lambda (y) (* y 2)) x)) 
+                                    data))))''',
+            '28'  # map: (2 4 6 8 10), filter: (4 6 8 10), fold: 4+6+8+10 = 28
+        )
+
+    @pytest.mark.parametrize("expression,expected", [
+        # These are the core failing cases that expose the bug
+        ('(map (lambda (x) ((lambda (y) (* y 2)) x)) (list 1 2 3))', '(2 4 6)'),
+        ('(filter (lambda (x) ((lambda (y) (> y 0)) x)) (list -1 2 -3 4))', '(2 4)'),
+        ('(any? (lambda (x) ((lambda (y) (> y 5)) x)) (list 1 3 7))', '#t'),
+        ('(all? (lambda (x) ((lambda (y) (> y 0)) x)) (list 1 3 7))', '#t'),
+        ('(find (lambda (x) ((lambda (y) (= y 3)) x)) (list 1 3 7))', '3'),
+        ('(fold (lambda (acc x) ((lambda (y) (+ acc y)) (* x 2))) 0 (list 1 2 3))', '12'),
+    ])
+    def test_nested_lambda_bug_cases(self, aifpl, expression, expected):
+        """
+        Parameterized test for the core cases that expose the nested lambda bug.
+        
+        These expressions currently fail with "Unexpected tail call in higher-order 
+        function context" due to the _is_recursive_call bug, but should work correctly
+        once the bug is fixed.
+        """
+        assert aifpl.evaluate_and_format(expression) == expected

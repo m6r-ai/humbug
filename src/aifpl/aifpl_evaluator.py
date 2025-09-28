@@ -745,29 +745,6 @@ class AIFPLEvaluator:
                 suggestion="This is an internal error - please report this issue"
             ) from e
 
-    def _is_recursive_call(self, func_value: AIFPLFunction, call_chain: List[AIFPLFunction]) -> bool:
-        """
-        Check if a function call is recursive (simple or mutual).
-
-        Args:
-            func_value: The function being called
-            call_chain: List of functions currently being executed
-
-        Returns:
-            True if this is a recursive call (simple or mutual)
-        """
-        # Simple recursion: calling the same function
-        if call_chain and func_value.name == call_chain[-1].name:
-            return True
-
-        # Mutual recursion: calling any function in the current call chain
-        # Use object identity comparison since AIFPLFunction objects are unique
-        for chain_func in call_chain:
-            if func_value.name == chain_func.name:
-                return True
-
-        return False
-
     def _evaluate_expression_with_tail_detection(
         self,
         expr: AIFPLValue,
@@ -848,7 +825,7 @@ class AIFPLEvaluator:
                 return self._evaluate_function_call(expr, env, depth + 1)
 
             # Check for recursion (simple or mutual)
-            if not self._is_recursive_call(func_value, self.call_chain):
+            if func_value not in self.call_chain:
                 return self._evaluate_function_call(expr, env, depth + 1)
 
             # This is a recursive call (simple or mutual)!
