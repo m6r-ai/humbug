@@ -1754,6 +1754,9 @@ class ColumnManager(QWidget):
             active_column_index: Index of the column to make active
             active_tab_ids: List of active tab IDs for each column
         """
+        # Show all columns with appropriate sizes
+        self.show_all_columns()
+
         # Set the active column
         if 0 <= active_column_index < len(self._tab_columns):
             self._active_column = self._tab_columns[active_column_index]
@@ -1797,9 +1800,6 @@ class ColumnManager(QWidget):
                 tab = self._tabs[active_tab_id]
                 column.setCurrentWidget(tab)
                 active_tab_ids.append(active_tab_id)
-
-        # Show all columns with appropriate sizes
-        self.show_all_columns()
 
         # Defer setting the active column to ensure it's not overridden by other UI operations
         QTimer.singleShot(0, lambda: self._deferred_set_active_column(active_column_index, active_tab_ids))
