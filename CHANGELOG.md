@@ -13,6 +13,7 @@ New features:
 - Removed Claude Sonnet 3.5 support as that is now deprecated by Anthropic.
 - Removed the calculator tool.  The LLMs now have AIFPL so there's no need to carry two tools that can do calculations.
 - Added Claude Sonnet 4.5 support.
+- Added GLM 4.6 support.
 
 Bug fixes:
 

@@ -466,6 +466,15 @@ class AIConversationSettings:
         ),
 
         # Z.ai models
+        "glm-4.6": AIModel(
+            name="glm-4.6",
+            provider="zai",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "glm-4.5": AIModel(
             name="glm-4.5",
             provider="zai",
