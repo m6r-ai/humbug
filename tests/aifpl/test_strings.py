@@ -137,6 +137,82 @@ class TestStrings:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(substring "hello" -1 3)')  # Negative start
 
+    def test_substring_negative_end_index(self, aifpl):
+        """Test substring with negative end index."""
+        with pytest.raises(AIFPLEvalError, match="substring end index cannot be negative"):
+            aifpl.evaluate('(substring "hello" 1 -1)')
+
+        with pytest.raises(AIFPLEvalError, match="substring end index cannot be negative"):
+            aifpl.evaluate('(substring "test" 0 -5)')
+
+        with pytest.raises(AIFPLEvalError, match="substring end index cannot be negative"):
+            aifpl.evaluate('(substring "" 0 -1)')  # Empty string with negative end
+
+    def test_substring_start_index_out_of_range(self, aifpl):
+        """Test substring with start index beyond string length."""
+        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
+            aifpl.evaluate('(substring "hello" 10 15)')  # start_idx > string_len
+
+        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
+            aifpl.evaluate('(substring "hi" 5 6)')  # start_idx > string_len
+
+        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
+            aifpl.evaluate('(substring "" 1 2)')  # start_idx > empty string length
+
+        # Test with Unicode strings
+        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
+            aifpl.evaluate('(substring "世界" 5 6)')  # start beyond Unicode string
+
+    def test_substring_start_greater_than_end(self, aifpl):
+        """Test substring with start index greater than end index."""
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(substring "hello" 3 1)')  # start > end
+
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(substring "test" 4 2)')  # start > end
+
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(substring "world" 5 0)')  # start > end
+
+        # Test with Unicode strings
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(substring "café" 3 1)')  # start > end with Unicode
+
+    def test_substring_edge_cases_comprehensive(self, aifpl):
+        """Test comprehensive edge cases for substring validation."""
+        # Valid boundary cases (should work)
+        assert aifpl.evaluate_and_format('(substring "hello" 5 5)') == '""'  # start == end == length
+        assert aifpl.evaluate_and_format('(substring "hello" 0 0)') == '""'  # start == end == 0
+        assert aifpl.evaluate_and_format('(substring "hello" 2 2)') == '""'  # start == end in middle
+
+        # Test validation order precedence
+        with pytest.raises(AIFPLEvalError, match="substring start index cannot be negative"):
+            aifpl.evaluate('(substring "test" -1 10)')  # start negative, end out of range
+
+        with pytest.raises(AIFPLEvalError, match="substring end index cannot be negative"):
+            aifpl.evaluate('(substring "test" 0 -1)')  # start valid, end negative
+
+        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
+            aifpl.evaluate('(substring "test" 10 15)')  # both out of range, start checked first
+
+    def test_substring_with_different_string_lengths(self, aifpl):
+        """Test error conditions with various string lengths."""
+        # Empty string
+        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
+            aifpl.evaluate('(substring "" 1 1)')
+
+        # Single character
+        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
+            aifpl.evaluate('(substring "a" 2 3)')
+
+        # Long string
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(substring "abcdefghijklmnop" 10 5)')
+
+        # Multiple violations - should catch first one encountered
+        with pytest.raises(AIFPLEvalError, match="substring start index cannot be negative"):
+            aifpl.evaluate('(substring "hello" -1 -2)')  # Both negative, start checked first
+
     @pytest.mark.parametrize("expression,expected", [
         # String case conversion
         ('(string-upcase "hello")', '"HELLO"'),
