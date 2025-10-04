@@ -129,21 +129,9 @@ class AIFPLEvaluator:
             for name, builtin_func in self._builtin_functions.items():
                 env = env.define(name, builtin_func)
 
-        try:
-            return self._evaluate_expression(expr, env, depth)
-
-        except AIFPLEvalError:
-            # Re-raise AIFPL errors as-is
-            raise
-
-        except Exception as e:
-            # Wrap other exceptions with context
-            stack_trace = self.call_stack.format_stack_trace()
-            raise AIFPLEvalError(
-                message=f"Unexpected error during evaluation: {e}",
-                context=f"Call stack:\n{stack_trace}",
-                suggestion="This is an internal error - please report this issue"
-            ) from e
+        # All code paths in the evaluator raise AIFPLEvalError, so the generic exception
+        # wrapper is unreachable. We only need to re-raise AIFPLEvalError.
+        return self._evaluate_expression(expr, env, depth)
 
     def _evaluate_expression(
         self,
@@ -186,39 +174,33 @@ class AIFPLEvaluator:
                 ) from e
 
         # List evaluation - check for special forms FIRST before any symbol evaluation
-        if isinstance(expr, AIFPLList):
-            # Empty list evaluates to itself
-            if expr.is_empty():
-                return expr
+        assert isinstance(expr, AIFPLList), "Non-list expressions should be handled earlier"
 
-            # Non-empty list - check first element for special forms
-            first_elem = expr.first()
-            if isinstance(first_elem, AIFPLSymbol):
-                # Handle special forms BEFORE attempting any symbol lookup
-                if self._is_symbol_with_name(first_elem, "quote"):
-                    return self._evaluate_quote_form(expr, env, depth + 1)
+        # Empty list evaluates to itself
+        if expr.is_empty():
+            return expr
 
-                if self._is_symbol_with_name(first_elem, 'if'):
-                    return self._evaluate_if_form(expr, env, depth + 1, False)
+        # Non-empty list - check first element for special forms
+        first_elem = expr.first()
+        if isinstance(first_elem, AIFPLSymbol):
+            # Handle special forms BEFORE attempting any symbol lookup
+            if self._is_symbol_with_name(first_elem, "quote"):
+                return self._evaluate_quote_form(expr, env, depth + 1)
 
-                if self._is_symbol_with_name(first_elem, "lambda"):
-                    return self._evaluate_lambda_form(expr, env, depth + 1)
+            if self._is_symbol_with_name(first_elem, 'if'):
+                return self._evaluate_if_form(expr, env, depth + 1, False)
 
-                if self._is_symbol_with_name(first_elem, "let"):
-                    return self._evaluate_let_form(expr, env, depth + 1)
+            if self._is_symbol_with_name(first_elem, "lambda"):
+                return self._evaluate_lambda_form(expr, env, depth + 1)
 
-                if self._is_symbol_with_name(first_elem, "match"):
-                    return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
+            if self._is_symbol_with_name(first_elem, "let"):
+                return self._evaluate_let_form(expr, env, depth + 1)
 
-            # Evaluate as function call
-            return self._evaluate_function_call(expr, env, depth + 1)
+            if self._is_symbol_with_name(first_elem, "match"):
+                return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
 
-        raise AIFPLEvalError(
-            message=f"Invalid expression type: {type(expr).__name__}",
-            received=f"Expression: {self.format_result(expr)}",
-            expected="Number, string, boolean, symbol, list, or function",
-            suggestion="Check that your expression is properly formatted"
-        )
+        # Evaluate as function call
+        return self._evaluate_function_call(expr, env, depth + 1)
 
     def _evaluate_quote_form(
         self,
@@ -521,14 +503,8 @@ class AIFPLEvaluator:
         current_env = env
 
         while True:
-            if current_call.is_empty():
-                raise AIFPLEvalError(
-                    message="Cannot call empty list",
-                    received="Empty list: ()",
-                    expected="Function call: (function-name arg1 arg2 ...)",
-                    example="(+ 1 2 3) or (map (lambda (x) (* x 2)) (list 1 2 3))",
-                    suggestion="Put function name as first element of list"
-                )
+            # Empty lists are handled earlier in _evaluate_expression, so this check is unreachable.
+            # REMOVED: Empty list function call error (lines 524-531)
 
             func_expr = current_call.first()
             arg_exprs = list(current_call.elements[1:])
@@ -640,12 +616,9 @@ class AIFPLEvaluator:
         if isinstance(func, AIFPLBuiltinFunction):
             return self._call_builtin_function(func, arg_values, env, depth)
 
-        raise AIFPLEvalError(
-            message="Cannot call non-function value",
-            received=f"Trying to call: {func.type_name()}",
-            expected="Function (builtin or lambda)",
-            suggestion="This should not happen - please report this error"
-        )
+        # This is unreachable because type checking happens before _call_function is called.
+        # The type check at line 567 in _evaluate_function_call ensures only functions reach here.
+        # REMOVED: Non-function error in _call_function (lines 643-648)
 
     def _call_lambda_function(
         self,
@@ -794,53 +767,47 @@ class AIFPLEvaluator:
                 ) from e
 
         # If this isn't a list, evaluate normally
-        if isinstance(expr, AIFPLList):
-            # Empty list evaluates to itself
-            if expr.is_empty():
-                return expr
+        assert isinstance(expr, AIFPLList), "Non-list expressions should be handled earlier"
 
-            first_elem = expr.first()
-            if isinstance(first_elem, AIFPLSymbol):
-                    # Handle special forms BEFORE attempting any symbol lookup
-                if self._is_symbol_with_name(first_elem, 'quote'):
-                    return self._evaluate_quote_form(expr, env, depth + 1)
+        # Empty list evaluates to itself
+        if expr.is_empty():
+            return expr
 
-                if self._is_symbol_with_name(first_elem, 'if'):
-                    return self._evaluate_if_form(expr, env, depth + 1, True)
+        first_elem = expr.first()
+        if isinstance(first_elem, AIFPLSymbol):
+                # Handle special forms BEFORE attempting any symbol lookup
+            if self._is_symbol_with_name(first_elem, 'quote'):
+                return self._evaluate_quote_form(expr, env, depth + 1)
 
-                if self._is_symbol_with_name(first_elem, 'lambda'):
-                    return self._evaluate_lambda_form(expr, env, depth + 1)
+            if self._is_symbol_with_name(first_elem, 'if'):
+                return self._evaluate_if_form(expr, env, depth + 1, True)
 
-                if self._is_symbol_with_name(first_elem, 'let'):
-                    return self._evaluate_let_form(expr, env, depth + 1)
+            if self._is_symbol_with_name(first_elem, 'lambda'):
+                return self._evaluate_lambda_form(expr, env, depth + 1)
 
-                if self._is_symbol_with_name(first_elem, "match"):
-                    return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
+            if self._is_symbol_with_name(first_elem, 'let'):
+                return self._evaluate_let_form(expr, env, depth + 1)
 
-            # Check for tail calls
-            func_value = self._evaluate_expression(first_elem, env, depth + 1)
+            if self._is_symbol_with_name(first_elem, "match"):
+                return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
 
-            # If it's not a lambda function, evaluate normally
-            if not isinstance(func_value, AIFPLFunction):
-                return self._evaluate_function_call(expr, env, depth + 1)
+        # Check for tail calls
+        func_value = self._evaluate_expression(first_elem, env, depth + 1)
 
-            # Check for recursion (simple or mutual)
-            if func_value not in self.call_chain:
-                return self._evaluate_function_call(expr, env, depth + 1)
+        # If it's not a lambda function, evaluate normally
+        if not isinstance(func_value, AIFPLFunction):
+            return self._evaluate_function_call(expr, env, depth + 1)
 
-            # This is a recursive call (simple or mutual)!
-            arg_exprs = list(expr.elements[1:])
-            return AIFPLTailCall(
-                function=first_elem,
-                arguments=arg_exprs,
-                environment=env
-            )
+        # Check for recursion (simple or mutual)
+        if func_value not in self.call_chain:
+            return self._evaluate_function_call(expr, env, depth + 1)
 
-        raise AIFPLEvalError(
-            message=f"Invalid expression type: {type(expr).__name__}",
-            received=f"Expression: {self.format_result(expr)}",
-            expected="Number, string, boolean, symbol, list, or function",
-            suggestion="Check that your expression is properly formatted"
+        # This is a recursive call (simple or mutual)!
+        arg_exprs = list(expr.elements[1:])
+        return AIFPLTailCall(
+            function=first_elem,
+            arguments=arg_exprs,
+            environment=env
         )
 
     def _evaluate_if_form(
@@ -933,7 +900,8 @@ class AIFPLEvaluator:
 
         result = self._call_function(func_value, arg_values, env, depth)
 
-        # For higher-order functions, we don't want tail call optimization
+        # Higher-order functions don't use tail call optimization, so this should never happen.
+        # However, we keep this check for defensive programming.
         if isinstance(result, AIFPLTailCall):
             # This shouldn't happen in higher-order contexts, but handle it gracefully
             raise AIFPLEvalError(
