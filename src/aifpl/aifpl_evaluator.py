@@ -503,9 +503,6 @@ class AIFPLEvaluator:
         current_env = env
 
         while True:
-            # Empty lists are handled earlier in _evaluate_expression, so this check is unreachable.
-            # REMOVED: Empty list function call error (lines 524-531)
-
             func_expr = current_call.first()
             arg_exprs = list(current_call.elements[1:])
 
@@ -575,7 +572,11 @@ class AIFPLEvaluator:
                     suggestion="Check each argument for syntax errors"
                 ) from e
 
-            result = self._call_function(func_value, arg_values, current_env, depth)
+            if isinstance(func_value, AIFPLFunction):
+                result = self._call_lambda_function(func_value, arg_values, env, depth)
+
+            else:  # AIFPLBuiltinFunction
+                result = self._call_builtin_function(func_value, arg_values, env, depth)
 
             # Check if result is a tail call
             if isinstance(result, AIFPLTailCall):
@@ -590,35 +591,6 @@ class AIFPLEvaluator:
     def _is_special_form(self, function_name: str) -> bool:
         """Check if a function name is a special form that needs unevaluated arguments."""
         return function_name in ['and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']
-
-    def _call_function(
-        self,
-        func: AIFPLFunction | AIFPLBuiltinFunction,
-        arg_values: List[AIFPLValue],
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """
-        Unified function calling mechanism for both user-defined and built-in functions.
-
-        Args:
-            func: Function to call (either AIFPLFunction or AIFPLBuiltinFunction)
-            arg_values: Already-evaluated argument values
-            env: Current environment
-            depth: Current recursion depth
-
-        Returns:
-            Function result or AIFPLTailCall for optimization
-        """
-        if isinstance(func, AIFPLFunction):
-            return self._call_lambda_function(func, arg_values, env, depth)
-
-        if isinstance(func, AIFPLBuiltinFunction):
-            return self._call_builtin_function(func, arg_values, env, depth)
-
-        # This is unreachable because type checking happens before _call_function is called.
-        # The type check at line 567 in _evaluate_function_call ensures only functions reach here.
-        # REMOVED: Non-function error in _call_function (lines 643-648)
 
     def _call_lambda_function(
         self,
@@ -887,30 +859,23 @@ class AIFPLEvaluator:
         """
         # Evaluate the function expression
         func_value = self._evaluate_expression(func_expr, env, depth)
+        if isinstance(func_value, AIFPLFunction):
+            result = self._call_lambda_function(func_value, arg_values, env, depth)
+            assert not isinstance(result, AIFPLTailCall), "Tail calls should not propagate out of higher-order function calls"
+            return result
 
-        # We can only call functions!
-        if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
-            raise AIFPLEvalError(
-                message="Cannot call non-function value in higher-order context",
-                received=f"Trying to call: {self.format_result(func_value)} ({func_value.type_name()})",
-                expected="Function (builtin or lambda)",
-                example="(map (lambda (x) (* x 2)) (list 1 2 3))",
-                suggestion="Provide a function as the first argument to higher-order functions"
-            )
+        if isinstance(func_value, AIFPLBuiltinFunction):
+            result = self._call_builtin_function(func_value, arg_values, env, depth)
+            assert not isinstance(result, AIFPLTailCall), "Tail calls should not propagate out of higher-order function calls"
+            return result
 
-        result = self._call_function(func_value, arg_values, env, depth)
-
-        # Higher-order functions don't use tail call optimization, so this should never happen.
-        # However, we keep this check for defensive programming.
-        if isinstance(result, AIFPLTailCall):
-            # This shouldn't happen in higher-order contexts, but handle it gracefully
-            raise AIFPLEvalError(
-                message="Unexpected tail call in higher-order function context",
-                context="This is an internal error",
-                suggestion="Please report this issue"
-            )
-
-        return result
+        raise AIFPLEvalError(
+            message="Cannot call non-function value in higher-order context",
+            received=f"Trying to call: {self.format_result(func_value)} ({func_value.type_name()})",
+            expected="Function (builtin or lambda)",
+            example="(map (lambda (x) (* x 2)) (list 1 2 3))",
+            suggestion="Provide a function as the first argument to higher-order functions"
+        )
 
     def _builtin_and_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
         """Handle AND with short-circuit evaluation."""
