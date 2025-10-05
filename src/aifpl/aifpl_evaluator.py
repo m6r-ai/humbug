@@ -632,12 +632,9 @@ class AIFPLEvaluator:
             return self._evaluate_expression_with_tail_detection(func.body, func_env, depth)
 
         finally:
-            # Always pop the call frame and remove from call chain
+            # Remove function from call chain and pop call stack
+            self.call_chain.pop()
             self.call_stack.pop()
-
-            # Remove function from call chain
-            if self.call_chain and self.call_chain[-1] is func:
-                self.call_chain.pop()
 
     def _call_builtin_function(
         self,
