@@ -89,19 +89,12 @@ class AIFPLEvaluator:
         """Check if value is a symbol with the given name."""
         return isinstance(value, AIFPLSymbol) and value.name == name
 
-    def evaluate(
-        self,
-        expr: AIFPLValue,
-        env: AIFPLEnvironment | None = None,
-        depth: int = 0
-    ) -> AIFPLValue:
+    def evaluate(self, expr: AIFPLValue) -> AIFPLValue:
         """
         Recursively evaluate AST.
 
         Args:
             expr: Expression to evaluate
-            env: Environment for variable lookups
-            depth: Current recursion depth
 
         Returns:
             Evaluation result as AIFPLValue
@@ -109,29 +102,19 @@ class AIFPLEvaluator:
         Raises:
             AIFPLEvalError: If evaluation fails
         """
-        if depth > self.max_depth:
-            stack_trace = self.call_stack.format_stack_trace()
-            raise AIFPLEvalError(
-                message=f"Expression too deeply nested (max depth: {self.max_depth})",
-                context=f"Call stack:\n{stack_trace}",
-                suggestion="Reduce nesting depth or increase max_depth limit",
-                example="Instead of deep nesting, use let bindings: (let ((x (+ 1 2))) (+ x 3))"
-            )
+        env = AIFPLEnvironment(name="global")
 
-        # Create global environment if none provided
-        if env is None:
-            env = AIFPLEnvironment(name="global")
-            # Add constants to global environment
-            for name, value in self.CONSTANTS.items():
-                env = env.define(name, value)
+        # Add constants to global environment
+        for name, value in self.CONSTANTS.items():
+            env = env.define(name, value)
 
-            # Add built-in functions to global environment
-            for name, builtin_func in self._builtin_functions.items():
-                env = env.define(name, builtin_func)
+        # Add built-in functions to global environment
+        for name, builtin_func in self._builtin_functions.items():
+            env = env.define(name, builtin_func)
 
         # All code paths in the evaluator raise AIFPLEvalError, so the generic exception
         # wrapper is unreachable. We only need to re-raise AIFPLEvalError.
-        return self._evaluate_expression(expr, env, depth)
+        return self._evaluate_expression(expr, env, 0)
 
     def _evaluate_expression(
         self,
