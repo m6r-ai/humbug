@@ -290,12 +290,6 @@ class AIFPLTokenizer:
             if next_char.isdigit() or (next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit()):
                 return True
 
-        # Hex, binary, octal prefixes
-        if char == '0' and pos + 1 < len(expression):
-            next_char = expression[pos + 1].lower()
-            if next_char in 'xbo':
-                return True
-
         return False
 
     def _is_delimiter(self, char: str) -> bool:
