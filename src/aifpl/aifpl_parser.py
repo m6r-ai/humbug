@@ -33,7 +33,7 @@ class AIFPLParser:
         Raises:
             AIFPLParseError: If parsing fails with detailed context
         """
-        if self.current_token is None or self.current_token.type == AIFPLTokenType.EOF:
+        if self.current_token is None:
             raise AIFPLParseError(
                 message="Empty expression",
                 expected="Valid AIFPL expression",
@@ -44,7 +44,7 @@ class AIFPLParser:
 
         expr = self._parse_expression()
 
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.EOF:
+        if self.current_token is not None:
             current_value = self.current_token.value if self.current_token else "EOF"
             current_pos = self.current_token.position if self.current_token else len(self.expression)
 
@@ -62,37 +62,36 @@ class AIFPLParser:
 
     def _parse_expression(self) -> AIFPLValue:
         """Parse a single expression with detailed error reporting."""
-        if self.current_token is None:
-            raise AIFPLParseError(
-                message="Unexpected end of input",
-                expected="Valid expression (atom or list)",
-                example="42, \"hello\", (+ 1 2), or 'symbol",
-                suggestion="Provide a complete expression",
-                context="Expression ended unexpectedly"
-            )
-
+        assert self.current_token is not None, "Current token must not be None here"
         start_pos = self.current_token.position
+        token = self.current_token
 
-        if self.current_token.type == AIFPLTokenType.LPAREN:
+        if token.type == AIFPLTokenType.LPAREN:
             return self._parse_list(start_pos)
 
-        if self.current_token.type == AIFPLTokenType.QUOTE:
+        if token.type == AIFPLTokenType.QUOTE:
             return self._parse_quoted_expression()
 
-        if self.current_token.type in (AIFPLTokenType.NUMBER, AIFPLTokenType.SYMBOL,
-                                       AIFPLTokenType.STRING, AIFPLTokenType.BOOLEAN):
-            return self._parse_atom()
+        if token.type == AIFPLTokenType.SYMBOL:
+            self._advance()
+            return AIFPLSymbol(token.value, token.position)
+
+        if token.type == AIFPLTokenType.NUMBER:
+            self._advance()
+            return AIFPLNumber(token.value)
+
+        if token.type == AIFPLTokenType.STRING:
+            self._advance()
+            return AIFPLString(token.value)
+
+        if token.type == AIFPLTokenType.BOOLEAN:
+            self._advance()
+            return AIFPLBoolean(token.value)
 
         # Enhanced error for unexpected tokens
-        token_value = self.current_token.value
-        token_type = self.current_token.type.name
-
-        suggestions = {
-            AIFPLTokenType.RPAREN: "Missing opening parenthesis '(' or extra closing parenthesis",
-            AIFPLTokenType.EOF: "Expression ended unexpectedly"
-        }
-
-        suggestion = suggestions.get(self.current_token.type, f"'{token_value}' is not a valid start of expression")
+        assert token.type == AIFPLTokenType.RPAREN, f"Unexpected token type ({token.type}) encountered"
+        token_value = token.value
+        token_type = token.type.name
 
         raise AIFPLParseError(
             message=f"Unexpected token: {token_value}",
@@ -100,7 +99,7 @@ class AIFPLParser:
             received=f"Token: {token_value} (type: {token_type})",
             expected="Number, string, boolean, symbol, '(', or '",
             example="Valid starts: 42, \"hello\", #t, symbol, (, '",
-            suggestion=suggestion,
+            suggestion="List expressions must start with '(' and quoted expressions with '",
             context=f"Token '{token_value}' cannot start an expression"
         )
 
@@ -110,17 +109,6 @@ class AIFPLParser:
 
         elements = []
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            if self.current_token.type == AIFPLTokenType.EOF:
-                raise AIFPLParseError(
-                    message="Unclosed parenthesis",
-                    position=start_pos,
-                    received="Reached end of expression",
-                    expected="Closing parenthesis ')'",
-                    example="Correct: (+ 1 2)\\nIncorrect: (+ 1 2",
-                    suggestion="Add missing ')' at the end",
-                    context=f"Opening '(' at position {start_pos} was never closed"
-                )
-
             elements.append(self._parse_expression())
 
         if self.current_token is None:
@@ -151,7 +139,7 @@ class AIFPLParser:
         self._advance()  # consume quote
 
         # Check if we have something to quote
-        if self.current_token is None or self.current_token.type == AIFPLTokenType.EOF:
+        if self.current_token is None:
             raise AIFPLParseError(
                 message="Incomplete quote expression",
                 position=quote_pos,
@@ -168,32 +156,6 @@ class AIFPLParser:
         # Transform 'expr into (quote expr)
         quote_symbol = AIFPLSymbol("quote", quote_pos)
         return AIFPLList((quote_symbol, quoted_expr))
-
-    def _parse_atom(self) -> AIFPLValue:
-        """Parse an atomic value and convert to appropriate AIFPLValue."""
-        assert self.current_token is not None, "_parse_atom called with None token"
-
-        token = self.current_token
-        self._advance()
-
-        # Convert tokens to appropriate AIFPLValue types
-        if token.type == AIFPLTokenType.SYMBOL:
-            return AIFPLSymbol(token.value, token.position)
-
-        if token.type == AIFPLTokenType.NUMBER:
-            return AIFPLNumber(token.value)
-
-        if token.type == AIFPLTokenType.STRING:
-            return AIFPLString(token.value)
-
-        if token.type == AIFPLTokenType.BOOLEAN:
-            return AIFPLBoolean(token.value)
-
-        raise AIFPLParseError(
-            message=f"Unexpected token type: {token.type}",
-            context="This is an internal parser error",
-            suggestion="Please report this issue"
-        )
 
     def _advance(self) -> None:
         """Move to the next token."""

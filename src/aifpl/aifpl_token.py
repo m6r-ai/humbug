@@ -14,7 +14,6 @@ class AIFPLTokenType(Enum):
     NUMBER = "NUMBER"
     STRING = "STRING"
     BOOLEAN = "BOOLEAN"
-    EOF = "EOF"
 
 
 @dataclass

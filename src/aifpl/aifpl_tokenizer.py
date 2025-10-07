@@ -156,31 +156,10 @@ class AIFPLTokenizer:
 
             # Symbols (variables, parameters, functions, constants)
             if self._is_symbol_start(expression[i]):
-                try:
-                    symbol, length = self._read_symbol(expression, i)
-                    tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, i, length))
-                    i += length
-                    continue
-
-                except AIFPLTokenError as e:
-                    if "looks like malformed number" in str(e):
-                        symbol_text = ""
-                        j = i
-                        while j < len(expression) and not expression[j].isspace() and expression[j] not in "()":
-                            symbol_text += expression[j]
-                            j += 1
-
-                        raise AIFPLTokenError(
-                            message=f"Invalid symbol: {symbol_text}",
-                            position=i,
-                            received=f"Symbol: {symbol_text}",
-                            expected="Valid symbol name or number",
-                            example="Valid symbols: +, my-var, func?\\nValid numbers: 42, -3.14",
-                            suggestion="If this should be a number, check the format. If a symbol, don't start with digits.",
-                            context="Symbols cannot look like malformed numbers"
-                        ) from e
-
-                    raise  # Re-raise if not handled
+                symbol, length = self._read_symbol(expression, i)
+                tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, i, length))
+                i += length
+                continue
 
             # Invalid character
             char = expression[i]
@@ -218,7 +197,6 @@ class AIFPLTokenizer:
                 context=context
             )
 
-        tokens.append(AIFPLToken(AIFPLTokenType.EOF, None, len(expression)))
         return tokens
 
     def _read_string(self, expression: str, start: int) -> tuple[str, int]:
@@ -494,9 +472,6 @@ class AIFPLTokenizer:
 
             else:
                 break
-
-        if i == start:
-            raise AIFPLTokenError(f"Invalid symbol at position {start}")
 
         symbol = expression[start:i]
 

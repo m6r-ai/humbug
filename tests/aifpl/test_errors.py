@@ -93,10 +93,10 @@ class TestErrors:
 
     def test_unmatched_parentheses_parse_error(self, aifpl):
         """Test that unmatched parentheses cause parse errors."""
-        with pytest.raises(AIFPLParseError, match="Unclosed parenthesis"):
+        with pytest.raises(AIFPLParseError, match="Unterminated list"):
             aifpl.evaluate("(+ 1 2")
 
-        with pytest.raises(AIFPLParseError, match="Unclosed parenthesis"):
+        with pytest.raises(AIFPLParseError, match="Unterminated list"):
             aifpl.evaluate("(* (+ 1 2) 3")
 
         with pytest.raises(AIFPLParseError, match="Unexpected token after complete expression"):
