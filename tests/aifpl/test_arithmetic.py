@@ -3,9 +3,8 @@
 import pytest
 import math
 import cmath
-from typing import Union
 
-from aifpl import AIFPL, AIFPLEvalError
+from aifpl import AIFPLEvalError
 
 
 class TestArithmetic:
@@ -552,3 +551,84 @@ class TestArithmetic:
         """Test that subtraction requires at least 1 argument."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(-)")
+
+    # ========== Additional Coverage Tests ==========
+
+    def test_division_argument_position_specific_errors(self, aifpl):
+        """Test division by zero with specific argument positions."""
+        # Test division by zero at different argument positions
+        with pytest.raises(AIFPLEvalError, match="Division by zero at argument 2"):
+            aifpl.evaluate("(/ 10 0)")
+
+        with pytest.raises(AIFPLEvalError, match="Division by zero at argument 3"):
+            aifpl.evaluate("(/ 10 2 0)")
+
+        with pytest.raises(AIFPLEvalError, match="Division by zero at argument 4"):
+            aifpl.evaluate("(/ 24 2 3 0)")
+
+    def test_complex_trigonometric_edge_cases(self, aifpl):
+        """Test trigonometric functions with pure imaginary numbers."""
+        # Test tan with complex numbers to hit the complex branch
+        result = aifpl.evaluate("(tan j)")
+        expected = cmath.tan(1j)
+        assert abs(result - expected) < 1e-10
+
+    def test_logarithm_negative_numbers_return_complex(self, aifpl):
+        """Test that logarithms of negative numbers return complex results."""
+        # Test log with negative real numbers
+        result = aifpl.evaluate("(log -2)")
+        expected = cmath.log(-2)
+        assert abs(result - expected) < 1e-10
+
+        # Test log10 with negative real numbers
+        result = aifpl.evaluate("(log10 -10)")
+        expected = cmath.log10(-10)
+        assert abs(result - expected) < 1e-10
+
+    def test_sqrt_negative_and_complex_numbers(self, aifpl):
+        """Test sqrt with negative and complex numbers."""
+        # Test sqrt with negative numbers (returns complex)
+        result = aifpl.evaluate("(sqrt -9)")
+        expected = cmath.sqrt(-9)
+        assert abs(result - expected) < 1e-10
+
+        # Test sqrt with complex numbers
+        result = aifpl.evaluate("(sqrt (complex 0 4))")
+        expected = cmath.sqrt(4j)
+        assert abs(result - expected) < 1e-10
+
+    def test_exponential_with_complex_numbers(self, aifpl):
+        """Test exponential function with complex arguments."""
+        # Test exp with complex numbers
+        result = aifpl.evaluate("(exp (complex 1 2))")
+        expected = cmath.exp(1+2j)
+        assert abs(result - expected) < 1e-10
+
+        # Test exp with pure imaginary
+        result = aifpl.evaluate("(exp j)")
+        expected = cmath.exp(1j)
+        assert abs(result - expected) < 1e-10
+
+    def test_rounding_with_near_zero_complex_parts(self, aifpl):
+        """Test rounding functions with complex numbers having tiny imaginary parts."""
+        # This should test the tolerance checking in rounding functions
+        # Create a complex number with a very small but non-zero imaginary part
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(round (+ 3.5 (* j 1e-5)))")
+
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(floor (+ 2.7 (* j 1e-8)))")
+
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(ceil (+ 4.1 (* j 1e-6)))")
+
+    def test_real_imag_with_integer_results(self, aifpl):
+        """Test real/imag functions that return integers."""
+        # Test cases where real/imag parts are whole numbers
+        result = aifpl.evaluate("(real (complex 5.0 3.0))")
+        assert result == 5
+        assert isinstance(result, int)
+
+        result = aifpl.evaluate("(imag (complex 2.0 7.0))")
+        assert result == 7
+        assert isinstance(result, int)
