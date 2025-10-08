@@ -2,6 +2,10 @@
 
 ## v0.27 (2025-10-xx)
 
+Internal structure changes:
+
+- Added more test coverage for AIFPL, and removed more redundant code paths.
+
 ## v0.26 (2025-10-07)
 
 New features:

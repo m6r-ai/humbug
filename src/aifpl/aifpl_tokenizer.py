@@ -325,15 +325,10 @@ class AIFPLTokenizer:
         Returns:
             True if the token represents a valid number
         """
-        if not token:
-            return False
-
         # Handle negative numbers
         check_token = token
         if token.startswith('-'):
-            if len(token) == 1:
-                return False  # Just a minus sign
-
+            # We don't need to worry about just '-' being a number, as that would be caught earlier
             check_token = token[1:]
 
         # Try different number formats
@@ -468,9 +463,4 @@ class AIFPLTokenizer:
                 break
 
         symbol = expression[start:i]
-
-        # Validate that symbols don't look like malformed numbers
-        if symbol[0].isdigit() or (symbol.startswith('-') and len(symbol) > 1 and symbol[1].isdigit()):
-            raise AIFPLTokenError(f"Invalid symbol '{symbol}' at position {start} (looks like malformed number)")
-
         return symbol, i - start
