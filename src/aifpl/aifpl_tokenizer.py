@@ -99,30 +99,21 @@ class AIFPLTokenizer:
             if expression[i] == '#' and i + 1 < len(expression):
                 if expression[i + 1] in 'tf':
                     # Check if this is part of a longer invalid sequence like #true or #false
-                    if i + 2 < len(expression) and expression[i + 2].isalpha():
+                    if i + 2 < len(expression) and not self._is_delimiter(expression[i + 2]):
                         # Find end of the invalid sequence
                         end = i + 2
                         while end < len(expression) and expression[end].isalnum():
                             end += 1
 
                         invalid_literal = expression[i:end]
-
-                        suggestion = ""
-                        if invalid_literal.lower() in ["#true", "#false"]:
-                            correct = "#t" if "true" in invalid_literal.lower() else "#f"
-                            suggestion = f"Use {correct} instead of {invalid_literal}"
-
-                        else:
-                            suggestion = "Use #t for true or #f for false"
-
                         raise AIFPLTokenError(
                             message=f"Invalid boolean literal: {invalid_literal}",
                             position=i,
                             received=f"Boolean literal: {invalid_literal}",
                             expected="Valid boolean: #t or #f",
                             example="Correct: #t, #f\\nIncorrect: #true, #false, #T, #F",
-                            suggestion=suggestion,
-                            context="AIFPL uses #t and #f for boolean values (not #true/#false)"
+                            suggestion="Use #t for true or #f for false",
+                            context="AIFPL uses #t and #f for boolean values"
                         )
 
                     boolean_value = expression[i + 1] == 't'
