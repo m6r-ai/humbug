@@ -35,12 +35,23 @@ A demonstration is that each version has been built using earlier versions of it
 
 - **Powerful, pluggable tools**  
 
-  Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a scientific calculator, and UI orchestration.
+  Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a custom pure functional programming language (AIFPL) based on Lisp, and UI orchestration.
   Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
   Task delegation allows one LLM to make use of one or more other LLMs.
+  AIFPL (AI Functional Programming Language) is a pure functional language designed for AIs to use for calculations, string processing, or other algorithmic tasks.
   The UI supports simultaneous conversations, file editing with syntax highlights, dynamic wiki pages, terminal emulators, a system shell, and a system log.
   UI orchestration means your AI can help you work and visualise things using any of these tools too.
   LLMs can check the status of terminal tabs and issue commands to them (subject to user approval)
+
+- **AIFPL, a programming language designed for AIs**  
+
+  Previously, programming languages were designed to meet the needs of human developers.
+  While AIs are proficient with most of these languages, they risk being unsafe because they support potentially dangerous I/O operations.
+  AIFPL is an experimental, Lisp-inspired, language designed to suit the needs of AIs for algorithmic processing operations.
+  It supports higher-order functions, and tail call optimizations.
+  It can support simple calculations, handles string processing, all the way to highly complex algorithmic tasks.
+  Being side-effect free, AIFPL is intrinsically safe for AIs to use and does not require any user approvals.
+  The AIFPL implementation offers detailed exception handling to allow AIs debug any issues in their own code.
 
 - **Open and extensible**  
 
