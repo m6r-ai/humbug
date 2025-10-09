@@ -60,11 +60,8 @@ class AIFPLEnvironment:
 
         # Create helpful error message with available bindings
         available = self.get_available_bindings()
-        if available:
-            available_str = ", ".join(f"'{name}'" for name in sorted(available))
-            raise AIFPLEvalError(f"Undefined variable: '{name}'. Available bindings: {available_str}")
-
-        raise AIFPLEvalError(f"Undefined variable: '{name}'. No bindings available in current scope")
+        available_str = ", ".join(f"'{name}'" for name in sorted(available))
+        raise AIFPLEvalError(f"Undefined variable: '{name}'. Available bindings: {available_str}")
 
     def get_available_bindings(self) -> List[str]:
         """Get all available binding names in this environment chain."""
