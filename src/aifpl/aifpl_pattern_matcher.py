@@ -144,11 +144,8 @@ class AIFPLPatternMatcher:
             new_env = env.define(pattern.name, value)
             return new_env
 
-        if isinstance(pattern, AIFPLList):
-            return self._try_match_list_pattern(pattern, value, env)
-
-        # Pattern type not supported
-        return None
+        assert isinstance(pattern, AIFPLList), "Pattern type checked earlier"
+        return self._try_match_list_pattern(pattern, value, env)
 
     def _try_match_list_pattern(
         self,
@@ -319,19 +316,8 @@ class AIFPLPatternMatcher:
         if isinstance(pattern, AIFPLSymbol):
             return
 
-        # List patterns need deeper validation
-        if isinstance(pattern, AIFPLList):
-            self._validate_list_pattern_syntax(pattern)
-            return
-
-        # Other types are not valid patterns
-        raise AIFPLEvalError(
-            message="Pattern variable must be a symbol",
-            received=f"Pattern: {self.format_result(pattern)} ({pattern.type_name()})",
-            expected="Symbol, number, string, boolean, or list pattern",
-            example="Valid: x, 42, \"hello\", #t, (number? n), (a b . rest)",
-            suggestion="Use symbols for variables, literals for exact matches"
-        )
+        assert isinstance(pattern, AIFPLList), "Pattern type checked earlier"
+        self._validate_list_pattern_syntax(pattern)
 
     def _validate_list_pattern_syntax(self, pattern: AIFPLList) -> None:
         """

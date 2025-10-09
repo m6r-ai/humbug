@@ -6,7 +6,7 @@ Role:
 
 Context:
     # Pull in the default Python coding rules for the project.
-    Include: metaphor/humbug/python-rules.m6r
+    Include: metaphor/python-rules.m6r
 
     # The project only uses external dependencies if there's no other choice.  This makes it
     # much easier for the AI to know what it's working with.
@@ -20,7 +20,9 @@ Context:
         # Embed all the files that the AI will need to modify the code successfully.  If necessary,
         # describe what those files are used for.
 
-        Embed:
+        Embed: src/aifpl/*.py
 
 Action:
     # Describe the details of the change required.
+    I would like you to review this code carefully and try to work out what AIFPL expression might trigger
+    the raise operation in `_validate_pattern_syntax`

@@ -230,6 +230,11 @@ class TestAIFPLPatternMatchingEdgeCases:
             # Invalid pattern should raise error
             pass
 
+        try:
+            result = aifpl.evaluate('(match 42 ((42) "found") "not a list")')
+        except AIFPLEvalError:
+            pass
+
     def test_pattern_matching_with_functions(self, aifpl):
         """Test pattern matching with function values."""
         # Match function type

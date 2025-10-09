@@ -241,13 +241,9 @@ class AIFPLTokenizer:
                     if not all(c in '0123456789abcdefABCDEF' for c in hex_digits):
                         raise AIFPLTokenError(f"Invalid Unicode escape sequence at position {i}: \\u{hex_digits}")
 
-                    try:
-                        code_point = int(hex_digits, 16)
-                        result.append(chr(code_point))
-                        i += 4  # Skip the extra 4 characters (uXXXX)
-
-                    except ValueError as e:
-                        raise AIFPLTokenError(f"Invalid Unicode code point at position {i}: \\u{hex_digits}") from e
+                    code_point = int(hex_digits, 16)
+                    result.append(chr(code_point))
+                    i += 4  # Skip the extra 4 characters (uXXXX)
 
                 else:
                     raise AIFPLTokenError(f"Invalid escape sequence at position {i}: \\{next_char}")
