@@ -461,6 +461,17 @@ class TestAIFPLParserEdgeCases:
                 # These would indicate parsing problems
                 pytest.fail(f"Parsing failed for special form: {expr}")
 
+    def test_parser_broken_quote(self, aifpl):
+        """Handle an empty quote"""
+        with pytest.raises(AIFPLParseError, match="Incomplete quote expression"):
+            result = aifpl.evaluate("('")
+
+        with pytest.raises(AIFPLParseError, match="Unexpected token: \)"):
+            result = aifpl.evaluate("(')")
+
+        with pytest.raises(AIFPLParseError, match="Unexpected token: \)"):
+            result = aifpl.evaluate("(' )")
+
     def test_parser_operator_precedence_not_applicable(self, aifpl):
         """Test that LISP syntax doesn't have precedence issues."""
         # In LISP, everything is explicit with parentheses
