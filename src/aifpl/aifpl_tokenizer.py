@@ -81,17 +81,16 @@ class AIFPLTokenizer:
                         while escape_pos < len(expression) and expression[escape_pos] != '\\':
                             escape_pos += 1
 
-                        if escape_pos + 1 < len(expression):
-                            bad_escape = expression[escape_pos:escape_pos+2]
-                            raise AIFPLTokenError(
-                                message=f"Invalid escape sequence: {bad_escape}",
-                                position=escape_pos,
-                                received=f"Escape sequence: {bad_escape}",
-                                expected="Valid escape: \\n, \\t, \\r, \\\", \\\\, or \\uXXXX",
-                                example='Valid: "line1\\nline2" or "tab\\there"\\nInvalid: "bad\\qsequence"',
-                                suggestion="Use valid escape sequences or remove backslash",
-                                context="Only specific escape sequences are supported in strings"
-                            ) from e
+                        bad_escape = expression[escape_pos:escape_pos+2]
+                        raise AIFPLTokenError(
+                            message=f"Invalid escape sequence: {bad_escape}",
+                            position=escape_pos,
+                            received=f"Escape sequence: {bad_escape}",
+                            expected="Valid escape: \\n, \\t, \\r, \\\", \\\\, or \\uXXXX",
+                            example='Valid: "line1\\nline2" or "tab\\there"\\nInvalid: "bad\\qsequence"',
+                            suggestion="Use valid escape sequences or remove backslash",
+                            context="Only specific escape sequences are supported in strings"
+                        ) from e
 
                     raise  # Re-raise if not handled
 

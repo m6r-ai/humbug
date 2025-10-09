@@ -169,6 +169,9 @@ class TestAIFPLTokenizerEdgeCases:
             result = aifpl.evaluate(expr)
             assert result == expected
 
+        with pytest.raises(AIFPLTokenError):
+            aifpl.evaluate('"\\')
+
     def test_invalid_string_tokenization(self, aifpl):
         """Test invalid string tokenization cases."""
         invalid_strings = [
