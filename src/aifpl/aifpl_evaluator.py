@@ -680,14 +680,6 @@ class AIFPLEvaluator:
         Returns:
             Either a regular result or a AIFPLTailCall object for optimization
         """
-        if depth > self.max_depth:
-            stack_trace = self.call_stack.format_stack_trace()
-            raise AIFPLEvalError(
-                message=f"Expression too deeply nested (max depth: {self.max_depth})",
-                context=f"Call stack:\n{stack_trace}",
-                suggestion="Reduce nesting depth or increase max_depth limit"
-            )
-
         # AIFPLValue evaluation - handle all value types that should self-evaluate
         if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLFunction, AIFPLBuiltinFunction)):
             # Self-evaluating values
