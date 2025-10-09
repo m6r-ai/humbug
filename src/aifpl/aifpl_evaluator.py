@@ -243,25 +243,18 @@ class AIFPLEvaluator:
         # Extract parameter list
         param_expr = lambda_list.get(1)
 
+        if not isinstance(param_expr, AIFPLList):
+            raise AIFPLEvalError(
+                message="Lambda parameters must be a list",
+                received=f"Parameter list: {self.format_result(param_expr)} ({param_expr.type_name()})",
+                expected="List of symbols: (param1 param2 ...)",
+                example="(lambda (x y z) (+ x y z))",
+                suggestion="Parameters should be unquoted variable names"
+            )
+
         # Extract parameters and ensure they're all symbols
         raw_parameters: List[AIFPLValue] = []
-
-        if isinstance(param_expr, AIFPLList):
-            # (param1 param2 ...) or ()
-            raw_parameters = list(param_expr.elements)
-
-        else:
-            # Single parameter without parentheses (not standard but handle gracefully)
-            if not isinstance(param_expr, AIFPLSymbol):
-                raise AIFPLEvalError(
-                    message="Lambda parameter list must contain symbols",
-                    received=f"Parameter list: {self.format_result(param_expr)} ({param_expr.type_name()})",
-                    expected="List of symbols: (param1 param2 ...)",
-                    example="(lambda (x y z) (+ x y z))",
-                    suggestion="Parameters should be unquoted variable names"
-                )
-
-            raw_parameters = [param_expr]
+        raw_parameters = list(param_expr.elements)
 
         # Validate parameters are all symbols and convert them
         parameters: List[str] = []

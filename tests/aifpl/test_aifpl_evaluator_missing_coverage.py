@@ -61,13 +61,13 @@ class TestEvaluatorMissingCoverage:
         """Test lambda with invalid single parameter (number)."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(lambda 123 (+ 1 2))")
-        assert "must contain symbols" in str(exc_info.value)
+        assert "must be a list" in str(exc_info.value)
 
     def test_lambda_invalid_single_parameter_string(self, aifpl):
         """Test lambda with invalid single parameter (string)."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(lambda "param" (+ 1 2))')
-        assert "must contain symbols" in str(exc_info.value)
+        assert "must be a list" in str(exc_info.value)
 
     # ========== Let Form Validation Tests ==========
 

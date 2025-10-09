@@ -416,19 +416,8 @@ class AIFPLTokenizer:
             )
 
         # Parse the valid number
-        try:
-            number_value = self._parse_number_value(complete_token)
-            return number_value, len(complete_token)
-
-        except ValueError as e:
-            raise AIFPLTokenError(
-                message=f"Invalid number format: {complete_token}",
-                position=start,
-                received=f"Unparseable number: {complete_token}",
-                expected="Valid numeric literal",
-                suggestion=f"Fix the number format: {complete_token}",
-                context=f"Number parsing failed: {str(e)}"
-            ) from e
+        number_value = self._parse_number_value(complete_token)
+        return number_value, len(complete_token)
 
     def _is_symbol_start(self, char: str) -> bool:
         """Check if character can start a symbol."""
