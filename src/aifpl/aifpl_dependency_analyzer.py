@@ -60,8 +60,7 @@ class AIFPLDependencyAnalyzer:
                 depends_on=external_deps
             ))
 
-        # Step 4: Sort groups in topological order
-        return self._topological_sort_groups(groups)
+        return groups
 
     def _find_free_variables(self, expr: AIFPLValue) -> Set[str]:
         """Find all free variables (symbols) in an expression."""
@@ -132,6 +131,7 @@ class AIFPLDependencyAnalyzer:
     def _find_strongly_connected_components(self, graph: Dict[str, Set[str]]) -> List[Set[str]]:
         """
         Find strongly connected components using Tarjan's algorithm.
+        Note: SCCs are returned in topological order (dependencies before dependents).
 
         Args:
             graph: Dict mapping node names to their dependencies
@@ -177,48 +177,5 @@ class AIFPLDependencyAnalyzer:
         for node in graph:
             if node not in index:
                 strongconnect(node)
-
-        return result
-
-    def _topological_sort_groups(self, groups: List[AIFPLBindingGroup]) -> List[AIFPLBindingGroup]:
-        """Sort binding groups in topological order."""
-        # Create mapping from group names to groups
-        name_to_group: Dict[str, AIFPLBindingGroup] = {}
-        for group in groups:
-            for name in group.names:
-                name_to_group[name] = group
-
-        # Build dependency graph between groups
-        group_deps: Dict[int, Set[int]] = {}
-        for group in groups:
-            group_id = id(group)  # Use object id as unique identifier
-            deps: Set[int] = set()
-            for dep_name in group.depends_on:
-                deps.add(id(name_to_group[dep_name]))
-
-            group_deps[group_id] = deps
-
-        # Topological sort
-        visited: Set[int] = set()
-        temp_visited: Set[int] = set()
-        result: List[AIFPLBindingGroup] = []
-        group_by_id: Dict[int, AIFPLBindingGroup] = {id(group): group for group in groups}
-
-        def visit(group_id: int) -> None:
-            assert group_id not in temp_visited, "Circular dependency detected"
-            if group_id in visited:
-                return
-
-            temp_visited.add(group_id)
-            for dep_id in group_deps.get(group_id, set()):
-                visit(dep_id)
-
-            temp_visited.remove(group_id)
-            visited.add(group_id)
-            result.append(group_by_id[group_id])
-
-        for group in groups:
-            if id(group) not in visited:
-                visit(id(group))
 
         return result
