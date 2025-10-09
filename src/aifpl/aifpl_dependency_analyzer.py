@@ -194,8 +194,7 @@ class AIFPLDependencyAnalyzer:
             group_id = id(group)  # Use object id as unique identifier
             deps: Set[int] = set()
             for dep_name in group.depends_on:
-                if dep_name in name_to_group:
-                    deps.add(id(name_to_group[dep_name]))
+                deps.add(id(name_to_group[dep_name]))
 
             group_deps[group_id] = deps
 
@@ -206,9 +205,7 @@ class AIFPLDependencyAnalyzer:
         group_by_id: Dict[int, AIFPLBindingGroup] = {id(group): group for group in groups}
 
         def visit(group_id: int) -> None:
-            if group_id in temp_visited:
-                raise ValueError("Circular dependency detected")
-
+            assert group_id not in temp_visited, "Circular dependency detected"
             if group_id in visited:
                 return
 
