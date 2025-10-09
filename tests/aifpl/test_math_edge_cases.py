@@ -370,6 +370,11 @@ class TestAIFPLMathEdgeCases:
         assert aifpl.evaluate("(ceil -1e-10)") == 0
         assert aifpl.evaluate("(floor -1e-10)") == -1
 
+        # Complex numbers that we deem to be real
+        assert aifpl.evaluate("(round (complex 2.0 0.00000000000001))") == 2
+        assert aifpl.evaluate("(ceil (complex 2.0 0.00000000000001))") == 2
+        assert aifpl.evaluate("(floor (complex 2.0 0.00000000000001))") == 2
+
     def test_rounding_functions_reject_complex(self, aifpl):
         """Test that rounding functions reject complex numbers."""
         complex_values = [
