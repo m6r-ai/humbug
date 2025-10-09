@@ -145,7 +145,6 @@ class AIFPLEvaluator:
 
             except AIFPLEvalError as e:
                 # Add more context to symbol lookup errors
-                stack_trace = self.call_stack.format_stack_trace()
                 available_vars = env.get_available_bindings()
 
                 raise AIFPLEvalError(
@@ -692,7 +691,6 @@ class AIFPLEvaluator:
 
             except AIFPLEvalError as e:
                 # Add more context to symbol lookup errors
-                stack_trace = self.call_stack.format_stack_trace()
                 available_vars = env.get_available_bindings()
 
                 raise AIFPLEvalError(
