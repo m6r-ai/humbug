@@ -48,10 +48,8 @@ class AIFPLCallStack:
         Returns:
             The popped frame, or None if stack is empty
         """
-        if self.frames:
-            return self.frames.pop()
-
-        return None
+        assert self.frames, "Attempted to pop from an empty call stack"
+        return self.frames.pop()
 
     def format_stack_trace(self, max_frames: int = 10) -> str:
         """
@@ -81,8 +79,7 @@ class AIFPLCallStack:
             else:
                 lines.append(f"{indent}{frame.function_name}()")
 
-            if frame.expression:
-                lines.append(f"{indent}  -> {frame.expression}")
+            lines.append(f"{indent}  -> {frame.expression}")
 
         return "\n".join(lines)
 
