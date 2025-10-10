@@ -1854,23 +1854,22 @@ AIFPL automatically optimizes tail calls to prevent stack overflow in recursive 
 Functions capture their lexical environment, creating closures:
 
 ```aifpl
-; Counter closure
-(let ((make-counter (lambda (start)
-                      (let ((count start))
-                        (lambda ()
-                          (let ((current count))
-                            (set! count (+ count 1))  ; Note: set! not implemented, this is conceptual
-                            current))))))
-  (let ((counter (make-counter 10)))
-    ; Each call would increment the internal count
-    counter))
+; Function factory with captured state
+(let ((make-adder (lambda (increment)
+                    (lambda (x) (+ x increment)))))
+  (let ((add-five (make-adder 5))
+        (add-ten (make-adder 10)))
+    (list (add-five 3) (add-ten 3))))      ; → (8 13)
 
-; Function factories with captured environment
-(let ((make-multiplier (lambda (factor)
-                         (lambda (x) (* x factor)))))
-  (let ((double (make-multiplier 2))
-        (triple (make-multiplier 3)))
-    (list (double 5) (triple 5))))         ; → (10 15)
+; Nested closures capturing multiple levels
+(let ((outer-value 100))
+  (let ((make-calculator (lambda (operation)
+                           (lambda (x y)
+                             (operation (+ x outer-value) y)))))
+    (let ((multiply-with-offset (make-calculator *))
+          (add-with-offset (make-calculator +)))
+      (list (multiply-with-offset 2 3)     ; → (102 * 3) = 306
+            (add-with-offset 5 10)))))     ; → (105 + 10) = 115
 ```
 
 ### Error Handling Patterns

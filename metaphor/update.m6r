@@ -21,8 +21,11 @@ Context:
         # describe what those files are used for.
 
         Embed: src/aifpl/*.py
+        Embed: src/aifpl/README.md
 
 Action:
     # Describe the details of the change required.
-    I would like you to review this code carefully and try to work out what AIFPL expression might trigger
-    the raise operation in `_validate_pattern_syntax`
+    The readme file contains an example that would use `set!` but AIFPL will never
+    have `set!` because it's a pure functional programming language.
+
+    Please suggest an alternative and more appropriate example.
