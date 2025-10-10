@@ -77,47 +77,53 @@ class AIFPLDependencyAnalyzer:
                 if isinstance(first_elem, AIFPLSymbol):
                     if first_elem.name == "lambda":
                         # (lambda (params...) body)
-                        if expr.length() == 3:
-                            param_list = expr.get(1)
-                            body = expr.get(2)
+                        assert expr.length() == 3, "Lambda expressions must have exactly 3 elements (validated by evaluator)"
 
-                            # Extract parameter names
-                            param_names = set()
-                            if isinstance(param_list, AIFPLList):
-                                for param in param_list.elements:
-                                    if isinstance(param, AIFPLSymbol):
-                                        param_names.add(param.name)
+                        param_list = expr.get(1)
+                        body = expr.get(2)
 
-                            # Find free variables in body, excluding parameters
-                            body_vars = self._find_free_variables(body)
-                            free_vars.update(body_vars - param_names)
+                        assert isinstance(param_list, AIFPLList), "Lambda parameter list must be a list (validated by evaluator)"
+
+                        # Extract parameter names (all validated by evaluator to be symbols)
+                        param_names = set()
+                        for param in param_list.elements:
+                            assert isinstance(param, AIFPLSymbol), "Lambda parameters must be symbols (validated by evaluator)"
+                            param_names.add(param.name)
+
+                        # Find free variables in body, excluding parameters
+                        body_vars = self._find_free_variables(body)
+                        free_vars.update(body_vars - param_names)
 
                         return free_vars
 
                     if first_elem.name == "let":
                         # (let ((var1 val1) (var2 val2) ...) body)
-                        if expr.length() == 3:
-                            binding_list = expr.get(1)
-                            body = expr.get(2)
+                        assert expr.length() == 3, "Let expressions must have exactly 3 elements (validated by evaluator)"
 
-                            binding_names = set()
+                        binding_list = expr.get(1)
+                        body = expr.get(2)
 
-                            # Process bindings
-                            if isinstance(binding_list, AIFPLList):
-                                for binding in binding_list.elements:
-                                    if isinstance(binding, AIFPLList) and binding.length() == 2:
-                                        var_name = binding.get(0)
-                                        var_value = binding.get(1)
+                        assert isinstance(binding_list, AIFPLList), "Let binding list must be a list (validated by evaluator)"
 
-                                        if isinstance(var_name, AIFPLSymbol):
-                                            binding_names.add(var_name.name)
+                        binding_names = set()
 
-                                        # Free variables in binding expressions
-                                        free_vars.update(self._find_free_variables(var_value))
+                        # Process bindings (all validated by evaluator)
+                        for binding in binding_list.elements:
+                            assert isinstance(binding, AIFPLList), "Let bindings must be lists (validated by evaluator)"
+                            assert binding.length() == 2, "Let bindings must have exactly 2 elements (validated by evaluator)"
 
-                            # Free variables in body, excluding bound names
-                            body_vars = self._find_free_variables(body)
-                            free_vars.update(body_vars - binding_names)
+                            var_name = binding.get(0)
+                            var_value = binding.get(1)
+
+                            assert isinstance(var_name, AIFPLSymbol), "Let binding variables must be symbols (validated by evaluator)"
+                            binding_names.add(var_name.name)
+
+                            # Free variables in binding expressions
+                            free_vars.update(self._find_free_variables(var_value))
+
+                        # Free variables in body, excluding bound names
+                        body_vars = self._find_free_variables(body)
+                        free_vars.update(body_vars - binding_names)
 
                         return free_vars
 
