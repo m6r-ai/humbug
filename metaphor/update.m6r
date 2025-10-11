@@ -25,7 +25,5 @@ Context:
 
 Action:
     # Describe the details of the change required.
-    The readme file contains an example that would use `set!` but AIFPL will never
-    have `set!` because it's a pure functional programming language.
-
-    Please suggest an alternative and more appropriate example.
+    The tests for the code do not exersize all if conditions in `format_stack_trace`.  Please propose some tests
+    that will cause stack traces that trigger both the true and false paths.

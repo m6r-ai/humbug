@@ -38,7 +38,7 @@ AIFPL uses a **pure list representation** for all code, following traditional Li
 
 ### Package Structure
 
-```
+```plaintext
 src/aifpl/
 ├── __init__.py              # Package exports
 ├── aifpl.py                 # Main AIFPL class (public API)

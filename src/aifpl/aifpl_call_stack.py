@@ -72,8 +72,8 @@ class AIFPLCallStack:
 
         for i, frame in enumerate(frames_to_show):
             indent = "  " + "  " * i
-            args_str = ", ".join(f"{k}={repr(v)}" for k, v in frame.arguments.items())
-            if args_str:
+            if frame.arguments:
+                args_str = ", ".join(f"{k}={repr(v)}" for k, v in frame.arguments.items())
                 lines.append(f"{indent}{frame.function_name}({args_str})")
 
             else:
