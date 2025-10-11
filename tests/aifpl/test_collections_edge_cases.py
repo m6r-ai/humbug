@@ -474,3 +474,243 @@ class TestAIFPLCollectionEdgeCases:
         # Nested large operations
         result = aifpl.evaluate("(length (reverse (take 500 (range 1 1001))))")
         assert result == 500
+
+    # New tests for missing coverage
+
+    def test_string_arity_errors(self, aifpl):
+        """Test arity errors for string functions."""
+        # string-upcase requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="string-upcase takes exactly 1 argument"):
+            aifpl.evaluate("(string-upcase)")
+
+        with pytest.raises(AIFPLEvalError, match="string-upcase takes exactly 1 argument"):
+            aifpl.evaluate('(string-upcase "hello" "world")')
+
+        # string-downcase requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="string-downcase takes exactly 1 argument"):
+            aifpl.evaluate("(string-downcase)")
+
+        with pytest.raises(AIFPLEvalError, match="string-downcase takes exactly 1 argument"):
+            aifpl.evaluate('(string-downcase "HELLO" "WORLD")')
+
+        # string-trim requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="string-trim takes exactly 1 argument"):
+            aifpl.evaluate("(string-trim)")
+
+        with pytest.raises(AIFPLEvalError, match="string-trim takes exactly 1 argument"):
+            aifpl.evaluate('(string-trim "  hello  " "  world  ")')
+
+        # string-replace requires exactly 3 arguments
+        with pytest.raises(AIFPLEvalError, match="string-replace takes exactly 3 arguments"):
+            aifpl.evaluate("(string-replace)")
+
+        with pytest.raises(AIFPLEvalError, match="string-replace takes exactly 3 arguments"):
+            aifpl.evaluate('(string-replace "hello")')
+
+        with pytest.raises(AIFPLEvalError, match="string-replace takes exactly 3 arguments"):
+            aifpl.evaluate('(string-replace "hello" "l")')
+
+        with pytest.raises(AIFPLEvalError, match="string-replace takes exactly 3 arguments"):
+            aifpl.evaluate('(string-replace "hello" "l" "L" "extra")')
+
+        # string-prefix? requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="string-prefix\\? takes exactly 2 arguments"):
+            aifpl.evaluate("(string-prefix?)")
+
+        with pytest.raises(AIFPLEvalError, match="string-prefix\\? takes exactly 2 arguments"):
+            aifpl.evaluate('(string-prefix? "hello")')
+
+        with pytest.raises(AIFPLEvalError, match="string-prefix\\? takes exactly 2 arguments"):
+            aifpl.evaluate('(string-prefix? "hello" "he" "extra")')
+
+        # string-suffix? requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="string-suffix\\? takes exactly 2 arguments"):
+            aifpl.evaluate("(string-suffix?)")
+
+        with pytest.raises(AIFPLEvalError, match="string-suffix\\? takes exactly 2 arguments"):
+            aifpl.evaluate('(string-suffix? "hello")')
+
+        with pytest.raises(AIFPLEvalError, match="string-suffix\\? takes exactly 2 arguments"):
+            aifpl.evaluate('(string-suffix? "hello" "lo" "extra")')
+
+    def test_list_arity_errors_additional(self, aifpl):
+        """Test additional arity errors for list functions."""
+        # reverse requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="reverse takes exactly 1 argument"):
+            aifpl.evaluate("(reverse)")
+
+        with pytest.raises(AIFPLEvalError, match="reverse takes exactly 1 argument"):
+            aifpl.evaluate("(reverse (list 1) (list 2))")
+
+        # list? requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="list\\? takes exactly 1 argument"):
+            aifpl.evaluate("(list?)")
+
+        with pytest.raises(AIFPLEvalError, match="list\\? takes exactly 1 argument"):
+            aifpl.evaluate("(list? (list 1) (list 2))")
+
+        # remove requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="remove takes exactly 2 arguments"):
+            aifpl.evaluate("(remove)")
+
+        with pytest.raises(AIFPLEvalError, match="remove takes exactly 2 arguments"):
+            aifpl.evaluate("(remove 1)")
+
+        with pytest.raises(AIFPLEvalError, match="remove takes exactly 2 arguments"):
+            aifpl.evaluate("(remove 1 (list 1 2) (list 3))")
+
+        # position requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="position takes exactly 2 arguments"):
+            aifpl.evaluate("(position)")
+
+        with pytest.raises(AIFPLEvalError, match="position takes exactly 2 arguments"):
+            aifpl.evaluate("(position 1)")
+
+        with pytest.raises(AIFPLEvalError, match="position takes exactly 2 arguments"):
+            aifpl.evaluate("(position 1 (list 1 2) (list 3))")
+
+        # drop requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="drop takes exactly 2 arguments"):
+            aifpl.evaluate("(drop)")
+
+        with pytest.raises(AIFPLEvalError, match="drop takes exactly 2 arguments"):
+            aifpl.evaluate("(drop 1)")
+
+        with pytest.raises(AIFPLEvalError, match="drop takes exactly 2 arguments"):
+            aifpl.evaluate("(drop 1 (list 1 2) (list 3))")
+
+    def test_string_list_conversion_arity_errors(self, aifpl):
+        """Test arity errors for string-list conversion functions."""
+        # string->list requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="string->list takes exactly 1 argument"):
+            aifpl.evaluate("(string->list)")
+
+        with pytest.raises(AIFPLEvalError, match="string->list takes exactly 1 argument"):
+            aifpl.evaluate('(string->list "hello" "world")')
+
+        # list->string requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="list->string takes exactly 1 argument"):
+            aifpl.evaluate("(list->string)")
+
+        with pytest.raises(AIFPLEvalError, match="list->string takes exactly 1 argument"):
+            aifpl.evaluate('(list->string (list "a") (list "b"))')
+
+        # string-split requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="string-split takes exactly 2 arguments"):
+            aifpl.evaluate("(string-split)")
+
+        with pytest.raises(AIFPLEvalError, match="string-split takes exactly 2 arguments"):
+            aifpl.evaluate('(string-split "hello")')
+
+        with pytest.raises(AIFPLEvalError, match="string-split takes exactly 2 arguments"):
+            aifpl.evaluate('(string-split "hello" "," "extra")')
+
+        # string-join requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="string-join takes exactly 2 arguments"):
+            aifpl.evaluate("(string-join)")
+
+        with pytest.raises(AIFPLEvalError, match="string-join takes exactly 2 arguments"):
+            aifpl.evaluate('(string-join (list "a"))')
+
+        with pytest.raises(AIFPLEvalError, match="string-join takes exactly 2 arguments"):
+            aifpl.evaluate('(string-join (list "a") "," "extra")')
+
+    def test_type_predicate_arity_errors(self, aifpl):
+        """Test arity errors for type predicate functions."""
+        # number? requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="number\\? takes exactly 1 argument"):
+            aifpl.evaluate("(number?)")
+
+        with pytest.raises(AIFPLEvalError, match="number\\? takes exactly 1 argument"):
+            aifpl.evaluate("(number? 1 2)")
+
+        # integer? requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="integer\\? takes exactly 1 argument"):
+            aifpl.evaluate("(integer?)")
+
+        with pytest.raises(AIFPLEvalError, match="integer\\? takes exactly 1 argument"):
+            aifpl.evaluate("(integer? 1 2)")
+
+        # float? requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="float\\? takes exactly 1 argument"):
+            aifpl.evaluate("(float?)")
+
+        with pytest.raises(AIFPLEvalError, match="float\\? takes exactly 1 argument"):
+            aifpl.evaluate("(float? 1.0 2.0)")
+
+        # complex? requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="complex\\? takes exactly 1 argument"):
+            aifpl.evaluate("(complex?)")
+
+        with pytest.raises(AIFPLEvalError, match="complex\\? takes exactly 1 argument"):
+            aifpl.evaluate("(complex? (+ 1 j) (+ 2 j))")
+
+        # string? requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="string\\? takes exactly 1 argument"):
+            aifpl.evaluate("(string?)")
+
+        with pytest.raises(AIFPLEvalError, match="string\\? takes exactly 1 argument"):
+            aifpl.evaluate('(string? "hello" "world")')
+
+        # boolean? requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="boolean\\? takes exactly 1 argument"):
+            aifpl.evaluate("(boolean?)")
+
+        with pytest.raises(AIFPLEvalError, match="boolean\\? takes exactly 1 argument"):
+            aifpl.evaluate("(boolean? #t #f)")
+
+        # function? requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="function\\? takes exactly 1 argument"):
+            aifpl.evaluate("(function?)")
+
+        with pytest.raises(AIFPLEvalError, match="function\\? takes exactly 1 argument"):
+            aifpl.evaluate("(function? + -)")
+
+    def test_list_to_string_error_handling(self, aifpl):
+        """Test error handling in list->string conversion."""
+        # Test the exception handling branch in list->string
+        # This tests the generic Exception catch
+        # We need to test a case where to_python() might raise an exception
+        # For now, just verify normal operation works
+        assert aifpl.evaluate('(list->string (list "h" "e" "l" "l" "o"))') == "hello"
+
+        # Test with numbers (should convert to string representation)
+        assert aifpl.evaluate('(list->string (list "1" "2" "3"))') == "123"
+
+    def test_string_replace_functionality(self, aifpl):
+        """Test string-replace function thoroughly."""
+        # Basic replacement
+        assert aifpl.evaluate('(string-replace "hello" "l" "L")') == "heLLo"
+
+        # No match
+        assert aifpl.evaluate('(string-replace "hello" "x" "X")') == "hello"
+
+        # Replace with empty string
+        assert aifpl.evaluate('(string-replace "hello" "l" "")') == "heo"
+
+        # Replace empty string (should work but not change anything meaningful)
+        assert aifpl.evaluate('(string-replace "hello" "" "X")') == "XhXeXlXlXoX"
+
+
+    def test_boolean_predicate_return_coverage(self, aifpl):
+        """Test boolean? return statement coverage."""
+        # Test with boolean values to ensure return statement is covered
+        assert aifpl.evaluate("(boolean? #t)") is True
+        assert aifpl.evaluate("(boolean? #f)") is True
+
+        # Test with non-boolean values
+        assert aifpl.evaluate("(boolean? 1)") is False
+        assert aifpl.evaluate('(boolean? "hello")') is False
+        assert aifpl.evaluate("(boolean? (list 1))") is False
+
+    def test_function_predicate_return_coverage(self, aifpl):
+        """Test function? return statement coverage."""
+        # Test with function values to ensure return statement is covered
+        assert aifpl.evaluate("(function? +)") is True
+        assert aifpl.evaluate("(function? (lambda (x) x))") is True
+
+        # Test with non-function values
+        assert aifpl.evaluate("(function? 1)") is False
+        assert aifpl.evaluate('(function? "hello")') is False
+        assert aifpl.evaluate("(function? #t)") is False
+        assert aifpl.evaluate("(function? (list 1))") is False

@@ -22,8 +22,11 @@ Context:
 
         Embed: src/aifpl/*.py
         Embed: src/aifpl/README.md
+        Embed: tests/aifpl/test_collections_edge_cases.py
 
 Action:
     # Describe the details of the change required.
-    The tests for the code do not exersize all if conditions in `format_stack_trace`.  Please propose some tests
-    that will cause stack traces that trigger both the true and false paths.
+    The tests is tests/aifpl/test_collections_edge_cases.py do not give 100% coverage of all lines.
+    I would like you to add tests to get 100% coverage in this file as all other files now have 100% coverage.
+
+    The tests are run using pytest and this is run from the initial directory when you open a terminal.

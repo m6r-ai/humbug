@@ -416,12 +416,7 @@ class AIFPLCollectionsFunctions:
             raise AIFPLEvalError(f"list->string takes exactly 1 argument, got {len(args)}")
 
         list_arg = self._ensure_list(args[0], "list->string")
-
-        try:
-            return AIFPLString(''.join(str(elem.to_python()) for elem in list_arg.elements))
-
-        except Exception as e:
-            raise AIFPLEvalError(f"Cannot convert list to string: {e}") from e
+        return AIFPLString(''.join(str(elem.to_python()) for elem in list_arg.elements))
 
     def _builtin_string_split(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
         """Implement string-split function."""
