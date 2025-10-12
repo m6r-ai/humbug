@@ -67,7 +67,7 @@ class AIFPL:
         simplified = evaluator.simplify_result(result)
 
         # Convert to Python types for backward compatibility
-        return self._aifpl_value_to_python(simplified)
+        return simplified.to_python()
 
     def evaluate_and_format(self, expression: str) -> str:
         """
@@ -103,20 +103,3 @@ class AIFPL:
         # Simplify and format the result
         simplified = evaluator.simplify_result(result)
         return evaluator.format_result(simplified)
-
-    def _aifpl_value_to_python(self, value: AIFPLValue) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
-        """
-        Convert AIFPLValue to Python types for backward compatibility.
-
-        Args:
-            value: AIFPLValue to convert
-
-        Returns:
-            Python equivalent of the value
-        """
-        if isinstance(value, AIFPLFunction):
-            # Functions are returned as-is for backward compatibility
-            return value
-
-        # Use the value's to_python method
-        return value.to_python()
