@@ -240,7 +240,7 @@ class TestAIFPLTokenizerEdgeCases:
             # These should not raise tokenization errors
             # (might raise evaluation errors if undefined, but tokenization should work)
             try:
-                result = aifpl.evaluate(symbol)
+                aifpl.evaluate(symbol)
                 # If evaluation succeeds, that's fine
             except AIFPLError:
                 # Evaluation errors are fine, we're testing tokenization
@@ -259,7 +259,7 @@ class TestAIFPLTokenizerEdgeCases:
 
         for symbol in special_symbols:
             try:
-                result = aifpl.evaluate(f"({symbol})")
+                aifpl.evaluate(f"({symbol})")
                 # If evaluation succeeds, that's fine
             except AIFPLError:
                 # Evaluation errors are fine, we're testing tokenization
@@ -280,7 +280,7 @@ class TestAIFPLTokenizerEdgeCases:
         for expr in nested_cases:
             # Should tokenize without error
             try:
-                result = aifpl.evaluate(expr)
+                aifpl.evaluate(expr)
                 # If evaluation succeeds, that's fine
             except AIFPLError:
                 # Evaluation errors are fine, we're testing tokenization
@@ -320,7 +320,7 @@ class TestAIFPLTokenizerEdgeCases:
 
         for expr in quote_cases:
             try:
-                result = aifpl.evaluate(expr)
+                aifpl.evaluate(expr)
                 # Should tokenize without error
             except AIFPLError:
                 # Evaluation errors are fine, we're testing tokenization
@@ -338,6 +338,82 @@ class TestAIFPLTokenizerEdgeCases:
         for expr in invalid_chars:
             with pytest.raises(AIFPLTokenError):
                 aifpl.evaluate(expr)
+
+    def test_tokenizer_control_characters_outside_strings(self, aifpl):
+        """Test that control characters outside strings are rejected with proper error messages."""
+        # Control characters (ASCII < 32) that are NOT considered whitespace by Python's isspace()
+        # Python's isspace() returns True for: 0x09 (tab), 0x0A (newline), 0x0B (vertical tab),
+        # 0x0C (form feed), 0x0D (carriage return), 0x1C (file separator), 0x1D (group separator),
+        # 0x1E (record separator), 0x1F (unit separator)
+        # We test the other control characters that should trigger the error
+
+        # To properly test the control character error path, we need the control character
+        # to appear in a position where it's checked individually, not consumed as part of
+        # another token. We use expressions like "42 \x01" (with space separator) where
+        # the control character is isolated.
+
+        control_chars_to_test = [
+            (0x00, "\\u0000"),  # Null character (NUL)
+            (0x01, "\\u0001"),  # Start of Heading (SOH)
+            (0x02, "\\u0002"),  # Start of Text (STX)
+            (0x03, "\\u0003"),  # End of Text (ETX)
+            (0x04, "\\u0004"),  # End of Transmission (EOT)
+            (0x05, "\\u0005"),  # Enquiry (ENQ)
+            (0x06, "\\u0006"),  # Acknowledge (ACK)
+            (0x07, "\\u0007"),  # Bell (BEL)
+            (0x08, "\\u0008"),  # Backspace (BS)
+            # 0x09 (tab), 0x0A (newline), 0x0B (vertical tab), 0x0C (form feed), 0x0D (carriage return) are whitespace
+            (0x0E, "\\u000e"),  # Shift Out (SO)
+            (0x0F, "\\u000f"),  # Shift In (SI)
+            (0x10, "\\u0010"),  # Data Link Escape (DLE)
+            (0x11, "\\u0011"),  # Device Control 1 (DC1)
+            (0x12, "\\u0012"),  # Device Control 2 (DC2)
+            (0x13, "\\u0013"),  # Device Control 3 (DC3)
+            (0x14, "\\u0014"),  # Device Control 4 (DC4)
+            (0x15, "\\u0015"),  # Negative Acknowledge (NAK)
+            (0x16, "\\u0016"),  # Synchronous Idle (SYN)
+            (0x17, "\\u0017"),  # End of Transmission Block (ETB)
+            (0x18, "\\u0018"),  # Cancel (CAN)
+            (0x19, "\\u0019"),  # End of Medium (EM)
+            (0x1A, "\\u001a"),  # Substitute (SUB)
+            (0x1B, "\\u001b"),  # Escape (ESC)
+            # 0x1C (file separator), 0x1D (group separator), 0x1E (record separator), 0x1F (unit separator) are whitespace
+        ]
+
+        for char_code, expected_display in control_chars_to_test:
+            # Create an expression with the control character isolated by whitespace
+            # This ensures it will be checked as an individual character, not consumed
+            # as part of a number or symbol token
+            expr = f"42 {chr(char_code)}"
+
+            try:
+                aifpl.evaluate(expr)
+                pytest.fail(f"Expected AIFPLTokenError for control character {expected_display}")
+            except AIFPLTokenError as e:
+                error_msg = str(e)
+                # Verify the error message contains:
+                # 1. The escaped display format of the character
+                # 2. The character code
+                # 3. A message about control characters
+                assert expected_display in error_msg, \
+                    f"Expected {expected_display} in error message, got: {error_msg}"
+                assert str(char_code) in error_msg, \
+                    f"Expected character code {char_code} in error message, got: {error_msg}"
+                assert "Control characters are not allowed" in error_msg or \
+                       "control character" in error_msg.lower(), \
+                    f"Expected control character warning in error message, got: {error_msg}"
+
+        # Also test that control characters ARE allowed inside strings
+        # (this confirms the "except in strings" part of the error message)
+        valid_string_cases = [
+            ('"\\u0001"', "\x01"),  # Control char via escape sequence
+            ('"\\u0007"', "\x07"),  # Bell character
+            ('"\\u001b"', "\x1b"),  # Escape character
+        ]
+
+        for expr, expected in valid_string_cases:
+            result = aifpl.evaluate(expr)
+            assert result == expected, "Control characters should be allowed in strings via escape sequences"
 
     def test_tokenizer_position_tracking(self, aifpl):
         """Test that tokenizer tracks positions for error reporting."""
@@ -537,3 +613,70 @@ class TestAIFPLTokenizerEdgeCases:
         for expr, expected in mixed_strings:
             result = aifpl.evaluate(expr)
             assert result == expected
+
+
+    def test_tokenizer_control_characters_in_tokens(self, aifpl):
+        """Test that control characters are caught even when embedded in tokens."""
+        # This tests the fix for the issue where control characters adjacent to
+        # other characters (non-isolated) were being consumed as part of a token
+        # and producing confusing error messages like "Invalid number format: 42^A43"
+
+        # Test control characters embedded in what would be number tokens
+        number_cases = [
+            (0x01, "42\x0143", "number with SOH"),
+            (0x07, "42\x0743", "number with Bell"),
+            (0x1B, "100\x1b200", "number with ESC"),
+            (0x00, "0\x0042", "number with NULL"),
+        ]
+
+        for char_code, expr, description in number_cases:
+            expected_display = f"\\u{char_code:04x}"
+            try:
+                aifpl.evaluate(expr)
+                pytest.fail(f"Expected AIFPLTokenError for {description}")
+            except AIFPLTokenError as e:
+                error_msg = str(e)
+                # Should get control character error, not number format error
+                assert "control character" in error_msg.lower(), \
+                    f"Expected control character error for {description}, got: {error_msg}"
+                assert expected_display in error_msg, \
+                    f"Expected {expected_display} in error for {description}, got: {error_msg}"
+                assert str(char_code) in error_msg, \
+                    f"Expected code {char_code} in error for {description}, got: {error_msg}"
+
+        # Test control characters embedded in what would be symbol tokens
+        symbol_cases = [
+            (0x01, "hello\x01world", "symbol with SOH"),
+            (0x07, "test\x07name", "symbol with Bell"),
+            (0x1B, "var\x1bname", "symbol with ESC"),
+        ]
+
+        for char_code, expr, description in symbol_cases:
+            expected_display = f"\\u{char_code:04x}"
+            try:
+                aifpl.evaluate(expr)
+                pytest.fail(f"Expected AIFPLTokenError for {description}")
+            except AIFPLTokenError as e:
+                error_msg = str(e)
+                # Should get control character error, not undefined variable error
+                assert "control character" in error_msg.lower(), \
+                    f"Expected control character error for {description}, got: {error_msg}"
+                assert expected_display in error_msg, \
+                    f"Expected {expected_display} in error for {description}, got: {error_msg}"
+
+        # Test control characters in various positions within expressions
+        position_cases = [
+            ("(\x01)", "after open paren"),
+            ("(+\x01)", "after operator"),
+            ("(+ 1\x012)", "between digits"),
+            ("(+ 1 2\x01)", "at end before close paren"),
+        ]
+
+        for expr, description in position_cases:
+            try:
+                aifpl.evaluate(expr)
+                pytest.fail(f"Expected AIFPLTokenError for control char {description}")
+            except AIFPLTokenError as e:
+                error_msg = str(e)
+                assert "control character" in error_msg.lower(), \
+                    f"Expected control character error for {description}, got: {error_msg}"

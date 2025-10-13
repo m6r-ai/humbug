@@ -151,14 +151,28 @@ class AIFPLTokenizer:
                 i += length
                 continue
 
-            # Invalid character
+            # Invalid character - check for control characters first
             char = expression[i]
             char_code = ord(char)
 
+            if char_code < 32:
+                # Control character - provide specific error
+                char_display = f"\\u{char_code:04x}"
+                raise AIFPLTokenError(
+                    message=f"Invalid control character in source code: {char_display}",
+                    position=i,
+                    received=f"Control character: {char_display} (code {char_code})",
+                    expected="Valid AIFPL characters or escape sequences in strings",
+                    example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
+                    suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
+                    context="Control characters are not allowed in source code. Use escape sequences like \\n, \\t, or \\uXXXX in strings."
+                )
+
+            # Other invalid characters
             # Provide helpful suggestions for common mistakes
             suggestions = {
                 '@': "@ is not valid in AIFPL - use symbols like 'at' or 'email'",
-                '$': "$ is not valid in AIFPL - use symbols like 'dollar' or 'var'", 
+                '$': "$ is not valid in AIFPL - use symbols like 'dollar' or 'var'",
                 '&': "Use 'and' for boolean operations, not &",
                 '|': "Use 'or' for boolean operations, not |",
                 '[': "Use parentheses ( ) for lists, not brackets [ ]",
@@ -168,19 +182,12 @@ class AIFPLTokenizer:
             }
 
             suggestion = suggestions.get(char, f"'{char}' is not a valid character in AIFPL")
-
-            if char_code < 32:
-                char_display = f"\\u{char_code:04x}"
-                context = "Control characters are not allowed except in strings"
-
-            else:
-                char_display = char
-                context = "Only letters, digits, and specific symbols are allowed"
+            context = "Only letters, digits, and specific symbols are allowed"
 
             raise AIFPLTokenError(
-                message=f"Invalid character: {char_display}",
+                message=f"Invalid character: {char}",
                 position=i,
-                received=f"Character: {char_display} (code {char_code})",
+                received=f"Character: {char} (code {char_code})",
                 expected="Valid AIFPL characters: letters, digits, +, -, *, /, etc.",
                 example="Valid: (+ 1 2), my-var, func?\\nInvalid: @var, $value, [list]",
                 suggestion=suggestion,
@@ -282,18 +289,53 @@ class AIFPLTokenizer:
         """Check if character is a LISP token delimiter."""
         return char.isspace() or char in "()'\";,"
 
+    def _check_for_control_character(self, char: str, position: int) -> None:
+        """
+        Check if a character is a control character and raise an error if so.
+
+        Args:
+            char: Character to check
+            position: Position in the expression
+
+        Raises:
+            AIFPLTokenError: If the character is a control character
+        """
+        char_code = ord(char)
+
+        # Control characters are ASCII < 32 (excluding whitespace which is handled separately)
+        if char_code < 32 and not char.isspace():
+            char_display = f"\\u{char_code:04x}"
+            raise AIFPLTokenError(
+                message=f"Invalid control character in source code: {char_display}",
+                position=position,
+                received=f"Control character: {char_display} (code {char_code})",
+                expected="Valid AIFPL characters or escape sequences in strings",
+                example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
+                suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
+                context="Control characters are not allowed in source code. Use escape sequences like \\n, \\t, or \\uXXXX in strings."
+            )
+
     def _read_complete_token(self, expression: str, start: int) -> str:
         """
         Read a complete token until delimiter, following LISP tokenization rules.
 
+        Validates that no control characters are present in the token.
+
         Returns:
             The complete token string
+
+        Raises:
+            AIFPLTokenError: If a control character is encountered
         """
         i = start
 
         # Consume characters until we hit a delimiter
         while i < len(expression):
             char = expression[i]
+
+            # Check for control characters before processing
+            self._check_for_control_character(char, i)
+
             if self._is_delimiter(char):
                 break
 
@@ -396,7 +438,7 @@ class AIFPLTokenizer:
         Raises:
             AIFPLTokenError: If the token is not a valid number
         """
-        # Get the complete token until delimiter
+        # Get the complete token until delimiter (this will check for control characters)
         complete_token = self._read_complete_token(expression, start)
 
         # Validate that this token is a valid number
@@ -423,15 +465,23 @@ class AIFPLTokenizer:
         """
         Read a symbol from the expression.
 
+        Validates that no control characters are present in the symbol.
+
         Returns:
             Tuple of (symbol_string, length_consumed)
+
+        Raises:
+            AIFPLTokenError: If a control character is encountered
         """
         i = start
 
         while i < len(expression):
             char = expression[i]
+
             # Symbol characters: letters, digits, hyphens, and operator chars
             if char.isalnum() or char in '-+*/%<>=!&|^~?_.':
+                # Check for control characters before adding to symbol
+                self._check_for_control_character(char, i)
                 i += 1
 
             else:
