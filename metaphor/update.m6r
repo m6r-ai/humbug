@@ -22,18 +22,20 @@ Context:
 
         Embed: src/aifpl/*.py
         Embed: src/aifpl/README.md
-        Embed: tests/aifpl/test_tokenizer_edge_cases.py
+
+        This is a new tool we have been building:
+
+        Embed: aifpl_patch_bridge.py
+        Embed: aifpl_patch_library.aifpl
+        Embed: aifpl_patcher.py
 
 Action:
     # Describe the details of the change required.
-    The tests in tests/aifpl/test_tokenizer_edge_cases.py do not current exercise the following if statement:
+    In another session we started to design a utility that can patch files based on unified
+    diffs and fuzzy matching.
 
-    ```python
-            if char_code < 32:
-                char_display = f"\\u{char_code:04x}"
-                context = "Control characters are not allowed except in strings"
-    ```
+    This report summarizes the current status:
 
-    I would like you to propose a test to add to cover this.
+    Embed: FINAL_STATUS.md
 
-    The tests are run using pytest and this is run from the initial directory when you open a terminal.
+    We need to complete debugging.
