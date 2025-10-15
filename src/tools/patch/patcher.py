@@ -23,7 +23,7 @@ from pathlib import Path
 import shutil
 import sys
 import traceback
-from typing import Optional, List
+from typing import List
 
 from .diff_parser import UnifiedDiffParser
 from .aifpl_bridge import AIFPLPatchBridge
@@ -105,6 +105,9 @@ class AIFPLPatcher:
             if hunks is None:
                 return 1
 
+            if target_file is None:
+                return 1
+
             # Verify target file matches source file
             if not self._verify_target_file(target_file):
                 return 1
@@ -152,7 +155,7 @@ class AIFPLPatcher:
 
         return True
 
-    def _read_source_file(self) -> Optional[List[str]]:
+    def _read_source_file(self) -> List[str] | None:
         """Read source file into list of lines."""
         try:
             with open(self.source_file, 'r', encoding='utf-8') as f:
@@ -172,7 +175,7 @@ class AIFPLPatcher:
             self._print_error(f"Failed to read source file: {e}")
             return None
 
-    def _parse_patch(self) -> tuple[Optional[str], Optional[List[dict]]]:
+    def _parse_patch(self) -> tuple[str | None, List[dict] | None]:
         """Parse patch file."""
         try:
             target_file, hunks = self.parser.parse_file(str(self.patch_file))

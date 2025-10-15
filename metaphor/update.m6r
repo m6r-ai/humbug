@@ -25,17 +25,16 @@ Context:
 
         This is a new tool we have been building:
 
-        Embed: aifpl_patch_bridge.py
-        Embed: aifpl_patch_library.aifpl
-        Embed: aifpl_patcher.py
+        Embed: src/tools/patch/*.py
+        Embed: src/tools/patch/*.aifpl
 
 Action:
     # Describe the details of the change required.
-    In another session we started to design a utility that can patch files based on unified
-    diffs and fuzzy matching.
+    We have tests in tests/tools/patch.  These are run using pytest and this can be run from the default
+    directory when you open a terminal.
 
-    This report summarizes the current status:
+    One of the tests is failing.  This may be a problem in the tool or may be a problem in the test.
 
-    Embed: FINAL_STATUS.md
+    I would like you to review this and work out what's wrong.
 
-    We need to complete debugging.
+    Don't try to fix it yet - I want to review what you find.

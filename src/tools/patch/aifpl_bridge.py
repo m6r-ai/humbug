@@ -170,6 +170,7 @@ class AIFPLPatchBridge:
 
         except AIFPLError as e:
             return False, f"AIFPL error: {e}"
+
         except Exception as e:
             return False, f"Unexpected error: {e}"
 
@@ -202,6 +203,7 @@ class AIFPLPatchBridge:
 
         except AIFPLError as e:
             return False, f"AIFPL error: {e}"
+
         except Exception as e:
             return False, f"Unexpected error: {e}"
 
@@ -225,18 +227,19 @@ class AIFPLPatchBridge:
             patched_lines = result[1]
             if not isinstance(patched_lines, list):
                 return False, f"Expected list of lines, got {type(patched_lines)}"
+
             return True, patched_lines
 
-        elif status == "error":
+        if status == "error":
             # Result is ["error", message, position]
             if len(result) >= 2:
                 error_msg = result[1]
                 position = result[2] if len(result) > 2 else "unknown"
                 return False, f"{error_msg} (at line {position})"
+
             return False, "Unknown error"
 
-        else:
-            return False, f"Unknown status: {status}"
+        return False, f"Unknown status: {status}"
 
     def _parse_validation_result(self, result: Any) -> Tuple[bool, Any]:
         """
@@ -272,6 +275,7 @@ class AIFPLPatchBridge:
 
             if invalid_hunks:
                 return False, "\n".join(invalid_hunks)
+
             return False, "Some hunks invalid (details unavailable)"
 
         return False, f"Unknown validation status: {status}"

@@ -35,7 +35,7 @@ class TestUnifiedDiffParser:
         assert hunk['start_line'] == 0  # 0-based
         assert hunk['old_count'] == 5
         assert hunk['new_count'] == 5
-        assert len(hunk['changes']) == 5
+        assert len(hunk['changes']) == 6
 
         # Check changes
         changes = hunk['changes']
@@ -44,6 +44,7 @@ class TestUnifiedDiffParser:
         assert changes[2] == ('delete', 'line 3')
         assert changes[3] == ('insert', 'line 3 modified')
         assert changes[4] == ('context', 'line 4')
+        assert changes[5] == ('context', 'line 5')
 
     def test_multiple_hunks(self):
         """Test parsing multiple hunks."""
