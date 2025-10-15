@@ -176,7 +176,7 @@ class AIFPLEvaluator:
                 return self._evaluate_lambda_form(expr, env, depth + 1)
 
             if self._is_symbol_with_name(first_elem, "let"):
-                return self._evaluate_let_form(expr, env, depth + 1)
+                return self._evaluate_let_form(expr, env, depth + 1, False)
 
             if self._is_symbol_with_name(first_elem, "match"):
                 return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
@@ -293,7 +293,8 @@ class AIFPLEvaluator:
         self,
         let_list: AIFPLList,
         env: AIFPLEnvironment,
-        depth: int
+        depth: int,
+        in_tail_position: bool = False
     ) -> AIFPLValue:
         """
         Evaluate (let ((var1 val1) (var2 val2) ...) body) form with enhanced error messages.
@@ -302,6 +303,7 @@ class AIFPLEvaluator:
             let_list: List representing let expression
             env: Current environment
             depth: Current recursion depth
+            in_tail_position: Whether this let is in tail position (for TCO)
 
         Returns:
             Result of evaluating the let body
@@ -389,7 +391,11 @@ class AIFPLEvaluator:
                 current_env = self._evaluate_sequential_binding_group(group, current_env, depth)
 
         # Evaluate body in the final environment
-        return self._evaluate_expression(body, current_env, depth)
+        # Use tail detection if we're in tail position
+        if in_tail_position:
+            return self._evaluate_expression_with_tail_detection(body, current_env, depth)
+        else:
+            return self._evaluate_expression(body, current_env, depth)
 
     def _evaluate_sequential_binding_group(
         self,
@@ -721,7 +727,7 @@ class AIFPLEvaluator:
                 return self._evaluate_lambda_form(expr, env, depth + 1)
 
             if self._is_symbol_with_name(first_elem, 'let'):
-                return self._evaluate_let_form(expr, env, depth + 1)
+                return self._evaluate_let_form(expr, env, depth + 1, True)
 
             if self._is_symbol_with_name(first_elem, "match"):
                 return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)

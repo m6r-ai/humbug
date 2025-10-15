@@ -15,14 +15,6 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        The following files are used in my application:
-
-        # Embed all the files that the AI will need to modify the code successfully.  If necessary,
-        # describe what those files are used for.
-
-        Embed: src/aifpl/*.py
-        Embed: src/aifpl/README.md
-
         This is a new tool we have been building:
 
         Embed: src/tools/patch/*.py
@@ -30,10 +22,8 @@ Context:
 
 Action:
     # Describe the details of the change required.
-    We have tests in tests/tools/patch.  These are run using pytest and this can be run from the default
-    directory when you open a terminal.
+    I would like you to reformat the two AIFPL files in the patch tool to follow the parenthesis formatting
+    rules correctly.  In the case of the diff tool, you can remove the comments after closing parenthesis
+    as this was a failed experiment.
 
-    The current code has a diff parser written in python, but I want the diff parser to be written in
-    AIFPL.  How might we do this?
-
-    Don't try to modify the code yet - I want to review what you find.
+    Please outline examples of what you will change before you do so.
