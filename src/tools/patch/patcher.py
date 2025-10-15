@@ -25,7 +25,6 @@ import sys
 import traceback
 from typing import List
 
-from .diff_parser import UnifiedDiffParser
 from .aifpl_bridge import AIFPLPatchBridge
 
 
@@ -58,8 +57,7 @@ class AIFPLPatcher:
     Coordinates:
     - Parsing command-line arguments
     - Reading files
-    - Parsing diffs
-    - Applying patches via AIFPL
+    - Applying patches via AIFPL (parse + apply in one call)
     - Writing results
     """
 
@@ -79,8 +77,7 @@ class AIFPLPatcher:
         if not sys.stdout.isatty() or args.no_color:
             Colors.disable()
 
-        # Initialize components
-        self.parser = UnifiedDiffParser()
+        # Initialize bridge
         self.bridge = AIFPLPatchBridge(fuzz_range=args.fuzz)
 
     def run(self) -> int:
@@ -100,28 +97,22 @@ class AIFPLPatcher:
             if source_lines is None:
                 return 1
 
-            # Parse patch
-            target_file, hunks = self._parse_patch()
-            if hunks is None:
+            # Read patch file
+            diff_text = self._read_patch_file()
+            if diff_text is None:
                 return 1
 
-            if target_file is None:
+            # Show patch info (parse separately for display)
+            if not self._show_patch_info(diff_text):
                 return 1
 
-            # Verify target file matches source file
-            if not self._verify_target_file(target_file):
-                return 1
-
-            # Show patch info
-            self._show_patch_info(hunks)
-
-            # Validate patch (dry run)
-            if not self._validate_patch(source_lines, hunks):
+            # Validate patch (dry run using step-by-step API)
+            if not self._validate_patch(diff_text, source_lines):
                 return 1
 
             # Apply patch if requested
             if self.args.apply:
-                return self._apply_patch(source_lines, hunks)
+                return self._apply_patch(diff_text, source_lines)
 
             self._show_dry_run_message()
             return 0
@@ -177,69 +168,95 @@ class AIFPLPatcher:
             self._print_error(f"Failed to read source file: {e}")
             return None
 
-    def _parse_patch(self) -> tuple[str | None, List[dict] | None]:
-        """Parse patch file."""
+    def _read_patch_file(self) -> str | None:
+        """Read patch file into string."""
         try:
-            target_file, hunks = self.parser.parse_file(str(self.patch_file))
-            self._print_verbose(f"Parsed {len(hunks)} hunks from patch")
-            return target_file, hunks
+            with open(self.patch_file, 'r', encoding='utf-8') as f:
+                diff_text = f.read()
+
+            self._print_verbose(f"Read {len(diff_text)} bytes from {self.patch_file}")
+            return diff_text
 
         except Exception as e:
-            self._print_error(f"Failed to parse patch file: {e}")
-            return None, None
+            self._print_error(f"Failed to read patch file: {e}")
+            return None
 
-    def _verify_target_file(self, target_file: str) -> bool:
-        """Verify that patch target matches source file."""
-        if not target_file:
-            self._print_warning("Could not determine target file from patch")
-            return True  # Continue anyway
-
-        # Compare filenames (not full paths)
-        source_name = self.source_file.name
-        target_name = Path(target_file).name
-
-        if source_name != target_name:
-            self._print_warning(
-                f"Patch target '{target_name}' doesn't match source '{source_name}'"
-            )
-            # Don't fail, just warn
-
-        return True
-
-    def _show_patch_info(self, hunks: List[dict]) -> None:
+    def _show_patch_info(self, diff_text: str) -> bool:
         """Display information about the patch."""
-        print(f"\n{Colors.BOLD}Patch Information:{Colors.RESET}")
-        print(f"  Source file: {Colors.CYAN}{self.source_file}{Colors.RESET}")
-        print(f"  Patch file:  {Colors.CYAN}{self.patch_file}{Colors.RESET}")
-        print(f"  Hunks:       {Colors.CYAN}{len(hunks)}{Colors.RESET}")
-        print(f"  Fuzz range:  {Colors.CYAN}±{self.args.fuzz} lines{Colors.RESET}")
+        try:
+            # Parse diff to get info (using step-by-step API for display)
+            filename, hunks = self.bridge.parse_diff(diff_text)
 
-        if self.verbose:
-            print(f"\n{Colors.BOLD}Hunk Details:{Colors.RESET}")
-            for i, hunk in enumerate(hunks, 1):
-                changes = hunk['changes']
-                context_count = sum(1 for t, _ in changes if t == 'context')
-                delete_count = sum(1 for t, _ in changes if t == 'delete')
-                insert_count = sum(1 for t, _ in changes if t == 'insert')
+            if hunks is None:
+                self._print_error("Failed to parse patch file")
+                return False
 
-                print(f"  Hunk {i}: line {hunk['start_line'] + 1}")
-                print(f"    Context: {context_count}, Deletions: {delete_count}, Insertions: {insert_count}")
+            print(f"\n{Colors.BOLD}Patch Information:{Colors.RESET}")
+            print(f"  Source file: {Colors.CYAN}{self.source_file}{Colors.RESET}")
+            print(f"  Patch file:  {Colors.CYAN}{self.patch_file}{Colors.RESET}")
+            print(f"  Target file: {Colors.CYAN}{filename}{Colors.RESET}")
+            print(f"  Hunks:       {Colors.CYAN}{len(hunks)}{Colors.RESET}")
+            print(f"  Fuzz range:  {Colors.CYAN}±{self.args.fuzz} lines{Colors.RESET}")
 
-    def _validate_patch(self, source_lines: List[str], hunks: List[dict]) -> bool:
+            # Verify target file matches source file
+            if filename:
+                source_name = self.source_file.name
+                target_name = Path(filename).name
+
+                if source_name != target_name:
+                    self._print_warning(
+                        f"Patch target '{target_name}' doesn't match source '{source_name}'"
+                    )
+
+            if self.verbose:
+                print(f"\n{Colors.BOLD}Hunk Details:{Colors.RESET}")
+                for i, hunk in enumerate(hunks, 1):
+                    changes = hunk['changes']
+                    context_count = sum(1 for t, _ in changes if t == 'context')
+                    delete_count = sum(1 for t, _ in changes if t == 'delete')
+                    insert_count = sum(1 for t, _ in changes if t == 'insert')
+
+                    print(f"  Hunk {i}: line {hunk['start_line'] + 1}")
+                    print(f"    Context: {context_count}, Deletions: {delete_count}, Insertions: {insert_count}")
+
+            return True
+
+        except Exception as e:
+            self._print_error(f"Failed to parse patch: {e}")
+            if self.verbose:
+                traceback.print_exc()
+            return False
+
+    def _validate_patch(self, diff_text: str, source_lines: List[str]) -> bool:
         """Validate that patch can be applied."""
         print(f"\n{Colors.BOLD}Validating patch...{Colors.RESET}")
 
-        valid, result = self.bridge.validate_patch(source_lines, hunks)
+        try:
+            # Parse diff first (step-by-step API)
+            filename, hunks = self.bridge.parse_diff(diff_text)
 
-        if valid:
-            print(f"{Colors.GREEN}✓ All hunks can be applied{Colors.RESET}")
-            return True
+            if hunks is None:
+                self._print_error("Failed to parse patch for validation")
+                return False
 
-        print(f"{Colors.RED}✗ Patch validation failed:{Colors.RESET}")
-        print(f"  {result}")
-        return False
+            # Validate using step-by-step API
+            valid, result = self.bridge.validate_patch(source_lines, hunks)
 
-    def _apply_patch(self, source_lines: List[str], hunks: List[dict]) -> int:
+            if valid:
+                print(f"{Colors.GREEN}✓ All hunks can be applied{Colors.RESET}")
+                return True
+
+            print(f"{Colors.RED}✗ Patch validation failed:{Colors.RESET}")
+            print(f"  {result}")
+            return False
+
+        except Exception as e:
+            self._print_error(f"Validation failed: {e}")
+            if self.verbose:
+                traceback.print_exc()
+            return False
+
+    def _apply_patch(self, diff_text: str, source_lines: List[str]) -> int:
         """Apply the patch to the source file."""
         print(f"\n{Colors.BOLD}Applying patch...{Colors.RESET}")
 
@@ -248,8 +265,8 @@ class AIFPLPatcher:
             if not self._create_backup():
                 return 1
 
-        # Apply patch
-        success, result = self.bridge.apply_patch(source_lines, hunks)
+        # Apply patch using optimized one-shot API
+        success, result = self.bridge.parse_and_apply_patch(diff_text, source_lines)
 
         if not success:
             self._print_error(f"Patch application failed: {result}")

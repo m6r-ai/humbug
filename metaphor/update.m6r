@@ -33,8 +33,7 @@ Action:
     We have tests in tests/tools/patch.  These are run using pytest and this can be run from the default
     directory when you open a terminal.
 
-    One of the tests is failing.  This may be a problem in the tool or may be a problem in the test.
+    The current code has a diff parser written in python, but I want the diff parser to be written in
+    AIFPL.  How might we do this?
 
-    I would like you to review this and work out what's wrong.
-
-    Don't try to fix it yet - I want to review what you find.
+    Don't try to modify the code yet - I want to review what you find.

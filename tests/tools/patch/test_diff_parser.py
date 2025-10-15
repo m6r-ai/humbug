@@ -1,17 +1,17 @@
-"""Tests for unified diff parser."""
+"""Tests for unified diff parser (AIFPL-based)."""
 
 import pytest
 from pathlib import Path
 
-from tools.patch.diff_parser import UnifiedDiffParser
+from tools.patch.aifpl_bridge import AIFPLPatchBridge
 
 
 class TestUnifiedDiffParser:
-    """Test cases for UnifiedDiffParser."""
+    """Test cases for AIFPL-based diff parser."""
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.parser = UnifiedDiffParser()
+        self.bridge = AIFPLPatchBridge()
 
     def test_simple_diff(self):
         """Test parsing a simple unified diff."""
@@ -26,7 +26,7 @@ class TestUnifiedDiffParser:
  line 5
 """
 
-        filename, hunks = self.parser.parse(diff_text)
+        filename, hunks = self.bridge.parse_diff(diff_text)
 
         assert filename == "test.py"
         assert len(hunks) == 1
@@ -62,7 +62,7 @@ class TestUnifiedDiffParser:
  line 12
 """
 
-        filename, hunks = self.parser.parse(diff_text)
+        filename, hunks = self.bridge.parse_diff(diff_text)
 
         assert filename == "test.py"
         assert len(hunks) == 2
@@ -80,7 +80,10 @@ class TestUnifiedDiffParser:
         fixture_path = Path(__file__).parent / "fixtures" / "example.diff"
 
         if fixture_path.exists():
-            filename, hunks = self.parser.parse_file(str(fixture_path))
+            with open(fixture_path, 'r', encoding='utf-8') as f:
+                diff_text = f.read()
+
+            filename, hunks = self.bridge.parse_diff(diff_text)
 
             assert filename == "test_example.py"
             assert len(hunks) == 2

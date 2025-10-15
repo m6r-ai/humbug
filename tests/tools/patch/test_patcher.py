@@ -3,7 +3,6 @@
 import pytest
 from pathlib import Path
 
-from tools.patch.diff_parser import UnifiedDiffParser
 from tools.patch.aifpl_bridge import AIFPLPatchBridge
 
 
@@ -12,7 +11,6 @@ class TestPatcherIntegration:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.parser = UnifiedDiffParser()
         self.bridge = AIFPLPatchBridge(fuzz_range=50)
 
         # Load fixtures
@@ -34,8 +32,12 @@ class TestPatcherIntegration:
         if file_lines and file_lines[-1] == '':
             file_lines = file_lines[:-1]
 
+        # Read diff file
+        with open(example_diff, 'r') as f:
+            diff_text = f.read()
+
         # Parse diff
-        filename, hunks = self.parser.parse_file(str(example_diff))
+        filename, hunks = self.bridge.parse_diff(diff_text)
 
         # Validate patch
         valid, validation_info = self.bridge.validate_patch(file_lines, hunks)
@@ -43,6 +45,34 @@ class TestPatcherIntegration:
 
         # Apply patch
         success, result = self.bridge.apply_patch(file_lines, hunks)
+        assert success, f"Patch application failed: {result}"
+
+        # Verify result
+        assert isinstance(result, list)
+        assert len(result) > len(file_lines)  # Should have more lines after insertions
+
+    def test_apply_example_patch_optimized(self):
+        """Test applying the example patch using the optimized one-shot API."""
+        # Read fixture files
+        example_file = self.fixtures_dir / "example.py"
+        example_diff = self.fixtures_dir / "example.diff"
+
+        if not example_file.exists() or not example_diff.exists():
+            pytest.skip("Fixture files not found")
+
+        # Read source file
+        with open(example_file, 'r') as f:
+            content = f.read()
+        file_lines = content.split('\n')
+        if file_lines and file_lines[-1] == '':
+            file_lines = file_lines[:-1]
+
+        # Read diff file
+        with open(example_diff, 'r') as f:
+            diff_text = f.read()
+
+        # Apply patch using optimized API
+        success, result = self.bridge.parse_and_apply_patch(diff_text, file_lines)
         assert success, f"Patch application failed: {result}"
 
         # Verify result
