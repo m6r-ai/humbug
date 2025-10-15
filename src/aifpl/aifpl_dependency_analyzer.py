@@ -115,7 +115,8 @@ class AIFPLDependencyAnalyzer:
                             var_name = binding.get(0)
                             var_value = binding.get(1)
 
-                            assert isinstance(var_name, AIFPLSymbol), "Let binding variables must be symbols (validated by evaluator)"
+                            assert isinstance(var_name, AIFPLSymbol), \
+                                "Let binding variables must be symbols (validated by evaluator)"
                             binding_names.add(var_name.name)
 
                             # Free variables in binding expressions

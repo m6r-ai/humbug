@@ -48,7 +48,7 @@ class UnifiedDiffParser:
     NEW_FILE_PATTERN = re.compile(r'^\+\+\+\s+(.+)$')
     HUNK_HEADER_PATTERN = re.compile(r'^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@')
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the parser."""
         self.current_file: Optional[str] = None
         self.current_header: Optional[DiffHeader] = None
@@ -169,6 +169,7 @@ class UnifiedDiffParser:
         while i < len(lines):
             if self.HUNK_HEADER_PATTERN.match(lines[i]):
                 break
+
             i += 1
 
         # Parse each hunk
@@ -220,8 +221,12 @@ class UnifiedDiffParser:
             new_count=new_count
         )
 
-    def _parse_hunk_body(self, lines: List[str], start_idx: int, 
-                        header: HunkHeader) -> Tuple[List[Tuple[str, str]], int]:
+    def _parse_hunk_body(
+        self,
+        lines: List[str],
+        start_idx: int,
+        header: HunkHeader
+    ) -> Tuple[List[Tuple[str, str]], int]:
         """
         Parse hunk body (context, deletions, insertions).
 
@@ -250,9 +255,9 @@ class UnifiedDiffParser:
             # Empty line or line with just whitespace might end hunk
             if not line or (line and line[0] not in ' +-\\'):
                 # Check if we've processed expected number of lines
-                if (old_lines_processed >= header.old_count and 
-                    new_lines_processed >= header.new_count):
+                if (old_lines_processed >= header.old_count and new_lines_processed >= header.new_count):
                     break
+
                 # Otherwise, might be an empty context line
                 if line == '':
                     changes.append(('context', ''))
@@ -260,6 +265,7 @@ class UnifiedDiffParser:
                     new_lines_processed += 1
                     i += 1
                     continue
+
                 # Unknown line, skip it
                 i += 1
                 continue
@@ -290,8 +296,7 @@ class UnifiedDiffParser:
             i += 1
 
             # Check if we've processed all expected lines
-            if (old_lines_processed >= header.old_count and 
-                new_lines_processed >= header.new_count):
+            if (old_lines_processed >= header.old_count and new_lines_processed >= header.new_count):
                 break
 
         return changes, i
@@ -310,65 +315,3 @@ class UnifiedDiffParser:
             diff_text = f.read()
 
         return self.parse(diff_text)
-
-
-def test_parser():
-    """Test the unified diff parser with examples."""
-    print("Testing Unified Diff Parser...")
-
-    # Test case 1: Simple diff
-    simple_diff = """--- a/test.py
-+++ b/test.py
-@@ -1,5 +1,5 @@
- line 1
- line 2
--line 3
-+line 3 modified
- line 4
- line 5
-"""
-
-    parser = UnifiedDiffParser()
-
-    print("\n=== Test 1: Simple diff ===")
-    try:
-        filename, hunks = parser.parse(simple_diff)
-        print(f"Filename: {filename}")
-        print(f"Hunks: {len(hunks)}")
-        for i, hunk in enumerate(hunks, 1):
-            print(f"\nHunk {i}:")
-            print(f"  Start line: {hunk['start_line']}")
-            print(f"  Old count: {hunk['old_count']}")
-            print(f"  New count: {hunk['new_count']}")
-            print(f"  Changes:")
-            for change_type, line in hunk['changes']:
-                print(f"    {change_type:8s}: '{line}'")
-    except Exception as e:
-        print(f"Error: {e}")
-
-    # Test case 2: Multiple hunks
-    multi_hunk_diff = """--- a/example.py
-+++ b/example.py
-@@ -10,3 +10,4 @@
- context 1
--old line 1
-+new line 1
-+inserted line
-@@ -20,2 +21,2 @@
--old line 2
-+new line 2
-"""
-
-    print("\n=== Test 2: Multiple hunks ===")
-    try:
-        filename, hunks = parser.parse(multi_hunk_diff)
-        print(f"Filename: {filename}")
-        print(f"Hunks: {len(hunks)}")
-        for i, hunk in enumerate(hunks, 1):
-            print(f"\nHunk {i}: line {hunk['start_line']}, {len(hunk['changes'])} changes")
-    except Exception as e:
-        print(f"Error: {e}")
-
-
-if __name__ == "__main__":
-    test_parser()

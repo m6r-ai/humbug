@@ -32,7 +32,7 @@ class AIFPLPatchBridge:
         self.aifpl = AIFPL(max_depth=500)  # Increased depth for complex patches
         self.fuzz_range = fuzz_range
         self._patch_functions_loaded = False
-        self._library_code = None
+        self._library_code: str | None = None
         self._load_patch_library()
 
     def _load_patch_library(self) -> None:

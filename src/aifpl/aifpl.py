@@ -4,7 +4,7 @@ from typing import Union
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
-from aifpl.aifpl_value import AIFPLValue, AIFPLFunction
+from aifpl.aifpl_value import AIFPLFunction
 
 
 class AIFPL:

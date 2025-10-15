@@ -40,7 +40,7 @@ class Colors:
     CYAN = '\033[96m'
 
     @classmethod
-    def disable(cls):
+    def disable(cls) -> None:
         """Disable colors (for non-terminal output)."""
         cls.RESET = ''
         cls.BOLD = ''
@@ -122,17 +122,19 @@ class AIFPLPatcher:
             # Apply patch if requested
             if self.args.apply:
                 return self._apply_patch(source_lines, hunks)
-            else:
-                self._show_dry_run_message()
-                return 0
+
+            self._show_dry_run_message()
+            return 0
 
         except KeyboardInterrupt:
             self._print_error("\nInterrupted by user")
             return 130
+
         except Exception as e:
             self._print_error(f"Unexpected error: {e}")
             if self.verbose:
                 traceback.print_exc()
+
             return 1
 
     def _validate_inputs(self) -> bool:
@@ -232,10 +234,10 @@ class AIFPLPatcher:
         if valid:
             print(f"{Colors.GREEN}✓ All hunks can be applied{Colors.RESET}")
             return True
-        else:
-            print(f"{Colors.RED}✗ Patch validation failed:{Colors.RESET}")
-            print(f"  {result}")
-            return False
+
+        print(f"{Colors.RED}✗ Patch validation failed:{Colors.RESET}")
+        print(f"  {result}")
+        return False
 
     def _apply_patch(self, source_lines: List[str], hunks: List[dict]) -> int:
         """Apply the patch to the source file."""

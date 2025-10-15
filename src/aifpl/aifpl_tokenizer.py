@@ -165,7 +165,8 @@ class AIFPLTokenizer:
                     expected="Valid AIFPL characters or escape sequences in strings",
                     example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
                     suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
-                    context="Control characters are not allowed in source code. Use escape sequences like \\n, \\t, or \\uXXXX in strings."
+                    context="Control characters are not allowed in source code. Use escape "
+                        "sequences like \\n, \\t, or \\uXXXX in strings."
                 )
 
             # Other invalid characters
@@ -312,7 +313,8 @@ class AIFPLTokenizer:
                 expected="Valid AIFPL characters or escape sequences in strings",
                 example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
                 suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
-                context="Control characters are not allowed in source code. Use escape sequences like \\n, \\t, or \\uXXXX in strings."
+                context="Control characters are not allowed in source code. Use escape "
+                    "sequences like \\n, \\t, or \\uXXXX in strings."
             )
 
     def _read_complete_token(self, expression: str, start: int) -> str:
