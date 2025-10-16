@@ -5,7 +5,8 @@ Role:
     are going to assist me in making modifications to my application.
 
 Context:
-    # Pull in the default Python coding rules for the project.
+    # Pull in the default coding rules for the project.
+    Include: metaphor/aifpl-rules.m6r
     Include: metaphor/python-rules.m6r
 
     # The project only uses external dependencies if there's no other choice.  This makes it
@@ -17,13 +18,11 @@ Context:
     Context: Existing code
         This is a new tool we have been building:
 
-        Embed: src/tools/patch/*.py
-        Embed: src/tools/patch/*.aifpl
+        Embed: csv_parser_tail_recursive.aifpl
 
 Action:
     # Describe the details of the change required.
-    I would like you to reformat the two AIFPL files in the patch tool to follow the parenthesis formatting
-    rules correctly.  In the case of the diff tool, you can remove the comments after closing parenthesis
-    as this was a failed experiment.
+    We have recently built a prototype tail-recursive CSV parser in AIFPL.  How generic is this design?
+    Does it follow all the coding rules you've been given?
 
-    Please outline examples of what you will change before you do so.
+    Don't change it - I want to discuss

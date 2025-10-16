@@ -1,0 +1,380 @@
+# Standard set of AIFPL coding rules.
+
+Context: AIFPL implementation rules
+    As an engineer working with the application, I want the application to be easy to use and understand,
+    so I can maintain and enhance it over time.
+
+    Context: Implement in AIFPL
+        The application will be written in AIFPL (AI Functional Programming Language), a LISP-like functional
+        language with S-expression syntax.
+
+    Context: Indentation of code
+        Code must be indented by 2 spaces, following LISP/Scheme conventions.
+
+        Nested S-expressions should be indented to show structure clearly.
+
+        For example:
+
+        ```aifpl
+        (let (
+          (x 5)
+          (y 10)
+        )
+          (+ x y) )
+        ```
+
+    Context: Use comments
+        Comments must be used to describe all major functions and complex logic.
+
+        Use semicolon (`;`) for comments.
+
+        Comments should describe:
+        - The purpose of each lambda function
+        - Function parameters and their expected types/values
+        - Return values and their structure
+        - Any complex algorithms or non-obvious logic
+
+        For example:
+
+        ```aifpl
+        ; Parse a CSV line character by character
+        ; Args: chars (list of strings), in-quotes (boolean), current-field (string), fields (list)
+        ; Returns: list of parsed fields
+        (parse-csv-line
+          (lambda (chars in-quotes current-field fields)
+            ...) )
+        ```
+
+    Context: Function naming conventions
+        Use descriptive kebab-case names for all functions.
+
+        Names should clearly indicate what the function does.
+
+        Use conventional prefixes:
+        - Predicates (functions returning boolean) should end with `?` (e.g., `null?`, `valid-input?`)
+        - Functions that convert between types should use `->` (e.g., `string->number`, `list->string`)
+        - Helper functions can be prefixed with their domain (e.g., `csv-parse-line`, `json-extract-field`)
+
+    Context: Avoid deeply nested conditionals
+        To improve readability, avoid deeply nested `if` expressions when possible.
+
+        Use early returns or guard clauses at the start of functions to handle edge cases.
+
+        For example, do this:
+
+        ```aifpl
+        (lambda (items)
+          (if (null? items)
+            (list)  ; Early return for empty case
+            
+            (if (< (length items) 2)
+              items  ; Early return for single item
+              
+              (process-items items) ) ) )
+        ```
+
+        This is clearer than deeply nested conditions that check for the positive case first.
+
+    Context: Handle error and edge cases early
+        If it is possible to detect errors and edge cases early then do so. Always prefer to do this as early
+        as possible within the code so we have the fewest possible conditional checks by the time we reach the
+        main purpose of any function.
+
+        This is sometimes known as "flattening the code to the left" as there is generally less indentation required
+        when we do this. This makes the code easier to read.
+
+        For example do this:
+
+        ```aifpl
+        (lambda (data)
+          (if (null? data)
+            (list)  ; Handle empty case
+            
+            (if (not (list? data) )
+              (list)  ; Handle invalid type
+              
+              (process-valid-data data) ) ) )
+        ```
+
+        instead of this:
+
+        ```aifpl
+        (lambda (data)
+          (if (and (not (null? data) )
+                   (list? data) )
+            (process-valid-data data)
+            (list) ) )
+        ```
+
+        While the latter may be shorter, the former is easier to understand and maintain.
+
+    Context: Error handling philosophy
+        Context: Document error conditions
+            Document what error conditions each function may encounter in its comments.
+
+            Specify what the function returns in error cases (e.g., empty list, special value, error tuple).
+
+        Context: Validate inputs early
+            Check input validity at the start of functions.
+
+            Return appropriate default or error values for invalid inputs.
+
+            For example:
+
+            ```aifpl
+            ; Get item at index from list
+            ; Args: lst (list), idx (number)
+            ; Returns: item at index, or empty string if index out of bounds
+            (get-item-safe
+              (lambda (lst idx)
+                (if (not (list? lst) )
+                  ""  ; Invalid input type
+                  
+                  (if (or (< idx 0) (>= idx (length lst) ) )
+                    ""  ; Index out of bounds
+                    
+                    (list-ref lst idx) ) ) ) )
+            ```
+
+        Context: Provide meaningful error indicators
+            When a function cannot complete successfully, return a value that clearly indicates failure.
+
+            Options include:
+            - Empty list `(list)` for functions returning lists
+            - Empty string `""` for functions returning strings
+            - Special sentinel values like `-1` or `#f` for numeric/boolean functions
+            - Error tuples like `(list "error" "message")` for complex cases
+
+            Document the error return value clearly in comments.
+
+        Context: Propagate context in error cases
+            When detecting an error condition, provide context about what went wrong.
+
+            For complex parsers or processors, consider returning structured error information:
+
+            ```aifpl
+            ; Returns: (list "success" result) or (list "error" message)
+            (parse-with-validation
+              (lambda (input)
+                (if (string=? input "")
+                  (list "error" "Input cannot be empty")
+                  
+                  (if (not (valid-format? input) )
+                    (list "error" "Input format is invalid")
+                    
+                    (list "success" (parse-input input) ) ) ) ) )
+            ```
+
+    Context: Use let bindings for clarity
+        Use `let` bindings to name intermediate values, especially when:
+        - The same computation is used multiple times
+        - A complex expression would be hard to read inline
+        - The name adds semantic meaning
+
+        For example, do this:
+
+        ```aifpl
+        (let ((first-char (first chars) )
+              (remaining (rest chars) )
+              (is-delimiter (string=? first-char ",") ) )
+          (if is-delimiter
+            (process-delimiter remaining)
+            (process-char first-char remaining) ) )
+        ```
+
+        instead of this:
+
+        ```aifpl
+        (if (string=? (first chars) ",")
+          (process-delimiter (rest chars) )
+          (process-char (first chars) (rest chars) ) )
+        ```
+
+        The first version is more readable and avoids duplicate computations.
+
+    Context: Tail recursion optimization
+        AIFPL supports tail call optimization. Always structure recursive functions to be tail-recursive.
+
+        Use accumulator parameters to build up results.
+
+        For example, do this:
+
+        ```aifpl
+        ; Tail-recursive sum with accumulator
+        (sum-list
+          (lambda (lst acc)
+            (if (null? lst)
+              acc
+              (sum-list (rest lst) (+ acc (first lst) ) ) ) ) )
+        ```
+
+        instead of this:
+
+        ```aifpl
+        ; Non-tail-recursive (builds up stack)
+        (sum-list
+          (lambda (lst)
+            (if (null? lst)
+              0
+              (+ (first lst) (sum-list (rest lst) ) ) ) ) )
+        ```
+
+        The first version will not overflow the stack on large lists.
+
+    Context: Function organization in let bindings
+        When defining multiple related functions in a `let` binding, organize them logically:
+
+        1. Core/low-level functions first
+        2. Helper functions that use the core functions
+        3. High-level API functions last
+        4. Utility functions for data access
+
+        Add blank lines and comments to separate logical groups.
+
+        For example:
+
+        ```aifpl
+        (let (
+          ; === Core parsing functions ===
+          
+          (parse-char
+            (lambda (c state)
+              ...) )
+          
+          (parse-line
+            (lambda (chars state)
+              ...) )
+          
+          ; === Helper functions ===
+          
+          (parse-string
+            (lambda (str)
+              (parse-line (string->list str) initial-state) ) )
+          
+          ; === Public API ===
+          
+          (parse
+            (lambda (input)
+              ...) )
+          
+          ; === Utility functions ===
+          
+          (get-column
+            (lambda (data idx)
+              ...) )
+        )
+          ; Main expression using the functions
+          ... )
+        ```
+
+    Context: Avoid magic numbers and strings
+        Define named constants for magic values using `let` bindings.
+
+        For example, do this:
+
+        ```aifpl
+        (let (
+          (FIELD-DELIMITER ",")
+          (QUOTE-CHAR "\"")
+          (LINE-SEPARATOR "\n")
+          
+          (parse-csv
+            (lambda (text)
+              (let ((lines (string-split text LINE-SEPARATOR) ) )
+                (map (lambda (line) (parse-line line FIELD-DELIMITER QUOTE-CHAR) )
+                     lines) ) ) )
+        )
+          ...)
+        ```
+
+        instead of hardcoding `","`, `"\""`, and `"\n"` throughout the code.
+
+    Context: Make functions parameterizable
+        When designing parsers, processors, or other utilities, consider making them configurable
+        through parameters rather than hardcoding assumptions.
+
+        For example, a CSV parser should accept delimiter and quote character as parameters:
+
+        ```aifpl
+        (parse-csv-with-options
+          (lambda (text delimiter quote-char)
+            ...) )
+        ```
+
+        This makes the code more reusable and testable.
+
+    Context: Use higher-order functions appropriately
+        Leverage AIFPL's higher-order functions (`map`, `filter`, `fold`) when working with lists.
+
+        These are more declarative and often clearer than manual recursion.
+
+        For example, do this:
+
+        ```aifpl
+        ; Extract all ages from list of records
+        (map (lambda (record) (list-ref record 1) )
+             records)
+        ```
+
+        instead of this:
+
+        ```aifpl
+        (extract-ages
+          (lambda (records result)
+            (if (null? records)
+              (reverse result)
+              (extract-ages (rest records)
+                           (cons (list-ref (first records) 1) result) ) ) ) )
+        ```
+
+        However, use manual recursion when you need more control or when the logic doesn't fit
+        the map/filter/fold pattern cleanly.
+
+    Context: Pattern matching for clarity
+        Use `match` expressions for complex conditional logic, especially when:
+        - Destructuring lists or complex data
+        - Handling multiple type cases
+        - Implementing state machines or parsers
+
+        For example:
+
+        ```aifpl
+        (match result
+          ( (list "success" data) (process-data data) )
+          ( (list "error" msg) (handle-error msg) )
+          (_ (handle-unknown-result result) ) )
+        ```
+
+        This is clearer than nested `if` expressions checking the structure manually.
+
+    Context: Test and demo code organization
+        When including tests or demos in a file, place them at the end after all function definitions.
+
+        Clearly separate test code with comments.
+
+        Structure tests to show:
+        - What is being tested
+        - Expected results
+        - Actual results
+
+        For example:
+
+        ```aifpl
+        (let (
+          ; ... function definitions ...
+        )
+          ; ============================================================
+          ; TESTS / DEMOS
+          ; ============================================================
+          
+          (let (
+            (test1 (parse-csv-string "Alice,30,Engineer") )
+            (test2 (parse-csv-string "\"Smith, John\",42,\"VP, Engineering\"") )
+          )
+            (list
+              (list "Test 1 - Simple CSV:" test1)
+              (list "Expected:" (list "Alice" "30" "Engineer") )
+              (list "Test 2 - Quoted fields:" test2)
+              (list "Expected:" (list "Smith, John" "42" "VP, Engineering") )
+            ) ) )
+        ```
