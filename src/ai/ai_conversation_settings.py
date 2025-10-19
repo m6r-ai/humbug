@@ -11,6 +11,24 @@ class AIConversationSettings:
     # Single dictionary of all available models
     MODELS = {
         # Anthropic models
+        "claude-haiku-4-5-20251001": AIModel(
+            name="claude-haiku-4-5-20251001",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=32000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "claude-haiku-4-5-20251001 (thinking)": AIModel(
+            name="claude-haiku-4-5-20251001 (thinking)",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=32000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "claude-3-5-haiku-20241022": AIModel(
             name="claude-3-5-haiku-20241022",
             provider="anthropic",

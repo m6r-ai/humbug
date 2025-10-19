@@ -2,9 +2,20 @@
 
 ## v0.27 (2025-10-xx)
 
+New features:
+
+- Added Claude Haiku 4.5 support.
+- AIFPL now has dramatically improved error responses to allow LLMs to do better debugging of problems.
+
+Bug fixes:
+
+- Resolved problems with some AIFPL tail recursions not working correctly.
+
 Internal structure changes:
 
 - Added more test coverage for AIFPL, and removed more redundant code paths.
+- Started to add AIFPL tools to the codebase.  These are not yet integrated but start to demonstrate how AIFPL can be
+  used for complex algorithmic processing.  The first tool supports patching files with unified diffs.
 
 ## v0.26 (2025-10-07)
 
