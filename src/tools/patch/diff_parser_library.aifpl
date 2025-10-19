@@ -9,39 +9,39 @@
   
   ;; Check if string starts with prefix
   (string-starts-with? (lambda (str prefix)
-    (if (> (string-length prefix) (string-length str) )
+    (if (> (string-length prefix) (string-length str))
         #f
-        (string=? (substring str 0 (string-length prefix) ) prefix) ) ) )
+        (string=? (substring str 0 (string-length prefix)) prefix))))
   
   ;; Remove prefix from string if present
   (string-strip-prefix (lambda (str prefix)
     (if (string-starts-with? str prefix)
-        (substring str (string-length prefix) (string-length str) )
-        str) ) )
+        (substring str (string-length prefix) (string-length str))
+        str)))
   
   ;; Check if a string contains only digits (and optional leading minus)
   (is-numeric-string? (lambda (str)
     (if (= (string-length str) 0)
         #f
-        (let ( (first-char (substring str 0 1) ) )
+        (let ((first-char (substring str 0 1)))
           (if (string=? first-char "-")
               ;; Negative number - check rest
               (if (< (string-length str) 2)
                   #f
-                  (let ( (rest-str (substring str 1 (string-length str) ) ) )
+                  (let ((rest-str (substring str 1 (string-length str))))
                     (all? (lambda (c)
                             (or (string=? c "0") (string=? c "1") (string=? c "2")
                                 (string=? c "3") (string=? c "4") (string=? c "5")
                                 (string=? c "6") (string=? c "7") (string=? c "8")
-                                (string=? c "9") ) )
-                          (string->list rest-str) ) ) )
+                                (string=? c "9")))
+                          (string->list rest-str))))
               ;; Positive number - check all chars
               (all? (lambda (c)
                       (or (string=? c "0") (string=? c "1") (string=? c "2")
                           (string=? c "3") (string=? c "4") (string=? c "5")
                           (string=? c "6") (string=? c "7") (string=? c "8")
-                          (string=? c "9") ) )
-                    (string->list str) ) ) ) ) ) )
+                          (string=? c "9")))
+                    (string->list str)))))))
   
   ;; ============================================================================
   ;; FILENAME EXTRACTION
@@ -50,17 +50,17 @@
   ;; Extract clean filename from diff path
   (extract-filename (lambda (path)
     ;; Remove "a/" or "b/" prefix if present
-    (let ( (without-a (if (string-starts-with? path "a/")
+    (let ((without-a (if (string-starts-with? path "a/")
                           (string-strip-prefix path "a/")
-                          path) ) )
-      (let ( (without-b (if (string-starts-with? without-a "b/")
+                          path)))
+      (let ((without-b (if (string-starts-with? without-a "b/")
                             (string-strip-prefix without-a "b/")
-                            without-a) ) )
+                            without-a)))
         ;; Remove timestamp (split by tab or multiple spaces)
-        (let ( (parts (string-split without-b "\t") ) )
+        (let ((parts (string-split without-b "\t")))
           (if (> (length parts) 0)
-              (string-trim (first parts) )
-              without-b) ) ) ) ) )
+              (string-trim (first parts))
+              without-b))))))
   
   ;; ============================================================================
   ;; HUNK HEADER PARSING
@@ -68,55 +68,55 @@
   
   ;; Parse "@@ -1,5 +1,5 @@" into (old-start old-count new-start new-count)
   (parse-hunk-header (lambda (line)
-    (if (not (string-starts-with? line "@@") )
+    (if (not (string-starts-with? line "@@"))
         (list "error" "Not a hunk header")
         ;; Extract the part between @@ and @@
-        (let ( (without-prefix (string-strip-prefix line "@@") ) )
-          (let ( (parts (string-split without-prefix "@@") ) )
+        (let ((without-prefix (string-strip-prefix line "@@")))
+          (let ((parts (string-split without-prefix "@@")))
             (if (< (length parts) 1)
                 (list "error" "Malformed hunk header")
-                (let ( (range-part (string-trim (first parts) ) ) )
+                (let ((range-part (string-trim (first parts))))
                   ;; Split by space to get old and new ranges
-                  (let ( (ranges (string-split range-part " ") ) )
+                  (let ((ranges (string-split range-part " ")))
                     (if (< (length ranges) 2)
                         (list "error" "Missing range information")
-                        (let ( (old-range (first ranges) )
-                              (new-range (first (rest ranges) ) ) )
+                        (let ((old-range (first ranges))
+                              (new-range (first (rest ranges))))
                           ;; Parse old range: -start,count
-                          (let ( (old-parsed (parse-range old-range "-") ) )
+                          (let ((old-parsed (parse-range old-range "-")))
                             (if (string=? (first old-parsed) "error")
                                 old-parsed
-                                (let ( (new-parsed (parse-range new-range "+") ) )
+                                (let ((new-parsed (parse-range new-range "+")))
                                   (if (string=? (first new-parsed) "error")
                                       new-parsed
                                       (list "ok"
-                                            (first (rest old-parsed) )
-                                            (first (rest (rest old-parsed) ) )
-                                            (first (rest new-parsed) )
-                                            (first (rest (rest new-parsed) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
+                                            (first (rest old-parsed))
+                                            (first (rest (rest old-parsed)))
+                                            (first (rest new-parsed))
+                                            (first (rest (rest new-parsed))))))))))))))))))
   
   ;; Parse "-1,5" or "+1,5" into (start count)
   ;; FIXED: Validate numeric strings before calling string->number
   (parse-range (lambda (range-str prefix)
-    (if (not (string-starts-with? range-str prefix) )
-        (list "error" (string-append "Range doesn't start with " prefix) )
-        (let ( (without-prefix (string-strip-prefix range-str prefix) ) )
-          (let ( (parts (string-split without-prefix ",") ) )
+    (if (not (string-starts-with? range-str prefix))
+        (list "error" (string-append "Range doesn't start with " prefix))
+        (let ((without-prefix (string-strip-prefix range-str prefix)))
+          (let ((parts (string-split without-prefix ",")))
             (if (= (length parts) 0)
                 (list "error" "Empty range")
-                (let ( (start-str (first parts) ) )
-                  (if (not (is-numeric-string? start-str) )
+                (let ((start-str (first parts)))
+                  (if (not (is-numeric-string? start-str))
                       (list "error" "Invalid start number")
-                      (let ( (start (string->number start-str) ) )
+                      (let ((start (string->number start-str)))
                         (if (= (length parts) 1)
                             ;; No comma, count is 1
                             (list "ok" start 1)
                             ;; Has comma, parse count
-                            (let ( (count-str (first (rest parts) ) ) )
-                              (if (not (is-numeric-string? count-str) )
+                            (let ((count-str (first (rest parts))))
+                              (if (not (is-numeric-string? count-str))
                                   (list "error" "Invalid count number")
-                                  (let ( (count (string->number count-str) ) )
-                                    (list "ok" start count) ) ) ) ) ) ) ) ) ) ) ) ) )
+                                  (let ((count (string->number count-str)))
+                                    (list "ok" start count))))))))))))))
   
   ;; ============================================================================
   ;; LINE CLASSIFICATION
@@ -126,18 +126,18 @@
   (classify-line (lambda (line)
     (if (= (string-length line) 0)
         (list "context" "")
-        (let ( (first-char (substring line 0 1) ) )
+        (let ((first-char (substring line 0 1)))
           (if (string=? first-char " ")
-              (list "context" (substring line 1 (string-length line) ) )
+              (list "context" (substring line 1 (string-length line)))
               (if (string=? first-char "+")
-                  (list "insert" (substring line 1 (string-length line) ) )
+                  (list "insert" (substring line 1 (string-length line)))
                   (if (string=? first-char "-")
-                      (list "delete" (substring line 1 (string-length line) ) )
+                      (list "delete" (substring line 1 (string-length line)))
                       (if (string=? first-char "\\")
                           ;; "\ No newline at end of file" - skip
                           (list "skip" "")
                           ;; Unknown line type, treat as context
-                          (list "context" line) ) ) ) ) ) ) ) )
+                          (list "context" line)))))))))
   
   ;; ============================================================================
   ;; FILE HEADER PARSING
@@ -146,20 +146,20 @@
   ;; Find --- and +++ file headers in diff
   ;; FIXED: Use boolean? to check if old-file/new-file are still #f
   (find-file-headers (lambda (lines)
-    (let ( (find-helper (lambda (remaining old-file new-file)
+    (let ((find-helper (lambda (remaining old-file new-file)
       (if (null? remaining)
-          (if (and (string? old-file) (string? new-file) )
+          (if (and (string? old-file) (string? new-file))
               (list "ok" old-file new-file)
-              (list "error" "Missing file headers") )
-          (let ( (line (first remaining) ) )
-            (if (and (boolean? old-file) (string-starts-with? line "---") )
-                (let ( (path (string-trim (string-strip-prefix line "---") ) ) )
-                  (find-helper (rest remaining) path new-file) )
-                (if (and (string? old-file) (boolean? new-file) (string-starts-with? line "+++") )
-                    (let ( (path (string-trim (string-strip-prefix line "+++") ) ) )
-                      (list "ok" old-file path) )
-                    (find-helper (rest remaining) old-file new-file) ) ) ) ) ) ) )
-      (find-helper lines #f #f) ) ) )
+              (list "error" "Missing file headers"))
+          (let ((line (first remaining)))
+            (if (and (boolean? old-file) (string-starts-with? line "---"))
+                (let ((path (string-trim (string-strip-prefix line "---"))))
+                  (find-helper (rest remaining) path new-file))
+                (if (and (string? old-file) (boolean? new-file) (string-starts-with? line "+++"))
+                    (let ((path (string-trim (string-strip-prefix line "+++"))))
+                      (list "ok" old-file path))
+                    (find-helper (rest remaining) old-file new-file))))))))
+      (find-helper lines #f #f))))
   
   ;; ============================================================================
   ;; HUNK BODY PARSING
@@ -167,19 +167,19 @@
   
   ;; Parse the body of a hunk (the actual changes)
   (parse-hunk-body (lambda (lines start-idx old-count new-count)
-    (let ( (parse-helper (lambda (remaining idx changes old-processed new-processed)
+    (let ((parse-helper (lambda (remaining idx changes old-processed new-processed)
       (if (or (null? remaining)
               (and (>= old-processed old-count)
-                   (>= new-processed new-count) ) )
+                   (>= new-processed new-count)))
           ;; Done with this hunk
           (list "ok" changes idx)
-          (let ( (line (first remaining) ) )
+          (let ((line (first remaining)))
             ;; Check if we've hit the next hunk
             (if (string-starts-with? line "@@")
                 (list "ok" changes idx)
-                (let ( (classified (classify-line line) ) )
-                  (let ( (change-type (first classified) )
-                        (change-text (first (rest classified) ) ) )
+                (let ((classified (classify-line line)))
+                  (let ((change-type (first classified))
+                        (change-text (first (rest classified))))
                     (if (string=? change-type "skip")
                         ;; Skip this line
                         (parse-helper (rest remaining) (+ idx 1) changes old-processed new-processed)
@@ -187,28 +187,28 @@
                             ;; Context line
                             (parse-helper (rest remaining)
                                         (+ idx 1)
-                                        (append changes (list (list "context" change-text) ) )
+                                        (append changes (list (list "context" change-text)))
                                         (+ old-processed 1)
-                                        (+ new-processed 1) )
+                                        (+ new-processed 1))
                             (if (string=? change-type "delete")
                                 ;; Delete line
                                 (parse-helper (rest remaining)
                                             (+ idx 1)
-                                            (append changes (list (list "delete" change-text) ) )
+                                            (append changes (list (list "delete" change-text)))
                                             (+ old-processed 1)
                                             new-processed)
                                 (if (string=? change-type "insert")
                                     ;; Insert line
                                     (parse-helper (rest remaining)
                                                 (+ idx 1)
-                                                (append changes (list (list "insert" change-text) ) )
+                                                (append changes (list (list "insert" change-text)))
                                                 old-processed
-                                                (+ new-processed 1) )
+                                                (+ new-processed 1))
                                     ;; Unknown, skip
-                                    (parse-helper (rest remaining) (+ idx 1) changes old-processed new-processed) ) ) ) ) ) ) ) ) ) ) ) )
-      (if (>= start-idx (length lines) )
+                                    (parse-helper (rest remaining) (+ idx 1) changes old-processed new-processed)))))))))))))
+      (if (>= start-idx (length lines))
           (list "ok" (list) start-idx)
-          (parse-helper (drop start-idx lines) start-idx (list) 0 0) ) ) ) )
+          (parse-helper (drop start-idx lines) start-idx (list) 0 0)))))
   
   ;; ============================================================================
   ;; HUNK PARSING
@@ -216,35 +216,35 @@
   
   ;; Parse all hunks from lines starting at start-idx
   (parse-hunks (lambda (lines start-idx)
-    (let ( (parse-all (lambda (idx hunks)
-      (if (>= idx (length lines) )
+    (let ((parse-all (lambda (idx hunks)
+      (if (>= idx (length lines))
           (list "ok" hunks)
-          (let ( (line (list-ref lines idx) ) )
-            (if (not (string-starts-with? line "@@") )
+          (let ((line (list-ref lines idx)))
+            (if (not (string-starts-with? line "@@"))
                 ;; Skip non-hunk lines
                 (parse-all (+ idx 1) hunks)
                 ;; Parse hunk header
-                (let ( (header-result (parse-hunk-header line) ) )
+                (let ((header-result (parse-hunk-header line)))
                   (if (string=? (first header-result) "error")
                       header-result
-                      (let ( (old-start (first (rest header-result) ) )
-                            (old-count (first (rest (rest header-result) ) ) )
-                            (new-start (first (rest (rest (rest header-result) ) ) ) )
-                            (new-count (first (rest (rest (rest (rest header-result) ) ) ) ) ) )
+                      (let ((old-start (first (rest header-result)))
+                            (old-count (first (rest (rest header-result))))
+                            (new-start (first (rest (rest (rest header-result)))))
+                            (new-count (first (rest (rest (rest (rest header-result)))))))
                         ;; Parse hunk body
-                        (let ( (body-result (parse-hunk-body lines (+ idx 1) old-count new-count) ) )
+                        (let ((body-result (parse-hunk-body lines (+ idx 1) old-count new-count)))
                           (if (string=? (first body-result) "error")
                               body-result
-                              (let ( (changes (first (rest body-result) ) )
-                                    (next-idx (first (rest (rest body-result) ) ) ) )
+                              (let ((changes (first (rest body-result)))
+                                    (next-idx (first (rest (rest body-result)))))
                                 ;; Create hunk structure (0-based indexing)
-                                (let ( (hunk (list
-                                             (list "start-line" (- old-start 1) )
+                                (let ((hunk (list
+                                             (list "start-line" (- old-start 1))
                                              (list "old-count" old-count)
                                              (list "new-count" new-count)
-                                             (list "changes" changes) ) ) )
-                                  (parse-all next-idx (append hunks (list hunk) ) ) ) ) ) ) ) ) ) ) ) ) ) ) )
-      (parse-all start-idx (list) ) ) ) )
+                                             (list "changes" changes))))
+                                  (parse-all next-idx (append hunks (list hunk))))))))))))))))
+      (parse-all start-idx (list)))))
   
   ;; ============================================================================
   ;; MAIN PARSE FUNCTION
@@ -253,32 +253,32 @@
   ;; Main function: parse unified diff text into structured format
   (parse-diff-text (lambda (diff-text)
     ;; Split into lines
-    (let ( (lines (string-split diff-text "\n") ) )
+    (let ((lines (string-split diff-text "\n")))
       ;; Find file headers
-      (let ( (header-result (find-file-headers lines) ) )
+      (let ((header-result (find-file-headers lines)))
         (if (string=? (first header-result) "error")
-            (list "error" (first (rest header-result) ) )
-            (let ( (old-file (first (rest header-result) ) )
-                  (new-file (first (rest (rest header-result) ) ) ) )
+            (list "error" (first (rest header-result)))
+            (let ((old-file (first (rest header-result)))
+                  (new-file (first (rest (rest header-result)))))
               ;; Extract filename (prefer new file)
-              (let ( (filename (extract-filename new-file) ) )
-                (let ( (final-filename (if (or (string=? filename "") (string=? filename "/dev/null") )
+              (let ((filename (extract-filename new-file)))
+                (let ((final-filename (if (or (string=? filename "") (string=? filename "/dev/null"))
                                           (extract-filename old-file)
-                                          filename) ) )
+                                          filename)))
                   ;; Find where hunks start (after +++ line)
-                  (let ( (find-hunk-start (lambda (remaining idx)
+                  (let ((find-hunk-start (lambda (remaining idx)
                     (if (null? remaining)
                         idx
                         (if (string-starts-with? (first remaining) "+++")
                             (+ idx 1)
-                            (find-hunk-start (rest remaining) (+ idx 1) ) ) ) ) ) )
-                    (let ( (hunk-start-idx (find-hunk-start lines 0) ) )
+                            (find-hunk-start (rest remaining) (+ idx 1)))))))
+                    (let ((hunk-start-idx (find-hunk-start lines 0)))
                       ;; Parse hunks
-                      (let ( (hunks-result (parse-hunks lines hunk-start-idx) ) )
+                      (let ((hunks-result (parse-hunks lines hunk-start-idx)))
                         (if (string=? (first hunks-result) "error")
                             hunks-result
-                            (let ( (hunks (first (rest hunks-result) ) ) )
-                              (list "ok" final-filename hunks) ) ) ) ) ) ) ) ) ) ) ) ) )
+                            (let ((hunks (first (rest hunks-result))))
+                              (list "ok" final-filename hunks))))))))))))))
   
   ;; ============================================================================
   ;; COMBINED PARSE AND APPLY
@@ -287,15 +287,15 @@
   ;; Combined function: parse diff and apply to file lines
   (parse-and-apply (lambda (diff-text file-lines fuzz-range patch-apply-fn)
     ;; Parse the diff
-    (let ( (parse-result (parse-diff-text diff-text) ) )
+    (let ((parse-result (parse-diff-text diff-text)))
       (if (string=? (first parse-result) "error")
-          (list "error" (first (rest parse-result) ) 0)
-          (let ( (filename (first (rest parse-result) ) )
-                (hunks (first (rest (rest parse-result) ) ) ) )
+          (list "error" (first (rest parse-result)) 0)
+          (let ((filename (first (rest parse-result)))
+                (hunks (first (rest (rest parse-result)))))
             ;; Apply the patch
-            (patch-apply-fn file-lines hunks fuzz-range) ) ) ) ) ) )
+            (patch-apply-fn file-lines hunks fuzz-range)))))))
   
   ;; Export functions (this is the body of the let)
   (list
     (list "parse-diff-text" parse-diff-text)
-    (list "parse-and-apply" parse-and-apply) ) )
+    (list "parse-and-apply" parse-and-apply)))

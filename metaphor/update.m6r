@@ -18,11 +18,14 @@ Context:
     Context: Existing code
         This is a new tool we have been building:
 
-        Embed: csv_parser_tail_recursive.aifpl
+        Embed: csv_parser.aifpl
+        Embed: test_csv_parser.py
 
 Action:
     # Describe the details of the change required.
-    We have recently built a prototype tail-recursive CSV parser in AIFPL.  How generic is this design?
-    Does it follow all the coding rules you've been given?
+    The code is supposed to use tail recursion but if I set the stack depth to 30 (as it is now) then the code fails
+    If I set it to 50 then the tests work.
 
-    Don't change it - I want to discuss
+    Should this work (using a tail recursion optimization) or are we seeing a bug in the AIFPL implementation?
+
+    The AIFPL implementation can be found in src/aifpl 

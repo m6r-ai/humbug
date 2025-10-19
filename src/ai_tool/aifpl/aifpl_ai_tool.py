@@ -39,11 +39,6 @@ class AIFPLAITool(AITool):
 
                 "Syntax: (operator arg1 arg2 ...)\n\n"
 
-                "Criticial parenthesis rule: You MUST NOT emit adjacent opening parentheses without a space in between.  You "
-                "MUST NOT emit adjacent closing parentheses without a space in between.\n"
-                "Correct: emit '( (' or ') )'\n"
-                "Wrong: emit '((' or '))'\n"
-
                 "Quote - Data Literals and Code as Data:\n"
                 "- (quote expr) → returns expr without evaluation\n"
                 "- 'expr → shortcut for (quote expr)\n"
