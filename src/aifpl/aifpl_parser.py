@@ -1,9 +1,18 @@
 """Parser for AIFPL expressions with detailed error messages."""
 
 from typing import List
+from dataclasses import dataclass
 from aifpl.aifpl_error import AIFPLParseError, ErrorMessageBuilder
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
+
+
+@dataclass
+class ParenStackFrame:
+    """Represents an unclosed opening parenthesis with context."""
+    position: int
+    expression_type: str
+    context_snippet: str
 
 
 class AIFPLParser:
@@ -22,6 +31,9 @@ class AIFPLParser:
         self.current_token: AIFPLToken | None = tokens[0] if tokens else None
         self.expression = expression
         self.message_builder = ErrorMessageBuilder()
+
+        # Paren stack for tracking unclosed expressions
+        self.paren_stack: List[ParenStackFrame] = []
 
     def parse(self) -> AIFPLValue:
         """
@@ -103,8 +115,152 @@ class AIFPLParser:
             context=f"Token '{token_value}' cannot start an expression"
         )
 
+    def _push_paren_frame(self, position: int) -> None:
+        """
+        Push a new opening paren onto the tracking stack.
+
+        Args:
+            position: Character position of the opening paren
+        """
+        expr_type = self._detect_expression_type(position)
+        snippet = self._get_context_snippet(position, length=30)
+
+        frame = ParenStackFrame(
+            position=position,
+            expression_type=expr_type,
+            context_snippet=snippet
+        )
+
+        self.paren_stack.append(frame)
+
+    def _pop_paren_frame(self) -> None:
+        """Pop an opening paren from the stack when it's successfully closed."""
+        assert self.paren_stack, "Paren stack underflow - trying to pop from empty stack"
+        self.paren_stack.pop()
+
+    def _detect_expression_type(self, position: int) -> str:
+        """
+        Detect what type of expression starts at this position.
+
+        Looks at the first symbol after the opening paren to classify
+        the expression type (let, lambda, if, etc.)
+
+        Args:
+            position: Character position of the opening paren
+
+        Returns:
+            Human-readable expression type string
+        """
+        # Skip past the opening paren and whitespace
+        i = position + 1
+        while i < len(self.expression) and self.expression[i].isspace():
+            i += 1
+
+        if i >= len(self.expression):
+            return "list"
+
+        # Read the first symbol
+        symbol_start = i
+        while i < len(self.expression) and (self.expression[i].isalnum() or self.expression[i] in '-+*/?_'):
+            i += 1
+
+        first_symbol = self.expression[symbol_start:i]
+
+        # Classify based on first symbol
+        special_forms = {
+            'let': 'let binding',
+            'lambda': 'lambda function',
+            'if': 'if expression',
+            'match': 'match expression',
+            'quote': 'quote expression',
+            'map': 'map call',
+            'filter': 'filter call',
+            'fold': 'fold call',
+            'define': 'define',
+            'cond': 'cond expression',
+            'and': 'and expression',
+            'or': 'or expression',
+            'not': 'not expression',
+        }
+
+        return special_forms.get(first_symbol, 'list/function call')
+
+    def _get_context_snippet(self, position: int, length: int = 30) -> str:
+        """
+        Get a snippet of code starting at position for error display.
+
+        Args:
+            position: Starting character position
+            length: Maximum length of snippet
+
+        Returns:
+            Formatted context snippet with ellipsis if truncated
+        """
+        end = min(position + length, len(self.expression))
+        snippet = self.expression[position:end]
+
+        # Clean up whitespace for display (collapse multiple spaces)
+        snippet = ' '.join(snippet.split())
+
+        # Add ellipsis if truncated
+        if end < len(self.expression):
+            snippet += "..."
+
+        return snippet
+
+    def _create_enhanced_unterminated_error(self, start_pos: int) -> AIFPLParseError:
+        """
+        Create enhanced error message with paren stack information.
+
+        Args:
+            start_pos: Position where the unterminated list started
+
+        Returns:
+            AIFPLParseError with detailed stack trace
+        """
+        depth = len(self.paren_stack)
+
+        # Build stack trace showing all unclosed expressions
+        stack_lines = []
+        for i, frame in enumerate(self.paren_stack, 1):
+            stack_lines.append(
+                f"  {i}. {frame.expression_type} at position {frame.position}: "
+                f"{frame.context_snippet}"
+            )
+
+        stack_trace = "\n".join(stack_lines) if stack_lines else "  (no unclosed expressions)"
+
+        # Build closing parens suggestion with spaces for readability
+        if depth > 1:
+            closing_parens = " ) " * depth
+            closing_parens = closing_parens.strip()
+
+        else:
+            closing_parens = ")"
+
+        # Create the context message
+        context_msg = (
+            f"Reached end of input at depth {depth}.\n\n"
+            f"Unclosed expressions:\n{stack_trace}"
+        )
+
+        # Determine singular vs plural
+        paren_word = "parenthesis" if depth == 1 else "parentheses"
+
+        return AIFPLParseError(
+            message=f"Unterminated list - missing {depth} closing {paren_word}",
+            position=start_pos,
+            expected=f'Add "{closing_parens}" to close all expressions',
+            example="Correct: (+ 1 2)\nIncorrect: (+ 1 2",
+            suggestion=f"Add {depth} closing {paren_word}: {closing_parens}",
+            context=context_msg
+        )
+
     def _parse_list(self, start_pos: int) -> AIFPLList:
-        """Parse (element1 element2 ...) with detailed error reporting."""
+        """Parse (element1 element2 ...) with enhanced error tracking."""
+        # Push opening paren onto tracking stack
+        self._push_paren_frame(start_pos)
+
         self._advance()  # consume '('
 
         elements = []
@@ -112,14 +268,11 @@ class AIFPLParser:
             elements.append(self._parse_expression())
 
         if self.current_token is None:
-            raise AIFPLParseError(
-                message="Unterminated list - missing closing parenthesis",
-                position=start_pos,
-                expected="Closing parenthesis ')'",
-                example="Correct: (+ 1 2)\\nIncorrect: (+ 1 2",
-                suggestion="Add ')' to close the list",
-                context=f"List starting at position {start_pos} was never closed"
-            )
+            # Use enhanced error with stack trace
+            raise self._create_enhanced_unterminated_error(start_pos)
+
+        # Pop from stack when successfully closed
+        self._pop_paren_frame()
 
         self._advance()  # consume ')'
 
