@@ -394,8 +394,8 @@ class AIFPLEvaluator:
         # Use tail detection if we're in tail position
         if in_tail_position:
             return self._evaluate_expression_with_tail_detection(body, current_env, depth)
-        else:
-            return self._evaluate_expression(body, current_env, depth)
+
+        return self._evaluate_expression(body, current_env, depth)
 
     def _evaluate_sequential_binding_group(
         self,

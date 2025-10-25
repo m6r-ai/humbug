@@ -16,16 +16,15 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        This is a new tool we have been building:
+        This is part of your AIFPL tool we have been building:
 
-        Embed: csv_parser.aifpl
-        Embed: test_csv_parser.py
+        Embed: src/aifpl/aifpl_parser.py
 
 Action:
     # Describe the details of the change required.
-    The code is supposed to use tail recursion but if I set the stack depth to 30 (as it is now) then the code fails
-    If I set it to 50 then the tests work.
+    We recently added a lot of code to provide more precise error messages for unbalanced parentheses problems.  Do you
+    have any thoughts on how we can make it even more specific about where any missing paren should be?
 
-    Should this work (using a tail recursion optimization) or are we seeing a bug in the AIFPL implementation?
+    If you need it, the full AIFPL implementation can be found in src/aifpl 
 
-    The AIFPL implementation can be found in src/aifpl 
+    Don't code anything - I want to discuss first.

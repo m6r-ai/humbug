@@ -361,7 +361,7 @@ class TestAIFPLParserEdgeCases:
         # Multiple errors in sequence
         errors = ["(+ 1 2", "+ 1 2)", "(+ 1 @)"]
         for expr in errors:
-            with pytest.raises((AIFPLParseError, AIFPLTokenError, AIFPLEvalError)):
+            with pytest.raises((AIFPLTokenError, AIFPLParseError, AIFPLEvalError)):
                 aifpl.evaluate(expr)
 
         # Should still work after multiple errors
@@ -466,10 +466,10 @@ class TestAIFPLParserEdgeCases:
         with pytest.raises(AIFPLParseError, match="Incomplete quote expression"):
             result = aifpl.evaluate("('")
 
-        with pytest.raises(AIFPLParseError, match="Unexpected token: \)"):
+        with pytest.raises(AIFPLParseError, match=r"Unexpected token: \)"):
             result = aifpl.evaluate("(')")
 
-        with pytest.raises(AIFPLParseError, match="Unexpected token: \)"):
+        with pytest.raises(AIFPLParseError, match=r"Unexpected token: \)"):
             result = aifpl.evaluate("(' )")
 
     def test_parser_operator_precedence_not_applicable(self, aifpl):

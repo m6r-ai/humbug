@@ -13,6 +13,9 @@ class ParenStackFrame:
     position: int
     expression_type: str
     context_snippet: str
+    elements_parsed: int = 0
+    last_complete_position: int | None = None
+    related_symbol: str | None = None  # For bindings: the variable name
 
 
 class AIFPLParser:
@@ -115,12 +118,15 @@ class AIFPLParser:
             context=f"Token '{token_value}' cannot start an expression"
         )
 
-    def _push_paren_frame(self, position: int) -> None:
+    def _push_paren_frame(self, position: int) -> ParenStackFrame:
         """
         Push a new opening paren onto the tracking stack.
 
         Args:
             position: Character position of the opening paren
+
+        Returns:
+            The created frame (so caller can update it)
         """
         expr_type = self._detect_expression_type(position)
         snippet = self._get_context_snippet(position, length=30)
@@ -132,11 +138,25 @@ class AIFPLParser:
         )
 
         self.paren_stack.append(frame)
+        return frame
 
     def _pop_paren_frame(self) -> None:
         """Pop an opening paren from the stack when it's successfully closed."""
         assert self.paren_stack, "Paren stack underflow - trying to pop from empty stack"
         self.paren_stack.pop()
+
+    def _update_frame_after_element(self) -> None:
+        """Update the current frame after successfully parsing an element."""
+        if self.paren_stack:
+            frame = self.paren_stack[-1]
+            frame.elements_parsed += 1
+
+            # Record position after this element (for suggesting where to close)
+            if self.current_token:
+                frame.last_complete_position = self.current_token.position
+
+            else:
+                frame.last_complete_position = len(self.expression)
 
     def _detect_expression_type(self, position: int) -> str:
         """
@@ -223,10 +243,23 @@ class AIFPLParser:
         # Build stack trace showing all unclosed expressions
         stack_lines = []
         for i, frame in enumerate(self.paren_stack, 1):
-            stack_lines.append(
-                f"  {i}. {frame.expression_type} at position {frame.position}: "
-                f"{frame.context_snippet}"
-            )
+            line = f"  {i}. {frame.expression_type} at position {frame.position}"
+
+            # Add related symbol if available (e.g., binding variable name)
+            if frame.related_symbol:
+                line += f" ('{frame.related_symbol}')"
+
+            line += f": {frame.context_snippet}"
+
+            # Show how many elements were parsed
+            if frame.elements_parsed > 0:
+                line += f"\n     Parsed {frame.elements_parsed} element{'s' if frame.elements_parsed != 1 else ''}"
+
+            # Suggest where the closing paren should go
+            if frame.last_complete_position is not None:
+                line += f"\n     → Likely needs ')' after position {frame.last_complete_position}"
+
+            stack_lines.append(line)
 
         stack_trace = "\n".join(stack_lines) if stack_lines else "  (no unclosed expressions)"
 
@@ -241,7 +274,7 @@ class AIFPLParser:
         # Create the context message
         context_msg = (
             f"Reached end of input at depth {depth}.\n\n"
-            f"Unclosed expressions:\n{stack_trace}"
+            f"Unclosed expressions (innermost to outermost):\n{stack_trace}"
         )
 
         # Determine singular vs plural
@@ -259,13 +292,22 @@ class AIFPLParser:
     def _parse_list(self, start_pos: int) -> AIFPLList:
         """Parse (element1 element2 ...) with enhanced error tracking."""
         # Push opening paren onto tracking stack
-        self._push_paren_frame(start_pos)
+        frame = self._push_paren_frame(start_pos)
 
         self._advance()  # consume '('
 
-        elements = []
+        elements: List[AIFPLValue] = []
+
+        # Check if this is a 'let' form to enable special tracking
+        if (self.current_token and
+            self.current_token.type == AIFPLTokenType.SYMBOL and
+            self.current_token.value == 'let'):
+            return self._parse_let_with_tracking(start_pos, frame, elements)
+
+        # Regular list parsing
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             elements.append(self._parse_expression())
+            self._update_frame_after_element()
 
         if self.current_token is None:
             # Use enhanced error with stack trace
@@ -277,6 +319,246 @@ class AIFPLParser:
         self._advance()  # consume ')'
 
         return AIFPLList(tuple(elements))
+
+    def _parse_let_with_tracking(
+        self,
+        start_pos: int,
+        _frame: ParenStackFrame,
+        elements: List[AIFPLValue]
+    ) -> AIFPLList:
+        """
+        Parse a 'let' form with special tracking for binding-level errors.
+
+        Args:
+            start_pos: Position where the let started
+            frame: The paren stack frame for this let
+            elements: List to accumulate parsed elements
+
+        Returns:
+            Parsed let expression as AIFPLList
+        """
+        # Parse 'let' keyword
+        elements.append(self._parse_expression())
+        self._update_frame_after_element()
+
+        # Check for bindings list
+        if self.current_token is None:
+            raise self._create_enhanced_unterminated_error(start_pos)
+
+        # If we hit a closing paren right after 'let', just return what we have
+        # and let the evaluator complain about the structure
+        if self.current_token.type == AIFPLTokenType.RPAREN:
+            self._pop_paren_frame()
+            self._advance()  # consume ')'
+            return AIFPLList(tuple(elements))
+
+        # Parse bindings with special tracking
+        if self.current_token.type == AIFPLTokenType.LPAREN:
+            bindings = self._parse_let_bindings()
+            elements.append(bindings)
+            self._update_frame_after_element()
+
+        else:
+            # Not our job to validate structure - just parse what's there
+            elements.append(self._parse_expression())
+            self._update_frame_after_element()
+
+        # Parse body
+        if self.current_token is None:
+            raise self._create_enhanced_unterminated_error(start_pos)
+
+        if self.current_token.type != AIFPLTokenType.RPAREN:
+            elements.append(self._parse_expression())
+            self._update_frame_after_element()
+
+        # Expect closing paren
+        if self.current_token is None:
+            raise self._create_enhanced_unterminated_error(start_pos)
+
+        # Pop from stack when successfully closed
+        self._pop_paren_frame()
+
+        self._advance()  # consume ')'
+
+        return AIFPLList(tuple(elements))
+
+    def _parse_let_bindings(self) -> AIFPLList:
+        """
+        Parse the bindings list of a let form with per-binding tracking.
+
+        Returns:
+            AIFPLList of bindings
+        """
+        assert self.current_token is not None, "Current token must not be None here"
+        bindings_start = self.current_token.position
+
+        # Push frame for bindings list
+        bindings_frame = self._push_paren_frame(bindings_start)
+        bindings_frame.expression_type = "let bindings list"
+
+        self._advance()  # consume '('
+
+        bindings: List[AIFPLValue] = []
+        binding_index = 0
+
+        while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            binding_index += 1
+
+            # Each binding should start with '('
+            if self.current_token.type == AIFPLTokenType.LPAREN:
+                binding = self._parse_single_binding(binding_index)
+                bindings.append(binding)
+                self._update_frame_after_element()
+
+            else:
+                # Not a binding structure - just parse it and let evaluator complain
+                bindings.append(self._parse_expression())
+                self._update_frame_after_element()
+
+        if self.current_token is None:
+            # EOF while parsing bindings - create enhanced error
+            raise self._create_incomplete_bindings_error(bindings, bindings_start)
+
+        # Pop bindings frame
+        self._pop_paren_frame()
+
+        self._advance()  # consume ')'
+
+        return AIFPLList(tuple(bindings))
+
+    def _parse_single_binding(self, binding_index: int) -> AIFPLList:
+        """
+        Parse a single let binding with tracking.
+
+        Args:
+            binding_index: The index of this binding (1-based)
+
+        Returns:
+            AIFPLList representing the binding
+        """
+        assert self.current_token is not None, "Current token must not be None here"
+        binding_start = self.current_token.position
+
+        # Push frame for this binding
+        binding_frame = self._push_paren_frame(binding_start)
+        binding_frame.expression_type = f"let binding #{binding_index}"
+
+        self._advance()  # consume '('
+
+        elements = []
+
+        # Parse variable name (if present)
+        if self.current_token is not None and self.current_token.type == AIFPLTokenType.SYMBOL:
+            var_name = self.current_token.value
+            binding_frame.related_symbol = var_name
+            binding_frame.expression_type = f"let binding #{binding_index} ('{var_name}')"
+            elements.append(self._parse_expression())
+            self._update_frame_after_element()
+
+        elif self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            # Not a symbol, but parse it anyway
+            elements.append(self._parse_expression())
+            self._update_frame_after_element()
+
+        # Parse value (if present)
+        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            elements.append(self._parse_expression())
+            self._update_frame_after_element()
+
+        # Parse any additional elements (evaluator will complain about wrong count)
+        while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            elements.append(self._parse_expression())
+            self._update_frame_after_element()
+
+        if self.current_token is None:
+            # EOF while parsing binding
+            raise self._create_enhanced_unterminated_error(binding_start)
+
+        # Pop binding frame
+        self._pop_paren_frame()
+
+        self._advance()  # consume ')'
+
+        return AIFPLList(tuple(elements))
+
+    def _create_incomplete_bindings_error(
+        self,
+        parsed_bindings: List[AIFPLValue],
+        bindings_start: int
+    ) -> AIFPLParseError:
+        """
+        Create enhanced error when EOF is reached while parsing let bindings.
+
+        Args:
+            parsed_bindings: List of successfully parsed bindings
+            bindings_start: Position where bindings list started
+
+        Returns:
+            AIFPLParseError with detailed context
+        """
+        # Analyze the parsed bindings to show what completed successfully
+        binding_summary = []
+        for i, binding in enumerate(parsed_bindings, 1):
+            if isinstance(binding, AIFPLList):
+                symbol_binding = binding.get(0)
+                if binding.length() >= 1 and isinstance(symbol_binding, AIFPLSymbol):
+                    var_name = symbol_binding.name
+                    status = "✓" if binding.length() == 2 else "✗"
+                    binding_summary.append(f"  {i}. ({var_name} ...) {status}")
+
+                else:
+                    binding_summary.append(f"  {i}. <invalid binding> ✗")
+
+            else:
+                binding_summary.append(f"  {i}. <not a list> ✗")
+
+        summary_text = "\n".join(binding_summary) if binding_summary else "  (no complete bindings)"
+
+        # Build the enhanced error using the paren stack
+        depth = len(self.paren_stack)
+
+        # Get details from stack
+        stack_lines = []
+        for i, frame in enumerate(self.paren_stack, 1):
+            line = f"  {i}. {frame.expression_type} at position {frame.position}"
+
+            if frame.related_symbol:
+                line += f" ('{frame.related_symbol}')"
+
+            if frame.elements_parsed > 0:
+                line += f" - parsed {frame.elements_parsed} element{'s' if frame.elements_parsed != 1 else ''}"
+
+            if frame.last_complete_position:
+                line += f"\n     → Needs ')' after position {frame.last_complete_position}"
+
+            stack_lines.append(line)
+
+        stack_trace = "\n".join(stack_lines)
+
+        # Build closing parens
+        if depth > 1:
+            closing_parens = " ) " * depth
+            closing_parens = closing_parens.strip()
+
+        else:
+            closing_parens = ")"
+
+        paren_word = "parenthesis" if depth == 1 else "parentheses"
+
+        context_msg = (
+            f"Reached end of input while parsing let bindings.\n\n"
+            f"Bindings parsed:\n{summary_text}\n\n"
+            f"Unclosed expressions:\n{stack_trace}"
+        )
+
+        return AIFPLParseError(
+            message=f"Incomplete let bindings - missing {depth} closing {paren_word}",
+            position=bindings_start,
+            expected=f'Add "{closing_parens}" to close all expressions',
+            suggestion=f"Add {depth} closing {paren_word}: {closing_parens}",
+            context=context_msg,
+            example="(let (\n  (x 5)\n  (y (+ x 2))\n) body)"
+        )
 
     def _parse_quoted_expression(self) -> AIFPLList:
         """

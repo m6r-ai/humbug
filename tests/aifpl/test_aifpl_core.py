@@ -1,7 +1,6 @@
 """Tests for the main AIFPL class and core integration."""
 
 import pytest
-from typing import Any
 
 from aifpl import AIFPL, AIFPLError, AIFPLTokenError, AIFPLParseError, AIFPLEvalError
 
