@@ -147,16 +147,18 @@ class AIFPLParser:
 
     def _update_frame_after_element(self) -> None:
         """Update the current frame after successfully parsing an element."""
-        if self.paren_stack:
-            frame = self.paren_stack[-1]
-            frame.elements_parsed += 1
+        # This method is only called after _push_paren_frame, so stack is never empty
+        assert self.paren_stack, "Frame stack should not be empty when updating after element"
 
-            # Record position after this element (for suggesting where to close)
-            if self.current_token:
-                frame.last_complete_position = self.current_token.position
+        frame = self.paren_stack[-1]
+        frame.elements_parsed += 1
 
-            else:
-                frame.last_complete_position = len(self.expression)
+        # Record position after this element (for suggesting where to close)
+        if self.current_token:
+            frame.last_complete_position = self.current_token.position
+
+        else:
+            frame.last_complete_position = len(self.expression)
 
     def _detect_expression_type(self, position: int) -> str:
         """
@@ -454,9 +456,8 @@ class AIFPLParser:
             binding_frame.expression_type = f"let binding #{binding_index} ('{var_name}')"
             elements.append(self._parse_expression())
             self._update_frame_after_element()
-
         elif self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            # Not a symbol, but parse it anyway
+            # Not a symbol, but parse it anyway (for error recovery)
             elements.append(self._parse_expression())
             self._update_frame_after_element()
 
@@ -516,14 +517,12 @@ class AIFPLParser:
 
         # Build the enhanced error using the paren stack
         depth = len(self.paren_stack)
+        assert depth >= 2, "Bindings error should have at least 2 frames on stack"
 
         # Get details from stack
         stack_lines = []
         for i, frame in enumerate(self.paren_stack, 1):
             line = f"  {i}. {frame.expression_type} at position {frame.position}"
-
-            if frame.related_symbol:
-                line += f" ('{frame.related_symbol}')"
 
             if frame.elements_parsed > 0:
                 line += f" - parsed {frame.elements_parsed} element{'s' if frame.elements_parsed != 1 else ''}"
@@ -535,15 +534,11 @@ class AIFPLParser:
 
         stack_trace = "\n".join(stack_lines)
 
-        # Build closing parens
-        if depth > 1:
-            closing_parens = " ) " * depth
-            closing_parens = closing_parens.strip()
+        # Build closing parens (always multiple since depth >= 2)
+        closing_parens = " ) " * depth
+        closing_parens = closing_parens.strip()
 
-        else:
-            closing_parens = ")"
-
-        paren_word = "parenthesis" if depth == 1 else "parentheses"
+        paren_word = "parentheses"  # Always plural since depth >= 2
 
         context_msg = (
             f"Reached end of input while parsing let bindings.\n\n"

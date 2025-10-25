@@ -22,9 +22,20 @@ Context:
 
 Action:
     # Describe the details of the change required.
-    We recently added a lot of code to provide more precise error messages for unbalanced parentheses problems.  Do you
-    have any thoughts on how we can make it even more specific about where any missing paren should be?
+    We recently added a lot of code to provide more precise error messages for unbalanced parentheses problems.  This
+    added new code that does not have 100% test coverage.  We need to get this back to 100%.
 
     If you need it, the full AIFPL implementation can be found in src/aifpl 
 
+    Tests are run in the terminal.  It opens in the correct directory.  All tests are passing.  Use `pytest` to run them.
+
+    Code coverage is here:
+
+    Embed: htmlcov/z_16e795a451993345_aifpl_parser_py.html
+
+    Consider if code paths might be unreachable due to overly-defensive programming.  In such cases let's explore how to
+    remove unecessary code.
+
     Don't code anything - I want to discuss first.
+
+    Note - any changes you might make will never be reflected in your internal AIFPL tool (nor can this be changed).
