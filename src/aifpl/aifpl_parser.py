@@ -16,6 +16,7 @@ class ParenStackFrame:
     elements_parsed: int = 0
     last_complete_position: int | None = None
     related_symbol: str | None = None  # For bindings: the variable name
+    incomplete_element_start: int | None = None  # Where we started parsing an incomplete element
 
 
 class AIFPLParser:
@@ -37,6 +38,9 @@ class AIFPLParser:
 
         # Paren stack for tracking unclosed expressions
         self.paren_stack: List[ParenStackFrame] = []
+
+        # Track the position of the last token we consumed
+        self.last_token_end: int = 0
 
     def parse(self) -> AIFPLValue:
         """
@@ -145,6 +149,13 @@ class AIFPLParser:
         assert self.paren_stack, "Paren stack underflow - trying to pop from empty stack"
         self.paren_stack.pop()
 
+    def _mark_element_start(self) -> None:
+        """Mark that we're starting to parse a new element."""
+        assert self.paren_stack, "Should only be called while parsing a list"
+        assert self.current_token is not None, "Should not be called at EOF"
+        frame = self.paren_stack[-1]
+        frame.incomplete_element_start = self.current_token.position
+
     def _update_frame_after_element(self) -> None:
         """Update the current frame after successfully parsing an element."""
         # This method is only called after _push_paren_frame, so stack is never empty
@@ -153,12 +164,12 @@ class AIFPLParser:
         frame = self.paren_stack[-1]
         frame.elements_parsed += 1
 
-        # Record position after this element (for suggesting where to close)
-        if self.current_token:
-            frame.last_complete_position = self.current_token.position
+        # Record position where the last element ended (not where the next one starts)
+        # Use last_token_end which is updated by _advance()
+        frame.last_complete_position = self.last_token_end
 
-        else:
-            frame.last_complete_position = len(self.expression)
+        # Clear the incomplete element start since we just completed an element
+        frame.incomplete_element_start = None
 
     def _detect_expression_type(self, position: int) -> str:
         """
@@ -255,23 +266,29 @@ class AIFPLParser:
 
             # Show how many elements were parsed
             if frame.elements_parsed > 0:
-                line += f"\n     Parsed {frame.elements_parsed} element{'s' if frame.elements_parsed != 1 else ''}"
+                line += f"\n     Parsed {frame.elements_parsed} complete element{'s' if frame.elements_parsed != 1 else ''}"
 
-            # Suggest where the closing paren should go
-            if frame.last_complete_position is not None:
-                line += f"\n     → Likely needs ')' after position {frame.last_complete_position}"
+            # Check if we're in the middle of parsing an incomplete element
+            if frame.incomplete_element_start is not None:
+                # This frame was parsing an element that's incomplete
+                incomplete_snippet = self._get_context_snippet(frame.incomplete_element_start, length=20)
+                line += f"\n     Started parsing element {frame.elements_parsed + 1} at "
+                line += f"position {frame.incomplete_element_start}: {incomplete_snippet}"
+                line += "\n     → This element is incomplete (see below)"
+
+            else:
+                # This is the innermost frame - show where to add closing paren
+                if frame.last_complete_position is not None:
+                    line += f"\n     → Needs ')' after position {frame.last_complete_position}"
+
+                else:
+                    line += "\n     → Needs ')' to close this expression"
 
             stack_lines.append(line)
 
         stack_trace = "\n".join(stack_lines) if stack_lines else "  (no unclosed expressions)"
 
-        # Build closing parens suggestion with spaces for readability
-        if depth > 1:
-            closing_parens = " ) " * depth
-            closing_parens = closing_parens.strip()
-
-        else:
-            closing_parens = ")"
+        closing_parens = ")" * depth
 
         # Create the context message
         context_msg = (
@@ -285,9 +302,9 @@ class AIFPLParser:
         return AIFPLParseError(
             message=f"Unterminated list - missing {depth} closing {paren_word}",
             position=start_pos,
-            expected=f'Add "{closing_parens}" to close all expressions',
+            expected=f'Additional parentheses, "{closing_parens}", to close all expressions',
             example="Correct: (+ 1 2)\nIncorrect: (+ 1 2",
-            suggestion=f"Add {depth} closing {paren_word}: {closing_parens}",
+            suggestion="Close each incomplete expression with ')', working from innermost to outermost",
             context=context_msg
         )
 
@@ -308,6 +325,7 @@ class AIFPLParser:
 
         # Regular list parsing
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            self._mark_element_start()
             elements.append(self._parse_expression())
             self._update_frame_after_element()
 
@@ -333,13 +351,14 @@ class AIFPLParser:
 
         Args:
             start_pos: Position where the let started
-            frame: The paren stack frame for this let
+            _frame: The paren stack frame for this let (unused but kept for consistency)
             elements: List to accumulate parsed elements
 
         Returns:
             Parsed let expression as AIFPLList
         """
         # Parse 'let' keyword
+        self._mark_element_start()
         elements.append(self._parse_expression())
         self._update_frame_after_element()
 
@@ -355,6 +374,7 @@ class AIFPLParser:
             return AIFPLList(tuple(elements))
 
         # Parse bindings with special tracking
+        self._mark_element_start()
         if self.current_token.type == AIFPLTokenType.LPAREN:
             bindings = self._parse_let_bindings()
             elements.append(bindings)
@@ -370,6 +390,7 @@ class AIFPLParser:
             raise self._create_enhanced_unterminated_error(start_pos)
 
         if self.current_token.type != AIFPLTokenType.RPAREN:
+            self._mark_element_start()
             elements.append(self._parse_expression())
             self._update_frame_after_element()
 
@@ -407,6 +428,7 @@ class AIFPLParser:
             binding_index += 1
 
             # Each binding should start with '('
+            self._mark_element_start()
             if self.current_token.type == AIFPLTokenType.LPAREN:
                 binding = self._parse_single_binding(binding_index)
                 bindings.append(binding)
@@ -454,20 +476,24 @@ class AIFPLParser:
             var_name = self.current_token.value
             binding_frame.related_symbol = var_name
             binding_frame.expression_type = f"let binding #{binding_index} ('{var_name}')"
+            self._mark_element_start()
             elements.append(self._parse_expression())
             self._update_frame_after_element()
         elif self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Not a symbol, but parse it anyway (for error recovery)
+            self._mark_element_start()
             elements.append(self._parse_expression())
             self._update_frame_after_element()
 
         # Parse value (if present)
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            self._mark_element_start()
             elements.append(self._parse_expression())
             self._update_frame_after_element()
 
         # Parse any additional elements (evaluator will complain about wrong count)
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            self._mark_element_start()
             elements.append(self._parse_expression())
             self._update_frame_after_element()
 
@@ -527,7 +553,11 @@ class AIFPLParser:
             if frame.elements_parsed > 0:
                 line += f" - parsed {frame.elements_parsed} element{'s' if frame.elements_parsed != 1 else ''}"
 
-            if frame.last_complete_position:
+            if frame.incomplete_element_start is not None:
+                incomplete_snippet = self._get_context_snippet(frame.incomplete_element_start, length=20)
+                line += f"\n     Started parsing element at position {frame.incomplete_element_start}: {incomplete_snippet}"
+                line += "\n     → This element is incomplete"
+            elif frame.last_complete_position:
                 line += f"\n     → Needs ')' after position {frame.last_complete_position}"
 
             stack_lines.append(line)
@@ -550,7 +580,7 @@ class AIFPLParser:
             message=f"Incomplete let bindings - missing {depth} closing {paren_word}",
             position=bindings_start,
             expected=f'Add "{closing_parens}" to close all expressions',
-            suggestion=f"Add {depth} closing {paren_word}: {closing_parens}",
+            suggestion="Close each incomplete expression with ')', working from innermost to outermost",
             context=context_msg,
             example="(let (\n  (x 5)\n  (y (+ x 2))\n) body)"
         )
@@ -589,6 +619,10 @@ class AIFPLParser:
 
     def _advance(self) -> None:
         """Move to the next token."""
+        # Track where the current token ends before advancing
+        assert self.current_token is not None, "Cannot advance when current token is None"
+        self.last_token_end = self.current_token.position + self.current_token.length
+
         self.pos += 1
         if self.pos < len(self.tokens):
             self.current_token = self.tokens[self.pos]
