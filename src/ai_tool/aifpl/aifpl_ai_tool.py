@@ -141,6 +141,8 @@ class AIFPLAITool(AITool):
                 "- Lists only support = and != comparisons, not < > <= >=\n"
                 "- Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't\n"
                 "- Use for calculations, data processing, and functional programming only\n"
+                "- The user will not see the AIFPL code or AIFPL results directly; if you want to show either, you must "
+                "format it as a message to the user."
             ),
             parameters=[
                 AIToolParameter(
