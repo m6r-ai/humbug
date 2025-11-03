@@ -16,26 +16,24 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        This is part of your AIFPL tool we have been building:
+        This is part of the application that deals with conversations between the user and the AI
 
-        Embed: src/aifpl/aifpl_parser.py
+        Embed: src/humbug/tabs/conversation/*.py
 
 Action:
     # Describe the details of the change required.
-    We recently added a lot of code to provide more precise error messages for unbalanced parentheses problems.  This
-    added new code that does not have 100% test coverage.  We need to get this back to 100%.
+    In the current design, if an LLM is engaged in a complex series of operations involving using many
+    tool calls the operation can run for a considerable number of turns and a long time without the
+    user having any ability to intervene, other than to cancel the conversation.
 
-    If you need it, the full AIFPL implementation can be found in src/aifpl 
+    I would like to have the option for the user to type a message in the input control, as they do
+    for a new conversation message, and have this be added to the next tool call result.  This will
+    allow the user to flag to the LLM that something isn't right, or where the user has some new
+    information to share that will assist the LLM.
 
-    Tests are run in the terminal.  It opens in the correct directory.  All tests are passing.  Use `pytest` to run them.
+    The current UI has a button that the user can click to either submit a new conversation message,
+    or a stop button to cancel the conversation.  We need an extra option to submit an interruption.
 
-    Code coverage is here:
-
-    Embed: htmlcov/z_16e795a451993345_aifpl_parser_py.html
-
-    Consider if code paths might be unreachable due to overly-defensive programming.  In such cases let's explore how to
-    remove unecessary code.
+    How might this be done?
 
     Don't code anything - I want to discuss first.
-
-    Note - any changes you might make will never be reflected in your internal AIFPL tool (nor can this be changed).

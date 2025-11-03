@@ -21,6 +21,7 @@ class ConversationInput(ConversationMessage):
     page_key_scroll_requested = Signal()
     submit_requested = Signal()
     stop_requested = Signal()
+    interrupt_requested = Signal()
     modified = Signal()
 
     def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
@@ -28,6 +29,7 @@ class ConversationInput(ConversationMessage):
         self._is_streaming = False
         self._current_model = ""
         self._submit_button: QToolButton | None = None
+        self._stop_button: QToolButton | None = None
 
         super().__init__(style, parent=parent, is_input=True)
 
@@ -37,9 +39,15 @@ class ConversationInput(ConversationMessage):
         self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
-        # Create submit button
+        # Create stop button (initially hidden)
+        self._stop_button = QToolButton(self)
+        self._stop_button.clicked.connect(self._stop_message)
+        self._stop_button.hide()
+        self._header_layout.addWidget(self._stop_button)
+
+        # Create submit/interrupt button
         self._submit_button = QToolButton(self)
-        self._submit_button.clicked.connect(self._submit_message)
+        self._submit_button.clicked.connect(self._on_primary_button_clicked)
         self._header_layout.addWidget(self._submit_button)
 
         # Connect text changes to update button state
@@ -47,7 +55,7 @@ class ConversationInput(ConversationMessage):
 
         self._update_header_text()
         self._on_style_changed()
-        self._update_submit_button_state()
+        self._update_button_states()
 
     def set_model(self, model: str) -> None:
         """Set the model name for the input prompt."""
@@ -57,24 +65,27 @@ class ConversationInput(ConversationMessage):
     def _on_language_changed(self) -> None:
         """Handle language change event."""
         self._update_header_text()
+        self._update_button_tooltips()
 
-        # Update submit button tooltip
+    def _update_button_tooltips(self) -> None:
+        """Update button tooltips based on current state."""
         strings = self._language_manager.strings()
-        if self._submit_button is None:
-            return
 
-        submit_button = cast(QToolButton, self._submit_button)
-        if self._is_streaming:
-            submit_button.setToolTip(strings.tooltip_stop_message)
+        if self._stop_button:
+            self._stop_button.setToolTip(strings.tooltip_stop_message)
 
-        else:
-            submit_button.setToolTip(strings.tooltip_submit_message)
+        if self._submit_button:
+            if self._is_streaming:
+                self._submit_button.setToolTip(strings.tooltip_interrupt_message)
+
+            else:
+                self._submit_button.setToolTip(strings.tooltip_submit_message)
 
     def set_streaming(self, streaming: bool) -> None:
         """Update the streaming state and header text."""
         self._is_streaming = streaming
         self._update_header_text()
-        self._update_submit_button_state()
+        self._update_button_states()
 
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
@@ -87,10 +98,10 @@ class ConversationInput(ConversationMessage):
         """Handle the style changing."""
         super()._on_style_changed()
         self._set_role_style()
-        self._update_submit_button_styling()
+        self._update_button_styling()
 
-    def _update_submit_button_styling(self) -> None:
-        """Update submit button styling and icon."""
+    def _update_button_styling(self) -> None:
+        """Update button styling and icons."""
         if self._submit_button is None:
             return
 
@@ -120,20 +131,22 @@ class ConversationInput(ConversationMessage):
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
+        # Update submit/interrupt button
         submit_button = cast(QToolButton, self._submit_button)
-
-        # Set appropriate icon based on streaming state
-        if self._is_streaming:
-            icon_name = "stop"
-
-        else:
-            icon_name = "submit"
-
         submit_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path(icon_name), icon_base_size
+            self._style_manager.get_icon_path("submit"), icon_base_size
         )))
         submit_button.setIconSize(icon_size)
         submit_button.setStyleSheet(button_style)
+
+        # Update stop button if it exists
+        if self._stop_button:
+            stop_button = cast(QToolButton, self._stop_button)
+            stop_button.setIcon(QIcon(self._style_manager.scale_icon(
+                self._style_manager.get_icon_path("stop"), icon_base_size
+            )))
+            stop_button.setIconSize(icon_size)
+            stop_button.setStyleSheet(button_style)
 
     def _update_header_text(self) -> None:
         """Update the header text based on current state."""
@@ -163,48 +176,43 @@ class ConversationInput(ConversationMessage):
 
     def _on_text_changed(self) -> None:
         """Handle text changes in the input area."""
-        self._update_submit_button_state()
+        self._update_button_states()
         self.modified.emit()
 
-    def _update_submit_button_state(self) -> None:
-        """Update submit button enabled state, functionality, and tooltip based on content and streaming status."""
+    def _update_button_states(self) -> None:
+        """Update button enabled states and visibility based on content and streaming status."""
         has_content = bool(self.to_plain_text().strip())
-        submit_button = cast(QToolButton, self._submit_button)
-        strings = self._language_manager.strings()
+
         if self._is_streaming:
-            # When streaming, show stop button - always enabled
-            submit_button.setEnabled(True)
-            submit_button.setToolTip(strings.tooltip_stop_message)
+            # Show both stop and interrupt buttons
+            if self._stop_button:
+                self._stop_button.show()
+                self._stop_button.setEnabled(True)
 
-            # Disconnect any existing connections and connect to stop
-            try:
-                submit_button.clicked.disconnect()
-
-            except TypeError:
-                pass  # No connections to disconnect
-
-            submit_button.clicked.connect(self._stop_message)
+            if self._submit_button:
+                # Interrupt button only enabled if has content
+                self._submit_button.setEnabled(has_content)
 
         else:
-            # When not streaming, show submit button - enabled if has content
-            submit_button.setEnabled(has_content)
-            submit_button.setToolTip(strings.tooltip_submit_message)
+            # Hide stop button, show only submit
+            if self._stop_button:
+                self._stop_button.hide()
 
-            # Disconnect any existing connections and connect to submit
-            try:
-                submit_button.clicked.disconnect()
+            if self._submit_button:
+                # Submit button only enabled if has content
+                self._submit_button.setEnabled(has_content)
 
-            except TypeError:
-                pass  # No connections to disconnect
+        # Update tooltips and styling
+        self._update_button_tooltips()
+        self._update_button_styling()
 
-            submit_button.clicked.connect(self._submit_message)
+    def _on_primary_button_clicked(self) -> None:
+        """Handle primary button (submit/interrupt) click."""
+        if self._is_streaming:
+            self.interrupt_requested.emit()
 
-        # Update the button styling (which includes icon)
-        self._update_submit_button_styling()
-
-    def _submit_message(self) -> None:
-        """Submit the current message via button click."""
-        self.submit_requested.emit()
+        else:
+            self.submit_requested.emit()
 
     def _stop_message(self) -> None:
         """Stop the current message processing via button click."""

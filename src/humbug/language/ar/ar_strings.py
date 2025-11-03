@@ -261,6 +261,7 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_edit_file="تحرير هذا الملف",
         tooltip_submit_message="إرسال الرسالة",
         tooltip_stop_message="إيقاف المعالجة الحالية",
+        tooltip_interrupt_message="مقاطعة بالرسالة",
         tooltip_expand_message="توسيع الرسالة",
         tooltip_collapse_message="طي الرسالة",
 

@@ -68,12 +68,6 @@ class AnthropicBackend(AIBackend):
         """
         # For Anthropic, tool results are structured content within the user message
         content_parts = []
-        if content:
-            content_parts.append({
-                "type": "text",
-                "text": content
-            })
-
         if tool_results:
             # Add tool results as structured content
             for tool_result in tool_results:
@@ -89,6 +83,13 @@ class AnthropicBackend(AIBackend):
                     result["is_error"] = True
 
                 content_parts.append(result)
+
+        # Tool results must appear before text content
+        if content:
+            content_parts.append({
+                "type": "text",
+                "text": content
+            })
 
         return {
             "role": "user",

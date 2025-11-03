@@ -1,11 +1,15 @@
 # Change log for Humbug
 
-## v0.27 (2025-10-xx)
+## v0.27 (2025-11-xx)
 
 New features:
 
 - Added Claude Haiku 4.5 support.
 - AIFPL now has dramatically improved error responses to allow LLMs to do better debugging of problems.
+- When an AI is streaming responses, and especially useful where it is making a series of tool calls, you can now type
+  a message and "interrupt" it when the next tool call completes.  This message will be passed to the LLM and allows you
+  to provide feedback about what it is currently doing.  This includes, for example, saying "stop" and asking it to stop
+  what it is doing.
 
 Bug fixes:
 
@@ -13,7 +17,7 @@ Bug fixes:
 
 Internal structure changes:
 
-- Added more test coverage for AIFPL, and removed more redundant code paths.
+- Moved AIFPL test coverage to 100% of statements and conditionals.
 - Started to add AIFPL tools to the codebase.  These are not yet integrated but start to demonstrate how AIFPL can be
   used for complex algorithmic processing.  The first tool supports patching files with unified diffs.
 

@@ -260,7 +260,8 @@ def get_english_strings() -> LanguageStrings:
         tooltip_delete_from_message="Delete conversation from this point",
         tooltip_edit_file="Edit this file",
         tooltip_submit_message="Submit message",
-        tooltip_stop_message="Stop processing message",
+        tooltip_stop_message="Stop current processing",
+        tooltip_interrupt_message="Interrupt with message",
         tooltip_expand_message="Expand message",
         tooltip_collapse_message="Collapse message",
 

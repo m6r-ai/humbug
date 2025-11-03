@@ -17,6 +17,14 @@ from ai.ai_usage import AIUsage
 from ai_tool import AIToolManager, AIToolCall, AIToolResult, AIToolAuthorizationDenied
 
 
+class ConversationState(Enum):
+    """State of the conversation processing."""
+    IDLE = auto()
+    STREAMING_AI_RESPONSE = auto()
+    EXECUTING_TOOLS = auto()
+    WAITING_FOR_APPROVAL = auto()
+
+
 class AIConversationEvent(Enum):
     """Events that can be emitted by the AIConversation class."""
     ERROR = auto()              # When an error occurs during request processing
@@ -55,6 +63,10 @@ class AIConversation:
         self._pending_tool_calls: List[AIToolCall] = []
         self._pending_tool_call_message: AIMessage | None = None
         self._pending_authorization_future: asyncio.Future[bool] | None = None
+
+        # Conversation state and interruption handling
+        self._state = ConversationState.IDLE
+        self._pending_user_messages: List[AIMessage] = []
 
         # Callbacks for events
         self._callbacks: Dict[AIConversationEvent, Set[Callable]] = {
@@ -166,13 +178,25 @@ class AIConversation:
 
     async def submit_message(self, message: AIMessage) -> None:
         """
-        Submit a new user message and start AI response.
+        Submit a user message to the conversation.
+
+        If the conversation is currently executing tools, the message will be
+        appended to the tool results as user feedback. If streaming an AI response,
+        the message will be queued and processed after the current cycle completes.
 
         Args:
-            message: User message
+            message: The user message to submit
         """
-        # Add the user message to the conversation
+        # If we're actively processing, queue the message as an interruption
+        if self._state in (ConversationState.EXECUTING_TOOLS, ConversationState.STREAMING_AI_RESPONSE):
+            self._logger.debug("Queuing message as interruption during active processing")
+            self._pending_user_messages.append(message)
+            await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
+            return
+
+        # Normal submission when idle
         self._conversation.add_message(message)
+        await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
 
         # Start AI response
         task = asyncio.create_task(self._start_ai())
@@ -189,6 +213,7 @@ class AIConversation:
 
     async def _start_ai(self) -> None:
         """Start an AI response based on the conversation history."""
+        self._state = ConversationState.STREAMING_AI_RESPONSE
         stream = None
         settings = self.conversation_settings()
 
@@ -277,6 +302,8 @@ class AIConversation:
                 except Exception as e:
                     # Log but don't propagate generator cleanup errors
                     self._logger.debug("Error during generator cleanup: %s", e)
+
+        self._state = ConversationState.IDLE
 
     async def _request_tool_authorization(self, tool_name: str, arguments: Dict[str, Any], reason: str, destructive: bool) -> bool:
         """
@@ -406,6 +433,7 @@ class AIConversation:
 
     async def _execute_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
         """Execute tool calls with support for parallel execution via continuations."""
+        self._state = ConversationState.EXECUTING_TOOLS
         self._logger.debug("Executing tool calls with continuation support...")
 
         # Execute all tool calls and collect results and continuations
@@ -490,16 +518,38 @@ class AIConversation:
                         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
                         break
 
-        # Create a specific user message with the tool results
+        # Check for pending interruptions and append them to tool results
+        interrupt_content = ""
+        if self._pending_user_messages:
+            self._logger.debug("Appending %d interrupt messages to tool results",
+                              len(self._pending_user_messages))
+
+            # Collect interrupt messages
+            interrupt_texts = []
+            for msg in self._pending_user_messages:
+                if msg.content:
+                    interrupt_texts.append(msg.content)
+
+            # Format as user feedback
+            if interrupt_texts:
+                interrupt_content = "\n\n".join([
+                    f"[User feedback: {text}]" for text in interrupt_texts
+                ])
+
+            # Clear the queue
+            self._pending_user_messages.clear()
+
+        # Create a specific user message with the tool results (and any interrupts)
         tool_response_message = AIMessage.create(
             AIMessageSource.USER,
-            content="",
+            content=interrupt_content,
             tool_results=tool_results
         )
         self._conversation.add_message(tool_response_message)
         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
 
-        # Automatically continue the conversation with tool results
+        # Continue the conversation with tool results
+        self._state = ConversationState.IDLE
         await self._start_ai()
 
     async def approve_pending_tool_calls(self) -> None:
