@@ -165,7 +165,7 @@ class StyleManager(QObject):
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
                 ColorMode.DARK: "#000000",
-                ColorMode.LIGHT: "#d8d8d8"
+                ColorMode.LIGHT: "#d0d0d0"
             },
             ColorRole.TAB_BACKGROUND_ACTIVE: {
                 ColorMode.DARK: "#1e1e1e",
@@ -184,8 +184,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#f0d0f8"
             },
             ColorRole.TAB_BORDER_ACTIVE: {
-                ColorMode.DARK: "#8080ff",
-                ColorMode.LIGHT: "#3030ff"
+                ColorMode.DARK: "#a0d0ff",
+                ColorMode.LIGHT: "#ff3018"
             },
 
             # Button colours
@@ -260,6 +260,10 @@ class StyleManager(QObject):
             ColorRole.SPLITTER: {
                 ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#b0b0b0"
+            },
+            ColorRole.TAB_SPLITTER: {
+                ColorMode.DARK: "#303030",
+                ColorMode.LIGHT: "#d0d0d0"
             },
 
             # Scroll bar elements

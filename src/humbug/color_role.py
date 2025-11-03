@@ -73,6 +73,7 @@ class ColorRole(Enum):
 
     # Splitter bars
     SPLITTER = auto()                   # Splitter bar
+    TAB_SPLITTER = auto()               # Tab bar splitter
 
     # Scroll bar elements
     SCROLLBAR_BACKGROUND = auto()       # Scrollbar background
