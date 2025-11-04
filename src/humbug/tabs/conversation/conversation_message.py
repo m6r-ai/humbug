@@ -125,7 +125,8 @@ class ConversationMessage(QFrame):
             AIMessageSource.REASONING: "reasoning",
             AIMessageSource.TOOL_CALL: "tool_call",
             AIMessageSource.TOOL_RESULT: "tool_result",
-            AIMessageSource.SYSTEM: "system"
+            AIMessageSource.SYSTEM: "system",
+            AIMessageSource.USER_INTERRUPT: "user_interrupt"
         }
 
         current_style = self._message_source or AIMessageSource.USER
@@ -383,7 +384,7 @@ class ConversationMessage(QFrame):
 
         strings = self._language_manager.strings()
         match self._message_source:
-            case AIMessageSource.USER:
+            case AIMessageSource.USER | AIMessageSource.USER_INTERRUPT:
                 if self._message_user_name:
                     role_text = self._message_user_name
 

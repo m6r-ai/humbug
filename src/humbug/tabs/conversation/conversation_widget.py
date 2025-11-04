@@ -1020,6 +1020,9 @@ class ConversationWidget(QWidget):
         # If our input box is hidden then focus the last message.
         if self._input.isHidden():
             last_visible_index = self._find_last_visible_message()
+            if last_visible_index == -1:
+                return
+
             self._focused_message_index = last_visible_index
             self._messages[self._focused_message_index].set_focused(True)
             return
@@ -1566,6 +1569,9 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_role_label[message_source="system"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
+            #ConversationMessage #_role_label[message_source="user_interrupt"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_INTERRUPT)};
+            }}
 
             #ConversationMessage #_expand_button,
             #ConversationMessage #_copy_button,
@@ -2057,15 +2063,18 @@ class ConversationWidget(QWidget):
 
         sanitized_content = self._sanitize_input(content)
         message = AIMessage.create(
-            AIMessageSource.USER, sanitized_content,
+            AIMessageSource.USER_INTERRUPT, sanitized_content,
             model=settings.model, temperature=settings.temperature,
             reasoning_capability=settings.reasoning
         )
 
         # Submit the interruption - AIConversation will queue it automatically
         loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.create_task(ai_conversation.submit_message(message))
+        if not loop.is_running():
+            return
+
+        loop.create_task(ai_conversation.submit_message(message))
+        self._append_message_to_transcript(message)
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""

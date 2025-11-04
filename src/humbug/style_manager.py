@@ -319,6 +319,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#808080",
                 ColorMode.LIGHT: "#808080"
             },
+            ColorRole.MESSAGE_USER_INTERRUPT: {
+                ColorMode.DARK: "#808080",
+                ColorMode.LIGHT: "#808080"
+            },
             ColorRole.MESSAGE_SYSTEM_ERROR: {
                 ColorMode.DARK: "#c08080",
                 ColorMode.LIGHT: "#a04040"

@@ -43,7 +43,8 @@ class AIMessage:
         AIMessageSource.REASONING: "ai_reasoning",
         AIMessageSource.SYSTEM: "system_message",
         AIMessageSource.TOOL_CALL: "tool_call",
-        AIMessageSource.TOOL_RESULT: "tool_result"
+        AIMessageSource.TOOL_RESULT: "tool_result",
+        AIMessageSource.USER_INTERRUPT: "user_interrupt"
     }
     _TYPE_SOURCE_MAP = {v: k for k, v in _SOURCE_TYPE_MAP.items()}
 
