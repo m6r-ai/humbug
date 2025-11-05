@@ -172,7 +172,6 @@ class ConversationWidget(QWidget):
         self._input.fork_requested.connect(self._on_message_fork_requested)
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._on_stop_requested)
-        self._input.interrupt_requested.connect(self.submit)
         self._input.modified.connect(self.conversation_modified)
 
         spacing = int(self._style_manager.message_bubble_spacing())

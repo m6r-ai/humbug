@@ -21,7 +21,6 @@ class ConversationInput(ConversationMessage):
     page_key_scroll_requested = Signal()
     submit_requested = Signal()
     stop_requested = Signal()
-    interrupt_requested = Signal()
     modified = Signal()
 
     def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
@@ -47,7 +46,7 @@ class ConversationInput(ConversationMessage):
 
         # Create submit/interrupt button
         self._submit_button = QToolButton(self)
-        self._submit_button.clicked.connect(self._on_primary_button_clicked)
+        self._submit_button.clicked.connect(self._on_submit_button_clicked)
         self._header_layout.addWidget(self._submit_button)
 
         # Connect text changes to update button state
@@ -206,13 +205,9 @@ class ConversationInput(ConversationMessage):
         self._update_button_tooltips()
         self._update_button_styling()
 
-    def _on_primary_button_clicked(self) -> None:
-        """Handle primary button (submit/interrupt) click."""
-        if self._is_streaming:
-            self.interrupt_requested.emit()
-
-        else:
-            self.submit_requested.emit()
+    def _on_submit_button_clicked(self) -> None:
+        """Handle submit button click."""
+        self.submit_requested.emit()
 
     def _stop_message(self) -> None:
         """Stop the current message processing via button click."""

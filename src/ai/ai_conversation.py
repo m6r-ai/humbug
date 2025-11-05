@@ -532,9 +532,7 @@ class AIConversation:
 
             # Format as user feedback
             if interrupt_texts:
-                interrupt_content = "\n\n".join([
-                    f"{text}" for text in interrupt_texts
-                ])
+                interrupt_content = "\n\n".join([f"{text}" for text in interrupt_texts])
 
             # Clear the queue
             self._pending_user_messages.clear()
