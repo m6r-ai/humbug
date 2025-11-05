@@ -172,7 +172,7 @@ class ConversationWidget(QWidget):
         self._input.fork_requested.connect(self._on_message_fork_requested)
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._on_stop_requested)
-        self._input.interrupt_requested.connect(self._on_interrupt_requested)
+        self._input.interrupt_requested.connect(self.submit)
         self._input.modified.connect(self.conversation_modified)
 
         spacing = int(self._style_manager.message_bubble_spacing())
@@ -1963,7 +1963,7 @@ class ConversationWidget(QWidget):
     def can_submit(self) -> bool:
         """Check if the current input can be submitted."""
         has_text = bool(self._input.to_plain_text())
-        return has_text and not self._is_streaming
+        return has_text
 
     def _sanitize_input(self, text: str) -> str:
         """
@@ -1990,6 +1990,36 @@ class ConversationWidget(QWidget):
             return
 
         if self._is_streaming:
+            # Clear input
+            self._input.clear()
+
+            # Auto-reject any pending tool approval
+            if self._pending_tool_call_approval:
+                self._pending_tool_call_approval.remove_tool_approval_ui()
+                self._pending_tool_call_approval = None
+
+                ai_conversation = cast(AIConversation, self._ai_conversation)
+                loop = asyncio.get_event_loop()
+                loop.create_task(ai_conversation.reject_pending_tool_calls("User interrupted with new message"))
+
+            # Create interruption message
+            ai_conversation = cast(AIConversation, self._ai_conversation)
+            settings = ai_conversation.conversation_settings()
+
+            sanitized_content = self._sanitize_input(content)
+            message = AIMessage.create(
+                AIMessageSource.USER_INTERRUPT, sanitized_content,
+                model=settings.model, temperature=settings.temperature,
+                reasoning_capability=settings.reasoning
+            )
+
+            # Submit the interruption - AIConversation will queue it automatically
+            loop = asyncio.get_event_loop()
+            if not loop.is_running():
+                return
+
+            loop.create_task(ai_conversation.submit_message(message))
+            self._append_message_to_transcript(message)
             return
 
         self._input.clear()
@@ -2035,46 +2065,6 @@ class ConversationWidget(QWidget):
     def _on_stop_requested(self) -> None:
         """Handle stop request from input widget."""
         self.cancel_current_tasks()
-
-    def _on_interrupt_requested(self) -> None:
-        """Handle interruption request from input widget."""
-        content = self._input.to_plain_text().strip()
-        if not content:
-            return
-
-        if not self._is_streaming:
-            return
-
-        # Clear input
-        self._input.clear()
-
-        # Auto-reject any pending tool approval
-        if self._pending_tool_call_approval:
-            self._pending_tool_call_approval.remove_tool_approval_ui()
-            self._pending_tool_call_approval = None
-
-            ai_conversation = cast(AIConversation, self._ai_conversation)
-            loop = asyncio.get_event_loop()
-            loop.create_task(ai_conversation.reject_pending_tool_calls("User interrupted with new message"))
-
-        # Create interruption message
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        settings = ai_conversation.conversation_settings()
-
-        sanitized_content = self._sanitize_input(content)
-        message = AIMessage.create(
-            AIMessageSource.USER_INTERRUPT, sanitized_content,
-            model=settings.model, temperature=settings.temperature,
-            reasoning_capability=settings.reasoning
-        )
-
-        # Submit the interruption - AIConversation will queue it automatically
-        loop = asyncio.get_event_loop()
-        if not loop.is_running():
-            return
-
-        loop.create_task(ai_conversation.submit_message(message))
-        self._append_message_to_transcript(message)
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""
