@@ -1871,6 +1871,9 @@ class ConversationWidget(QWidget):
         # Remove message widgets from the layout and delete them
         for i in range(len(self._messages) - 1, index - 1, -1):
             message_widget = self._messages[i]
+            if self._message_with_selection == message_widget:
+                self._message_with_selection = None
+
             self._messages_layout.removeWidget(message_widget)
             message_widget.deleteLater()
 

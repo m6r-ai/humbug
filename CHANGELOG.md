@@ -14,6 +14,7 @@ New features:
 Bug fixes:
 
 - Resolved problems with some AIFPL tail recursions not working correctly.
+- Resolved an exception triggered when a highlighted code section in a message was deleted (by deleting that message).
 
 Internal structure changes:
 
