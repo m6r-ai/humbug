@@ -27,35 +27,6 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Result simplification**: Complex numbers with negligible imaginary parts become real
 - **Comments**: `;` introduces comments
 
-## Architecture
-
-AIFPL uses a **pure list representation** for all code, following traditional Lisp philosophy:
-
-- **Everything is data**: Code and data have identical representation (`AIFPLValue` objects)
-- **No special AST nodes**: Lambda expressions, let expressions, and function calls are all just lists
-- **Homoiconic**: The same data structures represent both code and data
-- **Simple and consistent**: One unified representation for all expressions
-
-### Package Structure
-
-```plaintext
-src/aifpl/
-├── __init__.py              # Package exports
-├── aifpl.py                 # Main AIFPL class (public API)
-├── aifpl_error.py           # Exception classes
-├── aifpl_token.py           # Token types and definitions
-├── aifpl_tokenizer.py       # Tokenizer implementation
-├── aifpl_parser.py          # Parser (creates AIFPLValue objects)
-├── aifpl_evaluator.py       # Expression evaluator
-├── aifpl_environment.py     # Environment and function management
-├── aifpl_value.py           # Value hierarchy (AIFPLValue types)
-└── aifpl_dependency_analyzer.py  # Let binding dependency analysis
-```
-
-### Core Types
-
-- **AIFPLValue**: Base class for all values (numbers, strings, booleans, symbols, lists, functions)
-
 ## Usage
 
 ### Basic Usage
@@ -576,6 +547,9 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ```
 
 #### List Structure Pattern Matching
+
+**Important:** In AIFPL, the `(head . tail)` pattern always binds `tail` to a list (possibly empty), never to an atom. This differs from Scheme/Lisp.
+
 ```aifpl
 ; Empty list matching
 (match (list)
@@ -587,21 +561,22 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   ((a b c) (+ a b c))
   (_ "wrong length"))                       ; → 6
 
-; Head-tail decomposition
+; Head-tail decomposition - tail is ALWAYS a list
 (match (list 1 2 3 4)
   ((head . tail) (list "head" head "tail" tail))
   (() "empty"))                             ; → ("head" 1 "tail" (2 3 4))
 
-; Single element list
+; Single element list - tail is empty list
 (match (list 42)
-  ((x) (* x 2))
-  (_ "not single element"))                 ; → 84
+  ((x . xs) (list x xs)))                   ; → (42 ())  - xs is (), not an atom
 
 ; Two-element list
 (match (list "hello" "world")
   ((first second) (string-append first " " second))
   (_ "not a pair"))                         ; → "hello world"
 ```
+
+**Note:** Unlike Scheme/Lisp where `(cdr '(1 . 2))` returns the atom `2`, AIFPL's `(head . tail)` pattern always binds `tail` to a list. Use fixed-length patterns like `(a b)` when you want direct access to individual elements.
 
 #### Nested Pattern Matching
 ```aifpl
@@ -1234,20 +1209,30 @@ AIFPL provides comprehensive type checking functions:
 ### List Operations
 
 #### List Construction and Manipulation
+
+**Note:** AIFPL uses proper lists only. The `cons` function requires the second argument to be a list.
+
 ```aifpl
 (list 1 2 3)                           ; → (1 2 3)
 (list "a" "b" "c")                     ; → ("a" "b" "c")
 (list 1 "hello" #t)                    ; → (1 "hello" #t) [mixed types]
 (list)                                 ; → () [empty list]
-(cons 1 (list 2 3))                    ; → (1 2 3) [prepend]
+(cons 1 (list 2 3))                    ; → (1 2 3) [prepend to list]
+(cons 1 (list))                        ; → (1) [prepend to empty list]
 (append (list 1 2) (list 3 4))         ; → (1 2 3 4) [concatenate]
 (reverse (list 1 2 3))                 ; → (3 2 1)
 ```
 
+**Important:** Unlike Scheme/Lisp, `(cons 1 2)` is invalid in AIFPL. Use `(list 1 2)` to create pairs.
+
 #### List Access and Properties
+
+**Note:** The `rest` function always returns a list, never an atom.
+
 ```aifpl
 (first (list 1 2 3))                  ; → 1
-(rest (list 1 2 3))                   ; → (2 3)
+(rest (list 1 2 3))                   ; → (2 3) [always returns a list]
+(rest (list 1))                       ; → () [empty list, not an atom]
 (last (list 1 2 3))                   ; → 3
 (list-ref (list "a" "b" "c") 1)       ; → "b" (0-indexed)
 (length (list 1 2 3))                 ; → 3
@@ -1899,6 +1884,115 @@ Functions capture their lexical environment, creating closures:
         (safe-divide 10 0 "undefined")))    ; → ("empty" 3 "undefined")
 ```
 
+## Differences from Traditional Lisp/Scheme
+
+**AIFPL uses proper lists only, not cons cells.** This is a fundamental difference from traditional Lisp/Scheme that affects list construction and pattern matching.
+
+### Key Differences
+
+#### 1. Cons Requires a List as Second Argument
+
+**Traditional Lisp/Scheme:**
+```scheme
+(cons 1 2)              ; => (1 . 2)  - creates a dotted pair
+(cons 1 (cons 2 3))     ; => (1 2 . 3) - creates an improper list
+```
+
+**AIFPL:**
+```aifpl
+(cons 1 (list 2 3))     ; => (1 2 3)  ✓ Valid - second arg is a list
+(cons 1 (list 2))       ; => (1 2)    ✓ Valid
+(cons 1 2)              ; => ERROR    ✗ Invalid - second arg must be a list!
+```
+
+**Why?** AIFPL lists are backed by Python tuples. All lists are proper lists - there are no dotted pairs or improper lists. This makes the language simpler and more predictable.
+
+**To create pairs:** Use `(list a b)` instead of cons cells.
+
+#### 2. Rest Always Returns a List
+
+**Traditional Lisp/Scheme:**
+```scheme
+(cdr '(1))        ; => ()  - empty list
+(cdr '(1 . 2))    ; => 2   - can return an atom!
+```
+
+**AIFPL:**
+```aifpl
+(rest (list 1))         ; => ()     - always returns a list
+(rest (list 1 2))       ; => (2)    - always returns a list
+; No way to get an atom from rest
+```
+
+**Why?** This guarantees type safety. You always know `rest` returns a list, never an atom.
+
+#### 3. Pattern Matching: Tail is Always a List
+
+**Traditional Lisp/Scheme:**
+```scheme
+(match '(1 . 2) ((h . t) t))    ; => 2   - t binds to atom
+(match '(1 2) ((h . t) t))      ; => (2) - t binds to list
+```
+
+**AIFPL:**
+```aifpl
+(match (list 1 2) ((h . t) t))      ; => (2)  - t is always a list
+(match (list 1) ((h . t) t))        ; => ()   - t is empty list, not atom
+```
+
+**Why?** Consistency. The `(head . tail)` pattern always binds `tail` to a list (possibly empty), never to an atom.
+
+#### 4. No car/cdr - Use first/rest
+
+AIFPL uses more descriptive names:
+- `first` instead of `car`
+- `rest` instead of `cdr`
+- `last` for the last element
+
+These names are clearer and emphasize that `rest` always returns a list.
+
+### Other Differences from Scheme/Lisp
+
+- **No mutation**: No `set!`, `set-car!`, `set-cdr!` - all data is immutable
+- **No macros**: No `define-syntax` or `defmacro` - all special forms are built-in
+- **No global definitions**: No top-level `define` - use `let` for bindings
+- **Strict type system**: Boolean operations require booleans, no "truthy" values
+- **No continuations**: No `call/cc` - simpler execution model
+
+### Migration Guide
+
+If you're coming from Scheme/Lisp:
+
+**Creating pairs:**
+```aifpl
+; Instead of: (cons 1 2)
+(list 1 2)              ; Two-element list
+```
+
+**Association lists:**
+```aifpl
+; Instead of: '((a . 1) (b . 2))
+(list (list "a" 1) (list "b" 2))    ; List of two-element lists
+```
+
+**Pattern matching:**
+```aifpl
+; Pattern (h . t) always binds t to a list
+(match (list 1 2 3)
+  ((h . t) (list h t)))             ; => (1 (2 3))  - t is (2 3), not 2 3
+
+; For fixed-length patterns, use explicit elements
+(match (list 1 2)
+  ((a b) (list a b)))               ; => (1 2)  - direct binding
+```
+
+### Why These Differences?
+
+1. **Simplicity**: Proper lists only means fewer edge cases
+2. **Type safety**: `rest` always returns a list - no runtime type checking needed
+3. **Predictability**: Consistent behavior makes code easier to reason about
+4. **AI-friendly**: Fewer special cases for AI models to learn
+
 ## Design Principles
 
 1. **Pure List Representation**: Everything is data, following traditional Lisp philosophy
@@ -1915,8 +2009,38 @@ Functions capture their lexical environment, creating closures:
 12. **Homoiconicity**: Code and data use identical representations
 13. **Syntactic Sugar**: Single quote shortcut provides convenient syntax while maintaining pure list representation
 14. **Pattern Matching**: Comprehensive pattern matching for elegant data processing
+15. **Proper Lists Only**: Lists are backed by Python tuples, no cons cells or improper lists for simplicity and type safety
 
-## Exception Hierarchy
+## Architecture
+
+AIFPL uses a **pure list representation** for all code, following traditional Lisp philosophy:
+
+- **Everything is data**: Code and data have identical representation (`AIFPLValue` objects)
+- **No special AST nodes**: Lambda expressions, let expressions, and function calls are all just lists
+- **Homoiconic**: The same data structures represent both code and data
+- **Simple and consistent**: One unified representation for all expressions
+
+### Package Structure
+
+```plaintext
+src/aifpl/
+├── __init__.py              # Package exports
+├── aifpl.py                 # Main AIFPL class (public API)
+├── aifpl_error.py           # Exception classes
+├── aifpl_token.py           # Token types and definitions
+├── aifpl_tokenizer.py       # Tokenizer implementation
+├── aifpl_parser.py          # Parser (creates AIFPLValue objects)
+├── aifpl_evaluator.py       # Expression evaluator
+├── aifpl_environment.py     # Environment and function management
+├── aifpl_value.py           # Value hierarchy (AIFPLValue types)
+└── aifpl_dependency_analyzer.py  # Let binding dependency analysis
+```
+
+### Core Types
+
+- **AIFPLValue**: Base class for all values (numbers, strings, booleans, symbols, lists, functions)
+
+### Exception Hierarchy
 
 - `AIFPLError` - Base exception
   - `AIFPLTokenError` - Tokenization errors
