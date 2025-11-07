@@ -174,6 +174,18 @@ class ConversationMessageSection(QFrame):
             )
             self._language_header.setText(language_header)
 
+    def update_language(self, language: ProgrammingLanguage | None) -> None:
+        """
+        Update the programming language for this section.
+
+        Args:
+            language: The programming language to set.
+        """
+        if self._language == language:
+            return
+
+        self._set_language(language)
+
     def lazy_update(self, event_filter: QObject) -> None:
         """Lazy update - called when section becomes visible."""
         if not self._needs_lazy_update:

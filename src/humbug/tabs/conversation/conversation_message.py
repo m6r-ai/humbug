@@ -661,6 +661,7 @@ class ConversationMessage(QFrame):
             if i == len(self._sections) - 1:
                 # Update the last section with new content
                 section = self._sections[-1]
+                section.update_language(language)
                 section.set_content(node)
 
         # Remove any extra sections
