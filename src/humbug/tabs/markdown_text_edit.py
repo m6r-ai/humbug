@@ -446,14 +446,6 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         super().keyPressEvent(e)
 
-    def _height(self) -> int:
-        height = int(self.document().size().height())
-        if self._has_code_block and self.horizontalScrollBar().isVisible():
-            # Additional space for scrollbar with gap
-            height += 14
-
-        return height
-
     def find_text(self, text: str) -> bool:
         """Find text in the widget.
 
