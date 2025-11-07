@@ -12,4 +12,4 @@ class AIMessageSource(Enum):
     SYSTEM = "system"
     TOOL_CALL = "tool_call"
     TOOL_RESULT = "tool_result"
-    USER_INTERRUPT = "user_interrupt"
+    USER_QUEUED = "user_queued"

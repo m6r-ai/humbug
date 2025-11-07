@@ -7,9 +7,9 @@ New features:
 - Added Claude Haiku 4.5 support.
 - AIFPL now has dramatically improved error responses to allow LLMs to do better debugging of problems.
 - When an AI is streaming responses, and especially useful where it is making a series of tool calls, you can now type
-  a message and "interrupt" it when the next tool call completes.  This message will be passed to the LLM and allows you
+  a message and queue it for when the next tool call completes.  This message will be passed to the LLM and allows you
   to provide feedback about what it is currently doing.  This includes, for example, saying "stop" and asking it to stop
-  what it is doing.
+  what it is doing.  You could also use this to indicate an approach it is trying will not work.
 
 Bug fixes:
 

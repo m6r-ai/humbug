@@ -64,6 +64,7 @@ class LanguageStrings:
 
     # Message roles and labels
     role_you: str
+    role_you_queued: str
     role_connected: str
     role_assistant: str
     role_reasoning: str

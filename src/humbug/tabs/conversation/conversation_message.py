@@ -126,7 +126,7 @@ class ConversationMessage(QFrame):
             AIMessageSource.TOOL_CALL: "tool_call",
             AIMessageSource.TOOL_RESULT: "tool_result",
             AIMessageSource.SYSTEM: "system",
-            AIMessageSource.USER_INTERRUPT: "user_interrupt"
+            AIMessageSource.USER_QUEUED: "user_queued"
         }
 
         current_style = self._message_source or AIMessageSource.USER
@@ -384,12 +384,14 @@ class ConversationMessage(QFrame):
 
         strings = self._language_manager.strings()
         match self._message_source:
-            case AIMessageSource.USER | AIMessageSource.USER_INTERRUPT:
+            case AIMessageSource.USER:
                 if self._message_user_name:
                     role_text = self._message_user_name
 
                 else:
                     role_text = strings.role_you
+            case AIMessageSource.USER_QUEUED:
+                role_text = strings.role_you_queued
 
             case AIMessageSource.AI_CONNECTED:
                 role_text = strings.role_connected.format(model=self._message_model)

@@ -319,7 +319,7 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#808080",
                 ColorMode.LIGHT: "#808080"
             },
-            ColorRole.MESSAGE_USER_INTERRUPT: {
+            ColorRole.MESSAGE_USER_QUEUED: {
                 ColorMode.DARK: "#808080",
                 ColorMode.LIGHT: "#808080"
             },

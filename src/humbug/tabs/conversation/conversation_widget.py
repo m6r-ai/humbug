@@ -1553,8 +1553,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_role_label[message_source="system"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
-            #ConversationMessage #_role_label[message_source="user_interrupt"] {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_INTERRUPT)};
+            #ConversationMessage #_role_label[message_source="user_queued"] {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_QUEUED)};
             }}
 
             #ConversationMessage #_expand_button,
@@ -1995,7 +1995,7 @@ class ConversationWidget(QWidget):
 
             sanitized_content = self._sanitize_input(content)
             message = AIMessage.create(
-                AIMessageSource.USER_INTERRUPT, sanitized_content,
+                AIMessageSource.USER_QUEUED, sanitized_content,
                 model=settings.model, temperature=settings.temperature,
                 reasoning_capability=settings.reasoning
             )

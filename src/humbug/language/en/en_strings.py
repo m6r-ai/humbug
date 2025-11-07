@@ -69,6 +69,7 @@ def get_english_strings() -> LanguageStrings:
 
         # Message roles
         role_you="You",
+        role_you_queued="You (queued)",
         role_connected="{model} connected",
         role_assistant="{model} response",
         role_reasoning="{model} reasoning",
