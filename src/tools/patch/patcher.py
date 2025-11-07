@@ -233,7 +233,7 @@ class AIFPLPatcher:
 
         try:
             # Parse diff first (step-by-step API)
-            filename, hunks = self.bridge.parse_diff(diff_text)
+            _filename, hunks = self.bridge.parse_diff(diff_text)
 
             if hunks is None:
                 self._print_error("Failed to parse patch for validation")

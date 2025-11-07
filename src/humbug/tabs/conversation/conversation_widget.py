@@ -90,7 +90,7 @@ class ConversationWidget(QWidget):
         self._update_timer = QTimer(self)  # Timer for throttled updates
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._process_pending_update)
-        self._pending_message = None  # Store the most recent pending message
+        self._pending_message: AIMessage | None = None  # Store the most recent pending message
 
         # Widget tracking
         self._messages: List[ConversationMessage] = []
