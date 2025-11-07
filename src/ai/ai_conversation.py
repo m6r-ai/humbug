@@ -860,3 +860,5 @@ class AIConversation:
         for task in self._current_tasks:
             if not task.done():
                 task.cancel()
+
+        self._state = ConversationState.IDLE
