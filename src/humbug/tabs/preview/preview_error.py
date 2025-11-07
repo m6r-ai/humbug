@@ -1,14 +1,14 @@
-"""Exception classes for wiki operations."""
+"""Exception classes for preview operations."""
 
 from typing import Dict
 
 
-class WikiError(Exception):
-    """Base class for wiki-related exceptions."""
+class PreviewError(Exception):
+    """Base class for preview-related exceptions."""
 
     def __init__(self, message: str, details: Dict | None = None) -> None:
         """
-        Initialize wiki error.
+        Initialize preview error.
 
         Args:
             message: Error message
@@ -18,5 +18,5 @@ class WikiError(Exception):
         self.details = details or {}
 
 
-class WikiIOError(WikiError):
-    """Exception raised when wiki file operations fail."""
+class PreviewIOError(PreviewError):
+    """Exception raised when preview file operations fail."""

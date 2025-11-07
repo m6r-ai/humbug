@@ -1,4 +1,4 @@
-"""Wiki tab implementation with file change detection."""
+"""Preview tab implementation with file change detection."""
 
 import logging
 from typing import cast
@@ -14,14 +14,14 @@ from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
-from humbug.tabs.wiki.wiki_error import WikiError
-from humbug.tabs.wiki.wiki_widget import WikiWidget
+from humbug.tabs.preview.preview_error import PreviewError
+from humbug.tabs.preview.preview_widget import PreviewWidget
 
 
-class WikiTab(TabBase):
-    """Wiki tab for displaying wiki-like content."""
+class PreviewTab(TabBase):
+    """Preview tab for previewing content."""
 
-    # Signal to request opening a new wiki tab
+    # Signal to request opening a new preview tab
     open_link_requested = Signal(str)
 
     # Signal to request editing a file
@@ -34,15 +34,15 @@ class WikiTab(TabBase):
         parent: QWidget | None = None
     ) -> None:
         """
-        Initialize the wiki tab.
+        Initialize the preview tab.
 
         Args:
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
-            path: Full path to wiki file
+            path: Full path to preview file
             parent: Optional parent widget
         """
         super().__init__(tab_id, parent)
-        self._logger = logging.getLogger("WikiTab")
+        self._logger = logging.getLogger("PreviewTab")
         self._path = path
 
         # Create layout
@@ -58,65 +58,65 @@ class WikiTab(TabBase):
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         layout.addWidget(self._find_widget)
 
-        # Create wiki content widget
-        self._wiki_content_widget = WikiWidget(path, self)
-        self._wiki_content_widget.status_updated.connect(self.update_status)
-        self._wiki_content_widget.open_link.connect(self._on_open_link)
-        self._wiki_content_widget.edit_file.connect(self.edit_file_requested)
+        # Create preview content widget
+        self._preview_content_widget = PreviewWidget(path, self)
+        self._preview_content_widget.status_updated.connect(self.update_status)
+        self._preview_content_widget.open_link.connect(self._on_open_link)
+        self._preview_content_widget.edit_file.connect(self.edit_file_requested)
 
         # Connect new signals for file watching
-        self._wiki_content_widget.content_refreshed.connect(self._on_content_refreshed)
+        self._preview_content_widget.content_refreshed.connect(self._on_content_refreshed)
 
-        layout.addWidget(self._wiki_content_widget)
+        layout.addWidget(self._preview_content_widget)
 
         # Install activation tracking
-        self._wiki_content_widget.activated.connect(self.activated)
+        self._preview_content_widget.activated.connect(self.activated)
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Load content
-        self._wiki_content_widget.load_content()
+        self._preview_content_widget.load_content()
 
         self._start_file_watching(self._path)
 
     def _on_content_refreshed(self) -> None:
-        """Handle when wiki content has been refreshed due to file changes."""
-        self._logger.debug("Wiki content refreshed for path: %s", self._path)
+        """Handle when preview content has been refreshed due to file changes."""
+        self._logger.debug("Preview content refreshed for path: %s", self._path)
         self.set_updated(True)
         self.update_status()
 
     def scroll_to_anchor(self, anchor: str) -> None:
         """
-        Scroll to the specified anchor in the wiki content.
+        Scroll to the specified anchor in the preview content.
 
         Args:
             anchor: Anchor ID to scroll to
         """
-        # Delegate to the wiki content widget
-        self._wiki_content_widget.scroll_to_target(anchor)
+        # Delegate to the preview content widget
+        self._preview_content_widget.scroll_to_target(anchor)
 
     def _on_open_link(self, url: str) -> None:
         """
         Handle opening links.
 
-        We don't need to handle local anchor links as the WikiWidget does that.
+        We don't need to handle local anchor links as the PreviewWidget does that.
 
         Args:
             url: The URL or file path to open
         """
         try:
             # Try to resolve the link path
-            resolved_path = self._wiki_content_widget.resolve_link(cast(str, self._path), url)
+            resolved_path = self._preview_content_widget.resolve_link(cast(str, self._path), url)
             if resolved_path is not None:
-                # It's a local mindspace link - open in wiki tab
+                # It's a local mindspace link - open in preview tab
                 self.open_link_requested.emit(resolved_path)
                 return
 
             # Otherwise, it's an external link - open in browser
             self._open_external_url(url)
 
-        except WikiError as e:
+        except PreviewError as e:
             # Show error message if link couldn't be handled
             strings = self._language_manager.strings()
             MessageBox.show_message(
@@ -144,7 +144,7 @@ class WikiTab(TabBase):
         """Update language-specific elements when language changes."""
         # Update find widget text if visible
         if not self._find_widget.isHidden():
-            current, total = self._wiki_content_widget.get_match_status()
+            current, total = self._preview_content_widget.get_match_status()
             self._find_widget.set_match_status(current, total)
 
         # Update status bar
@@ -162,7 +162,7 @@ class WikiTab(TabBase):
             self._stop_file_watching()
 
         self._path = path
-        self._wiki_content_widget.set_path(path)
+        self._preview_content_widget.set_path(path)
 
         # Start watching new path
         if path:
@@ -172,33 +172,33 @@ class WikiTab(TabBase):
         """Update status bar."""
         strings = self._language_manager.strings()
         message = StatusMessage(
-            strings.wiki_status.format(
+            strings.preview_status.format(
                 path=self._path
             )
         )
         self.status_message.emit(message)
 
     def can_close_tab(self) -> bool:
-        """Check if wiki can be closed."""
+        """Check if preview can be closed."""
         return True
 
     def close_tab(self) -> None:
-        """Close the wiki tab."""
+        """Close the preview tab."""
         self._stop_file_watching()
-        self._wiki_content_widget.close_widget()
+        self._preview_content_widget.close_widget()
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Get serializable state for mindspace persistence."""
         metadata = {}
 
         # Get widget-specific metadata
-        metadata.update(self._wiki_content_widget.create_state_metadata())
+        metadata.update(self._preview_content_widget.create_state_metadata())
 
         if temp_state:
             metadata['find_widget'] = self._find_widget.create_state_metadata()
 
         return TabState(
-            type=TabType.WIKI,
+            type=TabType.PREVIEW,
             tab_id=self._tab_id,
             path=self._path,
             metadata=metadata,
@@ -206,17 +206,17 @@ class WikiTab(TabBase):
         )
 
     @classmethod
-    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'WikiTab':
-        """Create and restore a wiki tab from serialized state."""
+    def restore_from_state(cls, state: TabState, parent: QWidget) -> 'PreviewTab':
+        """Create and restore a preview tab from serialized state."""
         tab = cls(state.tab_id, state.path, parent)
         if state.is_ephemeral:
             tab._is_ephemeral = True
 
-        # Load wiki content
+        # Load preview content
         try:
             # Restore widget-specific state if metadata present
             if state.metadata:
-                tab._wiki_content_widget.restore_from_metadata(state.metadata)
+                tab._preview_content_widget.restore_from_metadata(state.metadata)
 
                 if 'find_widget' in state.metadata:
                     tab._find_widget.restore_from_metadata(state.metadata['find_widget'])
@@ -224,22 +224,22 @@ class WikiTab(TabBase):
             return tab
 
         except Exception as e:
-            raise WikiError(f"Failed to restore wiki tab: {str(e)}") from e
+            raise PreviewError(f"Failed to restore preview tab: {str(e)}") from e
 
     def can_save(self) -> bool:
-        """Check if wiki can be saved."""
+        """Check if preview can be saved."""
         return False  # Read-only for now
 
     def save(self) -> bool:
-        """Save wiki (not applicable)."""
+        """Save preview (not applicable)."""
         return True
 
     def can_save_as(self) -> bool:
-        """Check if wiki can be saved as."""
+        """Check if preview can be saved as."""
         return False  # Read-only for now
 
     def save_as(self) -> bool:
-        """Save wiki as (not applicable)."""
+        """Save preview as (not applicable)."""
         return True
 
     def can_undo(self) -> bool:
@@ -247,36 +247,36 @@ class WikiTab(TabBase):
         return False
 
     def undo(self) -> None:
-        """Undo not supported for wiki."""
+        """Undo not supported for preview."""
 
     def can_redo(self) -> bool:
         """Check if redo is available."""
         return False
 
     def redo(self) -> None:
-        """Redo not supported for wiki."""
+        """Redo not supported for preview."""
 
     def can_cut(self) -> bool:
         """Check if cut is available."""
         return False  # Read-only content
 
     def cut(self) -> None:
-        """Cut not supported for wiki."""
+        """Cut not supported for preview."""
 
     def can_copy(self) -> bool:
         """Check if copy is available."""
-        return self._wiki_content_widget.can_copy()
+        return self._preview_content_widget.can_copy()
 
     def copy(self) -> None:
         """Copy selected text to clipboard."""
-        self._wiki_content_widget.copy()
+        self._preview_content_widget.copy()
 
     def can_paste(self) -> bool:
         """Check if paste is available."""
         return False  # Read-only content
 
     def paste(self) -> None:
-        """Paste not supported for wiki."""
+        """Paste not supported for preview."""
 
     def can_submit(self) -> bool:
         """Check if terminal can submit (not supported)."""
@@ -288,10 +288,11 @@ class WikiTab(TabBase):
     def show_find(self) -> None:
         """Show the find widget."""
         # Get selected text if any
-        if self._wiki_content_widget.has_selection():
-            selected_text = self._wiki_content_widget.get_selected_text()
+        if self._preview_content_widget.has_selection():
+            selected_text = self._preview_content_widget.get_selected_text()
             if selected_text:
                 self._find_widget.set_search_text(selected_text)
+
             else:
                 self._find_widget.set_search_text("")
 
@@ -301,10 +302,10 @@ class WikiTab(TabBase):
     def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._wiki_content_widget.clear_find()
+        self._preview_content_widget.clear_find()
 
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        current, total = self._wiki_content_widget.find_text(text, forward)
+        current, total = self._preview_content_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)

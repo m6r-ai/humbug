@@ -1,4 +1,4 @@
-"""Main mindspace view widget containing files, conversations, and wiki views."""
+"""Main mindspace view widget containing files, conversations, and preview views."""
 
 import os
 
@@ -11,12 +11,12 @@ from humbug.mindspace.conversations.mindspace_conversations_view import Mindspac
 from humbug.mindspace.files.mindspace_files_view import MindspaceFilesView
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
-from humbug.mindspace.wiki.mindspace_wiki_view import MindspaceWikiView
+from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
 from humbug.style_manager import StyleManager
 
 
 class MindspaceView(QWidget):
-    """Main mindspace view widget containing files, conversations, and wiki sections."""
+    """Main mindspace view widget containing files, conversations, and preview sections."""
 
     # Forward all file-related signals from all views
     file_clicked = Signal(MindspaceViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
@@ -24,7 +24,7 @@ class MindspaceView(QWidget):
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
-    file_opened_in_wiki = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in wiki
+    file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the mindspace view widget."""
@@ -36,7 +36,7 @@ class MindspaceView(QWidget):
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         # Size tracking for dynamic splitter management
-        self._saved_sizes: list[int] = [1, 1, 0, 0]  # Default: equal sizes for conversations and files, 0 for wiki and spacer
+        self._saved_sizes: list[int] = [1, 1, 0, 0]  # Default: equal sizes for conversations and files, 0 for preview and spacer
 
         # Create main layout
         layout = QVBoxLayout(self)
@@ -70,28 +70,28 @@ class MindspaceView(QWidget):
         self._files_view = MindspaceFilesView()
         self._splitter.addWidget(self._files_view)
 
-        # Add wiki view (starts collapsed)
-        self._wiki_view = MindspaceWikiView()
-        self._splitter.addWidget(self._wiki_view)
+        # Add preview view (starts collapsed)
+        self._preview_view = MindspacePreviewView()
+        self._splitter.addWidget(self._preview_view)
 
         # Create spacer widget - invisible widget that takes up space when all sections are collapsed
         self._spacer_widget = QWidget()
         self._spacer_widget.setObjectName("_spacer_widget")
         self._splitter.addWidget(self._spacer_widget)
 
-        # Set initial proportions: equal for conversations and files, 0 for wiki and spacer
+        # Set initial proportions: equal for conversations and files, 0 for preview and spacer
         self._splitter.setSizes([1, 1, 0, 0])
 
         # Set stretch factors - all sections and spacer can stretch
         self._splitter.setStretchFactor(0, 1)  # Conversations
         self._splitter.setStretchFactor(1, 1)  # Files
-        self._splitter.setStretchFactor(2, 1)  # Wiki
+        self._splitter.setStretchFactor(2, 1)  # Preview
         self._splitter.setStretchFactor(3, 1)  # Spacer
 
         # Prevent complete collapse by making sections non-collapsible
         self._splitter.setCollapsible(0, False)  # Conversations view cannot be collapsed
         self._splitter.setCollapsible(1, False)  # Files view cannot be collapsed
-        self._splitter.setCollapsible(2, False)  # Wiki view cannot be collapsed
+        self._splitter.setCollapsible(2, False)  # Preview view cannot be collapsed
         self._splitter.setCollapsible(3, True)   # Spacer widget can be collapsed
 
         # Set minimum sizes to ensure headers remain visible
@@ -100,7 +100,7 @@ class MindspaceView(QWidget):
         # Connect header toggle signals to manage splitter sizes
         self._conversations_view.toggled.connect(self._on_conversations_toggled)
         self._files_view.toggled.connect(self._on_files_toggled)
-        self._wiki_view.toggled.connect(self._on_wiki_toggled)
+        self._preview_view.toggled.connect(self._on_preview_toggled)
 
         # Connect files view signals - files view clicks go to editor
         self._files_view.file_clicked.connect(self.file_clicked.emit)
@@ -108,7 +108,7 @@ class MindspaceView(QWidget):
         self._files_view.file_renamed.connect(self.file_renamed.emit)
         self._files_view.file_moved.connect(self.file_moved.emit)
         self._files_view.file_edited.connect(self.file_edited.emit)
-        self._files_view.file_opened_in_wiki.connect(self.file_opened_in_wiki.emit)
+        self._files_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
 
         # Connect conversations view signals - conversations view clicks go to editor
         self._conversations_view.file_clicked.connect(self.file_clicked.emit)
@@ -116,15 +116,15 @@ class MindspaceView(QWidget):
         self._conversations_view.file_renamed.connect(self.file_renamed.emit)
         self._conversations_view.file_moved.connect(self.file_moved.emit)
         self._conversations_view.file_edited.connect(self.file_edited.emit)
-        self._conversations_view.file_opened_in_wiki.connect(self.file_opened_in_wiki.emit)
+        self._conversations_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
 
-        # Connect wiki view signals - wiki view clicks go to wiki
-        self._wiki_view.file_clicked.connect(self.file_clicked.emit)
-        self._wiki_view.file_deleted.connect(self.file_deleted.emit)
-        self._wiki_view.file_renamed.connect(self.file_renamed.emit)
-        self._wiki_view.file_moved.connect(self.file_moved.emit)
-        self._wiki_view.file_edited.connect(self.file_edited.emit)
-        self._wiki_view.file_opened_in_wiki.connect(self.file_opened_in_wiki.emit)
+        # Connect preview view signals - preview view clicks go to preview
+        self._preview_view.file_clicked.connect(self.file_clicked.emit)
+        self._preview_view.file_deleted.connect(self.file_deleted.emit)
+        self._preview_view.file_renamed.connect(self.file_renamed.emit)
+        self._preview_view.file_moved.connect(self.file_moved.emit)
+        self._preview_view.file_edited.connect(self.file_edited.emit)
+        self._preview_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
 
         # Set initial label text
         self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
@@ -138,8 +138,8 @@ class MindspaceView(QWidget):
         conversations_expanded = self._conversations_view.is_expanded()
         files_header_height = self._files_view.get_header_height()
         files_expanded = self._files_view.is_expanded()
-        wiki_header_height = self._wiki_view.get_header_height()
-        wiki_expanded = self._wiki_view.is_expanded()
+        preview_header_height = self._preview_view.get_header_height()
+        preview_expanded = self._preview_view.is_expanded()
 
         # Set minimum size for each view to their header height
         # This prevents them from being collapsed completely
@@ -161,14 +161,14 @@ class MindspaceView(QWidget):
         else:
             self._files_view.setFixedHeight(files_header_height)
 
-        if wiki_expanded:
-            self._wiki_view.setMinimumHeight(
-                wiki_header_height + (wiki_header_height * 2 if wiki_expanded else 0)
+        if preview_expanded:
+            self._preview_view.setMinimumHeight(
+                preview_header_height + (preview_header_height * 2 if preview_expanded else 0)
             )
-            self._wiki_view.setMaximumHeight(16777215)
+            self._preview_view.setMaximumHeight(16777215)
 
         else:
-            self._wiki_view.setFixedHeight(wiki_header_height)
+            self._preview_view.setFixedHeight(preview_header_height)
 
         # The spacer widget can be collapsed to 0
         self._spacer_widget.setMinimumHeight(0)
@@ -191,12 +191,12 @@ class MindspaceView(QWidget):
         """
         self._update_splitter_sizes()
 
-    def _on_wiki_toggled(self, _expanded: bool) -> None:
+    def _on_preview_toggled(self, _expanded: bool) -> None:
         """
-        Handle wiki section expand/collapse.
+        Handle preview section expand/collapse.
 
         Args:
-            expanded: Whether the wiki section is now expanded
+            expanded: Whether the preview section is now expanded
         """
         self._update_splitter_sizes()
 
@@ -206,7 +206,7 @@ class MindspaceView(QWidget):
 
         conversations_expanded = self._conversations_view.is_expanded()
         files_expanded = self._files_view.is_expanded()
-        wiki_expanded = self._wiki_view.is_expanded()
+        preview_expanded = self._preview_view.is_expanded()
 
         # Get current splitter height
         total_height = self._splitter.height()
@@ -218,7 +218,7 @@ class MindspaceView(QWidget):
         header_height = self._conversations_view.get_header_height()
 
         # Count expanded sections
-        expanded_sections = sum([conversations_expanded, files_expanded, wiki_expanded])
+        expanded_sections = sum([conversations_expanded, files_expanded, preview_expanded])
 
         if expanded_sections == 0:
             # All collapsed - give minimal space to all sections, rest to spacer
@@ -243,7 +243,7 @@ class MindspaceView(QWidget):
             elif files_expanded:
                 self._splitter.setSizes([header_height, expanded_size, header_height, 0])
 
-            else:  # wiki_expanded
+            else:  # preview_expanded
                 self._splitter.setSizes([header_height, header_height, expanded_size, 0])
 
         elif expanded_sections == 2:
@@ -258,10 +258,10 @@ class MindspaceView(QWidget):
             if conversations_expanded and files_expanded:
                 self._splitter.setSizes([half_space, half_space, header_height, 0])
 
-            elif conversations_expanded and wiki_expanded:
+            elif conversations_expanded and preview_expanded:
                 self._splitter.setSizes([half_space, header_height, half_space, 0])
 
-            else:  # files_expanded and wiki_expanded
+            else:  # files_expanded and preview_expanded
                 self._splitter.setSizes([header_height, half_space, half_space, 0])
 
         else:
@@ -270,8 +270,8 @@ class MindspaceView(QWidget):
                 # Restore the proportions of the three sections
                 conversations_size = self._saved_sizes[0]
                 files_size = self._saved_sizes[1]
-                wiki_size = self._saved_sizes[2]
-                self._splitter.setSizes([conversations_size, files_size, wiki_size, 0])
+                preview_size = self._saved_sizes[2]
+                self._splitter.setSizes([conversations_size, files_size, preview_size, 0])
 
             else:
                 # Equal split among three sections
@@ -280,7 +280,7 @@ class MindspaceView(QWidget):
 
     def reveal_and_select_file(self, view_type: MindspaceViewType, file_path: str) -> None:
         """
-        Reveal and select a file in the appropriate view (files, conversations, or wiki).
+        Reveal and select a file in the appropriate view (files, conversations, or preview).
 
         Args:
             file_path: Absolute path to the file to reveal and select
@@ -296,11 +296,11 @@ class MindspaceView(QWidget):
             case MindspaceViewType.CONVERSATIONS:
                 self._conversations_view.reveal_and_select_file(file_path)
 
-            case MindspaceViewType.WIKI:
-                self._wiki_view.reveal_and_select_file(file_path)
-
             case MindspaceViewType.FILES:
                 self._files_view.reveal_and_select_file(file_path)
+
+            case MindspaceViewType.PREVIEW:
+                self._preview_view.reveal_and_select_file(file_path)
 
     def set_mindspace(self, path: str) -> None:
         """
@@ -319,7 +319,7 @@ class MindspaceView(QWidget):
         # Forward to all views
         self._files_view.set_mindspace(path)
         self._conversations_view.set_mindspace(path)
-        self._wiki_view.set_mindspace(path)
+        self._preview_view.set_mindspace(path)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
@@ -498,7 +498,7 @@ class MindspaceView(QWidget):
         # Forward style updates to child views
         self._files_view.apply_style()
         self._conversations_view.apply_style()
-        self._wiki_view.apply_style()
+        self._preview_view.apply_style()
 
         # Update splitter sizes after style changes (zoom factor may have changed)
         self._update_splitter_sizes()

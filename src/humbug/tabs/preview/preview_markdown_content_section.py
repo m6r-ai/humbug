@@ -1,4 +1,4 @@
-"""Widget for displaying a section of wiki content."""
+"""Widget for displaying a section of preview content."""
 
 import logging
 from typing import List, Tuple, cast
@@ -16,11 +16,11 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.markdown_block_data import HeadingBlockData
 from humbug.tabs.markdown_renderer import MarkdownRenderer
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
-from humbug.tabs.wiki.wiki_language_highlighter import WikiLanguageHighlighter
+from humbug.tabs.preview.preview_language_highlighter import PreviewLanguageHighlighter
 
 
-class WikiMarkdownContentSection(QFrame):
-    """Widget for displaying a section of wiki content with markdown support."""
+class PreviewMarkdownContentSection(QFrame):
+    """Widget for displaying a section of preview content with markdown support."""
 
     selection_changed = Signal(bool)
     scroll_requested = Signal(QPoint)
@@ -37,16 +37,16 @@ class WikiMarkdownContentSection(QFrame):
         Initialize a content section widget.
 
         Args:
-            is_input: Whether this section is for user input (always False for wiki)
+            is_input: Whether this section is for user input (always False for preview)
             language: Optional programming language for this section
             parent: Optional parent widget
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
 
-        self.setObjectName("WikiMarkdownContentSection")
+        self.setObjectName("PreviewMarkdownContentSection")
 
-        self._logger = logging.getLogger("WikiMarkdownContentSection")
+        self._logger = logging.getLogger("PreviewMarkdownContentSection")
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
@@ -84,7 +84,7 @@ class WikiMarkdownContentSection(QFrame):
             # Add header container to main layout
             self._layout.addWidget(self._header_container)
 
-        self._is_input = is_input  # Always False for wiki
+        self._is_input = is_input  # Always False for preview
 
         # Determine if this section should use markdown (always true if no language)
         self._use_markdown = language is None
@@ -92,7 +92,7 @@ class WikiMarkdownContentSection(QFrame):
         # Create text area
         self._text_area = MarkdownTextEdit()
         self._text_area.setAcceptRichText(self._use_markdown)
-        self._text_area.setReadOnly(True)  # Always read-only for wiki
+        self._text_area.setReadOnly(True)  # Always read-only for preview
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -118,7 +118,7 @@ class WikiMarkdownContentSection(QFrame):
         self._text_area.viewport().installEventFilter(self)
 
         # Add appropriate highlighter
-        self._highlighter: WikiLanguageHighlighter | None = None
+        self._highlighter: PreviewLanguageHighlighter | None = None
         self.set_language(language)
 
         self._mouse_left_button_pressed = False
@@ -144,7 +144,7 @@ class WikiMarkdownContentSection(QFrame):
             self._highlighter = None
         else:
             self._use_markdown = False
-            highlighter = WikiLanguageHighlighter(self._text_area.document())
+            highlighter = PreviewLanguageHighlighter(self._text_area.document())
             highlighter.set_language(language)
             self._highlighter = highlighter
             self._text_area.set_has_code_block(True)

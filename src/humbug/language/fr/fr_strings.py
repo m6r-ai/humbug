@@ -31,7 +31,7 @@ def get_french_strings() -> LanguageStrings:
         open_mindspace="Ouvrir espace mental...",
         open_conversation="Ouvrir conversation...",
         open_file="Ouvrir fichier...",
-        open_wiki="Ouvrir wiki",
+        open_preview="Ouvrir aperçu...",
         fork_conversation="Dupliquer la conversation",
         save="Enregistrer",
         save_as="Enregistrer sous...",
@@ -130,7 +130,7 @@ def get_french_strings() -> LanguageStrings:
         mindspace_label_none="Aucun espace mental actif",
         mindspace_files="Fichiers",
         mindspace_conversations="Conversations",
-        mindspace_wiki="Wiki",
+        mindspace_preview="Aperçu",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
@@ -184,7 +184,7 @@ def get_french_strings() -> LanguageStrings:
         save_changes_title="Enregistrer les modifications ?",
         confirm_delete_title="Confirmer la suppression",
         file_error_title="Erreur de fichier",
-        wiki_error_title="Erreur de Wiki",
+        preview_error_title="Erreur d'aperçu",
         cancel_conversation_title="Annuler la conversation ?",
 
         # Messages
@@ -226,13 +226,13 @@ def get_french_strings() -> LanguageStrings:
         terminal_status="Terminal : {name} ({columns}x{rows})",
         system_status="Statut du système",
         log_status="Journal",
-        wiki_status="Wiki : {path}",
+        preview_status="Aperçu : {path}",
 
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Renommer",
         delete="Supprimer",
         edit="Modifier",
-        wiki_view="Voir dans le Wiki",
+        preview="Aperçu",
         duplicate="Dupliquer",
         sort_by="Trier par",
         sort_by_name="Trier par nom",

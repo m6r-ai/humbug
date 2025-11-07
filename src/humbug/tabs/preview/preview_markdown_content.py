@@ -1,4 +1,4 @@
-"""Widget for displaying a markdown content block in the wiki."""
+"""Widget for displaying a markdown content block in the preview."""
 
 import logging
 from typing import Dict, List, Tuple, Callable
@@ -11,12 +11,12 @@ from dmarkdown import MarkdownConverter
 from syntax import ProgrammingLanguage
 
 from humbug.language.language_manager import LanguageManager
-from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
-from humbug.tabs.wiki.wiki_markdown_content_section import WikiMarkdownContentSection
+from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
+from humbug.tabs.preview.preview_markdown_content_section import PreviewMarkdownContentSection
 
 
-class WikiMarkdownContent(WikiContentWidget):
-    """Widget for displaying markdown content in the wiki with sections."""
+class PreviewMarkdownContent(PreviewContentWidget):
+    """Widget for displaying markdown content in the preview with sections."""
 
     def __init__(self, parent: QWidget | None = None, contained: bool = False) -> None:
         """
@@ -29,9 +29,9 @@ class WikiMarkdownContent(WikiContentWidget):
         super().__init__(parent)
 
         # Set object name for QSS targeting
-        self.setObjectName("WikiMarkdownContent")
+        self.setObjectName("PreviewMarkdownContent")
 
-        self._logger = logging.getLogger("WikiMarkdownContent")
+        self._logger = logging.getLogger("PreviewMarkdownContent")
         self._content = ""
         self._contained = contained
 
@@ -47,8 +47,8 @@ class WikiMarkdownContent(WikiContentWidget):
         self._layout.addWidget(self._sections_container)
 
         # Track sections
-        self._sections: List[WikiMarkdownContentSection] = []
-        self._section_with_selection: WikiMarkdownContentSection | None = None
+        self._sections: List[PreviewMarkdownContentSection] = []
+        self._section_with_selection: PreviewMarkdownContentSection | None = None
 
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
@@ -62,7 +62,7 @@ class WikiMarkdownContent(WikiContentWidget):
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
 
-    def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> WikiMarkdownContentSection:
+    def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> PreviewMarkdownContentSection:
         """
         Create a new section widget.
 
@@ -70,10 +70,10 @@ class WikiMarkdownContent(WikiContentWidget):
             language: Optional programming language for the section
 
         Returns:
-            A new WikiMarkdownContentSection instance
+            A new PreviewMarkdownContentSection instance
         """
-        is_input = False  # Wiki sections are never input
-        section = WikiMarkdownContentSection(is_input, language, self._sections_container)
+        is_input = False  # Preview sections are never input
+        section = PreviewMarkdownContentSection(is_input, language, self._sections_container)
         section_type = "code" if language is not None else "text"
         section.setProperty("section_type", section_type)
         section.setProperty("contained", self._contained)
@@ -97,7 +97,7 @@ class WikiMarkdownContent(WikiContentWidget):
         # Forward the signal with the URL
         self.link_clicked.emit(url)
 
-    def _on_section_selection_changed(self, section: WikiMarkdownContentSection, has_selection: bool) -> None:
+    def _on_section_selection_changed(self, section: PreviewMarkdownContentSection, has_selection: bool) -> None:
         """
         Handle selection changes in a section widget.
 
@@ -265,7 +265,7 @@ class WikiMarkdownContent(WikiContentWidget):
             return
 
         # Group matches by section
-        section_matches: Dict[WikiMarkdownContentSection, List[Tuple[int, int, int]]] = {}
+        section_matches: Dict[PreviewMarkdownContentSection, List[Tuple[int, int, int]]] = {}
         for section in self._sections:
             section_matches[section] = []
 

@@ -32,7 +32,7 @@ class MindspaceConversationsView(QWidget):
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
-    file_opened_in_wiki = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in wiki
+    file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
     toggled = Signal(bool)  # Emitted when expand/collapse state changes (expanded state)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -802,8 +802,8 @@ class MindspaceConversationsView(QWidget):
             if is_dir:
                 # For directories: show all options (no "New File" option)
                 edit_action = None
-                wiki_view_action = menu.addAction(strings.wiki_view)
-                wiki_view_action.triggered.connect(lambda: self._handle_wiki_view_file(path))
+                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 duplicate_action = None
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
@@ -816,8 +816,8 @@ class MindspaceConversationsView(QWidget):
                 # File context menu
                 edit_action = menu.addAction(strings.edit)
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
-                wiki_view_action = menu.addAction(strings.wiki_view)
-                wiki_view_action.triggered.connect(lambda: self._handle_wiki_view_file(path))
+                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
                 new_folder_action = None
@@ -925,9 +925,9 @@ class MindspaceConversationsView(QWidget):
         """Edit a file."""
         self.file_edited.emit(path, False)
 
-    def _handle_wiki_view_file(self, path: str) -> None:
-        """View a file in the wiki."""
-        self.file_opened_in_wiki.emit(path, False)
+    def _handle_preview_view_file(self, path: str) -> None:
+        """View a file in the preview."""
+        self.file_opened_in_preview.emit(path, False)
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.

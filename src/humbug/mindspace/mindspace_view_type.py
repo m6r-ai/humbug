@@ -5,4 +5,4 @@ class MindspaceViewType(Enum):
     """Enumeration of available mindspace views."""
     CONVERSATIONS = auto()
     FILES = auto()
-    WIKI = auto()
+    PREVIEW = auto()

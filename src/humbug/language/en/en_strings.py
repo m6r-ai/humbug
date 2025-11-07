@@ -31,7 +31,7 @@ def get_english_strings() -> LanguageStrings:
         open_mindspace="Open Mindspace...",
         open_conversation="Open Conversation...",
         open_file="Open File...",
-        open_wiki="Open Wiki",
+        open_preview="Open Preview...",
         fork_conversation="Fork Conversation",
         save="Save",
         save_as="Save As...",
@@ -130,7 +130,7 @@ def get_english_strings() -> LanguageStrings:
         mindspace_label_none="No mindspace active",
         mindspace_files="Files",
         mindspace_conversations="Conversations",
-        mindspace_wiki="Wiki",
+        mindspace_preview="Preview",
 
         # Mindspace folders dialog
         mindspace_folders_title="Configure Mindspace Folders",
@@ -184,7 +184,7 @@ def get_english_strings() -> LanguageStrings:
         save_changes_title="Save Changes?",
         confirm_delete_title="Confirm Delete",
         file_error_title="File Error",
-        wiki_error_title="Wiki Error",
+        preview_error_title="Preview Error",
         cancel_conversation_title="Cancel Conversation?",
 
         # Messages
@@ -226,13 +226,13 @@ def get_english_strings() -> LanguageStrings:
         terminal_status="Terminal: {name} ({columns}x{rows})",
         system_status="System",
         log_status="Log",
-        wiki_status="Wiki: {path}",
+        preview_status="Preview: {path}",
 
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Rename",
         delete="Delete",
         edit="Edit",
-        wiki_view="View in Wiki",
+        preview="Preview",
         duplicate="Duplicate",
         sort_by="Sort By",
         sort_by_name="Sort by name",

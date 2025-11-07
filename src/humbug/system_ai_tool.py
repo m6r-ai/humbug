@@ -25,7 +25,7 @@ class SystemAITool(AITool):
     System operations tool for LLM interaction.
 
     Provides structured access to system operations like opening files, creating terminals,
-    starting conversations, accessing wiki views, and controlling terminal operations.
+    starting conversations, accessing previews, and controlling terminal operations.
     All operations are restricted to the current mindspace and require user authorization
     where appropriate.
     """
@@ -84,7 +84,7 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="file_path",
                     type="string",
-                    description="Path to file or directory (for open_editor, open_conversation, and open_wiki operations)",
+                    description="Path to file or directory (for open_editor, open_conversation, and open_preview operations)",
                     required=False
                 ),
                 AIToolParameter(
@@ -187,12 +187,12 @@ class SystemAITool(AITool):
                 required_parameters=set(),
                 description="Open the mindspace log tab"
             ),
-            "open_wiki_tab": AIToolOperationDefinition(
-                name="open_wiki_tab",
-                handler=self._open_wiki_tab,
+            "open_preview_tab": AIToolOperationDefinition(
+                name="open_preview_tab",
+                handler=self._open_preview_tab,
                 allowed_parameters={"file_path"},
                 required_parameters=set(),
-                description="open a file/directory in a wiki view tab"
+                description="open a file/directory in a preview view tab"
             ),
             "tab_info": AIToolOperationDefinition(
                 name="tab_info",
@@ -757,48 +757,48 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to show system shell: {str(e)}") from e
 
-    async def _open_wiki_tab(
+    async def _open_preview_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Open wiki view for a specific location or mindspace root."""
+        """Open preview view for a specific location or mindspace root."""
         # Get file path (optional)
         arguments = tool_call.arguments
         file_path_arg = arguments.get("file_path", "")
 
         if file_path_arg:
-            wiki_path = self._validate_and_resolve_path(file_path_arg)
+            preview_path = self._validate_and_resolve_path(file_path_arg)
 
         else:
             # Use mindspace root if no path provided
-            wiki_path = self._mindspace_manager.get_absolute_path(".")
+            preview_path = self._mindspace_manager.get_absolute_path(".")
 
         try:
-            # Open wiki page
+            # Open preview page
             self._column_manager.protect_current_tab(True)
             try:
-                wiki_tab = self._column_manager.open_wiki_page(wiki_path, False)
+                preview_tab = self._column_manager.open_preview_page(preview_path, False)
 
             finally:
                 self._column_manager.protect_current_tab(False)
 
-            relative_path = self._mindspace_manager.get_relative_path(wiki_path)
+            relative_path = self._mindspace_manager.get_relative_path(preview_path)
             location = relative_path if relative_path else "."
 
-            tab_id = wiki_tab.tab_id()
+            tab_id = preview_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI opened wiki tab for: '{location}'\ntab ID: {tab_id}"
+                f"AI opened preview tab for: '{location}'\ntab ID: {tab_id}"
             )
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Opened wiki tab for: '{location}', tab ID: {tab_id}"
+                content=f"Opened preview tab for: '{location}', tab ID: {tab_id}"
             )
 
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to open wiki: {str(e)}") from e
+            raise AIToolExecutionError(f"Failed to open preview: {str(e)}") from e
 
     async def _tab_info(
         self,

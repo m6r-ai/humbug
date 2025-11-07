@@ -1,4 +1,4 @@
-"""Widget for displaying markdown preview content in the wiki."""
+"""Widget for displaying markdown preview content in the preview."""
 
 import logging
 from typing import List, Tuple, Callable
@@ -8,12 +8,12 @@ from PySide6.QtCore import QPoint
 from PySide6.QtGui import QColor
 
 from humbug.style_manager import StyleManager
-from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
-from humbug.tabs.wiki.wiki_markdown_content import WikiMarkdownContent
+from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
+from humbug.tabs.preview.preview_markdown_content import PreviewMarkdownContent
 
 
-class WikiMarkdownPreviewContent(WikiContentWidget):
-    """Widget for displaying markdown preview content in the wiki with a distinct visual container."""
+class PreviewMarkdownPreviewContent(PreviewContentWidget):
+    """Widget for displaying markdown preview content in the preview with a distinct visual container."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
@@ -23,10 +23,10 @@ class WikiMarkdownPreviewContent(WikiContentWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self._logger = logging.getLogger("WikiMarkdownPreviewContent")
+        self._logger = logging.getLogger("PreviewMarkdownPreviewContent")
         self._content = ""
 
-        self.setObjectName("WikiMarkdownPreviewContent")
+        self.setObjectName("PreviewMarkdownPreviewContent")
 
         self._style_manager = StyleManager()
 
@@ -35,7 +35,7 @@ class WikiMarkdownPreviewContent(WikiContentWidget):
         self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         # Create the actual markdown content widget
-        self._markdown_content = WikiMarkdownContent(self, True)
+        self._markdown_content = PreviewMarkdownContent(self, True)
         self._markdown_content.selection_changed.connect(self.selection_changed)
         self._markdown_content.scroll_requested.connect(self.scroll_requested)
         self._markdown_content.mouse_released.connect(self.mouse_released)

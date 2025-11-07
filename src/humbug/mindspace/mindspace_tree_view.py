@@ -104,7 +104,7 @@ class MindspaceTreeView(QTreeView):
         Get the type identifier for this view.
 
         Returns:
-            String identifying the view type ("conversations", "files", "wiki")
+            String identifying the view type ("conversations", "files", "preview")
         """
         raise NotImplementedError("Subclasses must implement get_view_type")
 

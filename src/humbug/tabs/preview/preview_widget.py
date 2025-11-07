@@ -1,4 +1,4 @@
-"""Wiki content widget implementation with file change detection."""
+"""Preview content widget implementation with file change detection."""
 
 import logging
 import os
@@ -15,15 +15,15 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 from humbug.style_manager import StyleManager
-from humbug.tabs.wiki.wiki_content import WikiContent, WikiContentType
-from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
-from humbug.tabs.wiki.wiki_error import WikiIOError
-from humbug.tabs.wiki.wiki_file_content import WikiFileContent
-from humbug.tabs.wiki.wiki_markdown_content import WikiMarkdownContent
-from humbug.tabs.wiki.wiki_markdown_preview_content import WikiMarkdownPreviewContent
+from humbug.tabs.preview.preview_content import PreviewContent, PreviewContentType
+from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
+from humbug.tabs.preview.preview_error import PreviewIOError
+from humbug.tabs.preview.preview_file_content import PreviewFileContent
+from humbug.tabs.preview.preview_markdown_content import PreviewMarkdownContent
+from humbug.tabs.preview.preview_markdown_preview_content import PreviewMarkdownPreviewContent
 
 
-class WikiWidgetEventFilter(QObject):
+class PreviewWidgetEventFilter(QObject):
     """Event filter to track activation events from child widgets."""
 
     widget_activated = Signal(object)
@@ -57,8 +57,8 @@ class WikiWidgetEventFilter(QObject):
         return super().eventFilter(watched, event)
 
 
-class WikiWidget(QWidget):
-    """Widget for displaying wiki content with automatic refresh capability."""
+class PreviewWidget(QWidget):
+    """Widget for displaying preview content with automatic refresh capability."""
 
     # Signal to notify tab of status changes
     status_updated = Signal()
@@ -81,25 +81,25 @@ class WikiWidget(QWidget):
         parent: QWidget | None = None
     ) -> None:
         """
-        Initialize the wiki content widget.
+        Initialize the preview content widget.
 
         Args:
-            path: Full path to wiki file
+            path: Full path to preview file
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self._logger = logging.getLogger("WikiWidget")
+        self._logger = logging.getLogger("PreviewWidget")
         self._path = path
 
-        self._wiki = WikiContent()
+        self._preview = PreviewContent()
 
         # File watching integration
         self._file_watcher = MindspaceFileWatcher()
         self._watched_paths: Set[str] = set()
 
         # Widget tracking
-        self._content_blocks: List[WikiContentWidget] = []
-        self._content_with_selection: WikiContentWidget | None = None
+        self._content_blocks: List[PreviewContentWidget] = []
+        self._content_with_selection: PreviewContentWidget | None = None
 
         # Initialize tracking variables
         self._auto_scroll = True
@@ -139,7 +139,7 @@ class WikiWidget(QWidget):
         content_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[WikiContentWidget, List[Tuple[int, int, int]]] = {}
+        self._search_highlights: Dict[PreviewContentWidget, List[Tuple[int, int, int]]] = {}
 
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
@@ -167,14 +167,14 @@ class WikiWidget(QWidget):
         self._on_style_changed()
 
         # Find functionality
-        self._matches: List[Tuple[WikiContentWidget, List[Tuple[int, int, int]]]] = []
+        self._matches: List[Tuple[PreviewContentWidget, List[Tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
-        self._highlighted_widgets: Set[WikiContentWidget] = set()
+        self._highlighted_widgets: Set[PreviewContentWidget] = set()
 
         # Set up activation tracking
-        self._event_filter = WikiWidgetEventFilter(self)
+        self._event_filter = PreviewWidgetEventFilter(self)
         self._event_filter.widget_activated.connect(self._on_widget_activated)
         self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
 
@@ -283,30 +283,30 @@ class WikiWidget(QWidget):
                 for _ in range(min(target_match, total)):
                     self.find_text(find_state['last_search'], True)
 
-    def _add_content_block(self, content_type: WikiContentType, content: str) -> WikiContentWidget:
+    def _add_content_block(self, content_type: PreviewContentType, content: str) -> PreviewContentWidget:
         """
-        Add a new content block to the wiki view.
+        Add a new content block to the preview view.
 
         Args:
             content_type: Type of content to create
             content: The content text
 
         Returns:
-            The created WikiContentWidget widget
+            The created PreviewContentWidget widget
         """
-        if content_type == WikiContentType.MARKDOWN:
-            content_widget: WikiContentWidget = WikiMarkdownContent(self)
+        if content_type == PreviewContentType.MARKDOWN:
+            content_widget: PreviewContentWidget = PreviewMarkdownContent(self)
 
-        elif content_type == WikiContentType.MARKDOWN_PREVIEW:
-            content_widget = WikiMarkdownPreviewContent(self)
+        elif content_type == PreviewContentType.MARKDOWN_PREVIEW:
+            content_widget = PreviewMarkdownPreviewContent(self)
 
-        elif content_type == WikiContentType.FILE:
-            content_widget = WikiFileContent(self)
+        elif content_type == PreviewContentType.FILE:
+            content_widget = PreviewFileContent(self)
 
         else:
             # Default to markdown for unknown types
             self._logger.warning("Unknown content type: %s, defaulting to markdown", content_type)
-            content_widget = WikiMarkdownContent(self)
+            content_widget = PreviewMarkdownContent(self)
 
         content_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(content_widget, has_selection)
@@ -357,7 +357,7 @@ class WikiWidget(QWidget):
         """
         Install event filter on widget and all its children recursively.
 
-        Call this for any new widgets added to the wiki widget.
+        Call this for any new widgets added to the preview widget.
 
         Args:
             widget: Widget to track for activation events
@@ -374,7 +374,7 @@ class WikiWidget(QWidget):
         Args:
             widget: The widget that was activated
         """
-        # Emit activated signal to let the tab know this wiki was clicked
+        # Emit activated signal to let the tab know this preview was clicked
         self.activated.emit()
 
     def _on_widget_deactivated(self, widget: QWidget) -> None:
@@ -386,10 +386,10 @@ class WikiWidget(QWidget):
         """
 
     def load_content(self) -> None:
-        """Load content from the mindspace wiki."""
+        """Load content from the mindspace preview."""
         try:
             # Get content and dependencies
-            content_list, dependencies = self._wiki.get_wiki_content(self._path)
+            content_list, dependencies = self._preview.get_preview_content(self._path)
 
             # Clear existing content blocks
             self.clear_content()
@@ -406,7 +406,7 @@ class WikiWidget(QWidget):
             self._scroll_to_top()
 
         except Exception as e:
-            raise WikiIOError(f"Failed to read wiki file: {str(e)}") from e
+            raise PreviewIOError(f"Failed to read preview file: {str(e)}") from e
 
     def clear_content(self) -> None:
         """Clear all content blocks."""
@@ -422,20 +422,20 @@ class WikiWidget(QWidget):
         Resolve a link to an absolute path.
 
         Args:
-            current_path: Path of the current wiki page
+            current_path: Path of the current preview page
             target_path: Target path from the link
 
         Returns:
             Absolute path to the target or None if it's an external link
         """
-        return self._wiki.resolve_link(current_path, target_path)
+        return self._preview.resolve_link(current_path, target_path)
 
     def set_path(self, new_path: str) -> None:
         """
-        Set the path for the wiki file.
+        Set the path for the preview file.
 
         Args:
-            new_path: New path for the wiki file
+            new_path: New path for the preview file
         """
         # Unregister old file watching
         self._unregister_file_watching()
@@ -570,7 +570,7 @@ class WikiWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
-    def _on_selection_changed(self, content_widget: WikiContentWidget, has_selection: bool) -> None:
+    def _on_selection_changed(self, content_widget: PreviewContentWidget, has_selection: bool) -> None:
         """Handle selection changes in content widgets."""
         if not has_selection:
             if self._content_with_selection:
@@ -692,38 +692,38 @@ class WikiWidget(QWidget):
             }}
         """
 
-    def _build_wiki_file_content_style(self) -> str:
-        """Build styles for the WikiFileContent widget."""
+    def _build_preview_file_content_style(self) -> str:
+        """Build styles for the PreviewFileContent widget."""
         style_manager = self._style_manager
 
         return f"""
-            #WikiFileContent {{
+            #PreviewFileContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {int(style_manager.message_bubble_spacing())}px;
                 border: none;
             }}
 
-            #WikiFileContent #_content_container {{
+            #PreviewFileContent #_content_container {{
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
-            #WikiFileContent #_header_container {{
+            #PreviewFileContent #_header_container {{
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
-            #WikiFileContent #_language_header {{
+            #PreviewFileContent #_language_header {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
-            #WikiFileContent #_text_area {{
+            #PreviewFileContent #_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
@@ -733,67 +733,67 @@ class WikiWidget(QWidget):
                 background-color: transparent;
             }}
 
-            #WikiFileContent #_text_area QScrollBar:horizontal {{
+            #PreviewFileContent #_text_area QScrollBar:horizontal {{
                 height: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
-            #WikiFileContent #_text_area QScrollBar::handle:horizontal {{
+            #PreviewFileContent #_text_area QScrollBar::handle:horizontal {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
-            #WikiFileContent #_text_area QScrollBar::add-page:horizontal,
-            #WikiFileContent #_text_area QScrollBar::sub-page:horizontal {{
+            #PreviewFileContent #_text_area QScrollBar::add-page:horizontal,
+            #PreviewFileContent #_text_area QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
-            #WikiFileContent #_text_area QScrollBar::add-line:horizontal,
-            #WikiFileContent #_text_area QScrollBar::sub-line:horizontal {{
+            #PreviewFileContent #_text_area QScrollBar::add-line:horizontal,
+            #PreviewFileContent #_text_area QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
-            #WikiFileContent #_text_area QScrollBar:vertical {{
+            #PreviewFileContent #_text_area QScrollBar:vertical {{
                 width: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
-            #WikiFileContent #_text_area QScrollBar::handle:vertical {{
+            #PreviewFileContent #_text_area QScrollBar::handle:vertical {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-height: 20px;
             }}
-            #WikiFileContent #_text_area QScrollBar::add-page:vertical,
-            #WikiFileContent #_text_area QScrollBar::sub-page:vertical {{
+            #PreviewFileContent #_text_area QScrollBar::add-page:vertical,
+            #PreviewFileContent #_text_area QScrollBar::sub-page:vertical {{
                 background: none;
             }}
-            #WikiFileContent #_text_area QScrollBar::add-line:vertical,
-            #WikiFileContent #_text_area QScrollBar::sub-line:vertical {{
+            #PreviewFileContent #_text_area QScrollBar::add-line:vertical,
+            #PreviewFileContent #_text_area QScrollBar::sub-line:vertical {{
                 height: 0px;
             }}
 
-            #WikiFileContent #_edit_button {{
+            #PreviewFileContent #_edit_button {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
                 border-radius: 0;
                 padding: 0px;
             }}
-            #WikiFileContent #_edit_button:hover {{
+            #PreviewFileContent #_edit_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
             }}
-            #WikiFileContent #_edit_button:pressed {{
+            #PreviewFileContent #_edit_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
             }}
         """
 
-    def _build_wiki_markdown_content_styles(self) -> str:
+    def _build_preview_markdown_content_styles(self) -> str:
         """Build styles for the main container."""
         style_manager = self._style_manager
         return f"""
-            QWidget#WikiMarkdownContent {{
+            QWidget#PreviewMarkdownContent {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            QWidget#WikiMarkdownContent[contained="true"] {{
+            QWidget#PreviewMarkdownContent[contained="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
-            #WikiMarkdownContent QWidget#_sections_container {{
+            #PreviewMarkdownContent QWidget#_sections_container {{
                 background-color: transparent;
                 border: none;
                 margin: 0;
@@ -801,40 +801,40 @@ class WikiWidget(QWidget):
             }}
         """
 
-    def _build_wiki_markdown_content_section_styles(self) -> str:
+    def _build_preview_markdown_content_section_styles(self) -> str:
         """Build styles for language headers within sections."""
         style_manager = self._style_manager
         border_radius = int(style_manager.message_bubble_spacing())
 
         return f"""
             /* Default section styling */
-            QFrame#WikiMarkdownContentSection {{
+            QFrame#PreviewMarkdownContentSection {{
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
             }}
 
             /* Text sections - normal (not contained) */
-            QFrame#WikiMarkdownContentSection[section_type="text"][contained="false"] {{
+            QFrame#PreviewMarkdownContentSection[section_type="text"][contained="false"] {{
                 background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
             /* Text sections - contained */
-            QFrame#WikiMarkdownContentSection[section_type="text"][contained="true"] {{
+            QFrame#PreviewMarkdownContentSection[section_type="text"][contained="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             /* Code sections - normal (not contained) */
-            QFrame#WikiMarkdownContentSection[section_type="code"][contained="false"] {{
+            QFrame#PreviewMarkdownContentSection[section_type="code"][contained="false"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
             /* Code sections - contained */
-            QFrame#WikiMarkdownContentSection[section_type="code"][contained="true"] {{
+            QFrame#PreviewMarkdownContentSection[section_type="code"][contained="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
             }}
 
-            QFrame#WikiMarkdownContentSection QLabel {{
+            QFrame#PreviewMarkdownContentSection QLabel {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
                 background-color: transparent;
                 margin: 0;
@@ -842,7 +842,7 @@ class WikiWidget(QWidget):
             }}
 
             /* Text areas within sections */
-            #WikiMarkdownContentSection QTextEdit {{
+            #PreviewMarkdownContentSection QTextEdit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
@@ -852,37 +852,37 @@ class WikiWidget(QWidget):
             }}
 
             /* Header containers within sections */
-            #WikiMarkdownContentSection QWidget {{
+            #PreviewMarkdownContentSection QWidget {{
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
             }}
 
             /* Scrollbars within sections */
-            #WikiMarkdownContentSection QScrollBar:horizontal {{
+            #PreviewMarkdownContentSection QScrollBar:horizontal {{
                 height: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
-            #WikiMarkdownContentSection QScrollBar::handle:horizontal {{
+            #PreviewMarkdownContentSection QScrollBar::handle:horizontal {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
-            #WikiMarkdownContentSection QScrollBar::add-page:horizontal,
-            #WikiMarkdownContentSection QScrollBar::sub-page:horizontal {{
+            #PreviewMarkdownContentSection QScrollBar::add-page:horizontal,
+            #PreviewMarkdownContentSection QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
-            #WikiMarkdownContentSection QScrollBar::add-line:horizontal,
-            #WikiMarkdownContentSection QScrollBar::sub-line:horizontal {{
+            #PreviewMarkdownContentSection QScrollBar::add-line:horizontal,
+            #PreviewMarkdownContentSection QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
         """
 
-    def _build_wiki_markdown_preview_content_style(self) -> str:
-        """Build styles for the WikiMarkdownPreviewContent widget."""
+    def _build_preview_markdown_preview_content_style(self) -> str:
+        """Build styles for the PreviewMarkdownPreviewContent widget."""
         style_manager = self._style_manager
 
         return f"""
-            QFrame#WikiMarkdownPreviewContent {{
+            QFrame#PreviewMarkdownPreviewContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {int(style_manager.message_bubble_spacing())}px;
@@ -900,10 +900,10 @@ class WikiWidget(QWidget):
 
         stylesheet_parts = [
             self._build_widget_style(),
-            self._build_wiki_file_content_style(),
-            self._build_wiki_markdown_content_styles(),
-            self._build_wiki_markdown_content_section_styles(),
-            self._build_wiki_markdown_preview_content_style(),
+            self._build_preview_file_content_style(),
+            self._build_preview_markdown_content_styles(),
+            self._build_preview_markdown_content_section_styles(),
+            self._build_preview_markdown_preview_content_style(),
         ]
 
         shared_stylesheet = "\n".join(stylesheet_parts)
@@ -919,7 +919,7 @@ class WikiWidget(QWidget):
             self._content_with_selection.copy_selection()
 
     def close_widget(self) -> None:
-        """Close the wiki widget and clean up resources."""
+        """Close the preview widget and clean up resources."""
         self._unregister_file_watching()
 
     def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
@@ -1017,7 +1017,7 @@ class WikiWidget(QWidget):
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
 
-    def _handle_find_scroll(self, widget: WikiContentWidget, section_num: int, position: int) -> None:
+    def _handle_find_scroll(self, widget: PreviewContentWidget, section_num: int, position: int) -> None:
         """
         Handle scroll requests from find operations.
 
@@ -1089,7 +1089,7 @@ class WikiWidget(QWidget):
         Create metadata dictionary capturing current widget state.
 
         Returns:
-            Dictionary containing wiki state metadata
+            Dictionary containing preview state metadata
         """
         metadata: Dict[str, Any] = {}
 

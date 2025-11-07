@@ -1,4 +1,4 @@
-"""Wiki model implementation for mindspace wiki view."""
+"""Preview model implementation for mindspace preview view."""
 
 import os
 from typing import cast
@@ -10,8 +10,8 @@ from humbug.user.user_file_sort_order import UserFileSortOrder
 from humbug.user.user_manager import UserManager
 
 
-class MindspaceWikiModel(QSortFilterProxyModel):
-    """Filter model to hide .humbug directory and apply custom sorting for wiki view."""
+class MindspacePreviewModel(QSortFilterProxyModel):
+    """Filter model to hide .humbug directory and apply custom sorting for preview view."""
 
     def __init__(self, parent: QWidget | None = None):
         """Initialize the filter model."""

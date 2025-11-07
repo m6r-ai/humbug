@@ -50,11 +50,11 @@ from humbug.tabs.shell.commands.shell_command_help import ShellCommandHelp
 from humbug.tabs.shell.commands.shell_command_log import ShellCommandLog
 from humbug.tabs.shell.commands.shell_command_m6rc import ShellCommandM6rc
 from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTerminal
-from humbug.tabs.shell.commands.shell_command_wiki import ShellCommandWiki
+from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
 from humbug.tabs.tab_base import TabBase
-from humbug.tabs.wiki.wiki_error import WikiError
-from humbug.tabs.wiki.wiki_tab import WikiTab
+from humbug.tabs.preview.preview_error import PreviewError
+from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
 from humbug.user.user_settings_dialog import UserSettingsDialog
@@ -113,9 +113,9 @@ class MainWindow(QMainWindow):
         self._open_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
         self._open_mindspace_action.triggered.connect(self._open_mindspace)
 
-        self._open_wiki_action = QAction(strings.open_wiki, self)
-        self._open_wiki_action.setShortcut(QKeySequence("Ctrl+Shift+W"))
-        self._open_wiki_action.triggered.connect(self._open_wiki)
+        self._open_preview_action = QAction(strings.open_preview, self)
+        self._open_preview_action.setShortcut(QKeySequence("Ctrl+Shift+W"))
+        self._open_preview_action.triggered.connect(self._open_preview)
 
         self._open_conv_action = QAction(strings.open_conversation, self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
@@ -256,7 +256,7 @@ class MainWindow(QMainWindow):
         self._file_menu.addAction(self._new_terminal_action)
         self._file_menu.addSeparator()
         self._file_menu.addAction(self._open_mindspace_action)
-        self._file_menu.addAction(self._open_wiki_action)
+        self._file_menu.addAction(self._open_preview_action)
         self._file_menu.addAction(self._open_conv_action)
         self._file_menu.addAction(self._open_file_action)
         self._file_menu.addSeparator()
@@ -327,7 +327,7 @@ class MainWindow(QMainWindow):
         self._mindspace_view.file_deleted.connect(self._on_mindspace_view_file_deleted)
         self._mindspace_view.file_renamed.connect(self._on_mindspace_view_file_renamed)
         self._mindspace_view.file_edited.connect(self._on_mindspace_view_file_edited)
-        self._mindspace_view.file_opened_in_wiki.connect(self._on_mindspace_view_file_opened_in_wiki)
+        self._mindspace_view.file_opened_in_preview.connect(self._on_mindspace_view_file_opened_in_preview)
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
@@ -335,7 +335,7 @@ class MainWindow(QMainWindow):
         self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
         self._column_manager.fork_requested.connect(self._on_column_manager_fork_requested)
         self._column_manager.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
-        self._column_manager.open_wiki_link_requested.connect(self._on_column_manager_open_wiki_link_requested)
+        self._column_manager.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
         self._splitter.addWidget(self._column_manager)
 
@@ -389,7 +389,7 @@ class MainWindow(QMainWindow):
         self._command_registry.register_command(ShellCommandLog(self._column_manager))
         self._command_registry.register_command(ShellCommandM6rc(self._column_manager))
         self._command_registry.register_command(ShellCommandTerminal(self._column_manager))
-        self._command_registry.register_command(ShellCommandWiki(self._column_manager))
+        self._command_registry.register_command(ShellCommandPreview(self._column_manager))
 
         # Register help command last so it can see all other commands
         self._command_registry.register_command(ShellCommandHelp(self._command_registry))
@@ -431,7 +431,7 @@ class MainWindow(QMainWindow):
         self._new_conv_action.setEnabled(has_mindspace)
         self._new_metaphor_conv_action.setEnabled(has_mindspace)
         self._new_file_action.setEnabled(has_mindspace)
-        self._open_wiki_action.setEnabled(has_mindspace)
+        self._open_preview_action.setEnabled(has_mindspace)
         self._open_conv_action.setEnabled(has_mindspace)
         self._open_file_action.setEnabled(has_mindspace)
         self._new_terminal_action.setEnabled(has_mindspace)
@@ -496,7 +496,7 @@ class MainWindow(QMainWindow):
         self._new_metaphor_conv_action.setText(strings.new_metaphor_conversation)
         self._new_file_action.setText(strings.new_file)
         self._open_mindspace_action.setText(strings.open_mindspace)
-        self._open_wiki_action.setText(strings.open_wiki)
+        self._open_preview_action.setText(strings.open_preview)
         self._open_conv_action.setText(strings.open_conversation)
         self._open_file_action.setText(strings.open_file)
         self._fork_conv_action.setText(strings.fork_conversation)
@@ -611,8 +611,8 @@ class MainWindow(QMainWindow):
         if isinstance(tab, ConversationTab):
             return MindspaceViewType.CONVERSATIONS
 
-        if isinstance(tab, WikiTab):
-            return MindspaceViewType.WIKI
+        if isinstance(tab, PreviewTab):
+            return MindspaceViewType.PREVIEW
 
         return MindspaceViewType.FILES
 
@@ -842,15 +842,15 @@ class MainWindow(QMainWindow):
 
         self._column_manager.new_file()
 
-    def _on_mindspace_view_file_opened_in_wiki(self, path: str, ephemeral: bool) -> None:
-        """Handle click of a wiki link from the mindspace view."""
-        wiki_tab = self._column_manager.open_wiki_page(path, ephemeral)
-        if wiki_tab is None:
+    def _on_mindspace_view_file_opened_in_preview(self, path: str, ephemeral: bool) -> None:
+        """Handle click of a preview link from the mindspace view."""
+        preview_tab = self._column_manager.open_preview_page(path, ephemeral)
+        if preview_tab is None:
             return
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"User opened wiki: '{path}'\ntab ID: {wiki_tab.tab_id()}"
+            f"User opened preview: '{path}'\ntab ID: {preview_tab.tab_id()}"
         )
 
     def _on_mindspace_view_file_clicked(self, source: MindspaceViewType, path: str, ephemeral: bool) -> None:
@@ -924,9 +924,9 @@ class MainWindow(QMainWindow):
         path = self._column_manager.save_file_as()
         self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
 
-    def _open_wiki(self) -> None:
-        """Open the wiki page in a new tab."""
-        self._column_manager.open_wiki_page(self._mindspace_manager.get_absolute_path("."), False)
+    def _open_preview(self) -> None:
+        """Open the preview page in a new tab."""
+        self._column_manager.open_preview_page(self._mindspace_manager.get_absolute_path("."), False)
 
     def _show_system_log(self) -> None:
         """Show the log tab."""
@@ -1200,18 +1200,18 @@ class MainWindow(QMainWindow):
                 strings.error_forking_conversation.format(str(e))
             )
 
-    def _on_column_manager_open_wiki_link_requested(self, path: str) -> None:
-        """Handle requests to open a wiki page."""
+    def _on_column_manager_open_preview_link_requested(self, path: str) -> None:
+        """Handle requests to open a preview page."""
         try:
-            self._column_manager.open_wiki_page(path, True)
+            self._column_manager.open_preview_page(path, True)
 
-        except WikiError as e:
-            self._logger.info("Error opening wiki page: %s: %s", path, str(e))
+        except PreviewError as e:
+            self._logger.info("Error opening preview page: %s: %s", path, str(e))
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                strings.wiki_error_title,
+                strings.preview_error_title,
                 strings.could_not_open.format(path, str(e))
             )
 

@@ -6,6 +6,6 @@ class TabType(Enum):
     CONVERSATION = auto()
     EDITOR = auto()
     LOG = auto()
+    PREVIEW = auto()
     SHELL = auto()
     TERMINAL = auto()
-    WIKI = auto()

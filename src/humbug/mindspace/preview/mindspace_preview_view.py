@@ -1,4 +1,4 @@
-"""Wiki view widget for mindspace."""
+"""Preview view widget for mindspace."""
 
 import logging
 import os
@@ -18,29 +18,29 @@ from humbug.mindspace.mindspace_tree_delegate import MindspaceTreeDelegate
 from humbug.mindspace.mindspace_tree_icon_provider import MindspaceTreeIconProvider
 from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
-from humbug.mindspace.wiki.mindspace_wiki_model import MindspaceWikiModel
-from humbug.mindspace.wiki.mindspace_wiki_tree_view import MindspaceWikiTreeView
+from humbug.mindspace.preview.mindspace_preview_model import MindspacePreviewModel
+from humbug.mindspace.preview.mindspace_preview_tree_view import MindspacePreviewTreeView
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
 
 
-class MindspaceWikiView(QWidget):
-    """Wiki view widget for displaying mindspace files in wiki mode."""
+class MindspacePreviewView(QWidget):
+    """Preview view widget for displaying mindspace files in preview mode."""
 
     file_clicked = Signal(MindspaceViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
     file_renamed = Signal(str, str)  # Emits (old_path, new_path)
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
-    file_opened_in_wiki = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in wiki
+    file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
     toggled = Signal(bool)  # Emitted when expand/collapse state changes (expanded state)
 
     def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the wiki view widget."""
+        """Initialize the preview view widget."""
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._logger = logging.getLogger("MindspaceWikiView")
+        self._logger = logging.getLogger("MindspacePreviewView")
         self._mindspace_manager = MindspaceManager()
 
         # Create layout
@@ -53,7 +53,7 @@ class MindspaceWikiView(QWidget):
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._header = MindspaceCollapsibleHeader(
-            self._language_manager.strings().mindspace_wiki,
+            self._language_manager.strings().mindspace_preview,
             self
         )
         self._header.setProperty("splitter", True)
@@ -64,7 +64,7 @@ class MindspaceWikiView(QWidget):
         layout.addWidget(self._header)
 
         # Create tree view
-        self._tree_view = MindspaceWikiTreeView()
+        self._tree_view = MindspacePreviewTreeView()
         self._tree_view.customContextMenuRequested.connect(self._show_context_menu)
         self._tree_style = MindspaceTreeStyle()
         self._tree_view.setStyle(self._tree_style)
@@ -79,7 +79,7 @@ class MindspaceWikiView(QWidget):
         self._fs_model.setFilter(QDir.Filter.AllEntries | QDir.Filter.Hidden | QDir.Filter.NoDotDot)
 
         # Create filter model
-        self._filter_model = MindspaceWikiModel()
+        self._filter_model = MindspacePreviewModel()
         self._filter_model.setSourceModel(self._fs_model)
 
         # Create and set the editable delegate
@@ -137,7 +137,7 @@ class MindspaceWikiView(QWidget):
 
     def is_expanded(self) -> bool:
         """
-        Check if the wiki section is expanded.
+        Check if the preview section is expanded.
 
         Returns:
             True if expanded, False if collapsed
@@ -313,9 +313,9 @@ class MindspaceWikiView(QWidget):
             self._logger.info("Successfully renamed temporary %s from '%s' to '%s'",
                             "folder" if is_folder else "file", temp_path, new_path)
 
-            # If it's a file, signal that it should be opened in wiki
+            # If it's a file, signal that it should be opened in preview
             if not is_folder:
-                self.file_opened_in_wiki.emit(new_path, False)
+                self.file_opened_in_preview.emit(new_path, False)
 
         except OSError as e:
             self._logger.error("Failed to rename temporary %s from '%s' to '%s': %s",
@@ -642,7 +642,7 @@ class MindspaceWikiView(QWidget):
         return file_name == "."
 
     def _show_context_menu(self, position: QPoint) -> None:
-        """Show context menu for wiki tree items."""
+        """Show context menu for preview tree items."""
         # Get the index at the clicked position
         index = self._tree_view.indexAt(position)
 
@@ -668,8 +668,8 @@ class MindspaceWikiView(QWidget):
             # Create actions based on item type
             if is_dir:
                 # Directory context menu
-                wiki_view_action = menu.addAction(strings.wiki_view)
-                wiki_view_action.triggered.connect(lambda: self._handle_wiki_view_file(path))
+                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 edit_action = menu.addAction(strings.edit)
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 new_folder_action = menu.addAction(strings.new_folder)
@@ -683,8 +683,8 @@ class MindspaceWikiView(QWidget):
 
             else:
                 # File context menu
-                wiki_view_action = menu.addAction(strings.wiki_view)
-                wiki_view_action.triggered.connect(lambda: self._handle_wiki_view_file(path))
+                preview_view_action = menu.addAction(strings.preview)
+                preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 edit_action = menu.addAction(strings.edit)
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 duplicate_action = menu.addAction(strings.duplicate)
@@ -833,9 +833,9 @@ class MindspaceWikiView(QWidget):
         """Edit a file."""
         self.file_edited.emit(path, False)
 
-    def _handle_wiki_view_file(self, path: str) -> None:
-        """View a file in the wiki."""
-        self.file_opened_in_wiki.emit(path, False)
+    def _handle_preview_view_file(self, path: str) -> None:
+        """View a file in the preview."""
+        self.file_opened_in_preview.emit(path, False)
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
@@ -993,30 +993,30 @@ class MindspaceWikiView(QWidget):
         self._tree_view.header().hideSection(3)  # Date
 
     def _on_tree_clicked(self, index: QModelIndex) -> None:
-        """Handle click events - route to wiki view."""
+        """Handle click events - route to preview view."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
-        # For wiki view, single clicks open in wiki
-        self.file_clicked.emit(MindspaceViewType.WIKI, path, True)
+        # For preview view, single clicks open in preview
+        self.file_clicked.emit(MindspaceViewType.PREVIEW, path, True)
 
     def _on_tree_double_clicked(self, index: QModelIndex) -> None:
-        """Handle double click events - route to wiki view."""
+        """Handle double click events - route to preview view."""
         # Get the file path from the source model
         source_index = self._filter_model.mapToSource(index)
         path = QDir.toNativeSeparators(self._fs_model.filePath(source_index))
         if not path:
             return
 
-        # For wiki view, double clicks also open in wiki (non-ephemeral)
-        self.file_clicked.emit(MindspaceViewType.WIKI, path, False)
+        # For preview view, double clicks also open in preview (non-ephemeral)
+        self.file_clicked.emit(MindspaceViewType.PREVIEW, path, False)
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
-        self._header.set_title(self._language_manager.strings().mindspace_wiki)
+        self._header.set_title(self._language_manager.strings().mindspace_preview)
         self.apply_style()
 
     def apply_style(self) -> None:

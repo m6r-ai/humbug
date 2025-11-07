@@ -1,4 +1,4 @@
-"""File change detection service for mindspace wiki content."""
+"""File change detection service for mindspace preview content."""
 
 import logging
 import os

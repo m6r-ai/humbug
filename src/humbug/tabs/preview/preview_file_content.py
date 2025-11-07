@@ -1,4 +1,4 @@
-"""Widget for displaying source code content in the wiki."""
+"""Widget for displaying source code content in the previewer."""
 
 import logging
 from typing import List, Tuple, Callable
@@ -12,13 +12,13 @@ from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
-from humbug.tabs.wiki.wiki_content_widget import WikiContentWidget
-from humbug.tabs.wiki.wiki_language_highlighter import WikiLanguageHighlighter
+from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
+from humbug.tabs.preview.preview_language_highlighter import PreviewLanguageHighlighter
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 
 
-class WikiFileContent(WikiContentWidget):
-    """Widget for displaying file content in the wiki with editing capabilities."""
+class PreviewFileContent(PreviewContentWidget):
+    """Widget for displaying file content in the preview with editing capabilities."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
@@ -28,8 +28,8 @@ class WikiFileContent(WikiContentWidget):
             parent: Optional parent widget
         """
         super().__init__(parent)
-        self._logger = logging.getLogger("WikiFileContent")
-        self.setObjectName("WikiFileContent")
+        self._logger = logging.getLogger("PreviewFileContent")
+        self.setObjectName("PreviewFileContent")
 
         self._content = ""
         self._file_path = ""
@@ -80,7 +80,7 @@ class WikiFileContent(WikiContentWidget):
         self._text_area = MarkdownTextEdit()
         self._text_area.setObjectName("_text_area")
         self._text_area.setAcceptRichText(False)  # No rich text for source code
-        self._text_area.setReadOnly(True)  # Always read-only in wiki
+        self._text_area.setReadOnly(True)  # Always read-only in preview
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
@@ -92,7 +92,7 @@ class WikiFileContent(WikiContentWidget):
 
         # Initialize variables
         self._language: ProgrammingLanguage | None = None
-        self._highlighter: WikiLanguageHighlighter | None = None
+        self._highlighter: PreviewLanguageHighlighter | None = None
         self._mouse_left_button_pressed = False
         self._init_colour_mode = self._style_manager.color_mode()
 
@@ -177,7 +177,7 @@ class WikiFileContent(WikiContentWidget):
             # Default to text if no language detected
             self._language = ProgrammingLanguage.TEXT
 
-        highlighter = WikiLanguageHighlighter(self._text_area.document())
+        highlighter = PreviewLanguageHighlighter(self._text_area.document())
         highlighter.set_language(self._language)
         self._highlighter = highlighter
         self._text_area.set_has_code_block(True)
@@ -242,7 +242,7 @@ class WikiFileContent(WikiContentWidget):
             if cursor.isNull():
                 break
 
-            # For compatibility with the WikiContent interface, we use section 0
+            # For compatibility with the PreviewContent interface, we use section 0
             # as there's only one section in source content
             matches.append((0, cursor.selectionStart(), cursor.selectionEnd()))
 

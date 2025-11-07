@@ -778,8 +778,8 @@ class StyleManager(QObject):
             </svg>
         ''')
 
-        # Wiki tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
-        self._write_icon(f'{prefix}wiki-{suffix}.svg', f'''
+        # Preview tab icon (from https://www.svgrepo.com/collection/scarlab-oval-line-icons/)
+        self._write_icon(f'{prefix}preview-{suffix}.svg', f'''
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M17.8284 6.82843C18.4065 7.40649 18.6955 7.69552 18.8478 8.06306C19 8.4306 19 8.83935
                     19 9.65685L19 17C19 18.8856 19 19.8284 18.4142 20.4142C17.8284 21 16.8856 21 15 21H9C7.11438

@@ -1,4 +1,4 @@
-"""Wiki functionality with dependency tracking."""
+"""Preview functionality with dependency tracking."""
 
 from enum import Enum, auto
 import logging
@@ -8,41 +8,41 @@ from datetime import datetime
 from typing import List, Tuple, Set, cast
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.tabs.wiki.wiki_error import WikiIOError
+from humbug.tabs.preview.preview_error import PreviewIOError
 
 
-class WikiContentType(Enum):
-    """Enum for wiki content types."""
+class PreviewContentType(Enum):
+    """Enum for preview content types."""
     MARKDOWN = auto()           # Standard markdown text
     MARKDOWN_PREVIEW = auto()   # Markdown preview
     FILE = auto()               # File content (e.g., source code)
 
 
-class WikiContent:
+class PreviewContent:
     """
-    Manager for virtual wiki pages in a mindspace.
+    Manager for virtual preview pages in a mindspace.
 
-    This class handles the creation of virtual wiki pages based on
+    This class handles the creation of virtual preview pages based on
     different file types or directories.
     """
 
     def __init__(self) -> None:
-        """Initialize the wiki manager."""
-        self._logger = logging.getLogger("WikiContent")
+        """Initialize the preview manager."""
+        self._logger = logging.getLogger("PreviewContent")
         self._mindspace_manager = MindspaceManager()
 
-    def get_wiki_content(self, path: str) -> Tuple[List[Tuple[WikiContentType, str]], Set[str]]:
+    def get_preview_content(self, path: str) -> Tuple[List[Tuple[PreviewContentType, str]], Set[str]]:
         """
-        Get wiki content for a path, generating it dynamically based on file type.
+        Get preview content for a path, generating it dynamically based on file type.
 
         Args:
-            path: Path to the wiki file or virtual wiki path
+            path: Path to the preview file or virtual preview path
 
         Returns:
             Tuple of (content_list, dependency_paths)
 
         Raises:
-            WikiIOError: If the path cannot be read or does not exist
+            PreviewIOError: If the path cannot be read or does not exist
         """
         # Track dependencies - always include the main path
         dependencies: Set[str] = {os.path.abspath(path)}
@@ -50,7 +50,7 @@ class WikiContent:
         # Get file info
         if not os.path.exists(path):
             self._logger.error("Path does not exist: %s", path)
-            raise WikiIOError(f"Path does not exist: {path}")
+            raise PreviewIOError(f"Path does not exist: {path}")
 
         if os.path.isdir(path):
             # Generate directory listing
@@ -90,7 +90,7 @@ class WikiContent:
         companion_path = file_path + ".md"
         return companion_path if os.path.exists(companion_path) else None
 
-    def _read_markdown_file(self, md_path: str) -> List[Tuple[WikiContentType, str]]:
+    def _read_markdown_file(self, md_path: str) -> List[Tuple[PreviewContentType, str]]:
         """
         Read and prepare markdown file content for rendering.
 
@@ -105,7 +105,7 @@ class WikiContent:
                 content = f.read()
 
             if content.strip():  # Only add content if file is not empty
-                return [(WikiContentType.MARKDOWN_PREVIEW, content)]
+                return [(PreviewContentType.MARKDOWN_PREVIEW, content)]
 
             return []
 
@@ -124,7 +124,7 @@ class WikiContent:
             File size in bytes
 
         Raises:
-            WikiIOError: If file size cannot be accessed
+            PreviewIOError: If file size cannot be accessed
         """
         try:
             file_stat = os.stat(file_path)
@@ -132,7 +132,7 @@ class WikiContent:
 
         except OSError as e:
             self._logger.warning("Failed to get size for %s: %s", file_path, str(e))
-            raise WikiIOError(f"Failed to get size for {file_path}: {str(e)}") from e
+            raise PreviewIOError(f"Failed to get size for {file_path}: {str(e)}") from e
 
     def _get_file_permissions(self, file_path: str) -> str:
         """
@@ -145,7 +145,7 @@ class WikiContent:
             Formatted permissions string (e.g., 'rwxr-xr-x')
 
         Raises:
-            WikiIOError: If file permissions cannot be accessed
+            PreviewIOError: If file permissions cannot be accessed
         """
         try:
             file_stat = os.stat(file_path)
@@ -153,7 +153,7 @@ class WikiContent:
 
         except OSError as e:
             self._logger.warning("Failed to get permissions for %s: %s", file_path, str(e))
-            raise WikiIOError(f"Failed to get permissions for {file_path}: {str(e)}") from e
+            raise PreviewIOError(f"Failed to get permissions for {file_path}: {str(e)}") from e
 
     def _get_file_modification_time(self, file_path: str) -> str:
         """
@@ -166,7 +166,7 @@ class WikiContent:
             Formatted modification time string
 
         Raises:
-            WikiIOError: If file modification time cannot be accessed
+            PreviewIOError: If file modification time cannot be accessed
         """
         try:
             file_stat = os.stat(file_path)
@@ -175,7 +175,7 @@ class WikiContent:
 
         except OSError as e:
             self._logger.warning("Failed to get modification time for %s: %s", file_path, str(e))
-            raise WikiIOError(f"Failed to get modification time for {file_path}: {str(e)}") from e
+            raise PreviewIOError(f"Failed to get modification time for {file_path}: {str(e)}") from e
 
     def _format_permissions(self, mode: int) -> str:
         """
@@ -225,7 +225,7 @@ class WikiContent:
             size = self._get_file_size_bytes(parent_path)
             max_width = max(max_width, len(str(size)))
 
-        except WikiIOError:
+        except PreviewIOError:
             pass
 
         # Check all entries in the directory
@@ -235,14 +235,14 @@ class WikiContent:
                 size = self._get_file_size_bytes(full_path)
                 max_width = max(max_width, len(str(size)))
 
-            except WikiIOError:
+            except PreviewIOError:
                 pass
 
         return max_width
 
-    def _generate_directory_content(self, directory_path: str) -> Tuple[List[Tuple[WikiContentType, str]], Set[str]]:
+    def _generate_directory_content(self, directory_path: str) -> Tuple[List[Tuple[PreviewContentType, str]], Set[str]]:
         """
-        Generate wiki content for a directory.
+        Generate preview content for a directory.
 
         Args:
             directory_path: Path to the directory
@@ -266,7 +266,7 @@ class WikiContent:
             if rel_path in (".", ""):
                 dir_name = f"Mindspace home: {os.path.basename(self._mindspace_manager.mindspace_path())}"
 
-            contents: List[Tuple[WikiContentType, str]] = []
+            contents: List[Tuple[PreviewContentType, str]] = []
 
             # Start with a heading
             lines = [
@@ -287,10 +287,10 @@ class WikiContent:
                     f"**Path**: {rel_path}"
                 ])
 
-            except WikiIOError as e:
+            except PreviewIOError as e:
                 self._logger.warning("Could not retrieve metadata for %s: %s", directory_path, str(e))
 
-            contents.append((WikiContentType.MARKDOWN, "\n".join(lines)))
+            contents.append((PreviewContentType.MARKDOWN, "\n".join(lines)))
 
             # Sort entries - directories first, then files
             files = [".."]
@@ -305,7 +305,7 @@ class WikiContent:
                     "  ",
                     "## Files and folders (directories)"
                 ]
-                contents.append((WikiContentType.MARKDOWN, "\n".join(md_lines)))
+                contents.append((PreviewContentType.MARKDOWN, "\n".join(md_lines)))
 
                 # Calculate maximum size width for proper alignment
                 max_size_width = self._calculate_max_size_width(directory_path, entries)
@@ -327,7 +327,7 @@ class WikiContent:
                         size_str = str(size).rjust(max_size_width)
                         lines.append(f"`{permissions}  {size_str}  {mod_time}  `[`{f}{suffix}`]({full_path})  ")
 
-                    except WikiIOError:
+                    except PreviewIOError:
                         # Fallback without metadata if we can't get it
                         lines.append(f"[`{f}{suffix}`]({full_path})  ")
 
@@ -345,18 +345,18 @@ class WikiContent:
                     size_str = str(size).rjust(max_size_width)
                     lines.append(f"`{permissions}  {size_str}  {mod_time}  `[`{f}{suffix}`]({full_path})")
 
-                except WikiIOError:
+                except PreviewIOError:
                     # Fallback without metadata if we can't get it
                     lines.append(f"[`{f}{suffix}`]({full_path})")
 
-                contents.append((WikiContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
+                contents.append((PreviewContentType.MARKDOWN_PREVIEW, "\n".join(lines)))
 
             # Check for README.md and render it if found
             readme_path = self._check_for_readme(directory_path)
             if readme_path:
                 dependencies.add(os.path.abspath(readme_path))
                 readme_content = self._read_markdown_file(readme_path)
-                contents.append((WikiContentType.MARKDOWN, f"  \n## {os.path.basename(readme_path)}"))
+                contents.append((PreviewContentType.MARKDOWN, f"  \n## {os.path.basename(readme_path)}"))
                 contents.extend(readme_content)
 
             return contents, dependencies
@@ -364,7 +364,7 @@ class WikiContent:
         except Exception as e:
             self._logger.error("Error generating directory content: %s", str(e))
             dependencies = {os.path.abspath(directory_path)}
-            return [(WikiContentType.MARKDOWN, f"# Error\n\nFailed to generate directory content: {str(e)}")], dependencies
+            return [(PreviewContentType.MARKDOWN, f"# Error\n\nFailed to generate directory content: {str(e)}")], dependencies
 
     def get_file_type(self, file_path: str) -> str:
         """
@@ -388,9 +388,9 @@ class WikiContent:
 
         return 'other'
 
-    def _generate_file_content(self, file_path: str) -> Tuple[List[Tuple[WikiContentType, str]], Set[str]]:
+    def _generate_file_content(self, file_path: str) -> Tuple[List[Tuple[PreviewContentType, str]], Set[str]]:
         """
-        Generate wiki content for a file.
+        Generate preview content for a file.
 
         Args:
             file_path: Path to the file
@@ -405,7 +405,7 @@ class WikiContent:
             rel_path = self._mindspace_manager.get_relative_path(file_path)
             file_name = os.path.basename(file_path)
 
-            contents: List[Tuple[WikiContentType, str]] = []
+            contents: List[Tuple[PreviewContentType, str]] = []
 
             # Generate markdown with metadata
             lines = [
@@ -426,16 +426,16 @@ class WikiContent:
                     f"**Path**: {rel_path}"
                 ])
 
-            except WikiIOError as e:
+            except PreviewIOError as e:
                 self._logger.warning("Could not retrieve metadata for %s: %s", file_path, str(e))
 
-            contents.append((WikiContentType.MARKDOWN, "\n".join(lines)))
+            contents.append((PreviewContentType.MARKDOWN, "\n".join(lines)))
 
             # Check for companion .md file and render it if found
             companion_md_path = self._check_for_companion_md(file_path)
             if companion_md_path:
                 dependencies.add(os.path.abspath(companion_md_path))
-                contents.append((WikiContentType.MARKDOWN, f"  \n## Notes from {os.path.basename(companion_md_path)}"))
+                contents.append((PreviewContentType.MARKDOWN, f"  \n## Notes from {os.path.basename(companion_md_path)}"))
                 companion_content = self._read_markdown_file(companion_md_path)
                 contents.extend(companion_content)
 
@@ -445,11 +445,11 @@ class WikiContent:
                     "  ",
                     "## Preview"
                 ]
-                contents.append((WikiContentType.MARKDOWN, "\n".join(md_lines)))
+                contents.append((PreviewContentType.MARKDOWN, "\n".join(md_lines)))
                 md_lines2 = [
                     f"![{file_name}]({file_path})"
                 ]
-                contents.append((WikiContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
+                contents.append((PreviewContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
                 return contents, dependencies
 
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -460,28 +460,28 @@ class WikiContent:
                     "  ",
                     "## Preview"
                 ]
-                contents.append((WikiContentType.MARKDOWN, "\n".join(md_lines)))
+                contents.append((PreviewContentType.MARKDOWN, "\n".join(md_lines)))
                 md_lines2 = [
                     file_content
                 ]
-                contents.append((WikiContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
+                contents.append((PreviewContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
 
             source_lines = [
                 "  ",
                 "## Source"
             ]
-            contents.append((WikiContentType.MARKDOWN, "\n".join(source_lines)))
+            contents.append((PreviewContentType.MARKDOWN, "\n".join(source_lines)))
             source_lines2 = [
                 file_content
             ]
-            contents.append((WikiContentType.FILE, "\n".join(source_lines2)))
+            contents.append((PreviewContentType.FILE, "\n".join(source_lines2)))
 
             return contents, dependencies
 
         except Exception as e:
             self._logger.error("Error generating file content: %s", str(e))
             dependencies = {os.path.abspath(file_path)}
-            return [(WikiContentType.MARKDOWN,
+            return [(PreviewContentType.MARKDOWN,
                         f"# Error\n\nFailed to generate content for {file_path}: {str(e)}")], dependencies
 
     def resolve_link(self, current_path: str, target_path: str) -> str | None:
@@ -489,14 +489,14 @@ class WikiContent:
         Resolve a link path to an absolute path.
 
         Args:
-            current_path: Path of the current wiki page
+            current_path: Path of the current preview page
             target_path: Target path from the link
 
         Returns:
             Absolute path to the target or None if it's an external link
 
         Raises:
-            WikiIOError: If the target path does not exist
+            PreviewIOError: If the target path does not exist
         """
         # Handle anchors separately
         if target_path.startswith("#"):
@@ -523,7 +523,7 @@ class WikiContent:
 
         # Check if path exists
         if not os.path.exists(base_path):
-            raise WikiIOError(f"Path does not exist: {base_path}")
+            raise PreviewIOError(f"Path does not exist: {base_path}")
 
         # Return resolved path with anchor if present
         if anchor:

@@ -26,7 +26,7 @@ class LanguageStrings:
     open_mindspace: str
     open_conversation: str
     open_file: str
-    open_wiki: str
+    open_preview: str
     fork_conversation: str
     save: str
     save_as: str
@@ -125,7 +125,7 @@ class LanguageStrings:
     mindspace_label_none: str
     mindspace_files: str
     mindspace_conversations: str
-    mindspace_wiki: str
+    mindspace_preview: str
 
     # Mindspace folders dialog
     mindspace_folders_title: str
@@ -179,7 +179,7 @@ class LanguageStrings:
     save_changes_title: str
     confirm_delete_title: str
     file_error_title: str
-    wiki_error_title: str
+    preview_error_title: str
     cancel_conversation_title: str
 
     # Messages
@@ -215,13 +215,13 @@ class LanguageStrings:
     terminal_status: str
     system_status: str
     log_status: str
-    wiki_status: str
+    preview_status: str
 
     # Mindspace File Tree Edit Menu Errors and Options
     rename: str
     delete: str
     edit: str
-    wiki_view: str
+    preview: str
     duplicate: str
     sort_by: str
     sort_by_name: str

@@ -29,8 +29,8 @@ from humbug.tabs.tab_label import TabLabel
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
 from humbug.tabs.terminal.terminal_tab import TerminalTab
-from humbug.tabs.wiki.wiki_error import WikiError
-from humbug.tabs.wiki.wiki_tab import WikiTab
+from humbug.tabs.preview.preview_error import PreviewError
+from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.welcome_widget import WelcomeWidget
 
 
@@ -41,7 +41,7 @@ class ColumnManager(QWidget):
     tab_changed = Signal()
     fork_requested = Signal()
     fork_from_index_requested = Signal(int)
-    open_wiki_link_requested = Signal(str)
+    open_preview_link_requested = Signal(str)
     edit_file_requested = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -147,7 +147,7 @@ class ColumnManager(QWidget):
             Dictionary containing tab information:
             - tab_id: Unique identifier for the tab
             - title: Display title of the tab
-            - type: Type of tab (conversation, editor, wiki, etc.)
+            - type: Type of tab (conversation, editor, preview, etc.)
             - path: File path (if applicable, relative to mindspace)
             - column_index: Index of the column containing the tab
             - is_active: Whether this tab is currently active in its column
@@ -175,8 +175,8 @@ class ColumnManager(QWidget):
         elif isinstance(tab, TerminalTab):
             tab_type = "terminal"
 
-        elif isinstance(tab, WikiTab):
-            tab_type = "wiki"
+        elif isinstance(tab, PreviewTab):
+            tab_type = "preview"
 
         # Get relative path if available
         path = tab.path()
@@ -460,8 +460,8 @@ class ColumnManager(QWidget):
         elif isinstance(tab, TerminalTab):
             icon = "terminal"
 
-        elif isinstance(tab, WikiTab):
-            icon = "wiki"
+        elif isinstance(tab, PreviewTab):
+            icon = "preview"
 
         tab_id = tab.tab_id()
         label = TabLabel(tab_id, icon, title, tool_tip)
@@ -546,13 +546,13 @@ class ColumnManager(QWidget):
 
             return conversation_tab
 
-        if source == MindspaceViewType.WIKI:
-            wiki_tab = self.open_wiki_page(path, ephemeral)
+        if source == MindspaceViewType.PREVIEW:
+            preview_tab = self.open_preview_page(path, ephemeral)
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"User opened wiki page: '{path}'\ntab ID: {wiki_tab.tab_id()}"
+                f"User opened preview page: '{path}'\ntab ID: {preview_tab.tab_id()}"
             )
-            return wiki_tab
+            return preview_tab
 
         # From files view - always open as editor
         if os.path.isdir(path):
@@ -570,7 +570,7 @@ class ColumnManager(QWidget):
         Open a file with the appropriate tab type based on source view.
 
         Args:
-            source_type: Source view type ("conversations", "files", "wiki") or None
+            source_type: Source view type ("conversations", "files", "preview") or None
             path: File path to open
             ephemeral: Whether tab should be ephemeral
 
@@ -580,7 +580,7 @@ class ColumnManager(QWidget):
         mapping = {
             "conversations": MindspaceViewType.CONVERSATIONS,
             "files": MindspaceViewType.FILES,
-            "wiki": MindspaceViewType.WIKI
+            "preview": MindspaceViewType.PREVIEW
         }
 
         assert source_type in mapping
@@ -696,7 +696,7 @@ class ColumnManager(QWidget):
             if current_index != target_index:
                 target_column.tabBar().moveTab(current_index, target_index)
 
-        except (ConversationError, WikiError, OSError) as e:
+        except (ConversationError, PreviewError, OSError) as e:
             self._logger.exception("Failed to open dropped file '%s': %s", path, str(e))
 
     def _update_tab_bar_for_label_change(self, tab: TabBase) -> None:
@@ -739,17 +739,17 @@ class ColumnManager(QWidget):
                 label.set_text(new_title)
                 self._update_tab_bar_for_label_change(conversation_tab)
 
-        # Update any wiki tab for this file
-        wiki_tab = self._find_wiki_tab_by_path(old_path)
-        if wiki_tab:
-            wiki_tab.set_path(new_path)
+        # Update any preview tab for this file
+        preview_tab = self._find_preview_tab_by_path(old_path)
+        if preview_tab:
+            preview_tab.set_path(new_path)
 
             # Update tab label text
             new_title = os.path.basename(new_path)
-            tab_id = wiki_tab.tab_id()
+            tab_id = preview_tab.tab_id()
             label = self._tab_labels[tab_id]
             label.set_text(new_title)
-            self._update_tab_bar_for_label_change(wiki_tab)
+            self._update_tab_bar_for_label_change(preview_tab)
 
     def _create_column(self, index: int) -> ColumnWidget:
         """Create a new tab column."""
@@ -1305,18 +1305,18 @@ class ColumnManager(QWidget):
 
         return None
 
-    def _find_wiki_tab_by_path(self, path: str) -> WikiTab | None:
+    def _find_preview_tab_by_path(self, path: str) -> PreviewTab | None:
         """
-        Find a wiki tab by its path.
+        Find a preview tab by its path.
 
         Args:
-            path: The wiki path to search for
+            path: The preview path to search for
 
         Returns:
-            The WikiTab if found, None otherwise
+            The PreviewTab if found, None otherwise
         """
         for tab in self._tabs.values():
-            if isinstance(tab, WikiTab) and tab.path() == path:
+            if isinstance(tab, PreviewTab) and tab.path() == path:
                 return tab
 
         return None
@@ -1582,16 +1582,16 @@ class ColumnManager(QWidget):
         self._add_tab(terminal, title)
         return terminal
 
-    def _on_wiki_open_link_requested(self, path: str) -> None:
-        """Handle a wiki link click."""
-        self.open_wiki_link_requested.emit(path)
+    def _on_preview_open_link_requested(self, path: str) -> None:
+        """Handle a preview link click."""
+        self.open_preview_link_requested.emit(path)
 
-    def _on_wiki_edit_file_requested(self, path: str) -> None:
-        """Edit a file from a wiki page."""
+    def _on_preview_edit_file_requested(self, path: str) -> None:
+        """Edit a file from a preview page."""
         self.edit_file_requested.emit(path)
 
-    def open_wiki_page(self, path: str, ephemeral: bool) -> WikiTab:
-        """Open a wiki page."""
+    def open_preview_page(self, path: str, ephemeral: bool) -> PreviewTab:
+        """Open a preview page."""
         assert os.path.isabs(path), "Path must be absolute"
 
         path_minus_anchor = path
@@ -1600,7 +1600,7 @@ class ColumnManager(QWidget):
             path_minus_anchor, anchor = path.split('#', 1)
 
         # Check if already open
-        existing_tab = self._find_wiki_tab_by_path(path_minus_anchor)
+        existing_tab = self._find_preview_tab_by_path(path_minus_anchor)
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
                 # If the existing tab is ephemeral, convert it to permanent
@@ -1615,20 +1615,20 @@ class ColumnManager(QWidget):
             return existing_tab
 
         try:
-            wiki_tab = WikiTab("", path_minus_anchor, self)
-            wiki_tab.open_link_requested.connect(self._on_wiki_open_link_requested)
-            wiki_tab.edit_file_requested.connect(self._on_wiki_edit_file_requested)
-            wiki_tab.set_ephemeral(ephemeral)
-            self._add_tab(wiki_tab, os.path.basename(path_minus_anchor))
+            preview_tab = PreviewTab("", path_minus_anchor, self)
+            preview_tab.open_link_requested.connect(self._on_preview_open_link_requested)
+            preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
+            preview_tab.set_ephemeral(ephemeral)
+            self._add_tab(preview_tab, os.path.basename(path_minus_anchor))
 
             # If there's an anchor, scroll to it
             if anchor:
-                wiki_tab.scroll_to_anchor(anchor)
+                preview_tab.scroll_to_anchor(anchor)
 
-            return wiki_tab
+            return preview_tab
 
-        except WikiError as e:
-            self._logger.exception("Failed to open wiki page: %s", str(e))
+        except PreviewError as e:
+            self._logger.exception("Failed to open preview page: %s", str(e))
             raise
 
     def save_state(self) -> Dict:
@@ -1689,11 +1689,11 @@ class ColumnManager(QWidget):
             case TabType.TERMINAL:
                 return TerminalTab.restore_from_state(state, self)
 
-            case TabType.WIKI:
-                wiki_tab = WikiTab.restore_from_state(state, self)
-                wiki_tab.open_link_requested.connect(self._on_wiki_open_link_requested)
-                wiki_tab.edit_file_requested.connect(self._on_wiki_edit_file_requested)
-                return wiki_tab
+            case TabType.PREVIEW:
+                preview_tab = PreviewTab.restore_from_state(state, self)
+                preview_tab.open_link_requested.connect(self._on_preview_open_link_requested)
+                preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
+                return preview_tab
 
         return None
 
@@ -1714,7 +1714,7 @@ class ColumnManager(QWidget):
 
             return "Terminal"
 
-        if isinstance(tab, WikiTab):
+        if isinstance(tab, PreviewTab):
             return os.path.basename(state.path)
 
         return os.path.basename(state.path)
@@ -1966,14 +1966,14 @@ class ColumnManager(QWidget):
                 )
                 self.close_tab_by_id(conversation_tab.tab_id(), True)
 
-        # Close any wiki page we may have had for this file
-        wiki_tab = self._find_wiki_tab_by_path(path)
-        if wiki_tab:
+        # Close any preview page we may have had for this file
+        preview_tab = self._find_preview_tab_by_path(path)
+        if preview_tab:
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Deleted '{path}' - closed wiki tab\ntab ID: {wiki_tab.tab_id()}"
+                f"Deleted '{path}' - closed preview tab\ntab ID: {preview_tab.tab_id()}"
             )
-            self.close_tab_by_id(wiki_tab.tab_id(), True)
+            self.close_tab_by_id(preview_tab.tab_id(), True)
 
     def close_all_tabs(self) -> bool:
         """

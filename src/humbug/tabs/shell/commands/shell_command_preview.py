@@ -1,4 +1,4 @@
-"""Command for opening pages in a wiki tab from the system shell."""
+"""Command for opening pages in a preview tab from the system shell."""
 
 import logging
 import os
@@ -12,12 +12,12 @@ from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
 
 
-class ShellCommandWiki(ShellCommand):
-    """Command to open a wiki tab."""
+class ShellCommandPreview(ShellCommand):
+    """Command to open a preview tab."""
 
     def __init__(self, column_manager: ColumnManager) -> None:
         """
-        Initialize wiki command.
+        Initialize preview command.
 
         Args:
             open_file_callback: Callback to open an existing file
@@ -25,15 +25,15 @@ class ShellCommandWiki(ShellCommand):
         super().__init__()
         self._column_manager = column_manager
         self._mindspace_manager = MindspaceManager()
-        self._logger = logging.getLogger("ShellCommandWiki")
+        self._logger = logging.getLogger("ShellCommandPreview")
 
     def name(self) -> str:
         """Get the name of the command."""
-        return "wiki"
+        return "preview"
 
     def help_text(self) -> str:
         """Get the help text for the command."""
-        return "Opens a wiki tab"
+        return "Opens a preview tab"
 
     def _execute_command(self, tokens: List[Token]) -> bool:
         """
@@ -50,7 +50,7 @@ class ShellCommandWiki(ShellCommand):
         if not args:
             self._history_manager.add_message(
                 ShellMessageSource.ERROR,
-                "No filename specified. Usage: wiki <filename>"
+                "No filename specified. Usage: preview <filename>"
             )
             return False
 
@@ -73,7 +73,7 @@ class ShellCommandWiki(ShellCommand):
             self._column_manager.protect_current_tab(True)
 
             try:
-                self._column_manager.open_wiki_page(full_path, False)
+                self._column_manager.open_preview_page(full_path, False)
 
             finally:
                 self._column_manager.protect_current_tab(False)
@@ -109,7 +109,7 @@ class ShellCommandWiki(ShellCommand):
         Returns:
             List of possible completions
         """
-        # For the wiki command, we're primarily interested in completing file paths
+        # For the preview command, we're primarily interested in completing file paths
         # Only handle options if we're explicitly looking at an option token
         if current_token.type == TokenType.OPTION:
             return self._get_option_completions(current_token.value)

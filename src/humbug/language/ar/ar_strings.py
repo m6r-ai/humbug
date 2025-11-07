@@ -31,7 +31,7 @@ def get_arabic_strings() -> LanguageStrings:
         open_mindspace="فتح مساحة ذهنية...",
         open_conversation="فتح محادثة...",
         open_file="فتح ملف...",
-        open_wiki="فتح ويكي",
+        open_preview="فتح معاينة...",
         fork_conversation="نسخ المحادثة",
         save="حفظ",
         save_as="حفظ باسم...",
@@ -130,7 +130,7 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
         mindspace_files="ملفات",
         mindspace_conversations="محادثات",
-        mindspace_wiki="ويكي",
+        mindspace_preview="معاينة",
 
         # Mindspace folders dialog
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",
@@ -184,7 +184,7 @@ def get_arabic_strings() -> LanguageStrings:
         save_changes_title="حفظ التغييرات؟",
         confirm_delete_title="تأكيد الحذف",
         file_error_title="خطأ في الملف",
-        wiki_error_title="خطأ في الويكي",
+        preview_error_title="خطأ في المعاينة",
         cancel_conversation_title="إلغاء المحادثة؟",
 
         # Messages
@@ -226,13 +226,13 @@ def get_arabic_strings() -> LanguageStrings:
         terminal_status="طرفية: {name} ({columns}x{rows})",
         system_status="نظام",
         log_status="سجل",
-        wiki_status="ويكي: {path}",
+        preview_status="معاينة: {path}",
 
         # Mindspace File Tree Edit Menu Errors and Options
         rename="إعادة التسمية",
         delete="حذف",
         edit="تحرير",
-        wiki_view="عرض في الويكي",
+        preview="معاينة",
         duplicate="تكرار",
         sort_by="ترتيب حسب",
         sort_by_name="ترتيب حسب الاسم",

@@ -1,4 +1,4 @@
-"""Wiki tree view implementation for mindspace wiki with drag and drop support and inline editing."""
+"""Preview tree view implementation for mindspace preview with drag and drop support and inline editing."""
 
 import os
 from typing import cast
@@ -9,11 +9,11 @@ from PySide6.QtWidgets import QWidget, QFileSystemModel
 from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 
 
-class MindspaceWikiTreeView(MindspaceTreeView):
-    """Custom tree view for wiki with drag and drop support, auto-scroll, and inline editing."""
+class MindspacePreviewTreeView(MindspaceTreeView):
+    """Custom tree view for preview with drag and drop support, auto-scroll, and inline editing."""
 
     def __init__(self, parent: QWidget | None = None):
-        """Initialize the wiki tree view."""
+        """Initialize the preview tree view."""
         super().__init__(parent)
         self._mindspace_path: str = ""
 
@@ -30,7 +30,7 @@ class MindspaceWikiTreeView(MindspaceTreeView):
         """
         Check if a path can be dragged from this tree view.
 
-        Wiki tree view prevents dragging of special folders.
+        Preview tree view prevents dragging of special folders.
 
         Args:
             path: Path to check for drag validity
@@ -59,9 +59,9 @@ class MindspaceWikiTreeView(MindspaceTreeView):
         Get the type identifier for this view.
 
         Returns:
-            String identifying this as the wiki view
+            String identifying this as the preview view
         """
-        return "wiki"
+        return "preview"
 
     def get_path_from_index(self, index: QModelIndex) -> str | None:
         """

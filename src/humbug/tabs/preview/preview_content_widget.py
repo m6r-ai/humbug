@@ -1,4 +1,4 @@
-"""Base class for all wiki content types."""
+"""Base class for all preview content types."""
 
 import logging
 from typing import List, Tuple, Callable
@@ -10,12 +10,12 @@ from PySide6.QtGui import QColor
 from humbug.style_manager import StyleManager
 
 
-class WikiContentWidget(QFrame):
+class PreviewContentWidget(QFrame):
     """
-    Base class for all types of wiki content.
+    Base class for all types of preview content.
 
     This abstract base class defines the common interface and functionality
-    that all wiki content types must implement. Subclasses will provide
+    that all preview content types must implement. Subclasses will provide
     specific implementations for different content types (markdown, images, etc.).
 
     Signals:
