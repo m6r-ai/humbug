@@ -1,12 +1,10 @@
 """Widget for displaying messages with minimal height possible."""
 
-from typing import cast
-
 from PySide6.QtWidgets import (
     QFrame, QTextEdit, QSizePolicy, QWidget
 )
-from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QTextOption
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QTextOption, QTextCursor
 
 
 class MinHeightTextEdit(QTextEdit):
@@ -39,47 +37,71 @@ class MinHeightTextEdit(QTextEdit):
         # Set word wrap mode
         self.setWordWrapMode(word_wrap_mode)
 
-        # Batch update handling
-        self._update_timer = QTimer(self)
-        self._update_timer.setSingleShot(True)
-        self._update_timer.setInterval(16)
-        self._update_timer.timeout.connect(self._process_delayed_update)
-        self._pending_update = False
-
-        # Track current content length for incremental updates
-        self._current_length = 0
+        # Track current content for incremental updates
+        self._current_text = ""
 
     def _on_content_changed(self) -> None:
         """Queue a content update instead of processing immediately."""
-        if not self._pending_update:
-            self._pending_update = True
-            self._update_timer.start()
-
-    def _process_delayed_update(self) -> None:
-        """Process the queued size update."""
-        self._pending_update = False
         self.updateGeometry()
 
-        # Ensure parent updates as well
-        if self.parent():
-            cast(QWidget, self.parent()).updateGeometry()
-
     def set_text(self, text: str) -> None:
-        """Update text content if we have anything new."""
-        if len(text) == self._current_length:
-            # No new content
+        """Update text content incrementally based on differences."""
+        old_text = self._current_text
+
+        # If text is identical, do nothing
+        if text == old_text:
             return
 
-        self.setPlainText(text)
-        self._current_length = len(text)
+        # If old text is empty, just set it
+        if not old_text:
+            self.setPlainText(text)
+            self._current_text = text
+            return
+
+        # Find common prefix
+        prefix_len = 0
+        min_len = min(len(old_text), len(text))
+        while prefix_len < min_len and old_text[prefix_len] == text[prefix_len]:
+            prefix_len += 1
+
+        # Find common suffix (but don't overlap with prefix)
+        suffix_len = 0
+        old_len = len(old_text)
+        new_len = len(text)
+        while (suffix_len < min_len - prefix_len and old_text[old_len - 1 - suffix_len] == text[new_len - 1 - suffix_len]):
+            suffix_len += 1
+
+        # Calculate the region that needs to be replaced
+        # old_text[prefix_len : old_len - suffix_len] -> text[prefix_len : new_len - suffix_len]
+        old_end = old_len - suffix_len
+        new_end = new_len - suffix_len
+
+        # Use cursor to perform incremental update
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+
+        # Position cursor at the start of the changed region
+        cursor.setPosition(prefix_len)
+
+        # Select the old text that needs to be replaced
+        cursor.setPosition(old_end, QTextCursor.MoveMode.KeepAnchor)
+
+        # Replace with new text
+        new_middle = text[prefix_len:new_end]
+        cursor.insertText(new_middle)
+
+        cursor.endEditBlock()
+
+        # Update our cached text
+        self._current_text = text
 
     def clear(self) -> None:
-        """Override clear to reset current length."""
+        """Override clear to reset current text."""
         super().clear()
-        self._current_length = 0
+        self._current_text = ""
         self._on_content_changed()
 
-    def _height(self) -> int:
+    def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
         height = int(self.document().size().height())
         if self.horizontalScrollBar().isVisible():
@@ -91,12 +113,14 @@ class MinHeightTextEdit(QTextEdit):
     def minimumSizeHint(self) -> QSize:
         """Calculate minimum size based on content."""
         width = super().minimumSizeHint().width()
-        return QSize(width, self._height())
+#        print(f"{self}: MinSizeHint width: {width}, height: {self._size_hint_height()}")
+        return QSize(width, self._size_hint_height())
 
     def sizeHint(self) -> QSize:
         """Calculate ideal size based on content."""
         width = super().sizeHint().width()
-        return QSize(width, self._height())
+#        print(f"{self}: SizeHint width: {width}, height: {self._size_hint_height()}")
+        return QSize(width, self._size_hint_height())
 
     def find_text(self, text: str) -> bool:
         """

@@ -15,6 +15,8 @@ Bug fixes:
 
 - Resolved problems with some AIFPL tail recursions not working correctly.
 - Resolved an exception triggered when a highlighted code section in a message was deleted (by deleting that message).
+- Resolved a bug in the deferred update processing of streamed messages.
+- Added clarification that AIFPL cons operations are not the same as classic Lisp/Scheme.
 
 Internal structure changes:
 

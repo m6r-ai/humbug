@@ -3,7 +3,6 @@
 import asyncio
 import logging
 import os
-import time
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
@@ -88,7 +87,6 @@ class ConversationWidget(QWidget):
         # it completes.  If we move a conversation to a new tab, we need to ensure it doesn't get lost.
         self._current_unfinished_message: AIMessage | None = None
 
-        self._last_update_time: float = 0  # Timestamp of last UI update
         self._update_timer = QTimer(self)  # Timer for throttled updates
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._process_pending_update)
@@ -782,45 +780,32 @@ class ConversationWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-    async def _process_pending_update(self) -> None:
+    def _process_pending_update(self) -> None:
         """Process any pending message update."""
         if not self._pending_message:
             return
 
         self._update_last_message(self._pending_message)
         self._pending_message = None
-        self._last_update_time = time.time() * 1000
 
     async def _on_message_updated(self, message: AIMessage) -> None:
         """
         Handle a message being updated with throttling.
 
         The first update is processed immediately, subsequent updates
-        are throttled to once every 100ms.
+        are throttled to once every 20ms.
 
         Args:
             message: The message that was updated
         """
-        # Make a deep copy of the message to prevent any reference issues
-        message_copy = message.copy()
 
-        # If no pending message exists, process immediately
-        if self._pending_message is None:
-            self._update_last_message(message_copy)
-            self._last_update_time = time.time() * 1000  # Current time in ms
+        if self._update_timer.isActive():
+            # Make a deep copy of the message to prevent any reference issues
+            self._pending_message = message.copy()
             return
 
-        # Store the pending message (overwrite any existing pending message)
-        self._pending_message = message_copy
-
-        # If the timer is not active, start it
-        if not self._update_timer.isActive():
-            # Calculate time until next update (aim for 100ms between updates)
-            current_time = time.time() * 1000
-            elapsed = current_time - self._last_update_time
-            delay = max(0, 100 - elapsed)
-
-            self._update_timer.start(int(delay))
+        self._update_last_message(message)
+        self._update_timer.start(20)
 
     async def _on_message_completed(self, message: AIMessage) -> None:
         """

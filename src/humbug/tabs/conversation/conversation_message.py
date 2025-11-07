@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
 )
 from PySide6.QtCore import Signal, QPoint, QSize, Qt, QRect, QObject
-from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QResizeEvent, QColor, QPainter, QPen
+from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
@@ -640,8 +640,9 @@ class ConversationMessage(QFrame):
         if self._is_input:
             self._sections[0].set_content(MarkdownASTTextNode(text))
             if text:
-                self._message_rendered = True
-                self.show()
+                if not self._message_rendered:
+                    self._message_rendered = True
+                    self.show()
 
             return
 
@@ -672,8 +673,9 @@ class ConversationMessage(QFrame):
 
         # Show the message if it has text
         if text:
-            self._message_rendered = True
-            self.show()
+            if not self._message_rendered:
+                self._message_rendered = True
+                self.show()
 
     def message_id(self) -> str | None:
         """Get the unique message ID."""
@@ -769,10 +771,6 @@ class ConversationMessage(QFrame):
         if self._section_with_selection:
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
-
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        """Handle resize events."""
-        super().resizeEvent(event)
 
     def _apply_button_style(self) -> None:
         """Apply the current style to all buttons."""
