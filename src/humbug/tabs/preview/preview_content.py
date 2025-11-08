@@ -441,11 +441,6 @@ class PreviewContent:
 
             file_type = self.get_file_type(file_path)
             if file_type == 'image':
-                md_lines = [
-                    "  ",
-                    "## Preview"
-                ]
-                contents.append((PreviewContentType.MARKDOWN, "\n".join(md_lines)))
                 md_lines2 = [
                     f"![{file_name}]({file_path})"
                 ]
@@ -456,26 +451,16 @@ class PreviewContent:
                 file_content = f.read()
 
             if file_type == 'markdown':
-                md_lines = [
-                    "  ",
-                    "## Preview"
-                ]
-                contents.append((PreviewContentType.MARKDOWN, "\n".join(md_lines)))
                 md_lines2 = [
                     file_content
                 ]
                 contents.append((PreviewContentType.MARKDOWN_PREVIEW, "\n".join(md_lines2)))
+                return contents, dependencies
 
-            source_lines = [
-                "  ",
-                "## Source"
-            ]
-            contents.append((PreviewContentType.MARKDOWN, "\n".join(source_lines)))
             source_lines2 = [
                 file_content
             ]
             contents.append((PreviewContentType.FILE, "\n".join(source_lines2)))
-
             return contents, dependencies
 
         except Exception as e:
