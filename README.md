@@ -3,18 +3,23 @@
 Humbug is a modular, extensible platform that aims to let you and your AIs work on ideas together.
 Think of it as an operating system for human-AI collaboration.
 
-It's designed to let you work on lots of different types of problems, but it currently shines at supporting you build software.
-A demonstration is that each version has been built using earlier versions of itself!
-
 ![Humbug in action](docs/v0.22-demo.gif)
 
 ## What are the core ideas?
 
-- **Human–AI collaboration at the core**  
+- **Human–AI collaboration at the heart of the design**  
 
   When you're using AI, you're no longer working alone.
   Humbug treats both humans and AIs as first-class actors.
   All tools, including the GUI, are designed to be available for both to use, so it's faster and easier to get things done (there's still work to do on this though).
+
+- **Bootstrapped: built using itself**  
+
+  Each version of Humbug has been built using the previous version.
+  This has meant over 80% of the code has been built by LLMs.
+  This isn't vibe coded, however!
+  Using each ever-more capable version of Humbug to help design and build its successor has freed up huge amounts of human time to think about bigger design problems.
+  The tireless ability of LLMs to morph software into new forms also means the software has a clean, highly modular, architecture.
 
 - **LLMs, lots of LLMs**  
 
@@ -22,10 +27,6 @@ A demonstration is that each version has been built using earlier versions of it
   Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, xAI, and Z.ai so you're not tied to any one provider.
   You can optimize for cost, and are future-proofed when you want to use something new.
   You can seamlessly switch between models, even switching mid-conversation.
-
-- **Mindspaces: project-centric workspaces**  
-
-  Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
 
 - **Structured context engineering with Metaphor**  
 
@@ -61,10 +62,9 @@ A demonstration is that each version has been built using earlier versions of it
   Humbug is open-source and modular by design.
   You don't need to worry about being locked into a vendor tool and can add new features if you want them.  
 
-- **Bootstrapped with LLMs**  
+- **Mindspaces: project-centric workspaces**  
 
-  Each version of Humbug has been built using the previous version.
-  This allowed over 80% of the code to be implemented by LLMs.
+  Every project lives in its own mindspace: a persistent, context-rich environment with isolated files, settings, and conversations.
 
 - **OS-agnostic**  
 
