@@ -10,7 +10,8 @@ New features:
   a message and queue it for when the next tool call completes.  This message will be passed to the LLM and allows you
   to provide feedback about what it is currently doing.  This includes, for example, saying "stop" and asking it to stop
   what it is doing.  You could also use this to indicate an approach it is trying will not work.
-- The wiki feature that was previously in the software has been renamed as a "preview" capability.
+- The wiki feature that was previously in the software has been renamed as a "preview" capability, and the design has been
+  simplified.
 
 Bug fixes:
 
