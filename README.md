@@ -14,7 +14,7 @@ A demonstration is that each version has been built using earlier versions of it
 
   When you're using AI, you're no longer working alone.
   Humbug treats both humans and AIs as first-class actors.
-  All tools, including the GUI, are designed to be available for both to use, so it's faster and easier to get things done.
+  All tools, including the GUI, are designed to be available for both to use, so it's faster and easier to get things done (there's still work to do on this though).
 
 - **LLMs, lots of LLMs**  
 
@@ -35,7 +35,9 @@ A demonstration is that each version has been built using earlier versions of it
 
 - **Powerful, pluggable tools**  
 
-  Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a custom pure functional programming language (AIFPL) based on Lisp, and UI orchestration.
+  We designed computers to give humans better, faster, and more reliable tools.
+  Humbug's tool framework sets out to do the same for AIs.
+  Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a custom pure functional programming language (AIFPL), and UI orchestration.
   Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
   Task delegation allows one LLM to make use of one or more other LLMs.
   AIFPL (AI Functional Programming Language) is a pure functional language designed for AIs to use for calculations, string processing, or other algorithmic tasks.
