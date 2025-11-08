@@ -56,7 +56,7 @@ class AboutDialog(QDialog):
 
         # Description with hyperlink
         desc_label = QLabel(
-            "Visit <a href='https://m6r.ai'>m6r.ai</a> to learn more."
+            "Visit the <a href='https://github.com/m6r-ai/humbug'>Humbug</a> project to learn more."
         )
         desc_label.setWordWrap(True)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
