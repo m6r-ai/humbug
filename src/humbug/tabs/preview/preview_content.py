@@ -254,8 +254,6 @@ class PreviewContent:
             # Track dependencies - include the directory itself and all its entries
             dependencies: Set[str] = {os.path.abspath(directory_path)}
 
-            rel_path = self._mindspace_manager.get_relative_path(directory_path)
-            dir_name = os.path.basename(cast(str, directory_path))
             entries = os.listdir(directory_path)
 
             # Add all directory entries as dependencies (for change detection)
@@ -263,34 +261,7 @@ class PreviewContent:
                 entry_path = os.path.join(directory_path, entry)
                 dependencies.add(os.path.abspath(entry_path))
 
-            if rel_path in (".", ""):
-                dir_name = f"Mindspace home: {os.path.basename(self._mindspace_manager.mindspace_path())}"
-
             contents: List[Tuple[PreviewContentType, str]] = []
-
-            # Start with a heading
-            lines = [
-                f"# {dir_name}",
-                ""
-            ]
-
-            # Add file metadata on separate lines
-            try:
-                size = self._get_file_size_bytes(directory_path)
-                permissions = self._get_file_permissions(directory_path)
-                mod_time = self._get_file_modification_time(directory_path)
-
-                lines.extend([
-                    f"**Permissions**: {permissions}  ",
-                    f"**Size**: {size}  ",
-                    f"**Modified**: {mod_time}  ",
-                    f"**Path**: {rel_path}"
-                ])
-
-            except PreviewIOError as e:
-                self._logger.warning("Could not retrieve metadata for %s: %s", directory_path, str(e))
-
-            contents.append((PreviewContentType.MARKDOWN, "\n".join(lines)))
 
             # Sort entries - directories first, then files
             files = [".."]
@@ -301,12 +272,6 @@ class PreviewContent:
             files.sort()
 
             if files:
-                md_lines = [
-                    "  ",
-                    "## Files and folders (directories)"
-                ]
-                contents.append((PreviewContentType.MARKDOWN, "\n".join(md_lines)))
-
                 # Calculate maximum size width for proper alignment
                 max_size_width = self._calculate_max_size_width(directory_path, entries)
 
@@ -356,7 +321,6 @@ class PreviewContent:
             if readme_path:
                 dependencies.add(os.path.abspath(readme_path))
                 readme_content = self._read_markdown_file(readme_path)
-                contents.append((PreviewContentType.MARKDOWN, f"  \n## {os.path.basename(readme_path)}"))
                 contents.extend(readme_content)
 
             return contents, dependencies
@@ -402,34 +366,9 @@ class PreviewContent:
             # Track dependencies - just the file itself for regular files
             dependencies: Set[str] = {os.path.abspath(file_path)}
 
-            rel_path = self._mindspace_manager.get_relative_path(file_path)
             file_name = os.path.basename(file_path)
 
             contents: List[Tuple[PreviewContentType, str]] = []
-
-            # Generate markdown with metadata
-            lines = [
-                f"# {file_name}",
-                ""
-            ]
-
-            # Add file metadata on separate lines
-            try:
-                size = self._get_file_size_bytes(file_path)
-                permissions = self._get_file_permissions(file_path)
-                mod_time = self._get_file_modification_time(file_path)
-
-                lines.extend([
-                    f"**Permissions**: {permissions}  ",
-                    f"**Size**: {size}  ",
-                    f"**Modified**: {mod_time}  ",
-                    f"**Path**: {rel_path}"
-                ])
-
-            except PreviewIOError as e:
-                self._logger.warning("Could not retrieve metadata for %s: %s", file_path, str(e))
-
-            contents.append((PreviewContentType.MARKDOWN, "\n".join(lines)))
 
             # Check for companion .md file and render it if found
             companion_md_path = self._check_for_companion_md(file_path)
