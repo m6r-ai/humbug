@@ -263,9 +263,14 @@ class PreviewContent:
 
             contents: List[Tuple[PreviewContentType, str]] = []
 
-            # Sort entries - directories first, then files
-            files = [".."]
+            files = ["."]
 
+            # If we're not in the root of the mindspace, add ".." entry
+            rel_path = self._mindspace_manager.get_relative_path(directory_path)
+            if rel_path not in (".", ""):
+                files.append("..")
+
+            # Sort entries - directories first, then files
             for entry in entries:
                 files.append(entry)
 
