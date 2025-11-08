@@ -5,7 +5,7 @@ import logging
 import os
 import stat
 from datetime import datetime
-from typing import List, Tuple, Set, cast
+from typing import List, Tuple, Set
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.preview.preview_error import PreviewIOError
