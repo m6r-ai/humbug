@@ -88,7 +88,7 @@ Think of it as an operating system for human-AI collaboration.
 - **What's new:** [Latest updates](./CHANGELOG.md)
 - **Dive deeper:** [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor)
 - **Download:** [Download Humbug](https://github.com/m6r-ai/humbug/releases)
-- **Blog posts:** [Dave's blog posts about Humbug and Metaphor](https://davehudson.io/blog)
+- **Blog posts:** [Dave's blog posts about Humbug, Metaphor, and AIFPL](https://davehudson.io/blog)
 - **Developer notes:** [Dave's project notes](https://davehudson.io/notes)
 - **AIFPL summary:** [AIFPL project page](https://davehudson.io/projects/aifpl)
 - **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
