@@ -46,7 +46,7 @@ Think of it as an operating system for human-AI collaboration.
   UI orchestration means your AI can help you work and visualise things using any of these tools too.
   LLMs can check the status of terminal tabs and issue commands to them (subject to user approval)
 
-- **AIFPL, a programming language designed for AIs**  
+- **AIFPL: a programming language designed for AIs**  
 
   Previously, programming languages were designed to meet the needs of human developers.
   While AIs are proficient with most of these languages, they risk being unsafe because they support potentially dangerous I/O operations.
@@ -90,6 +90,7 @@ Think of it as an operating system for human-AI collaboration.
 - **Download:** [Download Humbug](https://github.com/m6r-ai/humbug/releases)
 - **Blog posts:** [Dave's blog posts about Humbug and Metaphor](https://davehudson.io/blog)
 - **Developer notes:** [Dave's project notes](https://davehudson.io/notes)
+- **AIFPL summary:*** [AIFPL project page](https://davehudson.io/projects/aifpl)
 - **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
 - **YouTube:** [@m6rai on YouTube](https://youtube.com/@m6rai)
 
