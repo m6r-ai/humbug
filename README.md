@@ -90,7 +90,7 @@ Think of it as an operating system for human-AI collaboration.
 - **Download:** [Download Humbug](https://github.com/m6r-ai/humbug/releases)
 - **Blog posts:** [Dave's blog posts about Humbug and Metaphor](https://davehudson.io/blog)
 - **Developer notes:** [Dave's project notes](https://davehudson.io/notes)
-- **AIFPL summary:*** [AIFPL project page](https://davehudson.io/projects/aifpl)
+- **AIFPL summary:** [AIFPL project page](https://davehudson.io/projects/aifpl)
 - **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
 - **YouTube:** [@m6rai on YouTube](https://youtube.com/@m6rai)
 
