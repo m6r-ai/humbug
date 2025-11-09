@@ -613,6 +613,7 @@ class ConversationMessage(QFrame):
             self._layout.removeWidget(self._approval_widget)
             self._approval_widget.deleteLater()
             self._approval_widget = None
+            self._approval_text_edit = None
             self._approval_approve_button = None
             self._approval_reject_button = None
 
