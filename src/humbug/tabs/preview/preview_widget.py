@@ -701,7 +701,7 @@ class PreviewWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {int(style_manager.message_bubble_spacing())}px;
-                border: none;
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
             #PreviewFileContent #_content_container {{
