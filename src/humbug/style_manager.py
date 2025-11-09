@@ -313,7 +313,7 @@ class StyleManager(QObject):
             },
             ColorRole.MESSAGE_USER_BACKGROUND: {
                 ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#e4e4e4"
+                ColorMode.LIGHT: "#e0e0e0"
             },
             ColorRole.MESSAGE_BORDER: {
                 ColorMode.DARK: "#303030",
@@ -321,7 +321,7 @@ class StyleManager(QObject):
             },
             ColorRole.MESSAGE_USER_BORDER: {
                 ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#d4d4d4"
+                ColorMode.LIGHT: "#d0d0d0"
             },
             ColorRole.MESSAGE_FOCUSED: {
                 ColorMode.DARK: "#586878",
