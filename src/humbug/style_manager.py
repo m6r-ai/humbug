@@ -70,7 +70,7 @@ class StyleManager(QObject):
         return {
             # Background colours
             ColorRole.BACKGROUND_PRIMARY: {
-                ColorMode.DARK: "#080808",
+                ColorMode.DARK: "#060606",
                 ColorMode.LIGHT: "#fcfcfc"
             },
             ColorRole.BACKGROUND_SECONDARY: {
@@ -78,7 +78,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#ececec"
             },
             ColorRole.BACKGROUND_TERTIARY: {
-                ColorMode.DARK: "#101010",
+                ColorMode.DARK: "#080808",
                 ColorMode.LIGHT: "#f8f8f8"
             },
             ColorRole.BACKGROUND_DIALOG: {
@@ -292,7 +292,7 @@ class StyleManager(QObject):
 
             # Code block border
             ColorRole.CODE_BORDER: {
-                ColorMode.DARK: "#404040",
+                ColorMode.DARK: "#383838",
                 ColorMode.LIGHT: "#d0d0d0"
             },
 
@@ -308,19 +308,19 @@ class StyleManager(QObject):
 
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
-                ColorMode.DARK: "#202020",
+                ColorMode.DARK: "#181818",
                 ColorMode.LIGHT: "#f2f2f2"
             },
             ColorRole.MESSAGE_USER_BACKGROUND: {
-                ColorMode.DARK: "#2e2e2e",
+                ColorMode.DARK: "#282828",
                 ColorMode.LIGHT: "#e4e4e4"
             },
             ColorRole.MESSAGE_BORDER: {
-                ColorMode.DARK: "#383838",
+                ColorMode.DARK: "#303030",
                 ColorMode.LIGHT: "#e2e2e2"
             },
             ColorRole.MESSAGE_USER_BORDER: {
-                ColorMode.DARK: "#464646",
+                ColorMode.DARK: "#404040",
                 ColorMode.LIGHT: "#d4d4d4"
             },
             ColorRole.MESSAGE_FOCUSED: {
