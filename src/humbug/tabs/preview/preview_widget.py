@@ -827,11 +827,13 @@ class PreviewWidget(QWidget):
             /* Code sections - normal (not contained) */
             QFrame#PreviewMarkdownContentSection[section_type="code"][contained="false"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
             /* Code sections - contained */
             QFrame#PreviewMarkdownContentSection[section_type="code"][contained="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
             QFrame#PreviewMarkdownContentSection QLabel {{
@@ -886,7 +888,7 @@ class PreviewWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {int(style_manager.message_bubble_spacing())}px;
-                border: 0;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER )};
             }}
         """
 
