@@ -56,6 +56,7 @@ class MindspacePreviewView(QWidget):
             self._language_manager.strings().mindspace_preview,
             self
         )
+        self._header.setProperty("splitter", True)
         self._header.toggled.connect(self._on_header_toggled)
 
         # Start collapsed by default

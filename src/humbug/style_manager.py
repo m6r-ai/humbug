@@ -168,7 +168,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#fafafa"
             },
             ColorRole.MINDSPACE_NAME_BACKGROUND: {
-                ColorMode.DARK: "#383838",
+                ColorMode.DARK: "#303030",
                 ColorMode.LIGHT: "#d0d0d0"
             },
             ColorRole.MINDSPACE_HEADING: {
