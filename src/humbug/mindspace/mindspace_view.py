@@ -35,9 +35,6 @@ class MindspaceView(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        # Size tracking for dynamic splitter management
-        self._saved_sizes: list[int] = [1, 1, 0, 0]  # Default: equal sizes for conversations and files, 0 for preview and spacer
-
         # Create main layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -221,62 +218,20 @@ class MindspaceView(QWidget):
         expanded_sections = sum([conversations_expanded, files_expanded, preview_expanded])
 
         if expanded_sections == 0:
-            # All collapsed - give minimal space to all sections, rest to spacer
-            current_sizes = self._splitter.sizes()
-            if len(current_sizes) >= 3 and any(size > header_height for size in current_sizes[:3]):
-                self._saved_sizes = current_sizes
-
             # Give minimal space to all sections, all remaining space to spacer
             spacer_size = total_height - (3 * header_height)
             self._splitter.setSizes([header_height, header_height, header_height, spacer_size])
+            return
 
-        elif expanded_sections == 1:
-            # Only one expanded - give most space to expanded section
-            current_sizes = self._splitter.sizes()
-            if len(current_sizes) >= 3 and sum(size > header_height for size in current_sizes[:3]) > 1:
-                self._saved_sizes = current_sizes
+        # We have one or more expanded sections - distribute space evenly among them
+        available_space = total_height - ((3 - expanded_sections) * header_height)
+        section_space = available_space // expanded_sections
 
-            expanded_size = total_height - (2 * header_height)
-            if conversations_expanded:
-                self._splitter.setSizes([expanded_size, header_height, header_height, 0])
+        conversations_space = section_space if conversations_expanded else header_height
+        files_space = section_space if files_expanded else header_height
+        preview_space = section_space if preview_expanded else header_height
 
-            elif files_expanded:
-                self._splitter.setSizes([header_height, expanded_size, header_height, 0])
-
-            else:  # preview_expanded
-                self._splitter.setSizes([header_height, header_height, expanded_size, 0])
-
-        elif expanded_sections == 2:
-            # Two expanded - split space between them
-            current_sizes = self._splitter.sizes()
-            if len(current_sizes) >= 3 and sum(size > header_height for size in current_sizes[:3]) > 2:
-                self._saved_sizes = current_sizes
-
-            available_space = total_height - header_height
-            half_space = available_space // 2
-
-            if conversations_expanded and files_expanded:
-                self._splitter.setSizes([half_space, half_space, header_height, 0])
-
-            elif conversations_expanded and preview_expanded:
-                self._splitter.setSizes([half_space, header_height, half_space, 0])
-
-            else:  # files_expanded and preview_expanded
-                self._splitter.setSizes([header_height, half_space, half_space, 0])
-
-        else:
-            # All three expanded - restore saved sizes or use equal split
-            if len(self._saved_sizes) >= 3 and sum(self._saved_sizes[:3]) > 0:
-                # Restore the proportions of the three sections
-                conversations_size = self._saved_sizes[0]
-                files_size = self._saved_sizes[1]
-                preview_size = self._saved_sizes[2]
-                self._splitter.setSizes([conversations_size, files_size, preview_size, 0])
-
-            else:
-                # Equal split among three sections
-                third_height = total_height // 3
-                self._splitter.setSizes([third_height, third_height, third_height, 0])
+        self._splitter.setSizes([conversations_space, files_space, preview_space, 0])
 
     def reveal_and_select_file(self, view_type: MindspaceViewType, file_path: str) -> None:
         """

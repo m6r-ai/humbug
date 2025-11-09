@@ -9,6 +9,7 @@ New features:
 Bug fixes:
 
 - Resolved a problem with restyling after a tool approval widget has been removed.
+- Resolved a problem with the mindspace view expand/shrink logic.
 
 ## v0.27 (2025-11-08)
 
