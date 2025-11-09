@@ -71,7 +71,7 @@ class StyleManager(QObject):
             # Background colours
             ColorRole.BACKGROUND_PRIMARY: {
                 ColorMode.DARK: "#080808",
-                ColorMode.LIGHT: "#e0e0e0"
+                ColorMode.LIGHT: "#fcfcfc"
             },
             ColorRole.BACKGROUND_SECONDARY: {
                 ColorMode.DARK: "#141414",
@@ -79,7 +79,7 @@ class StyleManager(QObject):
             },
             ColorRole.BACKGROUND_TERTIARY: {
                 ColorMode.DARK: "#242424",
-                ColorMode.LIGHT: "#fcfcfc"
+                ColorMode.LIGHT: "#e0e0e0"
             },
             ColorRole.BACKGROUND_DIALOG: {
                 ColorMode.DARK: "#282828",
@@ -164,15 +164,15 @@ class StyleManager(QObject):
 
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
-                ColorMode.DARK: "#000000",
+                ColorMode.DARK: "#383838",
                 ColorMode.LIGHT: "#d0d0d0"
             },
             ColorRole.TAB_BACKGROUND_ACTIVE: {
-                ColorMode.DARK: "#1e1e1e",
+                ColorMode.DARK: "#000000",
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
-                ColorMode.DARK: "#141414",
+                ColorMode.DARK: "#202020",
                 ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
@@ -288,11 +288,11 @@ class StyleManager(QObject):
 
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
-                ColorMode.DARK: "#020202",
+                ColorMode.DARK: "#202020",
                 ColorMode.LIGHT: "#f2f2f2"
             },
             ColorRole.MESSAGE_USER_BACKGROUND: {
-                ColorMode.DARK: "#121212",
+                ColorMode.DARK: "#2e2e2e",
                 ColorMode.LIGHT: "#e4e4e4"
             },
             ColorRole.MESSAGE_FOCUSED: {

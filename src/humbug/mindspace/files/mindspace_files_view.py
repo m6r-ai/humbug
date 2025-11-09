@@ -56,7 +56,6 @@ class MindspaceFilesView(QWidget):
             self._language_manager.strings().mindspace_files,
             self
         )
-        self._header.setProperty("splitter", True)
         self._header.toggled.connect(self._on_header_toggled)
         layout.addWidget(self._header)
 

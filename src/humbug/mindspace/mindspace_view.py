@@ -366,8 +366,6 @@ class MindspaceView(QWidget):
                 border-radius: 0px;
                 margin: 0px;
                 padding: 0px 0px 1px 0px;
-            }}
-            #MindspaceCollapsibleHeader[splitter="true"] {{
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
             #MindspaceCollapsibleHeader[hovered="true"] {{
