@@ -2,6 +2,10 @@
 
 ## v0.28 (2025-11-xx)
 
+New features:
+
+- Improved some visual styling elements to improve readability.
+
 Bug fixes:
 
 - Resolved a problem with restyling after a tool approval widget has been removed.
