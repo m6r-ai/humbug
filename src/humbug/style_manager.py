@@ -162,6 +162,20 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#d04030"
             },
 
+            # Mindspace colours
+            ColorRole.MINDSPACE_BACKGROUND: {
+                ColorMode.DARK: "#101010",
+                ColorMode.LIGHT: "#fafafa"
+            },
+            ColorRole.MINDSPACE_NAME_BACKGROUND: {
+                ColorMode.DARK: "#383838",
+                ColorMode.LIGHT: "#d0d0d0"
+            },
+            ColorRole.MINDSPACE_HEADING: {
+                ColorMode.DARK: "#242424",
+                ColorMode.LIGHT: "#e0e0e0"
+            },
+
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
                 ColorMode.DARK: "#383838",
@@ -262,7 +276,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#b0b0b0"
             },
             ColorRole.TAB_SPLITTER: {
-                ColorMode.DARK: "#303030",
+                ColorMode.DARK: "#404040",
                 ColorMode.LIGHT: "#d0d0d0"
             },
 

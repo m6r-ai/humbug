@@ -33,6 +33,11 @@ class ColorRole(Enum):
     EDIT_BOX_BACKGROUND = auto()        # Edit box background
     EDIT_BOX_ERROR = auto()             # Edit box error
 
+    # Mindspace colours
+    MINDSPACE_BACKGROUND = auto()       # Mindspace background
+    MINDSPACE_NAME_BACKGROUND = auto()  # Mindspace name background
+    MINDSPACE_HEADING = auto()          # Mindspace heading
+
     # Tab colours
     TAB_BAR_BACKGROUND = auto()         # Tab bar background
     TAB_BACKGROUND_ACTIVE = auto()      # Active tab background

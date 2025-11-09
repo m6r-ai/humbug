@@ -293,7 +293,7 @@ class MindspaceView(QWidget):
 
         # Update font size for mindspace label
         font = self._mindspace_label.font()
-        font.setPointSizeF(base_font_size * zoom_factor)
+        font.setPointSizeF(round(base_font_size * zoom_factor - 0.5))
         self._mindspace_label.setFont(font)
 
         branch_icon_size = round(12 * zoom_factor)
@@ -302,7 +302,7 @@ class MindspaceView(QWidget):
         # Style the mindspace view
         self.setStyleSheet(f"""
             #_header_widget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND)};
                 margin: 0px;
                 padding: 0px;
                 border: none;
@@ -317,7 +317,7 @@ class MindspaceView(QWidget):
             }}
 
             #MindspaceCollapsibleHeader {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_HEADING)};
                 border-radius: 0px;
                 margin: 0px;
                 padding: 0px 0px 1px 0px;
@@ -343,7 +343,7 @@ class MindspaceView(QWidget):
             }}
 
             QWidget#_spacer_widget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
 
@@ -354,7 +354,7 @@ class MindspaceView(QWidget):
             }}
 
             QTreeView {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
                 border: none;
                 padding: 0 0 0 8px;
             }}
@@ -370,7 +370,7 @@ class MindspaceView(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
             }}
             QTreeView::branch {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
             }}
             QTreeView::branch:has-children:!has-siblings:closed,
             QTreeView::branch:closed:has-children:has-siblings {{
@@ -388,7 +388,7 @@ class MindspaceView(QWidget):
             }}
 
             MindspaceRootDropWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
                 border: none;
             }}
             MindspaceRootDropWidget[is_drop_target="true"] {{
