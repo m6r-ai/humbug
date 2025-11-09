@@ -78,8 +78,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#ececec"
             },
             ColorRole.BACKGROUND_TERTIARY: {
-                ColorMode.DARK: "#242424",
-                ColorMode.LIGHT: "#e0e0e0"
+                ColorMode.DARK: "#282828",
+                ColorMode.LIGHT: "#e8e8e8"
             },
             ColorRole.BACKGROUND_DIALOG: {
                 ColorMode.DARK: "#282828",
@@ -276,6 +276,12 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c0c0c0"
             },
 
+            # Code block border
+            ColorRole.CODE_BORDER: {
+                ColorMode.DARK: "#505050",
+                ColorMode.LIGHT: "#c0c0c0"
+            },
+
             # Table elements
             ColorRole.TABLE_BORDER: {
                 ColorMode.DARK: "#808080",
@@ -300,8 +306,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#aab6c4"
             },
             ColorRole.MESSAGE_USER: {
-                ColorMode.DARK: "#8080c0",
-                ColorMode.LIGHT: "#6060a0"
+                ColorMode.DARK: "#7090e0",
+                ColorMode.LIGHT: "#6080c0"
             },
             ColorRole.MESSAGE_AI: {
                 ColorMode.DARK: "#80c080",
@@ -657,7 +663,7 @@ class StyleManager(QObject):
             TokenType.LINK_URL: ColorRole.SYNTAX_20,
             TokenType.LIST_MARKER: ColorRole.SYNTAX_15,
             TokenType.TABLE: ColorRole.SYNTAX_03,
-            TokenType.TEXT: ColorRole.SYNTAX_17
+            TokenType.TEXT: ColorRole.TEXT_PRIMARY
         }
 
         for token_type, role in colour_mapping.items():

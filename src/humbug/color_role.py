@@ -79,6 +79,9 @@ class ColorRole(Enum):
     SCROLLBAR_BACKGROUND = auto()       # Scrollbar background
     SCROLLBAR_HANDLE = auto()           # Scrollbar handle
 
+    # Code block border
+    CODE_BORDER = auto()                # Code block border
+
     # Table elements
     TABLE_BORDER = auto()               # Table border
     TABLE_HEADER_BACKGROUND = auto()    # Table header background

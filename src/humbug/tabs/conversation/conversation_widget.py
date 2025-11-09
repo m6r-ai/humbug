@@ -1654,13 +1654,13 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 border-radius: {border_radius}px;
-                border: 0;
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
             #ConversationMessage #ConversationMessageSection[section_style="code-user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
                 border-radius: {border_radius}px;
-                border: 0;
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
             #ConversationMessage #ConversationMessageSection #_header_container {{
