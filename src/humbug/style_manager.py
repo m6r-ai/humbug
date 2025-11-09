@@ -263,7 +263,7 @@ class StyleManager(QObject):
             },
             ColorRole.MENU_HOVER: {
                 ColorMode.DARK: "#3060d0",
-                ColorMode.LIGHT: "#2050c0"
+                ColorMode.LIGHT: "#5090e0"
             },
             ColorRole.MENU_BORDER: {
                 ColorMode.DARK: "#606060",
