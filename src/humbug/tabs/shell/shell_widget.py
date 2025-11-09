@@ -738,14 +738,14 @@ class ShellWidget(QWidget):
                 margin: 0;
                 border-radius: {border_radius}px;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
             }}
             #ShellMessageWidget[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
             }}
             #ShellMessageWidget[border="focused"] {{
-                border-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
             }}
 
             #ShellMessageWidget #_header {{

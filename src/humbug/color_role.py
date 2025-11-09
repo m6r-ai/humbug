@@ -89,6 +89,8 @@ class ColorRole(Enum):
     # Message colours
     MESSAGE_BACKGROUND = auto()         # Message background
     MESSAGE_USER_BACKGROUND = auto()    # Message background for user messages
+    MESSAGE_BORDER = auto()             # Message border
+    MESSAGE_USER_BORDER = auto()        # Message border for user messages
     MESSAGE_FOCUSED = auto()            # For highlighting the focused message
     MESSAGE_USER = auto()               # User message
     MESSAGE_AI = auto()                 # AI response
@@ -99,7 +101,6 @@ class ColorRole(Enum):
     MESSAGE_SYSTEM_ERROR = auto()       # System error message
     MESSAGE_SYSTEM_SUCCESS = auto()     # System success message
     MESSAGE_LANGUAGE = auto()           # Language heading
-    MESSAGE_BOOKMARK = auto()           # Bookmark highlight
     MESSAGE_STREAMING = auto()          # Message streaming
     MESSAGE_TRACE = auto()              # Trace message
     MESSAGE_INFORMATION = auto()        # Information message

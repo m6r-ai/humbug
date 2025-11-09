@@ -78,8 +78,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#ececec"
             },
             ColorRole.BACKGROUND_TERTIARY: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#e8e8e8"
+                ColorMode.DARK: "#101010",
+                ColorMode.LIGHT: "#f8f8f8"
             },
             ColorRole.BACKGROUND_DIALOG: {
                 ColorMode.DARK: "#282828",
@@ -278,8 +278,8 @@ class StyleManager(QObject):
 
             # Code block border
             ColorRole.CODE_BORDER: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#d0d0d0"
             },
 
             # Table elements
@@ -301,9 +301,17 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#2e2e2e",
                 ColorMode.LIGHT: "#e4e4e4"
             },
+            ColorRole.MESSAGE_BORDER: {
+                ColorMode.DARK: "#383838",
+                ColorMode.LIGHT: "#e2e2e2"
+            },
+            ColorRole.MESSAGE_USER_BORDER: {
+                ColorMode.DARK: "#464646",
+                ColorMode.LIGHT: "#d4d4d4"
+            },
             ColorRole.MESSAGE_FOCUSED: {
-                ColorMode.DARK: "#3a4654",
-                ColorMode.LIGHT: "#aab6c4"
+                ColorMode.DARK: "#586878",
+                ColorMode.LIGHT: "#98a8b8"
             },
             ColorRole.MESSAGE_USER: {
                 ColorMode.DARK: "#7090e0",
@@ -340,10 +348,6 @@ class StyleManager(QObject):
             ColorRole.MESSAGE_LANGUAGE: {
                 ColorMode.DARK: "#a07850",
                 ColorMode.LIGHT: "#806040"
-            },
-            ColorRole.MESSAGE_BOOKMARK: {
-                ColorMode.DARK: "#ffdf00",
-                ColorMode.LIGHT: "#806000"
             },
             ColorRole.MESSAGE_STREAMING: {
                 ColorMode.DARK: "#c0a080",

@@ -590,10 +590,10 @@ class LogWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
             }}
             #LogMessage[border="focused"] {{
-                border-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
             }}
 
             #LogMessage #_header {{

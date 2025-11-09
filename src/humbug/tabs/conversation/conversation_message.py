@@ -238,9 +238,22 @@ class ConversationMessage(QFrame):
         super().paintEvent(arg__1)
 
         painter = QPainter(self)
-        border_width = 2
-        border_radius = int(self._style_manager.message_bubble_spacing() / 2)
-        border_color = self._get_border_color()
+        border_radius = int(self._style_manager.message_bubble_spacing())
+
+        if self._is_border_animated:
+            border_color = self._get_fade_color()
+            border_width = 2
+
+        elif self._is_focused and self.hasFocus():
+            border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
+            border_width = 2
+
+        else:
+            current_style = self._message_source or AIMessageSource.USER
+            border_color = self._style_manager.get_color_str(
+                ColorRole.MESSAGE_USER_BORDER if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BORDER
+            )
+            border_width = 1
 
         # Enable antialiasing for smooth curves
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -255,7 +268,7 @@ class ConversationMessage(QFrame):
 
         # Adjust rectangle to center the border line
         # (QPainter draws the border centered on the rectangle edge)
-        adjustment = border_width // 2
+        adjustment = (border_width + 1) // 2
         adjusted_rect = self.rect().adjusted(adjustment, adjustment, -adjustment, -adjustment)
 
         # Draw the rounded rectangle border
@@ -627,7 +640,7 @@ class ConversationMessage(QFrame):
 
         current_style = self._message_source or AIMessageSource.USER
         return self._style_manager.get_color_str(
-            ColorRole.MESSAGE_USER_BACKGROUND if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BACKGROUND
+            ColorRole.MESSAGE_USER_BORDER if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BORDER
         )
 
     def set_content(self, text: str) -> None:
