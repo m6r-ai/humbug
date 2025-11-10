@@ -1196,7 +1196,7 @@ class StyleManager(QObject):
 
     def message_bubble_spacing(self) -> float:
         """Get the number of pixels to use in message bubble spacing."""
-        return 8.0
+        return 10.0
 
     def get_dialog_stylesheet(self) -> str:
         """

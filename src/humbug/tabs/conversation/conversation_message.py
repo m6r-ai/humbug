@@ -564,11 +564,14 @@ class ConversationMessage(QFrame):
         """
         assert self._approval_widget is None, "Approval widget already exists"
 
+        style_manager = self._style_manager
+        spacing = int(style_manager.message_bubble_spacing())
+
         self._approval_widget = QWidget()
         self._approval_widget.setObjectName("_approval_widget")
         layout = QVBoxLayout(self._approval_widget)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(8)
+        layout.setSpacing(spacing)
         strings = self._language_manager.strings()
 
         self._approval_text_edit = MinHeightTextEdit()
@@ -579,11 +582,11 @@ class ConversationMessage(QFrame):
 
         # Approval buttons
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(10)
+        button_layout.setSpacing(spacing)
         button_layout.addStretch()
 
         min_button_height = 40
-        zoom_factor = self._style_manager.zoom_factor()
+        zoom_factor = style_manager.zoom_factor()
         min_button_width = int(180 * zoom_factor)
 
         self._approval_approve_button = QPushButton(strings.approve_tool_call)
