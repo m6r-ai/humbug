@@ -93,8 +93,9 @@ class MessageBox(QDialog):
         layout.addLayout(header_layout)
 
         # Add buttons
+        spacing = int(self._style_manager.message_bubble_spacing())
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(8)
+        button_layout.setSpacing(spacing)
         button_layout.addStretch()
 
         self._button_results = {}

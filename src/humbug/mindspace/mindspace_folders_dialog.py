@@ -81,8 +81,9 @@ class MindspaceFoldersDialog(QDialog):
         layout.addSpacing(24)
 
         # Button row
+        spacing = int(style_manager.message_bubble_spacing())
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(8)
+        button_layout.setSpacing(spacing)
         button_layout.addStretch()
 
         self._ok_button = QPushButton(strings.ok)

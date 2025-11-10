@@ -97,8 +97,9 @@ class ConversationSettingsDialog(QDialog):
         main_layout.addSpacing(20)
 
         # Button row with proper spacing and alignment
+        spacing = int(style_manager.message_bubble_spacing())
         button_layout = QHBoxLayout()
-        button_layout.setSpacing(8)
+        button_layout.setSpacing(spacing)
         button_layout.addStretch()
 
         self.ok_button = QPushButton(strings.ok)
