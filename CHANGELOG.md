@@ -2,6 +2,15 @@
 
 ## v0.29 (2025-11-xx)
 
+New features:
+
+- The conversation input now has a settings button to make it easy to change the conversation settings (without having to
+  look at the menu).
+
+Bug fixes:
+
+- Many visual elements are now better spaced and scale better with the zoom factor.
+
 ## v0.28 (2025-11-09)
 
 New features:
