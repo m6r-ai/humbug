@@ -262,7 +262,7 @@ def get_english_strings() -> LanguageStrings:
         tooltip_edit_file="Edit this file",
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
-        tooltip_interrupt_message="Interrupt with message",
+        tooltip_settings_message="Open conversation settings",
         tooltip_expand_message="Expand message",
         tooltip_collapse_message="Collapse message",
 

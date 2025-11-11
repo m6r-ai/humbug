@@ -21,6 +21,7 @@ class ConversationInput(ConversationMessage):
     page_key_scroll_requested = Signal()
     submit_requested = Signal()
     stop_requested = Signal()
+    settings_requested = Signal()
     modified = Signal()
 
     def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
@@ -29,6 +30,7 @@ class ConversationInput(ConversationMessage):
         self._current_model = ""
         self._submit_button: QToolButton | None = None
         self._stop_button: QToolButton | None = None
+        self._settings_button: QToolButton | None = None
 
         super().__init__(style, parent=parent, is_input=True)
 
@@ -40,14 +42,19 @@ class ConversationInput(ConversationMessage):
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
-        self._stop_button.clicked.connect(self._stop_message)
+        self._stop_button.clicked.connect(self._on_stop_button_clicked)
         self._stop_button.hide()
         self._header_layout.addWidget(self._stop_button)
 
-        # Create submit/interrupt button
+        # Create submit button
         self._submit_button = QToolButton(self)
         self._submit_button.clicked.connect(self._on_submit_button_clicked)
         self._header_layout.addWidget(self._submit_button)
+
+        # Create settings button
+        self._settings_button = QToolButton(self)
+        self._settings_button.clicked.connect(self._on_settings_button_clicked)
+        self._header_layout.addWidget(self._settings_button)
 
         # Connect text changes to update button state
         self._text_area.textChanged.connect(self._on_text_changed)
@@ -70,15 +77,14 @@ class ConversationInput(ConversationMessage):
         """Update button tooltips based on current state."""
         strings = self._language_manager.strings()
 
+        if self._settings_button:
+            self._settings_button.setToolTip(strings.tooltip_settings_message)
+
         if self._stop_button:
             self._stop_button.setToolTip(strings.tooltip_stop_message)
 
         if self._submit_button:
-            if self._is_streaming:
-                self._submit_button.setToolTip(strings.tooltip_interrupt_message)
-
-            else:
-                self._submit_button.setToolTip(strings.tooltip_submit_message)
+            self._submit_button.setToolTip(strings.tooltip_submit_message)
 
     def set_streaming(self, streaming: bool) -> None:
         """Update the streaming state and header text."""
@@ -134,6 +140,14 @@ class ConversationInput(ConversationMessage):
         submit_button = cast(QToolButton, self._submit_button)
         submit_button.setIcon(QIcon(self._style_manager.scale_icon(
             self._style_manager.get_icon_path("submit"), icon_base_size
+        )))
+        submit_button.setIconSize(icon_size)
+        submit_button.setStyleSheet(button_style)
+
+        # Update settings button
+        submit_button = cast(QToolButton, self._settings_button)
+        submit_button.setIcon(QIcon(self._style_manager.scale_icon(
+            self._style_manager.get_icon_path("cog"), icon_base_size
         )))
         submit_button.setIconSize(icon_size)
         submit_button.setStyleSheet(button_style)
@@ -209,9 +223,13 @@ class ConversationInput(ConversationMessage):
         """Handle submit button click."""
         self.submit_requested.emit()
 
-    def _stop_message(self) -> None:
+    def _on_stop_button_clicked(self) -> None:
         """Stop the current message processing via button click."""
         self.stop_requested.emit()
+
+    def _on_settings_button_clicked(self) -> None:
+        """Handle settings button click."""
+        self.settings_requested.emit()
 
     def _insert_from_mime_data(self, source: QMimeData) -> None:
         """Override default paste behavior to insert only plain text."""

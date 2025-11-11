@@ -39,6 +39,9 @@ class ConversationWidget(QWidget):
     fork_requested = Signal()  # Signal to fork the conversation
     fork_from_index_requested = Signal(int)  # Signal to fork from a specific message index
 
+    # Emits when conversation settings are requested
+    conversation_settings_requested = Signal()
+
     # Emits when parent should be activated by user interaction
     activated = Signal()
 
@@ -171,6 +174,7 @@ class ConversationWidget(QWidget):
         self._input.fork_requested.connect(self._on_message_fork_requested)
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._on_stop_requested)
+        self._input.settings_requested.connect(self._on_input_settings_requested)
         self._input.modified.connect(self.conversation_modified)
 
         self._messages_layout.addStretch()
@@ -2060,6 +2064,10 @@ class ConversationWidget(QWidget):
     def _on_stop_requested(self) -> None:
         """Handle stop request from input widget."""
         self.cancel_current_tasks()
+
+    def _on_input_settings_requested(self) -> None:
+        """Handle settings request from input widget."""
+        self.conversation_settings_requested.emit()
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""

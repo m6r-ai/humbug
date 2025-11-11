@@ -262,7 +262,7 @@ def get_french_strings() -> LanguageStrings:
         tooltip_edit_file="Modifier ce fichier",
         tooltip_submit_message="Envoyer le message",
         tooltip_stop_message="Arrêter le traitement du message",
-        tooltip_interrupt_message="Interrompre avec un message",
+        tooltip_settings_message="Ouvrir les paramètres de la conversation",
         tooltip_expand_message="Étendre le message",
         tooltip_collapse_message="Réduire le message",
 

@@ -957,6 +957,17 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'cog-{suffix}.svg', f'''
+                <svg width="64" height="64" viewBox="0 0 64
+                64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="10" stroke="{color}" stroke-width="6" fill="none"/>
+                    <path stroke="{color}" stroke-width="6" fill="none"
+                        d="M32,4 L32,16 M32,48 L32,60 M4,32 L16,32 M48,32 L60,32
+                        M12.686,12.686 L21.213,21.213 M42.787,42.787 L51.314,51.314
+                        M12.686,51.314 L21.213,42.787 M42.787,21.213 L51.314,12.686"/>
+                </svg>
+            ''')
+
             self._write_icon(f'copy-{suffix}.svg', f'''
                 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <rect x="22" y="10" width="32" height="32" stroke="{color}" stroke-width="6" fill="none"/>

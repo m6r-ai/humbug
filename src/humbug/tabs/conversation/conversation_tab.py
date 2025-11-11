@@ -65,6 +65,9 @@ class ConversationTab(TabBase):
         )
         self._conversation_widget.fork_requested.connect(self.fork_requested)
         self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index_requested)
+        self._conversation_widget.conversation_settings_requested.connect(
+            self.show_conversation_settings_dialog
+        )
         self._conversation_widget.status_updated.connect(self.update_status)
         self._conversation_widget.submit_finished.connect(self._on_submit_finished)
         self._conversation_widget.update_label.connect(self._on_update_label)
