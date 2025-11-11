@@ -60,9 +60,6 @@ class ConversationMessageSection(QFrame):
 
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        zoom_factor = style_manager.zoom_factor()
-        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        self._layout.setSpacing(spacing)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
         # Create language header if needed
@@ -73,8 +70,6 @@ class ConversationMessageSection(QFrame):
         self._save_as_button: QToolButton | None = None
 
         if language is not None:
-            self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
-
             # Create a container for header (language label + buttons)
             self._header_container = QWidget()
             self._header_container.setObjectName("_header_container")
@@ -489,14 +484,18 @@ class ConversationMessageSection(QFrame):
     def apply_style(self) -> None:
         """Apply styling to this section."""
         style_manager = self._style_manager
-        factor = style_manager.zoom_factor()
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        self._layout.setSpacing(spacing)
+
         font = self.font()
         base_font_size = style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
+        font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
 
         if self._language_header:
             self._language_header.setFont(font)
+            self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         self._text_area.setFont(font)
 
