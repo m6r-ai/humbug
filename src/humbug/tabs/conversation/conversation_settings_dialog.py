@@ -37,11 +37,13 @@ class ConversationSettingsDialog(QDialog):
         self._current_settings: AIConversationSettings | None = None
 
         style_manager = StyleManager()
+        spacing = int(style_manager.message_bubble_spacing())
 
         # Main layout
         main_layout = QVBoxLayout()
-        main_layout.setSpacing(12)
-        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(spacing)
+        double_spacing = spacing * 2
+        main_layout.setContentsMargins(double_spacing, double_spacing, double_spacing, double_spacing)
 
         # Create a scroll area
         scroll_area = QScrollArea()
@@ -97,7 +99,6 @@ class ConversationSettingsDialog(QDialog):
         main_layout.addSpacing(20)
 
         # Button row with proper spacing and alignment
-        spacing = int(style_manager.message_bubble_spacing())
         button_layout = QHBoxLayout()
         button_layout.setSpacing(spacing)
         button_layout.addStretch()
