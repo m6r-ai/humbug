@@ -76,7 +76,8 @@ class ConversationMessage(QFrame):
         self._message_id = message_id
         self._message_user_name = user_name
 
-        self._style_manager = StyleManager()
+        style_manager = StyleManager()
+        self._style_manager = style_manager
 
         # Border animation state
         self._is_border_animated = False
@@ -91,9 +92,6 @@ class ConversationMessage(QFrame):
         # Create layout
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        spacing = int(self._style_manager.message_bubble_spacing())
-        self._layout.setSpacing(spacing)
-        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         # Create header area with horizontal layout
         self._header = QWidget(self)
@@ -147,7 +145,6 @@ class ConversationMessage(QFrame):
         self._sections_container.setObjectName("_sections_container")
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
-        self._sections_layout.setSpacing(15)
         self._layout.addWidget(self._sections_container)
 
         # Tool approval widgets
@@ -238,7 +235,8 @@ class ConversationMessage(QFrame):
         super().paintEvent(arg__1)
 
         painter = QPainter(self)
-        border_radius = int(self._style_manager.message_bubble_spacing())
+        zoom_factor = self._style_manager.zoom_factor()
+        border_radius = int(self._style_manager.message_bubble_spacing() * zoom_factor)
 
         if self._is_border_animated:
             border_color = self._get_fade_color()
@@ -565,7 +563,8 @@ class ConversationMessage(QFrame):
         assert self._approval_widget is None, "Approval widget already exists"
 
         style_manager = self._style_manager
-        spacing = int(style_manager.message_bubble_spacing())
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
 
         self._approval_widget = QWidget()
         self._approval_widget.setObjectName("_approval_widget")
@@ -586,7 +585,6 @@ class ConversationMessage(QFrame):
         button_layout.addStretch()
 
         min_button_height = 40
-        zoom_factor = style_manager.zoom_factor()
         min_button_width = int(180 * zoom_factor)
 
         self._approval_approve_button = QPushButton(strings.approve_tool_call)
@@ -834,10 +832,15 @@ class ConversationMessage(QFrame):
         """Handle the style changing."""
         style_manager = self._style_manager
 
-        factor = style_manager.zoom_factor()
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        self._layout.setSpacing(spacing)
+        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        self._sections_layout.setSpacing(spacing)
+
         font = self.font()
         base_font_size = style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
+        font.setPointSizeF(base_font_size * zoom_factor)
         self._role_label.setFont(font)
 
         self._apply_button_style()

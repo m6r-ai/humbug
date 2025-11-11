@@ -55,11 +55,13 @@ class ConversationMessageSection(QFrame):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._style_manager = StyleManager()
+        style_manager = StyleManager()
+        self._style_manager = style_manager
 
         self._layout = QVBoxLayout(self)
         self.setLayout(self._layout)
-        spacing = int(self._style_manager.message_bubble_spacing())
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
         self._layout.setSpacing(spacing)
         self._layout.setContentsMargins(0, 0, 0, 0)
 

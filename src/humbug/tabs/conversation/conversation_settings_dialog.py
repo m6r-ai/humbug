@@ -37,7 +37,8 @@ class ConversationSettingsDialog(QDialog):
         self._current_settings: AIConversationSettings | None = None
 
         style_manager = StyleManager()
-        spacing = int(style_manager.message_bubble_spacing())
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
 
         # Main layout
         main_layout = QVBoxLayout()

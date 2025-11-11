@@ -695,12 +695,14 @@ class PreviewWidget(QWidget):
     def _build_preview_file_content_style(self) -> str:
         """Build styles for the PreviewFileContent widget."""
         style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        bubble_spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
 
         return f"""
             #PreviewFileContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
-                border-radius: {int(style_manager.message_bubble_spacing())}px;
+                border-radius: {bubble_spacing}px;
                 border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
@@ -882,12 +884,14 @@ class PreviewWidget(QWidget):
     def _build_preview_markdown_preview_content_style(self) -> str:
         """Build styles for the PreviewMarkdownPreviewContent widget."""
         style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        bubble_spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
 
         return f"""
             QFrame#PreviewMarkdownPreviewContent {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 margin: 0;
-                border-radius: {int(style_manager.message_bubble_spacing())}px;
+                border-radius: {bubble_spacing}px;
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER )};
             }}
         """

@@ -72,7 +72,8 @@ class ConversationWidget(QWidget):
 
         self._mindspace_manager = MindspaceManager()
 
-        self._style_manager = StyleManager()
+        style_manager = StyleManager()
+        self._style_manager = style_manager
 
         self._ai_conversation = None
         if not use_existing_ai_conversation:
@@ -172,9 +173,6 @@ class ConversationWidget(QWidget):
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.modified.connect(self.conversation_modified)
 
-        spacing = int(self._style_manager.message_bubble_spacing())
-        self._messages_layout.setSpacing(spacing)
-        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
         self._messages_layout.addStretch()
         self._messages_layout.addWidget(self._input)
 
@@ -207,7 +205,7 @@ class ConversationWidget(QWidget):
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
 
-        self._style_manager.style_changed.connect(self._on_style_changed)
+        style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
 
         # Find functionality
@@ -1225,7 +1223,8 @@ class ConversationWidget(QWidget):
 
         delta = message_pos.y() - scroll_value
 
-        message_spacing = int(self._style_manager.message_bubble_spacing())
+        zoom_factor = self._style_manager.zoom_factor()
+        message_spacing = int(self._style_manager.message_bubble_spacing() * zoom_factor)
         message_y = message_pos.y()
 
         # Determine if scrolling is needed
@@ -1503,7 +1502,8 @@ class ConversationWidget(QWidget):
     def _build_conversation_message_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
-        border_radius = int(self._style_manager.message_bubble_spacing())
+        zoom_factor = style_manager.zoom_factor()
+        border_radius = int(self._style_manager.message_bubble_spacing() * zoom_factor)
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -1638,7 +1638,8 @@ class ConversationWidget(QWidget):
     def _build_conversation_message_section_styles(self) -> str:
         """Build styles for message sections."""
         style_manager = self._style_manager
-        border_radius = int(style_manager.message_bubble_spacing() / 2)
+        zoom_factor = style_manager.zoom_factor()
+        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor / 2)
         return f"""
             #ConversationMessage #ConversationMessageSection[section_style="text-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
@@ -1733,10 +1734,15 @@ class ConversationWidget(QWidget):
 
     def _on_style_changed(self) -> None:
         """Update styles when the application style changes."""
-        factor = self._style_manager.zoom_factor()
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
+        self._messages_layout.setSpacing(spacing)
+        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
+
         font = self.font()
-        base_font_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
+        base_font_size = style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
 
         stylesheet_parts = [

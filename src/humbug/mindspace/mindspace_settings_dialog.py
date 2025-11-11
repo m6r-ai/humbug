@@ -146,7 +146,8 @@ class MindspaceSettingsDialog(QDialog):
         main_layout.addSpacing(20)
 
         # Button row
-        spacing = int(style_manager.message_bubble_spacing())
+        zoom_factor = style_manager.zoom_factor()
+        spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
         button_layout = QHBoxLayout()
         button_layout.setSpacing(spacing)
         button_layout.addStretch()
@@ -162,7 +163,6 @@ class MindspaceSettingsDialog(QDialog):
         self.cancel_button.clicked.connect(self.reject)
 
         # Set minimum button sizes
-        zoom_factor = style_manager.zoom_factor()
         min_button_width = int(90 * zoom_factor)
         min_button_height = 40
         for button in [self.ok_button, self.apply_button, self.cancel_button]:
