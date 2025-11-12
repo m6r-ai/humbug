@@ -18,21 +18,16 @@ Context:
     Context: Existing code
         This is part of the application that deals with conversations between the user and the AI
 
-        Embed: src/humbug/tabs/conversation/*.py
+        Embed: src/humbug/mindspace/mindspace_view.py
+        Embed: src/humbug/style_manager.py
+        Embed: src/humbug/tabs/conversation/conversation_input.py
+        Embed: src/humbug/mindspace/mindspace_settings_dialog.py
 
 Action:
     # Describe the details of the change required.
-    In the current design, if an LLM is engaged in a complex series of operations involving using many
-    tool calls the operation can run for a considerable number of turns and a long time without the
-    user having any ability to intervene, other than to cancel the conversation.
-
-    I would like to have the option for the user to type a message in the input control, as they do
-    for a new conversation message, and have this be added to the next tool call result.  This will
-    allow the user to flag to the LLM that something isn't right, or where the user has some new
-    information to share that will assist the LLM.
-
-    The current UI has a button that the user can click to either submit a new conversation message,
-    or a stop button to cancel the conversation.  We need an extra option to submit an interruption.
+    In the current code, the conversation input shows a "cog" button to access the conversation settings.  I want
+    to add a similar capability where a cog button is shown to the right of the mindspace label (on the far
+    right edge, similar to how the buttons appear on the right edge for the conversation input.
 
     How might this be done?
 

@@ -2,8 +2,9 @@
 
 import os
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QSplitter, QLabel
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QToolButton
+from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtGui import QIcon
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -25,6 +26,7 @@ class MindspaceView(QWidget):
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
     file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
+    settings_requested = Signal()  # Emits when settings button is clicked
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the mindspace view widget."""
@@ -43,9 +45,9 @@ class MindspaceView(QWidget):
         # Create header container for mindspace name
         self._header_widget = QWidget()
         self._header_widget.setObjectName("_header_widget")
-        header_layout = QVBoxLayout(self._header_widget)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(0)
+        header_layout = QHBoxLayout(self._header_widget)
+        header_layout.setContentsMargins(10, 7, 7, 7)
+        header_layout.setSpacing(4)
 
         # Create mindspace label
         self._mindspace_label = QLabel()
@@ -53,6 +55,14 @@ class MindspaceView(QWidget):
         self._mindspace_label.setContentsMargins(0, 0, 0, 0)
 
         header_layout.addWidget(self._mindspace_label)
+        header_layout.addStretch()
+
+        # Create settings button (initially hidden)
+        self._settings_button = QToolButton(self._header_widget)
+        self._settings_button.clicked.connect(self._on_settings_button_clicked)
+        self._settings_button.hide()
+        header_layout.addWidget(self._settings_button)
+
         layout.addWidget(self._header_widget)
 
         # Create splitter for mindspace views
@@ -267,14 +277,20 @@ class MindspaceView(QWidget):
         # Update the mindspace label
         if not path:
             self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
+            self._settings_button.hide()
 
         else:
             self._mindspace_label.setText(os.path.basename(path))
+            self._settings_button.show()
 
         # Forward to all views
         self._files_view.set_mindspace(path)
         self._conversations_view.set_mindspace(path)
         self._preview_view.set_mindspace(path)
+
+    def _on_settings_button_clicked(self) -> None:
+        """Handle settings button click."""
+        self.settings_requested.emit()
 
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
@@ -284,7 +300,23 @@ class MindspaceView(QWidget):
         if current_text == none_text or not current_text:
             self._mindspace_label.setText(none_text)
 
+        # Update button tooltip
+        self._settings_button.setToolTip(self._language_manager.strings().mindspace_settings)
+
         self.apply_style()
+
+    def _update_button_styling(self) -> None:
+        """Update button styling and icons."""
+        # Apply icon and styling
+        icon_base_size = 14
+        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+
+        # Update settings button
+        self._settings_button.setIcon(QIcon(self._style_manager.scale_icon(
+            self._style_manager.get_icon_path("cog"), icon_base_size
+        )))
+        self._settings_button.setIconSize(icon_size)
 
     def apply_style(self) -> None:
         """Update styling when application style changes."""
@@ -296,8 +328,12 @@ class MindspaceView(QWidget):
         font.setPointSize(int(base_font_size * zoom_factor))
         self._mindspace_label.setFont(font)
 
+        # Update button styling
+        self._update_button_styling()
+
         branch_icon_size = round(12 * zoom_factor)
         expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
+        background_color = self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND)
 
         # Style the mindspace view
         self.setStyleSheet(f"""
@@ -313,7 +349,24 @@ class MindspaceView(QWidget):
                 background-color: transparent;
                 border: none;
                 margin: 0px;
-                padding: 7px 0px 7px 10px;
+                padding: 0px;
+            }}
+
+            #_header_widget QToolButton {{
+                background-color: {background_color};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 0px;
+            }}
+            #_header_widget QToolButton:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            #_header_widget QToolButton:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+            #_header_widget QToolButton:disabled {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: {background_color};
             }}
 
             #MindspaceCollapsibleHeader {{

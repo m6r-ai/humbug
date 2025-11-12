@@ -328,6 +328,7 @@ class MainWindow(QMainWindow):
         self._mindspace_view.file_renamed.connect(self._on_mindspace_view_file_renamed)
         self._mindspace_view.file_edited.connect(self._on_mindspace_view_file_edited)
         self._mindspace_view.file_opened_in_preview.connect(self._on_mindspace_view_file_opened_in_preview)
+        self._mindspace_view.settings_requested.connect(self._show_mindspace_settings_dialog)
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
