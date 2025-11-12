@@ -501,6 +501,8 @@ class ConversationMessageSection(QFrame):
 
         self._apply_button_style()
 
+        self._renderer.apply_style()
+
         # Style the language header if present, or the inline code style if it's not
         if not self._language_header:
             if self._content_node:
