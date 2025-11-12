@@ -6,10 +6,14 @@ New features:
 
 - The conversation input now has a settings button to make it easy to change the conversation settings (without having to
   look at the menu).
+- The mindspace header now has a settings button to make it easy to change the mindspace settings (without having to look
+  at the menu).
 
 Bug fixes:
 
 - Many visual elements are now better spaced and scale better with the zoom factor.
+- Resolve an intermittent problem that can be caused when changing the styling of a markdown document that has horizontal
+  rules in it.
 
 ## v0.28 (2025-11-09)
 
