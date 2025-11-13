@@ -39,6 +39,10 @@ class ColorRole(Enum):
     # Mindspace colours
     MINDSPACE_BACKGROUND = auto()       # Mindspace background
     MINDSPACE_NAME_BACKGROUND = auto()  # Mindspace name background
+    MINDSPACE_NAME_BACKGROUND_HOVER = auto()
+                                        # Mindspace name background hover
+    MINDSPACE_NAME_BACKGROUND_PRESSED = auto()
+                                        # Mindspace name background pressed
     MINDSPACE_HEADING = auto()          # Mindspace heading
 
     # Tab colours

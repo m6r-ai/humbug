@@ -359,10 +359,10 @@ class MindspaceView(QWidget):
                 padding: 0px;
             }}
             #_header_widget QToolButton:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER)};
             }}
             #_header_widget QToolButton:pressed {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED)};
             }}
             #_header_widget QToolButton:disabled {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
