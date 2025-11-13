@@ -1538,28 +1538,28 @@ class ConversationWidget(QWidget):
                 border: none;
                 background-color: transparent;
             }}
-            #ConversationMessage #_role_label[message_source="user"] {{
+            #ConversationMessage[message_source="user"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
             }}
-            #ConversationMessage #_role_label[message_source="ai_connected"] {{
+            #ConversationMessage[message_source="ai_connected"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_STREAMING)};
             }}
-            #ConversationMessage #_role_label[message_source="ai"] {{
+            #ConversationMessage[message_source="ai"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_AI)};
             }}
-            #ConversationMessage #_role_label[message_source="reasoning"] {{
+            #ConversationMessage[message_source="reasoning"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_REASONING)};
             }}
-            #ConversationMessage #_role_label[message_source="tool_call"] {{
+            #ConversationMessage[message_source="tool_call"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_TOOL_CALL)};
             }}
-            #ConversationMessage #_role_label[message_source="tool_result"] {{
+            #ConversationMessage[message_source="tool_result"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_TOOL_RESULT)};
             }}
-            #ConversationMessage #_role_label[message_source="system"] {{
+            #ConversationMessage[message_source="system"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
-            #ConversationMessage #_role_label[message_source="user_queued"] {{
+            #ConversationMessage[message_source="user_queued"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_QUEUED)};
             }}
 
@@ -1579,14 +1579,28 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_save_button:hover,
             #ConversationMessage #_fork_button:hover,
             #ConversationMessage #_delete_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
 
             #ConversationMessage #_copy_button:pressed,
             #ConversationMessage #_save_button:pressed,
             #ConversationMessage #_fork_button:pressed,
             #ConversationMessage #_delete_button:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+            }}
+
+            #ConversationMessage[message_source="user"] #_copy_button:hover,
+            #ConversationMessage[message_source="user"] #_save_button:hover,
+            #ConversationMessage[message_source="user"] #_fork_button:hover,
+            #ConversationMessage[message_source="user"] #_delete_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+            }}
+
+            #ConversationMessage[message_source="user"] #_copy_button:pressed,
+            #ConversationMessage[message_source="user"] #_save_button:pressed,
+            #ConversationMessage[message_source="user"] #_fork_button:pressed,
+            #ConversationMessage[message_source="user"] #_delete_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
             }}
 
             #ConversationMessage #_approval_widget {{
@@ -1710,11 +1724,29 @@ class ConversationWidget(QWidget):
                 border: none;
                 padding: 0px;
             }}
-            #ConversationMessage #ConversationMessageSection QToolButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            #ConversationMessage #ConversationMessageSection[section_style="text-system"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
-            #ConversationMessage #ConversationMessageSection QToolButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            #ConversationMessage #ConversationMessageSection[section_style="text-system"] QToolButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+            }}
+            #ConversationMessage #ConversationMessageSection[section_style="text-user"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+            }}
+            #ConversationMessage #ConversationMessageSection[section_style="text-user"] QToolButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
+            }}
+            #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
+            }}
+            #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
             }}
 
             /* Scrollbars within message sections */

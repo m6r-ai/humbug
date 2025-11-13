@@ -81,6 +81,14 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#080808",
                 ColorMode.LIGHT: "#f8f8f8"
             },
+            ColorRole.BACKGROUND_TERTIARY_HOVER: {
+                ColorMode.DARK: "#303030",
+                ColorMode.LIGHT: "#e0e0e0"
+            },
+            ColorRole.BACKGROUND_TERTIARY_PRESSED: {
+                ColorMode.DARK: "#505050",
+                ColorMode.LIGHT: "#c8c8c8"
+            },
             ColorRole.BACKGROUND_DIALOG: {
                 ColorMode.DARK: "#282828",
                 ColorMode.LIGHT: "#d0d0d0"
@@ -311,9 +319,25 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#181818",
                 ColorMode.LIGHT: "#f2f2f2"
             },
+            ColorRole.MESSAGE_BACKGROUND_HOVER: {
+                ColorMode.DARK: "#383838",
+                ColorMode.LIGHT: "#d8d8d8"
+            },
+            ColorRole.MESSAGE_BACKGROUND_PRESSED: {
+                ColorMode.DARK: "#505050",
+                ColorMode.LIGHT: "#c0c0c0"
+            },
             ColorRole.MESSAGE_USER_BACKGROUND: {
                 ColorMode.DARK: "#282828",
                 ColorMode.LIGHT: "#e0e0e0"
+            },
+            ColorRole.MESSAGE_USER_BACKGROUND_HOVER: {
+                ColorMode.DARK: "#484848",
+                ColorMode.LIGHT: "#c0c0c0"
+            },
+            ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: {
+                ColorMode.DARK: "#606060",
+                ColorMode.LIGHT: "#a0a0a0"
             },
             ColorRole.MESSAGE_BORDER: {
                 ColorMode.DARK: "#303030",

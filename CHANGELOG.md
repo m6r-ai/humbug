@@ -14,6 +14,7 @@ Bug fixes:
 - Many visual elements are now better spaced and scale better with the zoom factor.
 - Resolve an intermittent problem that can be caused when changing the styling of a markdown document that has horizontal
   rules in it.
+- Buttons in headers now have "hover" and "pressed" effects.
 
 ## v0.28 (2025-11-09)
 

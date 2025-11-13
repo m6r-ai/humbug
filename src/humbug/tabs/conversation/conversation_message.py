@@ -129,7 +129,6 @@ class ConversationMessage(QFrame):
 
         current_style = self._message_source or AIMessageSource.USER
         role = role_sources.get(current_style, "user")
-        self._role_label.setProperty("message_source", role)
         self.setProperty("message_source", role)
 
         self._copy_message_button: QToolButton | None = None

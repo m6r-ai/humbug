@@ -9,6 +9,9 @@ class ColorRole(Enum):
     BACKGROUND_PRIMARY = auto()         # Main window background
     BACKGROUND_SECONDARY = auto()       # Secondary elements background
     BACKGROUND_TERTIARY = auto()        # Tertiary elements background
+    BACKGROUND_TERTIARY_HOVER = auto()  # Tertiary elements background hover
+    BACKGROUND_TERTIARY_PRESSED = auto()
+                                        # Tertiary elements background pressed
     BACKGROUND_DIALOG = auto()          # Dialog box background
 
     # Text colours
@@ -93,7 +96,11 @@ class ColorRole(Enum):
 
     # Message colours
     MESSAGE_BACKGROUND = auto()         # Message background
+    MESSAGE_BACKGROUND_HOVER = auto()   # Message background hover
+    MESSAGE_BACKGROUND_PRESSED = auto() # Message background pressed
     MESSAGE_USER_BACKGROUND = auto()    # Message background for user messages
+    MESSAGE_USER_BACKGROUND_HOVER = auto()   # Message background hover for user messages
+    MESSAGE_USER_BACKGROUND_PRESSED = auto() # Message background pressed for user messages
     MESSAGE_BORDER = auto()             # Message border
     MESSAGE_USER_BORDER = auto()        # Message border for user messages
     MESSAGE_FOCUSED = auto()            # For highlighting the focused message
