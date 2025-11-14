@@ -8,6 +8,8 @@ New features:
   look at the menu).
 - The mindspace header now has a settings button to make it easy to change the mindspace settings (without having to look
   at the menu).
+- The mindspace settings now have a configuration section relating to terminal scroll-back.  This can now be capped to
+  improve performance and reduce memory usage.
 
 Bug fixes:
 
