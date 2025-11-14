@@ -1,3 +1,4 @@
+from typing import Any, Dict, List
 import logging
 
 from PySide6.QtWidgets import (
@@ -325,3 +326,59 @@ class EditorTab(TabBase):
         self._editor_widget.find_text(text, forward)  # move_cursor defaults to True for user navigation
         current, total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
+
+    def get_text_range(self, start_line: int | None = None, end_line: int | None = None) -> str:
+        """
+        Get text from editor, optionally limited to line range.
+
+        Args:
+            start_line: Starting line number (1-indexed, inclusive), None for start
+            end_line: Ending line number (1-indexed, inclusive), None for end
+
+        Returns:
+            Text content for the specified range
+        """
+        return self._editor_widget.get_text_range(start_line, end_line)
+
+    def get_cursor_info(self) -> Dict[str, Any]:
+        """Get cursor position and selection information."""
+        return self._editor_widget.get_cursor_info()
+
+    def get_editor_info(self) -> Dict[str, Any]:
+        """Get editor metadata and document information."""
+        return self._editor_widget.get_editor_info()
+
+    def goto_line(self, line: int, column: int = 1) -> None:
+        """
+        Move cursor to specific line and column.
+
+        Args:
+            line: Target line number (1-indexed)
+            column: Target column number (1-indexed, default 1)
+        """
+        self._editor_widget.goto_line(line, column)
+
+    def set_selection(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
+        """
+        Select a specific range of text.
+
+        Args:
+            start_line: Starting line number (1-indexed)
+            start_column: Starting column number (1-indexed)
+            end_line: Ending line number (1-indexed)
+            end_column: Ending column number (1-indexed)
+        """
+        self._editor_widget.set_selection(start_line, start_column, end_line, end_column)
+
+    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
+        """
+        Find all occurrences of text in the document.
+
+        Args:
+            search_text: Text to search for
+            case_sensitive: Whether search should be case-sensitive
+
+        Returns:
+            List of match information dictionaries
+        """
+        return self._editor_widget.find_all_occurrences(search_text, case_sensitive)

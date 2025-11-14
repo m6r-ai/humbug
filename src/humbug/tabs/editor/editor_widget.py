@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
 from PySide6.QtCore import Qt, QRect, Signal, QObject, QEvent, QTimer
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
-    QResizeEvent, QPaintEvent
+    QResizeEvent, QPaintEvent, QTextDocument
 )
 
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
@@ -1300,3 +1300,273 @@ class EditorWidget(QPlainTextEdit):
     def can_paste(self) -> bool:
         """Check if paste is available."""
         return True
+
+    def get_text_range(self, start_line: int | None = None, end_line: int | None = None) -> str:
+        """
+        Get text from document, optionally limited to line range.
+
+        Args:
+            start_line: Starting line number (1-indexed, inclusive), None for start of document
+            end_line: Ending line number (1-indexed, inclusive), None for end of document
+
+        Returns:
+            Text content for the specified range
+
+        Raises:
+            ValueError: If line numbers are invalid
+        """
+        if start_line is None and end_line is None:
+            return self.toPlainText()
+
+        document = self.document()
+        total_lines = document.blockCount()
+
+        if start_line is None:
+            start_line = 1
+
+        if end_line is None:
+            end_line = total_lines
+
+        if start_line < 1:
+            raise ValueError(f"start_line must be >= 1, got {start_line}")
+
+        if end_line < start_line:
+            raise ValueError(f"end_line ({end_line}) must be >= start_line ({start_line})")
+
+        if start_line > total_lines:
+            raise ValueError(f"start_line ({start_line}) exceeds document length ({total_lines} lines)")
+
+        end_line = min(end_line, total_lines)
+
+        start_block = document.findBlockByLineNumber(start_line - 1)
+        end_block = document.findBlockByLineNumber(end_line - 1)
+
+        if not start_block.isValid() or not end_block.isValid():
+            raise ValueError("Invalid line range")
+
+        cursor = QTextCursor(start_block)
+        cursor.setPosition(end_block.position() + end_block.length() - 1, QTextCursor.MoveMode.KeepAnchor)
+
+        text = cursor.selectedText()
+        text = text.replace('\u2029', '\n')
+
+        return text
+
+    def get_cursor_info(self) -> Dict[str, Any]:
+        """
+        Get current cursor position and selection information.
+
+        Returns:
+            Dictionary with cursor and selection information:
+            - line: Current line number (1-indexed)
+            - column: Current column number (1-indexed)
+            - has_selection: Whether text is selected
+            - selection_start_line: Start line of selection (1-indexed, if has_selection)
+            - selection_start_column: Start column of selection (1-indexed, if has_selection)
+            - selection_end_line: End line of selection (1-indexed, if has_selection)
+            - selection_end_column: End column of selection (1-indexed, if has_selection)
+            - selected_text: The selected text (if has_selection)
+        """
+        cursor = self.textCursor()
+        document = self.document()
+
+        current_line = cursor.blockNumber() + 1
+        current_column = cursor.columnNumber() + 1
+
+        info: Dict[str, Any] = {
+            'line': current_line,
+            'column': current_column,
+            'has_selection': cursor.hasSelection()
+        }
+
+        if cursor.hasSelection():
+            selection_start = cursor.selectionStart()
+            selection_end = cursor.selectionEnd()
+
+            start_cursor = QTextCursor(document)
+            start_cursor.setPosition(selection_start)
+            info['selection_start_line'] = start_cursor.blockNumber() + 1
+            info['selection_start_column'] = start_cursor.columnNumber() + 1
+
+            end_cursor = QTextCursor(document)
+            end_cursor.setPosition(selection_end)
+            info['selection_end_line'] = end_cursor.blockNumber() + 1
+            info['selection_end_column'] = end_cursor.columnNumber() + 1
+
+            selected_text = cursor.selectedText()
+            info['selected_text'] = selected_text.replace('\u2029', '\n')
+
+        return info
+
+    def get_editor_info(self) -> Dict[str, Any]:
+        """
+        Get editor metadata and document information.
+
+        Returns:
+            Dictionary with editor information:
+            - line_count: Total number of lines
+            - language: Programming language name
+            - language_id: Programming language identifier
+            - encoding: File encoding
+            - is_modified: Whether document has unsaved changes
+            - file_path: Path to file (empty string if untitled)
+            - untitled_number: Untitled file number (None if saved file)
+        """
+        return {
+            'line_count': self.document().blockCount(),
+            'language': ProgrammingLanguageUtils.get_display_name(self._current_programming_language),
+            'language_id': self._current_programming_language.name,
+            'encoding': 'UTF-8',
+            'is_modified': self._is_modified,
+            'file_path': self._path,
+            'untitled_number': self._untitled_number
+        }
+
+    def goto_line(self, line: int, column: int = 1) -> None:
+        """
+        Move cursor to specific line and column.
+
+        Args:
+            line: Target line number (1-indexed)
+            column: Target column number (1-indexed, default 1)
+
+        Raises:
+            ValueError: If line or column is invalid
+        """
+        document = self.document()
+        total_lines = document.blockCount()
+
+        if line < 1:
+            raise ValueError(f"line must be >= 1, got {line}")
+
+        if line > total_lines:
+            raise ValueError(f"line ({line}) exceeds document length ({total_lines} lines)")
+
+        if column < 1:
+            raise ValueError(f"column must be >= 1, got {column}")
+
+        target_block = document.findBlockByLineNumber(line - 1)
+        if not target_block.isValid():
+            raise ValueError(f"Invalid line number: {line}")
+
+        line_length = target_block.length() - 1  # -1 for newline character
+        if column > line_length + 1:  # +1 because we can position at end of line
+            raise ValueError(f"column ({column}) exceeds line length ({line_length})")
+
+        cursor = QTextCursor(target_block)
+        cursor.movePosition(
+            QTextCursor.MoveOperation.Right,
+            QTextCursor.MoveMode.MoveAnchor,
+            column - 1
+        )
+
+        self.setTextCursor(cursor)
+        self.ensureCursorVisible()
+
+    def set_selection(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
+        """
+        Select a specific range of text.
+
+        Args:
+            start_line: Starting line number (1-indexed)
+            start_column: Starting column number (1-indexed)
+            end_line: Ending line number (1-indexed)
+            end_column: Ending column number (1-indexed)
+
+        Raises:
+            ValueError: If any position is invalid
+        """
+        document = self.document()
+        total_lines = document.blockCount()
+
+        if start_line < 1 or start_line > total_lines:
+            raise ValueError(f"start_line ({start_line}) must be between 1 and {total_lines}")
+
+        if end_line < 1 or end_line > total_lines:
+            raise ValueError(f"end_line ({end_line}) must be between 1 and {total_lines}")
+
+        if start_column < 1:
+            raise ValueError(f"start_column must be >= 1, got {start_column}")
+
+        if end_column < 1:
+            raise ValueError(f"end_column must be >= 1, got {end_column}")
+
+        start_block = document.findBlockByLineNumber(start_line - 1)
+        end_block = document.findBlockByLineNumber(end_line - 1)
+
+        if not start_block.isValid() or not end_block.isValid():
+            raise ValueError("Invalid line range")
+
+        start_line_length = start_block.length() - 1
+        if start_column > start_line_length + 1:
+            raise ValueError(f"start_column ({start_column}) exceeds line length ({start_line_length})")
+
+        end_line_length = end_block.length() - 1
+        if end_column > end_line_length + 1:
+            raise ValueError(f"end_column ({end_column}) exceeds line length ({end_line_length})")
+
+        cursor = QTextCursor(start_block)
+        cursor.movePosition(
+            QTextCursor.MoveOperation.Right,
+            QTextCursor.MoveMode.MoveAnchor,
+            start_column - 1
+        )
+
+        end_cursor = QTextCursor(end_block)
+        end_cursor.movePosition(
+            QTextCursor.MoveOperation.Right,
+            QTextCursor.MoveMode.MoveAnchor,
+            end_column - 1
+        )
+
+        cursor.setPosition(end_cursor.position(), QTextCursor.MoveMode.KeepAnchor)
+
+        self.setTextCursor(cursor)
+        self.ensureCursorVisible()
+
+    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
+        """
+        Find all occurrences of text in the document.
+
+        Args:
+            search_text: Text to search for
+            case_sensitive: Whether search should be case-sensitive
+
+        Returns:
+            List of dictionaries with match information:
+            - line: Line number (1-indexed)
+            - column: Column number (1-indexed)
+            - match_text: The matched text
+            - context: Line of text containing the match
+        """
+        if not search_text:
+            return []
+
+        document = self.document()
+        matches: List[Dict[str, Any]] = []
+
+        find_flags = QTextDocument.FindFlag(0)
+        if case_sensitive:
+            find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
+        cursor = QTextCursor(document)
+        while True:
+            cursor = document.find(search_text, cursor, find_flags)
+            if cursor.isNull():
+                break
+
+            line = cursor.blockNumber() + 1
+            column = cursor.columnNumber() + 1
+            match_text = cursor.selectedText()
+
+            block = cursor.block()
+            context = block.text()
+
+            matches.append({
+                'line': line,
+                'column': column,
+                'match_text': match_text,
+                'context': context
+            })
+
+        return matches

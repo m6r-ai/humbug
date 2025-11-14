@@ -11,6 +11,8 @@ New features:
 - The mindspace settings now have a configuration section relating to terminal scroll-back.  This can now be capped to
   improve performance and reduce memory usage.
 - Added GPT 5.1 support, and removed GPT O1 support.
+- Added more support to allow an AI to interact with editor tabs.  This includes reading content, finding things, moving the
+  view, selecting text regions, and understanding the editor metadata.
 
 Bug fixes:
 

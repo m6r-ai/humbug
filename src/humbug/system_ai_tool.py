@@ -15,6 +15,7 @@ from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
 from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.user.user_manager import UserManager
@@ -128,8 +129,55 @@ class SystemAITool(AITool):
                     type="integer",
                     description="Number of lines to read from terminal buffer (for read_terminal operation)",
                     required=False
-                )
-            ]
+                ),
+                AIToolParameter(
+                    name="line",
+                    type="integer",
+                    description="Line number (1-indexed) for editor operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="column",
+                    type="integer",
+                    description="Column number (1-indexed) for editor operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="start_line",
+                    type="integer",
+                    description="Start line number (1-indexed) for editor operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="end_line",
+                    type="integer",
+                    description="End line number (1-indexed) for editor operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="start_column",
+                    type="integer",
+                    description="Start column number (1-indexed) for editor operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="end_column",
+                    type="integer",
+                    description="End column number (1-indexed) for editor operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="search_text",
+                    type="string",
+                    description="Text to search for in editor",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="case_sensitive",
+                    type="boolean",
+                    description="Whether search should be case-sensitive (for search_in_editor operation)",
+                    required=False
+                ),            ]
         )
 
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
@@ -250,6 +298,49 @@ class SystemAITool(AITool):
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get terminal status and process information, given its tab ID"
+            ),
+            "read_editor_content": AIToolOperationDefinition(
+                name="read_editor_content",
+                handler=self._read_editor_content,
+                allowed_parameters={"tab_id", "start_line", "end_line"},
+                required_parameters={"tab_id"},
+                description="Read content from an editor tab. Optionally specify line range with start_line "
+                    "and end_line (1-indexed, inclusive)."
+            ),
+            "get_editor_cursor_info": AIToolOperationDefinition(
+                name="get_editor_cursor_info",
+                handler=self._get_editor_cursor_info,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Get cursor position and selection information from an editor tab."
+            ),
+            "get_editor_info": AIToolOperationDefinition(
+                name="get_editor_info",
+                handler=self._get_editor_info,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Get editor metadata including line count, language, encoding, and modification status."
+            ),
+            "goto_editor_line": AIToolOperationDefinition(
+                name="goto_editor_line",
+                handler=self._goto_editor_line,
+                allowed_parameters={"tab_id", "line", "column"},
+                required_parameters={"tab_id", "line"},
+                description="Move cursor to specific line and optional column in an editor tab (1-indexed)."
+            ),
+            "select_editor_range": AIToolOperationDefinition(
+                name="select_editor_range",
+                handler=self._select_editor_range,
+                allowed_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
+                required_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
+                description="Select a specific range of text in an editor tab (1-indexed). Highlights the region for the user."
+            ),
+            "search_in_editor": AIToolOperationDefinition(
+                name="search_in_editor",
+                handler=self._search_in_editor,
+                allowed_parameters={"tab_id", "search_text", "case_sensitive"},
+                required_parameters={"tab_id", "search_text"},
+                description="Find all occurrences of text in an editor tab. Returns list of matches with line, column, and context."
             )
         }
 
@@ -370,6 +461,31 @@ class SystemAITool(AITool):
 
         if not isinstance(tab, TerminalTab):
             raise AIToolExecutionError(f"Tab {tab_id} is not a terminal tab")
+
+        return tab
+
+
+    def _get_editor_tab(self, arguments: Dict[str, Any]) -> 'EditorTab':
+        """
+        Get an editor tab by ID.
+
+        Args:
+            arguments: Tool arguments containing tab_id
+
+        Returns:
+            EditorTab instance
+
+        Raises:
+            AIToolExecutionError: If no editor tab found
+        """
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
+
+        tab = self._column_manager.get_tab_by_id(tab_id)
+        if not tab:
+            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+
+        if not isinstance(tab, EditorTab):
+            raise AIToolExecutionError(f"Tab {tab_id} is not an editor tab")
 
         return tab
 
@@ -1067,3 +1183,231 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get terminal status: {str(e)}") from e
+    async def _read_editor_content(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Read content from an editor tab."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        start_line = arguments.get("start_line")
+        end_line = arguments.get("end_line")
+
+        if start_line is not None and not isinstance(start_line, int):
+            raise AIToolExecutionError("'start_line' must be an integer")
+
+        if end_line is not None and not isinstance(end_line, int):
+            raise AIToolExecutionError("'end_line' must be an integer")
+
+        try:
+            content = editor_tab.get_text_range(start_line, end_line)
+
+            if start_line is not None or end_line is not None:
+                range_desc = f"lines {start_line or 1}-{end_line or 'end'}"
+                log_msg = f"AI read editor content ({range_desc})\ntab ID: {tab_id}"
+                result_msg = f"Editor content (tab {tab_id}, {range_desc}):\n\n{content}"
+
+            else:
+                log_msg = f"AI read editor content\ntab ID: {tab_id}"
+                result_msg = f"Editor content (tab {tab_id}):\n\n{content}"
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                log_msg
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=result_msg
+            )
+
+        except ValueError as e:
+            raise AIToolExecutionError(f"Invalid line range: {str(e)}") from e
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to read editor content: {str(e)}") from e
+
+    async def _get_editor_cursor_info(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get cursor position and selection information from an editor tab."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        try:
+            cursor_info = editor_tab.get_cursor_info()
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested cursor info\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Cursor info (tab {tab_id}):\n{json.dumps(cursor_info, indent=2)}"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get cursor info: {str(e)}") from e
+
+    async def _get_editor_info(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get editor metadata and document information."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        try:
+            editor_info = editor_tab.get_editor_info()
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested editor info\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Editor info (tab {tab_id}):\n{json.dumps(editor_info, indent=2)}"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get editor info: {str(e)}") from e
+
+    async def _goto_editor_line(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Move cursor to specific line and column in an editor tab."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        line = self._get_int_value_from_key("line", arguments)
+        column = arguments.get("column", 1)
+
+        if not isinstance(column, int):
+            raise AIToolExecutionError("'column' must be an integer")
+
+        try:
+            editor_tab.goto_line(line, column)
+
+            col_desc = f", column {column}" if column != 1 else ""
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI moved cursor to line {line}{col_desc}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Moved cursor to line {line}{col_desc} in tab {tab_id}"
+            )
+
+        except ValueError as e:
+            raise AIToolExecutionError(f"Invalid position: {str(e)}") from e
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to goto line: {str(e)}") from e
+
+    async def _select_editor_range(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Select a specific range of text in an editor tab."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        start_line = self._get_int_value_from_key("start_line", arguments)
+        start_column = self._get_int_value_from_key("start_column", arguments)
+        end_line = self._get_int_value_from_key("end_line", arguments)
+        end_column = self._get_int_value_from_key("end_column", arguments)
+
+        try:
+            editor_tab.set_selection(start_line, start_column, end_line, end_column)
+
+            range_desc = f"lines {start_line}:{start_column} to {end_line}:{end_column}"
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI selected text range: {range_desc}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Selected text range {range_desc} in tab {tab_id}"
+            )
+
+        except ValueError as e:
+            raise AIToolExecutionError(f"Invalid selection range: {str(e)}") from e
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to select range: {str(e)}") from e
+
+    async def _search_in_editor(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Find all occurrences of text in an editor tab."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        search_text = self._get_str_value_from_key("search_text", arguments)
+        case_sensitive = arguments.get("case_sensitive", False)
+
+        if not isinstance(case_sensitive, bool):
+            raise AIToolExecutionError("'case_sensitive' must be a boolean")
+
+        try:
+            matches = editor_tab.find_all_occurrences(search_text, case_sensitive)
+
+            case_desc = " (case-sensitive)" if case_sensitive else ""
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI searched for '{search_text}'{case_desc}: {len(matches)} matches\ntab ID: {tab_id}"
+            )
+
+            if not matches:
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="system",
+                    content=f"No matches found for '{search_text}'{case_desc} in tab {tab_id}"
+                )
+
+            result = {
+                "search_text": search_text,
+                "case_sensitive": case_sensitive,
+                "match_count": len(matches),
+                "matches": matches
+            }
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Search results for '{search_text}'{case_desc} in tab {tab_id}:\n{json.dumps(result, indent=2)}"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to search in editor: {str(e)}") from e
