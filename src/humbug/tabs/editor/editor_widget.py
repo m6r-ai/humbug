@@ -648,7 +648,7 @@ class EditorWidget(QPlainTextEdit):
         )
 
         self.setTextCursor(cursor)
-        self.ensureCursorVisible()
+        self.centerCursor()
 
     def _get_cursor_position(self) -> Dict[str, int]:
         """
@@ -1259,7 +1259,7 @@ class EditorWidget(QPlainTextEdit):
             cursor = QTextCursor(self.document())
             cursor.setPosition(self._matches[match_index][0])
             self.setTextCursor(cursor)
-            self.ensureCursorVisible()
+            self.centerCursor()
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
@@ -1461,7 +1461,7 @@ class EditorWidget(QPlainTextEdit):
         )
 
         self.setTextCursor(cursor)
-        self.ensureCursorVisible()
+        self.centerCursor()
 
     def set_selection(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
         """
@@ -1522,7 +1522,7 @@ class EditorWidget(QPlainTextEdit):
         cursor.setPosition(end_cursor.position(), QTextCursor.MoveMode.KeepAnchor)
 
         self.setTextCursor(cursor)
-        self.ensureCursorVisible()
+        self.centerCursor()
 
     def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
         """
