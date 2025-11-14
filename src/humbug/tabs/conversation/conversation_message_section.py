@@ -147,14 +147,13 @@ class ConversationMessageSection(QFrame):
 
         if language is None:
             self._use_markdown = not self._is_input
+            self._needs_lazy_update = False
             if self._use_markdown:
                 self._highlighter = None
-                self._needs_lazy_update = False
 
             else:
                 self._highlighter = ConversationHighlighter(self._text_area.document())
                 self._highlighter.code_block_state_changed.connect(self._on_code_block_state_changed)
-                self._needs_lazy_update = False
 
         else:
             self._use_markdown = False
