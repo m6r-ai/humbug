@@ -10,6 +10,7 @@ New features:
   at the menu).
 - The mindspace settings now have a configuration section relating to terminal scroll-back.  This can now be capped to
   improve performance and reduce memory usage.
+- Added GPT 5.1 support, and removed GPT O1 support.
 
 Bug fixes:
 

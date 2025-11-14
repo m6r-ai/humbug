@@ -363,6 +363,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "gpt-5.1 (non-reasoning)": AIModel(
+            name="gpt-5.1",
+            provider="openai",
+            context_window=400000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-5.1": AIModel(
+            name="gpt-5.1",
+            provider="openai",
+            context_window=400000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "gpt-5": AIModel(
             name="gpt-5",
             provider="openai",
@@ -410,15 +428,6 @@ class AIConversationSettings:
         ),
         "o3": AIModel(
             name="o3",
-            provider="openai",
-            context_window=200000,
-            max_output_tokens=100000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "o1": AIModel(
-            name="o1",
             provider="openai",
             context_window=200000,
             max_output_tokens=100000,
