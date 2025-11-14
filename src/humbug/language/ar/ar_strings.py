@@ -147,6 +147,13 @@ def get_arabic_strings() -> LanguageStrings:
         backup_settings="إعدادات النسخ الاحتياطي",
         auto_backup="نسخ احتياطي تلقائي",
         backup_interval="فترة النسخ الاحتياطي (ثواني)",
+        terminal_settings="إعدادات الطرفية",
+        terminal_settings_description=(
+            "تكوين سلوك مخزن التمرير المؤقت للطرفية. يخزن مخزن التمرير المؤقت سجل إخراج الطرفية "
+            "الذي يمكنك التمرير للرجوع إليه."
+        ),
+        terminal_scrollback_enabled="تحديد مخزن التمرير المؤقت",
+        terminal_scrollback_lines="خطوط التمرير",
         tool_settings="إعدادات أدوات الذكاء الاصطناعي",
         tools_description="تفعيل أو إلغاء تفعيل الأدوات الفردية لهذا المساحة الذهنية",
 

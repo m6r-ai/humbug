@@ -89,6 +89,13 @@ class TerminalTab(TabBase):
         self._command = command
         self._mindspace_manager = MindspaceManager()
 
+        # Read scrollback settings
+        settings = self._mindspace_manager.settings()
+        assert settings is not None, "Settings should be available in TerminalTab"
+        scrollback_limit = None
+        if settings.terminal_scrollback_enabled:
+            scrollback_limit = settings.terminal_scrollback_lines
+
         # Create layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -102,8 +109,8 @@ class TerminalTab(TabBase):
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
         layout.addWidget(self._find_widget)
 
-        # Create terminal widget
-        self._terminal_widget = TerminalWidget(self)
+        # Create terminal widget with scrollback limit
+        self._terminal_widget = TerminalWidget(self, scrollback_limit)
         layout.addWidget(self._terminal_widget)
 
         # Connect signals

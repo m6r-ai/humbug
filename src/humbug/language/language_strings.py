@@ -142,6 +142,10 @@ class LanguageStrings:
     backup_settings: str
     auto_backup: str
     backup_interval: str
+    terminal_settings: str
+    terminal_settings_description: str
+    terminal_scrollback_enabled: str
+    terminal_scrollback_lines: str
     tool_settings: str
     tools_description: str
 

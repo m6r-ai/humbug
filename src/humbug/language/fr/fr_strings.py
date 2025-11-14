@@ -147,6 +147,13 @@ def get_french_strings() -> LanguageStrings:
         backup_settings="Paramètres de sauvegarde",
         auto_backup="Sauvegarde automatique",
         backup_interval="Intervalle de sauvegarde (secondes)",
+        terminal_settings="Paramètres du terminal",
+        terminal_settings_description=(
+            "Configurer le comportement du tampon de défilement du terminal. Le tampon de défilement "
+            "stocke l'historique de sortie du terminal que vous pouvez faire défiler."
+        ),
+        terminal_scrollback_enabled="Limiter le tampon de défilement",
+        terminal_scrollback_lines="Lignes de défilement",
         tool_settings="Paramètres des outils IA",
         tools_description="Activer ou désactiver des outils individuels pour cet espace mental",
 

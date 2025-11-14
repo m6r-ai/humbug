@@ -21,6 +21,8 @@ class MindspaceSettings:
     tab_size: int = 4
     auto_backup: bool = False  # Default to off
     auto_backup_interval: int = 300  # Default 5 minutes in seconds
+    terminal_scrollback_enabled: bool = True  # Default to limited scrollback
+    terminal_scrollback_lines: int = 10000  # Default 10000 lines
 
     @classmethod
     def load(cls, path: str) -> "MindspaceSettings":
@@ -30,6 +32,7 @@ class MindspaceSettings:
             editor = data.get("editor", {})
             conversation = data.get("conversation", {})
             tools = data.get("tools", {})
+            terminal = data.get("terminal", {})
 
             default_model = AIConversationSettings.get_default_model({})
             default_reasoning = AIConversationSettings.get_reasoning_capability(default_model)
@@ -56,6 +59,8 @@ class MindspaceSettings:
                 tab_size=editor.get("tabSize", 4),
                 auto_backup=editor.get("autoBackup", False),
                 auto_backup_interval=editor.get("autoBackupInterval", 300),
+                terminal_scrollback_enabled=terminal.get("scrollbackEnabled", True),
+                terminal_scrollback_lines=terminal.get("scrollbackLines", 10000),
                 enabled_tools=enabled_tools
             )
 
@@ -72,6 +77,10 @@ class MindspaceSettings:
                 "tabSize": self.tab_size,
                 "autoBackup": self.auto_backup,
                 "autoBackupInterval": self.auto_backup_interval,
+            },
+            "terminal": {
+                "scrollbackEnabled": self.terminal_scrollback_enabled,
+                "scrollbackLines": self.terminal_scrollback_lines,
             },
             "tools": {
                 "enabled": self.enabled_tools,

@@ -18,16 +18,25 @@ Context:
     Context: Existing code
         This is part of the application that deals with conversations between the user and the AI
 
-        Embed: src/humbug/mindspace/mindspace_view.py
-        Embed: src/humbug/style_manager.py
-        Embed: src/humbug/tabs/conversation/conversation_input.py
+        Embed: src/terminal/*.py
+        Embed: src/humbug/tabs/terminal/*.py
+        Embed: src/humbug/mindspace/mindspace_settings.py
         Embed: src/humbug/mindspace/mindspace_settings_dialog.py
+        Embed: src/humbug/language/language_strings.py
+        Embed: src/humbug/language/ar/ar_strings.py
+        Embed: src/humbug/language/en/en_strings.py
+        Embed: src/humbug/language/fr/fr_strings.py
 
 Action:
     # Describe the details of the change required.
-    In the current code, the conversation input shows a "cog" button to access the conversation settings.  I want
-    to add a similar capability where a cog button is shown to the right of the mindspace label (on the far
-    right edge, similar to how the buttons appear on the right edge for the conversation input.
+    In the current code, terminals have an unlimited scrollback buffer, but this can get very slow and consume
+    a very large amount of memory.  I would like to add a configuration option to have a defined number of
+    scrollback rows that ranges from 500 lines to 10000 lines.  This config option should be accompanied by a
+    checkbox that can disable this range limit and allow the current unlimited scrollback.
+
+    By default, if the settings do not exist, we should assume a limited scrollback of 10000 lines.
+
+    This will be configured in a new "Terminal Settings" area.
 
     How might this be done?
 

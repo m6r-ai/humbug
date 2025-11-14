@@ -147,6 +147,13 @@ def get_english_strings() -> LanguageStrings:
         backup_settings="Backup Settings",
         auto_backup="Auto Backup",
         backup_interval="Backup Interval (seconds)",
+        terminal_settings="Terminal Settings",
+        terminal_settings_description=(
+            "Configure terminal scrollback buffer behavior. The scrollback buffer stores terminal output "
+            "history that you can scroll back through."
+        ),
+        terminal_scrollback_enabled="Limit Scrollback Buffer",
+        terminal_scrollback_lines="Scrollback Lines",
         tool_settings="AI Tool Settings",
         tools_description="Enable or disable individual tools for this mindspace",
 

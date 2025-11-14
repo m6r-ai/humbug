@@ -150,6 +150,7 @@ class BufferState:
     scroll_region: dict  # Scroll region state
     modes: dict  # Operating modes state
     history_scrollback: bool
+    scrollback_limit: int | None
     max_cursor_row: int
     dimensions: dict  # Buffer dimensions
 
@@ -157,16 +158,20 @@ class BufferState:
 class TerminalBuffer:
     """Manages the state of a terminal screen buffer."""
 
-    def __init__(self, rows: int, cols: int, history_scrollback: bool):
+    def __init__(self, rows: int, cols: int, history_scrollback: bool, scrollback_limit: int | None = None):
         """
         Initialize terminal buffer.
 
         Args:
             rows: Number of rows in the buffer
             cols: Number of columns in the buffer
+            history_scrollback: Whether to keep history (False for alternate buffer)
+            scrollback_limit: Maximum total lines to keep (including visible rows), None for unlimited
         """
         self._rows = rows
         self._cols = cols
+        self._history_scrollback = history_scrollback
+        self._scrollback_limit = scrollback_limit
 
         # Initialize state objects
         self._cursor = CursorState()
@@ -174,12 +179,17 @@ class TerminalBuffer:
         self._scroll_region = ScrollRegion(bottom=rows, rows=rows)
         self._modes = OperatingModes()
         self._tab_stops = TabStopState(cols)
-        self._history_scrollback = history_scrollback
         self._max_cursor_row = 0
 
         # Initialize line storage
         self._lines: List[TerminalLine] = []
         self._add_new_lines(rows)
+
+    def _trim_scrollback(self) -> None:
+        """Trim scrollback buffer to configured limit if needed."""
+        if self._scrollback_limit is not None and len(self._lines) > self._scrollback_limit:
+            excess = len(self._lines) - self._scrollback_limit
+            del self._lines[:excess]
 
     def get_state(self) -> BufferState:
         """
@@ -230,6 +240,7 @@ class TerminalBuffer:
                 'bracketed_paste': self._modes.bracketed_paste
             },
             history_scrollback=self._history_scrollback,
+            scrollback_limit=self._scrollback_limit,
             max_cursor_row=self._max_cursor_row,
             dimensions={
                 'rows': self._rows,
@@ -248,6 +259,9 @@ class TerminalBuffer:
         if (state.dimensions['rows'] != self._rows or
             state.dimensions['cols'] != self._cols):
             self.resize(state.dimensions['rows'], state.dimensions['cols'])
+
+        # Restore scrollback limit
+        self._scrollback_limit = state.scrollback_limit
 
         # Restore lines
         self._lines = []
@@ -371,6 +385,9 @@ class TerminalBuffer:
         # Update buffer contents
         self._lines = new_lines
 
+        # Trim to scrollback limit if needed
+        self._trim_scrollback()
+
         # Adjust cursor position
         if old_line_count + add_rows >= new_rows:
             self._cursor.row = max(0, self._cursor.row + new_rows - old_rows - add_rows + delete_rows)
@@ -429,6 +446,9 @@ class TerminalBuffer:
                 scrolled_line = self._lines.pop(start)
                 if self._history_scrollback:
                     self._lines.insert(len(self._lines) - self._rows, scrolled_line)
+
+        # Trim scrollback if needed
+        self._trim_scrollback()
 
     def scroll_down(self, count: int) -> None:
         """

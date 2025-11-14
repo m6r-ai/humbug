@@ -19,18 +19,19 @@ class MouseTrackingState:
 class TerminalState:
     """Manages terminal emulator state and processing."""
 
-    def __init__(self, rows: int, cols: int) -> None:
+    def __init__(self, rows: int, cols: int, scrollback_limit: int | None = None) -> None:
         """
         Initialize terminal state.
 
         Args:
             rows: Initial number of rows
             cols: Initial number of columns
+            scrollback_limit: Maximum total lines to keep (including visible rows), None for unlimited
         """
         self._logger = logging.getLogger("TerminalState")
 
         # Initialize buffers
-        self._main_buffer = TerminalBuffer(rows, cols, True)
+        self._main_buffer = TerminalBuffer(rows, cols, True, scrollback_limit)
         self._alternate_buffer: TerminalBuffer | None = None
         self._current_buffer = self._main_buffer
 
@@ -403,7 +404,7 @@ class TerminalState:
         if enable:
             if not self._alternate_buffer:
                 buffer = self._current_buffer
-                self._alternate_buffer = TerminalBuffer(buffer.rows(), buffer.cols(), False)
+                self._alternate_buffer = TerminalBuffer(buffer.rows(), buffer.cols(), False, None)
 
             self._current_buffer = self._alternate_buffer
 
@@ -664,7 +665,8 @@ class TerminalState:
                 self._alternate_buffer = TerminalBuffer(
                     metadata['alternate_buffer'].dimensions['rows'],
                     metadata['alternate_buffer'].dimensions['cols'],
-                    False
+                    False,
+                    None
                 )
             self._alternate_buffer.restore_state(metadata['alternate_buffer'])
 
