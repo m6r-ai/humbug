@@ -361,11 +361,11 @@ class StyleManager(QObject):
             },
             ColorRole.MESSAGE_USER: {
                 ColorMode.DARK: "#7090e0",
-                ColorMode.LIGHT: "#6080c0"
+                ColorMode.LIGHT: "#5068a0"
             },
             ColorRole.MESSAGE_AI: {
                 ColorMode.DARK: "#80c080",
-                ColorMode.LIGHT: "#40a040"
+                ColorMode.LIGHT: "#208020"
             },
             ColorRole.MESSAGE_REASONING: {
                 ColorMode.DARK: "#808080",
