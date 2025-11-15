@@ -124,7 +124,6 @@ class ConversationMessageSection(QFrame):
 
         self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
 
-        self._needs_lazy_update = False
         self._set_language(language)
 
         self._mouse_left_button_pressed = False
@@ -147,7 +146,6 @@ class ConversationMessageSection(QFrame):
 
         if language is None:
             self._use_markdown = not self._is_input
-            self._needs_lazy_update = False
             if self._use_markdown:
                 self._highlighter = None
 
@@ -160,7 +158,6 @@ class ConversationMessageSection(QFrame):
 
             # Defer creation of expensive language highlighter until section becomes visible
             self._highlighter = None
-            self._needs_lazy_update = True
             self._text_area.set_has_code_block(True)
 
         strings = self._language_manager.strings()
@@ -184,29 +181,26 @@ class ConversationMessageSection(QFrame):
 
     def lazy_update(self, event_filter: QObject) -> None:
         """Lazy update - called when section becomes visible."""
-        if not self._needs_lazy_update:
-            return
-
-        self._needs_lazy_update = False
-
         if self._language is None:
             return
 
         strings = self._language_manager.strings()
 
         # Add Copy button with icon
-        self._copy_button = QToolButton()
-        self._copy_button.clicked.connect(self._copy_all_content)
-        self._copy_button.setToolTip(strings.tooltip_copy_contents)
-        self._copy_button.installEventFilter(event_filter)
-        self._header_layout.addWidget(self._copy_button)
+        if self._copy_button is None:
+            self._copy_button = QToolButton()
+            self._copy_button.clicked.connect(self._copy_all_content)
+            self._copy_button.setToolTip(strings.tooltip_copy_contents)
+            self._copy_button.installEventFilter(event_filter)
+            self._header_layout.addWidget(self._copy_button)
 
         # Add Save As button with icon
-        self._save_as_button = QToolButton()
-        self._save_as_button.clicked.connect(self._save_as)
-        self._save_as_button.setToolTip(strings.tooltip_save_contents)
-        self._save_as_button.installEventFilter(event_filter)
-        self._header_layout.addWidget(self._save_as_button)
+        if self._save_as_button is None:
+            self._save_as_button = QToolButton()
+            self._save_as_button.clicked.connect(self._save_as)
+            self._save_as_button.setToolTip(strings.tooltip_save_contents)
+            self._save_as_button.installEventFilter(event_filter)
+            self._header_layout.addWidget(self._save_as_button)
 
         self._apply_button_style()
 
