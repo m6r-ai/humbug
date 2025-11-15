@@ -990,13 +990,11 @@ class StyleManager(QObject):
             ''')
 
             self._write_icon(f'cog-{suffix}.svg', f'''
-                <svg width="64" height="64" viewBox="0 0 64
-                64" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="32" cy="32" r="10" stroke="{color}" stroke-width="6" fill="none"/>
-                    <path stroke="{color}" stroke-width="6" fill="none"
-                        d="M32,4 L32,16 M32,48 L32,60 M4,32 L16,32 M48,32 L60,32
-                        M12.686,12.686 L21.213,21.213 M42.787,42.787 L51.314,51.314
-                        M12.686,51.314 L21.213,42.787 M42.787,21.213 L51.314,12.686"/>
+                <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke="{color}" stroke-width="4" fill="none" stroke-linejoin="miter"
+                        d="M24,16 L31,14 L33,6 L44,9 L42,17 L47,22 L55,20 L58,31 L50,33 L48,40 L54,46 L46,54
+                        L40,48 L33,50 L31,58 L20,55 L22,47 L17,42 L9,44 L6,33 L14,31 L16,24 L10,18 L18,10 Z
+                        M40,32 A8,8 0 1,1 24,32 A8,8 0 1,1 40,32 Z"/>
                 </svg>
             ''')
 
