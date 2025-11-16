@@ -177,7 +177,32 @@ class SystemAITool(AITool):
                     type="boolean",
                     description="Whether search should be case-sensitive (for search_in_editor operation)",
                     required=False
-                ),            ]
+                ),
+                AIToolParameter(
+                    name="text",
+                    type="string",
+                    description="Text content for editor operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="new_text",
+                    type="string",
+                    description="New text content for replace operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="new_lines",
+                    type="string",
+                    description="New line content for replace_lines operation",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="move_cursor_after",
+                    type="boolean",
+                    description="Whether to move cursor after edit operation (default: True)",
+                    required=False
+                ),
+            ]
         )
 
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
@@ -341,8 +366,42 @@ class SystemAITool(AITool):
                 allowed_parameters={"tab_id", "search_text", "case_sensitive"},
                 required_parameters={"tab_id", "search_text"},
                 description="Find all occurrences of text in an editor tab. Returns list of matches with line, column, and context."
-            )
-        }
+            ),
+            "insert_text": AIToolOperationDefinition(
+                name="insert_text",
+                handler=self._insert_text,
+                allowed_parameters={"tab_id", "text", "line", "column", "move_cursor_after"},
+                required_parameters={"tab_id", "text"},
+                description="Insert text at cursor or specific position in an editor tab. Requires user authorization."
+            ),
+            "delete_text_range": AIToolOperationDefinition(
+                name="delete_text_range",
+                handler=self._delete_text_range,
+                allowed_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
+                required_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
+                description="Delete text in specified range. Requires user authorization."
+            ),
+            "replace_lines": AIToolOperationDefinition(
+                name="replace_lines",
+                handler=self._replace_lines,
+                allowed_parameters={"tab_id", "start_line", "end_line", "new_lines", "move_cursor_after"},
+                required_parameters={"tab_id", "start_line", "end_line", "new_lines"},
+                description="Replace entire lines with new content. Requires user authorization."
+            ),
+            "get_selected_text": AIToolOperationDefinition(
+                name="get_selected_text",
+                handler=self._get_selected_text,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Get the currently selected text from an editor tab."
+            ),
+            "save_editor_file": AIToolOperationDefinition(
+                name="save_editor_file",
+                handler=self._save_editor_file,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Save the current editor content to file. Requires user authorization."
+            )        }
 
     def _validate_mindspace_access(self) -> None:
         """
@@ -1411,3 +1470,243 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to search in editor: {str(e)}") from e
+
+    async def _insert_text(
+        self,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Insert text at cursor or specific position in an editor tab."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        text = self._get_str_value_from_key("text", arguments)
+        line = arguments.get("line")
+        column = arguments.get("column")
+        move_cursor_after = arguments.get("move_cursor_after", True)
+
+        if line is not None and not isinstance(line, int):
+            raise AIToolExecutionError("'line' must be an integer")
+
+        if column is not None and not isinstance(column, int):
+            raise AIToolExecutionError("'column' must be an integer")
+
+        if not isinstance(move_cursor_after, bool):
+            raise AIToolExecutionError("'move_cursor_after' must be a boolean")
+
+        # Build authorization context
+        if line is not None and column is not None:
+            context = f"Insert text at line {line}, column {column} in editor (tab {tab_id}):\n{text[:100]}"
+            if len(text) > 100:
+                context += f"... ({len(text)} characters total)"
+
+        else:
+            context = f"Insert text at cursor position in editor (tab {tab_id}):\n{text[:100]}"
+            if len(text) > 100:
+                context += f"... ({len(text)} characters total)"
+
+        # Request authorization - modifying user files
+        authorized = await request_authorization("system", arguments, context, True)
+        if not authorized:
+            raise AIToolAuthorizationDenied("User denied permission to insert text")
+
+        try:
+            editor_tab.insert_text(text, line, column, move_cursor_after)
+
+            position_desc = f"at line {line}, column {column}" if line is not None else "at cursor"
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI inserted {len(text)} characters {position_desc}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Inserted {len(text)} characters {position_desc} in tab {tab_id}"
+            )
+
+        except ValueError as e:
+            raise AIToolExecutionError(f"Invalid position: {str(e)}") from e
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to insert text: {str(e)}") from e
+
+    async def _delete_text_range(
+        self,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Delete text in specified range."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        start_line = self._get_int_value_from_key("start_line", arguments)
+        start_column = self._get_int_value_from_key("start_column", arguments)
+        end_line = self._get_int_value_from_key("end_line", arguments)
+        end_column = self._get_int_value_from_key("end_column", arguments)
+
+        # Build authorization context
+        range_desc = f"lines {start_line}:{start_column} to {end_line}:{end_column}"
+        context = f"Delete text range {range_desc} in editor (tab {tab_id})"
+
+        # Request authorization - modifying user files
+        authorized = await request_authorization("system", arguments, context, True)
+        if not authorized:
+            raise AIToolAuthorizationDenied("User denied permission to delete text")
+
+        try:
+            editor_tab.delete_text_range(start_line, start_column, end_line, end_column)
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI deleted text range {range_desc}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Deleted text range {range_desc} in tab {tab_id}"
+            )
+
+        except ValueError as e:
+            raise AIToolExecutionError(f"Invalid range: {str(e)}") from e
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to delete text: {str(e)}") from e
+
+    async def _replace_lines(
+        self,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Replace entire lines with new content."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        start_line = self._get_int_value_from_key("start_line", arguments)
+        end_line = self._get_int_value_from_key("end_line", arguments)
+        new_lines = self._get_str_value_from_key("new_lines", arguments)
+        move_cursor_after = arguments.get("move_cursor_after", True)
+
+        if not isinstance(move_cursor_after, bool):
+            raise AIToolExecutionError("'move_cursor_after' must be a boolean")
+
+        # Build authorization context
+        line_count = end_line - start_line + 1
+        new_line_count = new_lines.count('\n') + 1 if new_lines else 0
+        context = f"Replace {line_count} lines ({start_line}-{end_line}) with {new_line_count} " \
+            f"new lines in editor (tab {tab_id}):\n{new_lines[:200]}"
+        if len(new_lines) > 200:
+            context += f"... ({len(new_lines)} characters total)"
+
+        # Request authorization - modifying user files
+        authorized = await request_authorization("system", arguments, context, True)
+        if not authorized:
+            raise AIToolAuthorizationDenied("User denied permission to replace lines")
+
+        try:
+            editor_tab.replace_lines(start_line, end_line, new_lines, move_cursor_after)
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI replaced lines {start_line}-{end_line}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Replaced lines {start_line}-{end_line} in tab {tab_id}"
+            )
+
+        except ValueError as e:
+            raise AIToolExecutionError(f"Invalid line range: {str(e)}") from e
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to replace lines: {str(e)}") from e
+
+    async def _get_selected_text(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get the currently selected text from an editor tab."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        try:
+            selected_text = editor_tab.get_selected_text()
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested selected text\ntab ID: {tab_id}"
+            )
+
+            if not selected_text:
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="system",
+                    content=f"No text selected in tab {tab_id}"
+                )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Selected text (tab {tab_id}):\n\n{selected_text}"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get selected text: {str(e)}") from e
+
+    async def _save_editor_file(
+        self,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Save the current editor content to file."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        # Get editor info to show file path
+        editor_info = editor_tab.get_editor_info()
+        file_path = editor_info.get('file_path', '')
+
+        if not file_path:
+            raise AIToolExecutionError("Cannot save: editor has no file path (untitled file)")
+
+        # Build authorization context
+        context = f"Save editor content to file: {file_path} (tab {tab_id})"
+
+        # Request authorization - writing to filesystem
+        authorized = await request_authorization("system", arguments, context, True)
+        if not authorized:
+            raise AIToolAuthorizationDenied("User denied permission to save file")
+
+        try:
+            success = editor_tab.save()
+
+            if not success:
+                raise AIToolExecutionError("Save operation failed")
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI saved editor file: {file_path}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Saved file: {file_path} (tab {tab_id})"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to save file: {str(e)}") from e

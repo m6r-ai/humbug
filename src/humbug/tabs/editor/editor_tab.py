@@ -382,3 +382,51 @@ class EditorTab(TabBase):
             List of match information dictionaries
         """
         return self._editor_widget.find_all_occurrences(search_text, case_sensitive)
+
+
+    def insert_text(self, text: str, line: int | None = None, column: int | None = None,
+                   move_cursor_after: bool = True) -> None:
+        """
+        Insert text at specified position or current cursor.
+
+        Args:
+            text: Text to insert
+            line: Target line number (1-indexed), None for current cursor position
+            column: Target column number (1-indexed), None for current cursor position
+            move_cursor_after: Whether to position cursor after inserted text
+        """
+        self._editor_widget.insert_text(text, line, column, move_cursor_after)
+
+    def delete_text_range(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
+        """
+        Delete text in specified range.
+
+        Args:
+            start_line: Starting line number (1-indexed)
+            start_column: Starting column number (1-indexed)
+            end_line: Ending line number (1-indexed)
+            end_column: Ending column number (1-indexed)
+        """
+        self._editor_widget.delete_text_range(start_line, start_column, end_line, end_column)
+
+    def replace_lines(self, start_line: int, end_line: int, new_lines: str,
+                     move_cursor_after: bool = True) -> None:
+        """
+        Replace entire lines with new content.
+
+        Args:
+            start_line: Starting line number (1-indexed)
+            end_line: Ending line number (1-indexed, inclusive)
+            new_lines: New line content (newline-separated text)
+            move_cursor_after: Whether to position cursor after replacement
+        """
+        self._editor_widget.replace_lines(start_line, end_line, new_lines, move_cursor_after)
+
+    def get_selected_text(self) -> str:
+        """
+        Get the currently selected text.
+
+        Returns:
+            Selected text, or empty string if no selection
+        """
+        return self._editor_widget.get_selected_text()
