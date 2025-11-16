@@ -1627,25 +1627,15 @@ class EditorWidget(QPlainTextEdit):
 
         self._set_modified(True)
 
-    def replace_text_range(
-        self,
-        start_line: int,
-        start_column: int,
-        end_line: int,
-        end_column: int,
-        new_text: str,
-        move_cursor_after: bool = True
-    ) -> None:
+    def delete_text_range(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
         """
-        Replace text in specified range with new content.
+        Delete text in specified range.
 
         Args:
             start_line: Starting line number (1-indexed)
             start_column: Starting column number (1-indexed)
             end_line: Ending line number (1-indexed)
             end_column: Ending column number (1-indexed)
-            new_text: Text to replace with
-            move_cursor_after: Whether to position cursor after replacement
 
         Raises:
             ValueError: If any position is invalid
@@ -1696,29 +1686,12 @@ class EditorWidget(QPlainTextEdit):
 
         cursor.setPosition(end_cursor.position(), QTextCursor.MoveMode.KeepAnchor)
 
-        # Replace the selected text
-        cursor.insertText(new_text)
+        # Delete the selected text
+        cursor.removeSelectedText()
 
-        if move_cursor_after:
-            self.setTextCursor(cursor)
-            self.centerCursor()
-
+        self.setTextCursor(cursor)
+        self.centerCursor()
         self._set_modified(True)
-
-    def delete_text_range(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
-        """
-        Delete text in specified range.
-
-        Args:
-            start_line: Starting line number (1-indexed)
-            start_column: Starting column number (1-indexed)
-            end_line: Ending line number (1-indexed)
-            end_column: Ending column number (1-indexed)
-
-        Raises:
-            ValueError: If any position is invalid
-        """
-        self.replace_text_range(start_line, start_column, end_line, end_column, "", move_cursor_after=True)
 
     def replace_lines(self, start_line: int, end_line: int, new_lines: str, move_cursor_after: bool = True) -> None:
         """
