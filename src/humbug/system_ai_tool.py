@@ -181,8 +181,8 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="new_lines",
                     type="string",
-                    description="New line content for editor_replace_lines operation. All lines MUST have a newline terminator " \
-                        "unless no new content is being provided (e.g. to delete lines)",
+                    description="New line content for editor_replace_lines operation. You must add a newline " \
+                        "terminator \"\\n\" to each line",
                     required=False
                 ),
                 AIToolParameter(
