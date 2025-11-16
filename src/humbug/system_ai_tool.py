@@ -175,25 +175,14 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="case_sensitive",
                     type="boolean",
-                    description="Whether search should be case-sensitive (for search_in_editor operation)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="text",
-                    type="string",
-                    description="Text content for editor operations",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="new_text",
-                    type="string",
-                    description="New text content for replace operations",
+                    description="Whether search should be case-sensitive (for editor_search operation)",
                     required=False
                 ),
                 AIToolParameter(
                     name="new_lines",
                     type="string",
-                    description="New line content for replace_lines operation",
+                    description="New line content for editor_replace_lines operation. All lines MUST have a newline terminator " \
+                        "unless no new content is being provided (e.g. to delete lines)",
                     required=False
                 ),
                 AIToolParameter(
@@ -213,56 +202,56 @@ class SystemAITool(AITool):
             Dictionary mapping operation names to their definitions
         """
         return {
-            "open_editor_tab": AIToolOperationDefinition(
-                name="open_editor_tab",
-                handler=self._open_editor_tab,
+            "editor_open_tab": AIToolOperationDefinition(
+                name="editor_open_tab",
+                handler=self._editor_open_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
                 description="Open a file in an editor tab for the user to browse/edit. "
                     "You (the AI) cannot use this to edit files"
             ),
-            "new_terminal_tab": AIToolOperationDefinition(
-                name="new_terminal_tab",
-                handler=self._new_terminal_tab,
+            "terminal_new_tab": AIToolOperationDefinition(
+                name="terminal_new_tab",
+                handler=self._terminal_new_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
                 description="Create a fully interactive terminal tab. "
                     "This provides a terminal emulator connected to a new shell. "
-                    "You may interact with this terminal using the `read_terminal` and `write_terminal` operations, but"
-                    "you must use `read_terminal` to observe any changes."
+                    "You may interact with this terminal using the `terminal_read` and `terminal_write` operations, but"
+                    "you must use `terminal_read` to observe any changes"
             ),
-            "open_conversation_tab": AIToolOperationDefinition(
-                name="open_conversation_tab",
-                handler=self._open_conversation_tab,
+            "conversation_open_tab": AIToolOperationDefinition(
+                name="conversation_open_tab",
+                handler=self._conversation_open_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
                 description="Open an existing conversation in a conversation tab for the user to browse/edit. "
                     "You (the AI) cannot use this to send messages"
             ),
-            "new_conversation_tab": AIToolOperationDefinition(
-                name="new_conversation_tab",
-                handler=self._new_conversation_tab,
+            "conversation_new_tab": AIToolOperationDefinition(
+                name="conversation_new_tab",
+                handler=self._conversation_new_tab,
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
-                description="Create a new AI conversation tab, with optional model/temperature. "
+                description="Create a new AI conversation tab, with optional model/temperature"
             ),
-            "show_system_shell_tab": AIToolOperationDefinition(
-                name="show_system_shell_tab",
-                handler=self._show_system_shell_tab,
+            "system_shell_show_tab": AIToolOperationDefinition(
+                name="system_shell_show_tab",
+                handler=self._system_shell_show_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
                 description="Open a system shell tab"
             ),
-            "show_log_tab": AIToolOperationDefinition(
-                name="show_log_tab",
-                handler=self._show_log_tab,
+            "log_show_tab": AIToolOperationDefinition(
+                name="log_show_tab",
+                handler=self._log_show_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
                 description="Open the mindspace log tab"
             ),
-            "open_preview_tab": AIToolOperationDefinition(
-                name="open_preview_tab",
-                handler=self._open_preview_tab,
+            "preview_open_tab": AIToolOperationDefinition(
+                name="preview_open_tab",
+                handler=self._preview_open_tab,
                 allowed_parameters={"file_path"},
                 required_parameters=set(),
                 description="open a file/directory in a preview view tab"
@@ -295,9 +284,9 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id", "target_column"},
                 description="Move a tab to a specific column by index - there are a maximum of 6 columns"
             ),
-            "write_terminal": AIToolOperationDefinition(
-                name="write_terminal",
-                handler=self._write_terminal,
+            "terminal_write": AIToolOperationDefinition(
+                name="terminal_write",
+                handler=self._terminal_write,
                 allowed_parameters={"tab_id", "keystrokes"},
                 required_parameters={"tab_id", "keystrokes"},
                 description="Send keystrokes to a terminal tab, given its ID. "
@@ -305,102 +294,89 @@ class SystemAITool(AITool):
                     "The string is not terminated with a newline automatically, so if you want to execute a command "
                     "you must include appropriate end-of-line control characters. "
                     "You MUST use `\\u####` format to send any control characters (ASCII values less than 0x20), "
-                    "inluding newline (\\u000a), carriage return (\\u000d), tab (\\u0009), and escape (\\u001b). "
+                    "inluding newline (\\u000a), carriage return (\\u000d), tab (\\u0009), and escape (\\u001b)"
             ),
-            "read_terminal": AIToolOperationDefinition(
-                name="read_terminal",
-                handler=self._read_terminal,
+            "terminal_read": AIToolOperationDefinition(
+                name="terminal_read",
+                handler=self._terminal_read,
                 allowed_parameters={"tab_id", "lines"},
                 required_parameters={"tab_id"},
                 description="Read the current terminal buffer (ouput display) content, given its tab ID. "
                     "This returns the raw content of the terminal display. "
                     "The terminal can have over 10k lines of text and that's far too much content so you must "
-                    "think carefully about the number of `lines` you need to request."
+                    "think carefully about the number of `lines` you need to request"
             ),
-            "get_terminal_status": AIToolOperationDefinition(
-                name="get_terminal_status",
-                handler=self._get_terminal_status,
+            "terminal_get_status": AIToolOperationDefinition(
+                name="terminal_get_status",
+                handler=self._terminal_get_status,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get terminal status and process information, given its tab ID"
             ),
-            "read_editor_content": AIToolOperationDefinition(
-                name="read_editor_content",
-                handler=self._read_editor_content,
+            "editor_read_content": AIToolOperationDefinition(
+                name="editor_read_content",
+                handler=self._editor_read_content,
                 allowed_parameters={"tab_id", "start_line", "end_line"},
                 required_parameters={"tab_id"},
                 description="Read content from an editor tab. Optionally specify line range with start_line "
-                    "and end_line (1-indexed, inclusive)."
+                    "and end_line (1-indexed, inclusive)"
             ),
-            "get_editor_cursor_info": AIToolOperationDefinition(
-                name="get_editor_cursor_info",
-                handler=self._get_editor_cursor_info,
+            "editor_get_cursor_info": AIToolOperationDefinition(
+                name="editor_get_cursor_info",
+                handler=self._editor_get_cursor_info,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Get cursor position and selection information from an editor tab."
+                description="Get cursor position and selection information from an editor tab"
             ),
-            "get_editor_info": AIToolOperationDefinition(
-                name="get_editor_info",
-                handler=self._get_editor_info,
+            "editor_get_info": AIToolOperationDefinition(
+                name="editor_get_info",
+                handler=self._editor_get_info,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Get editor metadata including line count, language, encoding, and modification status."
+                description="Get editor metadata including line count, language, encoding, and modification status"
             ),
-            "goto_editor_line": AIToolOperationDefinition(
-                name="goto_editor_line",
-                handler=self._goto_editor_line,
+            "editor_goto_line": AIToolOperationDefinition(
+                name="editor_goto_line",
+                handler=self._editor_goto_line,
                 allowed_parameters={"tab_id", "line", "column"},
                 required_parameters={"tab_id", "line"},
-                description="Move cursor to specific line and optional column in an editor tab (1-indexed)."
+                description="Move cursor to specific line and optional column in an editor tab (1-indexed)"
             ),
-            "select_editor_range": AIToolOperationDefinition(
-                name="select_editor_range",
-                handler=self._select_editor_range,
+            "editor_select_range": AIToolOperationDefinition(
+                name="editor_select_range",
+                handler=self._editor_select_range,
                 allowed_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
                 required_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
-                description="Select a specific range of text in an editor tab (1-indexed). Highlights the region for the user."
+                description="Select a specific range of text in an editor tab (1-indexed). Highlights the region for the user"
             ),
-            "search_in_editor": AIToolOperationDefinition(
-                name="search_in_editor",
-                handler=self._search_in_editor,
+            "editor_search": AIToolOperationDefinition(
+                name="editor_search",
+                handler=self._editor_search,
                 allowed_parameters={"tab_id", "search_text", "case_sensitive"},
                 required_parameters={"tab_id", "search_text"},
-                description="Find all occurrences of text in an editor tab. Returns list of matches with line, column, and context."
+                description="Find all occurrences of text in an editor tab. Returns list of matches with line, column, and context"
             ),
-            "insert_text": AIToolOperationDefinition(
-                name="insert_text",
-                handler=self._insert_text,
-                allowed_parameters={"tab_id", "text", "line", "column", "move_cursor_after"},
-                required_parameters={"tab_id", "text"},
-                description="Insert text at cursor or specific position in an editor tab. Requires user authorization."
-            ),
-            "delete_text_range": AIToolOperationDefinition(
-                name="delete_text_range",
-                handler=self._delete_text_range,
-                allowed_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
-                required_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
-                description="Delete text in specified range. Requires user authorization."
-            ),
-            "replace_lines": AIToolOperationDefinition(
-                name="replace_lines",
-                handler=self._replace_lines,
+            "editor_replace_lines": AIToolOperationDefinition(
+                name="editor_replace_lines",
+                handler=self._editor_replace_lines,
                 allowed_parameters={"tab_id", "start_line", "end_line", "new_lines", "move_cursor_after"},
                 required_parameters={"tab_id", "start_line", "end_line", "new_lines"},
-                description="Replace entire lines with new content. Requires user authorization."
+                description="Replace entire lines with new content. Changes will not save until " \
+                    "you use the `editor_save_file` operation"
             ),
-            "get_selected_text": AIToolOperationDefinition(
-                name="get_selected_text",
-                handler=self._get_selected_text,
+            "editor_get_selected_text": AIToolOperationDefinition(
+                name="editor_get_selected_text",
+                handler=self._editor_get_selected_text,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Get the currently selected text from an editor tab."
+                description="Get the currently selected text from an editor tab"
             ),
-            "save_editor_file": AIToolOperationDefinition(
-                name="save_editor_file",
-                handler=self._save_editor_file,
+            "editor_save_file": AIToolOperationDefinition(
+                name="editor_save_file",
+                handler=self._editor_save_file,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Save the current editor content to file. Requires user authorization."
+                description="Save the current editor content to file. Requires user authorization"
             )        }
 
     def _validate_mindspace_access(self) -> None:
@@ -684,7 +660,7 @@ class SystemAITool(AITool):
             self._logger.error("Unexpected error in system operation '%s': %s", operation, str(e), exc_info=True)
             raise AIToolExecutionError(f"System operation failed: {str(e)}") from e
 
-    async def _open_editor_tab(
+    async def _editor_open_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -726,7 +702,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to open file '{file_path_arg}' for editing: {str(e)}") from e
 
-    async def _new_terminal_tab(
+    async def _terminal_new_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -754,7 +730,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to create terminal: {str(e)}") from e
 
-    async def _open_conversation_tab(
+    async def _conversation_open_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -799,7 +775,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
 
-    async def _new_conversation_tab(
+    async def _conversation_new_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -874,7 +850,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
 
-    async def _show_system_shell_tab(
+    async def _system_shell_show_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -903,7 +879,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to show system shell: {str(e)}") from e
 
-    async def _show_log_tab(
+    async def _log_show_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -932,7 +908,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to show system shell: {str(e)}") from e
 
-    async def _open_preview_tab(
+    async def _preview_open_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1125,7 +1101,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to move tab {tab_id} to column {target_column}: {str(e)}") from e
 
-    async def _write_terminal(
+    async def _terminal_write(
         self,
         tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback
@@ -1173,7 +1149,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to send keystrokes to terminal: {str(e)}") from e
 
-    async def _read_terminal(
+    async def _terminal_read(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1209,7 +1185,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to read terminal: {str(e)}") from e
 
-    async def _get_terminal_status(
+    async def _terminal_get_status(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1242,7 +1218,7 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get terminal status: {str(e)}") from e
-    async def _read_editor_content(
+    async def _editor_read_content(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1291,7 +1267,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to read editor content: {str(e)}") from e
 
-    async def _get_editor_cursor_info(
+    async def _editor_get_cursor_info(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1319,7 +1295,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get cursor info: {str(e)}") from e
 
-    async def _get_editor_info(
+    async def _editor_get_info(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1347,7 +1323,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get editor info: {str(e)}") from e
 
-    async def _goto_editor_line(
+    async def _editor_goto_line(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1385,7 +1361,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to goto line: {str(e)}") from e
 
-    async def _select_editor_range(
+    async def _editor_select_range(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1422,7 +1398,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to select range: {str(e)}") from e
 
-    async def _search_in_editor(
+    async def _editor_search(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1471,117 +1447,10 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to search in editor: {str(e)}") from e
 
-    async def _insert_text(
+    async def _editor_replace_lines(
         self,
         tool_call: AIToolCall,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Insert text at cursor or specific position in an editor tab."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        text = self._get_str_value_from_key("text", arguments)
-        line = arguments.get("line")
-        column = arguments.get("column")
-        move_cursor_after = arguments.get("move_cursor_after", True)
-
-        if line is not None and not isinstance(line, int):
-            raise AIToolExecutionError("'line' must be an integer")
-
-        if column is not None and not isinstance(column, int):
-            raise AIToolExecutionError("'column' must be an integer")
-
-        if not isinstance(move_cursor_after, bool):
-            raise AIToolExecutionError("'move_cursor_after' must be a boolean")
-
-        # Build authorization context
-        if line is not None and column is not None:
-            context = f"Insert text at line {line}, column {column} in editor (tab {tab_id}):\n{text[:100]}"
-            if len(text) > 100:
-                context += f"... ({len(text)} characters total)"
-
-        else:
-            context = f"Insert text at cursor position in editor (tab {tab_id}):\n{text[:100]}"
-            if len(text) > 100:
-                context += f"... ({len(text)} characters total)"
-
-        # Request authorization - modifying user files
-        authorized = await request_authorization("system", arguments, context, True)
-        if not authorized:
-            raise AIToolAuthorizationDenied("User denied permission to insert text")
-
-        try:
-            editor_tab.insert_text(text, line, column, move_cursor_after)
-
-            position_desc = f"at line {line}, column {column}" if line is not None else "at cursor"
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI inserted {len(text)} characters {position_desc}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Inserted {len(text)} characters {position_desc} in tab {tab_id}"
-            )
-
-        except ValueError as e:
-            raise AIToolExecutionError(f"Invalid position: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to insert text: {str(e)}") from e
-
-    async def _delete_text_range(
-        self,
-        tool_call: AIToolCall,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Delete text in specified range."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        start_line = self._get_int_value_from_key("start_line", arguments)
-        start_column = self._get_int_value_from_key("start_column", arguments)
-        end_line = self._get_int_value_from_key("end_line", arguments)
-        end_column = self._get_int_value_from_key("end_column", arguments)
-
-        # Build authorization context
-        range_desc = f"lines {start_line}:{start_column} to {end_line}:{end_column}"
-        context = f"Delete text range {range_desc} in editor (tab {tab_id})"
-
-        # Request authorization - modifying user files
-        authorized = await request_authorization("system", arguments, context, True)
-        if not authorized:
-            raise AIToolAuthorizationDenied("User denied permission to delete text")
-
-        try:
-            editor_tab.delete_text_range(start_line, start_column, end_line, end_column)
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI deleted text range {range_desc}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Deleted text range {range_desc} in tab {tab_id}"
-            )
-
-        except ValueError as e:
-            raise AIToolExecutionError(f"Invalid range: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to delete text: {str(e)}") from e
-
-    async def _replace_lines(
-        self,
-        tool_call: AIToolCall,
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Replace entire lines with new content."""
         arguments = tool_call.arguments
@@ -1596,19 +1465,6 @@ class SystemAITool(AITool):
 
         if not isinstance(move_cursor_after, bool):
             raise AIToolExecutionError("'move_cursor_after' must be a boolean")
-
-        # Build authorization context
-        line_count = end_line - start_line + 1
-        new_line_count = new_lines.count('\n') + 1 if new_lines else 0
-        context = f"Replace {line_count} lines ({start_line}-{end_line}) with {new_line_count} " \
-            f"new lines in editor (tab {tab_id}):\n{new_lines[:200]}"
-        if len(new_lines) > 200:
-            context += f"... ({len(new_lines)} characters total)"
-
-        # Request authorization - modifying user files
-        authorized = await request_authorization("system", arguments, context, True)
-        if not authorized:
-            raise AIToolAuthorizationDenied("User denied permission to replace lines")
 
         try:
             editor_tab.replace_lines(start_line, end_line, new_lines, move_cursor_after)
@@ -1630,7 +1486,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to replace lines: {str(e)}") from e
 
-    async def _get_selected_text(
+    async def _editor_get_selected_text(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1665,7 +1521,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get selected text: {str(e)}") from e
 
-    async def _save_editor_file(
+    async def _editor_save_file(
         self,
         tool_call: AIToolCall,
         request_authorization: AIToolAuthorizationCallback

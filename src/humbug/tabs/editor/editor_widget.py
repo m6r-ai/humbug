@@ -1572,127 +1572,6 @@ class EditorWidget(QPlainTextEdit):
         return matches
 
 
-    def insert_text(self, text: str, line: int | None = None, column: int | None = None, move_cursor_after: bool = True) -> None:
-        """
-        Insert text at specified position or current cursor.
-
-        Args:
-            text: Text to insert
-            line: Target line number (1-indexed), None for current cursor position
-            column: Target column number (1-indexed), None for current cursor position
-            move_cursor_after: Whether to position cursor after inserted text
-
-        Raises:
-            ValueError: If line or column is invalid
-        """
-        cursor = self.textCursor()
-
-        # If line and column specified, position cursor there
-        if line is not None and column is not None:
-            document = self.document()
-            total_lines = document.blockCount()
-
-            if line < 1:
-                raise ValueError(f"line must be >= 1, got {line}")
-
-            if line > total_lines:
-                raise ValueError(f"line ({line}) exceeds document length ({total_lines} lines)")
-
-            if column < 1:
-                raise ValueError(f"column must be >= 1, got {column}")
-
-            target_block = document.findBlockByLineNumber(line - 1)
-            if not target_block.isValid():
-                raise ValueError(f"Invalid line number: {line}")
-
-            line_length = target_block.length() - 1
-            if column > line_length + 1:
-                raise ValueError(f"column ({column}) exceeds line length ({line_length})")
-
-            cursor = QTextCursor(target_block)
-            cursor.movePosition(
-                QTextCursor.MoveOperation.Right,
-                QTextCursor.MoveMode.MoveAnchor,
-                column - 1
-            )
-        elif line is not None or column is not None:
-            raise ValueError("Both line and column must be specified together, or both must be None")
-
-        # Insert the text
-        cursor.insertText(text)
-
-        if move_cursor_after:
-            self.setTextCursor(cursor)
-            self.centerCursor()
-
-        self._set_modified(True)
-
-    def delete_text_range(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
-        """
-        Delete text in specified range.
-
-        Args:
-            start_line: Starting line number (1-indexed)
-            start_column: Starting column number (1-indexed)
-            end_line: Ending line number (1-indexed)
-            end_column: Ending column number (1-indexed)
-
-        Raises:
-            ValueError: If any position is invalid
-        """
-        document = self.document()
-        total_lines = document.blockCount()
-
-        if start_line < 1 or start_line > total_lines:
-            raise ValueError(f"start_line ({start_line}) must be between 1 and {total_lines}")
-
-        if end_line < 1 or end_line > total_lines:
-            raise ValueError(f"end_line ({end_line}) must be between 1 and {total_lines}")
-
-        if start_column < 1:
-            raise ValueError(f"start_column must be >= 1, got {start_column}")
-
-        if end_column < 1:
-            raise ValueError(f"end_column must be >= 1, got {end_column}")
-
-        start_block = document.findBlockByLineNumber(start_line - 1)
-        end_block = document.findBlockByLineNumber(end_line - 1)
-
-        if not start_block.isValid() or not end_block.isValid():
-            raise ValueError("Invalid line range")
-
-        start_line_length = start_block.length() - 1
-        if start_column > start_line_length + 1:
-            raise ValueError(f"start_column ({start_column}) exceeds line length ({start_line_length})")
-
-        end_line_length = end_block.length() - 1
-        if end_column > end_line_length + 1:
-            raise ValueError(f"end_column ({end_column}) exceeds line length ({end_line_length})")
-
-        # Create cursor and select the range
-        cursor = QTextCursor(start_block)
-        cursor.movePosition(
-            QTextCursor.MoveOperation.Right,
-            QTextCursor.MoveMode.MoveAnchor,
-            start_column - 1
-        )
-
-        end_cursor = QTextCursor(end_block)
-        end_cursor.movePosition(
-            QTextCursor.MoveOperation.Right,
-            QTextCursor.MoveMode.MoveAnchor,
-            end_column - 1
-        )
-
-        cursor.setPosition(end_cursor.position(), QTextCursor.MoveMode.KeepAnchor)
-
-        # Delete the selected text
-        cursor.removeSelectedText()
-
-        self.setTextCursor(cursor)
-        self.centerCursor()
-        self._set_modified(True)
-
     def replace_lines(self, start_line: int, end_line: int, new_lines: str, move_cursor_after: bool = True) -> None:
         """
         Replace entire lines with new content.
@@ -1735,10 +1614,6 @@ class EditorWidget(QPlainTextEdit):
         # If not the last line in document, include the newline
         if end_line < total_lines:
             end_cursor.movePosition(QTextCursor.MoveOperation.Right)
-
-            # Ensure new_lines ends with newline since we're removing one
-            if not new_lines.endswith('\n'):
-                new_lines = new_lines + '\n'
 
         cursor.setPosition(end_cursor.position(), QTextCursor.MoveMode.KeepAnchor)
 
