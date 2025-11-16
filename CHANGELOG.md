@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v0.29 (2025-11-xx)
+## v0.29 (2025-11-16)
 
 New features:
 
@@ -12,7 +12,7 @@ New features:
   improve performance and reduce memory usage.
 - Added GPT 5.1 support, and removed GPT O1 support.
 - Added more support to allow an AI to interact with editor tabs.  This includes reading content, finding things, moving the
-  view, selecting text regions, and understanding the editor metadata.
+  view, selecting text regions, understanding the editor metadata, modifying text, and saving a modified file.
 
 Bug fixes:
 
