@@ -179,10 +179,15 @@ class SystemAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
-                    name="new_lines",
+                    name="position",
                     type="string",
-                    description="New line content for editor_replace_lines operation. You must add a newline " \
-                        "terminator \"\\n\" to each line",
+                    description="Position for insertion: 'before' or 'after' (for editor_insert_lines operation)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="content",
+                    type="string",
+                    description="Content to insert (for editor_insert_lines operation). Each line must end with `\\n`",
                     required=False
                 ),
                 AIToolParameter(
@@ -356,13 +361,22 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id", "search_text"},
                 description="Find all occurrences of text in an editor tab. Returns list of matches with line, column, and context"
             ),
-            "editor_replace_lines": AIToolOperationDefinition(
-                name="editor_replace_lines",
-                handler=self._editor_replace_lines,
-                allowed_parameters={"tab_id", "start_line", "end_line", "new_lines", "move_cursor_after"},
-                required_parameters={"tab_id", "start_line", "end_line", "new_lines"},
-                description="Replace entire lines with new content. Changes will not save until " \
+            "editor_delete_lines": AIToolOperationDefinition(
+                name="editor_delete_lines",
+                handler=self._editor_delete_lines,
+                allowed_parameters={"tab_id", "start_line", "end_line", "move_cursor_after"},
+                required_parameters={"tab_id", "start_line", "end_line"},
+                description="Delete one or more complete lines from the document. Changes will not save until " \
                     "you use the `editor_save_file` operation"
+            ),
+            "editor_insert_lines": AIToolOperationDefinition(
+                name="editor_insert_lines",
+                handler=self._editor_insert_lines,
+                allowed_parameters={"tab_id", "line", "position", "content", "move_cursor_after"},
+                required_parameters={"tab_id", "line", "position", "content"},
+                description="Insert new lines at a specific position in the document. Position must be 'before' or 'after'. " \
+                    "If inserting after a line without a trailing newline, one will be added automatically. " \
+                    "Changes will not save until you use the `editor_save_file` operation"
             ),
             "editor_get_selected_text": AIToolOperationDefinition(
                 name="editor_get_selected_text",
@@ -377,7 +391,8 @@ class SystemAITool(AITool):
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Save the current editor content to file. Requires user authorization"
-            )        }
+            )
+        }
 
     def _validate_mindspace_access(self) -> None:
         """
@@ -1446,13 +1461,12 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to search in editor: {str(e)}") from e
-
-    async def _editor_replace_lines(
+    async def _editor_delete_lines(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Replace entire lines with new content."""
+        """Delete one or more complete lines from the document."""
         arguments = tool_call.arguments
 
         editor_tab = self._get_editor_tab(arguments)
@@ -1460,31 +1474,73 @@ class SystemAITool(AITool):
 
         start_line = self._get_int_value_from_key("start_line", arguments)
         end_line = self._get_int_value_from_key("end_line", arguments)
-        new_lines = self._get_str_value_from_key("new_lines", arguments)
         move_cursor_after = arguments.get("move_cursor_after", True)
 
         if not isinstance(move_cursor_after, bool):
             raise AIToolExecutionError("'move_cursor_after' must be a boolean")
 
         try:
-            editor_tab.replace_lines(start_line, end_line, new_lines, move_cursor_after)
+            editor_tab.delete_lines(start_line, end_line, move_cursor_after)
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI replaced lines {start_line}-{end_line}\ntab ID: {tab_id}"
+                f"AI deleted lines {start_line}-{end_line}\ntab ID: {tab_id}"
             )
 
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Replaced lines {start_line}-{end_line} in tab {tab_id}"
+                content=f"Deleted lines {start_line}-{end_line} in tab {tab_id}"
             )
 
         except ValueError as e:
             raise AIToolExecutionError(f"Invalid line range: {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to replace lines: {str(e)}") from e
+            raise AIToolExecutionError(f"Failed to delete lines: {str(e)}") from e
+
+    async def _editor_insert_lines(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Insert new lines at a specific position in the document."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        line = self._get_int_value_from_key("line", arguments)
+        position = self._get_str_value_from_key("position", arguments)
+        content = self._get_str_value_from_key("content", arguments)
+        move_cursor_after = arguments.get("move_cursor_after", True)
+
+        if not isinstance(move_cursor_after, bool):
+            raise AIToolExecutionError("'move_cursor_after' must be a boolean")
+
+        if position not in ("before", "after"):
+            raise AIToolExecutionError(f"'position' must be 'before' or 'after', got '{position}'")
+
+        try:
+            editor_tab.insert_lines(line, position, content, move_cursor_after)
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI inserted lines {position} line {line}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Inserted lines {position} line {line} in tab {tab_id}"
+            )
+
+        except ValueError as e:
+            raise AIToolExecutionError(f"Invalid parameters: {str(e)}") from e
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to insert lines: {str(e)}") from e
+
 
     async def _editor_get_selected_text(
         self,

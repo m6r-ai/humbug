@@ -1572,15 +1572,14 @@ class EditorWidget(QPlainTextEdit):
         return matches
 
 
-    def replace_lines(self, start_line: int, end_line: int, new_lines: str, move_cursor_after: bool = True) -> None:
+    def delete_lines(self, start_line: int, end_line: int, move_cursor_after: bool = True) -> None:
         """
-        Replace entire lines with new content.
+        Delete one or more complete lines from the document.
 
         Args:
             start_line: Starting line number (1-indexed)
             end_line: Ending line number (1-indexed, inclusive)
-            new_lines: New line content (newline-separated text)
-            move_cursor_after: Whether to position cursor after replacement
+            move_cursor_after: Whether to position cursor after deletion
 
         Raises:
             ValueError: If line numbers are invalid
@@ -1611,19 +1610,77 @@ class EditorWidget(QPlainTextEdit):
         end_cursor = QTextCursor(end_block)
         end_cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
 
-        # If not the last line in document, include the newline
+        # If not the last line in document, include the newline after the line
         if end_line < total_lines:
             end_cursor.movePosition(QTextCursor.MoveOperation.Right)
 
+        # If we're deleting the last line(s) and not deleting from line 1,
+        # we need to delete the newline from the previous line that creates this line
+        elif start_line > 1:
+            cursor.movePosition(QTextCursor.MoveOperation.Left)
+
         cursor.setPosition(end_cursor.position(), QTextCursor.MoveMode.KeepAnchor)
 
-        # Replace the selected lines
-        cursor.insertText(new_lines)
+        # Delete the selected lines
+        cursor.removeSelectedText()
 
         if move_cursor_after:
             self.setTextCursor(cursor)
-            self.centerCursor()
 
+        self.centerCursor()
+        self._set_modified(True)
+
+    def insert_lines(self, line: int, position: str, content: str, move_cursor_after: bool = True) -> None:
+        """
+        Insert new lines at a specific position in the document.
+
+        Args:
+            line: Line number where to insert (1-indexed)
+            position: Either "before" or "after"
+            content: Content to insert (should end with \\n for complete lines)
+            move_cursor_after: Whether to position cursor after insertion
+
+        Raises:
+            ValueError: If line number is invalid or position is not "before"/"after"
+        """
+        if position not in ("before", "after"):
+            raise ValueError(f"position must be 'before' or 'after', got '{position}'")
+
+        document = self.document()
+        total_lines = document.blockCount()
+
+        if line < 1 or line > total_lines:
+            raise ValueError(f"line ({line}) must be between 1 and {total_lines}")
+
+        block = document.findBlockByLineNumber(line - 1)
+        if not block.isValid():
+            raise ValueError(f"Invalid line number: {line}")
+
+        cursor = QTextCursor(block)
+
+        if position == "before":
+            # Insert at the start of the line
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+            cursor.insertText(content)
+
+        else:  # position == "after"
+            # If inserting after a line that is not the last line,
+            # simply move to the start of the next line
+            if line < total_lines:
+                cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
+                cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+                cursor.insertText(content)
+
+            else:
+                # Last line - need to add a newline to create a new block
+                cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+                cursor.insertText("\n")
+                cursor.insertText(content)
+
+        if move_cursor_after:
+            self.setTextCursor(cursor)
+
+        self.centerCursor()
         self._set_modified(True)
 
     def get_selected_text(self) -> str:

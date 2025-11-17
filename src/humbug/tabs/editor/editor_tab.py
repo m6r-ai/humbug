@@ -384,18 +384,28 @@ class EditorTab(TabBase):
         return self._editor_widget.find_all_occurrences(search_text, case_sensitive)
 
 
-    def replace_lines(self, start_line: int, end_line: int, new_lines: str,
-                     move_cursor_after: bool = True) -> None:
+    def delete_lines(self, start_line: int, end_line: int, move_cursor_after: bool = True) -> None:
         """
-        Replace entire lines with new content.
+        Delete one or more complete lines from the document.
 
         Args:
             start_line: Starting line number (1-indexed)
             end_line: Ending line number (1-indexed, inclusive)
-            new_lines: New line content (newline-separated text)
-            move_cursor_after: Whether to position cursor after replacement
+            move_cursor_after: Whether to position cursor after deletion
         """
-        self._editor_widget.replace_lines(start_line, end_line, new_lines, move_cursor_after)
+        self._editor_widget.delete_lines(start_line, end_line, move_cursor_after)
+
+    def insert_lines(self, line: int, position: str, content: str, move_cursor_after: bool = True) -> None:
+        """
+        Insert new lines at a specific position in the document.
+
+        Args:
+            line: Line number where to insert (1-indexed)
+            position: Either "before" or "after"
+            content: Content to insert (should end with \\n for complete lines)
+            move_cursor_after: Whether to position cursor after insertion
+        """
+        self._editor_widget.insert_lines(line, position, content, move_cursor_after)
 
     def get_selected_text(self) -> str:
         """
