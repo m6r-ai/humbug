@@ -1571,7 +1571,6 @@ class EditorWidget(QPlainTextEdit):
 
         return matches
 
-
     def delete_lines(self, start_line: int, end_line: int, move_cursor_after: bool = True) -> None:
         """
         Delete one or more complete lines from the document.
@@ -1630,22 +1629,18 @@ class EditorWidget(QPlainTextEdit):
         self.centerCursor()
         self._set_modified(True)
 
-    def insert_lines(self, line: int, position: str, content: str, move_cursor_after: bool = True) -> None:
+    def insert_lines(self, line: int, content: str, move_cursor_after: bool = True) -> None:
         """
         Insert new lines at a specific position in the document.
 
         Args:
             line: Line number where to insert (1-indexed)
-            position: Either "before" or "after"
             content: Content to insert (should end with \\n for complete lines)
             move_cursor_after: Whether to position cursor after insertion
 
         Raises:
-            ValueError: If line number is invalid or position is not "before"/"after"
+            ValueError: If line number is invalid
         """
-        if position not in ("before", "after"):
-            raise ValueError(f"position must be 'before' or 'after', got '{position}'")
-
         document = self.document()
         total_lines = document.blockCount()
 
@@ -1658,30 +1653,45 @@ class EditorWidget(QPlainTextEdit):
 
         cursor = QTextCursor(block)
 
-        if position == "before":
-            # Insert at the start of the line
-            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-            cursor.insertText(content)
-
-        else:  # position == "after"
-            # If inserting after a line that is not the last line,
-            # simply move to the start of the next line
-            if line < total_lines:
-                cursor.movePosition(QTextCursor.MoveOperation.NextBlock)
-                cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
-                cursor.insertText(content)
-
-            else:
-                # Last line - need to add a newline to create a new block
-                cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
-                cursor.insertText("\n")
-                cursor.insertText(content)
+        # Insert at the start of the line
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+        cursor.insertText(content)
 
         if move_cursor_after:
             self.setTextCursor(cursor)
 
         self.centerCursor()
         self._set_modified(True)
+
+    def append_lines(self, content: str, move_cursor_after: bool = True) -> int:
+        """
+        Append new lines to the end of the document.
+
+        Args:
+            content: Content to insert (should end with \\n for complete lines)
+            move_cursor_after: Whether to position cursor after insertion
+        Returns:
+            The line number where the content was appended (1-indexed)
+        """
+        document = self.document()
+        total_lines = document.blockCount()
+        start_line = total_lines
+        block = document.findBlockByLineNumber(total_lines - 1)
+        cursor = QTextCursor(block)
+
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+        if not cursor.atBlockStart():
+            cursor.insertText("\n")
+            start_line += 1
+
+        cursor.insertText(content)
+
+        if move_cursor_after:
+            self.setTextCursor(cursor)
+
+        self.centerCursor()
+        self._set_modified(True)
+        return start_line
 
     def get_selected_text(self) -> str:
         """

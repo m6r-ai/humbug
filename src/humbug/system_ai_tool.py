@@ -179,15 +179,10 @@ class SystemAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
-                    name="position",
-                    type="string",
-                    description="Position for insertion: 'before' or 'after' (for editor_insert_lines operation)",
-                    required=False
-                ),
-                AIToolParameter(
                     name="content",
                     type="string",
-                    description="Content to insert (for editor_insert_lines operation). Each line must end with `\\n`",
+                    description="Content to insert (for editor_insert_lines and editor_append_lines operations). " \
+                        "You must terminate each line with `\\n`",
                     required=False
                 ),
                 AIToolParameter(
@@ -266,14 +261,14 @@ class SystemAITool(AITool):
                 handler=self._tab_info,
                 allowed_parameters={"tab_id"},
                 required_parameters=set(),
-                description="Get information about a tab, given its ID (if no ID then gets the current tab info)"
+                description="Get information about a tab, given its tab ID (if no ID then gets the current tab info)"
             ),
             "close_tab": AIToolOperationDefinition(
                 name="close_tab",
                 handler=self._close_tab,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Close an existing tab"
+                description="Close an existing tab, given its tab ID"
             ),
             "list_tabs": AIToolOperationDefinition(
                 name="list_tabs",
@@ -287,14 +282,14 @@ class SystemAITool(AITool):
                 handler=self._move_tab,
                 allowed_parameters={"tab_id", "target_column"},
                 required_parameters={"tab_id", "target_column"},
-                description="Move a tab to a specific column by index - there are a maximum of 6 columns"
+                description="Move a tab to a specific column by index, given its tab ID. There are a maximum of 6 columns"
             ),
             "terminal_write": AIToolOperationDefinition(
                 name="terminal_write",
                 handler=self._terminal_write,
                 allowed_parameters={"tab_id", "keystrokes"},
                 required_parameters={"tab_id", "keystrokes"},
-                description="Send keystrokes to a terminal tab, given its ID. "
+                description="Send keystrokes to a terminal tab, given its tab ID. "
                     "You may send more than one keystroke at a time by submitting them as a string. "
                     "The string is not terminated with a newline automatically, so if you want to execute a command "
                     "you must include appropriate end-of-line control characters. "
@@ -318,64 +313,75 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id"},
                 description="Get terminal status and process information, given its tab ID"
             ),
-            "editor_read_content": AIToolOperationDefinition(
-                name="editor_read_content",
-                handler=self._editor_read_content,
+            "editor_read_lines": AIToolOperationDefinition(
+                name="editor_read_lines",
+                handler=self._editor_read_lines,
                 allowed_parameters={"tab_id", "start_line", "end_line"},
                 required_parameters={"tab_id"},
-                description="Read content from an editor tab. Optionally specify line range with start_line "
-                    "and end_line (1-indexed, inclusive)"
+                description="Read content lines from an editor tab, given its tab ID. " \
+                    "Optionally specify line range with start_line and end_line (1-indexed, inclusive)"
             ),
             "editor_get_cursor_info": AIToolOperationDefinition(
                 name="editor_get_cursor_info",
                 handler=self._editor_get_cursor_info,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Get cursor position and selection information from an editor tab"
+                description="Get cursor position and selection information from an editor tab, given its tab ID"
             ),
             "editor_get_info": AIToolOperationDefinition(
                 name="editor_get_info",
                 handler=self._editor_get_info,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Get editor metadata including line count, language, encoding, and modification status"
+                description="Get editor metadata including line count, language, encoding, and modification status, given its tab ID"
             ),
             "editor_goto_line": AIToolOperationDefinition(
                 name="editor_goto_line",
                 handler=self._editor_goto_line,
                 allowed_parameters={"tab_id", "line", "column"},
                 required_parameters={"tab_id", "line"},
-                description="Move cursor to specific line and optional column in an editor tab (1-indexed)"
+                description="Move cursor to specific line and optional column in an editor tab (1-indexed), given its tab ID"
             ),
             "editor_select_range": AIToolOperationDefinition(
                 name="editor_select_range",
                 handler=self._editor_select_range,
                 allowed_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
                 required_parameters={"tab_id", "start_line", "start_column", "end_line", "end_column"},
-                description="Select a specific range of text in an editor tab (1-indexed). Highlights the region for the user"
+                description="Select a specific range of text in an editor tab (1-indexed), given its tab ID. " \
+                    "Highlights the region for the user"
             ),
             "editor_search": AIToolOperationDefinition(
                 name="editor_search",
                 handler=self._editor_search,
                 allowed_parameters={"tab_id", "search_text", "case_sensitive"},
                 required_parameters={"tab_id", "search_text"},
-                description="Find all occurrences of text in an editor tab. Returns list of matches with line, column, and context"
+                description="Find all occurrences of text in an editor tab, given its tab ID. " \
+                    "Returns list of matches with line, column, and context"
             ),
             "editor_delete_lines": AIToolOperationDefinition(
                 name="editor_delete_lines",
                 handler=self._editor_delete_lines,
                 allowed_parameters={"tab_id", "start_line", "end_line", "move_cursor_after"},
                 required_parameters={"tab_id", "start_line", "end_line"},
-                description="Delete one or more complete lines from the document. Changes will not save until " \
-                    "you use the `editor_save_file` operation"
+                description="Delete one or more complete lines from an editor document, given its tab ID. " \
+                    "Deleting lines shifts subsequent lines up so you must consider this for any subsequent edits. " \
+                    "Changes will not save until you use the `editor_save_file` operation"
             ),
             "editor_insert_lines": AIToolOperationDefinition(
                 name="editor_insert_lines",
                 handler=self._editor_insert_lines,
-                allowed_parameters={"tab_id", "line", "position", "content", "move_cursor_after"},
-                required_parameters={"tab_id", "line", "position", "content"},
-                description="Insert new lines at a specific position in the document. Position must be 'before' or 'after'. " \
-                    "If inserting after a line without a trailing newline, one will be added automatically. " \
+                allowed_parameters={"tab_id", "line", "content", "move_cursor_after"},
+                required_parameters={"tab_id", "line", "content"},
+                description="Insert complete new lines at a specific line in an editor document, given its tab ID. " \
+                    "Inserting lines shifts subsequent lines down so you must consider this for any subsequent edits. " \
+                    "Changes will not save until you use the `editor_save_file` operation"
+            ),
+            "editor_append_lines": AIToolOperationDefinition(
+                name="editor_append_lines",
+                handler=self._editor_append_lines,
+                allowed_parameters={"tab_id", "content", "move_cursor_after"},
+                required_parameters={"tab_id", "content"},
+                description="Append complete new lines to the end of an editor document, given its tab ID. " \
                     "Changes will not save until you use the `editor_save_file` operation"
             ),
             "editor_get_selected_text": AIToolOperationDefinition(
@@ -383,14 +389,15 @@ class SystemAITool(AITool):
                 handler=self._editor_get_selected_text,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Get the currently selected text from an editor tab"
+                description="Get the currently selected text from an editor tab, given its tab ID"
             ),
             "editor_save_file": AIToolOperationDefinition(
                 name="editor_save_file",
                 handler=self._editor_save_file,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Save the current editor content to file. Requires user authorization"
+                description="Save the current editor content to file, given its tab ID. " \
+                    "Requires user authorization"
             )
         }
 
@@ -708,7 +715,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Opened editor tab for file: '{relative_path}', tab ID: {tab_id}"
+                content=f"Opened editor tab for file: '{relative_path}'"
             )
 
         except OSError as e:
@@ -1000,7 +1007,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Tab info for ID {tab_id}:\n{json.dumps(tab_info, indent=2)}"
+                content=f"{json.dumps(tab_info, indent=2)}"
             )
 
         except Exception as e:
@@ -1025,7 +1032,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Closed tab, tab ID: {tab_id}"
+                content="Closed tab"
             )
 
         except Exception as e:
@@ -1158,7 +1165,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Keystrokes sent to terminal {tab_id}: '{raw_keystrokes}'"
+                content="Keystrokes sent"
             )
 
         except Exception as e:
@@ -1194,7 +1201,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Terminal buffer content (tab {tab_id}):\n\n{buffer_content}"
+                content=buffer_content
             )
 
         except Exception as e:
@@ -1228,12 +1235,12 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Terminal status (tab {tab_id}):\n{status_text}"
+                content=status_text
             )
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get terminal status: {str(e)}") from e
-    async def _editor_read_content(
+    async def _editor_read_lines(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1304,7 +1311,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Cursor info (tab {tab_id}):\n{json.dumps(cursor_info, indent=2)}"
+                content=f"{json.dumps(cursor_info, indent=2)}"
             )
 
         except Exception as e:
@@ -1332,7 +1339,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Editor info (tab {tab_id}):\n{json.dumps(editor_info, indent=2)}"
+                content=f"{json.dumps(editor_info, indent=2)}"
             )
 
         except Exception as e:
@@ -1367,7 +1374,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Moved cursor to line {line}{col_desc} in tab {tab_id}"
+                content=f"Moved cursor to line {line}{col_desc}"
             )
 
         except ValueError as e:
@@ -1404,7 +1411,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Selected text range {range_desc} in tab {tab_id}"
+                content=f"Selected text range {range_desc}"
             )
 
         except ValueError as e:
@@ -1443,7 +1450,7 @@ class SystemAITool(AITool):
                 return AIToolResult(
                     id=tool_call.id,
                     name="system",
-                    content=f"No matches found for '{search_text}'{case_desc} in tab {tab_id}"
+                    content=f"No matches found for '{search_text}'{case_desc}"
                 )
 
             result = {
@@ -1456,7 +1463,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Search results for '{search_text}'{case_desc} in tab {tab_id}:\n{json.dumps(result, indent=2)}"
+                content=f"{json.dumps(result, indent=2)}"
             )
 
         except Exception as e:
@@ -1490,7 +1497,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Deleted lines {start_line}-{end_line} in tab {tab_id}"
+                content=f"Deleted lines {start_line}-{end_line}"
             )
 
         except ValueError as e:
@@ -1511,28 +1518,24 @@ class SystemAITool(AITool):
         tab_id = editor_tab.tab_id()
 
         line = self._get_int_value_from_key("line", arguments)
-        position = self._get_str_value_from_key("position", arguments)
         content = self._get_str_value_from_key("content", arguments)
         move_cursor_after = arguments.get("move_cursor_after", True)
 
         if not isinstance(move_cursor_after, bool):
             raise AIToolExecutionError("'move_cursor_after' must be a boolean")
 
-        if position not in ("before", "after"):
-            raise AIToolExecutionError(f"'position' must be 'before' or 'after', got '{position}'")
-
         try:
-            editor_tab.insert_lines(line, position, content, move_cursor_after)
+            editor_tab.insert_lines(line, content, move_cursor_after)
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI inserted lines {position} line {line}\ntab ID: {tab_id}"
+                f"AI inserted lines at line {line}\ntab ID: {tab_id}"
             )
 
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Inserted lines {position} line {line} in tab {tab_id}"
+                content=f"Inserted lines at line {line}"
             )
 
         except ValueError as e:
@@ -1541,6 +1544,42 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to insert lines: {str(e)}") from e
 
+    async def _editor_append_lines(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Append new lines to the end of the document."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        content = self._get_str_value_from_key("content", arguments)
+        move_cursor_after = arguments.get("move_cursor_after", True)
+
+        if not isinstance(move_cursor_after, bool):
+            raise AIToolExecutionError("'move_cursor_after' must be a boolean")
+
+        try:
+            insert_line = editor_tab.append_lines(content, move_cursor_after)
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI appended content at line {insert_line}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Appended content at line {insert_line}"
+            )
+
+        except ValueError as e:
+            raise AIToolExecutionError(f"Invalid parameters: {str(e)}") from e
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to append lines: {str(e)}") from e
 
     async def _editor_get_selected_text(
         self,
@@ -1565,13 +1604,13 @@ class SystemAITool(AITool):
                 return AIToolResult(
                     id=tool_call.id,
                     name="system",
-                    content=f"No text selected in tab {tab_id}"
+                    content="No text selected"
                 )
 
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Selected text (tab {tab_id}):\n\n{selected_text}"
+                content=selected_text
             )
 
         except Exception as e:
@@ -1617,7 +1656,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Saved file: {file_path} (tab {tab_id})"
+                content=f"Saved file: '{file_path}'"
             )
 
         except Exception as e:

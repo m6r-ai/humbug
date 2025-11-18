@@ -395,17 +395,28 @@ class EditorTab(TabBase):
         """
         self._editor_widget.delete_lines(start_line, end_line, move_cursor_after)
 
-    def insert_lines(self, line: int, position: str, content: str, move_cursor_after: bool = True) -> None:
+    def insert_lines(self, line: int, content: str, move_cursor_after: bool = True) -> None:
         """
         Insert new lines at a specific position in the document.
 
         Args:
             line: Line number where to insert (1-indexed)
-            position: Either "before" or "after"
             content: Content to insert (should end with \\n for complete lines)
             move_cursor_after: Whether to position cursor after insertion
         """
-        self._editor_widget.insert_lines(line, position, content, move_cursor_after)
+        self._editor_widget.insert_lines(line, content, move_cursor_after)
+
+    def append_lines(self, content: str, move_cursor_after: bool = True) -> int:
+        """
+        Append new lines to the end of the document.
+
+        Args:
+            content: Content to insert (should end with \\n for complete lines)
+            move_cursor_after: Whether to position cursor after insertion
+        Returns:
+            The line number where the content was appended (1-indexed)
+        """
+        return self._editor_widget.append_lines(content, move_cursor_after)
 
     def get_selected_text(self) -> str:
         """

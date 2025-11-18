@@ -2,6 +2,14 @@
 
 ## v0.30 (2025-11-xx)
 
+Bug fixes:
+
+- Remove "patch" tests as patch has now been removed from the project.
+- The new code to modify text in the editor could sometimes get confused about deletion behaviour.  Split this into
+  distinct "delete", "insert", and "append" operations to avoid this.
+- Fixed a problem when editing the last line of a file.
+- Some of the system AI tool descriptions were not clear about the need to use tab IDs.
+
 ## v0.29 (2025-11-16)
 
 New features:
