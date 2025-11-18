@@ -715,7 +715,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Opened editor tab for file: '{relative_path}'"
+                content=f"Opened editor tab for file: '{relative_path}', tab ID: {tab_id}"
             )
 
         except OSError as e:

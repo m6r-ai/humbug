@@ -721,6 +721,7 @@ class AIConversation:
                 # Continue the conversation with tool results
                 self._state = ConversationState.IDLE
                 await self._start_ai()
+
             return
 
         # Create and add initial AI response message
