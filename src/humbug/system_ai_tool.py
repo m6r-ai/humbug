@@ -333,7 +333,8 @@ class SystemAITool(AITool):
                 handler=self._editor_get_info,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Get editor metadata including line count, language, encoding, and modification status, given its tab ID"
+                description="Get editor metadata including line count, language, encoding, and " \
+                    "modification status, given its tab ID"
             ),
             "editor_goto_line": AIToolOperationDefinition(
                 name="editor_goto_line",

@@ -2039,8 +2039,10 @@ class ConversationWidget(QWidget):
 
             sanitized_content = self._sanitize_input(content)
             message = AIMessage.create(
-                AIMessageSource.USER_QUEUED, sanitized_content,
-                model=settings.model, temperature=settings.temperature,
+                AIMessageSource.USER_QUEUED,
+                sanitized_content,
+                model=settings.model,
+                temperature=settings.temperature,
                 reasoning_capability=settings.reasoning
             )
 
@@ -2071,8 +2073,12 @@ class ConversationWidget(QWidget):
 
         sanitized_content = self._sanitize_input(content)
         message = AIMessage.create(
-            AIMessageSource.USER, sanitized_content, user_name=requester,
-            model=model, temperature=temperature, reasoning_capability=reasoning_capability
+            AIMessageSource.USER,
+            sanitized_content,
+            user_name=requester,
+            model=model,
+            temperature=temperature,
+            reasoning_capability=reasoning_capability
         )
 
         self._last_submitted_message = content
