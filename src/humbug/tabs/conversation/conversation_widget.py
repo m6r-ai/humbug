@@ -2033,7 +2033,7 @@ class ConversationWidget(QWidget):
                 loop = asyncio.get_event_loop()
                 loop.create_task(ai_conversation.reject_pending_tool_calls("User interrupted with new message"))
 
-            # Create interruption message
+            # Create queued message
             ai_conversation = cast(AIConversation, self._ai_conversation)
             settings = ai_conversation.conversation_settings()
 
@@ -2044,7 +2044,7 @@ class ConversationWidget(QWidget):
                 reasoning_capability=settings.reasoning
             )
 
-            # Submit the interruption - AIConversation will queue it automatically
+            # Submit the queued message
             loop = asyncio.get_event_loop()
             if not loop.is_running():
                 return

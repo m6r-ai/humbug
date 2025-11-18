@@ -9,6 +9,7 @@ Bug fixes:
   distinct "delete", "insert", and "append" operations to avoid this.
 - Fixed a problem when editing the last line of a file.
 - Some of the system AI tool descriptions were not clear about the need to use tab IDs.
+- Fixed a problem where the user queues a message during an AI streaming response but where no tool call occurs.
 
 ## v0.29 (2025-11-16)
 

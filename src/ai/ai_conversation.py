@@ -518,29 +518,28 @@ class AIConversation:
                         await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
                         break
 
-        # Check for pending interruptions and append them to tool results
-        interrupt_content = ""
+        # Check for pending queued messages and append them to tool results
+        queued_content = ""
         if self._pending_user_messages:
-            self._logger.debug("Appending %d interrupt messages to tool results",
-                              len(self._pending_user_messages))
+            self._logger.debug("Appending %d queued messages to tool results", len(self._pending_user_messages))
 
-            # Collect interrupt messages
-            interrupt_texts = []
+            # Collect queued messages
+            queued_texts = []
             for msg in self._pending_user_messages:
                 if msg.content:
-                    interrupt_texts.append(msg.content)
+                    queued_texts.append(msg.content)
 
             # Format as user feedback
-            if interrupt_texts:
-                interrupt_content = "\n\n".join([f"{text}" for text in interrupt_texts])
+            if queued_texts:
+                queued_content = "\n\n".join([f"{text}" for text in queued_texts])
 
             # Clear the queue
             self._pending_user_messages.clear()
 
-        # Create a specific user message with the tool results (and any interrupts)
+        # Create a specific user message with the tool results (and any queued messages)
         tool_response_message = AIMessage.create(
             AIMessageSource.USER,
-            content=interrupt_content,
+            content=queued_content,
             tool_results=tool_results
         )
         self._conversation.add_message(tool_response_message)
@@ -694,6 +693,34 @@ class AIConversation:
                     message
                 )
 
+            # Check if we have any queued messages to process.
+            if usage is not None and self._pending_user_messages:
+                self._logger.debug("Processing %d queued messages after AI response completion",
+                                   len(self._pending_user_messages))
+
+                # Collect queued messages
+                queued_texts = []
+                for msg in self._pending_user_messages:
+                    if msg.content:
+                        queued_texts.append(msg.content)
+
+                # Format as user feedback
+                queued_content = "\n\n".join([f"{text}" for text in queued_texts])
+
+                # Clear the queue
+                self._pending_user_messages.clear()
+
+                # Create a specific user message with the queued messages
+                queued_message = AIMessage.create(
+                    AIMessageSource.USER,
+                    content=queued_content
+                )
+                self._conversation.add_message(queued_message)
+                await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, queued_message)
+
+                # Continue the conversation with tool results
+                self._state = ConversationState.IDLE
+                await self._start_ai()
             return
 
         # Create and add initial AI response message
