@@ -303,7 +303,7 @@ class AIConversation:
                     # Log but don't propagate generator cleanup errors
                     self._logger.debug("Error during generator cleanup: %s", e)
 
-        self._state = ConversationState.IDLE
+            self._state = ConversationState.IDLE
 
     async def _request_tool_authorization(self, tool_name: str, arguments: Dict[str, Any], reason: str, destructive: bool) -> bool:
         """
@@ -892,5 +892,7 @@ class AIConversation:
         for task in self._current_tasks:
             if not task.done():
                 task.cancel()
+
+        self._pending_user_messages.clear()
 
         self._state = ConversationState.IDLE

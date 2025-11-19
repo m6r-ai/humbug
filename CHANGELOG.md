@@ -2,6 +2,10 @@
 
 ## v0.30 (2025-11-xx)
 
+New features:
+
+- Added support for Google Gemini 3 Pro, and removed support for Gemini 1.5 models.
+
 Bug fixes:
 
 - Remove "patch" tests as patch has now been removed from the project.
@@ -10,6 +14,7 @@ Bug fixes:
 - Fixed a problem when editing the last line of a file.
 - Some of the system AI tool descriptions were not clear about the need to use tab IDs.
 - Fixed a problem where the user queues a message during an AI streaming response but where no tool call occurs.
+- Fixed a problem with cancelling messages after an API error.
 
 ## v0.29 (2025-11-16)
 
