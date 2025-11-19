@@ -25,7 +25,7 @@ class AIStreamResponse(ABC):
         self.error: AIError | None = None
         self.tool_calls: List[AIToolCall] = []
         self.signature = ""
-        self.readacted_reasoning = ""
+        self.redacted_reasoning = ""
         self._logger = logging.getLogger(self.__class__.__name__)
 
     @abstractmethod

@@ -107,13 +107,19 @@ class GoogleBackend(AIBackend):
             "parts": parts
         }
 
-    def _build_assistant_message(self, content: str, tool_calls: List[AIToolCall] | None = None) -> Dict[str, Any]:
+    def _build_assistant_message(
+        self,
+        content: str,
+        tool_calls: List[AIToolCall] | None = None,
+        redacted_reasoning: str | None = None
+    ) -> Dict[str, Any]:
         """
         Build assistant message for Google format.
 
         Args:
             content: Assistant message content
             tool_calls: Optional tool calls made by the assistant
+            redacted_reasoning: Optional redacted reasoning signature
 
         Returns:
             Assistant message dictionary with structured content
@@ -128,13 +134,25 @@ class GoogleBackend(AIBackend):
 
         # Add tool calls as function call parts
         if tool_calls:
+            seen_thought_signature = False
             for tool_call in tool_calls:
-                parts.append({
-                    "functionCall": {
-                        "name": tool_call.name,
-                        "args": tool_call.arguments
-                    }
-                })
+                if redacted_reasoning and not seen_thought_signature:
+                    parts.append({
+                        "functionCall": {
+                            "name": tool_call.name,
+                            "args": tool_call.arguments
+                        },
+                        "thoughtSignature": redacted_reasoning
+                    })
+                    seen_thought_signature = True
+
+                else:
+                    parts.append({
+                        "functionCall": {
+                            "name": tool_call.name,
+                            "args": tool_call.arguments
+                        }
+                    })
 
         return {
             "role": "model",
@@ -200,7 +218,8 @@ class GoogleBackend(AIBackend):
 
                 assistant_msg = self._build_assistant_message(
                     content=message.content,
-                    tool_calls=message.tool_calls
+                    tool_calls=message.tool_calls,
+                    redacted_reasoning=message.redacted_reasoning
                 )
                 result.append(assistant_msg)
 

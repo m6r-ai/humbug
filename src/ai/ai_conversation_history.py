@@ -47,7 +47,7 @@ class AIConversationHistory:
         usage: AIUsage | None = None,
         completed: bool | None = None,
         signature: str | None = None,
-        readacted_reasoning: str | None = None
+        redacted_reasoning: str | None = None
     ) -> AIMessage | None:
         """Update an existing message and return the updated message."""
         for message in self._messages:
@@ -68,7 +68,7 @@ class AIConversationHistory:
                     message.completed = completed
 
                 message.signature = signature
-                message.readacted_reasoning = readacted_reasoning
+                message.redacted_reasoning = redacted_reasoning
 
                 return message
 

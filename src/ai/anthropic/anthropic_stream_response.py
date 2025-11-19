@@ -60,7 +60,7 @@ class AnthropicStreamResponse(AIStreamResponse):
                 self._current_tool_arguments = ""
 
             elif block_type == "redacted_thinking":
-                self.readacted_reasoning = content_block.get("data", "")
+                self.redacted_reasoning = content_block.get("data", "")
 
         elif event_type == "content_block_delta":
             delta = chunk.get("delta", {})

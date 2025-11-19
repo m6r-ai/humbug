@@ -45,6 +45,10 @@ class GoogleStreamResponse(AIStreamResponse):
                         "arguments": function_args
                     }
 
+                # Handle thought signatures
+                if "thoughtSignature" in part:
+                    self.redacted_reasoning = part["thoughtSignature"]
+
         # Check for completion reason and process usage
         if candidate.get("finishReason") == "STOP" and "usageMetadata" in chunk:
             metadata = chunk["usageMetadata"]

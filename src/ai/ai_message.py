@@ -32,7 +32,7 @@ class AIMessage:
     tool_calls: List[AIToolCall] | None = None
     tool_results: List[AIToolResult] | None = None
     signature: str | None = None
-    readacted_reasoning: str | None = None
+    redacted_reasoning: str | None = None
     user_name: str | None = None
 
     # Map between AIMessageSource enum and transcript type strings
@@ -63,7 +63,7 @@ class AIMessage:
         tool_calls: List[AIToolCall] | None = None,
         tool_results: List[AIToolResult] | None = None,
         signature: str | None = None,
-        readacted_reasoning: str | None = None,
+        redacted_reasoning: str | None = None,
         user_name: str | None = None,
     ) -> 'AIMessage':
         """Create a new message with generated ID and current timestamp."""
@@ -84,7 +84,7 @@ class AIMessage:
             tool_calls=tool_calls,
             tool_results=tool_results,
             signature=signature,
-            readacted_reasoning=readacted_reasoning,
+            redacted_reasoning=redacted_reasoning,
             user_name=user_name
         )
 
@@ -104,7 +104,7 @@ class AIMessage:
             tool_calls=self.tool_calls.copy() if self.tool_calls else None,
             tool_results=self.tool_results.copy() if self.tool_results else None,
             signature=self.signature,
-            readacted_reasoning=self.readacted_reasoning,
+            redacted_reasoning=self.redacted_reasoning,
             user_name=self.user_name
         )
 
@@ -139,8 +139,8 @@ class AIMessage:
         if self.signature:
             message["signature"] = self.signature
 
-        if self.readacted_reasoning:
-            message["readacted_reasoning"] = self.readacted_reasoning
+        if self.redacted_reasoning:
+            message["redacted_reasoning"] = self.redacted_reasoning
 
         # Add tool-specific fields
         if self.tool_calls:
@@ -270,6 +270,6 @@ class AIMessage:
             tool_calls=tool_calls,
             tool_results=tool_results,
             signature=data.get("signature", None),
-            readacted_reasoning=data.get("readacted_reasoning", None),
+            redacted_reasoning=data.get("redacted_reasoning", None),
             user_name=data.get("user_name", None)
         )

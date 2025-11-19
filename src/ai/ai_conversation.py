@@ -246,7 +246,7 @@ class AIConversation:
                     error=response.error,
                     tool_calls=response.tool_calls,
                     signature=response.signature,
-                    readacted_reasoning=response.readacted_reasoning,
+                    redacted_reasoning=response.redacted_reasoning,
                     connected=response.connected
                 )
 
@@ -666,6 +666,7 @@ class AIConversation:
         content: str,
         usage: AIUsage | None,
         tool_calls: List[AIToolCall] | None,
+        redacted_reasoning: str | None = None
     ) -> None:
         """
         Handle content updates from the AI response.
@@ -674,6 +675,7 @@ class AIConversation:
             content: Main content of the AI response
             usage: Optional token usage information
             tool_calls: Optional list of tool calls made by the AI
+            redacted_reasoning: Optional redacted reasoning text
         """
         if self._current_ai_message:
             # Update existing message with new tool calls if provided
@@ -685,7 +687,8 @@ class AIConversation:
                 self._current_ai_message.id,
                 content,
                 usage=usage,
-                completed=(usage is not None)
+                completed=(usage is not None),
+                redacted_reasoning=redacted_reasoning
             )
             if message:
                 await self._trigger_event(
@@ -704,7 +707,8 @@ class AIConversation:
             temperature=settings.temperature,
             reasoning_capability=settings.reasoning,
             completed=(usage is not None),
-            tool_calls=tool_calls
+            tool_calls=tool_calls,
+            redacted_reasoning=redacted_reasoning
         )
         self._conversation.add_message(new_message)
         await self._trigger_event(
@@ -719,7 +723,7 @@ class AIConversation:
         usage: AIUsage | None,
         tool_calls: List[AIToolCall] | None,
         signature: str | None = None,
-        readacted_reasoning: str | None = None
+        redacted_reasoning: str | None = None
     ) -> None:
         """
         Handle reasoning updates from the AI response.
@@ -729,7 +733,7 @@ class AIConversation:
             usage: Optional token usage information
             tool_calls: Optional list of tool calls made by the AI
             signature: Optional signature for the response
-            readacted_reasoning: Optional readacted reasoning text
+            redacted_reasoning: Optional redacted reasoning text
         """
         # We're handling reasoning from our AI.  Have we already seen part of this reasoning?
         if self._current_reasoning_message:
@@ -740,7 +744,7 @@ class AIConversation:
                 usage=usage,
                 completed=(usage is not None),
                 signature=signature,
-                readacted_reasoning=readacted_reasoning
+                redacted_reasoning=redacted_reasoning
             )
             if message:
                 await self._trigger_event(
@@ -761,7 +765,7 @@ class AIConversation:
             completed=(usage is not None),
             tool_calls=tool_calls,
             signature=signature,
-            readacted_reasoning=readacted_reasoning
+            redacted_reasoning=redacted_reasoning
         )
         self._conversation.add_message(new_message)
         await self._trigger_event(
@@ -770,7 +774,13 @@ class AIConversation:
         )
         self._current_reasoning_message = new_message
 
-    async def _handle_usage(self, reasoning: str, content: str, tool_calls: List[AIToolCall] | None) -> None:
+    async def _handle_usage(
+        self,
+        reasoning: str,
+        content: str,
+        tool_calls: List[AIToolCall] | None,
+        redacted_reasoning: str | None = None
+    ) -> None:
         self._logger.debug("Finished AI response streaming")
 
         self._is_streaming = False
@@ -784,7 +794,8 @@ class AIConversation:
                 temperature=settings.temperature,
                 reasoning_capability=settings.reasoning,
                 completed=True,
-                tool_calls=tool_calls
+                tool_calls=tool_calls,
+                redacted_reasoning=redacted_reasoning
             )
             self._conversation.add_message(message)
             await self._trigger_event(AIConversationEvent.TOOL_USED, message)
@@ -839,7 +850,7 @@ class AIConversation:
         error: AIError | None = None,
         tool_calls: List[AIToolCall] | None = None,
         signature: str | None = None,
-        readacted_reasoning: str | None = None,
+        redacted_reasoning: str | None = None,
         connected: bool = False
     ) -> None:
         """
@@ -852,7 +863,7 @@ class AIConversation:
             error: Optional error information
             tool_calls: Optional list of tool calls made by the AI
             signature: Optional signature for the response
-            readacted_reasoning: Optional readacted reasoning text
+            redacted_reasoning: Optional redacted reasoning text
             connected: Whether this indicates AI connection established
         """
         if error:
@@ -871,13 +882,13 @@ class AIConversation:
         await self._trigger_event(AIConversationEvent.STREAMING_UPDATE)
 
         if reasoning:
-            await self._handle_reasoning(reasoning, usage, tool_calls, signature, readacted_reasoning)
+            await self._handle_reasoning(reasoning, usage, tool_calls, signature, redacted_reasoning)
 
         if content:
-            await self._handle_content(content, usage, tool_calls)
+            await self._handle_content(content, usage, tool_calls, redacted_reasoning)
 
         if usage:
-            await self._handle_usage(reasoning, content, tool_calls)
+            await self._handle_usage(reasoning, content, tool_calls, redacted_reasoning)
             await self._handle_pending_user_messages()
 
     def cancel_current_tasks(self) -> None:
