@@ -21,7 +21,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "claude-haiku-4-5-20251001 (thinking)": AIModel(
-            name="claude-haiku-4-5-20251001 (thinking)",
+            name="claude-haiku-4-5-20251001",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,
@@ -48,7 +48,7 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "claude-sonnet-4-5-20250929 (thinking)": AIModel(
-            name="claude-sonnet-4-5-20250929 (thinking)",
+            name="claude-sonnet-4-5-20250929",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
