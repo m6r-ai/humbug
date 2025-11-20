@@ -15,6 +15,8 @@ Bug fixes:
 - Some of the system AI tool descriptions were not clear about the need to use tab IDs.
 - Fixed a problem where the user queues a message during an AI streaming response but where no tool call occurs.
 - Fixed a problem with cancelling messages after an API error.
+- Fixed a probelm with "thinking" Claude models.
+- Fixed a problem where renaming conversations did not always correctly resize tab labels.
 
 ## v0.29 (2025-11-16)
 
