@@ -1234,9 +1234,16 @@ class SystemAITool(AITool):
         try:
             content = editor_tab.get_text_range(start_line, end_line)
             context_object = {}
-            content_lines = content.splitlines()
-            for line_num, line_text in enumerate(content_lines):
-                context_object[line_num + start_line if start_line is not None else line_num + 1] = line_text
+
+            # Handle empty content - should still show line 1 as empty string
+            # This matches the editor perspective where an empty file shows line 1
+            if not content:
+                context_object[1] = ""
+
+            else:
+                content_lines = content.splitlines()
+                for line_num, line_text in enumerate(content_lines):
+                    context_object[line_num + start_line if start_line is not None else line_num + 1] = line_text
 
             if start_line is not None or end_line is not None:
                 range_desc = f"lines {start_line or 1}-{end_line or 'end'}"
