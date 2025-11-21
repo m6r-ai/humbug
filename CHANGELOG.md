@@ -6,12 +6,11 @@ New features:
 
 - Added support for Google Gemini 3 Pro, and removed support for Gemini 1.5 models.
 - Added a new patch applying operation to the system AI editor tools.
+- Removed the code from v0.29 that would modify text in an editor as the new patch tool supercedes it.
 
 Bug fixes:
 
 - Removed "patch" tests as the provisional patch tool has now been removed from the project.
-- The new code to modify text in the editor could sometimes get confused about deletion behaviour.  Split this into
-  distinct "delete", "insert", and "append" operations to avoid this.
 - Fixed a problem when editing the last line of a file.
 - Some of the system AI tool descriptions were not clear about the need to use tab IDs.
 - Fixed a problem where the user queues a message during an AI streaming response but where no tool call occurs.

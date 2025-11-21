@@ -155,18 +155,6 @@ class SystemAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
-                    name="start_column",
-                    type="integer",
-                    description="Start column number (1-indexed) for editor operations",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="end_column",
-                    type="integer",
-                    description="End column number (1-indexed) for editor operations",
-                    required=False
-                ),
-                AIToolParameter(
                     name="search_text",
                     type="string",
                     description="Text to search for in editor",
@@ -354,35 +342,6 @@ class SystemAITool(AITool):
                 description="Find precise lines numbers for all occurrences of text in an editor tab. " \
                     "You must provide the tab_id and search_text parameters. " \
                     "Returns list of matches with line (1-indexed), column (1-indexed), and context"
-            ),
-            "editor_delete_lines": AIToolOperationDefinition(
-                name="editor_delete_lines",
-                handler=self._editor_delete_lines,
-                allowed_parameters={"tab_id", "start_line", "end_line"},
-                required_parameters={"tab_id", "start_line", "end_line"},
-                description="Delete lines from `start_line` to `end_line` in an editor document. " \
-                    "You must provide the tab_id, start_line, and end_line parameters. " \
-                    "Deleting lines shifts subsequent lines up so you must consider this for any subsequent edits. " \
-                    "Changes will not save until you use the `editor_save_file` operation"
-            ),
-            "editor_insert_lines": AIToolOperationDefinition(
-                name="editor_insert_lines",
-                handler=self._editor_insert_lines,
-                allowed_parameters={"tab_id", "line", "text_to_insert"},
-                required_parameters={"tab_id", "line", "text_to_insert"},
-                description="Insert complete new lines at a specific line in an editor document. " \
-                    "You must provide the tab_id, line, and text_to_insert parameters. " \
-                    "Inserting lines shifts subsequent lines down so you must consider this for any subsequent edits. " \
-                    "Changes will not save until you use the `editor_save_file` operation"
-            ),
-            "editor_append_lines": AIToolOperationDefinition(
-                name="editor_append_lines",
-                handler=self._editor_append_lines,
-                allowed_parameters={"tab_id", "text_to_insert"},
-                required_parameters={"tab_id", "text_to_insert"},
-                description="Append complete new lines to the end of an editor document. " \
-                    "You must provide the tab_id, and text_to_insert parameters. " \
-                    "Changes will not save until you use the `editor_save_file` operation"
             ),
             "editor_get_selected_text": AIToolOperationDefinition(
                 name="editor_get_selected_text",
@@ -1445,106 +1404,6 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to search in editor: {str(e)}") from e
-
-    async def _editor_delete_lines(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Delete one or more complete lines from the document."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        start_line = self._get_int_value_from_key("start_line", arguments)
-        end_line = self._get_int_value_from_key("end_line", arguments)
-
-        try:
-            editor_tab.delete_lines(start_line, end_line)
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI deleted lines from {start_line} to {end_line}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Deleted lines from {start_line} to {end_line}"
-            )
-
-        except ValueError as e:
-            raise AIToolExecutionError(f"Invalid line range: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to delete lines: {str(e)}") from e
-
-    async def _editor_insert_lines(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Insert new lines at a specific position in the document."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        line = self._get_int_value_from_key("line", arguments)
-        text_to_insert = self._get_str_value_from_key("text_to_insert", arguments)
-
-        try:
-            editor_tab.insert_lines(line, text_to_insert)
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI inserted lines at line {line}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Inserted lines at line {line}"
-            )
-
-        except ValueError as e:
-            raise AIToolExecutionError(f"Invalid parameters: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to insert lines: {str(e)}") from e
-
-    async def _editor_append_lines(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Append new lines to the end of the document."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        text_to_insert = self._get_str_value_from_key("text_to_insert", arguments)
-
-        try:
-            insert_line = editor_tab.append_lines(text_to_insert)
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI appended content at line {insert_line}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Appended content at line {insert_line}"
-            )
-
-        except ValueError as e:
-            raise AIToolExecutionError(f"Invalid parameters: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to append lines: {str(e)}") from e
 
     async def _editor_get_selected_text(
         self,

@@ -26,16 +26,12 @@ Context:
 Action:
     # Describe the details of the change required.
     In the current code we have some tools to allow an AI such as yourself to delete, insert, or
-    append lines of text.  I would like to add a new tool that will allow an AI to generate a
-    unified diff input and then have that applied to the editor buffer.
+    append lines of text.
 
-    The operation must be atomic so either all parts of the diff apply or all are rejected.
+    We just added a tool that lets you apply diffs instead and that tool is capable of doing all these
+    operations.  We should remove the ones we no longer need because it makes the tool description
+    more complex and consumes tokens.  It also makes maintenance harder.
 
-    The operation does not require user approval.
-
-    The diff must be applied in a fuzzy way in case there are slight movements in lines of
-    code.
-
-    How might this be done?
+    Please propose changes to remove the code we no longer need.
 
     Don't code anything - I want to discuss first.

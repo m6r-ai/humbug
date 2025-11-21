@@ -65,6 +65,7 @@ class DiffParser:
             if line.startswith('---') or line.startswith('+++'):
                 start_idx += 1
                 continue
+
             break
 
         # Parse hunks
@@ -172,6 +173,10 @@ class FuzzyMatcher:
         self._logger = logging.getLogger("FuzzyMatcher")
         self._confidence_threshold = confidence_threshold
         self._search_window = search_window
+
+    def search_window(self) -> int:
+        """Get the current search window size."""
+        return self._search_window
 
     def find_match(
         self,
@@ -458,6 +463,7 @@ class DiffApplier:
                     if line.type in (' ', '-')
                 ]
 
+                search_window = self._matcher.search_window()
                 return {
                     'success': False,
                     'message': f'Could not locate hunk {idx + 1} with sufficient confidence',
@@ -469,8 +475,8 @@ class DiffApplier:
                         'expected_location': hunk.old_start,
                         'expected_context': expected_lines,
                         'searched_range': [
-                            max(1, hunk.old_start - self._matcher._search_window),
-                            min(document.blockCount(), hunk.old_start + self._matcher._search_window)
+                            max(1, hunk.old_start - search_window),
+                            min(document.blockCount(), hunk.old_start + search_window)
                         ],
                         'best_match': {
                             'location': match_result.location,
@@ -571,16 +577,22 @@ class DiffApplier:
 
         Args:
             hunk: The hunk to apply
-            location: Line number where to apply (1-indexed)
+            location: Line number where to apply (1-indexed, or 0 for empty file)
             document: Document to modify
             cursor: Cursor for modifications
         """
-        # Position cursor at the start of the hunk location
-        block = document.findBlockByLineNumber(location - 1)
-        if not block.isValid():
-            raise ValueError(f"Invalid line number: {location}")
+        # Handle empty file case (location == 0)
+        if location == 0:
+            # Position cursor at start of empty document
+            cursor.setPosition(0)
 
-        cursor.setPosition(block.position())
+        else:
+            # Position cursor at the start of the hunk location
+            block = document.findBlockByLineNumber(location - 1)
+            if not block.isValid():
+                raise ValueError(f"Invalid line number: {location}")
+
+            cursor.setPosition(block.position())
 
         # Process each line in the hunk
         for line in hunk.lines:
@@ -596,6 +608,7 @@ class DiffApplier:
                 # If not at end of document, include the newline
                 if not cursor.atEnd():
                     cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor)
+
                 # If at end but not at start of document, delete the newline before
                 elif location > 1:
                     cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)

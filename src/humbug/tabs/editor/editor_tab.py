@@ -371,38 +371,6 @@ class EditorTab(TabBase):
         """
         return self._editor_widget.find_all_occurrences(search_text, case_sensitive)
 
-
-    def delete_lines(self, start_line: int, end_line: int) -> None:
-        """
-        Delete one or more complete lines from the document.
-
-        Args:
-            start_line: Starting line number (1-indexed)
-            end_line: Ending line number (1-indexed, inclusive)
-        """
-        self._editor_widget.delete_lines(start_line, end_line)
-
-    def insert_lines(self, line: int, content: str) -> None:
-        """
-        Insert new lines at a specific position in the document.
-
-        Args:
-            line: Line number where to insert (1-indexed)
-            content: Content to insert (should end with \\n for complete lines)
-        """
-        self._editor_widget.insert_lines(line, content)
-
-    def append_lines(self, content: str) -> int:
-        """
-        Append new lines to the end of the document.
-
-        Args:
-            content: Content to insert (should end with \\n for complete lines)
-        Returns:
-            The line number where the content was appended (1-indexed)
-        """
-        return self._editor_widget.append_lines(content)
-
     def get_selected_text(self) -> str:
         """
         Get the currently selected text.
