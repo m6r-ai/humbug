@@ -981,7 +981,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"{json.dumps(tab_info, indent=2)}"
+                content=str(tab_info)
             )
 
         except Exception as e:
@@ -1046,7 +1046,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Current tabs:\n{json.dumps(result, indent=2)}"
+                content=f"Current tabs:\n{result}"
             )
 
         except Exception as e:
@@ -1295,7 +1295,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"{json.dumps(cursor_info, indent=2)}"
+                content=str(cursor_info)
             )
 
         except Exception as e:
@@ -1323,7 +1323,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"{json.dumps(editor_info, indent=2)}"
+                content=str(editor_info)
             )
 
         except Exception as e:
@@ -1535,7 +1535,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Failed to apply diff: {result['message']}\n\nError details:\n{json.dumps(error_details, indent=2)}"
+                content=f"Failed to apply diff: {result['message']}\n\nError details:\n{error_details}"
             )
 
         except Exception as e:
