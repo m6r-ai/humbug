@@ -5,18 +5,20 @@
 New features:
 
 - Added support for Google Gemini 3 Pro, and removed support for Gemini 1.5 models.
+- Added a new patch applying operation to the system AI editor tools.
 
 Bug fixes:
 
-- Remove "patch" tests as patch has now been removed from the project.
+- Removed "patch" tests as the provisional patch tool has now been removed from the project.
 - The new code to modify text in the editor could sometimes get confused about deletion behaviour.  Split this into
   distinct "delete", "insert", and "append" operations to avoid this.
 - Fixed a problem when editing the last line of a file.
 - Some of the system AI tool descriptions were not clear about the need to use tab IDs.
 - Fixed a problem where the user queues a message during an AI streaming response but where no tool call occurs.
 - Fixed a problem with cancelling messages after an API error.
-- Fixed a probelm with "thinking" Claude models.
+- Fixed a problem with "thinking" Claude models.
 - Fixed a problem where renaming conversations did not always correctly resize tab labels.
+- Modified the `editor_read_lines` tool to provide line numbers with each line to improve AI tool use reliability.
 
 ## v0.29 (2025-11-16)
 
@@ -307,8 +309,8 @@ New features:
 
 Bug fixes:
 
-- Resolve problem with responses back to parallel tool calls.
-- Resolve problem with trailing whitespace after Metaphor embedded filenames.
+- Resolved problem with responses back to parallel tool calls.
+- Resolved problem with trailing whitespace after Metaphor embedded filenames.
 - When writing files to the filesystem, use a "destructive" button colour for overwrites, and "recommended" for new files.
 - When copying files to the filesystem, use a "destructive" button colour for overwrites, and "recommended" for new files.
 - The filesystem tool did not fully validate all arguments.  While this wouldn't have failed, it wouldn't have given
@@ -382,7 +384,7 @@ New features:
 Bug fixes:
 
 - When renaming or duplicating files, the file extension is no longer automatically selected, so the user does not
-  accidently remove the file extension when typing a new file name.
+  accidentally remove the file extension when typing a new file name.
 - When creating a new file or folder, ensure the mindspace tree is scrolled to the new file/folder before
   attempting to edit the label.
 - Changing a tab label could cause a temporary glitch in the display.
@@ -436,7 +438,7 @@ Bug fixes:
 Internal structure changes:
 
 - Added comprehensive markdown AST tests.
-- Updated the Metaphor AST tests to introduce the smae sort of example-based tests as markdown.
+- Updated the Metaphor AST tests to introduce the same sort of example-based tests as markdown.
 
 ## v0.13 (2025-05-28)
 
@@ -588,10 +590,10 @@ New features:
 Bug fixes:
 
 - The Metaphor compiler's parser is now more permissive about the use of blank lines to help improve
-  the readability of inluded Metaphor.
+  the readability of included Metaphor.
 - The bookmark menu items did not correctly change language when the language was changed at runtime.
-- Resolve a rendering problem with lists that contain paragraphs.
-- Resolve a problem where editor windows did not get focus correctly when clicked.
+- Resolved a rendering problem with lists that contain paragraphs.
+- Resolved a problem where editor windows did not get focus correctly when clicked.
 - Resolved a duplicate "Humbug" menu item on MacOS.
 
 ## v0.8 (2025-03-27)
@@ -658,7 +660,7 @@ Bug fixes:
 
 - Added elipsis to the Python syntax highlighting engine.
 - Go, Rust, and Swift were not correctly identified in editor tab status bars.
-- Fixed a problem with the Scheme lexer not handling some error condititions correctly.
+- Fixed a problem with the Scheme lexer not handling some error conditions correctly.
 
 ## v0.6 (2025-02-27)
 
@@ -684,7 +686,7 @@ Bug fixes:
 
 - Resolved some problems with failure handling in the AI networking code.
 - Corrected the missing language translations for terminal status messages.
-- Resolved a few problems with the Swift syntax highligher.
+- Resolved a few problems with the Swift syntax highlighter.
 
 ## v0.5 (2025-02-24)
 
