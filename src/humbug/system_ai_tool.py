@@ -56,7 +56,8 @@ class SystemAITool(AITool):
         # Build description from operations
         base_description = (
             "The system tool let's you (the AI) control the application user interface for the user.\n" \
-            "The user interface is organized into columns, each containing tabs"
+            "The user interface is organized into columns, each containing tabs.\n" \
+            "Use editor tabs to perform incremental edits to files." \
         )
 
         # Generate operations list
@@ -91,7 +92,7 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="tab_id",
                     type="string",
-                    description="ID of a tab (for tab_info, close_tab, move_tab, and terminal operations)",
+                    description="GUID ID of a tab (for tab_info, close_tab, move_tab, and terminal operations)",
                     required=False
                 ),
                 AIToolParameter(
@@ -367,7 +368,10 @@ class SystemAITool(AITool):
                     "This operation is atomic - either all hunks apply successfully or none do. " \
                     "The diff is applied with fuzzy matching to handle minor line movements. " \
                     "You must provide the tab_id and diff_content parameters. " \
-                    "The diff should be in standard unified diff format, though the file headers (--- and +++) are optional"
+                    "The diff should be in standard unified diff format, though the file headers (`---` and `+++`) are " \
+                    "optional. Where possible the diff should have at least 3 lines of context before and after each hunk. " \
+                    "Diff line numbers are best computed using the `editor_read_lines` or `editor_search` operations. " \
+                    "Editor contents are not saved automatically - you must call `editor_save_file` to persist changes"
             )
         }
 
@@ -1260,7 +1264,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=json.dumps(context_object, indent=2)
+                content=str(context_object)
             )
 
         except ValueError as e:
@@ -1406,7 +1410,7 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"{json.dumps(result, indent=2)}"
+                content=str(result)
             )
 
         except Exception as e:
