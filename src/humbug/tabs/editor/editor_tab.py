@@ -358,18 +358,6 @@ class EditorTab(TabBase):
         """
         self._editor_widget.goto_line(line, column)
 
-    def set_selection(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
-        """
-        Select a specific range of text.
-
-        Args:
-            start_line: Starting line number (1-indexed)
-            start_column: Starting column number (1-indexed)
-            end_line: Ending line number (1-indexed)
-            end_column: Ending column number (1-indexed)
-        """
-        self._editor_widget.set_selection(start_line, start_column, end_line, end_column)
-
     def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
         """
         Find all occurrences of text in the document.
@@ -384,39 +372,36 @@ class EditorTab(TabBase):
         return self._editor_widget.find_all_occurrences(search_text, case_sensitive)
 
 
-    def delete_lines(self, start_line: int, end_line: int, move_cursor_after: bool = True) -> None:
+    def delete_lines(self, start_line: int, end_line: int) -> None:
         """
         Delete one or more complete lines from the document.
 
         Args:
             start_line: Starting line number (1-indexed)
             end_line: Ending line number (1-indexed, inclusive)
-            move_cursor_after: Whether to position cursor after deletion
         """
-        self._editor_widget.delete_lines(start_line, end_line, move_cursor_after)
+        self._editor_widget.delete_lines(start_line, end_line)
 
-    def insert_lines(self, line: int, content: str, move_cursor_after: bool = True) -> None:
+    def insert_lines(self, line: int, content: str) -> None:
         """
         Insert new lines at a specific position in the document.
 
         Args:
             line: Line number where to insert (1-indexed)
             content: Content to insert (should end with \\n for complete lines)
-            move_cursor_after: Whether to position cursor after insertion
         """
-        self._editor_widget.insert_lines(line, content, move_cursor_after)
+        self._editor_widget.insert_lines(line, content)
 
-    def append_lines(self, content: str, move_cursor_after: bool = True) -> int:
+    def append_lines(self, content: str) -> int:
         """
         Append new lines to the end of the document.
 
         Args:
             content: Content to insert (should end with \\n for complete lines)
-            move_cursor_after: Whether to position cursor after insertion
         Returns:
             The line number where the content was appended (1-indexed)
         """
-        return self._editor_widget.append_lines(content, move_cursor_after)
+        return self._editor_widget.append_lines(content)
 
     def get_selected_text(self) -> str:
         """

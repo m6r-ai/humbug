@@ -1463,67 +1463,6 @@ class EditorWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
         self.centerCursor()
 
-    def set_selection(self, start_line: int, start_column: int, end_line: int, end_column: int) -> None:
-        """
-        Select a specific range of text.
-
-        Args:
-            start_line: Starting line number (1-indexed)
-            start_column: Starting column number (1-indexed)
-            end_line: Ending line number (1-indexed)
-            end_column: Ending column number (1-indexed)
-
-        Raises:
-            ValueError: If any position is invalid
-        """
-        document = self.document()
-        total_lines = document.blockCount()
-
-        if start_line < 1 or start_line > total_lines:
-            raise ValueError(f"start_line ({start_line}) must be between 1 and {total_lines}")
-
-        if end_line < 1 or end_line > total_lines:
-            raise ValueError(f"end_line ({end_line}) must be between 1 and {total_lines}")
-
-        if start_column < 1:
-            raise ValueError(f"start_column must be >= 1, got {start_column}")
-
-        if end_column < 1:
-            raise ValueError(f"end_column must be >= 1, got {end_column}")
-
-        start_block = document.findBlockByLineNumber(start_line - 1)
-        end_block = document.findBlockByLineNumber(end_line - 1)
-
-        if not start_block.isValid() or not end_block.isValid():
-            raise ValueError("Invalid line range")
-
-        start_line_length = start_block.length() - 1
-        if start_column > start_line_length + 1:
-            raise ValueError(f"start_column ({start_column}) exceeds line length ({start_line_length})")
-
-        end_line_length = end_block.length() - 1
-        if end_column > end_line_length + 1:
-            raise ValueError(f"end_column ({end_column}) exceeds line length ({end_line_length})")
-
-        cursor = QTextCursor(start_block)
-        cursor.movePosition(
-            QTextCursor.MoveOperation.Right,
-            QTextCursor.MoveMode.MoveAnchor,
-            start_column - 1
-        )
-
-        end_cursor = QTextCursor(end_block)
-        end_cursor.movePosition(
-            QTextCursor.MoveOperation.Right,
-            QTextCursor.MoveMode.MoveAnchor,
-            end_column - 1
-        )
-
-        cursor.setPosition(end_cursor.position(), QTextCursor.MoveMode.KeepAnchor)
-
-        self.setTextCursor(cursor)
-        self.centerCursor()
-
     def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
         """
         Find all occurrences of text in the document.
@@ -1571,14 +1510,13 @@ class EditorWidget(QPlainTextEdit):
 
         return matches
 
-    def delete_lines(self, start_line: int, end_line: int, move_cursor_after: bool = True) -> None:
+    def delete_lines(self, start_line: int, end_line: int) -> None:
         """
         Delete one or more complete lines from the document.
 
         Args:
             start_line: Starting line number (1-indexed)
             end_line: Ending line number (1-indexed, inclusive)
-            move_cursor_after: Whether to position cursor after deletion
 
         Raises:
             ValueError: If line numbers are invalid
@@ -1623,20 +1561,16 @@ class EditorWidget(QPlainTextEdit):
         # Delete the selected lines
         cursor.removeSelectedText()
 
-        if move_cursor_after:
-            self.setTextCursor(cursor)
-
         self.centerCursor()
         self._set_modified(True)
 
-    def insert_lines(self, line: int, content: str, move_cursor_after: bool = True) -> None:
+    def insert_lines(self, line: int, content: str) -> None:
         """
         Insert new lines at a specific position in the document.
 
         Args:
             line: Line number where to insert (1-indexed)
             content: Content to insert (should end with \\n for complete lines)
-            move_cursor_after: Whether to position cursor after insertion
 
         Raises:
             ValueError: If line number is invalid
@@ -1657,19 +1591,15 @@ class EditorWidget(QPlainTextEdit):
         cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
         cursor.insertText(content)
 
-        if move_cursor_after:
-            self.setTextCursor(cursor)
-
         self.centerCursor()
         self._set_modified(True)
 
-    def append_lines(self, content: str, move_cursor_after: bool = True) -> int:
+    def append_lines(self, content: str) -> int:
         """
         Append new lines to the end of the document.
 
         Args:
             content: Content to insert (should end with \\n for complete lines)
-            move_cursor_after: Whether to position cursor after insertion
         Returns:
             The line number where the content was appended (1-indexed)
         """
@@ -1685,9 +1615,6 @@ class EditorWidget(QPlainTextEdit):
             start_line += 1
 
         cursor.insertText(content)
-
-        if move_cursor_after:
-            self.setTextCursor(cursor)
 
         self.centerCursor()
         self._set_modified(True)
