@@ -19,24 +19,22 @@ Context:
         This is part of the application that deals with conversations between the user and the AI
 
         Embed: src/terminal/*.py
-        Embed: src/humbug/tabs/terminal/*.py
-        Embed: src/humbug/mindspace/mindspace_settings.py
-        Embed: src/humbug/mindspace/mindspace_settings_dialog.py
-        Embed: src/humbug/language/language_strings.py
-        Embed: src/humbug/language/ar/ar_strings.py
-        Embed: src/humbug/language/en/en_strings.py
-        Embed: src/humbug/language/fr/fr_strings.py
+        Embed: src/humbug/system_ai_tool.py
+        Embed: src/humbug/tabs/editor/editor_tab.py
+        Embed: src/humbug/tabs/editor/editor_widget.py
 
 Action:
     # Describe the details of the change required.
-    In the current code, terminals have an unlimited scrollback buffer, but this can get very slow and consume
-    a very large amount of memory.  I would like to add a configuration option to have a defined number of
-    scrollback rows that ranges from 500 lines to 10000 lines.  This config option should be accompanied by a
-    checkbox that can disable this range limit and allow the current unlimited scrollback.
+    In the current code we have some tools to allow an AI such as yourself to delete, insert, or
+    append lines of text.  I would like to add a new tool that will allow an AI to generate a
+    unified diff input and then have that applied to the editor buffer.
 
-    By default, if the settings do not exist, we should assume a limited scrollback of 10000 lines.
+    The operation must be atomic so either all parts of the diff apply or all are rejected.
 
-    This will be configured in a new "Terminal Settings" area.
+    The operation does not require user approval.
+
+    The diff must be applied in a fuzzy way in case there are slight movements in lines of
+    code.
 
     How might this be done?
 

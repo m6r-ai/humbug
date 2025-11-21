@@ -411,3 +411,15 @@ class EditorTab(TabBase):
             Selected text, or empty string if no selection
         """
         return self._editor_widget.get_selected_text()
+
+    def apply_diff(self, diff_text: str) -> Dict[str, Any]:
+        """
+        Apply a unified diff to the editor content.
+
+        Args:
+            diff_text: Unified diff format text
+
+        Returns:
+            Dictionary with operation result
+        """
+        return self._editor_widget.apply_unified_diff(diff_text)

@@ -184,6 +184,12 @@ class SystemAITool(AITool):
                     description="Content to insert (for editor_insert_lines or editor_append_lines). " \
                         "You must terminate each line with `\\n`",
                     required=False
+                ),
+                AIToolParameter(
+                    name="diff_content",
+                    type="string",
+                    description="Unified diff content to apply (for editor_apply_diff operation)",
+                    required=False
                 )
             ]
         )
@@ -392,6 +398,17 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id"},
                 description="Save the current editor content to file. You must provide the tab_id parameter. " \
                     "Requires user authorization"
+            ),
+            "editor_apply_diff": AIToolOperationDefinition(
+                name="editor_apply_diff",
+                handler=self._editor_apply_diff,
+                allowed_parameters={"tab_id", "diff_content"},
+                required_parameters={"tab_id", "diff_content"},
+                description="Apply a unified diff to the editor content. " \
+                    "This operation is atomic - either all hunks apply successfully or none do. " \
+                    "The diff is applied with fuzzy matching to handle minor line movements. " \
+                    "You must provide the tab_id and diff_content parameters. " \
+                    "The diff should be in standard unified diff format, though the file headers (--- and +++) are optional"
             )
         }
 
@@ -1609,3 +1626,47 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to save file: {str(e)}") from e
+
+    async def _editor_apply_diff(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Apply a unified diff to editor content."""
+        arguments = tool_call.arguments
+
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        diff_content = self._get_str_value_from_key("diff_content", arguments)
+
+        try:
+            result = editor_tab.apply_diff(diff_content)
+
+            if result['success']:
+                self._mindspace_manager.add_interaction(
+                    MindspaceLogLevel.INFO,
+                    f"AI applied diff to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {tab_id}"
+                )
+
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="system",
+                    content=result['message']
+                )
+
+            # Diff failed to apply
+            error_details = result.get('error_details', {})
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI diff application failed: {result['message']}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Failed to apply diff: {result['message']}\n\nError details:\n{json.dumps(error_details, indent=2)}"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to apply diff: {str(e)}") from e

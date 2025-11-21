@@ -18,6 +18,7 @@ from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.style_manager import StyleManager
+from humbug.tabs.editor.editor_diff_applier import DiffApplier
 from humbug.tabs.editor.editor_highlighter import EditorHighlighter
 from humbug.tabs.editor.editor_line_number_area import EditorLineNumberArea
 
@@ -1634,3 +1635,29 @@ class EditorWidget(QPlainTextEdit):
         selected_text = cursor.selectedText()
         # Qt uses U+2029 for paragraph separators, convert to newlines
         return selected_text.replace('\u2029', '\n')
+
+    def apply_unified_diff(self, diff_text: str) -> Dict[str, Any]:
+        """
+        Apply a unified diff to the editor content.
+
+        This operation is atomic - either all hunks apply successfully or none do.
+        The diff is applied with fuzzy matching to handle minor line movements.
+
+        Args:
+            diff_text: Unified diff format text
+
+        Returns:
+            Dictionary with operation result:
+            - success: bool - Whether the diff was applied successfully
+            - message: str - Human-readable result message
+            - hunks_applied: int - Number of hunks applied (if successful)
+            - error_details: dict - Detailed error information (if failed)
+        """
+        diff_applier = DiffApplier(confidence_threshold=0.75, search_window=50)
+        cursor = self.textCursor()
+
+        result = diff_applier.apply_diff(diff_text, self.document(), cursor)
+        if result['success']:
+            self._set_modified(True)
+
+        return result
