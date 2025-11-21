@@ -17,14 +17,14 @@ Think of it as an operating system for human-AI collaboration.
 
   Each version of Humbug has been built using the previous version.
   This has meant over 80% of the code has been built by LLMs.
-  This isn't vibe coded, however!
-  Using each ever-more capable version of Humbug to help design and build its successor has freed up huge amounts of human time to think about bigger design problems.
-  The tireless ability of LLMs to morph software into new forms also means the software has a clean, highly modular, architecture.
+  This isn't just "vibe-coded", however!
+  Using each ever more capable version of Humbug to help design and build its successor has freed up huge amounts of human time to think about bigger design problems.
+  The tireless ability of LLMs to morph software into new forms also means the software has a clean, highly modular architecture.
 
 - **LLMs, lots of LLMs**  
 
   Humbug lets you work with multiple large language models (LLMs) simultaneously, supporting local, cloud-based, or hybrids of both.
-  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, xAI, and Z.ai so you're not tied to any one provider.
+  Works with LLMs from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, xAI, and Z.ai, so you're not tied to any one provider.
   You can optimize for cost, and are future-proofed when you want to use something new.
   You can seamlessly switch between models, even switching mid-conversation.
 
@@ -43,7 +43,7 @@ Think of it as an operating system for human-AI collaboration.
   Task delegation allows one LLM to make use of one or more other LLMs.
   AIFPL (AI Functional Programming Language) is a pure functional language designed for AIs to use for calculations, string processing, or other algorithmic tasks.
   The UI supports simultaneous conversations, file editing with syntax highlights, dynamic wiki pages, terminal emulators, a system shell, and a system log.
-  UI orchestration means your AI can help you work and visualise things using any of these tools too.
+  UI orchestration means your AI can help you work and visualize things using any of these tools too.
   LLMs can check the status of terminal tabs and issue commands to them (subject to user approval).
   LLMs can also control and edit files using editor tabs.
 
@@ -51,11 +51,11 @@ Think of it as an operating system for human-AI collaboration.
 
   Previously, programming languages were designed to meet the needs of human developers.
   While AIs are proficient with most of these languages, they risk being unsafe because they support potentially dangerous I/O operations.
-  AIFPL is an experimental, Lisp-inspired, language designed to suit the needs of AIs for algorithmic processing operations.
-  It supports higher-order functions, and tail call optimizations.
-  It can support simple calculations, handles string processing, all the way to highly complex algorithmic tasks.
+  AIFPL is an experimental, Lisp-inspired language designed to suit the needs of AIs for algorithmic processing operations.
+  It supports higher-order functions and tail-call optimizations.
+  It supports simple calculations and string processing, all the way through to highly complex algorithmic tasks.
   Being side-effect free, AIFPL is intrinsically safe for AIs to use and does not require any user approvals.
-  The AIFPL implementation offers detailed exception handling to allow AIs debug any issues in their own code.
+  The AIFPL implementation offers detailed exception handling to allow AIs to debug any issues in their own code.
 
 - **Open and extensible**  
 
@@ -97,7 +97,7 @@ Think of it as an operating system for human-AI collaboration.
 
 ## Get involved!
 
-Humbug is open source and the project welcomes contributions.  If you're interested in helping, then join the Discord server.
+Humbug is open source and the project welcomes contributions. If you're interested in helping, join the Discord server.
 
 ## Requirements
 
@@ -112,14 +112,14 @@ Humbug is open source and the project welcomes contributions.  If you're interes
 
 1. Create and activate a virtual environment:
 
-   Linux and MacOS:
+   Linux and macOS:
 
    ```bash
    python -m venv venv
    source venv/bin/activate
    ```
 
-    Windows:
+   Windows:
 
    ```bash
    python -m venv venv
@@ -147,4 +147,3 @@ Humbug is open source and the project welcomes contributions.  If you're interes
 5. Initial configuration:
 
    See [Getting Started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) for a step-by-step guide to getting Humbug up and running.
-

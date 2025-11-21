@@ -6,7 +6,7 @@ New features:
 
 - Added support for Google Gemini 3 Pro, and removed support for Gemini 1.5 models.
 - Added a new patch applying operation to the system AI editor tools.
-- Removed the code from v0.29 that would modify text in an editor as the new patch tool supercedes it.
+- Removed the code from v0.29 that would modify text in an editor, as the new patch tool supersedes it.
 
 Bug fixes:
 
@@ -36,7 +36,7 @@ New features:
 Bug fixes:
 
 - Many visual elements are now better spaced and scale better with the zoom factor.
-- Resolve an intermittent problem that can be caused when changing the styling of a markdown document that has horizontal
+- Resolved an intermittent problem that can be caused when changing the styling of a markdown document that has horizontal
   rules in it.
 - Buttons in headers now have "hover" and "pressed" effects.
 
@@ -82,7 +82,7 @@ Internal structure changes:
 New features:
 
 - Humbug now features a simple new functional programming language designed for LLMs to use (AIFPL, short for "AI
-  functional programming language").  This is scheme-like, but doesn't attempt to implement all of scheme.  It's deliberately
+  functional programming language").  This is Scheme-like, but doesn't attempt to implement all of Scheme.  It's deliberately
   restricted to a pure functional language and has simplifications around things like string processing so there is no
   character atom type.  The functionality is a significant superset of the previous calculator AI tool which has now been
   removed as a consequence.
@@ -94,7 +94,7 @@ New features:
 
 Bug fixes:
 
-- The system AI tool was not escaping control characters in a way the terminal could handle so things like backspace,
+- The system AI tool was not escaping control characters in a way the terminal could handle, so things like backspace,
   escape, or Ctrl+C didn't work correctly.
 - The `terminal_read` operation did not account for lines at the bottom of the terminal potentially never having had
   content.
@@ -107,11 +107,11 @@ Bug fixes:
 New features:
 
 - Updated the system AI tool to allow the AI to send commands to a terminal window (subject to user approval) and to be
-  able to query the status of terminal.  This allows the AI to have full control of the terminal!
+  able to query the status of the terminal.  This allows the AI to have full control of the terminal!
 - When the AI backend gets a 200 OK connection response from the AI a new temporary "AI connected" message appears so the
   user can tell the AI is responding but not showing any messages (e.g. setting up a tool call).  This also means
   conversation transcripts now enable between network analytics.
-- Removed the "bookmark" functionality in the conversation tabs.  While this was nice idea early in development it appears
+- Removed the "bookmark" functionality in the conversation tabs.  While this was a nice idea early in development it appears
   to be something almost no-one uses now because the AI can write files via the filesystem tool.  Removing this significantly
   simplifies the code (over 300 lines removed).
 - Added `grok-code-fast-1` support using the xAI backend.
@@ -136,7 +136,7 @@ Internal structure changes:
 New features:
 
 - Added bit operations and base conversions to the calculator tool.
-- Added new sleep and alarm operations to the clock tool.  These let the LLM sleep for a duration or until a specific
+- Added new sleep and alarm operations to the clock tool.  These allow the LLM to sleep for a duration or until a specific
   date/time.
 - Wiki, conversation, and editor tabs now watch the primary file on which they're based.  If the file is deleted then they
   will now strike out the tab label and change it to red text, until the file is restored.
@@ -201,7 +201,7 @@ Bug fixes:
 - In looking at the new conversations view, it became clear that sorting by creation time was very slow.  Added a caching
   solution and this has reduced application startup times by > 200 ms when lots of conversations are present.
 - Fixed a problem with tab bar zooming.
-- Fixed a problem when scrolling an file/folder edit in the mindspace tree views.
+- Fixed a problem when scrolling a file/folder edit in the mindspace tree views.
 - When delegating tasks to another AI the requester user name was mis-set.
 
 Internal structure changes:
@@ -222,7 +222,7 @@ New features:
 
 Bug fixes:
 
-- Navigating between messsages in a conversation could be very slow, and the recent changes involving tool use could
+- Navigating between messages in a conversation could be very slow, and the recent changes involving tool use could
   have the UI attempt to navigate messages that were not visible.
 - Loading large and complex conversations could be very slow.  Optimized this by adding lazy updates to the UI.
 - The tab bar layout was difficult to see properly at times, the scroll buttons didn't have hover effects, and the
@@ -243,14 +243,14 @@ New features:
 
 - Added support for an LLM conversation to spawn a child conversation to undertake tasks for it.
 - AI tool processing was heavily updated to support true parallel tool calling.
-- Support production gemini 2.5 pro and gemini 2.5 flash models.
+- Supported production Gemini 2.5 Pro and Gemini 2.5 Flash models.
 - When navigating the mindspace tree, the delete key will now trigger file/folder deletion.
 
 Bug fixes:
 
 - Single clicks on the mindspace tree should not cause the tree to lose focus.
 - Added missing type hints to the Windows terminal code.
-- Resolved some linter and pytest issues on Windows and MacOS.
+- Resolved some linter and pytest issues on Windows and macOS.
 - Added missing exception handling in the Wiki link handling.
 
 Internal structure changes:
@@ -294,7 +294,7 @@ Internal structure changes:
 
 - Massively reworked the source code structure.  Instead of all components sitting under src/humbug, many generic components
   have been moved to the src directory.  At the same time, any dependendencies that might make reuse of those components
-  has been reworked so they can stand alone.  README.md files have been added to each directory to summarise their use.
+  has been reworked so they can stand alone.  README.md files have been added to each directory to summarize their use.
 - The structure of shell commands has been simplified so they no longer call-back into the MainWindow class.
 
 ## v0.18 (2025-07-08)
@@ -302,7 +302,7 @@ Internal structure changes:
 New features:
 
 - Added a "system" tool that gives the AI the ability to start terminal, wiki, editor, Humbug shell, and conversation tabs.
-- Added support for collapsing and expanding individual messages in a conversation.  By defaul tool use messages are
+- Added support for collapsing and expanding individual messages in a conversation.  By default tool use messages are
   auto-hidden, but an authorization request message is now provided.
 - Added support for Qwen3:8b model.
 
@@ -314,7 +314,7 @@ Bug fixes:
 - When copying files to the filesystem, use a "destructive" button colour for overwrites, and "recommended" for new files.
 - The filesystem tool did not fully validate all arguments.  While this wouldn't have failed, it wouldn't have given
   useful exception responses.
-- The filesystem tool sometime reported successes for no-op operations that are really failures.  The tool now reports the
+- The filesystem tool sometimes reported successes for no-op operations that are really failures.  The tool now reports the
   failures so the LLM is aware it didn't cause the operation to succeed.
 - The filesystem tool did not fully validate all arguments passed to it.  It now carefully checks all args are present and
   in a valid form.
@@ -324,7 +324,7 @@ Internal structure changes:
 
 - The internal mindspace logging and shell command interaction logic has been moved to the mindspace and the shell command
   tab namespaces to reflect how they're actually used.
-- Shell command logic has moved the the shell command area of the GUI code.
+- Shell command logic has moved to the shell command area of the GUI code.
 - Generic AI tools have moved to the ai/tools directory.
 
 ## v0.17 (2025-07-02)
@@ -333,7 +333,7 @@ New features:
 
 - All models that support tool/function calling now implement tool/function calling.  Safe tools do not require user
   authorization but any tools that might do damage require an explicit authorization from the user.
-- Added clock, calculator, and filesystem tools.  These allow the LLM to read the data/time, perform calcuations,
+- Added clock, calculator, and filesystem tools.  These allow the LLM to read the date/time, perform calculations,
   and interact with the current mindspace's filesystem.
 - Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking
   modes.
@@ -348,7 +348,7 @@ Bug fixes:
 - When recording conversation transcripts, Humbug was not recording the reasoning capabilities that were used in coming up
   with an answer.  This meant it was also not restoring these correctly after reloading a conversation.
 - The conversation input box could lose focus when an AI message finished streaming.
-- Markdown headings may now be preceeded by 0, 1, 2, or 3 spaces.
+- Markdown headings may now be preceded by 0, 1, 2, or 3 spaces.
 - File renames did not reliably update wiki tabs that were based on the old filename.
 - Under some circumstances, the column manager could crash when removing an ephemeral tab.
 - `m6rc` now uses mindspace-relative file paths to ensure consistency with the filesystem tool.
@@ -369,7 +369,7 @@ New features:
 - All "hidden" files except for ".humbug" are now shown in the mindspace tree.
 - There are new icons on message boxes.
 - The conversation input box now has a submit icon to submit new messages, and a stop icon to stop any current
-  message that is being sent by the AI
+  message that is being sent by the AI.
 - If the content of a non-active wiki tab changes, the tab label will now turn purple to notify you that things have
   been updated while you weren't looking.
 - If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you
@@ -377,7 +377,7 @@ New features:
 - Zooming now has finer-grained steps.
 - JSON syntax highlighting now differentiates keys from values.
 - The conversations folder now defaults to sorting by the conversation start date.  You can select sorting alphabetically
-  by right clicking the changing the "Sort By".
+  by right clicking and changing the "Sort By".
 - Wiki views will render any "README.md" file for folder pages that contain one, and "file.ext.md" for any file "file.ext"
 
 Bug fixes:
@@ -401,7 +401,7 @@ New features:
 - You can now delete an empty folder by right clicking in the mindspace tree.
 - You can now duplicate a file by right clicking in the mindspace tree.
 - You can now edit the `.conv` conversation files by right clicking in the mindspace tree.
-- You can now move and non-protected (e.g. not "conversations", "metaphor", and ".humbug") files or folders by
+- You can now move any non-protected (e.g. not "conversations", "metaphor", and ".humbug") files or folders by
   dragging and dropping within the mindspace tree.
 
 Bug fixes:
@@ -416,7 +416,7 @@ New features:
 
 - When you select a tab, or open a new one, that has a representation in the mindspace tree view then the matching
   entry in the tree will be expanded, selected, and scrolled into view.
-- Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as
+- Markdown parsing for code blocks is ambiguous because code fences inside code blocks could be misinterpreted as
   ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting
   to prevent blocks being closed too soon.
 - Removed the Gemini 2.0 Pro model, but added Gemini 2.5 Flash preview.  Updated models to the latest versions.
@@ -444,7 +444,7 @@ Internal structure changes:
 New features:
 
 - Added a new type of "wiki" tab and a matching "wiki" system shell command.  The wiki pages are dynamically generated
-  view of all the information relevent to a file or directory, including a preview of any markdown file content, and
+  view of all the information relevant to a file or directory, including a preview of any markdown file content, and
   any source code content.  This is now the default for opening files from the mindspace tree view.  Editing source code
   can now be done via the edit button, or by right clicking on the file in the mindspace tree.
 - Any dialog box that has a destructive default action now has a red default button instead of blue.
@@ -469,14 +469,14 @@ Internal structure changes:
 
 Bug fixes:
 
-- When starting the terminal from the MacOS application launcher we didn't default to the user's home directory
+- When starting the terminal from the macOS application launcher we didn't default to the user's home directory
   or have a LANG environment variable.
 
 ## v0.12.1 (2025-05-13)
 
 Bug fixes:
 
-- The MacOS shell could intermittently fail to close correctly when the application was closing, leaving it
+- The macOS shell could intermittently fail to close correctly when the application was closing, leaving it
   hanging.
 - Bold text in a heading could end up the wrong colour.
 - Some spacings around horizontal rules could end up slightly too large.
@@ -569,10 +569,10 @@ Internal structure changes:
 Bug fixes:
 
 - Several small bugs were resolved when implementing mypy and pylint checking.  In a few instances the
-  type hints had been incorrect, although type hints have no impact on the execution of python code.
+  type hints had been incorrect, although type hints have no impact on the execution of Python code.
 - If we had a markdown file embedded inside an AI response and that markdown file contained code inside
   a code fenced block then this would exit the code fenced region too soon.
-- The TERM environment variable is now set to xterm-256color on MacOS and Linux.
+- The TERM environment variable is now set to xterm-256color on macOS and Linux.
 - The system status bar messages could sometimes be overwritten by status from the wrong tab.  This is
   now resolved.
 
@@ -608,7 +608,7 @@ New features:
   matches the user setting.
 - Messages from the AI are now rendered using the markdown formatting provided.  This makes them
   easier to read and hides the markdown annotations.
-- Added support for Google Gemini 2.0 pro (experimental) and Gemini 2.5 pro (experimental).
+- Added support for Google Gemini 2.0 Pro (experimental) and Gemini 2.5 Pro (experimental).
 - Folded an implementation of the Metaphor compiler directly into Humbug.  Updated this so compiled
   Metaphor prompts render more cleanly within the UI.
 
@@ -642,7 +642,7 @@ New features:
 - Added the ability to "copy" or "save-as" any embedded code in a conversation view.
 - Added C# syntax highlighting.
 - Added support for Mistral AIs: codestral-latest, mistral-large-latest, and mistral-small-latest.
-- Remove OpenAI o1-preview but added o1, o3-mini, and gpt-4.5-preview.
+- Removed OpenAI o1-preview but added o1, o3-mini, and gpt-4.5-preview.
 
 Internal structure changes:
 
@@ -657,7 +657,7 @@ Internal structure changes:
 
 Bug fixes:
 
-- Added elipsis to the Python syntax highlighting engine.
+- Added ellipsis to the Python syntax highlighting engine.
 - Go, Rust, and Swift were not correctly identified in editor tab status bars.
 - Fixed a problem with the Scheme lexer not handling some error conditions correctly.
 
@@ -666,7 +666,7 @@ Bug fixes:
 New features:
 
 - Added support for Claude Sonnet 3.7 (chat and extended thinking).
-- Added support for Deepseek Chat and Deepseek Reasoner models.
+- Added support for DeepSeek Chat and DeepSeek Reasoner models.
 - For AI models that expose reasoning steps, the conversation tabs now capture the
   reasoning in a separate message box, after the user's message and before the AI's
   full response.
@@ -692,7 +692,7 @@ Bug fixes:
 New features:
 
 - Added a local command line/shell tab type.  This will let you open a Unix shell
-  on MacOS and Linux, or a command prompt on Windows.  From these you can use your standard
+-  on macOS and Linux, or a command prompt on Windows.  From these you can use your standard
   command line tools.
 - Added Go, Java, Rust, and Swift lexers/parsers for syntax highlighting.
 - Columns can now be merged by dragging one on top of another.
