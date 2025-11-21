@@ -38,7 +38,7 @@ class MatchResult:
 class DiffParser:
     """Parser for unified diff format."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the diff parser."""
         self._logger = logging.getLogger("DiffParser")
 
@@ -477,7 +477,8 @@ class DiffApplier:
                             'confidence': round(match_result.confidence, 2),
                             'actual_context': match_result.actual_lines
                         },
-                        'suggestion': 'Context lines do not match. Consider reading the current file content and regenerating the diff.'
+                        'suggestion': 'Context lines do not match. Consider reading the current ' \
+                            'file content and regenerating the diff.'
                     }
                 }
 
@@ -537,19 +538,21 @@ class DiffApplier:
             hunk1, match1 = hunk_locations[i]
             hunk2, match2 = hunk_locations[i + 1]
 
-            # Calculate the range each hunk affects
-            hunk1_end = match1.location + hunk1.old_count - 1
-            hunk2_start = match2.location
+            # Calculate the range each hunk affects.
+            # Since hunks are sorted in reverse order (high to low),
+            # hunk2 comes BEFORE hunk1 in the file, so check if hunk2 overlaps into hunk1
+            hunk2_end = match2.location + hunk2.old_count - 1
+            hunk1_start = match1.location
 
-            if hunk1_end >= hunk2_start:
+            if hunk2_end >= hunk1_start:
                 return {
                     'success': False,
                     'message': 'Hunks would overlap when applied',
                     'error_details': {
                         'phase': 'validation',
                         'reason': 'Overlapping hunks detected',
-                        'hunk1_range': [match1.location, hunk1_end],
-                        'hunk2_range': [match2.location, match2.location + hunk2.old_count - 1],
+                        'hunk1_range': [hunk1_start, hunk1_start + hunk1.old_count - 1],
+                        'hunk2_range': [match2.location, hunk2_end],
                         'suggestion': 'Hunks affect overlapping line ranges. Regenerate diff with non-overlapping changes.'
                     }
                 }
