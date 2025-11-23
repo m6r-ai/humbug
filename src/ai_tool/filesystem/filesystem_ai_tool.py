@@ -100,6 +100,18 @@ class FileSystemAITool(AITool):
                     type="boolean",
                     description="Create parent directories if they don't exist (for write operations)",
                     required=False
+                ),
+                AIToolParameter(
+                    name="start_line",
+                    type="integer",
+                    description="Start line number (1-indexed) for read_file_lines operation",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="end_line",
+                    type="integer",
+                    description="End line number (1-indexed) for read_file_lines operation",
+                    required=False
                 )
             ]
         )
@@ -117,70 +129,77 @@ class FileSystemAITool(AITool):
                 handler=self._read_file,
                 allowed_parameters={"path", "encoding"},
                 required_parameters={"path"},
-                description="read file contents"
+                description="Read file contents"
+            ),
+            "read_file_lines": AIToolOperationDefinition(
+                name="read_file_lines",
+                handler=self._read_file_lines,
+                allowed_parameters={"path", "encoding", "start_line", "end_line"},
+                required_parameters={"path"},
+                description="Read file contents with line numbers. Returns line numbers and content as a dictionary-like structure"
             ),
             "write_file": AIToolOperationDefinition(
                 name="write_file",
                 handler=self._write_file,
                 allowed_parameters={"path", "content", "encoding", "create_parents"},
                 required_parameters={"path", "content"},
-                description="write content to file (create or overwrite)"
+                description="Write content to file (create or overwrite)"
             ),
             "append_to_file": AIToolOperationDefinition(
                 name="append_to_file",
                 handler=self._append_to_file,
                 allowed_parameters={"path", "content", "encoding"},
                 required_parameters={"path", "content"},
-                description="append content to existing file"
+                description="Append content to existing file"
             ),
             "list_directory": AIToolOperationDefinition(
                 name="list_directory",
                 handler=self._list_directory,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
-                description="list directory contents"
+                description="List directory contents"
             ),
             "create_directory": AIToolOperationDefinition(
                 name="create_directory",
                 handler=self._create_directory,
                 allowed_parameters={"path", "create_parents"},
                 required_parameters={"path"},
-                description="create directory"
+                description="Create directory"
             ),
             "remove_directory": AIToolOperationDefinition(
                 name="remove_directory",
                 handler=self._remove_directory,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
-                description="remove empty directory"
+                description="Remove empty directory"
             ),
             "delete_file": AIToolOperationDefinition(
                 name="delete_file",
                 handler=self._delete_file,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
-                description="delete file"
+                description="Delete file"
             ),
             "copy_file": AIToolOperationDefinition(
                 name="copy_file",
                 handler=self._copy_file,
                 allowed_parameters={"path", "destination"},
                 required_parameters={"path", "destination"},
-                description="copy file to destination"
+                description="Copy file to destination"
             ),
             "move": AIToolOperationDefinition(
                 name="move",
                 handler=self._move,
                 allowed_parameters={"path", "destination"},
                 required_parameters={"path", "destination"},
-                description="move/rename file or directory"
+                description="Move/rename file or directory"
             ),
             "get_info": AIToolOperationDefinition(
                 name="get_info",
                 handler=self._get_info,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
-                description="get detailed information about file or directory"
+                description="Get detailed information about file or directory"
             )
         }
 
@@ -337,6 +356,92 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
 
         return f"File: {display_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
+
+    async def _read_file_lines(
+        self,
+        arguments: Dict[str, Any],
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """Read file contents with line numbers."""
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
+
+        # Validate file exists and is readable
+        if not path.exists():
+            raise AIToolExecutionError(f"File does not exist: {arguments['path']}")
+
+        if not path.is_file():
+            raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
+
+        # Check file size
+        file_size = path.stat().st_size
+        if file_size > self._max_file_size_bytes:
+            size_mb = file_size / (1024 * 1024)
+            max_mb = self._max_file_size_bytes / (1024 * 1024)
+            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+
+        encoding = arguments.get("encoding", "utf-8")
+        start_line = arguments.get("start_line")
+        end_line = arguments.get("end_line")
+
+        # Validate line parameters
+        if start_line is not None and not isinstance(start_line, int):
+            raise AIToolExecutionError("'start_line' must be an integer")
+
+        if end_line is not None and not isinstance(end_line, int):
+            raise AIToolExecutionError("'end_line' must be an integer")
+
+        # Read file content
+        try:
+            with open(path, 'r', encoding=encoding) as f:
+                content = f.read()
+
+            actual_size = path.stat().st_size
+
+        except UnicodeDecodeError as e:
+            raise AIToolExecutionError(
+                f"Failed to decode file with encoding '{encoding}': {str(e)}. Try a different encoding."
+            ) from e
+
+        except PermissionError as e:
+            raise AIToolExecutionError(f"Permission denied reading file: {str(e)}") from e
+
+        except OSError as e:
+            raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
+
+        # Build line-numbered content
+        context_object = {}
+        if not content:
+            context_object[1] = ""
+
+        else:
+            content_lines = content.splitlines()
+            total_lines = len(content_lines)
+
+            # Apply line range if specified
+            actual_start = (start_line if start_line is not None else 1)
+            actual_end = (end_line if end_line is not None else total_lines)
+
+            # Validate range
+            if actual_start < 1:
+                raise AIToolExecutionError(f"'start_line' must be >= 1, got {actual_start}")
+
+            if actual_end < actual_start:
+                raise AIToolExecutionError(f"'end_line' ({actual_end}) must be >= 'start_line' ({actual_start})")
+
+            if actual_start > total_lines:
+                raise AIToolExecutionError(f"'start_line' ({actual_start}) exceeds file length ({total_lines} lines)")
+
+            # Build result (end_line can exceed total_lines, just truncate)
+            for line_num in range(actual_start, min(actual_end + 1, total_lines + 1)):
+                context_object[line_num] = content_lines[line_num - 1]
+
+        # Build header with optional range description
+        range_desc = ""
+        if start_line is not None or end_line is not None:
+            range_desc = f" (lines {start_line or 1}-{end_line or 'end'})"
+
+        return f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}"
 
     async def _write_file(
         self,
