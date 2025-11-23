@@ -94,7 +94,7 @@ class ConversationWidget(QWidget):
         self._update_timer = QTimer(self)  # Timer for throttled updates
         self._update_timer.setSingleShot(True)
         self._update_timer.timeout.connect(self._process_pending_update)
-        self._pending_message: AIMessage | None = None  # Store the most recent pending message
+        self._pending_messages: Dict[str, AIMessage] = {}  # Store pending messages by message ID
 
         # Widget tracking
         self._messages: List[ConversationMessage] = []
@@ -783,50 +783,50 @@ class ConversationWidget(QWidget):
             self._scroll_to_bottom()
 
     def _process_pending_update(self) -> None:
-        """Process any pending message update."""
-        if not self._pending_message:
+        """Process all pending message updates."""
+        if not self._pending_messages:
             return
 
-        self._update_last_message(self._pending_message)
-        self._pending_message = None
+        for message in self._pending_messages.values():
+            self._update_last_message(message)
+
+        self._pending_messages.clear()
 
     async def _on_message_updated(self, message: AIMessage) -> None:
         """
         Handle a message being updated with throttling.
 
-        The first update is processed immediately, subsequent updates
-        are throttled to once every 20ms.
+        Updates are batched and processed together every 20ms to avoid
+        excessive UI updates while supporting multiple concurrent messages.
 
         Args:
             message: The message that was updated
         """
+        # Store the message update (will overwrite if same message updates multiple times)
+        self._pending_messages[message.id] = message.copy()
 
-        if self._update_timer.isActive():
-            # Make a deep copy of the message to prevent any reference issues
-            self._pending_message = message.copy()
-            return
-
-        self._update_last_message(message)
-        self._update_timer.start(20)
+        if not self._update_timer.isActive():
+            self._update_timer.start(20)
 
     async def _on_message_completed(self, message: AIMessage) -> None:
         """
         Handle a message being completed.
 
-        This cancels any pending updates and immediately updates with
-        the completed message.
+        This processes any pending updates for this message and immediately
+        updates with the completed message.
 
         Args:
             message: The message that was completed
         """
         self._current_unfinished_message = None
 
-        # Cancel any pending update
-        if self._update_timer.isActive():
-            self._update_timer.stop()
+        # Remove this message from pending updates if present
+        self._pending_messages.pop(message.id, None)
 
-        # Clear the pending message state
-        self._pending_message = None
+        # Stop timer if no more pending messages
+        if self._update_timer.isActive():
+            if not self._pending_messages:
+                self._update_timer.stop()
 
         # Update with the completed message immediately
         self._update_last_message(message)
@@ -843,7 +843,7 @@ class ConversationWidget(QWidget):
         self._stop_message_border_animation()
 
         # Reset message update throttling state
-        self._pending_message = None
+        self._pending_messages.clear()
         if self._update_timer.isActive():
             self._update_timer.stop()
 

@@ -18,6 +18,7 @@ Bug fixes:
 - Fixed a problem with "thinking" Claude models.
 - Fixed a problem where renaming conversations did not always correctly resize tab labels.
 - Modified the `editor_read_lines` tool to provide line numbers with each line to improve AI tool use reliability.
+- Resolved a visual update problem where reasoning and AI replies come back concurrently.
 
 ## v0.29 (2025-11-16)
 
