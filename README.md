@@ -95,7 +95,7 @@ Think of it as an operating system for human-AI collaboration.
 - **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
 - **YouTube:** [@m6rai on YouTube](https://youtube.com/@m6rai)
 
-## Get involved!
+## Get involved
 
 Humbug is open source and the project welcomes contributions. If you're interested in helping, join the Discord server.
 
