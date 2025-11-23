@@ -7,6 +7,7 @@ New features:
 - Added support for Google Gemini 3 Pro, and removed support for Gemini 1.5 models.
 - Added a new patch applying operation to the system AI editor tools.
 - Removed the code from v0.29 that would modify text in an editor, as the new patch tool supersedes it.
+- Added a `read_file_lines` tool to provide line numbers with each line to improve AI tool use reliability.
 
 Bug fixes:
 
