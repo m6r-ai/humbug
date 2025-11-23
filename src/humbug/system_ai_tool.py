@@ -309,7 +309,7 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id"},
                 description="Read content lines from an editor tab. You must provide the tab_id parameter. " \
                     "Optionally specify line range with start_line and end_line (1-indexed, inclusive). " \
-                    "Returns a JSON object with line numbers and content"
+                    "Returns line numbers and content as a dictionary-like structure"
             ),
             "editor_get_cursor_info": AIToolOperationDefinition(
                 name="editor_get_cursor_info",
