@@ -495,11 +495,27 @@ class DiffApplier:
             )
 
         # Phase 2: Sort hunks by location (bottom to top) and check for overlaps
+        # Before sorting, identify the bottommost hunk (highest line number) to position cursor there later
+        bottommost_hunk = None
+        bottommost_location = -1
+        for hunk, match_result in hunk_locations:
+            if match_result.location > bottommost_location:
+                bottommost_location = match_result.location
+                bottommost_hunk = hunk
+
         hunk_locations.sort(key=lambda x: x[1].location, reverse=True)
 
         overlap_error = self._check_for_overlaps(hunk_locations)
         if overlap_error:
             return overlap_error
+
+        # Calculate where the bottommost hunk will end after applying changes
+        # This is where we want the cursor to be positioned
+        final_cursor_line = None
+        if bottommost_hunk:
+            # Count the number of lines that will exist after this hunk is applied
+            lines_after_hunk = sum(1 for line in bottommost_hunk.lines if line.type in (' ', '+'))
+            final_cursor_line = bottommost_location + lines_after_hunk
 
         # Phase 3: Apply all hunks atomically
         cursor.beginEditBlock()
@@ -508,6 +524,12 @@ class DiffApplier:
                 self._apply_hunk(hunk, match_result.location, document, cursor)
 
             cursor.endEditBlock()
+
+            # Move cursor to the end of the bottommost hunk
+            if final_cursor_line is not None:
+                block = document.findBlockByLineNumber(final_cursor_line - 1)
+                if block.isValid():
+                    cursor.setPosition(block.position())
 
             return {
                 'success': True,

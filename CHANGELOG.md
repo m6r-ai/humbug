@@ -2,6 +2,11 @@
 
 ## v0.31 (2025-11-xx)
 
+New features:
+
+- When the AI applies changes to an editor tab, the cursor position is now moved to immediately after the last line that
+  has been edited.
+
 ## v0.30 (2025-11-23)
 
 New features:

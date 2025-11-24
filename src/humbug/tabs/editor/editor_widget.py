@@ -1548,6 +1548,10 @@ class EditorWidget(QPlainTextEdit):
 
         result = diff_applier.apply_diff(diff_text, self.document(), cursor)
         if result['success']:
+            # Set the cursor back to the editor to reflect the new position
+            self.setTextCursor(cursor)
+            self.centerCursor()
+
             self._set_modified(True)
 
         return result
