@@ -18,7 +18,7 @@ from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.style_manager import StyleManager
-from humbug.tabs.editor.editor_diff_applier import DiffApplier
+from humbug.tabs.editor.editor_diff_applier import EditorDiffApplier
 from humbug.tabs.editor.editor_highlighter import EditorHighlighter
 from humbug.tabs.editor.editor_line_number_area import EditorLineNumberArea
 
@@ -1543,7 +1543,7 @@ class EditorWidget(QPlainTextEdit):
             - hunks_applied: int - Number of hunks applied (if successful)
             - error_details: dict - Detailed error information (if failed)
         """
-        diff_applier = DiffApplier(confidence_threshold=0.75, search_window=50)
+        diff_applier = EditorDiffApplier(confidence_threshold=0.75, search_window=50)
         cursor = self.textCursor()
 
         result = diff_applier.apply_diff(diff_text, self.document(), cursor)

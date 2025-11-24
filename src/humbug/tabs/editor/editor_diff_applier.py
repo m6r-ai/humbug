@@ -159,7 +159,7 @@ class DiffParser:
         return DiffHunk(old_start, old_count, new_start, new_count, hunk_lines), None
 
 
-class FuzzyMatcher:
+class DiffFuzzyMatcher:
     """Fuzzy matching of diff hunks to document content."""
 
     def __init__(self, confidence_threshold: float = 0.75, search_window: int = 50):
@@ -170,7 +170,7 @@ class FuzzyMatcher:
             confidence_threshold: Minimum confidence (0.0-1.0) required for a match
             search_window: Number of lines to search above/below expected position
         """
-        self._logger = logging.getLogger("FuzzyMatcher")
+        self._logger = logging.getLogger("DiffFuzzyMatcher")
         self._confidence_threshold = confidence_threshold
         self._search_window = search_window
 
@@ -395,7 +395,7 @@ class FuzzyMatcher:
         return confidence
 
 
-class DiffApplier:
+class EditorDiffApplier:
     """Applies unified diffs to Qt text documents with fuzzy matching."""
 
     def __init__(
@@ -410,9 +410,9 @@ class DiffApplier:
             confidence_threshold: Minimum confidence required for matches
             search_window: Lines to search above/below expected position
         """
-        self._logger = logging.getLogger("DiffApplier")
+        self._logger = logging.getLogger("EditorDiffApplier")
         self._parser = DiffParser()
-        self._matcher = FuzzyMatcher(confidence_threshold, search_window)
+        self._matcher = DiffFuzzyMatcher(confidence_threshold, search_window)
 
     def apply_diff(
         self,
