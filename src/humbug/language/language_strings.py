@@ -123,6 +123,7 @@ class LanguageStrings:
 
     # Mindspace tree
     mindspace_label_none: str
+    mindspace_name_tooltip: str
     mindspace_files: str
     mindspace_conversations: str
     mindspace_preview: str

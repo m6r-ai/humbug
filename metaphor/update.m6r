@@ -19,18 +19,16 @@ Context:
         This is part of the application that deals with conversations between the user and the AI
 
         Embed: src/terminal/*.py
-        Embed: src/humbug/system_ai_tool.py
-        Embed: src/humbug/tabs/editor/editor_tab.py
-        Embed: src/humbug/tabs/editor/editor_widget.py
+        Embed: src/humbug/mindspace/mindspace_view.py
+        Embed: src/humbug/main_window.py
 
 Action:
     # Describe the details of the change required.
-    In the current code we have some tools to allow an AI such as yourself to delete, insert, or
-    append lines of text.
+    In the current code we have a label for the mindspace name.  This is currently a passive label
 
-    We just added a tool that lets you apply diffs instead and that tool is capable of doing all these
-    operations.  We should remove the ones we no longer need because it makes the tool description
-    more complex and consumes tokens.  It also makes maintenance harder.
+    I would like to modify this so the label becomes a button.  When clicked, this should allow the
+    user to change the mindspace, equivalent to the open_mindspace functionality in the main window
+    class.
 
     Please propose changes to remove the code we no longer need.
 

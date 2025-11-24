@@ -2,7 +2,7 @@
 
 import os
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel, QToolButton
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QToolButton, QPushButton
 from PySide6.QtCore import Qt, Signal, QSize
 from PySide6.QtGui import QIcon
 
@@ -19,6 +19,7 @@ from humbug.style_manager import StyleManager
 class MindspaceView(QWidget):
     """Main mindspace view widget containing files, conversations, and preview sections."""
 
+    open_mindspace_requested = Signal()  # Emits when user clicks mindspace name
     # Forward all file-related signals from all views
     file_clicked = Signal(MindspaceViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
@@ -46,19 +47,20 @@ class MindspaceView(QWidget):
         self._header_widget = QWidget()
         self._header_widget.setObjectName("_header_widget")
         header_layout = QHBoxLayout(self._header_widget)
-        header_layout.setContentsMargins(10, 7, 7, 7)
-        header_layout.setSpacing(4)
+        header_layout.setContentsMargins(8, 6, 8, 6)
+        header_layout.setSpacing(0)
 
-        # Create mindspace label
-        self._mindspace_label = QLabel()
-        self._mindspace_label.setIndent(0)
-        self._mindspace_label.setContentsMargins(0, 0, 0, 0)
+        # Create mindspace name button
+        self._mindspace_button = QPushButton()
+        self._mindspace_button.setObjectName("_mindspace_button")
+        self._mindspace_button.clicked.connect(self.open_mindspace_requested.emit)
 
-        header_layout.addWidget(self._mindspace_label)
+        header_layout.addWidget(self._mindspace_button)
         header_layout.addStretch()
 
         # Create settings button (initially hidden)
         self._settings_button = QToolButton(self._header_widget)
+        self._settings_button.setObjectName("_settings_button")
         self._settings_button.clicked.connect(self._on_settings_button_clicked)
         self._settings_button.hide()
         header_layout.addWidget(self._settings_button)
@@ -134,7 +136,7 @@ class MindspaceView(QWidget):
         self._preview_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
 
         # Set initial label text
-        self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
+        self._mindspace_button.setText(self._language_manager.strings().mindspace_label_none)
 
         self._on_language_changed()
 
@@ -276,11 +278,11 @@ class MindspaceView(QWidget):
         """
         # Update the mindspace label
         if not path:
-            self._mindspace_label.setText(self._language_manager.strings().mindspace_label_none)
+            self._mindspace_button.setText(self._language_manager.strings().mindspace_label_none)
             self._settings_button.hide()
 
         else:
-            self._mindspace_label.setText(os.path.basename(path))
+            self._mindspace_button.setText(os.path.basename(path))
             self._settings_button.show()
 
         # Forward to all views
@@ -295,12 +297,15 @@ class MindspaceView(QWidget):
     def _on_language_changed(self) -> None:
         """Update when the language changes."""
         # Update mindspace label if no mindspace is active
-        current_text = self._mindspace_label.text()
+        current_text = self._mindspace_button.text()
         none_text = self._language_manager.strings().mindspace_label_none
         if current_text == none_text or not current_text:
-            self._mindspace_label.setText(none_text)
+            self._mindspace_button.setText(none_text)
 
         # Update button tooltip
+        self._mindspace_button.setToolTip(self._language_manager.strings().mindspace_name_tooltip)
+
+        # Update settings button tooltip
         self._settings_button.setToolTip(self._language_manager.strings().mindspace_settings)
 
         self.apply_style()
@@ -324,9 +329,9 @@ class MindspaceView(QWidget):
         base_font_size = self._style_manager.base_font_size()
 
         # Update font size for mindspace label
-        font = self._mindspace_label.font()
+        font = self._mindspace_button.font()
         font.setPointSize(int(base_font_size * zoom_factor))
-        self._mindspace_label.setFont(font)
+        self._mindspace_button.setFont(font)
 
         # Update button styling
         self._update_button_styling()
@@ -344,29 +349,39 @@ class MindspaceView(QWidget):
                 border: none;
             }}
 
-            #_header_widget QLabel {{
+            #_header_widget #_settings_button {{
+                background-color: {background_color};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                padding: 0px;
+            }}
+            #_header_widget #_settings_button:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER)};
+            }}
+            #_header_widget #_settings_button:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED)};
+            }}
+            #_header_widget #_settings_button:disabled {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: {background_color};
+            }}
+
+            #_header_widget #_mindspace_button {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
                 margin: 0px;
-                padding: 0px;
+                padding: 1px 3px 1px 3px;
             }}
-
-            #_header_widget QToolButton {{
-                background-color: {background_color};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                padding: 0px;
-            }}
-            #_header_widget QToolButton:hover {{
+            #_header_widget #_mindspace_button:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER)};
             }}
-            #_header_widget QToolButton:pressed {{
+            #_header_widget #_mindspace_button:pressed {{
                 background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED)};
             }}
-            #_header_widget QToolButton:disabled {{
+            #_header_widget #_mindspace_button:disabled {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                background-color: {background_color};
+                background-color: transparent;
             }}
 
             #MindspaceCollapsibleHeader {{

@@ -6,6 +6,7 @@ New features:
 
 - When the AI applies changes to an editor tab, the cursor position is now moved to immediately after the last line that
   has been edited.
+- Replaced the mindspace label with a button that allows the user to open a new mindspace by clicking it.
 
 ## v0.30 (2025-11-23)
 
