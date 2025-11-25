@@ -7,6 +7,17 @@ New features:
 - When the AI applies changes to an editor tab, the cursor position is now moved to immediately after the last line that
   has been edited.
 - Replaced the mindspace label with a button that allows the user to open a new mindspace by clicking it.
+- Refactored diff application logic into a reusable `diff` package with abstract base classes for parsing, fuzzy matching,
+  and applying unified diffs to various document types.
+- Added `apply_diff` operation to the filesystem AI tool, allowing the AI to apply unified diffs directly to files with
+  fuzzy matching, overlap detection, dry-run validation, line ending preservation, and atomic file writes.
+- Editor diff applier now uses the shared diff package, reducing code duplication while maintaining Qt-specific functionality.
+- When the editor tab diff applier runs on another tab that is not currently visible then the tab label will turn purple
+  in the same way as conversation and preview tabs.
+
+Bug fixes:
+
+- Disabled file watching when saving files in the editor to avoid unecessary file reloads.
 
 ## v0.30 (2025-11-23)
 
