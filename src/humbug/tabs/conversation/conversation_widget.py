@@ -1894,21 +1894,6 @@ class ConversationWidget(QWidget):
 
         assert self._messages[index].message_source() == AIMessageSource.USER, "Only user messages can be deleted."
 
-        # Store all messages up to but not including the specified index
-        preserved_messages = self._messages[:index]
-
-        # Remove message widgets from the layout and delete them
-        for i in range(len(self._messages) - 1, index - 1, -1):
-            message_widget = self._messages[i]
-            if self._message_with_selection == message_widget:
-                self._message_with_selection = None
-
-            self._messages_layout.removeWidget(message_widget)
-            message_widget.deleteLater()
-
-        # Update the _messages list to only include preserved messages
-        self._messages = preserved_messages
-
         # Update the underlying AI conversation history
         ai_conversation = cast(AIConversation, self._ai_conversation)
         history = ai_conversation.get_conversation_history()
@@ -1925,6 +1910,21 @@ class ConversationWidget(QWidget):
 
         # Update the AI conversation history
         ai_conversation.load_message_history(preserved_history_messages)
+
+        # Store all messages up to but not including the specified index
+        preserved_messages = self._messages[:index]
+
+        # Remove message widgets from the layout and delete them
+        for i in range(len(self._messages) - 1, index - 1, -1):
+            message_widget = self._messages[i]
+            if self._message_with_selection == message_widget:
+                self._message_with_selection = None
+
+            self._messages_layout.removeWidget(message_widget)
+            message_widget.deleteLater()
+
+        # Update the _messages list to only include preserved messages
+        self._messages = preserved_messages
 
         # Work out what the conversation settings now are - they may have changed
         conversation_settings = ai_conversation.conversation_settings()
