@@ -10,6 +10,7 @@ from PySide6.QtGui import (
     QResizeEvent, QPaintEvent, QTextDocument
 )
 
+from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
@@ -1546,12 +1547,32 @@ class EditorWidget(QPlainTextEdit):
         diff_applier = EditorDiffApplier(confidence_threshold=0.75, search_window=50)
         cursor = self.textCursor()
 
-        result = diff_applier.apply_diff(diff_text, self.document(), cursor)
-        if result['success']:
+        try:
+            result = diff_applier.apply_diff(diff_text, self.document(), cursor=cursor)
+
+        except (DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError) as e:
+            # Convert diff exceptions to the format expected by callers
+            error_details = getattr(e, 'error_details', None) or {
+                'phase': 'diff_application',
+                'reason': str(e)
+            }
+            return {
+                'success': False,
+                'message': str(e),
+                'error_details': error_details
+            }
+
+        if result.success:
             # Set the cursor back to the editor to reflect the new position
             self.setTextCursor(cursor)
             self.centerCursor()
 
             self._set_modified(True)
 
-        return result
+        # Convert DiffApplicationResult to dict format
+        return {
+            'success': result.success,
+            'message': result.message,
+            'hunks_applied': result.hunks_applied,
+            'error_details': result.error_details
+        }

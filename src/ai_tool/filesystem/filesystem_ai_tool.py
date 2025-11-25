@@ -4,13 +4,15 @@ import shutil
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, List, Callable, Tuple
+from typing import Dict, Any, List, Callable, Tuple, cast
 
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
     AIToolResult, AIToolCall
 )
+from ai_tool.filesystem.filesystem_diff_applier import FilesystemDiffApplier
+from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 
 
 class FileSystemAITool(AITool):
@@ -112,6 +114,18 @@ class FileSystemAITool(AITool):
                     type="integer",
                     description="End line number (1-indexed) for read_file_lines operation",
                     required=False
+                ),
+                AIToolParameter(
+                    name="diff_content",
+                    type="string",
+                    description="Unified diff content to apply (for apply_diff operation)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="dry_run",
+                    type="boolean",
+                    description="If True, validate diff without applying changes (for apply_diff operation)",
+                    required=False
                 )
             ]
         )
@@ -200,6 +214,15 @@ class FileSystemAITool(AITool):
                 allowed_parameters={"path"},
                 required_parameters={"path"},
                 description="Get detailed information about file or directory"
+            ),
+            "apply_diff": AIToolOperationDefinition(
+                name="apply_diff",
+                handler=self._apply_diff,
+                allowed_parameters={"path", "diff_content", "dry_run", "encoding"},
+                required_parameters={"path", "diff_content"},
+                description="Apply a unified diff to a file. The diff is applied with fuzzy matching to handle "
+                    "minor line movements. If dry_run is True, validates the diff without applying changes. "
+                    "Requires user authorization to save the modified file."
             )
         }
 
@@ -922,3 +945,124 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
 
         except OSError as e:
             raise AIToolExecutionError(f"Failed to get info: {str(e)}") from e
+
+    async def _apply_diff(
+        self,
+        arguments: Dict[str, Any],
+        request_authorization: AIToolAuthorizationCallback
+    ) -> str:
+        """Apply a unified diff to a file."""
+        path_arg = self._get_str_value_from_key("path", arguments)
+        path, display_path = self._validate_and_resolve_path("path", path_arg)
+
+        # Validate file exists and is readable
+        if not path.exists():
+            raise AIToolExecutionError(f"File does not exist: {arguments['path']}")
+
+        if not path.is_file():
+            raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
+
+        diff_content = self._get_str_value_from_key("diff_content", arguments)
+        dry_run = arguments.get("dry_run", False)
+
+        if not isinstance(dry_run, bool):
+            raise AIToolExecutionError("'dry_run' must be a boolean")
+
+        # Read current file content
+        encoding = arguments.get("encoding", "utf-8")
+
+        try:
+            with open(path, 'r', encoding=encoding) as f:
+                file_content = f.read()
+
+        except UnicodeDecodeError as e:
+            raise AIToolExecutionError(
+                f"Failed to decode file with encoding '{encoding}': {str(e)}"
+            ) from e
+
+        except PermissionError as e:
+            raise AIToolExecutionError(f"Permission denied reading file: {str(e)}") from e
+
+        except OSError as e:
+            raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
+
+        # Apply diff
+        applier = FilesystemDiffApplier(confidence_threshold=0.75, search_window=50)
+
+        try:
+            result, modified_content = applier.apply_diff_to_file(
+                diff_content,
+                file_content,
+                dry_run=dry_run
+            )
+
+        except DiffParseError as e:
+            raise AIToolExecutionError(f"Failed to parse diff: {str(e)}") from e
+
+        except DiffMatchError as e:
+            error_details = getattr(e, 'error_details', None)
+            error_msg = f"Failed to match diff hunks: {str(e)}"
+            if error_details:
+                error_msg += f"\n\nError details:\n{error_details}"
+
+            raise AIToolExecutionError(error_msg) from e
+
+        except DiffValidationError as e:
+            error_details = getattr(e, 'error_details', None)
+            error_msg = f"Diff validation failed: {str(e)}"
+            if error_details:
+                error_msg += f"\n\nError details:\n{error_details}"
+
+            raise AIToolExecutionError(error_msg) from e
+
+        except DiffApplicationError as e:
+            raise AIToolExecutionError(f"Failed to apply diff: {str(e)}") from e
+
+        if not result.success:
+            error_msg = f"Failed to apply diff: {result.message}"
+            if result.error_details:
+                error_msg += f"\n\nError details:\n{result.error_details}"
+
+            raise AIToolExecutionError(error_msg)
+
+        # If dry run, return validation result
+        if dry_run:
+            return f"Diff validation successful for '{display_path}': {result.hunks_applied} hunk(s) can be applied"
+
+        # Request authorization to save modified file
+        context = f"Apply diff to file '{display_path}' ({result.hunks_applied} hunk(s)). " \
+            "This will overwrite the existing file."
+
+        authorized = await request_authorization("filesystem", arguments, context, True)
+        if not authorized:
+            raise AIToolAuthorizationDenied(f"User denied permission to apply diff to file: {arguments['path']}")
+
+        # Write modified content to file
+        try:
+            # Write to temporary file first, then rename for atomicity
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                encoding=encoding,
+                dir=path.parent,
+                delete=False,
+                suffix='.tmp'
+            ) as tmp_file:
+                tmp_file.write(cast(str,modified_content))
+                tmp_path = Path(tmp_file.name)
+
+            # Atomic rename
+            tmp_path.replace(path)
+
+            # Set proper permissions based on umask
+            umask = os.umask(0)
+            os.umask(umask)
+            desired_mode = 0o666 & ~umask
+            path.chmod(desired_mode)
+
+        except PermissionError as e:
+            raise AIToolExecutionError(f"Permission denied writing file: {str(e)}") from e
+
+        except OSError as e:
+            raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
+
+        return f"Diff applied successfully to '{display_path}': {result.hunks_applied} hunk(s) applied"
