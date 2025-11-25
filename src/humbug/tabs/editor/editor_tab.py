@@ -77,6 +77,7 @@ class EditorTab(TabBase):
     def _on_content_modified(self, modified: bool) -> None:
         """Handle content modification state changes."""
         self._set_modified(modified)
+        self.set_updated(True)
 
     def _on_text_changed(self) -> None:
         """Handle any text changes in the editor."""
@@ -237,7 +238,11 @@ class EditorTab(TabBase):
         Returns:
             bool: True if save was successful
         """
-        return self._editor_widget.save_file()
+        # Disable file watching during save to avoid false change notifications
+        self._stop_file_watching()
+        result = self._editor_widget.save_file()
+        self._start_file_watching(self._path)
+        return result
 
     def can_save_as(self) -> bool:
         """Check if the file can be saved as."""
@@ -250,7 +255,11 @@ class EditorTab(TabBase):
         Returns:
             bool: True if save was successful
         """
-        return self._editor_widget.save_file_as()
+        # Disable file watching during save to avoid false change notifications
+        self._stop_file_watching()
+        result = self._editor_widget.save_file_as()
+        self._start_file_watching(self._path)
+        return result
 
     def can_undo(self) -> bool:
         """Check if undo is available."""
