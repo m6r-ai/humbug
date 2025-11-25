@@ -55,9 +55,7 @@ class SystemAITool(AITool):
         # Build description from operations
         base_description = (
             "The system tool let's you (the AI) control the application user interface for the user.\n" \
-            "The user interface is organized into columns, each containing tabs.\n" \
-            "Unless you are changing more than half the contents of a text file, use an editor tab to perform " \
-            "incremental edits to files." \
+            "The user interface is organized into columns, each containing tabs"
         )
 
         # Generate operations list
