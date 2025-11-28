@@ -92,6 +92,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "claude-opus-4-5-20250805": AIModel(
+            name="claude-opus-4-5-20251101",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "claude-opus-4-5-20251101 (thinking)": AIModel(
+            name="claude-opus-4-5-20251101",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=32000,  # This is actuall 64000 but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "claude-opus-4-1-20250805": AIModel(
             name="claude-opus-4-1-20250805",
             provider="anthropic",
@@ -168,7 +186,7 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "gemini-3-pro-preview": AIModel(
+        "gemini-3-pro-preview (Google)": AIModel(
             name="gemini-3-pro-preview",
             provider="google",
             context_window=1048576,
@@ -235,6 +253,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.NO_TOOLS
         ),
+        "gemini-3-pro-preview (Ollama)": AIModel(
+            name="gemini-3-pro-preview:latest",
+            provider="ollama",
+            context_window=1048576,
+            max_output_tokens=65536,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "glm-4.6 (Ollama)": AIModel(
+            name="glm-4.6:cloud",
+            provider="ollama",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "gpt-oss:20b": AIModel(
             name="gpt-oss:20b",
             provider="ollama",
@@ -261,6 +297,33 @@ class AIConversationSettings:
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.NO_TOOLS
+        ),
+        "kimi-k2": AIModel(
+            name="kimi-k2:1t-cloud",
+            provider="ollama",
+            context_window=262144,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "kimi-k2 (thinking)": AIModel(
+            name="kimi-k2-thinking:cloud",
+            provider="ollama",
+            context_window=262144,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "minimax-m2": AIModel(
+            name="minimax-m2:cloud",
+            provider="ollama",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "phi4": AIModel(
             name="phi4",
@@ -484,7 +547,7 @@ class AIConversationSettings:
         ),
 
         # Z.ai models
-        "glm-4.6": AIModel(
+        "glm-4.6 (Z.ai)": AIModel(
             name="glm-4.6",
             provider="zai",
             context_window=200000,
