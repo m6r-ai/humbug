@@ -14,6 +14,7 @@ from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
 from humbug.tabs.terminal.terminal_tab import TerminalTab
@@ -176,6 +177,50 @@ class SystemAITool(AITool):
                     name="diff_content",
                     type="string",
                     description="Unified diff content to apply (for editor_apply_diff operation)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="message_id",
+                    type="string",
+                    description="Message UUID (for conversation operations)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="message_index",
+                    type="integer",
+                    description="Message index, 0-based (for conversation operations)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="message_types",
+                    type="array",
+                    description="List of message types to filter by (for conversation_read_messages, conversation_search). " \
+                        "Valid types: user_message, ai_response, ai_connected, tool_call, " \
+                        "tool_result, system_message, ai_reasoning",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="limit",
+                    type="integer",
+                    description="Maximum number of results to return (for conversation operations)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="include_tool_details",
+                    type="boolean",
+                    description="Include full tool call/result details (for conversation_read_messages)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="max_results",
+                    type="integer",
+                    description="Maximum number of search results to return (for conversation_search)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="position",
+                    type="string",
+                    description="Viewport position for scrolling: 'top', 'center', or 'bottom' (for conversation_scroll_to)",
                     required=False
                 )
             ]
@@ -370,6 +415,49 @@ class SystemAITool(AITool):
                     "optional. Where possible the diff should have at least 3 lines of context before and after each hunk. " \
                     "Diff line numbers are best computed using the `editor_read_lines` or `editor_search` operations. " \
                     "Editor contents are not saved automatically - you must call `editor_save_file` to persist changes"
+            ),
+            "conversation_get_info": AIToolOperationDefinition(
+                name="conversation_get_info",
+                handler=self._conversation_get_info,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Get high-level metadata about a conversation including message count, " \
+                    "timestamps, models used, token counts, and parent conversation reference"
+            ),
+            "conversation_read_messages": AIToolOperationDefinition(
+                name="conversation_read_messages",
+                handler=self._conversation_read_messages,
+                allowed_parameters={"tab_id", "start_index", "end_index", "message_types", "limit", "include_tool_details"},
+                required_parameters={"tab_id"},
+                description="Read messages from a conversation with filtering and pagination. " \
+                    "Supports filtering by index range, message types (user_message, ai_response, tool_call, tool_result, etc.), " \
+                    "and limiting results. Can optionally exclude tool call details for efficiency"
+            ),
+            "conversation_get_message": AIToolOperationDefinition(
+                name="conversation_get_message",
+                handler=self._conversation_get_message,
+                allowed_parameters={"tab_id", "message_id", "message_index"},
+                required_parameters={"tab_id"},
+                description="Get a specific message by ID or index. " \
+                    "Must provide either message_id (UUID) or message_index (0-based)"
+            ),
+            "conversation_search": AIToolOperationDefinition(
+                name="conversation_search",
+                handler=self._conversation_search,
+                allowed_parameters={"tab_id", "search_text", "case_sensitive", "message_types", "max_results"},
+                required_parameters={"tab_id", "search_text"},
+                description="Search for text across all messages in a conversation. " \
+                    "Returns matches with surrounding context. Supports case-sensitive search, " \
+                    "filtering by message types, and limiting results"
+            ),
+            "conversation_scroll_to": AIToolOperationDefinition(
+                name="conversation_scroll_to",
+                handler=self._conversation_scroll_to,
+                allowed_parameters={"tab_id", "message_id", "message_index", "position"},
+                required_parameters={"tab_id"},
+                description="Scroll the conversation view to a specific message. " \
+                    "Must provide either message_id (UUID) or message_index (0-based). " \
+                    "Optional position parameter controls where in viewport: 'top', 'center' (default), or 'bottom'"
             )
         }
 
@@ -515,6 +603,30 @@ class SystemAITool(AITool):
 
         if not isinstance(tab, EditorTab):
             raise AIToolExecutionError(f"Tab {tab_id} is not an editor tab")
+
+        return tab
+
+    def _get_conversation_tab(self, arguments: Dict[str, Any]) -> 'ConversationTab':
+        """
+        Get a conversation tab by ID.
+
+        Args:
+            arguments: Tool arguments containing tab_id
+
+        Returns:
+            ConversationTab instance
+
+        Raises:
+            AIToolExecutionError: If no conversation tab found
+        """
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
+
+        tab = self._column_manager.get_tab_by_id(tab_id)
+        if not tab:
+            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+
+        if not isinstance(tab, ConversationTab):
+            raise AIToolExecutionError(f"Tab {tab_id} is not a conversation tab")
 
         return tab
 
@@ -1538,3 +1650,249 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to apply diff: {str(e)}") from e
+
+    async def _conversation_get_info(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get conversation metadata."""
+        arguments = tool_call.arguments
+
+        conversation_tab = self._get_conversation_tab(arguments)
+        tab_id = conversation_tab.tab_id()
+
+        try:
+            info = conversation_tab.get_conversation_info()
+
+            # Add file path to info
+            info['file_path'] = self._mindspace_manager.get_relative_path(conversation_tab.path())
+            info['tab_id'] = tab_id
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested conversation info\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(info)
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get conversation info: {str(e)}") from e
+
+    async def _conversation_read_messages(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Read messages from conversation."""
+        arguments = tool_call.arguments
+
+        conversation_tab = self._get_conversation_tab(arguments)
+        tab_id = conversation_tab.tab_id()
+
+        # Extract optional parameters
+        start_index = arguments.get("start_index")
+        end_index = arguments.get("end_index")
+        message_types = arguments.get("message_types")
+        limit = arguments.get("limit")
+        include_tool_details = arguments.get("include_tool_details", True)
+
+        # Validate types
+        if start_index is not None and not isinstance(start_index, int):
+            raise AIToolExecutionError("'start_index' must be an integer")
+
+        if end_index is not None and not isinstance(end_index, int):
+            raise AIToolExecutionError("'end_index' must be an integer")
+
+        if message_types is not None and not isinstance(message_types, list):
+            raise AIToolExecutionError("'message_types' must be a list")
+
+        if limit is not None and not isinstance(limit, int):
+            raise AIToolExecutionError("'limit' must be an integer")
+
+        if not isinstance(include_tool_details, bool):
+            raise AIToolExecutionError("'include_tool_details' must be a boolean")
+
+        try:
+            result = conversation_tab.read_messages(
+                start_index, end_index, message_types, limit, include_tool_details
+            )
+
+            # Build log message
+            log_parts = ["AI read conversation messages"]
+            if start_index is not None or end_index is not None:
+                log_parts.append(f"range: {start_index or 0}-{end_index or 'end'}")
+
+            if message_types:
+                log_parts.append(f"types: {', '.join(message_types)}")
+
+            if limit:
+                log_parts.append(f"limit: {limit}")
+
+            log_parts.append(f"tab ID: {tab_id}")
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                "\n".join(log_parts)
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(result)
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to read messages: {str(e)}") from e
+
+    async def _conversation_get_message(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get a specific message by ID or index."""
+        arguments = tool_call.arguments
+
+        conversation_tab = self._get_conversation_tab(arguments)
+        tab_id = conversation_tab.tab_id()
+
+        message_id = arguments.get("message_id")
+        message_index = arguments.get("message_index")
+
+        if message_id is None and message_index is None:
+            raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
+
+        if message_id is not None and not isinstance(message_id, str):
+            raise AIToolExecutionError("'message_id' must be a string")
+
+        if message_index is not None and not isinstance(message_index, int):
+            raise AIToolExecutionError("'message_index' must be an integer")
+
+        try:
+            message = conversation_tab.get_message_by_id_or_index(message_id, message_index)
+
+            if message is None:
+                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
+                raise AIToolExecutionError(f"Message not found: {identifier}")
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested message {message_id or message_index}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(message)
+            )
+
+        except AIToolExecutionError:
+            raise
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get message: {str(e)}") from e
+
+    async def _conversation_search(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Search for text in conversation."""
+        arguments = tool_call.arguments
+
+        conversation_tab = self._get_conversation_tab(arguments)
+        tab_id = conversation_tab.tab_id()
+
+        search_text = self._get_str_value_from_key("search_text", arguments)
+        case_sensitive = arguments.get("case_sensitive", False)
+        message_types = arguments.get("message_types")
+        max_results = arguments.get("max_results", 50)
+
+        if not isinstance(case_sensitive, bool):
+            raise AIToolExecutionError("'case_sensitive' must be a boolean")
+
+        if message_types is not None and not isinstance(message_types, list):
+            raise AIToolExecutionError("'message_types' must be a list")
+
+        if not isinstance(max_results, int):
+            raise AIToolExecutionError("'max_results' must be an integer")
+
+        try:
+            result = conversation_tab.search_messages(
+                search_text, case_sensitive, message_types, max_results
+            )
+
+            case_desc = " (case-sensitive)" if case_sensitive else ""
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI searched conversation for '{search_text}'{case_desc}: " \
+                f"{result['total_matches']} matches\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(result)
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to search conversation: {str(e)}") from e
+
+    async def _conversation_scroll_to(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Scroll conversation to a specific message."""
+        arguments = tool_call.arguments
+
+        conversation_tab = self._get_conversation_tab(arguments)
+        tab_id = conversation_tab.tab_id()
+
+        message_id = arguments.get("message_id")
+        message_index = arguments.get("message_index")
+        position = arguments.get("position", "center")
+
+        if message_id is None and message_index is None:
+            raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
+
+        if message_id is not None and not isinstance(message_id, str):
+            raise AIToolExecutionError("'message_id' must be a string")
+
+        if message_index is not None and not isinstance(message_index, int):
+            raise AIToolExecutionError("'message_index' must be an integer")
+
+        if not isinstance(position, str):
+            raise AIToolExecutionError("'position' must be a string")
+
+        if position not in ("top", "center", "bottom"):
+            raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")
+
+        try:
+            success = conversation_tab.scroll_to_message(message_id, message_index, position)
+
+            if not success:
+                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
+                raise AIToolExecutionError(f"Message not found: {identifier}")
+
+            identifier = message_id if message_id else f"index {message_index}"
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI scrolled conversation to message {identifier} ({position})\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Scrolled to message {identifier} ({position})"
+            )
+
+        except AIToolExecutionError:
+            raise
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to scroll to message: {str(e)}") from e

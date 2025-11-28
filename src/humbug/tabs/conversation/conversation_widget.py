@@ -2447,3 +2447,313 @@ class ConversationWidget(QWidget):
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
+
+    # AI Tool Support Methods
+
+    def get_conversation_info(self) -> Dict[str, Any]:
+        """
+        Get high-level metadata about the conversation.
+
+        Returns:
+            Dictionary containing conversation metadata
+        """
+        if self._ai_conversation is None:
+            raise ValueError("No conversation available")
+
+        history = self.get_conversation_history()
+        messages = history.get_messages()
+
+        if not messages:
+            return {
+                "message_count": 0,
+                "first_message_timestamp": None,
+                "last_message_timestamp": None,
+                "models_used": [],
+                "total_tokens": history.get_token_counts(),
+                "parent": history.parent(),
+                "version": history.version()
+            }
+
+        # Collect unique models
+        models_used = list(set(msg.model for msg in messages if msg.model))
+
+        return {
+            "message_count": len(messages),
+            "first_message_timestamp": messages[0].timestamp.isoformat(),
+            "last_message_timestamp": messages[-1].timestamp.isoformat(),
+            "models_used": models_used,
+            "total_tokens": history.get_token_counts(),
+            "parent": history.parent(),
+            "version": history.version()
+        }
+
+    def read_messages(
+        self,
+        start_index: int | None = None,
+        end_index: int | None = None,
+        message_types: List[str] | None = None,
+        limit: int | None = None,
+        include_tool_details: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Read messages with filtering and pagination.
+
+        Args:
+            start_index: Starting message index (0-based, inclusive)
+            end_index: Ending message index (0-based, inclusive)
+            message_types: List of message types to include
+            limit: Maximum number of messages to return
+            include_tool_details: Include full tool call/result details
+
+        Returns:
+            Dictionary containing messages and metadata
+        """
+        if self._ai_conversation is None:
+            raise ValueError("No conversation available")
+
+        history = self.get_conversation_history()
+        messages = history.get_messages()
+
+        # Apply range filtering
+        if start_index is not None:
+            start_index = max(0, start_index)
+
+        else:
+            start_index = 0
+
+        if end_index is not None:
+            end_index = min(len(messages) - 1, end_index)
+
+        else:
+            end_index = len(messages) - 1
+
+        # Get messages in range
+        filtered_messages = messages[start_index:end_index + 1]
+
+        # Apply type filtering
+        if message_types:
+            filtered_messages = [
+                msg for msg in filtered_messages
+                if msg.source_str() in message_types
+            ]
+
+        # Apply limit
+        if limit and limit > 0:
+            filtered_messages = filtered_messages[:limit]
+
+        # Convert to dictionaries
+        result_messages = []
+        for msg in filtered_messages:
+            msg_dict = msg.to_transcript_dict()
+            msg_dict['index'] = messages.index(msg)  # Original index in full conversation
+
+            # Optionally remove tool details
+            if not include_tool_details:
+                msg_dict.pop('tool_calls', None)
+                msg_dict.pop('tool_results', None)
+
+            result_messages.append(msg_dict)
+
+        return {
+            "total_messages": len(messages),
+            "returned_count": len(result_messages),
+            "start_index": start_index,
+            "end_index": end_index,
+            "messages": result_messages
+        }
+
+    def get_message_by_id_or_index(
+        self,
+        message_id: str | None = None,
+        message_index: int | None = None
+    ) -> Dict[str, Any] | None:
+        """
+        Get a specific message by ID or index.
+
+        Args:
+            message_id: Message UUID
+            message_index: Message index (0-based)
+
+        Returns:
+            Message dictionary or None if not found
+        """
+        if self._ai_conversation is None:
+            raise ValueError("No conversation available")
+
+        if message_id is None and message_index is None:
+            raise ValueError("Must provide either message_id or message_index")
+
+        history = self.get_conversation_history()
+        messages = history.get_messages()
+
+        # Find by index
+        if message_index is not None:
+            if 0 <= message_index < len(messages):
+                msg = messages[message_index]
+                msg_dict = msg.to_transcript_dict()
+                msg_dict['index'] = message_index
+                return msg_dict
+            return None
+
+        # Find by ID
+        for idx, msg in enumerate(messages):
+            if msg.id == message_id:
+                msg_dict = msg.to_transcript_dict()
+                msg_dict['index'] = idx
+                return msg_dict
+
+        return None
+
+    def search_messages(
+        self,
+        search_text: str,
+        case_sensitive: bool = False,
+        message_types: List[str] | None = None,
+        max_results: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Search for text across all messages.
+
+        Args:
+            search_text: Text to search for
+            case_sensitive: Case-sensitive search
+            message_types: Filter to specific message types
+            max_results: Maximum results to return
+
+        Returns:
+            Dictionary containing search results
+        """
+        if self._ai_conversation is None:
+            raise ValueError("No conversation available")
+
+        if not search_text:
+            return {
+                "search_text": search_text,
+                "case_sensitive": case_sensitive,
+                "total_matches": 0,
+                "returned_count": 0,
+                "matches": []
+            }
+
+        history = self.get_conversation_history()
+        messages = history.get_messages()
+
+        # Prepare search
+        search_str = search_text if case_sensitive else search_text.lower()
+        matches = []
+
+        for idx, msg in enumerate(messages):
+            # Apply type filter
+            if message_types:
+                msg_type = msg.source_str()
+                if msg_type not in message_types:
+                    continue
+
+            # Search in content
+            content = msg.content if case_sensitive else msg.content.lower()
+            pos = 0
+
+            while True:
+                pos = content.find(search_str, pos)
+                if pos == -1:
+                    break
+
+                # Extract context (50 chars before and after)
+                context_start = max(0, pos - 50)
+                context_end = min(len(msg.content), pos + len(search_text) + 50)
+
+                match_info = {
+                    "message_index": idx,
+                    "message_id": msg.id,
+                    "message_type": msg.source_str(),
+                    "timestamp": msg.timestamp.isoformat(),
+                    "match_position": pos,
+                    "context_before": msg.content[context_start:pos],
+                    "match_text": msg.content[pos:pos + len(search_text)],
+                    "context_after": msg.content[pos + len(search_text):context_end]
+                }
+
+                matches.append(match_info)
+
+                # Check if we've hit the limit
+                if len(matches) >= max_results:
+                    break
+
+                pos += 1
+
+            if len(matches) >= max_results:
+                break
+
+        return {
+            "search_text": search_text,
+            "case_sensitive": case_sensitive,
+            "total_matches": len(matches),
+            "returned_count": len(matches),
+            "matches": matches
+        }
+
+    def scroll_to_message_by_id_or_index(
+        self,
+        message_id: str | None = None,
+        message_index: int | None = None,
+        position: str = "center"
+    ) -> bool:
+        """
+        Scroll to a specific message.
+
+        Args:
+            message_id: Message UUID
+            message_index: Message index (0-based)
+            position: Position in viewport ('top', 'center', 'bottom')
+
+        Returns:
+            True if successful, False if message not found
+        """
+        if message_id is None and message_index is None:
+            raise ValueError("Must provide either message_id or message_index")
+
+        # Find message index if ID provided
+        if message_id is not None:
+            history = self.get_conversation_history()
+            messages = history.get_messages()
+            message_index = None
+            for idx, msg in enumerate(messages):
+                if msg.id == message_id:
+                    message_index = idx
+                    break
+
+            if message_index is None:
+                return False
+
+        # Validate index
+        if message_index is None or message_index < 0 or message_index >= len(self._messages):
+            return False
+
+        # Get the message widget
+        message_widget = self._messages[message_index]
+
+        # Calculate scroll position based on requested position
+        message_pos = message_widget.mapTo(self._messages_container, QPoint(0, 0))
+        viewport_height = self._scroll_area.viewport().height()
+        message_height = message_widget.height()
+
+        if position == "top":
+            # Scroll so message is at top of viewport
+            scroll_value = message_pos.y()
+
+        elif position == "bottom":
+            # Scroll so message is at bottom of viewport
+            scroll_value = message_pos.y() + message_height - viewport_height
+
+        else:  # center (default)
+            # Scroll so message is centered in viewport
+            scroll_value = message_pos.y() - (viewport_height - message_height) // 2
+
+        # Clamp to valid range
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scroll_value = max(0, min(scroll_value, scrollbar.maximum()))
+
+        # Set scroll position
+        scrollbar.setValue(scroll_value)
+
+        return True

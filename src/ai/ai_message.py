@@ -108,6 +108,10 @@ class AIMessage:
             user_name=self.user_name
         )
 
+    def source_str(self) -> str:
+        """Get string representation of the message source."""
+        return self._SOURCE_TYPE_MAP[self.source]
+
     def to_transcript_dict(self) -> Dict:
         """Convert message to transcript format."""
         message = {

@@ -46,6 +46,7 @@ Think of it as an operating system for human-AI collaboration.
   UI orchestration means your AI can help you work and visualize things using any of these tools too.
   LLMs can check the status of terminal tabs and issue commands to them (subject to user approval).
   LLMs can also control and edit files using editor tabs.
+  LLMs can search and query the contents of conversation tabs.
 
 - **AIFPL: a programming language designed for AIs**  
 
@@ -60,7 +61,7 @@ Think of it as an operating system for human-AI collaboration.
 - **Open and extensible**  
 
   Add new AI backends, tools, or integrations with minimal friction.
-  Humbug is open-source and modular by design.
+  Humbug is open-source and highly modular.
   You don't need to worry about being locked into a vendor tool and can add new features if you want them.  
 
 - **Mindspaces: project-centric workspaces**  

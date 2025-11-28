@@ -367,3 +367,79 @@ class ConversationTab(TabBase):
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._conversation_widget.set_input_text(text)
+
+    # AI Tool Support Methods
+
+    def get_conversation_info(self) -> Dict[str, Any]:
+        """
+        Get high-level metadata about the conversation.
+
+        Returns:
+            Dictionary containing conversation metadata
+        """
+        return self._conversation_widget.get_conversation_info()
+
+    def read_messages(
+        self,
+        start_index: int | None = None,
+        end_index: int | None = None,
+        message_types: list[str] | None = None,
+        limit: int | None = None,
+        include_tool_details: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Read messages with filtering and pagination.
+
+        Args:
+            start_index: Starting message index (0-based, inclusive)
+            end_index: Ending message index (0-based, inclusive)
+            message_types: List of message types to include
+            limit: Maximum number of messages to return
+            include_tool_details: Include full tool call/result details
+
+        Returns:
+            Dictionary containing messages and metadata
+        """
+        return self._conversation_widget.read_messages(
+            start_index, end_index, message_types, limit, include_tool_details
+        )
+
+    def get_message_by_id_or_index(
+        self,
+        message_id: str | None = None,
+        message_index: int | None = None
+    ) -> Dict[str, Any] | None:
+        """
+        Get a specific message by ID or index.
+
+        Args:
+            message_id: Message UUID
+            message_index: Message index (0-based)
+
+        Returns:
+            Message dictionary or None if not found
+        """
+        return self._conversation_widget.get_message_by_id_or_index(message_id, message_index)
+
+    def search_messages(
+        self,
+        search_text: str,
+        case_sensitive: bool = False,
+        message_types: list[str] | None = None,
+        max_results: int = 50
+    ) -> Dict[str, Any]:
+        """Search for text across all messages."""
+        return self._conversation_widget.search_messages(
+            search_text, case_sensitive, message_types, max_results
+        )
+
+    def scroll_to_message(
+        self,
+        message_id: str | None = None,
+        message_index: int | None = None,
+        position: str = "center"
+    ) -> bool:
+        """Scroll to a specific message."""
+        return self._conversation_widget.scroll_to_message_by_id_or_index(
+            message_id, message_index, position
+        )
