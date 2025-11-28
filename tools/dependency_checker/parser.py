@@ -36,7 +36,7 @@ class ImportParser:
             're', 'math', 'random', 'statistics', 'decimal', 'fractions', 'numbers', 'struct', 'zoneinfo',
 
             # Text processing
-            'string', 'textwrap', 'unicodedata', 'stringprep', 'readline', 'rlcompleter',
+            'difflib', 'string', 'textwrap', 'unicodedata', 'stringprep', 'readline', 'rlcompleter',
 
             # Data types
             'collections', 'array', 'weakref', 'types', 'copy', 'pprint', 'reprlib', 'enum',

@@ -19,6 +19,7 @@ modules:
   ai_tool:
     internal_dependencies:
       - aifpl
+      - diff
     external_dependencies:
       - "standard_library"
 
@@ -27,6 +28,11 @@ modules:
       - "standard_library"
 
   dast:
+    internal_dependencies: []
+    external_dependencies:
+      - "standard_library"
+
+  diff:
     internal_dependencies: []
     external_dependencies:
       - "standard_library"
@@ -44,6 +50,7 @@ modules:
       - ai_conversation_transcript
       - ai_tool
       - dast
+      - diff
       - dmarkdown
       - metaphor
       - syntax
