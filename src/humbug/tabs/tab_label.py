@@ -127,7 +127,6 @@ class TabLabel(QWidget):
         self._layout.setContentsMargins(margins, 0, margins, 0)
 
         self._update_buttons()
-
         self.adjustSize()
 
     def _update_label(self) -> None:
@@ -362,11 +361,5 @@ class TabLabel(QWidget):
             text: New text to display
         """
         self._label.setText(text)
-
-        # Our label size will have changed so we need to adjust the size of the widget and inform
-        # our parent that it needs to update its layout.  This is a little more tricky than we
-        # might expect because the parent thinks we're really just a button.
+        self._update_label()
         self.adjustSize()
-        parent = self.parentWidget()
-        if parent:
-            parent.updateGeometry()
