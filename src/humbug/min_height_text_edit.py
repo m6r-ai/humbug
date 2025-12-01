@@ -113,13 +113,11 @@ class MinHeightTextEdit(QTextEdit):
     def minimumSizeHint(self) -> QSize:
         """Calculate minimum size based on content."""
         width = super().minimumSizeHint().width()
-#        print(f"{self}: MinSizeHint width: {width}, height: {self._size_hint_height()}")
         return QSize(width, self._size_hint_height())
 
     def sizeHint(self) -> QSize:
         """Calculate ideal size based on content."""
         width = super().sizeHint().width()
-#        print(f"{self}: SizeHint width: {width}, height: {self._size_hint_height()}")
         return QSize(width, self._size_hint_height())
 
     def find_text(self, text: str) -> bool:
