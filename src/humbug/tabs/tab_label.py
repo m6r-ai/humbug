@@ -232,11 +232,11 @@ class TabLabel(QWidget):
         if self._is_hovered and (not self._is_current or not self._is_active_column):
             return ColorRole.TAB_BACKGROUND_HOVER
 
-        if self._is_current:
-            return ColorRole.TAB_BACKGROUND_ACTIVE
-
         if self._is_updated:
             return ColorRole.TAB_BACKGROUND_UPDATED
+
+        if self._is_current:
+            return ColorRole.TAB_BACKGROUND_ACTIVE
 
         return ColorRole.TAB_BACKGROUND_INACTIVE
 
@@ -308,10 +308,6 @@ class TabLabel(QWidget):
         self._is_current = is_current
         self._is_active_column = is_active_column
         self._is_updated = is_updated
-
-        # If tab becomes current, clear the updated state
-        if is_current:
-            self._is_updated = False
 
         self._update_buttons()
         self._update_label()

@@ -801,9 +801,10 @@ class ColumnManager(QWidget):
             is_current = column_index != -1 and tab == column.widget(column_index)
             is_active_column = column == self._active_column
             is_updated = tab.is_updated()
+            has_seen_latest_update = tab.has_seen_latest_update()
 
             # If tab becomes current, clear its updated state
-            if is_current and is_updated:
+            if is_current and is_updated and has_seen_latest_update:
                 tab.set_updated(False)
                 is_updated = False
 

@@ -67,11 +67,11 @@ class TabBar(QTabBar):
         if is_hovered and (not is_current or not is_active_column):
             return ColorRole.TAB_BACKGROUND_HOVER
 
-        if is_current:
-            return ColorRole.TAB_BACKGROUND_ACTIVE
-
         if is_updated:
             return ColorRole.TAB_BACKGROUND_UPDATED
+
+        if is_current:
+            return ColorRole.TAB_BACKGROUND_ACTIVE
 
         return ColorRole.TAB_BACKGROUND_INACTIVE
 

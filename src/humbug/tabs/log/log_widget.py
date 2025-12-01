@@ -63,6 +63,12 @@ class LogWidget(QWidget):
     # Emits when parent should be activated by user interaction
     activated = Signal()
 
+    # Signal to notify tab when content is updated while user is scrolled up
+    update_label = Signal()
+
+    # Emits when the has-seen-latest-update state changes
+    has_seen_latest_update_changed = Signal(bool)
+
     def __init__(
         self,
         parent: QWidget | None = None,
@@ -224,10 +230,13 @@ class LogWidget(QWidget):
             for message in mindspace_messages[matching_count:]:
                 self._add_log_message(message)
 
-        # Scroll to the latest message if we added new ones
+        # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
         if len(mindspace_messages) > matching_count:
-            self._auto_scroll = True
-            self._scroll_to_bottom()
+            if self._auto_scroll:
+                self._scroll_to_bottom()
+            else:
+                # User is scrolled up, notify them there's new content below
+                self.update_label.emit()
 
     def _add_log_message(self, message: MindspaceMessage) -> None:
         """Add a message from the mindspace message log."""
@@ -324,6 +333,8 @@ class LogWidget(QWidget):
         # If user scrolls to bottom, re-enable auto-scroll
         if at_bottom:
             self._auto_scroll = True
+
+        self.has_seen_latest_update_changed.emit(at_bottom)
 
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
@@ -900,3 +911,325 @@ class LogWidget(QWidget):
         current_global_match = sum(len(m[1]) for m in self._matches[:self._current_widget_index]) + self._current_match_index + 1
 
         return current_global_match, total_matches
+
+    def get_log_info(self) -> Dict[str, Any]:
+        """
+        Get high-level metadata about the log.
+
+        Returns:
+            Dictionary containing log metadata
+        """
+        if not self._mindspace_manager.has_mindspace():
+            raise ValueError("No mindspace available")
+
+        messages = self._mindspace_manager.get_interactions()
+
+        if not messages:
+            return {
+                "message_count": 0,
+                "first_message_timestamp": None,
+                "last_message_timestamp": None,
+                "level_distribution": {
+                    "trace": 0,
+                    "info": 0,
+                    "warn": 0,
+                    "error": 0
+                }
+            }
+
+        # Calculate level distribution
+        level_distribution = {
+            "trace": 0,
+            "info": 0,
+            "warn": 0,
+            "error": 0
+        }
+
+        for msg in messages:
+            level_str = msg.level.value
+            if level_str in level_distribution:
+                level_distribution[level_str] += 1
+
+        return {
+            "message_count": len(messages),
+            "first_message_timestamp": messages[0].timestamp.isoformat(),
+            "last_message_timestamp": messages[-1].timestamp.isoformat(),
+            "level_distribution": level_distribution
+        }
+
+    def read_messages(
+        self,
+        start_index: int | None = None,
+        end_index: int | None = None,
+        levels: List[str] | None = None,
+        limit: int | None = None,
+        include_content: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Read log messages with filtering and pagination.
+
+        Args:
+            start_index: Starting message index (0-based, inclusive)
+            end_index: Ending message index (0-based, inclusive)
+            levels: List of log levels to include (trace, info, warn, error)
+            limit: Maximum number of messages to return
+            include_content: Include full message content
+
+        Returns:
+            Dictionary containing messages and metadata
+        """
+        if not self._mindspace_manager.has_mindspace():
+            raise ValueError("No mindspace available")
+
+        messages = self._mindspace_manager.get_interactions()
+
+        # Apply range filtering
+        if start_index is not None:
+            start_index = max(0, start_index)
+
+        else:
+            start_index = 0
+
+        if end_index is not None:
+            end_index = min(len(messages) - 1, end_index)
+
+        else:
+            end_index = len(messages) - 1
+
+        # Get messages in range
+        filtered_messages = messages[start_index:end_index + 1]
+
+        # Apply level filtering
+        if levels:
+            filtered_messages = [
+                msg for msg in filtered_messages
+                if msg.level.value in levels
+            ]
+
+        # Apply limit
+        if limit and limit > 0:
+            filtered_messages = filtered_messages[:limit]
+
+        # Convert to dictionaries
+        result_messages = []
+        for msg in filtered_messages:
+            msg_dict = {
+                "index": messages.index(msg),  # Original index in full log
+                "message_id": msg.message_id,
+                "level": msg.level.value,
+                "timestamp": msg.timestamp.isoformat()
+            }
+
+            # Optionally include content
+            if include_content:
+                msg_dict["content"] = msg.content
+
+            result_messages.append(msg_dict)
+
+        return {
+            "total_messages": len(messages),
+            "returned_count": len(result_messages),
+            "start_index": start_index,
+            "end_index": end_index,
+            "messages": result_messages
+        }
+
+    def get_message_by_id_or_index(
+        self,
+        message_id: str | None = None,
+        message_index: int | None = None
+    ) -> Dict[str, Any] | None:
+        """
+        Get a specific log message by ID or index.
+
+        Args:
+            message_id: Message UUID
+            message_index: Message index (0-based)
+
+        Returns:
+            Message dictionary or None if not found
+        """
+        if not self._mindspace_manager.has_mindspace():
+            raise ValueError("No mindspace available")
+
+        if message_id is None and message_index is None:
+            raise ValueError("Must provide either message_id or message_index")
+
+        messages = self._mindspace_manager.get_interactions()
+
+        # Find by index
+        if message_index is not None:
+            if 0 <= message_index < len(messages):
+                msg = messages[message_index]
+                return {
+                    "index": message_index,
+                    "message_id": msg.message_id,
+                    "level": msg.level.value,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp.isoformat()
+                }
+            return None
+
+        # Find by ID
+        for idx, msg in enumerate(messages):
+            if msg.message_id == message_id:
+                return {
+                    "index": idx,
+                    "message_id": msg.message_id,
+                    "level": msg.level.value,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp.isoformat()
+                }
+
+        return None
+
+    def search_messages(
+        self,
+        search_text: str,
+        case_sensitive: bool = False,
+        levels: List[str] | None = None,
+        max_results: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Search for text across all log messages.
+
+        Args:
+            search_text: Text to search for
+            case_sensitive: Case-sensitive search
+            levels: Filter to specific log levels
+            max_results: Maximum results to return
+
+        Returns:
+            Dictionary containing search results
+        """
+        if not self._mindspace_manager.has_mindspace():
+            raise ValueError("No mindspace available")
+
+        if not search_text:
+            return {
+                "search_text": search_text,
+                "case_sensitive": case_sensitive,
+                "total_matches": 0,
+                "returned_count": 0,
+                "matches": []
+            }
+
+        messages = self._mindspace_manager.get_interactions()
+
+        # Prepare search
+        search_str = search_text if case_sensitive else search_text.lower()
+        matches = []
+
+        for idx, msg in enumerate(messages):
+            # Apply level filter
+            if levels:
+                if msg.level.value not in levels:
+                    continue
+
+            # Search in content
+            content = msg.content if case_sensitive else msg.content.lower()
+            pos = 0
+
+            while True:
+                pos = content.find(search_str, pos)
+                if pos == -1:
+                    break
+
+                # Extract context (50 chars before and after)
+                context_start = max(0, pos - 50)
+                context_end = min(len(msg.content), pos + len(search_text) + 50)
+
+                match_info = {
+                    "message_index": idx,
+                    "message_id": msg.message_id,
+                    "level": msg.level.value,
+                    "timestamp": msg.timestamp.isoformat(),
+                    "match_position": pos,
+                    "context_before": msg.content[context_start:pos],
+                    "match_text": msg.content[pos:pos + len(search_text)],
+                    "context_after": msg.content[pos + len(search_text):context_end]
+                }
+
+                matches.append(match_info)
+
+                # Check if we've hit the limit
+                if len(matches) >= max_results:
+                    break
+
+                pos += 1
+
+            if len(matches) >= max_results:
+                break
+
+        return {
+            "search_text": search_text,
+            "case_sensitive": case_sensitive,
+            "total_matches": len(matches),
+            "returned_count": len(matches),
+            "matches": matches
+        }
+
+    def scroll_to_message_by_id_or_index(
+        self,
+        message_id: str | None = None,
+        message_index: int | None = None,
+        position: str = "center"
+    ) -> bool:
+        """
+        Scroll to a specific log message.
+
+        Args:
+            message_id: Message UUID
+            message_index: Message index (0-based)
+            position: Position in viewport ('top', 'center', 'bottom')
+
+        Returns:
+            True if successful, False if message not found
+        """
+        if message_id is None and message_index is None:
+            raise ValueError("Must provide either message_id or message_index")
+
+        # Find message index if ID provided
+        if message_id is not None:
+            messages = self._mindspace_manager.get_interactions()
+            message_index = None
+            for idx, msg in enumerate(messages):
+                if msg.message_id == message_id:
+                    message_index = idx
+                    break
+
+            if message_index is None:
+                return False
+
+        # Validate index
+        if message_index is None or message_index < 0 or message_index >= len(self._messages):
+            return False
+
+        # Get the message widget
+        message_widget = self._messages[message_index]
+
+        # Calculate scroll position based on requested position
+        message_pos = message_widget.mapTo(self._messages_container, QPoint(0, 0))
+        viewport_height = self._scroll_area.viewport().height()
+        message_height = message_widget.height()
+
+        if position == "top":
+            # Scroll so message is at top of viewport
+            scroll_value = message_pos.y()
+
+        elif position == "bottom":
+            # Scroll so message is at bottom of viewport
+            scroll_value = message_pos.y() + message_height - viewport_height
+
+        else:  # center (default)
+            # Scroll so message is centered in viewport
+            scroll_value = message_pos.y() - (viewport_height - message_height) // 2
+
+        # Clamp to valid range
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scroll_value = max(scrollbar.minimum(), min(scrollbar.maximum(), scroll_value))
+
+        # Perform scroll
+        scrollbar.setValue(scroll_value)
+
+        return True

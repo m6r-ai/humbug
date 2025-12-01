@@ -48,6 +48,9 @@ class ConversationWidget(QWidget):
     # Emits when the conversation label should be updated
     update_label = Signal()
 
+    # Emits when the has-seen-latest-update state changes
+    has_seen_latest_update_changed = Signal(bool)
+
     # Emits when a submitted message has finished processing
     submit_finished = Signal(dict)
 
@@ -416,7 +419,7 @@ class ConversationWidget(QWidget):
             AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
         )
         ai_conversation.unregister_callback(
-            AIConversationEvent.TOOL_USED, self._on_tool_used
+            AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, self._on_message_added_and_completed
         )
         ai_conversation.unregister_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
@@ -447,7 +450,7 @@ class ConversationWidget(QWidget):
             AIConversationEvent.MESSAGE_COMPLETED, self._on_message_completed
         )
         ai_conversation.register_callback(
-            AIConversationEvent.TOOL_USED, self._on_tool_used
+            AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, self._on_message_added_and_completed
         )
         ai_conversation.register_callback(
             AIConversationEvent.COMPLETED, self._on_request_completed
@@ -480,9 +483,13 @@ class ConversationWidget(QWidget):
         if not self._is_animating:
             self._start_message_border_animation()
 
-        # When we call this we should always scroll to the bottom and restore auto-scrolling
-        self._auto_scroll = True
-        self._scroll_to_bottom()
+        # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
+        if self._auto_scroll:
+            self._scroll_to_bottom()
+
+        else:
+            # User is scrolled up, notify them there's new content below
+            self.update_label.emit()
 
     async def _on_streaming_update(self) -> None:
         """
@@ -677,19 +684,13 @@ class ConversationWidget(QWidget):
                 self._last_submitted_message = ""
                 self._input.setFocus()
 
-        # When we call this we should always scroll to the bottom and restore auto-scrolling
-        self._auto_scroll = True
-        self._scroll_to_bottom()
+        # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
+        if self._auto_scroll:
+            self._scroll_to_bottom()
 
-    async def _on_tool_used(self, message: AIMessage) -> None:
-        """
-        Handle a tool being used in the conversation.
-
-        Args:
-            message: The tool call message
-        """
-        self._add_message(message)
-        self._append_message_to_transcript(message)
+        else:
+            # User is scrolled up, notify them there's new content below
+            self.update_label.emit()
 
     async def _on_tool_approval_required(
         self,
@@ -761,9 +762,13 @@ class ConversationWidget(QWidget):
         if not self._is_animating:
             self._start_message_border_animation()
 
-        # When we call this we should always scroll to the bottom and restore auto-scrolling
-        self._auto_scroll = True
-        self._scroll_to_bottom()
+        # Scroll to bottom if in auto-scroll mode, otherwise mark tab as updated
+        if self._auto_scroll:
+            self._scroll_to_bottom()
+
+        else:
+            # User is scrolled up, notify them there's new content below
+            self.update_label.emit()
 
     def _update_last_message(self, message: AIMessage) -> None:
         # Update the last message
@@ -832,6 +837,16 @@ class ConversationWidget(QWidget):
         self._update_last_message(message)
         self._append_message_to_transcript(message)
         self.status_updated.emit()
+
+    async def _on_message_added_and_completed(self, message: AIMessage) -> None:
+        """
+        Handle a message being added and completed in the conversation.
+
+        Args:
+            message: The message that was added and completed
+        """
+        await self._on_message_added(message)
+        await self._on_message_completed(message)
 
     async def _on_request_completed(self) -> None:
         """
@@ -966,6 +981,9 @@ class ConversationWidget(QWidget):
         # If user scrolls to bottom, re-enable auto-scroll
         if at_bottom:
             self._auto_scroll = True
+#            self.update_label.emit()
+
+        self.has_seen_latest_update_changed.emit(at_bottom)
 
         # Check for newly visible sections that need highlighting (only after initial layout is complete)
         if self._initial_layout_complete:

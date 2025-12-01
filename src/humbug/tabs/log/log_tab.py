@@ -5,6 +5,7 @@ This tab provides a read-only view of the mindspace message log for viewing syst
 """
 
 import logging
+from typing import Dict, Any
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
@@ -55,6 +56,8 @@ class LogTab(TabBase):
         self._log_widget = LogWidget(self)
         self._log_widget.status_updated.connect(self.update_status)
         layout.addWidget(self._log_widget)
+        self._log_widget.update_label.connect(self._on_update_label)
+        self._log_widget.has_seen_latest_update_changed.connect(self._on_has_seen_latest_update_changed)
 
         # Install activation tracking
         self._log_widget.activated.connect(self.activated)
@@ -79,6 +82,18 @@ class LogTab(TabBase):
 
         # Update status bar
         self.update_status()
+
+    def _on_update_label(self) -> None:
+        """
+        Handle label updates for the log tab.
+        """
+        self.set_updated(True)
+
+    def _on_has_seen_latest_update_changed(self, seen: bool) -> None:
+        """
+        Handle changes to the has-seen-latest-update state.
+        """
+        self.set_has_seen_latest_update(seen)
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """
@@ -246,3 +261,79 @@ class LogTab(TabBase):
         strings = self._language_manager.strings()
         message = StatusMessage(strings.log_status)
         self.status_message.emit(message)
+
+    # AI Tool Support Methods
+
+    def get_log_info(self) -> Dict[str, Any]:
+        """
+        Get high-level metadata about the log.
+
+        Returns:
+            Dictionary containing log metadata
+        """
+        return self._log_widget.get_log_info()
+
+    def read_messages(
+        self,
+        start_index: int | None = None,
+        end_index: int | None = None,
+        levels: list[str] | None = None,
+        limit: int | None = None,
+        include_content: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Read log messages with filtering and pagination.
+
+        Args:
+            start_index: Starting message index (0-based, inclusive)
+            end_index: Ending message index (0-based, inclusive)
+            levels: List of log levels to include (trace, info, warn, error)
+            limit: Maximum number of messages to return
+            include_content: Include full message content
+
+        Returns:
+            Dictionary containing messages and metadata
+        """
+        return self._log_widget.read_messages(
+            start_index, end_index, levels, limit, include_content
+        )
+
+    def get_message_by_id_or_index(
+        self,
+        message_id: str | None = None,
+        message_index: int | None = None
+    ) -> Dict[str, Any] | None:
+        """
+        Get a specific log message by ID or index.
+
+        Args:
+            message_id: Message UUID
+            message_index: Message index (0-based)
+
+        Returns:
+            Message dictionary or None if not found
+        """
+        return self._log_widget.get_message_by_id_or_index(message_id, message_index)
+
+    def search_messages(
+        self,
+        search_text: str,
+        case_sensitive: bool = False,
+        levels: list[str] | None = None,
+        max_results: int = 50
+    ) -> Dict[str, Any]:
+        """Search for text across log messages."""
+        return self._log_widget.search_messages(
+            search_text, case_sensitive, levels, max_results
+        )
+
+    def scroll_to_message(
+        self,
+        message_id: str | None = None,
+        message_index: int | None = None,
+        position: str = "center"
+    ) -> bool:
+        """Scroll to a specific log message."""
+        return self._log_widget.scroll_to_message_by_id_or_index(
+            message_id, message_index, position
+        )

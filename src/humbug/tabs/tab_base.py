@@ -55,6 +55,7 @@ class TabBase(QFrame):
         self._tab_id = tab_id
         self._is_modified = False
         self._is_updated = False
+        self._has_seen_latest_update = True
         self._is_ephemeral = False
         self._path: str = ""
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -99,6 +100,21 @@ class TabBase(QFrame):
         if updated != self._is_updated:
             self._is_updated = updated
             self.updated_state_changed.emit(self._tab_id, updated)
+
+    def has_seen_latest_update(self) -> bool:
+        """Check if the user has seen the latest update."""
+        return self._has_seen_latest_update
+
+    def set_has_seen_latest_update(self, seen: bool) -> None:
+        """
+        Set whether the user has seen the latest update.
+
+        Args:
+            seen: True if the user has seen the latest update, False otherwise
+        """
+        if seen != self._has_seen_latest_update:
+            self._has_seen_latest_update = seen
+            self.updated_state_changed.emit(self._tab_id, self._is_updated)
 
     def is_ephemeral(self) -> bool:
         """Check if this tab is ephemeral (will be auto-closed)."""

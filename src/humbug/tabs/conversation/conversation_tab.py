@@ -71,6 +71,7 @@ class ConversationTab(TabBase):
         self._conversation_widget.status_updated.connect(self.update_status)
         self._conversation_widget.submit_finished.connect(self._on_submit_finished)
         self._conversation_widget.update_label.connect(self._on_update_label)
+        self._conversation_widget.has_seen_latest_update_changed.connect(self._on_has_seen_latest_update_changed)
         self._conversation_widget.conversation_modified.connect(self._on_conversation_modified)
         layout.addWidget(self._conversation_widget)
 
@@ -188,6 +189,12 @@ class ConversationTab(TabBase):
         Handle label updates for the conversation tab.
         """
         self.set_updated(True)
+
+    def _on_has_seen_latest_update_changed(self, seen: bool) -> None:
+        """
+        Handle changes to the has-seen-latest-update state.
+        """
+        self.set_has_seen_latest_update(seen)
 
     def _on_submit_finished(self, result: Dict[str, Any]) -> None:
         """

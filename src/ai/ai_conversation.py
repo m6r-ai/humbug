@@ -32,7 +32,8 @@ class AIConversationEvent(Enum):
     MESSAGE_ADDED = auto()      # When a new message is added to history
     MESSAGE_UPDATED = auto()    # When an existing message is updated
     MESSAGE_COMPLETED = auto()  # When an existing message has been completed
-    TOOL_USED = auto()          # When a tool use message is added to history
+    MESSAGE_ADDED_AND_COMPLETED = auto()
+                                # When a new message is added and completed immediately
     TOOL_APPROVAL_REQUIRED = auto()
                                 # When tool calls need user approval
     STREAMING_UPDATE = auto()   # When a streaming response is updated
@@ -490,7 +491,7 @@ class AIConversation:
                     completed=True
                 )
                 self._conversation.add_message(tool_result_message)
-                await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
+                await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, tool_result_message)
 
         # If we have continuations, wait for them to complete.  Then we update the tool results.
         if continuations:
@@ -515,7 +516,7 @@ class AIConversation:
                             completed=True
                         )
                         self._conversation.add_message(tool_result_message)
-                        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_result_message)
+                        await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, tool_result_message)
                         break
 
         # Check for pending queued messages and append them to tool results
@@ -543,7 +544,7 @@ class AIConversation:
             tool_results=tool_results
         )
         self._conversation.add_message(tool_response_message)
-        await self._trigger_event(AIConversationEvent.TOOL_USED, tool_response_message)
+        await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, tool_response_message)
 
         # Continue the conversation with tool results
         self._state = ConversationState.IDLE
@@ -712,7 +713,7 @@ class AIConversation:
         )
         self._conversation.add_message(new_message)
         await self._trigger_event(
-            AIConversationEvent.MESSAGE_ADDED if usage is None else AIConversationEvent.TOOL_USED,
+            AIConversationEvent.MESSAGE_ADDED if usage is None else AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED,
             new_message
         )
         self._current_ai_message = new_message
@@ -769,7 +770,7 @@ class AIConversation:
         )
         self._conversation.add_message(new_message)
         await self._trigger_event(
-            AIConversationEvent.MESSAGE_ADDED if usage is None else AIConversationEvent.TOOL_USED,
+            AIConversationEvent.MESSAGE_ADDED if usage is None else AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED,
             new_message
         )
         self._current_reasoning_message = new_message
@@ -798,7 +799,7 @@ class AIConversation:
                 redacted_reasoning=redacted_reasoning
             )
             self._conversation.add_message(message)
-            await self._trigger_event(AIConversationEvent.TOOL_USED, message)
+            await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, message)
 
         self._current_reasoning_message = None
         self._current_ai_message = None

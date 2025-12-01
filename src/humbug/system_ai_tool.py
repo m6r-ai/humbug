@@ -16,6 +16,7 @@ from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceEr
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_tab import EditorTab
+from humbug.tabs.log.log_tab import LogTab
 from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
 from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.user.user_manager import UserManager
@@ -221,6 +222,19 @@ class SystemAITool(AITool):
                     name="position",
                     type="string",
                     description="Viewport position for scrolling: 'top', 'center', or 'bottom' (for conversation_scroll_to)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="levels",
+                    type="array",
+                    description="List of log levels to filter by (for log operations). " \
+                        "Valid levels: trace, info, warn, error",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="include_content",
+                    type="boolean",
+                    description="Include full message content (for log_read_messages)",
                     required=False
                 )
             ]
@@ -458,6 +472,49 @@ class SystemAITool(AITool):
                 description="Scroll the conversation view to a specific message. " \
                     "Must provide either message_id (UUID) or message_index (0-based). " \
                     "Optional position parameter controls where in viewport: 'top', 'center' (default), or 'bottom'"
+            ),
+            "log_get_info": AIToolOperationDefinition(
+                name="log_get_info",
+                handler=self._log_get_info,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Get high-level metadata about the log including message count, " \
+                    "timestamps, and level distribution"
+            ),
+            "log_read_messages": AIToolOperationDefinition(
+                name="log_read_messages",
+                handler=self._log_read_messages,
+                allowed_parameters={"tab_id", "start_index", "end_index", "levels", "limit", "include_content"},
+                required_parameters={"tab_id"},
+                description="Read log messages with filtering and pagination. " \
+                    "Supports filtering by index range, log levels (trace, info, warn, error), " \
+                    "and limiting results. Can optionally exclude full content for efficiency"
+            ),
+            "log_get_message": AIToolOperationDefinition(
+                name="log_get_message",
+                handler=self._log_get_message,
+                allowed_parameters={"tab_id", "message_id", "message_index"},
+                required_parameters={"tab_id"},
+                description="Get a specific log message by ID or index. " \
+                    "Must provide either message_id (UUID) or message_index (0-based)"
+            ),
+            "log_search": AIToolOperationDefinition(
+                name="log_search",
+                handler=self._log_search,
+                allowed_parameters={"tab_id", "search_text", "case_sensitive", "levels", "max_results"},
+                required_parameters={"tab_id", "search_text"},
+                description="Search for text across all log messages. " \
+                    "Returns matches with surrounding context. Supports case-sensitive search, " \
+                    "filtering by log levels, and limiting results"
+            ),
+            "log_scroll_to": AIToolOperationDefinition(
+                name="log_scroll_to",
+                handler=self._log_scroll_to,
+                allowed_parameters={"tab_id", "message_id", "message_index", "position"},
+                required_parameters={"tab_id"},
+                description="Scroll the log view to a specific message. " \
+                    "Must provide either message_id (UUID) or message_index (0-based). " \
+                    "Optional position parameter controls where in viewport: 'top', 'center' (default), or 'bottom'"
             )
         }
 
@@ -627,6 +684,30 @@ class SystemAITool(AITool):
 
         if not isinstance(tab, ConversationTab):
             raise AIToolExecutionError(f"Tab {tab_id} is not a conversation tab")
+
+        return tab
+
+    def _get_log_tab(self, arguments: Dict[str, Any]) -> 'LogTab':
+        """
+        Get a log tab by ID.
+
+        Args:
+            arguments: Tool arguments containing tab_id
+
+        Returns:
+            LogTab instance
+
+        Raises:
+            AIToolExecutionError: If no log tab found
+        """
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
+
+        tab = self._column_manager.get_tab_by_id(tab_id)
+        if not tab:
+            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+
+        if not isinstance(tab, LogTab):
+            raise AIToolExecutionError(f"Tab {tab_id} is not a log tab")
 
         return tab
 
@@ -1896,3 +1977,245 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to scroll to message: {str(e)}") from e
+
+    async def _log_get_info(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get log metadata."""
+        arguments = tool_call.arguments
+
+        log_tab = self._get_log_tab(arguments)
+        tab_id = log_tab.tab_id()
+
+        try:
+            info = log_tab.get_log_info()
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested log info\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(info)
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get log info: {str(e)}") from e
+
+    async def _log_read_messages(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Read log messages."""
+        arguments = tool_call.arguments
+
+        log_tab = self._get_log_tab(arguments)
+        tab_id = log_tab.tab_id()
+
+        # Extract optional parameters
+        start_index = arguments.get("start_index")
+        end_index = arguments.get("end_index")
+        levels = arguments.get("levels")
+        limit = arguments.get("limit")
+        include_content = arguments.get("include_content", True)
+
+        # Validate types
+        if start_index is not None and not isinstance(start_index, int):
+            raise AIToolExecutionError("'start_index' must be an integer")
+
+        if end_index is not None and not isinstance(end_index, int):
+            raise AIToolExecutionError("'end_index' must be an integer")
+
+        if levels is not None and not isinstance(levels, list):
+            raise AIToolExecutionError("'levels' must be a list")
+
+        if limit is not None and not isinstance(limit, int):
+            raise AIToolExecutionError("'limit' must be an integer")
+
+        if not isinstance(include_content, bool):
+            raise AIToolExecutionError("'include_content' must be a boolean")
+
+        try:
+            result = log_tab.read_messages(
+                start_index, end_index, levels, limit, include_content
+            )
+
+            # Build log message
+            log_parts = ["AI read log messages"]
+            if start_index is not None or end_index is not None:
+                log_parts.append(f"range: {start_index or 0}-{end_index or 'end'}")
+
+            if levels:
+                log_parts.append(f"levels: {', '.join(levels)}")
+
+            if limit:
+                log_parts.append(f"limit: {limit}")
+
+            log_parts.append(f"tab ID: {tab_id}")
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                "\n".join(log_parts)
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(result)
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to read log messages: {str(e)}") from e
+
+    async def _log_get_message(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get a specific log message by ID or index."""
+        arguments = tool_call.arguments
+
+        log_tab = self._get_log_tab(arguments)
+        tab_id = log_tab.tab_id()
+
+        message_id = arguments.get("message_id")
+        message_index = arguments.get("message_index")
+
+        if message_id is None and message_index is None:
+            raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
+
+        if message_id is not None and not isinstance(message_id, str):
+            raise AIToolExecutionError("'message_id' must be a string")
+
+        if message_index is not None and not isinstance(message_index, int):
+            raise AIToolExecutionError("'message_index' must be an integer")
+
+        try:
+            message = log_tab.get_message_by_id_or_index(message_id, message_index)
+
+            if message is None:
+                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
+                raise AIToolExecutionError(f"Log message not found: {identifier}")
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested log message {message_id or message_index}\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(message)
+            )
+
+        except AIToolExecutionError:
+            raise
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get log message: {str(e)}") from e
+
+    async def _log_search(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Search for text in log messages."""
+        arguments = tool_call.arguments
+
+        log_tab = self._get_log_tab(arguments)
+        tab_id = log_tab.tab_id()
+
+        search_text = self._get_str_value_from_key("search_text", arguments)
+        case_sensitive = arguments.get("case_sensitive", False)
+        levels = arguments.get("levels")
+        max_results = arguments.get("max_results", 50)
+
+        if not isinstance(case_sensitive, bool):
+            raise AIToolExecutionError("'case_sensitive' must be a boolean")
+
+        if levels is not None and not isinstance(levels, list):
+            raise AIToolExecutionError("'levels' must be a list")
+
+        if not isinstance(max_results, int):
+            raise AIToolExecutionError("'max_results' must be an integer")
+
+        try:
+            result = log_tab.search_messages(
+                search_text, case_sensitive, levels, max_results
+            )
+
+            case_desc = " (case-sensitive)" if case_sensitive else ""
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI searched log for '{search_text}'{case_desc}: " \
+                f"{result['total_matches']} matches\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(result)
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to search log: {str(e)}") from e
+
+    async def _log_scroll_to(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Scroll log to a specific message."""
+        arguments = tool_call.arguments
+
+        log_tab = self._get_log_tab(arguments)
+        tab_id = log_tab.tab_id()
+
+        message_id = arguments.get("message_id")
+        message_index = arguments.get("message_index")
+        position = arguments.get("position", "center")
+
+        if message_id is None and message_index is None:
+            raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
+
+        if message_id is not None and not isinstance(message_id, str):
+            raise AIToolExecutionError("'message_id' must be a string")
+
+        if message_index is not None and not isinstance(message_index, int):
+            raise AIToolExecutionError("'message_index' must be an integer")
+
+        if not isinstance(position, str):
+            raise AIToolExecutionError("'position' must be a string")
+
+        if position not in ("top", "center", "bottom"):
+            raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")
+
+        try:
+            success = log_tab.scroll_to_message(message_id, message_index, position)
+
+            if not success:
+                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
+                raise AIToolExecutionError(f"Log message not found: {identifier}")
+
+            identifier = message_id if message_id else f"index {message_index}"
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI scrolled log to message {identifier} ({position})\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Scrolled to log message {identifier} ({position})"
+            )
+
+        except AIToolExecutionError:
+            raise
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to scroll to log message: {str(e)}") from e
