@@ -1119,3 +1119,183 @@ class PreviewWidget(QWidget):
         if "scroll_position" in metadata:
             # Use a timer to ensure the scroll happens after layout is complete
             QTimer.singleShot(0, lambda: self._scroll_area.verticalScrollBar().setValue(metadata["scroll_position"]))
+
+    # AI Tool Support Methods
+
+    def get_preview_info(self) -> Dict[str, Any]:
+        """
+        Get high-level metadata about the preview content.
+
+        Returns:
+            Dictionary containing preview metadata
+        """
+        # Determine content type from path
+        content_type = self._preview.get_file_type(self._path)
+
+        # Map to consistent type names
+        if os.path.isdir(self._path):
+            content_type = "directory"
+
+        elif content_type == "markdown":
+            content_type = "markdown"
+
+        elif content_type == "image":
+            content_type = "image"
+
+        elif content_type == "other":
+            content_type = "file"
+
+        else:
+            content_type = "unknown"
+
+        return {
+            "path": self._path,
+            "content_type": content_type,
+            "content_blocks": len(self._content_blocks),
+            "has_content": len(self._content_blocks) > 0
+        }
+
+    def search_content(
+        self,
+        search_text: str,
+        case_sensitive: bool = False,
+        max_results: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Search for text across all content blocks.
+
+        Args:
+            search_text: Text to search for
+            case_sensitive: Whether search should be case-sensitive
+            max_results: Maximum number of results to return
+
+        Returns:
+            Dictionary containing search results with matches and context
+        """
+        if not search_text:
+            return {
+                "search_text": search_text,
+                "case_sensitive": case_sensitive,
+                "total_matches": 0,
+                "returned_matches": 0,
+                "matches": []
+            }
+
+        # Perform search across all content blocks
+        all_matches = []
+
+        for block_idx, content_block in enumerate(self._content_blocks):
+            # Use existing find_text method
+            # Note: Some content widgets may not support case_sensitive parameter
+            try:
+                widget_matches = content_block.find_text(search_text)
+
+            except Exception:
+                widget_matches = []
+
+            if widget_matches:
+                # Extract match information
+                for match_tuple in widget_matches:
+                    # Match format: (section_index, start_position, end_position)
+                    section_idx, start_pos, end_pos = match_tuple
+
+                    match_info = {
+                        "block_index": block_idx,
+                        "section_index": section_idx,
+                        "start_position": start_pos,
+                        "end_position": end_pos
+                    }
+
+                    all_matches.append(match_info)
+
+                    # Stop if we've reached max results
+                    if len(all_matches) >= max_results:
+                        break
+
+                if len(all_matches) >= max_results:
+                    break
+
+        return {
+            "search_text": search_text,
+            "case_sensitive": case_sensitive,
+            "total_matches": len(all_matches),
+            "returned_matches": min(len(all_matches), max_results),
+            "matches": all_matches[:max_results]
+        }
+
+    def scroll_to_content_position(
+        self,
+        block_index: int,
+        section_index: int = 0,
+        position: int = 0,
+        viewport_position: str = "center"
+    ) -> bool:
+        """
+        Scroll to a specific position in the content.
+
+        Args:
+            block_index: Index of the content block
+            section_index: Index of the section within the block
+            position: Text position within the section
+            viewport_position: Where to position in viewport ("top", "center", "bottom")
+
+        Returns:
+            True if scroll was successful, False otherwise
+        """
+        # Validate block index
+        if block_index < 0 or block_index >= len(self._content_blocks):
+            self._logger.warning("Invalid block index: %d", block_index)
+            return False
+
+        # Get the content block
+        content_block = self._content_blocks[block_index]
+
+        try:
+            # Get position to scroll to
+            pos_in_content = content_block.select_and_scroll_to_position(
+                section_index, position
+            )
+
+            if pos_in_content == QPoint(0, 0) and section_index > 0:
+                # Position not found
+                self._logger.warning(
+                    "Could not find position: block=%d, section=%d, pos=%d",
+                    block_index, section_index, position
+                )
+                return False
+
+            # Map position to scroll area coordinates
+            pos_in_scroll_area = content_block.mapTo(
+                self._content_container, pos_in_content
+            )
+
+            # Calculate scroll position based on viewport position
+            scroll_y = pos_in_scroll_area.y()
+
+            if viewport_position == "top":
+                # Position at top with small margin
+                scroll_y -= 10
+
+            elif viewport_position == "center":
+                # Position at center of viewport
+                viewport_height = self._scroll_area.viewport().height()
+                scroll_y -= viewport_height // 2
+
+            elif viewport_position == "bottom":
+                # Position at bottom with margin
+                viewport_height = self._scroll_area.viewport().height()
+                scroll_y -= viewport_height - 50
+
+            else:
+                # Default to center
+                viewport_height = self._scroll_area.viewport().height()
+                scroll_y -= viewport_height // 2
+
+            # Perform smooth scroll
+            self._start_smooth_scroll(scroll_y)
+
+            return True
+
+        except Exception as e:
+            self._logger.error("Error scrolling to position: %s", e, exc_info=True)
+            return False

@@ -1,7 +1,7 @@
 """Preview tab implementation with file change detection."""
 
 import logging
-from typing import cast
+from typing import Any, Dict, cast
 
 from PySide6.QtCore import QUrl, Signal
 from PySide6.QtGui import QDesktopServices
@@ -309,3 +309,54 @@ class PreviewTab(TabBase):
         text = self._find_widget.get_search_text()
         current, total = self._preview_content_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
+
+    def get_preview_info(self) -> Dict[str, Any]:
+        """
+        Get high-level metadata about the preview content.
+
+        Returns:
+            Dictionary containing preview metadata
+        """
+        return self._preview_content_widget.get_preview_info()
+
+    def search_content(
+        self,
+        search_text: str,
+        case_sensitive: bool = False,
+        max_results: int = 50
+    ) -> Dict[str, Any]:
+        """
+        Search for text across all content blocks.
+
+        Args:
+            search_text: Text to search for
+            case_sensitive: Whether search should be case-sensitive
+            max_results: Maximum number of results to return
+
+        Returns:
+            Dictionary containing search results with matches and context
+        """
+        return self._preview_content_widget.search_content(search_text, case_sensitive, max_results)
+
+    def scroll_to_content_position(
+        self,
+        block_index: int,
+        section_index: int = 0,
+        position: int = 0,
+        viewport_position: str = "center"
+    ) -> bool:
+        """
+        Scroll to a specific position in the content.
+
+        Args:
+            block_index: Index of the content block
+            section_index: Index of the section within the block
+            position: Text position within the section
+            viewport_position: Where to position in viewport ("top", "center", "bottom")
+
+        Returns:
+            True if scroll was successful, False otherwise
+        """
+        return self._preview_content_widget.scroll_to_content_position(
+            block_index, section_index, position, viewport_position
+        )

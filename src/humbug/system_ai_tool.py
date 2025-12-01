@@ -17,6 +17,7 @@ from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.log.log_tab import LogTab
+from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
 from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.user.user_manager import UserManager
@@ -221,7 +222,8 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="position",
                     type="string",
-                    description="Viewport position for scrolling: 'top', 'center', or 'bottom' (for conversation_scroll_to)",
+                    description="Viewport position for scrolling: 'top', 'center', or 'bottom' " \
+                        "(for conversation_scroll_to, log_scroll_to, preview_scroll_to)",
                     required=False
                 ),
                 AIToolParameter(
@@ -236,7 +238,25 @@ class SystemAITool(AITool):
                     type="boolean",
                     description="Include full message content (for log_read_messages)",
                     required=False
-                )
+                ),
+                AIToolParameter(
+                    name="block_index",
+                    type="integer",
+                    description="Content block index (0-based) for preview operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="section_index",
+                    type="integer",
+                    description="Section index within content block (0-based) for preview operations",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="text_position",
+                    type="integer",
+                    description="Text position within section (0-based) for preview operations",
+                    required=False
+                ),
             ]
         )
 
@@ -515,6 +535,32 @@ class SystemAITool(AITool):
                 description="Scroll the log view to a specific message. " \
                     "Must provide either message_id (UUID) or message_index (0-based). " \
                     "Optional position parameter controls where in viewport: 'top', 'center' (default), or 'bottom'"
+            ),
+            "preview_get_info": AIToolOperationDefinition(
+                name="preview_get_info",
+                handler=self._preview_get_info,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Get high-level metadata about preview content including path, content type, and block count"
+            ),
+            "preview_search": AIToolOperationDefinition(
+                name="preview_search",
+                handler=self._preview_search,
+                allowed_parameters={"tab_id", "search_text", "case_sensitive", "max_results"},
+                required_parameters={"tab_id", "search_text"},
+                description="Search for text in preview content. " \
+                    "Returns matches with surrounding context. Supports case-sensitive search " \
+                    "and limiting results"
+            ),
+            "preview_scroll_to": AIToolOperationDefinition(
+                name="preview_scroll_to",
+                handler=self._preview_scroll_to,
+                allowed_parameters={"tab_id", "block_index", "section_index", "text_position", "position"},
+                required_parameters={"tab_id", "block_index"},
+                description="Scroll preview to a specific content position. " \
+                    "Must provide block_index (0-based). Optional section_index and text_position " \
+                    "for finer control within a section. Optional position parameter controls where in " \
+                    "viewport: 'top', 'center' (default), or 'bottom'"
             )
         }
 
@@ -708,6 +754,30 @@ class SystemAITool(AITool):
 
         if not isinstance(tab, LogTab):
             raise AIToolExecutionError(f"Tab {tab_id} is not a log tab")
+
+        return tab
+
+    def _get_preview_tab(self, arguments: Dict[str, Any]) -> 'PreviewTab':
+        """
+        Get a preview tab by ID.
+
+        Args:
+            arguments: Tool arguments containing tab_id
+
+        Returns:
+            PreviewTab instance
+
+        Raises:
+            AIToolExecutionError: If no preview tab found
+        """
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
+
+        tab = self._column_manager.get_tab_by_id(tab_id)
+        if not tab:
+            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+
+        if not isinstance(tab, PreviewTab):
+            raise AIToolExecutionError(f"Tab {tab_id} is not a preview tab")
 
         return tab
 
@@ -2219,3 +2289,131 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to scroll to log message: {str(e)}") from e
+
+    async def _preview_get_info(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get preview content metadata."""
+        arguments = tool_call.arguments
+
+        preview_tab = self._get_preview_tab(arguments)
+        tab_id = preview_tab.tab_id()
+
+        try:
+            info = preview_tab.get_preview_info()
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested preview info\\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(info)
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get preview info: {str(e)}") from e
+
+    async def _preview_search(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Search for text in preview content."""
+        arguments = tool_call.arguments
+
+        preview_tab = self._get_preview_tab(arguments)
+        tab_id = preview_tab.tab_id()
+
+        search_text = self._get_str_value_from_key("search_text", arguments)
+        case_sensitive = arguments.get("case_sensitive", False)
+        max_results = arguments.get("max_results", 50)
+
+        if not isinstance(case_sensitive, bool):
+            raise AIToolExecutionError("'case_sensitive' must be a boolean")
+
+        if not isinstance(max_results, int):
+            raise AIToolExecutionError("'max_results' must be an integer")
+
+        try:
+            result = preview_tab.search_content(
+                search_text, case_sensitive, max_results
+            )
+
+            case_desc = " (case-sensitive)" if case_sensitive else ""
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI searched preview for '{search_text}'{case_desc}: " \
+                f"{result['total_matches']} matches\\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=str(result)
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to search preview: {str(e)}") from e
+
+    async def _preview_scroll_to(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Scroll preview to a specific content position."""
+        arguments = tool_call.arguments
+
+        preview_tab = self._get_preview_tab(arguments)
+        tab_id = preview_tab.tab_id()
+
+        block_index = self._get_int_value_from_key("block_index", arguments)
+        section_index = arguments.get("section_index", 0)
+        text_position = arguments.get("text_position", 0)
+        position = arguments.get("position", "center")
+
+        if not isinstance(section_index, int):
+            raise AIToolExecutionError("'section_index' must be an integer")
+
+        if not isinstance(text_position, int):
+            raise AIToolExecutionError("'text_position' must be an integer")
+
+        if not isinstance(position, str):
+            raise AIToolExecutionError("'position' must be a string")
+
+        if position not in ("top", "center", "bottom"):
+            raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")
+
+        try:
+            success = preview_tab.scroll_to_content_position(
+                block_index, section_index, text_position, position
+            )
+
+            if not success:
+                raise AIToolExecutionError(
+                    f"Could not scroll to position: block={block_index}, "
+                    f"section={section_index}, pos={text_position}"
+                )
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI scrolled preview to block {block_index}, section {section_index}, " \
+                f"position {text_position} ({position})\\ntab ID: {tab_id}"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Scrolled to block {block_index}, section {section_index}, " \
+                    f"position {text_position} ({position})"
+            )
+
+        except AIToolExecutionError:
+            raise
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to scroll preview: {str(e)}") from e

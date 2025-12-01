@@ -9,6 +9,7 @@ New features:
   Z.ai and Google backends to differentiate the two ways to access the same things.
 - Added a series of new features to the system AI tool to allow AIs to interact with conversation tabs.
 - Added a series of new features to the system AI tool to allow AIs to interact with the mindspace log.
+- Added a series of new features to the system AI tool to allow AIs to interact with preview tabs.
 
 ## v0.31 (2025-11-25)
 
