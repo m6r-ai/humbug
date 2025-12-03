@@ -35,10 +35,21 @@ class GoogleBackend(AIBackend):
         required = []
 
         for param in tool_def.parameters:
-            properties[param.name] = {
-                "type": param.type.upper(),  # Google uses uppercase types
-                "description": param.description
-            }
+            if param.type == "array":
+                properties[param.name] = {
+                    "type": "array",
+                    "description": param.description,
+                    "items": {
+                        "type": "STRING"  # Assuming array of strings for simplicity
+                    }
+                }
+
+            else:
+                properties[param.name] = {
+                    "type": param.type.upper(),  # Google uses uppercase types
+                    "description": param.description
+                }
+
             if param.enum:
                 properties[param.name]["enum"] = param.enum
 
