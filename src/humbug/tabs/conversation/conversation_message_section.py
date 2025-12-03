@@ -160,8 +160,8 @@ class ConversationMessageSection(QFrame):
             self._highlighter = None
             self._text_area.set_has_code_block(True)
 
-        strings = self._language_manager.strings()
         if self._language_header:
+            strings = self._language_manager.strings()
             language_header = strings.highlighting.format(
                 language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
             )
