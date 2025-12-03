@@ -106,7 +106,7 @@ class MarkdownRenderer(MarkdownASTVisitor):
             self.visit(child)
 
         # If our last block is empty then delete it
-        if self._cursor.block().text() == "":
+        if cursor.block().text() == "":
             cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
             cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
             cursor.movePosition(QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor)
