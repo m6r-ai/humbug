@@ -282,7 +282,7 @@ class SystemAITool(AITool):
                 required_parameters=set(),
                 description="Create a fully interactive terminal tab. "
                     "This provides a terminal emulator connected to a new shell. "
-                    "You may interact with this terminal using the `terminal_read` and `terminal_write` operations, but"
+                    "You may interact with this terminal using the `terminal_read` and `terminal_write` operations, but "
                     "you must use `terminal_read` to observe any changes"
             ),
             "conversation_open_tab": AIToolOperationDefinition(
