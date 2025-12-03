@@ -37,8 +37,8 @@ class MinHeightTextEdit(QTextEdit):
         # Set word wrap mode
         self.setWordWrapMode(word_wrap_mode)
 
-        # Track current content for incremental updates
         self._current_text = ""
+        self.clear()
 
     def _on_content_changed(self) -> None:
         """Queue a content update instead of processing immediately."""
@@ -101,24 +101,24 @@ class MinHeightTextEdit(QTextEdit):
         self._current_text = ""
         self._on_content_changed()
 
-    def _size_hint_height(self) -> int:
+    def _size_hint(self) -> QSize:
         """Calculate the height of the widget including scrollbar if visible."""
-        height = int(self.document().size().height())
+        document_size = self.document().size()
+        height = int(document_size.height())
+        width = int(document_size.width())
         if self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14
 
-        return height
+        return QSize(width, height)
 
     def minimumSizeHint(self) -> QSize:
         """Calculate minimum size based on content."""
-        width = super().minimumSizeHint().width()
-        return QSize(width, self._size_hint_height())
+        return self._size_hint()
 
     def sizeHint(self) -> QSize:
         """Calculate ideal size based on content."""
-        width = super().sizeHint().width()
-        return QSize(width, self._size_hint_height())
+        return self._size_hint()
 
     def find_text(self, text: str) -> bool:
         """
