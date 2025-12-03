@@ -400,6 +400,7 @@ class ConversationMessage(QFrame):
 
                 else:
                     role_text = strings.role_you
+
             case AIMessageSource.USER_QUEUED:
                 role_text = strings.role_you_queued
 
