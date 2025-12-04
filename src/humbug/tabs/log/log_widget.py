@@ -1172,8 +1172,7 @@ class LogWidget(QWidget):
     def scroll_to_message_by_id_or_index(
         self,
         message_id: str | None = None,
-        message_index: int | None = None,
-        position: str = "center"
+        message_index: int | None = None
     ) -> bool:
         """
         Scroll to a specific log message.
@@ -1181,7 +1180,6 @@ class LogWidget(QWidget):
         Args:
             message_id: Message UUID
             message_index: Message index (0-based)
-            position: Position in viewport ('top', 'center', 'bottom')
 
         Returns:
             True if successful, False if message not found
@@ -1208,22 +1206,10 @@ class LogWidget(QWidget):
         # Get the message widget
         message_widget = self._messages[message_index]
 
-        # Calculate scroll position based on requested position
+        # Scroll so message is at top of viewport
         message_pos = message_widget.mapTo(self._messages_container, QPoint(0, 0))
-        viewport_height = self._scroll_area.viewport().height()
-        message_height = message_widget.height()
-
-        if position == "top":
-            # Scroll so message is at top of viewport
-            scroll_value = message_pos.y()
-
-        elif position == "bottom":
-            # Scroll so message is at bottom of viewport
-            scroll_value = message_pos.y() + message_height - viewport_height
-
-        else:  # center (default)
-            # Scroll so message is centered in viewport
-            scroll_value = message_pos.y() - (viewport_height - message_height) // 2
+        bubble_spacing = self._style_manager.message_bubble_spacing()
+        scroll_value = int(message_pos.y() - bubble_spacing)
 
         # Clamp to valid range
         scrollbar = self._scroll_area.verticalScrollBar()

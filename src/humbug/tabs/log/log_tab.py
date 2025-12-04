@@ -330,10 +330,9 @@ class LogTab(TabBase):
     def scroll_to_message(
         self,
         message_id: str | None = None,
-        message_index: int | None = None,
-        position: str = "center"
+        message_index: int | None = None
     ) -> bool:
         """Scroll to a specific log message."""
         return self._log_widget.scroll_to_message_by_id_or_index(
-            message_id, message_index, position
+            message_id, message_index
         )
