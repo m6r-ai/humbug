@@ -492,6 +492,26 @@ class LogWidget(QWidget):
             self._messages[index].set_focused(True)
             self._scroll_to_message(self._messages[index])
 
+    def _perform_scroll_to_position(self, message: LogMessage, y_offset: int) -> None:
+        """
+        Scroll to position a message at a specific Y offset from the top of viewport.
+
+        This is a low-level helper that performs the actual scrolling operation.
+
+        Args:
+            message: Message widget to scroll to
+            y_offset: Offset from top of viewport (positive values move message down from top)
+        """
+        message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
+        scroll_value = message_pos.y() - y_offset
+
+        # Clamp to valid range
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scroll_value = max(scrollbar.minimum(), min(scrollbar.maximum(), scroll_value))
+
+        # Set scroll position
+        scrollbar.setValue(scroll_value)
+
     def _scroll_to_message(self, message: LogMessage) -> None:
         """Ensure the message is visible in the scroll area."""
         # Get the position of the message in the scroll area
@@ -504,23 +524,22 @@ class LogWidget(QWidget):
         delta = message_pos.y() - scroll_value
 
         message_spacing = int(self._style_manager.message_bubble_spacing())
-        message_y = message_pos.y()
 
         # Determine if scrolling is needed
         if delta < 0:
             # Message is above visible area
-            y = max(0, message_y - message_spacing)
-            self._scroll_area.verticalScrollBar().setValue(y)
+            self._perform_scroll_to_position(message, message_spacing)
 
         elif delta + message.height() > viewport_height:
             # Message is below visible area
             if message.height() > viewport_height:
-                y = max(0, message_y - message_spacing)
-                self._scroll_area.verticalScrollBar().setValue(y)
+                # Message is taller than viewport, position at top
+                self._perform_scroll_to_position(message, message_spacing)
 
             else:
-                y = message_y + message.height() - viewport_height + message_spacing
-                self._scroll_area.verticalScrollBar().setValue(y)
+                # Message fits in viewport, position at bottom
+                bottom_offset = viewport_height - message.height() - message_spacing
+                self._perform_scroll_to_position(message, bottom_offset)
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""
@@ -1206,16 +1225,8 @@ class LogWidget(QWidget):
         # Get the message widget
         message_widget = self._messages[message_index]
 
-        # Scroll so message is at top of viewport
-        message_pos = message_widget.mapTo(self._messages_container, QPoint(0, 0))
+        # Scroll so message is at top of viewport with spacing
         bubble_spacing = self._style_manager.message_bubble_spacing()
-        scroll_value = int(message_pos.y() - bubble_spacing)
-
-        # Clamp to valid range
-        scrollbar = self._scroll_area.verticalScrollBar()
-        scroll_value = max(scrollbar.minimum(), min(scrollbar.maximum(), scroll_value))
-
-        # Perform scroll
-        scrollbar.setValue(scroll_value)
+        self._perform_scroll_to_position(message_widget, int(bubble_spacing))
 
         return True
