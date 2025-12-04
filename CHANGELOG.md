@@ -5,10 +5,17 @@
 New features:
 
 - Added Ministral-3 and Mistral-large-3 support via the Ollama AI backend.
+- Added smooth scrolling for log and conversation tabs.
 
 Bug fixes:
 
 - Resolved a problem with tool definitions that affected the OpenAI backend.
+- Resolved a problem with scrolling conversation and log tabs where scrolling to the centre of a message would be very
+  confusing.
+
+Internal structure changes:
+
+- Split out the system AI tool functionality into separate per-tab-type AI tools.
 
 ## v0.32 (2025-12-01)
 
