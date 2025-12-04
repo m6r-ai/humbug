@@ -18,20 +18,16 @@ Context:
     Context: Existing code
         This is part of the application that deals with conversations between the user and the AI
 
-        Embed: src/humbug/tabs/editor/*.py
         Embed: src/humbug/system_ai_tool.py
-        Embed: src/ai_tool/filesystem/filesystem_ai_tool.py
 
 Action:
     # Describe the details of the change required.
-    In the current code we have an "apply diff" tool for the editor tab types.
+    The system AI tool handles the ability for an AI to control the UI of this application.  As we add more
+    features, this tool is getting larger.  I would like to refactor it so the generic tab operations remain
+    within the system_ai_tool.py file, but the specific backend operations that are associated with specific
+    tab types are moved into new files that reside along with the tab logic.  You can find the tab logic
+    in the subdirectories of src/humbug/tabs.
 
-    I would like a similar capability for the filesystem AI tool so that tool can apply diffs
-    automatically too.  This tool must seek user approval to save the resulting file.
-
-    When making this change we probably have common code for the diff management so that
-    probably wants to be moved to a new module in src/diff.
-
-    Please propose changes to remove the code we no longer need.
+    Please propose changes to achieve this.
 
     Don't code anything - I want to discuss first.

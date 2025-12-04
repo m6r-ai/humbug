@@ -41,8 +41,12 @@ from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.conversation.conversation_ai_tool import ConversationAITool
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
+from humbug.tabs.editor.editor_ai_tool import EditorAITool
+from humbug.tabs.log.log_ai_tool import LogAITool
+from humbug.tabs.preview.preview_ai_tool import PreviewAITool
 from humbug.tabs.shell.commands.shell_command_clear import ShellCommandClear
 from humbug.tabs.shell.commands.shell_command_conversation import ShellCommandConversation
 from humbug.tabs.shell.commands.shell_command_edit import ShellCommandEdit
@@ -53,6 +57,7 @@ from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTermin
 from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
 from humbug.tabs.tab_base import TabBase
+from humbug.tabs.terminal.terminal_ai_tool import TerminalAITool
 from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.user.user_manager import UserManager, UserError
@@ -407,7 +412,24 @@ class MainWindow(QMainWindow):
         self._ai_tool_manager.register_tool(
             FileSystemAITool(self._resolve_mindspace_path), "FileSystem: handles file operations in the current mindspace"
         )
-        self._ai_tool_manager.register_tool(SystemAITool(self._column_manager), "System: implements UI automations within Humbug")
+        self._ai_tool_manager.register_tool(
+            SystemAITool(self._column_manager), "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"
+        )
+        self._ai_tool_manager.register_tool(
+            EditorAITool(self._column_manager), "Editor: operations for interacting with editor tabs"
+        )
+        self._ai_tool_manager.register_tool(
+            TerminalAITool(self._column_manager), "Terminal: operations for interacting with terminal tabs"
+        )
+        self._ai_tool_manager.register_tool(
+            ConversationAITool(self._column_manager), "Conversation: operations for interacting with conversation tabs"
+        )
+        self._ai_tool_manager.register_tool(
+            LogAITool(self._column_manager), "Log: operations for interacting with mindspace log tabs"
+        )
+        self._ai_tool_manager.register_tool(
+            PreviewAITool(self._column_manager), "Preview: operations for interacting with preview tabs"
+        )
 
         QTimer.singleShot(0, self._restore_last_mindspace)
 

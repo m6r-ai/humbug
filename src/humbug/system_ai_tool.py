@@ -1,36 +1,33 @@
 import logging
 import os
-import re
-from typing import Dict, Any, List
+from typing import Any, Dict
 
 from ai import AIConversationSettings
 from ai_tool import (
-    AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
-    AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
-    AIToolResult, AIToolCall
+    AITool,
+    AIToolAuthorizationCallback,
+    AIToolCall,
+    AIToolDefinition,
+    AIToolExecutionError,
+    AIToolOperationDefinition,
+    AIToolParameter,
+    AIToolResult,
 )
-
+from humbug.mindspace.mindspace_error import MindspaceError, MindspaceNotFoundError
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
 from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.conversation.conversation_tab import ConversationTab
-from humbug.tabs.editor.editor_tab import EditorTab
-from humbug.tabs.log.log_tab import LogTab
-from humbug.tabs.preview.preview_tab import PreviewTab
-from humbug.tabs.terminal.terminal_status import TerminalStatusInfo
-from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.user.user_manager import UserManager
 
 
 class SystemAITool(AITool):
     """
-    System operations tool for LLM interaction.
+    System operations tool for tab lifecycle management.
 
-    Provides structured access to system operations like opening files, creating terminals,
-    starting conversations, accessing previews, and controlling terminal operations.
-    All operations are restricted to the current mindspace and require user authorization
-    where appropriate.
+    Provides operations for creating, opening, closing, and organizing tabs.
+    This is the primary tool for managing the workspace layout. Use specific
+    tab tools (editor, terminal, conversation, log, preview) for working with
+    tab content.
     """
 
     def __init__(self, column_manager: ColumnManager):
@@ -53,25 +50,19 @@ class SystemAITool(AITool):
             Tool definition with parameters and description
         """
         operations = self.get_operation_definitions()
-        operation_names: List[str] = list(operations.keys())
+        operation_names = list(operations.keys())
 
         # Build description from operations
-        base_description = (
-            "The system tool let's you (the AI) control the application user interface for the user.\n" \
-            "The user interface is organized into columns, each containing tabs"
-        )
-
-        # Generate operations list
         operation_list = []
         for name, op_def in operations.items():
             operation_list.append(f"- {name}: {op_def.description}")
 
-        footer_description = (
-            "All operations work within the current mindspace. "
-            "All operations return detailed results status information."
+        description = (
+            "Tab lifecycle and workspace management operations. Use this tool to create, open, "
+            "close, and organize tabs. Returns tab IDs (GUIDs) that can be used with specific tab tools "
+            "(editor, terminal, conversation, log, preview) to work with tab content.\n\n"
+            "Available operations:\n\n" + "\n".join(operation_list)
         )
-
-        description = f"{base_description}\nAvailable operations are:\n\n" + "\n".join(operation_list) + f"\n\n{footer_description}"
 
         return AIToolDefinition(
             name="system",
@@ -87,174 +78,31 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="file_path",
                     type="string",
-                    description="Path to file or directory (for open_editor, open_conversation, and open_preview operations)",
+                    description="Path to file or directory (for open_editor_tab, open_conversation_tab, open_preview_tab)",
                     required=False
                 ),
                 AIToolParameter(
                     name="tab_id",
                     type="string",
-                    description="GUID ID of a tab (for tab_info, close_tab, move_tab, and terminal operations)",
+                    description="GUID of tab (for get_tab_info, close_tab, move_tab operations)",
                     required=False
                 ),
                 AIToolParameter(
                     name="target_column",
                     type="integer",
-                    description="Target column index (0-based) (for move_tab operation)",
+                    description="Target column index (0-based) for move_tab operation. Maximum 6 columns",
                     required=False
                 ),
                 AIToolParameter(
                     name="model",
                     type="string",
-                    description="AI model to use (for new_conversation and spawn_ai_child_conversation operations)",
+                    description="AI model to use (for new_conversation_tab operation)",
                     required=False
                 ),
                 AIToolParameter(
                     name="temperature",
                     type="number",
-                    description="Temperature setting 0.0-1.0 (for new_conversation and spawn_ai_child_conversation operations)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="message",
-                    type="string",
-                    description="Message to submit to conversation (for spawn_ai_child_conversation operation)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="keystrokes",
-                    type="string",
-                    description="Keystrokes to send to terminal (for terminal_write operation)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="lines",
-                    type="integer",
-                    description="Number of lines to read from terminal buffer (for terminal_read operation)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="line",
-                    type="integer",
-                    description="Line number (1-indexed) for editor operations",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="column",
-                    type="integer",
-                    description="Column number (1-indexed) for editor operations",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="start_line",
-                    type="integer",
-                    description="Start line number (1-indexed) for editor operations",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="end_line",
-                    type="integer",
-                    description="End line number (1-indexed) for editor operations",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="search_text",
-                    type="string",
-                    description="Text to search for in editor",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="case_sensitive",
-                    type="boolean",
-                    description="Whether search should be case-sensitive (for editor_search operation)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="text_to_insert",
-                    type="string",
-                    description="Content to insert (for editor_insert_lines or editor_append_lines). " \
-                        "You must terminate each line with `\\n`",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="diff_content",
-                    type="string",
-                    description="Unified diff content to apply (for editor_apply_diff operation)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="message_id",
-                    type="string",
-                    description="Message UUID (for conversation operations)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="message_index",
-                    type="integer",
-                    description="Message index, 0-based (for conversation operations)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="message_types",
-                    type="array",
-                    description="List of message types to filter by (for conversation_read_messages, conversation_search). " \
-                        "Valid types: user_message, ai_response, ai_connected, tool_call, " \
-                        "tool_result, system_message, ai_reasoning",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="limit",
-                    type="integer",
-                    description="Maximum number of results to return (for conversation operations)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="include_tool_details",
-                    type="boolean",
-                    description="Include full tool call/result details (for conversation_read_messages)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="max_results",
-                    type="integer",
-                    description="Maximum number of search results to return (for conversation_search)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="position",
-                    type="string",
-                    description="Viewport position for scrolling: 'top', 'center', or 'bottom' " \
-                        "(for conversation_scroll_to, log_scroll_to, preview_scroll_to)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="levels",
-                    type="array",
-                    description="List of log levels to filter by (for log operations). " \
-                        "Valid levels: trace, info, warn, error",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="include_content",
-                    type="boolean",
-                    description="Include full message content (for log_read_messages)",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="block_index",
-                    type="integer",
-                    description="Content block index (0-based) for preview operations",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="section_index",
-                    type="integer",
-                    description="Section index within content block (0-based) for preview operations",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="text_position",
-                    type="integer",
-                    description="Text position within section (0-based) for preview operations",
+                    description="Temperature setting 0.0-1.0 (for new_conversation_tab operation)",
                     required=False
                 ),
             ]
@@ -268,65 +116,73 @@ class SystemAITool(AITool):
             Dictionary mapping operation names to their definitions
         """
         return {
-            "editor_open_tab": AIToolOperationDefinition(
-                name="editor_open_tab",
-                handler=self._editor_open_tab,
+            "open_editor_tab": AIToolOperationDefinition(
+                name="open_editor_tab",
+                handler=self._open_editor_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
-                description="Open a file in an editor tab for the user to browse/edit"
+                description="Open a file in an editor tab for the user to browse/edit. "
+                    "Returns the tab GUID for use with the editor tool"
             ),
-            "terminal_new_tab": AIToolOperationDefinition(
-                name="terminal_new_tab",
-                handler=self._terminal_new_tab,
+            "new_terminal_tab": AIToolOperationDefinition(
+                name="new_terminal_tab",
+                handler=self._new_terminal_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
                 description="Create a fully interactive terminal tab. "
-                    "This provides a terminal emulator connected to a new shell. "
-                    "You may interact with this terminal using the `terminal_read` and `terminal_write` operations, but "
-                    "you must use `terminal_read` to observe any changes"
+                "This provides a terminal emulator connected to a new shell. "
+                "You may interact with this terminal using the terminal tool. "
+                    "Returns the tab GUID for use with the terminal tool"
             ),
-            "conversation_open_tab": AIToolOperationDefinition(
-                name="conversation_open_tab",
-                handler=self._conversation_open_tab,
+            "open_conversation_tab": AIToolOperationDefinition(
+                name="open_conversation_tab",
+                handler=self._open_conversation_tab,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
                 description="Open an existing conversation in a conversation tab for the user to browse/edit. "
-                    "You (the AI) cannot use this to send messages"
+                "You (the AI) cannot use this to send messages. "
+                    "Returns the tab GUID for use with the conversation tool"
             ),
-            "conversation_new_tab": AIToolOperationDefinition(
-                name="conversation_new_tab",
-                handler=self._conversation_new_tab,
+            "new_conversation_tab": AIToolOperationDefinition(
+                name="new_conversation_tab",
+                handler=self._new_conversation_tab,
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
-                description="Create a new AI conversation tab, with optional model/temperature"
+                description="Create a new AI conversation tab, with optional model/temperature. "
+                    "Returns the tab GUID for use with the conversation tool"
             ),
-            "system_shell_show_tab": AIToolOperationDefinition(
-                name="system_shell_show_tab",
-                handler=self._system_shell_show_tab,
+            "show_system_shell_tab": AIToolOperationDefinition(
+                name="show_system_shell_tab",
+                handler=self._show_system_shell_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="Open a system shell tab"
+                description="Open a system shell tab. "
+                    "Returns the tab GUID for use with the terminal tool"
             ),
-            "log_show_tab": AIToolOperationDefinition(
-                name="log_show_tab",
-                handler=self._log_show_tab,
+            "show_log_tab": AIToolOperationDefinition(
+                name="show_log_tab",
+                handler=self._show_log_tab,
                 allowed_parameters=set(),
                 required_parameters=set(),
-                description="Open the mindspace log tab"
+                description="Open the mindspace log tab. "
+                    "Returns the tab GUID for use with the log tool"
             ),
-            "preview_open_tab": AIToolOperationDefinition(
-                name="preview_open_tab",
-                handler=self._preview_open_tab,
+            "open_preview_tab": AIToolOperationDefinition(
+                name="open_preview_tab",
+                handler=self._open_preview_tab,
                 allowed_parameters={"file_path"},
                 required_parameters=set(),
-                description="open a file/directory in a preview view tab"
+                description="Open a file/directory in a preview view tab. "
+                    "If no file_path provided, opens mindspace root. "
+                    "Returns the tab GUID for use with the preview tool"
             ),
-            "tab_info": AIToolOperationDefinition(
-                name="tab_info",
-                handler=self._tab_info,
+            "get_tab_info": AIToolOperationDefinition(
+                name="get_tab_info",
+                handler=self._get_tab_info,
                 allowed_parameters={"tab_id"},
                 required_parameters=set(),
-                description="Get information about a tab, given its tab ID (if no ID then gets the current tab info)"
+                description="Get information about a tab, given its tab GUID. "
+                    "If no tab_id provided, gets the current tab info"
             ),
             "close_tab": AIToolOperationDefinition(
                 name="close_tab",
@@ -350,218 +206,6 @@ class SystemAITool(AITool):
                 description="Move a tab to a specific column by index. You must provide the tab_id and target_column "
                     "parameters. There are a maximum of 6 columns"
             ),
-            "terminal_write": AIToolOperationDefinition(
-                name="terminal_write",
-                handler=self._terminal_write,
-                allowed_parameters={"tab_id", "keystrokes"},
-                required_parameters={"tab_id", "keystrokes"},
-                description="Send keystrokes to a terminal tab. You must provide the tab_id and keystrokes parameters. "
-                    "You may send more than one keystroke at a time by submitting them as a string. "
-                    "The string is not terminated with a newline automatically, so if you want to execute a command "
-                    "you must include appropriate end-of-line control characters. "
-                    "You MUST use `\\u####` format to send any control characters (ASCII values less than 0x20), "
-                    "inluding newline (\\u000a), carriage return (\\u000d), tab (\\u0009), and escape (\\u001b)"
-            ),
-            "terminal_read": AIToolOperationDefinition(
-                name="terminal_read",
-                handler=self._terminal_read,
-                allowed_parameters={"tab_id", "lines"},
-                required_parameters={"tab_id"},
-                description="Read the current terminal buffer (ouput display) content. You must provide the tab_id parameter. " \
-                    "This returns the raw content of the terminal display. " \
-                    "The terminal can have over 10k lines of text and that's far too much content so you must " \
-                    "think carefully about the number of `lines` you need to request"
-            ),
-            "terminal_get_status": AIToolOperationDefinition(
-                name="terminal_get_status",
-                handler=self._terminal_get_status,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Get terminal status and process information. You must provide the tab_id parameter"
-            ),
-            "editor_read_lines": AIToolOperationDefinition(
-                name="editor_read_lines",
-                handler=self._editor_read_lines,
-                allowed_parameters={"tab_id", "start_line", "end_line"},
-                required_parameters={"tab_id"},
-                description="Read content lines from an editor tab. You must provide the tab_id parameter. " \
-                    "Optionally specify line range with start_line and end_line (1-indexed, inclusive). " \
-                    "Returns line numbers and content as a dictionary-like structure"
-            ),
-            "editor_get_cursor_info": AIToolOperationDefinition(
-                name="editor_get_cursor_info",
-                handler=self._editor_get_cursor_info,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Get cursor position and selection information from an editor tab. " \
-                    "You must provide the tab_id parameter"
-            ),
-            "editor_get_info": AIToolOperationDefinition(
-                name="editor_get_info",
-                handler=self._editor_get_info,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Get editor metadata including line count, language, encoding, and " \
-                    "modification status. You must provide the tab_id parameter"
-            ),
-            "editor_goto_line": AIToolOperationDefinition(
-                name="editor_goto_line",
-                handler=self._editor_goto_line,
-                allowed_parameters={"tab_id", "line", "column"},
-                required_parameters={"tab_id", "line"},
-                description="Move cursor to specific line and optional column in an editor tab (1-indexed). " \
-                    "You must provide the tab_id and line parameters"
-            ),
-            "editor_search": AIToolOperationDefinition(
-                name="editor_search",
-                handler=self._editor_search,
-                allowed_parameters={"tab_id", "search_text", "case_sensitive"},
-                required_parameters={"tab_id", "search_text"},
-                description="Find precise lines numbers for all occurrences of text in an editor tab. " \
-                    "You must provide the tab_id and search_text parameters. " \
-                    "Returns list of matches with line (1-indexed), column (1-indexed), and context"
-            ),
-            "editor_get_selected_text": AIToolOperationDefinition(
-                name="editor_get_selected_text",
-                handler=self._editor_get_selected_text,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Get the currently selected text from an editor tab. You must provide the tab_id parameter"
-            ),
-            "editor_save_file": AIToolOperationDefinition(
-                name="editor_save_file",
-                handler=self._editor_save_file,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Save the current editor content to file. You must provide the tab_id parameter. " \
-                    "Requires user authorization"
-            ),
-            "editor_apply_diff": AIToolOperationDefinition(
-                name="editor_apply_diff",
-                handler=self._editor_apply_diff,
-                allowed_parameters={"tab_id", "diff_content"},
-                required_parameters={"tab_id", "diff_content"},
-                description="Apply a unified diff to the editor content. " \
-                    "This operation is atomic - either all hunks apply successfully or none do. " \
-                    "The diff is applied with fuzzy matching to handle minor line movements. " \
-                    "You must provide the tab_id and diff_content parameters. " \
-                    "The diff should be in standard unified diff format, though the file headers (`---` and `+++`) are " \
-                    "optional. Where possible the diff should have at least 3 lines of context before and after each hunk. " \
-                    "Diff line numbers are best computed using the `editor_read_lines` or `editor_search` operations. " \
-                    "Editor contents are not saved automatically - you must call `editor_save_file` to persist changes"
-            ),
-            "conversation_get_info": AIToolOperationDefinition(
-                name="conversation_get_info",
-                handler=self._conversation_get_info,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Get high-level metadata about a conversation including message count, " \
-                    "timestamps, models used, token counts, and parent conversation reference"
-            ),
-            "conversation_read_messages": AIToolOperationDefinition(
-                name="conversation_read_messages",
-                handler=self._conversation_read_messages,
-                allowed_parameters={"tab_id", "start_index", "end_index", "message_types", "limit", "include_tool_details"},
-                required_parameters={"tab_id"},
-                description="Read messages from a conversation with filtering and pagination. " \
-                    "Supports filtering by index range, message types (user_message, ai_response, tool_call, tool_result, etc.), " \
-                    "and limiting results. Can optionally exclude tool call details for efficiency"
-            ),
-            "conversation_get_message": AIToolOperationDefinition(
-                name="conversation_get_message",
-                handler=self._conversation_get_message,
-                allowed_parameters={"tab_id", "message_id", "message_index"},
-                required_parameters={"tab_id"},
-                description="Get a specific message by ID or index. " \
-                    "Must provide either message_id (UUID) or message_index (0-based)"
-            ),
-            "conversation_search": AIToolOperationDefinition(
-                name="conversation_search",
-                handler=self._conversation_search,
-                allowed_parameters={"tab_id", "search_text", "case_sensitive", "message_types", "max_results"},
-                required_parameters={"tab_id", "search_text"},
-                description="Search for text across all messages in a conversation. " \
-                    "Returns matches with surrounding context. Supports case-sensitive search, " \
-                    "filtering by message types, and limiting results"
-            ),
-            "conversation_scroll_to": AIToolOperationDefinition(
-                name="conversation_scroll_to",
-                handler=self._conversation_scroll_to,
-                allowed_parameters={"tab_id", "message_id", "message_index", "position"},
-                required_parameters={"tab_id"},
-                description="Scroll the conversation view to a specific message. " \
-                    "Must provide either message_id (UUID) or message_index (0-based). " \
-                    "Optional position parameter controls where in viewport: 'top', 'center' (default), or 'bottom'"
-            ),
-            "log_get_info": AIToolOperationDefinition(
-                name="log_get_info",
-                handler=self._log_get_info,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Get high-level metadata about the log including message count, " \
-                    "timestamps, and level distribution"
-            ),
-            "log_read_messages": AIToolOperationDefinition(
-                name="log_read_messages",
-                handler=self._log_read_messages,
-                allowed_parameters={"tab_id", "start_index", "end_index", "levels", "limit", "include_content"},
-                required_parameters={"tab_id"},
-                description="Read log messages with filtering and pagination. " \
-                    "Supports filtering by index range, log levels (trace, info, warn, error), " \
-                    "and limiting results. Can optionally exclude full content for efficiency"
-            ),
-            "log_get_message": AIToolOperationDefinition(
-                name="log_get_message",
-                handler=self._log_get_message,
-                allowed_parameters={"tab_id", "message_id", "message_index"},
-                required_parameters={"tab_id"},
-                description="Get a specific log message by ID or index. " \
-                    "Must provide either message_id (UUID) or message_index (0-based)"
-            ),
-            "log_search": AIToolOperationDefinition(
-                name="log_search",
-                handler=self._log_search,
-                allowed_parameters={"tab_id", "search_text", "case_sensitive", "levels", "max_results"},
-                required_parameters={"tab_id", "search_text"},
-                description="Search for text across all log messages. " \
-                    "Returns matches with surrounding context. Supports case-sensitive search, " \
-                    "filtering by log levels, and limiting results"
-            ),
-            "log_scroll_to": AIToolOperationDefinition(
-                name="log_scroll_to",
-                handler=self._log_scroll_to,
-                allowed_parameters={"tab_id", "message_id", "message_index", "position"},
-                required_parameters={"tab_id"},
-                description="Scroll the log view to a specific message. " \
-                    "Must provide either message_id (UUID) or message_index (0-based). " \
-                    "Optional position parameter controls where in viewport: 'top', 'center' (default), or 'bottom'"
-            ),
-            "preview_get_info": AIToolOperationDefinition(
-                name="preview_get_info",
-                handler=self._preview_get_info,
-                allowed_parameters={"tab_id"},
-                required_parameters={"tab_id"},
-                description="Get high-level metadata about preview content including path, content type, and block count"
-            ),
-            "preview_search": AIToolOperationDefinition(
-                name="preview_search",
-                handler=self._preview_search,
-                allowed_parameters={"tab_id", "search_text", "case_sensitive", "max_results"},
-                required_parameters={"tab_id", "search_text"},
-                description="Search for text in preview content. " \
-                    "Returns matches with surrounding context. Supports case-sensitive search " \
-                    "and limiting results"
-            ),
-            "preview_scroll_to": AIToolOperationDefinition(
-                name="preview_scroll_to",
-                handler=self._preview_scroll_to,
-                allowed_parameters={"tab_id", "block_index", "section_index", "text_position", "position"},
-                required_parameters={"tab_id", "block_index"},
-                description="Scroll preview to a specific content position. " \
-                    "Must provide block_index (0-based). Optional section_index and text_position " \
-                    "for finer control within a section. Optional position parameter controls where in " \
-                    "viewport: 'top', 'center' (default), or 'bottom'"
-            )
         }
 
     def _validate_mindspace_access(self) -> None:
@@ -575,52 +219,6 @@ class SystemAITool(AITool):
             raise AIToolExecutionError(
                 "No mindspace is currently open. System operations require an active mindspace."
             )
-
-    def _get_str_value_from_key(self, key: str, arguments: Dict[str, Any]) -> str:
-        """
-        Extract string value from arguments dictionary.
-
-        Args:
-            key: Key to extract from arguments
-            arguments: Dictionary containing operation parameters
-
-        Returns:
-            String value for the given key
-
-        Raises:
-            AIToolExecutionError: If key is missing or value is not a string
-        """
-        if key not in arguments:
-            raise AIToolExecutionError(f"No '{key}' argument provided")
-
-        value = arguments[key]
-        if not isinstance(value, str):
-            raise AIToolExecutionError(f"'{key}' must be a string")
-
-        return value
-
-    def _get_int_value_from_key(self, key: str, arguments: Dict[str, Any]) -> int:
-        """
-        Extract integer value from arguments dictionary.
-
-        Args:
-            key: Key to extract from arguments
-            arguments: Dictionary containing operation parameters
-
-        Returns:
-            Integer value for the given key
-
-        Raises:
-            AIToolExecutionError: If key is missing or value is not an integer
-        """
-        if key not in arguments:
-            raise AIToolExecutionError(f"No '{key}' argument provided")
-
-        value = arguments[key]
-        if not isinstance(value, int):
-            raise AIToolExecutionError(f"'{key}' must be an integer")
-
-        return value
 
     def _validate_and_resolve_path(self, path_str: str) -> str:
         """
@@ -639,7 +237,7 @@ class SystemAITool(AITool):
             raise AIToolExecutionError("Path parameter is required")
 
         try:
-            # Check if our path starts with a separator.  If it does we'll assume it's for the root of the mindspace.
+            # Check if our path starts with a separator - assume it's for the root of the mindspace
             if path_str.startswith(os.sep):
                 path_str = path_str[1:]
 
@@ -659,208 +257,6 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Invalid path '{path_str}': {str(e)}") from e
 
-    def _get_terminal_tab(self, arguments: Dict[str, Any]) -> TerminalTab:
-        """
-        Get a terminal tab by ID or current tab.
-
-        Args:
-            arguments: Tool arguments containing optional tab_id
-
-        Returns:
-            TerminalTab instance
-
-        Raises:
-            AIToolExecutionError: If no terminal tab found
-        """
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
-
-        # Get specific terminal by ID
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
-
-        if not isinstance(tab, TerminalTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not a terminal tab")
-
-        return tab
-
-
-    def _get_editor_tab(self, arguments: Dict[str, Any]) -> 'EditorTab':
-        """
-        Get an editor tab by ID.
-
-        Args:
-            arguments: Tool arguments containing tab_id
-
-        Returns:
-            EditorTab instance
-
-        Raises:
-            AIToolExecutionError: If no editor tab found
-        """
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
-
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
-
-        if not isinstance(tab, EditorTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not an editor tab")
-
-        return tab
-
-    def _get_conversation_tab(self, arguments: Dict[str, Any]) -> 'ConversationTab':
-        """
-        Get a conversation tab by ID.
-
-        Args:
-            arguments: Tool arguments containing tab_id
-
-        Returns:
-            ConversationTab instance
-
-        Raises:
-            AIToolExecutionError: If no conversation tab found
-        """
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
-
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
-
-        if not isinstance(tab, ConversationTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not a conversation tab")
-
-        return tab
-
-    def _get_log_tab(self, arguments: Dict[str, Any]) -> 'LogTab':
-        """
-        Get a log tab by ID.
-
-        Args:
-            arguments: Tool arguments containing tab_id
-
-        Returns:
-            LogTab instance
-
-        Raises:
-            AIToolExecutionError: If no log tab found
-        """
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
-
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
-
-        if not isinstance(tab, LogTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not a log tab")
-
-        return tab
-
-    def _get_preview_tab(self, arguments: Dict[str, Any]) -> 'PreviewTab':
-        """
-        Get a preview tab by ID.
-
-        Args:
-            arguments: Tool arguments containing tab_id
-
-        Returns:
-            PreviewTab instance
-
-        Raises:
-            AIToolExecutionError: If no preview tab found
-        """
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
-
-        tab = self._column_manager.get_tab_by_id(tab_id)
-        if not tab:
-            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
-
-        if not isinstance(tab, PreviewTab):
-            raise AIToolExecutionError(f"Tab {tab_id} is not a preview tab")
-
-        return tab
-
-    def _format_terminal_status(self, status_info: TerminalStatusInfo) -> str:
-        """
-        Format terminal status information as readable text.
-
-        Args:
-            status_info: TerminalStatusInfo instance
-
-        Returns:
-            Formatted status text
-        """
-        lines = []
-
-        lines.append(f"Tab ID: {status_info.tab_id}")
-        lines.append(f"Running: {status_info.tab_running}")
-
-        # Process information
-        if status_info.process_id:
-            lines.append(f"Process ID: {status_info.process_id}")
-        else:
-            lines.append("Process ID: None")
-
-        lines.append(f"Process Running: {status_info.process_running}")
-        lines.append(f"Process Name: {status_info.process_name}")
-
-        # Terminal dimensions
-        rows, cols = status_info.terminal_size
-        lines.append(f"Terminal Size: {rows} rows x {cols} cols")
-
-        # Cursor position
-        cursor_row, cursor_col = status_info.cursor_position
-        lines.append(f"Cursor Position: row {cursor_row}, col {cursor_col} (visible: {status_info.cursor_visible})")
-
-        lines.append(f"Buffer Lines: {status_info.buffer_lines}")
-
-        return '\n'.join(lines)
-
-    def _process_ai_escape_sequences(self, raw_input: str) -> str:
-        """
-        Convert AI's literal Unicode escape sequences to actual control characters.
-
-        This handles the JSON double-escaping issue where the AI sends input with
-        Unicode escapes that got converted to literal text. For example:
-        - AI intends: ESC character for ANSI colors
-        - AI should send: \\u001b in JSON (becomes actual ESC after json.loads)
-        - But if double-escaped: \\\\u001b in JSON (becomes literal \\u001b text)
-        - This function: converts literal \\u001b back to actual ESC character
-
-        We only process Unicode escapes (\\u####) because:
-        1. They're unambiguous in intent (clearly meant to be characters)
-        2. They're valid JSON escape sequences (unlike \\x##)
-        3. They avoid the ambiguity issues with \\n, \\t, etc.
-
-        Args:
-            raw_input: Input string potentially containing literal Unicode escape sequences
-
-        Returns:
-            Processed input string with Unicode escape sequences converted to actual characters
-        """
-        if not raw_input:
-            return raw_input
-
-        # Convert \u#### Unicode sequences to actual characters
-        def unicode_replace(match: re.Match[str]) -> str:
-            hex_value = match.group(1)
-            try:
-                char_code = int(hex_value, 16)
-                return chr(char_code)
-
-            except (ValueError, OverflowError):
-                # If invalid Unicode code point, return original
-                return match.group(0)
-
-        result = re.sub(r'\\u([0-9a-fA-F]{4})', unicode_replace, raw_input)
-
-        # Log conversion for debugging if any changes were made
-        if result != raw_input:
-            self._logger.debug("Processed AI Unicode escape sequences: %r -> %r", raw_input, result)
-
-        return result
-
     async def execute(
         self,
         tool_call: AIToolCall,
@@ -868,7 +264,7 @@ class SystemAITool(AITool):
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
-        Execute the system operation with continuation support.
+        Execute a system operation.
 
         Args:
             tool_call: Tool call containing operation name and arguments
@@ -876,11 +272,10 @@ class SystemAITool(AITool):
             request_authorization: Function to call for user authorization
 
         Returns:
-            AIToolResult containing the execution result and optional continuation
+            AIToolResult containing the execution result
 
         Raises:
             AIToolExecutionError: If operation fails
-            AIToolAuthorizationDenied: If user denies authorization
         """
         # Validate mindspace is open
         self._validate_mindspace_access()
@@ -909,22 +304,28 @@ class SystemAITool(AITool):
         try:
             return await operation_def.handler(tool_call, request_authorization)
 
-        except (AIToolExecutionError, AIToolAuthorizationDenied):
-            # Re-raise our own errors
+        except AIToolExecutionError:
             raise
 
         except Exception as e:
             self._logger.error("Unexpected error in system operation '%s': %s", operation, str(e), exc_info=True)
             raise AIToolExecutionError(f"System operation failed: {str(e)}") from e
 
-    async def _editor_open_tab(
+    async def _open_editor_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Edit or create a file in an editor tab."""
+        """Open or create a file in an editor tab."""
         arguments = tool_call.arguments
-        file_path_arg = self._get_str_value_from_key("file_path", arguments)
+
+        if "file_path" not in arguments:
+            raise AIToolExecutionError("No 'file_path' argument provided")
+
+        file_path_arg = arguments["file_path"]
+        if not isinstance(file_path_arg, str):
+            raise AIToolExecutionError("'file_path' must be a string")
+
         file_path = self._validate_and_resolve_path(file_path_arg)
 
         try:
@@ -937,7 +338,6 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 editor_tab = self._column_manager.open_file(file_path, False)
-
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -959,7 +359,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to open file '{file_path_arg}' for editing: {str(e)}") from e
 
-    async def _terminal_new_tab(
+    async def _new_terminal_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -969,7 +369,6 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 terminal_tab = self._column_manager.new_terminal()
-
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -987,26 +386,31 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to create terminal: {str(e)}") from e
 
-    async def _conversation_open_tab(
+    async def _open_conversation_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Create a new conversation tab."""
-        # Get file path
+        """Open an existing conversation tab."""
         arguments = tool_call.arguments
-        file_path_arg = self._get_str_value_from_key("file_path", arguments)
+
+        if "file_path" not in arguments:
+            raise AIToolExecutionError("No 'file_path' argument provided")
+
+        file_path_arg = arguments["file_path"]
+        if not isinstance(file_path_arg, str):
+            raise AIToolExecutionError("'file_path' must be a string")
+
         conversation_path = self._validate_and_resolve_path(file_path_arg)
 
         try:
             # Ensure conversations directory exists
             self._mindspace_manager.ensure_mindspace_dir("conversations")
 
-            # Create conversation
+            # Open conversation
             self._column_manager.protect_current_tab(True)
             try:
                 conversation_tab = self._column_manager.open_conversation(conversation_path, False)
-
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -1030,15 +434,14 @@ class SystemAITool(AITool):
             raise AIToolExecutionError(f"Failed to create conversation directory: {str(e)}") from e
 
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
+            raise AIToolExecutionError(f"Failed to open conversation: {str(e)}") from e
 
-    async def _conversation_new_tab(
+    async def _new_conversation_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Create a new conversation tab."""
-        # Extract optional parameters
         arguments = tool_call.arguments
         model = arguments.get("model")
         temperature = arguments.get("temperature")
@@ -1079,7 +482,6 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 conversation_tab = self._column_manager.new_conversation(False, None, model, temperature, reasoning)
-
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -1107,7 +509,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
 
-    async def _system_shell_show_tab(
+    async def _show_system_shell_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1115,10 +517,8 @@ class SystemAITool(AITool):
         """Show the system shell tab."""
         try:
             self._column_manager.protect_current_tab(True)
-
             try:
                 shell_tab = self._column_manager.show_system_shell()
-
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -1136,22 +536,20 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to show system shell: {str(e)}") from e
 
-    async def _log_show_tab(
+    async def _show_log_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Show the system shell tab."""
+        """Show the mindspace log tab."""
         try:
             self._column_manager.protect_current_tab(True)
-
             try:
-                shell_tab = self._column_manager.show_system_log()
-
+                log_tab = self._column_manager.show_system_log()
             finally:
                 self._column_manager.protect_current_tab(False)
 
-            tab_id = shell_tab.tab_id()
+            tab_id = log_tab.tab_id()
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI opened mindspace log\ntab ID: {tab_id}"
@@ -1163,21 +561,19 @@ class SystemAITool(AITool):
             )
 
         except Exception as e:
-            raise AIToolExecutionError(f"Failed to show system shell: {str(e)}") from e
+            raise AIToolExecutionError(f"Failed to show mindspace log: {str(e)}") from e
 
-    async def _preview_open_tab(
+    async def _open_preview_tab(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Open preview view for a specific location or mindspace root."""
-        # Get file path (optional)
         arguments = tool_call.arguments
         file_path_arg = arguments.get("file_path", "")
 
         if file_path_arg:
             preview_path = self._validate_and_resolve_path(file_path_arg)
-
         else:
             # Use mindspace root if no path provided
             preview_path = self._mindspace_manager.get_absolute_path(".")
@@ -1187,7 +583,6 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 preview_tab = self._column_manager.open_preview_page(preview_path, False)
-
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -1208,7 +603,7 @@ class SystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Failed to open preview: {str(e)}") from e
 
-    async def _tab_info(
+    async def _get_tab_info(
         self,
         tool_call: AIToolCall,
         _request_authorization: AIToolAuthorizationCallback
@@ -1245,6 +640,9 @@ class SystemAITool(AITool):
                 content=str(tab_info)
             )
 
+        except AIToolExecutionError:
+            raise
+
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get tab info for ID {tab_id}: {str(e)}") from e
 
@@ -1255,7 +653,13 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Close an existing tab by ID."""
         arguments = tool_call.arguments
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
+
+        if "tab_id" not in arguments:
+            raise AIToolExecutionError("No 'tab_id' argument provided")
+
+        tab_id = arguments["tab_id"]
+        if not isinstance(tab_id, str):
+            raise AIToolExecutionError("'tab_id' must be a string")
 
         try:
             self._column_manager.close_tab_by_id(tab_id)
@@ -1293,7 +697,7 @@ class SystemAITool(AITool):
                     content="No tabs are currently open."
                 )
 
-            # Format the response as a structured JSON string for easy parsing
+            # Format the response as a structured result
             result = {
                 "total_tabs": len(tab_info),
                 "total_columns": self._column_manager.num_colunns(),
@@ -1320,8 +724,20 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Move a tab to a specific column."""
         arguments = tool_call.arguments
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
-        target_column = self._get_int_value_from_key("target_column", arguments)
+
+        if "tab_id" not in arguments:
+            raise AIToolExecutionError("No 'tab_id' argument provided")
+
+        tab_id = arguments["tab_id"]
+        if not isinstance(tab_id, str):
+            raise AIToolExecutionError("'tab_id' must be a string")
+
+        if "target_column" not in arguments:
+            raise AIToolExecutionError("No 'target_column' argument provided")
+
+        target_column = arguments["target_column"]
+        if not isinstance(target_column, int):
+            raise AIToolExecutionError("'target_column' must be an integer")
 
         try:
             # Validate target column is non-negative
@@ -1357,1063 +773,3 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to move tab {tab_id} to column {target_column}: {str(e)}") from e
-
-    async def _terminal_write(
-        self,
-        tool_call: AIToolCall,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Write to a terminal."""
-        arguments = tool_call.arguments
-
-        # Get and validate keystrokes
-        raw_keystrokes = arguments.get("keystrokes")
-        if not raw_keystrokes or not isinstance(raw_keystrokes, str):
-            raise AIToolExecutionError("'keystrokes' must be a non-empty string")
-
-        # Process escape sequences from AI - convert literal Unicode escapes to actual characters
-        processed_keystrokes = self._process_ai_escape_sequences(raw_keystrokes)
-
-        # Get terminal tab
-        terminal_tab = self._get_terminal_tab(arguments)
-        tab_id = terminal_tab.tab_id()
-
-        # Build authorization context - show original keystrokes for transparency
-        context = f"Send keystrokes to terminal (tab {tab_id}): '{raw_keystrokes}'"
-        if processed_keystrokes != raw_keystrokes:
-            context += f"\n(will be processed as: '{processed_keystrokes!r}')"
-
-        # Request authorization - commands can be destructive
-        authorized = await request_authorization("system", arguments, context, True)
-        if not authorized:
-            raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_keystrokes}")
-
-        try:
-            await terminal_tab.send_keystrokes(processed_keystrokes)
-
-            # Log the operation
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI sent keystrokes to terminal: '{raw_keystrokes}'\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content="Keystrokes sent"
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to send keystrokes to terminal: {str(e)}") from e
-
-    async def _terminal_read(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Read terminal buffer content."""
-        arguments = tool_call.arguments
-
-        # Get terminal tab
-        terminal_tab = self._get_terminal_tab(arguments)
-        tab_id = terminal_tab.tab_id()
-
-        # Get optional lines parameter
-        lines = arguments.get("lines")
-        if lines is not None and not isinstance(lines, int):
-            raise AIToolExecutionError("'lines' must be an integer")
-
-        try:
-            # Get terminal buffer content using public method
-            buffer_content = terminal_tab.get_terminal_buffer_content(lines)
-
-            # Log the operation
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI read terminal buffer\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=buffer_content
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to read terminal: {str(e)}") from e
-
-    async def _terminal_get_status(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get terminal status information."""
-        arguments = tool_call.arguments
-
-        # Get terminal tab
-        terminal_tab = self._get_terminal_tab(arguments)
-        tab_id = terminal_tab.tab_id()
-
-        try:
-            # Get terminal status using public method
-            status_info = terminal_tab.get_terminal_status_info()
-
-            # Log the operation
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested terminal status\ntab ID: {tab_id}"
-            )
-
-            # Format status as readable text
-            status_text = self._format_terminal_status(status_info)
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=status_text
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get terminal status: {str(e)}") from e
-
-    async def _editor_read_lines(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Read content from an editor tab."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        start_line = arguments.get("start_line")
-        end_line = arguments.get("end_line")
-
-        if start_line is not None and not isinstance(start_line, int):
-            raise AIToolExecutionError("'start_line' must be an integer")
-
-        if end_line is not None and not isinstance(end_line, int):
-            raise AIToolExecutionError("'end_line' must be an integer")
-
-        try:
-            content = editor_tab.get_text_range(start_line, end_line)
-            context_object = {}
-
-            # Handle empty content - should still show line 1 as empty string
-            # This matches the editor perspective where an empty file shows line 1
-            if not content:
-                context_object[1] = ""
-
-            else:
-                content_lines = content.splitlines()
-                for line_num, line_text in enumerate(content_lines):
-                    context_object[line_num + start_line if start_line is not None else line_num + 1] = line_text
-
-            if start_line is not None or end_line is not None:
-                range_desc = f"lines {start_line or 1}-{end_line or 'end'}"
-                log_msg = f"AI read editor content ({range_desc})\ntab ID: {tab_id}"
-
-            else:
-                log_msg = f"AI read editor content\ntab ID: {tab_id}"
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                log_msg
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(context_object)
-            )
-
-        except ValueError as e:
-            raise AIToolExecutionError(f"Invalid line range: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to read editor content: {str(e)}") from e
-
-    async def _editor_get_cursor_info(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get cursor position and selection information from an editor tab."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        try:
-            cursor_info = editor_tab.get_cursor_info()
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested cursor info\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(cursor_info)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get cursor info: {str(e)}") from e
-
-    async def _editor_get_info(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get editor metadata and document information."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        try:
-            editor_info = editor_tab.get_editor_info()
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested editor info\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(editor_info)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get editor info: {str(e)}") from e
-
-    async def _editor_goto_line(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Move cursor to specific line and column in an editor tab."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        line = self._get_int_value_from_key("line", arguments)
-        column = arguments.get("column", 1)
-
-        if not isinstance(column, int):
-            raise AIToolExecutionError("'column' must be an integer")
-
-        try:
-            editor_tab.goto_line(line, column)
-
-            col_desc = f", column {column}" if column != 1 else ""
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI moved cursor to line {line}{col_desc}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Moved cursor to line {line}{col_desc}"
-            )
-
-        except ValueError as e:
-            raise AIToolExecutionError(f"Invalid position: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to goto line: {str(e)}") from e
-
-    async def _editor_search(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Find all occurrences of text in an editor tab."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        search_text = self._get_str_value_from_key("search_text", arguments)
-        case_sensitive = arguments.get("case_sensitive", False)
-
-        if not isinstance(case_sensitive, bool):
-            raise AIToolExecutionError("'case_sensitive' must be a boolean")
-
-        try:
-            matches = editor_tab.find_all_occurrences(search_text, case_sensitive)
-
-            case_desc = " (case-sensitive)" if case_sensitive else ""
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI searched for '{search_text}'{case_desc}: {len(matches)} matches\ntab ID: {tab_id}"
-            )
-
-            if not matches:
-                return AIToolResult(
-                    id=tool_call.id,
-                    name="system",
-                    content=f"No matches found for '{search_text}'{case_desc}"
-                )
-
-            result = {
-                "search_text": search_text,
-                "case_sensitive": case_sensitive,
-                "match_count": len(matches),
-                "matches": matches
-            }
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(result)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to search in editor: {str(e)}") from e
-
-    async def _editor_get_selected_text(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get the currently selected text from an editor tab."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        try:
-            selected_text = editor_tab.get_selected_text()
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested selected text\ntab ID: {tab_id}"
-            )
-
-            if not selected_text:
-                return AIToolResult(
-                    id=tool_call.id,
-                    name="system",
-                    content="No text selected"
-                )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=selected_text
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get selected text: {str(e)}") from e
-
-    async def _editor_save_file(
-        self,
-        tool_call: AIToolCall,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Save the current editor content to file."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        # Get editor info to show file path
-        editor_info = editor_tab.get_editor_info()
-        file_path = editor_info.get('file_path', '')
-
-        if not file_path:
-            raise AIToolExecutionError("Cannot save: editor has no file path (untitled file)")
-
-        # Build authorization context
-        context = f"Save editor content to file: {file_path} (tab {tab_id})"
-
-        # Request authorization - writing to filesystem
-        authorized = await request_authorization("system", arguments, context, True)
-        if not authorized:
-            raise AIToolAuthorizationDenied("User denied permission to save file")
-
-        try:
-            success = editor_tab.save()
-
-            if not success:
-                raise AIToolExecutionError("Save operation failed")
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI saved editor file: {file_path}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Saved file: '{file_path}'"
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to save file: {str(e)}") from e
-
-    async def _editor_apply_diff(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Apply a unified diff to editor content."""
-        arguments = tool_call.arguments
-
-        editor_tab = self._get_editor_tab(arguments)
-        tab_id = editor_tab.tab_id()
-
-        diff_content = self._get_str_value_from_key("diff_content", arguments)
-
-        try:
-            result = editor_tab.apply_diff(diff_content)
-
-            if result['success']:
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"AI applied diff to editor ({result.get('hunks_applied', 0)} hunks)\ntab ID: {tab_id}"
-                )
-
-                return AIToolResult(
-                    id=tool_call.id,
-                    name="system",
-                    content=result['message']
-                )
-
-            # Diff failed to apply
-            error_details = result.get('error_details', {})
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI diff application failed: {result['message']}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Failed to apply diff: {result['message']}\n\nError details:\n{error_details}"
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to apply diff: {str(e)}") from e
-
-    async def _conversation_get_info(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get conversation metadata."""
-        arguments = tool_call.arguments
-
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
-
-        try:
-            info = conversation_tab.get_conversation_info()
-
-            # Add file path to info
-            info['file_path'] = self._mindspace_manager.get_relative_path(conversation_tab.path())
-            info['tab_id'] = tab_id
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested conversation info\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(info)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get conversation info: {str(e)}") from e
-
-    async def _conversation_read_messages(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Read messages from conversation."""
-        arguments = tool_call.arguments
-
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
-
-        # Extract optional parameters
-        start_index = arguments.get("start_index")
-        end_index = arguments.get("end_index")
-        message_types = arguments.get("message_types")
-        limit = arguments.get("limit")
-        include_tool_details = arguments.get("include_tool_details", True)
-
-        # Validate types
-        if start_index is not None and not isinstance(start_index, int):
-            raise AIToolExecutionError("'start_index' must be an integer")
-
-        if end_index is not None and not isinstance(end_index, int):
-            raise AIToolExecutionError("'end_index' must be an integer")
-
-        if message_types is not None and not isinstance(message_types, list):
-            raise AIToolExecutionError("'message_types' must be a list")
-
-        if limit is not None and not isinstance(limit, int):
-            raise AIToolExecutionError("'limit' must be an integer")
-
-        if not isinstance(include_tool_details, bool):
-            raise AIToolExecutionError("'include_tool_details' must be a boolean")
-
-        try:
-            result = conversation_tab.read_messages(
-                start_index, end_index, message_types, limit, include_tool_details
-            )
-
-            # Build log message
-            log_parts = ["AI read conversation messages"]
-            if start_index is not None or end_index is not None:
-                log_parts.append(f"range: {start_index or 0}-{end_index or 'end'}")
-
-            if message_types:
-                log_parts.append(f"types: {', '.join(message_types)}")
-
-            if limit:
-                log_parts.append(f"limit: {limit}")
-
-            log_parts.append(f"tab ID: {tab_id}")
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                "\n".join(log_parts)
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(result)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to read messages: {str(e)}") from e
-
-    async def _conversation_get_message(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get a specific message by ID or index."""
-        arguments = tool_call.arguments
-
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
-
-        message_id = arguments.get("message_id")
-        message_index = arguments.get("message_index")
-
-        if message_id is None and message_index is None:
-            raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
-
-        if message_id is not None and not isinstance(message_id, str):
-            raise AIToolExecutionError("'message_id' must be a string")
-
-        if message_index is not None and not isinstance(message_index, int):
-            raise AIToolExecutionError("'message_index' must be an integer")
-
-        try:
-            message = conversation_tab.get_message_by_id_or_index(message_id, message_index)
-
-            if message is None:
-                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
-                raise AIToolExecutionError(f"Message not found: {identifier}")
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested message {message_id or message_index}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(message)
-            )
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get message: {str(e)}") from e
-
-    async def _conversation_search(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Search for text in conversation."""
-        arguments = tool_call.arguments
-
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
-
-        search_text = self._get_str_value_from_key("search_text", arguments)
-        case_sensitive = arguments.get("case_sensitive", False)
-        message_types = arguments.get("message_types")
-        max_results = arguments.get("max_results", 50)
-
-        if not isinstance(case_sensitive, bool):
-            raise AIToolExecutionError("'case_sensitive' must be a boolean")
-
-        if message_types is not None and not isinstance(message_types, list):
-            raise AIToolExecutionError("'message_types' must be a list")
-
-        if not isinstance(max_results, int):
-            raise AIToolExecutionError("'max_results' must be an integer")
-
-        try:
-            result = conversation_tab.search_messages(
-                search_text, case_sensitive, message_types, max_results
-            )
-
-            case_desc = " (case-sensitive)" if case_sensitive else ""
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI searched conversation for '{search_text}'{case_desc}: " \
-                f"{result['total_matches']} matches\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(result)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to search conversation: {str(e)}") from e
-
-    async def _conversation_scroll_to(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Scroll conversation to a specific message."""
-        arguments = tool_call.arguments
-
-        conversation_tab = self._get_conversation_tab(arguments)
-        tab_id = conversation_tab.tab_id()
-
-        message_id = arguments.get("message_id")
-        message_index = arguments.get("message_index")
-        position = arguments.get("position", "center")
-
-        if message_id is None and message_index is None:
-            raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
-
-        if message_id is not None and not isinstance(message_id, str):
-            raise AIToolExecutionError("'message_id' must be a string")
-
-        if message_index is not None and not isinstance(message_index, int):
-            raise AIToolExecutionError("'message_index' must be an integer")
-
-        if not isinstance(position, str):
-            raise AIToolExecutionError("'position' must be a string")
-
-        if position not in ("top", "center", "bottom"):
-            raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")
-
-        try:
-            success = conversation_tab.scroll_to_message(message_id, message_index, position)
-
-            if not success:
-                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
-                raise AIToolExecutionError(f"Message not found: {identifier}")
-
-            identifier = message_id if message_id else f"index {message_index}"
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI scrolled conversation to message {identifier} ({position})\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Scrolled to message {identifier} ({position})"
-            )
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to scroll to message: {str(e)}") from e
-
-    async def _log_get_info(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get log metadata."""
-        arguments = tool_call.arguments
-
-        log_tab = self._get_log_tab(arguments)
-        tab_id = log_tab.tab_id()
-
-        try:
-            info = log_tab.get_log_info()
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested log info\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(info)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get log info: {str(e)}") from e
-
-    async def _log_read_messages(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Read log messages."""
-        arguments = tool_call.arguments
-
-        log_tab = self._get_log_tab(arguments)
-        tab_id = log_tab.tab_id()
-
-        # Extract optional parameters
-        start_index = arguments.get("start_index")
-        end_index = arguments.get("end_index")
-        levels = arguments.get("levels")
-        limit = arguments.get("limit")
-        include_content = arguments.get("include_content", True)
-
-        # Validate types
-        if start_index is not None and not isinstance(start_index, int):
-            raise AIToolExecutionError("'start_index' must be an integer")
-
-        if end_index is not None and not isinstance(end_index, int):
-            raise AIToolExecutionError("'end_index' must be an integer")
-
-        if levels is not None and not isinstance(levels, list):
-            raise AIToolExecutionError("'levels' must be a list")
-
-        if limit is not None and not isinstance(limit, int):
-            raise AIToolExecutionError("'limit' must be an integer")
-
-        if not isinstance(include_content, bool):
-            raise AIToolExecutionError("'include_content' must be a boolean")
-
-        try:
-            result = log_tab.read_messages(
-                start_index, end_index, levels, limit, include_content
-            )
-
-            # Build log message
-            log_parts = ["AI read log messages"]
-            if start_index is not None or end_index is not None:
-                log_parts.append(f"range: {start_index or 0}-{end_index or 'end'}")
-
-            if levels:
-                log_parts.append(f"levels: {', '.join(levels)}")
-
-            if limit:
-                log_parts.append(f"limit: {limit}")
-
-            log_parts.append(f"tab ID: {tab_id}")
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                "\n".join(log_parts)
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(result)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to read log messages: {str(e)}") from e
-
-    async def _log_get_message(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get a specific log message by ID or index."""
-        arguments = tool_call.arguments
-
-        log_tab = self._get_log_tab(arguments)
-        tab_id = log_tab.tab_id()
-
-        message_id = arguments.get("message_id")
-        message_index = arguments.get("message_index")
-
-        if message_id is None and message_index is None:
-            raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
-
-        if message_id is not None and not isinstance(message_id, str):
-            raise AIToolExecutionError("'message_id' must be a string")
-
-        if message_index is not None and not isinstance(message_index, int):
-            raise AIToolExecutionError("'message_index' must be an integer")
-
-        try:
-            message = log_tab.get_message_by_id_or_index(message_id, message_index)
-
-            if message is None:
-                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
-                raise AIToolExecutionError(f"Log message not found: {identifier}")
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested log message {message_id or message_index}\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(message)
-            )
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get log message: {str(e)}") from e
-
-    async def _log_search(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Search for text in log messages."""
-        arguments = tool_call.arguments
-
-        log_tab = self._get_log_tab(arguments)
-        tab_id = log_tab.tab_id()
-
-        search_text = self._get_str_value_from_key("search_text", arguments)
-        case_sensitive = arguments.get("case_sensitive", False)
-        levels = arguments.get("levels")
-        max_results = arguments.get("max_results", 50)
-
-        if not isinstance(case_sensitive, bool):
-            raise AIToolExecutionError("'case_sensitive' must be a boolean")
-
-        if levels is not None and not isinstance(levels, list):
-            raise AIToolExecutionError("'levels' must be a list")
-
-        if not isinstance(max_results, int):
-            raise AIToolExecutionError("'max_results' must be an integer")
-
-        try:
-            result = log_tab.search_messages(
-                search_text, case_sensitive, levels, max_results
-            )
-
-            case_desc = " (case-sensitive)" if case_sensitive else ""
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI searched log for '{search_text}'{case_desc}: " \
-                f"{result['total_matches']} matches\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(result)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to search log: {str(e)}") from e
-
-    async def _log_scroll_to(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Scroll log to a specific message."""
-        arguments = tool_call.arguments
-
-        log_tab = self._get_log_tab(arguments)
-        tab_id = log_tab.tab_id()
-
-        message_id = arguments.get("message_id")
-        message_index = arguments.get("message_index")
-        position = arguments.get("position", "center")
-
-        if message_id is None and message_index is None:
-            raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
-
-        if message_id is not None and not isinstance(message_id, str):
-            raise AIToolExecutionError("'message_id' must be a string")
-
-        if message_index is not None and not isinstance(message_index, int):
-            raise AIToolExecutionError("'message_index' must be an integer")
-
-        if not isinstance(position, str):
-            raise AIToolExecutionError("'position' must be a string")
-
-        if position not in ("top", "center", "bottom"):
-            raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")
-
-        try:
-            success = log_tab.scroll_to_message(message_id, message_index, position)
-
-            if not success:
-                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
-                raise AIToolExecutionError(f"Log message not found: {identifier}")
-
-            identifier = message_id if message_id else f"index {message_index}"
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI scrolled log to message {identifier} ({position})\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Scrolled to log message {identifier} ({position})"
-            )
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to scroll to log message: {str(e)}") from e
-
-    async def _preview_get_info(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Get preview content metadata."""
-        arguments = tool_call.arguments
-
-        preview_tab = self._get_preview_tab(arguments)
-        tab_id = preview_tab.tab_id()
-
-        try:
-            info = preview_tab.get_preview_info()
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested preview info\\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(info)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get preview info: {str(e)}") from e
-
-    async def _preview_search(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Search for text in preview content."""
-        arguments = tool_call.arguments
-
-        preview_tab = self._get_preview_tab(arguments)
-        tab_id = preview_tab.tab_id()
-
-        search_text = self._get_str_value_from_key("search_text", arguments)
-        case_sensitive = arguments.get("case_sensitive", False)
-        max_results = arguments.get("max_results", 50)
-
-        if not isinstance(case_sensitive, bool):
-            raise AIToolExecutionError("'case_sensitive' must be a boolean")
-
-        if not isinstance(max_results, int):
-            raise AIToolExecutionError("'max_results' must be an integer")
-
-        try:
-            result = preview_tab.search_content(
-                search_text, case_sensitive, max_results
-            )
-
-            case_desc = " (case-sensitive)" if case_sensitive else ""
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI searched preview for '{search_text}'{case_desc}: " \
-                f"{result['total_matches']} matches\\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=str(result)
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to search preview: {str(e)}") from e
-
-    async def _preview_scroll_to(
-        self,
-        tool_call: AIToolCall,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Scroll preview to a specific content position."""
-        arguments = tool_call.arguments
-
-        preview_tab = self._get_preview_tab(arguments)
-        tab_id = preview_tab.tab_id()
-
-        block_index = self._get_int_value_from_key("block_index", arguments)
-        section_index = arguments.get("section_index", 0)
-        text_position = arguments.get("text_position", 0)
-        position = arguments.get("position", "center")
-
-        if not isinstance(section_index, int):
-            raise AIToolExecutionError("'section_index' must be an integer")
-
-        if not isinstance(text_position, int):
-            raise AIToolExecutionError("'text_position' must be an integer")
-
-        if not isinstance(position, str):
-            raise AIToolExecutionError("'position' must be a string")
-
-        if position not in ("top", "center", "bottom"):
-            raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")
-
-        try:
-            success = preview_tab.scroll_to_content_position(
-                block_index, section_index, text_position, position
-            )
-
-            if not success:
-                raise AIToolExecutionError(
-                    f"Could not scroll to position: block={block_index}, "
-                    f"section={section_index}, pos={text_position}"
-                )
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI scrolled preview to block {block_index}, section {section_index}, " \
-                f"position {text_position} ({position})\\ntab ID: {tab_id}"
-            )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Scrolled to block {block_index}, section {section_index}, " \
-                    f"position {text_position} ({position})"
-            )
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to scroll preview: {str(e)}") from e
