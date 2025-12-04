@@ -218,7 +218,7 @@ class AIConversationSettings:
         "codestral-latest": AIModel(
             name="codestral-latest",
             provider="mistral",
-            context_window=262144,
+            context_window=131072,
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
@@ -227,7 +227,7 @@ class AIConversationSettings:
         "mistral-large-latest": AIModel(
             name="mistral-large-latest",
             provider="mistral",
-            context_window=131072,
+            context_window=262144,
             max_output_tokens=65536,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
@@ -236,7 +236,7 @@ class AIConversationSettings:
         "mistral-small-latest": AIModel(
             name="mistral-small-latest",
             provider="mistral",
-            context_window=32768,
+            context_window=131072,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
