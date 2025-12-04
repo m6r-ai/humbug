@@ -325,6 +325,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "ministral-3:14b-cloud": AIModel(
+            name="ministral-3:14b-cloud",
+            provider="ollama",
+            context_window=262144,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "mistral-large-3 (Ollama)": AIModel(
+            name="mistral-large-3:675b-cloud",
+            provider="ollama",
+            context_window=262144,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "phi4": AIModel(
             name="phi4",
             provider="ollama",

@@ -2,6 +2,14 @@
 
 ## v0.33 (2025-12-xx)
 
+New features:
+
+- Added Ministral-3 and Mistral-large-3 support via the Ollama AI backend.
+
+Bug fixes:
+
+- Resolved a problem with tool definitions that affected the OpenAI backend.
+
 ## v0.32 (2025-12-01)
 
 New features:
