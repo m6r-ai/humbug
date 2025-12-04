@@ -481,17 +481,19 @@ class LogAITool(AITool):
             raise AIToolExecutionError("'message_index' must be an integer")
 
         try:
-            success = log_tab.scroll_to_message(message_id, message_index)
-
-            if not success:
-                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
-                raise AIToolExecutionError(f"Log message not found: {identifier}")
-
+            # This is slightly odd but we have to log the action before executing it as the log message
+            # can change where we're scrolling to!
             identifier = message_id if message_id else f"index {message_index}"
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"AI scrolled log to message {identifier}\\ntab ID: {tab_id}"
             )
+
+            success = log_tab.scroll_to_message(message_id, message_index)
+
+            if not success:
+                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
+                raise AIToolExecutionError(f"Log message not found: {identifier}")
 
             return AIToolResult(
                 id=tool_call.id,

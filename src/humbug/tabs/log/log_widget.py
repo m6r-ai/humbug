@@ -139,6 +139,16 @@ class LogWidget(QWidget):
         self._scroll_timer.timeout.connect(self._update_scroll)
         self._last_mouse_pos: QPoint | None = None
 
+        # Timer for smooth animated scrolling (for AI tool scrolling)
+        self._smooth_scroll_timer = QTimer(self)
+        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+        self._smooth_scroll_target: int = 0
+        self._smooth_scroll_start: int = 0
+        self._smooth_scroll_distance: int = 0
+        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_time: int = 0
+
         # Setup context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_log_context_menu)
@@ -312,6 +322,49 @@ class LogWidget(QWidget):
 
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
+
+    def _start_smooth_scroll(self, target_value: int) -> None:
+        """
+        Start smooth scrolling animation to target value.
+
+        Args:
+            target_value: Target scroll position
+        """
+        scrollbar = self._scroll_area.verticalScrollBar()
+
+        # If we're already scrolling, stop the current animation
+        if self._smooth_scroll_timer.isActive():
+            self._smooth_scroll_timer.stop()
+
+        # Set up the animation parameters
+        self._smooth_scroll_start = scrollbar.value()
+        self._smooth_scroll_target = target_value
+        self._smooth_scroll_distance = target_value - self._smooth_scroll_start
+        self._smooth_scroll_time = 0
+
+        # Start the animation timer
+        self._smooth_scroll_timer.start()
+
+    def _update_smooth_scroll(self) -> None:
+        """Update the smooth scrolling animation."""
+        self._smooth_scroll_time += self._smooth_scroll_timer.interval()
+
+        # Calculate progress (0 to 1)
+        progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
+
+        # Apply easing function (ease out cubic)
+        t = 1 - (1 - progress) ** 3
+
+        # Calculate new position
+        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+
+        # Update scrollbar position
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scrollbar.setValue(new_position)
+
+        # Stop the timer when animation is complete
+        if progress >= 1.0:
+            self._smooth_scroll_timer.stop()
 
     def _on_scroll_value_changed(self, value: int) -> None:
         """
@@ -509,8 +562,7 @@ class LogWidget(QWidget):
         scrollbar = self._scroll_area.verticalScrollBar()
         scroll_value = max(scrollbar.minimum(), min(scrollbar.maximum(), scroll_value))
 
-        # Set scroll position
-        scrollbar.setValue(scroll_value)
+        self._start_smooth_scroll(scroll_value)
 
     def _scroll_to_message(self, message: LogMessage) -> None:
         """Ensure the message is visible in the scroll area."""
