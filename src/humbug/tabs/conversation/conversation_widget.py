@@ -2801,10 +2801,9 @@ class ConversationWidget(QWidget):
         # Get the message widget to scroll to
         message_widget = self._messages[actual_index]
 
-        bubble_spacing = self._style_manager.message_bubble_spacing()
-
         # Scroll so message header is at top of viewport
         message_pos = message_widget.mapTo(self._messages_container, QPoint(0, 0))
+        bubble_spacing = self._style_manager.message_bubble_spacing()
         scroll_value = int(message_pos.y() - bubble_spacing)
 
         # Clamp to valid range
