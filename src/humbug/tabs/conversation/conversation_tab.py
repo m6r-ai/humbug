@@ -443,10 +443,18 @@ class ConversationTab(TabBase):
     def scroll_to_message(
         self,
         message_id: str | None = None,
-        message_index: int | None = None,
-        position: str = "center"
-    ) -> bool:
-        """Scroll to a specific message."""
+        message_index: int | None = None
+    ) -> Dict[str, Any]:
+        """
+        Scroll to a specific message.
+
+        Args:
+            message_id: Message UUID
+            message_index: Message index (0-based)
+
+        Returns:
+            Dictionary containing scroll result with success status and details
+        """
         return self._conversation_widget.scroll_to_message_by_id_or_index(
-            message_id, message_index, position
+            message_id, message_index
         )

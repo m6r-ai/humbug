@@ -137,12 +137,6 @@ class ConversationAITool(AITool):
                     description="Maximum number of search results to return",
                     required=False
                 ),
-                AIToolParameter(
-                    name="position",
-                    type="string",
-                    description="Viewport position for scrolling: 'top', 'center', or 'bottom'",
-                    required=False
-                ),
             ]
         )
 
@@ -191,11 +185,10 @@ class ConversationAITool(AITool):
             "scroll_to": AIToolOperationDefinition(
                 name="scroll_to",
                 handler=self._scroll_to,
-                allowed_parameters={"tab_id", "message_id", "message_index", "position"},
+                allowed_parameters={"tab_id", "message_id", "message_index"},
                 required_parameters={"tab_id"},
-                description="Scroll the conversation view to a specific message. "
-                    "Must provide either message_id (UUID) or message_index (0-based). "
-                    "Optional position parameter controls where in viewport: 'top', 'center' (default), or 'bottom'"
+                description="Scroll the conversation view to a specific message (header at top of viewport). "
+                    "Must provide either message_id (UUID) or message_index (0-based)"
             ),
         }
 
@@ -483,7 +476,6 @@ class ConversationAITool(AITool):
 
         message_id = arguments.get("message_id")
         message_index = arguments.get("message_index")
-        position = arguments.get("position", "center")
 
         if message_id is None and message_index is None:
             raise AIToolExecutionError("Must provide either 'message_id' or 'message_index'")
@@ -494,29 +486,25 @@ class ConversationAITool(AITool):
         if message_index is not None and not isinstance(message_index, int):
             raise AIToolExecutionError("'message_index' must be an integer")
 
-        if not isinstance(position, str):
-            raise AIToolExecutionError("'position' must be a string")
-
-        if position not in ("top", "center", "bottom"):
-            raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")
-
         try:
-            success = conversation_tab.scroll_to_message(message_id, message_index, position)
+            result = conversation_tab.scroll_to_message(message_id, message_index)
 
-            if not success:
-                identifier = f"ID {message_id}" if message_id else f"index {message_index}"
-                raise AIToolExecutionError(f"Message not found: {identifier}")
+            if not result["success"]:
+                error_msg = result.get("error", "Unknown error")
+                raise AIToolExecutionError(error_msg)
 
-            identifier = message_id if message_id else f"index {message_index}"
+            # Build identifier for logging and response
+            actual_identifier = f"index {result['actual_index']}"
+
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI scrolled conversation to message {identifier} ({position})\ntab ID: {tab_id}"
+                f"AI scrolled conversation to message {actual_identifier}\\ntab ID: {tab_id}"
             )
 
             return AIToolResult(
                 id=tool_call.id,
                 name="conversation",
-                content=f"Scrolled to message {identifier} ({position})"
+                content=f"Scrolled to message {actual_identifier}"
             )
 
         except AIToolExecutionError:

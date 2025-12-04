@@ -2713,22 +2713,36 @@ class ConversationWidget(QWidget):
     def scroll_to_message_by_id_or_index(
         self,
         message_id: str | None = None,
-        message_index: int | None = None,
-        position: str = "center"
-    ) -> bool:
+        message_index: int | None = None
+    ) -> Dict[str, Any]:
         """
-        Scroll to a specific message.
+        Scroll to a specific message, substituting with nearest visible message if hidden.
+
+        If the target message is hidden, this will search forward for the next visible
+        message, then backward if no forward message exists.
 
         Args:
             message_id: Message UUID
             message_index: Message index (0-based)
-            position: Position in viewport ('top', 'center', 'bottom')
 
         Returns:
-            True if successful, False if message not found
+            Dictionary containing:
+                - success (bool): Whether scroll succeeded
+                - target_index (int): Original requested index
+                - actual_index (int): Index actually scrolled to
+                - substituted (bool): Whether a visible message was substituted
+                - message_id (str): ID of message scrolled to
+                - error (str): Error message if success is False
         """
         if message_id is None and message_index is None:
-            raise ValueError("Must provide either message_id or message_index")
+            return {
+                "success": False,
+                "error": "Must provide either message_id or message_index"
+            }
+
+        # Store original message_id for result
+        original_message_id = message_id
+        target_index = message_index
 
         # Find message index if ID provided
         if message_id is not None:
@@ -2738,34 +2752,60 @@ class ConversationWidget(QWidget):
             for idx, msg in enumerate(messages):
                 if msg.id == message_id:
                     message_index = idx
+                    target_index = idx
                     break
 
             if message_index is None:
-                return False
+                return {
+                    "success": False,
+                    "error": f"Message not found with ID: {original_message_id}"
+                }
 
         # Validate index
         if message_index is None or message_index < 0 or message_index >= len(self._messages):
-            return False
+            return {
+                "success": False,
+                "error": f"Invalid message index: {message_index}"
+            }
 
-        # Get the message widget
-        message_widget = self._messages[message_index]
+        # Check if target message is visible
+        target_message = self._messages[message_index]
+        actual_index = message_index
+        substituted = False
 
-        # Calculate scroll position based on requested position
+        if not target_message.is_rendered():
+            # Target is hidden, find next visible message
+            next_visible = self._find_next_visible_message(message_index)
+
+            if next_visible != -1:
+                # Found visible message after target
+                actual_index = next_visible
+                substituted = True
+
+            else:
+                # No visible message after, search backward
+                prev_visible = self._find_previous_visible_message(message_index)
+
+                if prev_visible != -1:
+                    # Found visible message before target
+                    actual_index = prev_visible
+                    substituted = True
+
+                else:
+                    # No visible messages at all
+                    return {
+                        "success": False,
+                        "error": "No visible messages in conversation"
+                    }
+
+        # Get the message widget to scroll to
+        message_widget = self._messages[actual_index]
+
+        bubble_spacing = self._style_manager.message_bubble_spacing()
+
+        # Scroll so message header is at top of viewport
         message_pos = message_widget.mapTo(self._messages_container, QPoint(0, 0))
-        viewport_height = self._scroll_area.viewport().height()
-        message_height = message_widget.height()
-
-        if position == "top":
-            # Scroll so message is at top of viewport
-            scroll_value = message_pos.y()
-
-        elif position == "bottom":
-            # Scroll so message is at bottom of viewport
-            scroll_value = message_pos.y() + message_height - viewport_height
-
-        else:  # center (default)
-            # Scroll so message is centered in viewport
-            scroll_value = message_pos.y() - (viewport_height - message_height) // 2
+        scroll_value = int(message_pos.y() - bubble_spacing)
 
         # Clamp to valid range
         scrollbar = self._scroll_area.verticalScrollBar()
@@ -2774,4 +2814,15 @@ class ConversationWidget(QWidget):
         # Set scroll position
         scrollbar.setValue(scroll_value)
 
-        return True
+        # Get the actual message ID
+        history = self.get_conversation_history()
+        messages = history.get_messages()
+        actual_message_id = messages[actual_index].id
+
+        return {
+            "success": True,
+            "target_index": target_index,
+            "actual_index": actual_index,
+            "substituted": substituted,
+            "message_id": actual_message_id
+        }

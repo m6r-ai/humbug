@@ -16,17 +16,20 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        This is part of the application that deals with conversations between the user and the AI
+        This is part of the application that deals with tool interactions between an AI and the UI.
 
-        Embed: src/humbug/system_ai_tool.py
+        Embed: src/humbug/tabs/conversation/conversation_ai_tool.py
+
+        The related code can be found in src/humbug/tabs/conversation
 
 Action:
     # Describe the details of the change required.
-    The system AI tool handles the ability for an AI to control the UI of this application.  As we add more
-    features, this tool is getting larger.  I would like to refactor it so the generic tab operations remain
-    within the system_ai_tool.py file, but the specific backend operations that are associated with specific
-    tab types are moved into new files that reside along with the tab logic.  You can find the tab logic
-    in the subdirectories of src/humbug/tabs.
+    We have code that allows the UI to be scrolled to a particular user message.  Not all messages,
+    however, are visible.  Some can be hidden, but are left in place to ensure a 1:1 mapping between
+    transcript files and the UI layout.
+
+    If a message is hidden we cannot scroll to it, so we should probably scroll to the next
+    visible message.
 
     Please propose changes to achieve this.
 
