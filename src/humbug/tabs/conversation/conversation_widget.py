@@ -1026,15 +1026,7 @@ class ConversationWidget(QWidget):
 
         # Check if we're at the bottom
         at_bottom = value == vbar.maximum()
-
-        # If user scrolls up, disable auto-scroll
-        if not at_bottom:
-            self._auto_scroll = False
-
-        # If user scrolls to bottom, re-enable auto-scroll
-        if at_bottom:
-            self._auto_scroll = True
-#            self.update_label.emit()
+        self._auto_scroll = at_bottom
 
         self.has_seen_latest_update_changed.emit(at_bottom)
 
