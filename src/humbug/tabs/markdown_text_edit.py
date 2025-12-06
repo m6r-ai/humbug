@@ -79,7 +79,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
             self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         # Force layout update
-        self._on_content_changed()
+        self._on_content_resized()
 
     def has_code_block(self) -> bool:
         """Check if content contains code blocks."""

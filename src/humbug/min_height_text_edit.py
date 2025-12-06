@@ -25,14 +25,14 @@ class MinHeightTextEdit(QTextEdit):
             word_wrap_mode: Word wrap mode for text
         """
         super().__init__(parent)
-        self.document().documentLayout().documentSizeChanged.connect(self._on_content_changed)
+        self.document().documentLayout().documentSizeChanged.connect(self._on_content_resized)
         self.document().setDocumentMargin(0)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(horizontal_scrollbar_policy)
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
         # Force the widget to always use the width of its container
-        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         # Set word wrap mode
         self.setWordWrapMode(word_wrap_mode)
@@ -40,9 +40,9 @@ class MinHeightTextEdit(QTextEdit):
         self._current_text = ""
         self.clear()
 
-    def _on_content_changed(self) -> None:
-        """Queue a content update instead of processing immediately."""
-        self.updateGeometry()
+    def _on_content_resized(self) -> None:
+        """Handle resizing this widget based on the document content."""
+        self.setFixedHeight(self._size_hint_height())
 
     def set_text(self, text: str) -> None:
         """Update text content incrementally based on differences."""
@@ -99,7 +99,8 @@ class MinHeightTextEdit(QTextEdit):
         """Override clear to reset current text."""
         super().clear()
         self._current_text = ""
-        self._on_content_changed()
+# Not clear this is really necessary anymore
+#        self._on_content_resized()
 
     def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
