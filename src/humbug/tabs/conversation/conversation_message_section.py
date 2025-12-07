@@ -98,8 +98,6 @@ class ConversationMessageSection(QFrame):
         self._text_area = MarkdownTextEdit(self)
         self._text_area.setAcceptRichText(self._use_markdown)
         self._text_area.setReadOnly(not is_input)
-        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
         if language is not None:
             font = self._text_area.font()
