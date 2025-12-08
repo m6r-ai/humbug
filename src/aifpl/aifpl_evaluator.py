@@ -28,7 +28,7 @@ class AIFPLEvaluator:
         'false': AIFPLBoolean(False),
     }
 
-    def __init__(self, max_depth: int = 100, floating_point_tolerance: float = 1e-10):
+    def __init__(self, max_depth: int = 1000, floating_point_tolerance: float = 1e-10):
         """
         Initialize evaluator.
 
