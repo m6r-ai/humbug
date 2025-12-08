@@ -146,6 +146,11 @@ class ConversationWidget(QWidget):
         self._layout_stabilization_timer.setSingleShot(True)
         self._layout_stabilization_timer.timeout.connect(self._on_initial_layout_stabilized)
 
+        # Timer for debouncing container visibility to eliminate jitter
+        self._container_show_timer = QTimer(self)
+        self._container_show_timer.setSingleShot(True)
+        self._container_show_timer.timeout.connect(self._enable_messages_container_updates)
+
         # Create layout
         conversation_layout = QVBoxLayout(self)
         self.setLayout(conversation_layout)
@@ -322,8 +327,20 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
 
+        # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
+        if not self._auto_scroll:
+            # Cancel any pending show timer and hide container during insertion
+            if self._container_show_timer.isActive():
+                self._container_show_timer.stop()
+
+            self._messages_container.setUpdatesEnabled(False)
+
         # Add widget before input and the stretch
         self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
+
+        if not self._auto_scroll:
+            self._container_show_timer.start(5)
+
         self._messages.append(msg_widget)
 
         self._install_activation_tracking(msg_widget)
@@ -401,6 +418,14 @@ class ConversationWidget(QWidget):
             if message_rect.intersects(visible_rect):
                 is_streaming = self._is_streaming and i == len(self._messages) - 1
                 message.lazy_update(visible_rect, self._messages_container, self._event_filter, is_streaming)
+
+    def _enable_messages_container_updates(self) -> None:
+        """Re-enable updates for the messages container after layout has settled."""
+        self._messages_container.setUpdatesEnabled(True)
+
+        # Only unpolish/polish the specific widget that changed, not the entire container
+        self._messages_container.style().unpolish(self._messages_container)
+        self._messages_container.style().polish(self._messages_container)
 
     def _on_initial_layout_stabilized(self) -> None:
         """Handle the initial layout stabilization - do the first visibility check."""
@@ -789,12 +814,25 @@ class ConversationWidget(QWidget):
         if message.source not in (AIMessageSource.AI, AIMessageSource.REASONING):
             return
 
+        # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
+        if not self._auto_scroll:
+            # Cancel any pending show timer and hide container during content update
+            if self._container_show_timer.isActive():
+                self._container_show_timer.stop()
+
+            self._messages_container.setUpdatesEnabled(False)
+
         for i in range(len(self._messages) - 1, -1, -1):
             if self._messages[i].message_id() == message.id:
                 self._messages[i].set_content(message.content)
+                break
 
-        # Scroll to bottom if auto-scrolling is enabled
-        if self._auto_scroll:
+        if not self._auto_scroll:
+            # Defer re-enabling updates until layout settles (after all resize events)
+            self._container_show_timer.start(5)
+
+        else:
+            # Scroll to bottom if auto-scrolling is enabled
             self._scroll_to_bottom()
 
     def _process_pending_update(self) -> None:
