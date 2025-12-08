@@ -100,8 +100,6 @@ class MinHeightTextEdit(QTextEdit):
         """Override clear to reset current text."""
         super().clear()
         self._current_text = ""
-# Not clear this is really necessary anymore
-#        self._on_content_resized()
 
     def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
