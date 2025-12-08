@@ -21,7 +21,7 @@ class AIFPL:
     Designed specifically to help LLMs understand and self-correct errors.
     """
 
-    def __init__(self, max_depth: int = 100, floating_point_tolerance: float = 1e-10):
+    def __init__(self, max_depth: int = 1000, floating_point_tolerance: float = 1e-10):
         """
         Initialize enhanced AIFPL calculator.
 
