@@ -58,16 +58,17 @@ class ConversationMessageSection(QFrame):
         style_manager = StyleManager()
         self._style_manager = style_manager
 
-        self._layout = QVBoxLayout(self)
-        self.setLayout(self._layout)
-        self._layout.setContentsMargins(0, 0, 0, 0)
-
         # Create language header if needed
         self._language = language
         self._language_header = None
         self._header_container = None
         self._copy_button: QToolButton | None = None
         self._save_as_button: QToolButton | None = None
+
+        self._header_layout: QHBoxLayout | None = None
+
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
 
         if language is not None:
             # Create a container for header (language label + buttons)
@@ -99,15 +100,8 @@ class ConversationMessageSection(QFrame):
         self._text_area.setAcceptRichText(self._use_markdown)
         self._text_area.setReadOnly(not is_input)
 
-        if language is not None:
-            font = self._text_area.font()
-            font.setFamilies(self._style_manager.monospace_font_families())
-            self._text_area.setFont(font)
-
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
-
-        self._layout.addWidget(self._text_area)
 
         self._content_node: MarkdownASTNode | None = None
 
@@ -129,6 +123,9 @@ class ConversationMessageSection(QFrame):
         self._init_colour_mode = self._style_manager.color_mode()
 
         self._on_language_changed()
+
+        self._layout.addWidget(self._text_area)
+        self.setLayout(self._layout)
 
     def text_area(self) -> MarkdownTextEdit:
         """Get the text area widget."""
@@ -190,6 +187,7 @@ class ConversationMessageSection(QFrame):
             self._copy_button.clicked.connect(self._copy_all_content)
             self._copy_button.setToolTip(strings.tooltip_copy_contents)
             self._copy_button.installEventFilter(event_filter)
+            assert self._header_layout is not None, "Header layout should be initialized"
             self._header_layout.addWidget(self._copy_button)
 
         # Add Save As button with icon
@@ -198,6 +196,7 @@ class ConversationMessageSection(QFrame):
             self._save_as_button.clicked.connect(self._save_as)
             self._save_as_button.setToolTip(strings.tooltip_save_contents)
             self._save_as_button.installEventFilter(event_filter)
+            assert self._header_layout is not None, "Header layout should be initialized"
             self._header_layout.addWidget(self._save_as_button)
 
         self._apply_button_style()

@@ -89,10 +89,6 @@ class ConversationMessage(QFrame):
             self._message_rendered = False
             self.hide()
 
-        # Create layout
-        self._layout = QVBoxLayout(self)
-        self.setLayout(self._layout)
-
         # Create header area with horizontal layout
         self._header = QWidget(self)
         self._header.setObjectName("_header")
@@ -136,14 +132,15 @@ class ConversationMessage(QFrame):
         self._fork_message_button: QToolButton | None = None
         self._delete_message_button: QToolButton | None = None
 
-        # Add header widget to main layout
-        self._layout.addWidget(self._header)
-
         # Container for message sections
         self._sections_container = QWidget(self)
         self._sections_container.setObjectName("_sections_container")
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Create layout
+        self._layout = QVBoxLayout(self)
+        self._layout.addWidget(self._header)
         self._layout.addWidget(self._sections_container)
 
         # Tool approval widgets
@@ -184,6 +181,8 @@ class ConversationMessage(QFrame):
 
         if content:
             self.set_content(content)
+
+        self.setLayout(self._layout)
 
     def set_border_animation(self, active: bool, frame: int = 0, step: int = 64) -> None:
         """
@@ -671,9 +670,9 @@ class ConversationMessage(QFrame):
             # Create new section if needed
             if i >= len(self._sections):
                 section = self._create_section_widget(language)
+                section.set_content(node)
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
-                section.set_content(node)
                 continue
 
             if i == len(self._sections) - 1:
