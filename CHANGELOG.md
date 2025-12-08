@@ -1,6 +1,6 @@
 # Change log for Humbug
 
-## v0.33 (2025-12-xx)
+## v0.33 (2025-12-08)
 
 New features:
 
@@ -12,6 +12,8 @@ Bug fixes:
 - Resolved a problem with tool definitions that affected the OpenAI backend.
 - Resolved a problem with scrolling conversation and log tabs where scrolling to the centre of a message would be very
   confusing.
+- Massively reduced the "jitter" when viewing a conversation that is streaming and you are viewing something above the
+  bottom of the conversation tab.
 
 Internal structure changes:
 
