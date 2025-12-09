@@ -57,7 +57,8 @@ class TerminalAITool(AITool):
 
         description = (
             "Operations for interacting with terminal tabs. Use this tool to send commands, "
-            "read output, and check terminal status. You must have a terminal tab open first "
+            "read output, and check terminal status. Write operations require user authorization. "
+            "You must have a terminal tab open first "
             "(use the system tool to create terminals).\n\n"
             "Available operations:\n\n" + "\n".join(operation_list)
         )
@@ -108,8 +109,10 @@ class TerminalAITool(AITool):
                 handler=self._write,
                 allowed_parameters={"tab_id", "keystrokes"},
                 required_parameters={"tab_id", "keystrokes"},
-                description="Send keystrokes to a terminal tab. You may send more than one keystroke at a time "
-                    "by submitting them as a string. The string is not terminated with a newline automatically, so "
+                description="Send keystrokes to a terminal tab. Requires user authorization before execution. "
+                    "The terminal may have access beyond the project sandbox, so user will review commands before "
+                    "they are sent. You may send more than one keystroke at a time by submitting them as a string. "
+                    "The string is not terminated with a newline automatically, so "
                     "if you want to execute a command you must include appropriate end-of-line control characters. "
                     "You MUST use \\u#### format to send any control characters (ASCII values less than 0x20), "
                     "including newline (\\u000a), carriage return (\\u000d), tab (\\u0009), and escape (\\u001b)"
