@@ -48,9 +48,8 @@ class FileSystemAITool(AITool):
         # Build description from operations
         base_description = (
             f"The filesystem tool lets you (the AI) perform various file and directory operations within the current "
-            f"filesystem sandbox environment (this sandbox is called the project mindspace). Just because you can use this "
-            f"tool, does not mean you should, especially if you will be writing or modifying the filesystem. You should not "
-            f"assume the user wants you to write files or directories unless they ask you to do so."
+            f"filesystem sandbox environment (this sandbox is called the project mindspace). "
+            f"All write operations require user authorization before proceeding. "
             f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
         )
 
@@ -166,6 +165,28 @@ class FileSystemAITool(AITool):
                 required_parameters={"path", "content"},
                 description="Append content to existing file"
             ),
+            "apply_diff_to_file": AIToolOperationDefinition(
+                name="apply_diff_to_file",
+                handler=self._apply_diff_to_file,
+                allowed_parameters={"path", "diff_content", "dry_run", "encoding"},
+                required_parameters={"path", "diff_content"},
+                description="Apply a unified diff to a file. The diff is applied with fuzzy matching to handle "
+                    "minor line movements. If dry_run is True, validates the diff without applying changes. "
+            ),
+            "delete_file": AIToolOperationDefinition(
+                name="delete_file",
+                handler=self._delete_file,
+                allowed_parameters={"path"},
+                required_parameters={"path"},
+                description="Delete file"
+            ),
+            "copy_file": AIToolOperationDefinition(
+                name="copy_file",
+                handler=self._copy_file,
+                allowed_parameters={"path", "destination"},
+                required_parameters={"path", "destination"},
+                description="Copy file to destination"
+            ),
             "list_directory": AIToolOperationDefinition(
                 name="list_directory",
                 handler=self._list_directory,
@@ -187,20 +208,6 @@ class FileSystemAITool(AITool):
                 required_parameters={"path"},
                 description="Remove empty directory"
             ),
-            "delete_file": AIToolOperationDefinition(
-                name="delete_file",
-                handler=self._delete_file,
-                allowed_parameters={"path"},
-                required_parameters={"path"},
-                description="Delete file"
-            ),
-            "copy_file": AIToolOperationDefinition(
-                name="copy_file",
-                handler=self._copy_file,
-                allowed_parameters={"path", "destination"},
-                required_parameters={"path", "destination"},
-                description="Copy file to destination"
-            ),
             "move": AIToolOperationDefinition(
                 name="move",
                 handler=self._move,
@@ -214,15 +221,6 @@ class FileSystemAITool(AITool):
                 allowed_parameters={"path"},
                 required_parameters={"path"},
                 description="Get detailed information about file or directory"
-            ),
-            "apply_diff": AIToolOperationDefinition(
-                name="apply_diff",
-                handler=self._apply_diff,
-                allowed_parameters={"path", "diff_content", "dry_run", "encoding"},
-                required_parameters={"path", "diff_content"},
-                description="Apply a unified diff to a file. The diff is applied with fuzzy matching to handle "
-                    "minor line movements. If dry_run is True, validates the diff without applying changes. "
-                    "Requires user authorization to save the modified file."
             )
         }
 
@@ -946,7 +944,7 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
         except OSError as e:
             raise AIToolExecutionError(f"Failed to get info: {str(e)}") from e
 
-    async def _apply_diff(
+    async def _apply_diff_to_file(
         self,
         arguments: Dict[str, Any],
         request_authorization: AIToolAuthorizationCallback
