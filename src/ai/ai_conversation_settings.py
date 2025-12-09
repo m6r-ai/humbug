@@ -536,6 +536,42 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "grok-4-1-fast-non-reasoning": AIModel(
+            name="grok-4-1-fast-non-reasoning",
+            provider="xai",
+            context_window=2000000,
+            max_output_tokens=32767,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "grok-4-1-fast-reasoning": AIModel(
+            name="grok-4-1-fast-reasoning",
+            provider="xai",
+            context_window=2000000,
+            max_output_tokens=32767,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "grok-4-fast-non-reasoning": AIModel(
+            name="grok-4-fast-non-reasoning",
+            provider="xai",
+            context_window=2000000,
+            max_output_tokens=32767,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "grok-4-fast-reasoning": AIModel(
+            name="grok-4-fast-reasoning",
+            provider="xai",
+            context_window=2000000,
+            max_output_tokens=32767,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "grok-4-0709": AIModel(
             name="grok-4-0709",
             provider="xai",
