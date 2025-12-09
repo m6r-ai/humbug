@@ -2,6 +2,15 @@
 
 ## v0.34 (2025-12-xx)
 
+New features:
+
+- Added grok-4-fast and grok-4.1-fast models.
+- Removed grok-3 models.
+
+Bug fixes:
+
+- Improved took operation naming in the filesystem tool.
+
 ## v0.33 (2025-12-08)
 
 New features:
