@@ -555,6 +555,7 @@ class EditorAITool(AITool):
                 editor_info = editor_tab.get_editor_info()
                 if not editor_info.get('file_path'):
                     message = "No diff available: file has never been saved (untitled)"
+
                 else:
                     message = "No changes: buffer matches saved file content"
 
