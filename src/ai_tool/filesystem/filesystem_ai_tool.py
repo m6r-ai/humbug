@@ -505,7 +505,7 @@ class FileSystemAITool(AITool):
             destructive = False
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, destructive)
+        authorized = await request_authorization("filesystem", arguments, context, None, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to write file: {arguments['path']}")
 
@@ -578,7 +578,7 @@ class FileSystemAITool(AITool):
         context = f"Append content to the end of '{display_path}'. This will modify the existing file."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, True)
+        authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to append to file: {arguments['path']}")
 
@@ -686,7 +686,7 @@ class FileSystemAITool(AITool):
             context += " This will also create any missing parent directories."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, False)
+        authorized = await request_authorization("filesystem", arguments, context, None, False)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to create directory: {arguments['path']}")
 
@@ -735,7 +735,7 @@ class FileSystemAITool(AITool):
         context = f"Remove the empty directory '{display_path}'. This directory will be permanently deleted."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, True)
+        authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to remove directory: {arguments['path']}")
 
@@ -767,7 +767,7 @@ class FileSystemAITool(AITool):
         context = f"Delete the file '{display_path}'. This file will be permanently removed and cannot be recovered."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, True)
+        authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to delete file: {arguments['path']}")
 
@@ -819,7 +819,7 @@ class FileSystemAITool(AITool):
             destructive = False
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, destructive)
+        authorized = await request_authorization("filesystem", arguments, context, None, destructive)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to copy file: {arguments['path']} -> {destination_arg}")
 
@@ -872,7 +872,7 @@ class FileSystemAITool(AITool):
             context = f"Move the {item_type} '{source_display_path}' to '{dest_display_path}'."
 
         # Request authorization
-        authorized = await request_authorization("filesystem", arguments, context, True)
+        authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to move: {arguments['path']} -> {destination_arg}")
 
@@ -1031,7 +1031,7 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
         context = f"Apply diff to file '{display_path}' ({result.hunks_applied} hunk(s)). " \
             "This will overwrite the existing file."
 
-        authorized = await request_authorization("filesystem", arguments, context, True)
+        authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to apply diff to file: {arguments['path']}")
 

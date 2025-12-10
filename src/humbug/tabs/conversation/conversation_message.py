@@ -17,7 +17,8 @@ from syntax import ProgrammingLanguage
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
-from humbug.min_height_text_edit import MinHeightTextEdit
+from humbug.tabs.markdown_language_highlighter import MarkdownLanguageHighlighter
+from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.conversation.conversation_message_section import ConversationMessageSection
 
@@ -145,7 +146,9 @@ class ConversationMessage(QFrame):
 
         # Tool approval widgets
         self._approval_widget: QWidget | None = None
-        self._approval_text_edit: MinHeightTextEdit | None = None
+        self._approval_context_widget: QWidget | None = None
+        self._approval_text_edit: MarkdownTextEdit | None = None
+        self._approval_context_text_edit: MarkdownTextEdit | None = None
         self._approval_approve_button: QPushButton | None = None
         self._approval_reject_button: QPushButton | None = None
 
@@ -550,13 +553,14 @@ class ConversationMessage(QFrame):
         self._section_with_selection = section
         self.selection_changed.emit(has_selection)
 
-    def show_tool_approval_ui(self, tool_call: AIToolCall, reason: str, destructive: bool) -> None:
+    def show_tool_approval_ui(self, tool_call: AIToolCall, reason: str, context: str | None, destructive: bool) -> None:
         """
         Show tool approval UI for the given tool calls.
 
         Args:
             tool_call: Tool call that needs approval
             reason: Reason for the tool call
+            context: Additional context for the tool call
             destructive: Whether the tool calls are destructive
         """
         assert self._approval_widget is None, "Approval widget already exists"
@@ -572,11 +576,27 @@ class ConversationMessage(QFrame):
         layout.setSpacing(spacing)
         strings = self._language_manager.strings()
 
-        self._approval_text_edit = MinHeightTextEdit()
+        self._approval_text_edit = MarkdownTextEdit()
         self._approval_text_edit.setObjectName("_approval_text_edit")
         self._approval_text_edit.set_text(reason)
         self._approval_text_edit.setReadOnly(True)
         layout.addWidget(self._approval_text_edit)
+
+        if context is not None:
+            self._approval_context_widget = QWidget()
+            self._approval_context_widget.setObjectName("_approval_context_widget")
+            layout2 = QVBoxLayout(self._approval_context_widget)
+            layout2.setContentsMargins(spacing, spacing, spacing, spacing)
+            layout2.setSpacing(spacing)
+            self._approval_context_text_edit = MarkdownTextEdit()
+            self._approval_context_text_edit.setObjectName("_approval_context_text_edit")
+            self._approval_context_text_edit.set_text(context)
+            self._approval_context_text_edit.setReadOnly(True)
+            self._approval_context_text_edit.set_has_code_block(True)
+            highlighter = MarkdownLanguageHighlighter(self._approval_context_text_edit.document())
+            highlighter.set_language(ProgrammingLanguage.DIFF)
+            layout2.addWidget(self._approval_context_text_edit)
+            layout.addWidget(self._approval_context_widget)
 
         # Approval buttons
         button_layout = QHBoxLayout()
@@ -627,6 +647,8 @@ class ConversationMessage(QFrame):
             self._approval_widget.deleteLater()
             self._approval_widget = None
             self._approval_text_edit = None
+            self._approval_context_text_edit = None
+            self._approval_context_widget = None
             self._approval_approve_button = None
             self._approval_reject_button = None
 
@@ -853,6 +875,9 @@ class ConversationMessage(QFrame):
 
         if self._approval_text_edit:
             self._approval_text_edit.setFont(font)
+
+        if self._approval_context_text_edit:
+            self._approval_context_text_edit.setFont(font)
 
         # Apply styling to all sections
         for section in self._sections:

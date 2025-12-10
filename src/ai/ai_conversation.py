@@ -306,7 +306,14 @@ class AIConversation:
 
             self._state = ConversationState.IDLE
 
-    async def _request_tool_authorization(self, tool_name: str, arguments: Dict[str, Any], reason: str, destructive: bool) -> bool:
+    async def _request_tool_authorization(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+        reason: str,
+        context: str | None,
+        destructive: bool
+    ) -> bool:
         """
         Request authorization for a specific tool call during execution.
 
@@ -316,6 +323,7 @@ class AIConversation:
             tool_name: Name of the tool requesting authorization
             arguments: Arguments being passed to the tool
             reason: Human-readable reason why authorization is needed
+            context: Optional context information for the authorization
             destructive: Whether the tool call is considered destructive
 
         Returns:
@@ -336,7 +344,12 @@ class AIConversation:
         try:
             # Trigger the approval UI
             await self._trigger_event(
-                AIConversationEvent.TOOL_APPROVAL_REQUIRED, self._pending_tool_call_message, tool_call, reason, destructive
+                AIConversationEvent.TOOL_APPROVAL_REQUIRED,
+                self._pending_tool_call_message,
+                tool_call,
+                reason,
+                context,
+                destructive
             )
 
             # Wait for the user's response

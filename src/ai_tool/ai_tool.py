@@ -11,7 +11,7 @@ from ai_tool.ai_tool_result import AIToolResult
 
 
 # Type alias for the authorization callback
-AIToolAuthorizationCallback = Callable[[str, Dict[str, Any], str, bool], Awaitable[bool]]
+AIToolAuthorizationCallback = Callable[[str, Dict[str, Any], str, str | None, bool], Awaitable[bool]]
 
 
 class AITool(ABC):

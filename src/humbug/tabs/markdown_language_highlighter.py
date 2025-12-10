@@ -10,14 +10,14 @@ from syntax import TokenType, ProgrammingLanguage, ParserState, ParserRegistry
 from humbug.style_manager import StyleManager
 
 
-class PreviewLanguageHighlighterBlockData(QTextBlockUserData):
+class MarkdownLanguageHighlighterBlockData(QTextBlockUserData):
     """Data associated with each text block."""
     def __init__(self) -> None:
         super().__init__()
         self.parser_state: ParserState | None = None
 
 
-class PreviewLanguageHighlighter(QSyntaxHighlighter):
+class MarkdownLanguageHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for source code files."""
 
     def __init__(self, parent: QTextDocument) -> None:
@@ -27,7 +27,7 @@ class PreviewLanguageHighlighter(QSyntaxHighlighter):
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
         self._language = ProgrammingLanguage.TEXT
-        self._logger = logging.getLogger("PreviewLanguageHighlighter")
+        self._logger = logging.getLogger("MarkdownLanguageHighlighter")
 
     def set_language(self, language: ProgrammingLanguage) -> None:
         """
@@ -46,16 +46,16 @@ class PreviewLanguageHighlighter(QSyntaxHighlighter):
             current_block = self.currentBlock()
             prev_block = current_block.previous()
 
-            prev_block_data: PreviewLanguageHighlighterBlockData | None = None
+            prev_block_data: MarkdownLanguageHighlighterBlockData | None = None
             prev_parser_state = None
 
             if prev_block is not None:
-                prev_block_data = cast(PreviewLanguageHighlighterBlockData, prev_block.userData())
+                prev_block_data = cast(MarkdownLanguageHighlighterBlockData, prev_block.userData())
                 if prev_block_data is not None:
                     prev_parser_state = prev_block_data.parser_state
 
             continuation_state = -1
-            current_block_data = cast(PreviewLanguageHighlighterBlockData, current_block.userData())
+            current_block_data = cast(MarkdownLanguageHighlighterBlockData, current_block.userData())
 
             # Use the appropriate language parser
             parser = ParserRegistry.create_parser(self._language)
@@ -92,7 +92,7 @@ class PreviewLanguageHighlighter(QSyntaxHighlighter):
             if parser_state is not None and continuation_state != parser_state.continuation_state:
                 self.setCurrentBlockState(self.currentBlockState() + 1)
 
-            block_data = PreviewLanguageHighlighterBlockData()
+            block_data = MarkdownLanguageHighlighterBlockData()
             block_data.parser_state = parser_state
             current_block.setUserData(block_data)
 

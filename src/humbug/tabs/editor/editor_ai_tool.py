@@ -593,9 +593,10 @@ class EditorAITool(AITool):
 
         # Build authorization context
         context = f"Save editor content to file: {file_path} (tab {tab_id})"
+        diff = editor_tab.get_diff(3)
 
         # Request authorization - writing to filesystem
-        authorized = await request_authorization("editor", arguments, context, True)
+        authorized = await request_authorization("editor", arguments, context, diff, True)
         if not authorized:
             raise AIToolAuthorizationDenied("User denied permission to save file")
 

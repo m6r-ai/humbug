@@ -312,7 +312,7 @@ class TerminalAITool(AITool):
             context += f"\n(will be processed as: '{processed_keystrokes!r}')"
 
         # Request authorization - commands can be destructive
-        authorized = await request_authorization("terminal", arguments, context, True)
+        authorized = await request_authorization("terminal", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_keystrokes}")
 

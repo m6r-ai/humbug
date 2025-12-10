@@ -732,6 +732,7 @@ class ConversationWidget(QWidget):
         message: AIMessage,
         tool_call: AIToolCall,
         reason: str,
+        context: str | None,
         destructive: bool
     ) -> None:
         """
@@ -741,6 +742,7 @@ class ConversationWidget(QWidget):
             message: The tool call message
             tool_call: Tool call requiring approval
             reason: Reason for the tool call
+            context: Additional context for the tool call
             destructive: Whether the tool calls are considered destructive
         """
         # Find the message widget that corresponds to this tool call message
@@ -748,7 +750,7 @@ class ConversationWidget(QWidget):
             if msg_widget.message_id() == message.id:
                 # Add approval UI to this message
                 self._pending_tool_call_approval = msg_widget
-                msg_widget.show_tool_approval_ui(tool_call, reason, destructive)
+                msg_widget.show_tool_approval_ui(tool_call, reason, context, destructive)
                 self.update_label.emit()
                 break
 
@@ -1734,6 +1736,36 @@ class ConversationWidget(QWidget):
                 border-radius: 0px;
                 padding: 0;
                 margin: 0;
+            }}
+
+            #ConversationMessage #_approval_context_widget {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                margin: 0;
+                padding: 0;
+                border-radius: {border_radius // 2}px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
+            }}
+
+            #ConversationMessage #_approval_context_widget #_approval_context_text_edit {{
+                background-color: transparent;
+            }}
+
+            /* Scrollbars within approval contexts */
+            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar:horizontal {{
+                height: 12px;
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+            }}
+            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::handle:horizontal {{
+                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: 20px;
+            }}
+            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::add-page:horizontal,
+            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::sub-page:horizontal {{
+                background: none;
+            }}
+            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::add-line:horizontal,
+            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::sub-line:horizontal {{
+                width: 0px;
             }}
 
             #ConversationMessage #_approval_approve_button[recommended="true"] {{

@@ -14,9 +14,9 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
 from humbug.tabs.markdown_block_data import HeadingBlockData
+from humbug.tabs.markdown_language_highlighter import MarkdownLanguageHighlighter
 from humbug.tabs.markdown_renderer import MarkdownRenderer
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
-from humbug.tabs.preview.preview_language_highlighter import PreviewLanguageHighlighter
 
 
 class PreviewMarkdownContentSection(QFrame):
@@ -118,7 +118,7 @@ class PreviewMarkdownContentSection(QFrame):
         self._text_area.viewport().installEventFilter(self)
 
         # Add appropriate highlighter
-        self._highlighter: PreviewLanguageHighlighter | None = None
+        self._highlighter: MarkdownLanguageHighlighter | None = None
         self.set_language(language)
 
         self._mouse_left_button_pressed = False
@@ -144,7 +144,7 @@ class PreviewMarkdownContentSection(QFrame):
             self._highlighter = None
         else:
             self._use_markdown = False
-            highlighter = PreviewLanguageHighlighter(self._text_area.document())
+            highlighter = MarkdownLanguageHighlighter(self._text_area.document())
             highlighter.set_language(language)
             self._highlighter = highlighter
             self._text_area.set_has_code_block(True)
