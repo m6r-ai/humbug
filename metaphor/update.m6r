@@ -16,18 +16,15 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        The application contains a number of syntax highlighters.
+        The application contains an editor tab type and an AI tool that can control the editor.
 
-        Some examples can be found in:
-
-        Embed: src/syntax/aifpl/*.py
-        Embed: src/syntax/c/*.py
-
-        The related code can be found in src/syntax
+        The code can be found in src/humbug/tabs/editor
 
 Action:
     # Describe the details of the change required.
-    I would like to add a syntax highlighter for diff/patch files.
+    I would like to add a feature to capture unified diffs between the editor buffer content and the file
+    on which the editor is operating.  The idea is so I can ask an AI to show me diffs before I agree to
+    save a modified file.
 
     Please propose changes to achieve this.
 

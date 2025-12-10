@@ -7,6 +7,8 @@ New features:
 - Added grok-4-fast and grok-4.1-fast models.
 - Removed grok-3 models.
 - Added diff/patch syntax highlighting.
+- Added the ability to extract diffs between the current editor buffer and the previously-saved version of an editor file,
+  and added that as a `get_diff` editor AI tool operation.
 
 Bug fixes:
 

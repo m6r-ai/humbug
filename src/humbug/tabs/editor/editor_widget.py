@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from difflib import unified_diff
 from typing import List, Tuple, Dict, Any, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
@@ -1526,6 +1527,47 @@ class EditorWidget(QPlainTextEdit):
         selected_text = cursor.selectedText()
         # Qt uses U+2029 for paragraph separators, convert to newlines
         return selected_text.replace('\u2029', '\n')
+
+    def get_diff(self, context_lines: int = 3) -> str:
+        """
+        Generate a unified diff between saved file content and current buffer.
+
+        This shows what changes would be saved if save_file() were called.
+        Useful for previewing modifications before committing them to disk.
+
+        Args:
+            context_lines: Number of context lines to include in diff (default 3)
+
+        Returns:
+            Unified diff string showing changes, or empty string if:
+            - No modifications exist (buffer matches saved content)
+            - File has never been saved (untitled file with no saved content)
+
+        Example:
+            >>> diff = editor.get_diff()
+            >>> if diff:
+            ...     print("Changes to be saved:")
+            ...     print(diff)
+        """
+        # Return empty string for untitled files or no saved content
+        if not self._last_save_content and not self._path:
+            return ""
+
+        current_content = self.toPlainText()
+
+        # Return empty string if no changes
+        if current_content == self._last_save_content:
+            return ""
+
+        # Generate unified diff
+        saved_lines = self._last_save_content.splitlines(keepends=True)
+        current_lines = current_content.splitlines(keepends=True)
+        filename = self._path if self._path else "untitled"
+
+        diff_lines = unified_diff(
+            saved_lines, current_lines, fromfile=f"a/{filename}", tofile=f"b/{filename}", lineterm='', n=context_lines
+        )
+        return ''.join(diff_lines)
 
     def apply_unified_diff(self, diff_text: str) -> Dict[str, Any]:
         """

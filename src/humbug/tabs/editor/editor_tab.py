@@ -389,6 +389,19 @@ class EditorTab(TabBase):
         """
         return self._editor_widget.get_selected_text()
 
+    def get_diff(self, context_lines: int = 3) -> str:
+        """
+        Get unified diff between saved file and current buffer.
+
+        Args:
+            context_lines: Number of context lines to include (default 3)
+
+        Returns:
+            Unified diff string showing changes, or empty string if no modifications
+            exist or file has never been saved
+        """
+        return self._editor_widget.get_diff(context_lines)
+
     def apply_diff(self, diff_text: str) -> Dict[str, Any]:
         """
         Apply a unified diff to the editor content.

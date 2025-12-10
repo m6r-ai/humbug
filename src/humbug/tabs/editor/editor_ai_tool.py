@@ -118,6 +118,12 @@ class EditorAITool(AITool):
                     description="Unified diff content to apply (for apply_diff operation)",
                     required=False
                 ),
+                AIToolParameter(
+                    name="context_lines",
+                    type="integer",
+                    description="Number of context lines for get_diff operation (default 3)",
+                    required=False
+                ),
             ]
         )
 
@@ -174,12 +180,14 @@ class EditorAITool(AITool):
                 required_parameters={"tab_id"},
                 description="Get the currently selected text from an editor tab"
             ),
-            "save_file": AIToolOperationDefinition(
-                name="save_file",
-                handler=self._save_file,
-                allowed_parameters={"tab_id"},
+            "get_diff": AIToolOperationDefinition(
+                name="get_diff",
+                handler=self._get_diff,
+                allowed_parameters={"tab_id", "context_lines"},
                 required_parameters={"tab_id"},
-                description="Save the current editor content to file. Requires user authorization"
+                description="Get unified diff between saved file content and current editor buffer. "
+                    "Shows what changes would be saved. Returns empty if no modifications exist. "
+                    "Useful for previewing changes before save_file operation"
             ),
             "apply_diff": AIToolOperationDefinition(
                 name="apply_diff",
@@ -192,6 +200,13 @@ class EditorAITool(AITool):
                     "(--- and +++) are optional. Where possible the diff should have at least 3 lines of context "
                     "before and after each hunk. Diff line numbers are best computed using the read_lines or search "
                     "operations. Editor contents are not saved automatically - you must call save_file to persist changes"
+            ),
+            "save_file": AIToolOperationDefinition(
+                name="save_file",
+                handler=self._save_file,
+                allowed_parameters={"tab_id"},
+                required_parameters={"tab_id"},
+                description="Save the current editor content to file. Requires user authorization"
             ),
         }
 
@@ -509,6 +524,54 @@ class EditorAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get selected text: {str(e)}") from e
+
+    async def _get_diff(
+        self,
+        tool_call: AIToolCall,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get unified diff between saved file and current buffer."""
+        arguments = tool_call.arguments
+        editor_tab = self._get_editor_tab(arguments)
+        tab_id = editor_tab.tab_id()
+
+        context_lines = arguments.get("context_lines", 3)
+        if not isinstance(context_lines, int):
+            raise AIToolExecutionError("'context_lines' must be an integer")
+
+        if context_lines < 0:
+            raise AIToolExecutionError("'context_lines' must be non-negative")
+
+        try:
+            diff = editor_tab.get_diff(context_lines)
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI requested diff\ntab ID: {tab_id}"
+            )
+
+            if not diff:
+                # Get editor info to provide helpful message
+                editor_info = editor_tab.get_editor_info()
+                if not editor_info.get('file_path'):
+                    message = "No diff available: file has never been saved (untitled)"
+                else:
+                    message = "No changes: buffer matches saved file content"
+
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="editor",
+                    content=message
+                )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="editor",
+                content=diff
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get diff: {str(e)}") from e
 
     async def _save_file(
         self,
