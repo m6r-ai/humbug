@@ -39,8 +39,9 @@ class TestFileSystemAIToolDefinition:
         assert operation_param.required is True
         assert operation_param.enum == [
             "read_file", "read_file_lines", "write_file", "append_to_file",
+            "apply_diff_to_file", "delete_file", "copy_file",
             "list_directory", "create_directory", "remove_directory",
-            "delete_file", "copy_file", "move", "get_info", "apply_diff"
+            "move", "get_info"
         ]
 
     def test_path_parameter_definition(self, mock_path_resolver):

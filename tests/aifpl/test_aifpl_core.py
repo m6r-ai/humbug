@@ -11,7 +11,7 @@ class TestAIFPLCore:
     def test_aifpl_default_initialization(self):
         """Test AIFPL initializes with default parameters."""
         aifpl = AIFPL()
-        assert aifpl.max_depth == 100
+        assert aifpl.max_depth == 1000
         assert aifpl.floating_point_tolerance == 1e-10
 
     def test_aifpl_custom_initialization(self, aifpl_custom):
