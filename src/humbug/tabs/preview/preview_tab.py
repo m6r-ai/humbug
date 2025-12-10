@@ -84,6 +84,12 @@ class PreviewTab(TabBase):
         """Handle when preview content has been refreshed due to file changes."""
         self._logger.debug("Preview content refreshed for path: %s", self._path)
         self.set_updated(True)
+
+        # Update find widget text if visible
+        if not self._find_widget.isHidden():
+            current, total = self._preview_content_widget.get_match_status()
+            self._find_widget.set_match_status(current, total)
+
         self.update_status()
 
     def scroll_to_anchor(self, anchor: str) -> None:

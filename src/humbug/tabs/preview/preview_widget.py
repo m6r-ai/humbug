@@ -235,6 +235,9 @@ class PreviewWidget(QWidget):
             # Unregister old file watching
             self._unregister_file_watching()
 
+            # Clear down any find state before reloading
+            self.clear_find()
+
             # Reload content
             self.load_content()
 
@@ -242,9 +245,6 @@ class PreviewWidget(QWidget):
             QTimer.singleShot(0, lambda: self._restore_ui_state(
                 saved_scroll_pos, saved_selection, saved_find_state
             ))
-
-            # Emit refresh signal
-            self.content_refreshed.emit()
 
         except Exception as e:
             self._logger.error("Failed to refresh content: %s", str(e))
@@ -282,6 +282,9 @@ class PreviewWidget(QWidget):
                               (find_state['current_match_index'] + 1))
                 for _ in range(min(target_match, total)):
                     self.find_text(find_state['last_search'], True)
+
+        # Emit refresh signal
+        self.content_refreshed.emit()
 
     def _add_content_block(self, content_type: PreviewContentType, content: str) -> PreviewContentWidget:
         """
@@ -410,12 +413,13 @@ class PreviewWidget(QWidget):
 
     def clear_content(self) -> None:
         """Clear all content blocks."""
+        self._content_with_selection = None
+
         for content_widget in self._content_blocks:
             self._content_layout.removeWidget(content_widget)
             content_widget.deleteLater()
 
         self._content_blocks = []
-        self._content_with_selection = None
 
     def resolve_link(self, current_path: str, target_path: str) -> str | None:
         """
