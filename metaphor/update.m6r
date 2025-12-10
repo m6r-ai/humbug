@@ -16,20 +16,18 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        This is part of the application that deals with tool interactions between an AI and the UI.
+        The application contains a number of syntax highlighters.
 
-        Embed: src/humbug/tabs/conversation/conversation_ai_tool.py
+        Some examples can be found in:
 
-        The related code can be found in src/humbug/tabs/conversation
+        Embed: src/syntax/aifpl/*.py
+        Embed: src/syntax/c/*.py
+
+        The related code can be found in src/syntax
 
 Action:
     # Describe the details of the change required.
-    We have code that allows the UI to be scrolled to a particular user message.  Not all messages,
-    however, are visible.  Some can be hidden, but are left in place to ensure a 1:1 mapping between
-    transcript files and the UI layout.
-
-    If a message is hidden we cannot scroll to it, so we should probably scroll to the next
-    visible message.
+    I would like to add a syntax highlighter for diff/patch files.
 
     Please propose changes to achieve this.
 

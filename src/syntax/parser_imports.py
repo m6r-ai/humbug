@@ -6,6 +6,7 @@ from syntax.c.c_parser import CParser
 from syntax.cpp.cpp_parser import CppParser
 from syntax.csharp.csharp_parser import CSharpParser
 from syntax.css.css_parser import CSSParser
+from syntax.diff.diff_parser import DiffParser
 from syntax.go.go_parser import GoParser
 from syntax.html.html_parser import HTMLParser
 from syntax.java.java_parser import JavaParser

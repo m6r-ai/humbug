@@ -6,6 +6,7 @@ New features:
 
 - Added grok-4-fast and grok-4.1-fast models.
 - Removed grok-3 models.
+- Added diff/patch syntax highlighting.
 
 Bug fixes:
 

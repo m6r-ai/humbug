@@ -10,6 +10,7 @@ class ProgrammingLanguage(IntEnum):
     CSHARP = auto()
     CSS = auto()
     GO = auto()
+    DIFF = auto()
     HTML = auto()
     JAVA = auto()
     JAVASCRIPT = auto()
