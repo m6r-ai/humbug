@@ -11,8 +11,9 @@ New features:
   and added that as a `get_diff` editor AI tool operation.
 - Added code to allow tool calls to register a context extraction function that can present pretty-printed context to the
   user in the tool call messages.
-- Updated the editor AI diff applier to pretty-print the diff that was applied.
-- Updated the AIFPL AI evaluate tool to pretty-print the expression being evaluated.
+- Updated the editor AI tool diff applier to pretty-print the diff that was applied.
+- Updated the AIFPL AI tool evaluate operation to pretty-print the expression being evaluated.
+- Updated the filesystem AI tool to show the diff in the approval widget.
 
 Bug fixes:
 
