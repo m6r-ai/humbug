@@ -1031,7 +1031,7 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
         context = f"Apply diff to file '{display_path}' ({result.hunks_applied} hunk(s)). " \
             "This will overwrite the existing file."
 
-        authorized = await request_authorization("filesystem", arguments, context, None, True)
+        authorized = await request_authorization("filesystem", arguments, context, diff_content, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to apply diff to file: {arguments['path']}")
 
