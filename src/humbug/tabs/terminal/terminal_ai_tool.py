@@ -251,6 +251,24 @@ class TerminalAITool(AITool):
 
         return result
 
+    def _preview_ai_escape_sequences(self, input_text: str) -> str:
+        """
+        Preview AI's literal Unicode escape sequences as actual control characters for preview display.
+
+        Args:
+            input_text: Input string potentially containing literal Unicode escape sequences
+
+        Returns:
+            Preview string with newlines and carriage returns converted for display
+        """
+        if not input_text:
+            return input_text
+
+        # Replace \u000a with actual newline and \u000d with carriage return for preview
+        preview_text = input_text.replace('\\u000a', '\n').replace('\\u000d', '\r')
+
+        return preview_text
+
     def _format_terminal_status(self, status_info: TerminalStatusInfo) -> str:
         """
         Format terminal status information as readable text.
@@ -302,6 +320,7 @@ class TerminalAITool(AITool):
 
         # Process escape sequences from AI
         processed_keystrokes = self._process_ai_escape_sequences(raw_keystrokes)
+        preview_keystrokes = self._preview_ai_escape_sequences(raw_keystrokes)
 
         # Get terminal tab
         terminal_tab = self._get_terminal_tab(arguments)
@@ -311,7 +330,7 @@ class TerminalAITool(AITool):
         context = f"Send keystrokes to terminal (tab {tab_id}):"
 
         # Request authorization - commands can be destructive
-        authorized = await request_authorization("terminal", arguments, context, raw_keystrokes, True)
+        authorized = await request_authorization("terminal", arguments, context, preview_keystrokes, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_keystrokes}")
 
