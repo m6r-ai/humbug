@@ -338,6 +338,7 @@ class EditorAITool(AITool):
             # Handle empty content - should still show line 1 as empty string
             if not content:
                 context_object[1] = ""
+
             else:
                 content_lines = content.splitlines()
                 for line_num, line_text in enumerate(content_lines):
@@ -346,6 +347,7 @@ class EditorAITool(AITool):
             if start_line is not None or end_line is not None:
                 range_desc = f"lines {start_line or 1}-{end_line or 'end'}"
                 log_msg = f"AI read editor content ({range_desc})\ntab ID: {tab_id}"
+
             else:
                 log_msg = f"AI read editor content\ntab ID: {tab_id}"
 
