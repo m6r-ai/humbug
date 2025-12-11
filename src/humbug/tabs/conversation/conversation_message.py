@@ -44,7 +44,8 @@ class ConversationMessage(QFrame):
         user_name: str | None = None,
         content: str | None = None,
         parent: QWidget | None = None,
-        is_input: bool = False
+        is_input: bool = False,
+        do_not_style: bool = False
     ) -> None:
         """
         Initialize the message widget.
@@ -58,6 +59,7 @@ class ConversationMessage(QFrame):
             content: Optional initial content for the message
             parent: Optional parent widget
             is_input: Whether this is an input widget (affects styling)
+            do_not_style: Whether to skip initial styling
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
@@ -180,7 +182,9 @@ class ConversationMessage(QFrame):
         default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
         self.set_expanded(default_expanded)
 
-        self._on_style_changed()
+        # We don't want to style subclasses immediately
+        if not do_not_style:
+            self._on_style_changed()
 
         if content:
             self.set_content(content)
@@ -847,7 +851,6 @@ class ConversationMessage(QFrame):
             self._expand_button.setIconSize(icon_size)
             # Update the expand button icon and tooltip
             self._update_expand_button()
-
 
     def _on_style_changed(self) -> None:
         """Handle the style changing."""

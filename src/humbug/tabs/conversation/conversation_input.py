@@ -32,7 +32,7 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
 
-        super().__init__(style, parent=parent, is_input=True)
+        super().__init__(style, parent=parent, is_input=True, do_not_style=True)
 
         # Connect text cursor signals
         self._text_area = self._sections[0].text_area()
