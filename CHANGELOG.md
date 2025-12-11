@@ -9,6 +9,10 @@ New features:
 - Added diff/patch syntax highlighting.
 - Added the ability to extract diffs between the current editor buffer and the previously-saved version of an editor file,
   and added that as a `get_diff` editor AI tool operation.
+- Added code to allow tool calls to register a context extraction function that can present pretty-printed context to the
+  user in the tool call messages.
+- Updated the editor AI diff applier to pretty-print the diff that was applied.
+- Updated the AIFPL AI evaluate tool to pretty-print the expression being evaluated.
 
 Bug fixes:
 
