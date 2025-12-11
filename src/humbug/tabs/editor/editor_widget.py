@@ -1565,7 +1565,7 @@ class EditorWidget(QPlainTextEdit):
         filename = self._path if self._path else "untitled"
 
         diff_lines = unified_diff(
-            saved_lines, current_lines, fromfile=f"a/{filename}", tofile=f"b/{filename}", lineterm='', n=context_lines
+            saved_lines, current_lines, fromfile=f"a/{filename}", tofile=f"b/{filename}", n=context_lines
         )
         return ''.join(diff_lines)
 
