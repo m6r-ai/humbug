@@ -210,6 +210,27 @@ class EditorAITool(AITool):
             ),
         }
 
+    def extract_context(self, tool_call: AIToolCall) -> str | None:
+        """
+        Extract context information from the tool call.
+
+        Args:
+            tool_call: Tool call containing arguments and metadata
+
+        Returns:
+            Context string if available, otherwise None
+        """
+        arguments = tool_call.arguments
+        operation = arguments.get("operation")
+        if operation != "apply_diff":
+            return None
+
+        if "diff_content" not in arguments:
+            return None
+
+        diff_content = arguments["diff_content"]
+        return f"Diff content:\n```diff\n{diff_content}\n```"
+
     async def execute(
         self,
         tool_call: AIToolCall,

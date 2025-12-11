@@ -360,6 +360,25 @@ class AIConversation:
         finally:
             self._pending_authorization_future = None
 
+    def _extract_context(self, tool_call: AIToolCall) -> str | None:
+        """
+        Extract context information from the tool call.
+
+        Args:
+            tool_call: Tool call containing arguments and metadata
+
+        Returns:
+            Context string if available, otherwise None
+        """
+        tool = self._tool_manager.get_tool(tool_call.name)
+        if tool is None:
+            return None
+
+        if not self._tool_manager.is_tool_enabled(tool_call.name):
+            return None
+
+        return tool.extract_context(tool_call)
+
     async def _execute_tool(
         self,
         tool_call: AIToolCall,
@@ -460,6 +479,12 @@ class AIConversation:
             # Create and add tool call message
             tool_call_dict = tool_call.to_dict()
             content = f"""```json\n{json.dumps(tool_call_dict, indent=4)}\n```"""
+
+            # See if there's extra context to add for this tool call
+            context = self._extract_context(tool_call)
+            if context is not None:
+                content += f"\n{context}"
+
             tool_call_message = AIMessage.create(
                 source=AIMessageSource.TOOL_CALL,
                 content=content,

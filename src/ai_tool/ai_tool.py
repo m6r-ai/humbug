@@ -89,6 +89,18 @@ class AITool(ABC):
                 f"Required parameter(s) {missing_list} missing for operation '{operation}'"
             )
 
+    def extract_context(self, tool_call: AIToolCall) -> str | None:  # pylint: disable=unused-argument
+        """
+        Extract context information from the tool call.
+
+        Args:
+            tool_call: Tool call containing arguments and metadata
+
+        Returns:
+            Context string if available, otherwise None
+        """
+        return None
+
     @abstractmethod
     async def execute(
         self,

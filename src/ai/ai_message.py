@@ -30,6 +30,7 @@ class AIMessage:
     reasoning_capability: AIReasoningCapability | None = None
     completed: bool = True
     tool_calls: List[AIToolCall] | None = None
+    tool_call_context: str | None = None
     tool_results: List[AIToolResult] | None = None
     signature: str | None = None
     redacted_reasoning: str | None = None
@@ -61,6 +62,7 @@ class AIMessage:
         completed: bool = True,
         timestamp: datetime | None = None,
         tool_calls: List[AIToolCall] | None = None,
+        tool_call_context: str | None = None,
         tool_results: List[AIToolResult] | None = None,
         signature: str | None = None,
         redacted_reasoning: str | None = None,
@@ -82,6 +84,7 @@ class AIMessage:
             reasoning_capability=reasoning_capability,
             completed=completed,
             tool_calls=tool_calls,
+            tool_call_context=tool_call_context,
             tool_results=tool_results,
             signature=signature,
             redacted_reasoning=redacted_reasoning,
@@ -102,6 +105,7 @@ class AIMessage:
             reasoning_capability=self.reasoning_capability,
             completed=self.completed,
             tool_calls=self.tool_calls.copy() if self.tool_calls else None,
+            tool_call_context=self.tool_call_context,
             tool_results=self.tool_results.copy() if self.tool_results else None,
             signature=self.signature,
             redacted_reasoning=self.redacted_reasoning,
@@ -156,6 +160,9 @@ class AIMessage:
                 }
                 for call in self.tool_calls
             ]
+
+        if self.tool_call_context:
+            message["tool_call_context"] = self.tool_call_context
 
         if self.tool_results:
             message["tool_results"] = [
@@ -243,6 +250,12 @@ class AIMessage:
             except (KeyError, TypeError) as e:
                 raise ValueError(f"Invalid tool_calls data format: {data['tool_calls']}") from e
 
+        tool_call_context = None
+        if data.get("tool_call_context"):
+            tool_call_context = data["tool_call_context"]
+            if not isinstance(tool_call_context, str):
+                raise ValueError(f"Invalid tool_call_context format: {data['tool_call_context']}")
+
         # Parse tool results if present
         tool_results = None
         if data.get("tool_results"):
@@ -272,6 +285,7 @@ class AIMessage:
             reasoning_capability=reasoning_capability,
             completed=data.get("completed", True),
             tool_calls=tool_calls,
+            tool_call_context=tool_call_context,
             tool_results=tool_results,
             signature=data.get("signature", None),
             redacted_reasoning=data.get("redacted_reasoning", None),

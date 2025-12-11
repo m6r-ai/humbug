@@ -172,6 +172,20 @@ class AIFPLAITool(AITool):
         # Use the new evaluate_and_format method for proper LISP formatting
         return self._tool.evaluate_and_format(expression)
 
+    def extract_context(self, tool_call: AIToolCall) -> str | None:
+        """
+        Extract context from the tool call.
+
+        Args:
+            tool_call: The tool call object
+
+        Returns:
+            Context string if applicable, otherwise None
+        """
+        arguments = tool_call.arguments
+        expression = arguments.get("expression", "")
+        return f"AIFPL expression:\n```aifpl\n{expression}\n```"
+
     async def execute(
         self,
         tool_call: AIToolCall,
