@@ -42,7 +42,7 @@ Think of it as an operating system for human-AI collaboration.
   Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
   Task delegation allows one LLM to make use of one or more other LLMs.
   AIFPL (AI Functional Programming Language) is a pure functional language designed for AIs to use for calculations, string processing, or other algorithmic tasks.
-  The UI supports simultaneous conversations, file editing with syntax highlights, dynamic wiki pages, terminal emulators, a system shell, and a system log.
+  The UI supports simultaneous conversations, file editing with syntax highlights, markdown preview pages, terminal emulators, a system shell, and a system log.
   UI orchestration means your AI can help you work and visualize things using any of these tools too.
   LLMs can check the status of terminal tabs and issue commands to them (subject to user approval).
   LLMs can also control and edit files using editor tabs.
