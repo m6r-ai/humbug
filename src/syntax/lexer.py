@@ -26,6 +26,8 @@ class TokenType(IntEnum):
     DOC_COMMENT = auto()
     DIFF_ADDED = auto()
     DIFF_CHANGED = auto()
+    DIFF_HEADING = auto()
+    DIFF_METADATA = auto()
     DIFF_REMOVED = auto()
     DOCTYPE = auto()
     DOT = auto()

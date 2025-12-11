@@ -619,6 +619,8 @@ class StyleManager(QObject):
             TokenType.DOC_COMMENT: ColorRole.SYNTAX_03,
             TokenType.DIFF_ADDED: ColorRole.SYNTAX_16,
             TokenType.DIFF_CHANGED: ColorRole.SYNTAX_14,
+            TokenType.DIFF_HEADING: ColorRole.SYNTAX_07,
+            TokenType.DIFF_METADATA: ColorRole.SYNTAX_11,
             TokenType.DIFF_REMOVED: ColorRole.SYNTAX_12,
             TokenType.DOCTYPE: ColorRole.SYNTAX_05,
             TokenType.DIRECTIVE: ColorRole.SYNTAX_18,

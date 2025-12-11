@@ -134,7 +134,7 @@ class DiffLexer(Lexer):
             # It's a hunk header
             self._position = self._input_len
             self._tokens.append(Token(
-                type=TokenType.HEADING,
+                type=TokenType.DIFF_HEADING,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -157,7 +157,7 @@ class DiffLexer(Lexer):
             # File header
             self._position = self._input_len
             self._tokens.append(Token(
-                type=TokenType.COMMENT,
+                type=TokenType.DIFF_METADATA,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -193,7 +193,7 @@ class DiffLexer(Lexer):
             if ' ----' in self._input or self._input.endswith('----'):
                 self._position = self._input_len
                 self._tokens.append(Token(
-                    type=TokenType.HEADING,
+                    type=TokenType.DIFF_HEADING,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -205,7 +205,7 @@ class DiffLexer(Lexer):
                 # File header (has content after ---)
                 self._position = self._input_len
                 self._tokens.append(Token(
-                    type=TokenType.COMMENT,
+                    type=TokenType.DIFF_METADATA,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -214,7 +214,7 @@ class DiffLexer(Lexer):
             # Separator line (normal diff)
             self._position = self._input_len
             self._tokens.append(Token(
-                type=TokenType.HEADING,
+                type=TokenType.DIFF_HEADING,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -244,7 +244,7 @@ class DiffLexer(Lexer):
             # Separator line
             self._position = self._input_len
             self._tokens.append(Token(
-                type=TokenType.HEADING,
+                type=TokenType.DIFF_HEADING,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -259,7 +259,7 @@ class DiffLexer(Lexer):
                 # Range marker
                 self._position = self._input_len
                 self._tokens.append(Token(
-                    type=TokenType.HEADING,
+                    type=TokenType.DIFF_HEADING,
                     value=self._input[start:self._position],
                     start=start
                 ))
@@ -268,7 +268,7 @@ class DiffLexer(Lexer):
             # File header
             self._position = self._input_len
             self._tokens.append(Token(
-                type=TokenType.COMMENT,
+                type=TokenType.DIFF_METADATA,
                 value=self._input[start:self._position],
                 start=start
             ))
@@ -373,7 +373,7 @@ class DiffLexer(Lexer):
             if not remaining or remaining.isspace():
                 self._position = self._input_len
                 self._tokens.append(Token(
-                    type=TokenType.HEADING,
+                    type=TokenType.DIFF_HEADING,
                     value=self._input[start:self._position],
                     start=start
                 ))
