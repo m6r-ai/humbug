@@ -20,6 +20,8 @@ Bug fixes:
 - Improved took operation naming in the filesystem tool.
 - Resolved problem when reloading a preview tab while find was active and after editing and saving the source file on which
   the preview was based.
+- Resolved problem if you deleted a message and the changed the zoom level (this would duplicate the text in the input
+  prompt box).
 
 ## v0.33 (2025-12-08)
 

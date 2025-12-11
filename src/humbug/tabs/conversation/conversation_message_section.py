@@ -495,8 +495,14 @@ class ConversationMessageSection(QFrame):
 
         # Style the language header if present, or the inline code style if it's not
         if not self._language_header:
-            if self._content_node:
-                self._renderer.visit(self._content_node)
+            content = self._content_node
+            if content:
+                # If we have a text node, extract its content as plain text
+                if isinstance(content, MarkdownASTTextNode):
+                    self._text_area.set_text(content.content)
+
+                else:
+                    self._renderer.visit(content)
 
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode() != self._init_colour_mode:
