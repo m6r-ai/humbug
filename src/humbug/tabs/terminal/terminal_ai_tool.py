@@ -238,6 +238,7 @@ class TerminalAITool(AITool):
             try:
                 char_code = int(hex_value, 16)
                 return chr(char_code)
+
             except (ValueError, OverflowError):
                 # If invalid Unicode code point, return original
                 return match.group(0)
@@ -307,12 +308,10 @@ class TerminalAITool(AITool):
         tab_id = terminal_tab.tab_id()
 
         # Build authorization context
-        context = f"Send keystrokes to terminal (tab {tab_id}): '{raw_keystrokes}'"
-        if processed_keystrokes != raw_keystrokes:
-            context += f"\n(will be processed as: '{processed_keystrokes!r}')"
+        context = f"Send keystrokes to terminal (tab {tab_id}):"
 
         # Request authorization - commands can be destructive
-        authorized = await request_authorization("terminal", arguments, context, None, True)
+        authorized = await request_authorization("terminal", arguments, context, raw_keystrokes, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_keystrokes}")
 
