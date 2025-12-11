@@ -184,7 +184,7 @@ class AIFPLAITool(AITool):
         """
         arguments = tool_call.arguments
         expression = arguments.get("expression", "")
-        return f"AIFPL expression:\n```aifpl\n{expression}\n```"
+        return f"AIFPL `expression` is:\n```aifpl\n{expression}\n```"
 
     async def execute(
         self,

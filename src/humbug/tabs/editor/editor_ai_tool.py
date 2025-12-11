@@ -138,6 +138,7 @@ class EditorAITool(AITool):
             "read_lines": AIToolOperationDefinition(
                 name="read_lines",
                 handler=self._read_lines,
+                extract_context=None,
                 allowed_parameters={"tab_id", "start_line", "end_line"},
                 required_parameters={"tab_id"},
                 description="Read content lines from an editor tab. Optionally specify line range with "
@@ -147,6 +148,7 @@ class EditorAITool(AITool):
             "get_cursor_info": AIToolOperationDefinition(
                 name="get_cursor_info",
                 handler=self._get_cursor_info,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get cursor position and selection information from an editor tab"
@@ -154,6 +156,7 @@ class EditorAITool(AITool):
             "get_info": AIToolOperationDefinition(
                 name="get_info",
                 handler=self._get_info,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get editor metadata including line count, language, encoding, and modification status"
@@ -161,6 +164,7 @@ class EditorAITool(AITool):
             "goto_line": AIToolOperationDefinition(
                 name="goto_line",
                 handler=self._goto_line,
+                extract_context=None,
                 allowed_parameters={"tab_id", "line", "column"},
                 required_parameters={"tab_id", "line"},
                 description="Move cursor to specific line and optional column in an editor tab (1-indexed)"
@@ -168,6 +172,7 @@ class EditorAITool(AITool):
             "search": AIToolOperationDefinition(
                 name="search",
                 handler=self._search,
+                extract_context=None,
                 allowed_parameters={"tab_id", "search_text", "case_sensitive"},
                 required_parameters={"tab_id", "search_text"},
                 description="Find precise line numbers for all occurrences of text in an editor tab. "
@@ -176,6 +181,7 @@ class EditorAITool(AITool):
             "get_selected_text": AIToolOperationDefinition(
                 name="get_selected_text",
                 handler=self._get_selected_text,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get the currently selected text from an editor tab"
@@ -183,6 +189,7 @@ class EditorAITool(AITool):
             "get_diff": AIToolOperationDefinition(
                 name="get_diff",
                 handler=self._get_diff,
+                extract_context=None,
                 allowed_parameters={"tab_id", "context_lines"},
                 required_parameters={"tab_id"},
                 description="Get unified diff between saved file content and current editor buffer. "
@@ -192,6 +199,7 @@ class EditorAITool(AITool):
             "apply_diff": AIToolOperationDefinition(
                 name="apply_diff",
                 handler=self._apply_diff,
+                extract_context=None,
                 allowed_parameters={"tab_id", "diff_content"},
                 required_parameters={"tab_id", "diff_content"},
                 description="Apply a unified diff to the editor content. This operation is atomic - either all "
@@ -204,6 +212,7 @@ class EditorAITool(AITool):
             "save_file": AIToolOperationDefinition(
                 name="save_file",
                 handler=self._save_file,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Save the current editor content to file. Requires user authorization"

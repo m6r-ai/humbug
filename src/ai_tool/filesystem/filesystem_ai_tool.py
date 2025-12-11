@@ -13,6 +13,7 @@ from ai_tool import (
 )
 from ai_tool.filesystem.filesystem_diff_applier import FilesystemDiffApplier
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 
 class FileSystemAITool(AITool):
@@ -140,6 +141,7 @@ class FileSystemAITool(AITool):
             "read_file": AIToolOperationDefinition(
                 name="read_file",
                 handler=self._read_file,
+                extract_context=None,
                 allowed_parameters={"path", "encoding"},
                 required_parameters={"path"},
                 description="Read file contents"
@@ -147,6 +149,7 @@ class FileSystemAITool(AITool):
             "read_file_lines": AIToolOperationDefinition(
                 name="read_file_lines",
                 handler=self._read_file_lines,
+                extract_context=None,
                 allowed_parameters={"path", "encoding", "start_line", "end_line"},
                 required_parameters={"path"},
                 description="Read file contents with line numbers. Returns line numbers and content as a dictionary-like structure"
@@ -154,6 +157,7 @@ class FileSystemAITool(AITool):
             "write_file": AIToolOperationDefinition(
                 name="write_file",
                 handler=self._write_file,
+                extract_context=self._write_file_context,
                 allowed_parameters={"path", "content", "encoding", "create_parents"},
                 required_parameters={"path", "content"},
                 description="Write content to file (create or overwrite)"
@@ -161,6 +165,7 @@ class FileSystemAITool(AITool):
             "append_to_file": AIToolOperationDefinition(
                 name="append_to_file",
                 handler=self._append_to_file,
+                extract_context=self._append_to_file_context,
                 allowed_parameters={"path", "content", "encoding"},
                 required_parameters={"path", "content"},
                 description="Append content to existing file"
@@ -168,6 +173,7 @@ class FileSystemAITool(AITool):
             "apply_diff_to_file": AIToolOperationDefinition(
                 name="apply_diff_to_file",
                 handler=self._apply_diff_to_file,
+                extract_context=self._apply_diff_to_file_context,
                 allowed_parameters={"path", "diff_content", "dry_run", "encoding"},
                 required_parameters={"path", "diff_content"},
                 description="Apply a unified diff to a file. The diff is applied with fuzzy matching to handle "
@@ -176,6 +182,7 @@ class FileSystemAITool(AITool):
             "delete_file": AIToolOperationDefinition(
                 name="delete_file",
                 handler=self._delete_file,
+                extract_context=None,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
                 description="Delete file"
@@ -183,6 +190,7 @@ class FileSystemAITool(AITool):
             "copy_file": AIToolOperationDefinition(
                 name="copy_file",
                 handler=self._copy_file,
+                extract_context=None,
                 allowed_parameters={"path", "destination"},
                 required_parameters={"path", "destination"},
                 description="Copy file to destination"
@@ -190,6 +198,7 @@ class FileSystemAITool(AITool):
             "list_directory": AIToolOperationDefinition(
                 name="list_directory",
                 handler=self._list_directory,
+                extract_context=None,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
                 description="List directory contents"
@@ -197,6 +206,7 @@ class FileSystemAITool(AITool):
             "create_directory": AIToolOperationDefinition(
                 name="create_directory",
                 handler=self._create_directory,
+                extract_context=None,
                 allowed_parameters={"path", "create_parents"},
                 required_parameters={"path"},
                 description="Create directory"
@@ -204,6 +214,7 @@ class FileSystemAITool(AITool):
             "remove_directory": AIToolOperationDefinition(
                 name="remove_directory",
                 handler=self._remove_directory,
+                extract_context=None,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
                 description="Remove empty directory"
@@ -211,6 +222,7 @@ class FileSystemAITool(AITool):
             "move": AIToolOperationDefinition(
                 name="move",
                 handler=self._move,
+                extract_context=None,
                 allowed_parameters={"path", "destination"},
                 required_parameters={"path", "destination"},
                 description="Move/rename file or directory"
@@ -218,6 +230,7 @@ class FileSystemAITool(AITool):
             "get_info": AIToolOperationDefinition(
                 name="get_info",
                 handler=self._get_info,
+                extract_context=None,
                 allowed_parameters={"path"},
                 required_parameters={"path"},
                 description="Get detailed information about file or directory"
@@ -272,6 +285,41 @@ class FileSystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"{key}: failed to resolve path '{path_str}': {str(e)}") from e
+
+    def extract_context(self, tool_call: AIToolCall) -> str | None:
+        """
+        Extract context from the tool call.
+
+        Args:
+            tool_call: The tool call object
+
+        Returns:
+            Context string if applicable, otherwise None
+        """
+        arguments = tool_call.arguments
+        operation = arguments.get("operation")
+        if not operation:
+            return None
+
+        if not isinstance(operation, str):
+            return None
+
+        # Get operation definition
+        operation_definitions = self.get_operation_definitions()
+        if operation not in operation_definitions:
+            return None
+
+        operation_def = operation_definitions[operation]
+        extract_context = operation_def.extract_context
+        if extract_context is None:
+            return None
+
+        try:
+            return extract_context(arguments)
+
+        except AIToolExecutionError:
+            # Ignore errors during context extraction
+            return None
 
     async def execute(
         self,
@@ -464,11 +512,15 @@ class FileSystemAITool(AITool):
 
         return f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}"
 
-    async def _write_file(
-        self,
-        arguments: Dict[str, Any],
-        request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    def _write_file_context(self, arguments: Dict[str, Any]) -> str | None:
+        """Extract context for write_file operation."""
+        path_arg = self._get_str_value_from_key("path", arguments)
+        context = self._get_str_value_from_key("content", arguments)
+        language = ProgrammingLanguageUtils.from_file_extension(path_arg)
+        language_str = ProgrammingLanguageUtils.get_name(language)
+        return f"`content` is:\n```{language_str}\n{context}\n```"
+
+    async def _write_file(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback) -> str:
         """Write content to file (create or overwrite)."""
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
@@ -486,21 +538,21 @@ class FileSystemAITool(AITool):
 
         # Build authorization context
         if path.exists():
-            context = f"Write content to '{display_path}'. " \
-                "This will overwrite the existing file and the previous contents will be lost."
+            context = f"This will write content to '{display_path}'. " \
+                "It will overwrite the existing file and the previous contents will be lost."
             destructive = True
 
         else:
-            context = f"Create a new file '{display_path}' with the provided content."
+            context = f"This will create a new file '{display_path}' with the provided content."
             if create_parents and not path.parent.exists():
                 # Get display path for parent directory
                 try:
                     _, parent_display_path = self._resolve_path(str(path.parent))
-                    context += f" This will also create the parent directory '{parent_display_path}'."
+                    context += f" It will also create the parent directory '{parent_display_path}'."
 
                 except Exception:
                     # If we can't resolve parent for display, just mention it generically
-                    context += " This will also create the parent directory."
+                    context += " It will also create the parent directory."
 
             destructive = False
 
@@ -543,6 +595,17 @@ class FileSystemAITool(AITool):
 
         return f"File written successfully: {display_path} ({content_size:,} bytes)"
 
+    def _append_to_file_context(self, arguments: Dict[str, Any]) -> str | None:
+        """Extract context for append_to_file operation."""
+        path_arg = self._get_str_value_from_key("path", arguments)
+        if not path_arg:
+            return None
+
+        context = self._get_str_value_from_key("content", arguments)
+        language = ProgrammingLanguageUtils.from_file_extension(path_arg)
+        language_str = ProgrammingLanguageUtils.get_name(language)
+        return f"`content` is:\n```{language_str}\n{context}\n```"
+
     async def _append_to_file(
         self,
         arguments: Dict[str, Any],
@@ -575,7 +638,7 @@ class FileSystemAITool(AITool):
             )
 
         # Build authorization context
-        context = f"Append content to the end of '{display_path}'. This will modify the existing file."
+        context = f"This will append content to the end of '{display_path}'. It will modify the existing file."
 
         # Request authorization
         authorized = await request_authorization("filesystem", arguments, context, None, True)
@@ -944,6 +1007,11 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
         except OSError as e:
             raise AIToolExecutionError(f"Failed to get info: {str(e)}") from e
 
+    def _apply_diff_to_file_context(self, arguments: Dict[str, Any]) -> str | None:
+        """Extract context for append_to_file operation."""
+        context = self._get_str_value_from_key("diff_content", arguments)
+        return f"`diff_content` is:\n```diff\n{context}\n```"
+
     async def _apply_diff_to_file(
         self,
         arguments: Dict[str, Any],
@@ -1028,10 +1096,10 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
             return f"Diff validation successful for '{display_path}': {result.hunks_applied} hunk(s) can be applied"
 
         # Request authorization to save modified file
-        context = f"Apply diff to file '{display_path}' ({result.hunks_applied} hunk(s)). " \
+        context = f"This will apply a diff to file '{display_path}' ({result.hunks_applied} hunk(s)). " \
             "This will overwrite the existing file."
 
-        authorized = await request_authorization("filesystem", arguments, context, diff_content, True)
+        authorized = await request_authorization("filesystem", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to apply diff to file: {arguments['path']}")
 

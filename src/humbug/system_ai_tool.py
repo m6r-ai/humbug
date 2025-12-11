@@ -119,6 +119,7 @@ class SystemAITool(AITool):
             "open_editor_tab": AIToolOperationDefinition(
                 name="open_editor_tab",
                 handler=self._open_editor_tab,
+                extract_context=None,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
                 description="Open a file in an editor tab for the user to browse/edit. "
@@ -127,6 +128,7 @@ class SystemAITool(AITool):
             "new_terminal_tab": AIToolOperationDefinition(
                 name="new_terminal_tab",
                 handler=self._new_terminal_tab,
+                extract_context=None,
                 allowed_parameters=set(),
                 required_parameters=set(),
                 description="Create a fully interactive terminal tab. "
@@ -137,6 +139,7 @@ class SystemAITool(AITool):
             "open_conversation_tab": AIToolOperationDefinition(
                 name="open_conversation_tab",
                 handler=self._open_conversation_tab,
+                extract_context=None,
                 allowed_parameters={"file_path"},
                 required_parameters={"file_path"},
                 description="Open an existing conversation in a conversation tab for the user to browse/edit. "
@@ -146,6 +149,7 @@ class SystemAITool(AITool):
             "new_conversation_tab": AIToolOperationDefinition(
                 name="new_conversation_tab",
                 handler=self._new_conversation_tab,
+                extract_context=None,
                 allowed_parameters={"model", "temperature"},
                 required_parameters=set(),
                 description="Create a new AI conversation tab, with optional model/temperature. "
@@ -154,6 +158,7 @@ class SystemAITool(AITool):
             "show_system_shell_tab": AIToolOperationDefinition(
                 name="show_system_shell_tab",
                 handler=self._show_system_shell_tab,
+                extract_context=None,
                 allowed_parameters=set(),
                 required_parameters=set(),
                 description="Open a system shell tab. "
@@ -162,6 +167,7 @@ class SystemAITool(AITool):
             "show_log_tab": AIToolOperationDefinition(
                 name="show_log_tab",
                 handler=self._show_log_tab,
+                extract_context=None,
                 allowed_parameters=set(),
                 required_parameters=set(),
                 description="Open the mindspace log tab. "
@@ -170,6 +176,7 @@ class SystemAITool(AITool):
             "open_preview_tab": AIToolOperationDefinition(
                 name="open_preview_tab",
                 handler=self._open_preview_tab,
+                extract_context=None,
                 allowed_parameters={"file_path"},
                 required_parameters=set(),
                 description="Open a file/directory in a preview view tab. "
@@ -179,6 +186,7 @@ class SystemAITool(AITool):
             "get_tab_info": AIToolOperationDefinition(
                 name="get_tab_info",
                 handler=self._get_tab_info,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters=set(),
                 description="Get information about a tab, given its tab GUID. "
@@ -187,6 +195,7 @@ class SystemAITool(AITool):
             "close_tab": AIToolOperationDefinition(
                 name="close_tab",
                 handler=self._close_tab,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Close an existing tab. You must provide the tab_id parameter"
@@ -194,6 +203,7 @@ class SystemAITool(AITool):
             "list_tabs": AIToolOperationDefinition(
                 name="list_tabs",
                 handler=self._list_tabs,
+                extract_context=None,
                 allowed_parameters=set(),
                 required_parameters=set(),
                 description="Enumerate all currently open tabs across all columns"
@@ -201,6 +211,7 @@ class SystemAITool(AITool):
             "move_tab": AIToolOperationDefinition(
                 name="move_tab",
                 handler=self._move_tab,
+                extract_context=None,
                 allowed_parameters={"tab_id", "target_column"},
                 required_parameters={"tab_id", "target_column"},
                 description="Move a tab to a specific column by index. You must provide the tab_id and target_column "

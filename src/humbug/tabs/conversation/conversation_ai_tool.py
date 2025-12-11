@@ -151,6 +151,7 @@ class ConversationAITool(AITool):
             "get_info": AIToolOperationDefinition(
                 name="get_info",
                 handler=self._get_info,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get high-level metadata about a conversation including message count, "
@@ -159,6 +160,7 @@ class ConversationAITool(AITool):
             "read_messages": AIToolOperationDefinition(
                 name="read_messages",
                 handler=self._read_messages,
+                extract_context=None,
                 allowed_parameters={"tab_id", "start_index", "end_index", "message_types", "limit", "include_tool_details"},
                 required_parameters={"tab_id"},
                 description="Read messages from a conversation with filtering and pagination. "
@@ -168,6 +170,7 @@ class ConversationAITool(AITool):
             "get_message": AIToolOperationDefinition(
                 name="get_message",
                 handler=self._get_message,
+                extract_context=None,
                 allowed_parameters={"tab_id", "message_id", "message_index"},
                 required_parameters={"tab_id"},
                 description="Get a specific message by ID or index. "
@@ -176,6 +179,7 @@ class ConversationAITool(AITool):
             "search": AIToolOperationDefinition(
                 name="search",
                 handler=self._search,
+                extract_context=None,
                 allowed_parameters={"tab_id", "search_text", "case_sensitive", "message_types", "max_results"},
                 required_parameters={"tab_id", "search_text"},
                 description="Search for text across all messages in a conversation. "
@@ -185,6 +189,7 @@ class ConversationAITool(AITool):
             "scroll_to": AIToolOperationDefinition(
                 name="scroll_to",
                 handler=self._scroll_to,
+                extract_context=None,
                 allowed_parameters={"tab_id", "message_id", "message_index"},
                 required_parameters={"tab_id"},
                 description="Scroll the conversation view to a specific message (header at top of viewport). "

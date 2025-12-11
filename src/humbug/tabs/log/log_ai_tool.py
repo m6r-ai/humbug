@@ -149,6 +149,7 @@ class LogAITool(AITool):
             "get_info": AIToolOperationDefinition(
                 name="get_info",
                 handler=self._get_info,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get high-level metadata about the log including message count, "
@@ -157,6 +158,7 @@ class LogAITool(AITool):
             "read_messages": AIToolOperationDefinition(
                 name="read_messages",
                 handler=self._read_messages,
+                extract_context=None,
                 allowed_parameters={"tab_id", "start_index", "end_index", "levels", "limit", "include_content"},
                 required_parameters={"tab_id"},
                 description="Read log messages with filtering and pagination. "
@@ -166,6 +168,7 @@ class LogAITool(AITool):
             "get_message": AIToolOperationDefinition(
                 name="get_message",
                 handler=self._get_message,
+                extract_context=None,
                 allowed_parameters={"tab_id", "message_id", "message_index"},
                 required_parameters={"tab_id"},
                 description="Get a specific log message by ID or index. "
@@ -174,6 +177,7 @@ class LogAITool(AITool):
             "search": AIToolOperationDefinition(
                 name="search",
                 handler=self._search,
+                extract_context=None,
                 allowed_parameters={"tab_id", "search_text", "case_sensitive", "levels", "max_results"},
                 required_parameters={"tab_id", "search_text"},
                 description="Search for text across all log messages. "
@@ -183,6 +187,7 @@ class LogAITool(AITool):
             "scroll_to": AIToolOperationDefinition(
                 name="scroll_to",
                 handler=self._scroll_to,
+                extract_context=None,
                 allowed_parameters={"tab_id", "message_id", "message_index"},
                 required_parameters={"tab_id"},
                 description="Scroll the log view to a specific message (at top of viewport). "

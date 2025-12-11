@@ -83,6 +83,7 @@ class ClockAITool(AITool):
             "get_time": AIToolOperationDefinition(
                 name="get_time",
                 handler=self._get_time,
+                extract_context=None,
                 allowed_parameters={"format", "timezone"},
                 required_parameters=set(),
                 description="get the current date and time"
@@ -90,6 +91,7 @@ class ClockAITool(AITool):
             "sleep": AIToolOperationDefinition(
                 name="sleep",
                 handler=self._sleep,
+                extract_context=None,
                 allowed_parameters={"duration", "format", "timezone"},
                 required_parameters={"duration"},
                 description="sleep for a specified number of seconds, then return current time"
@@ -97,6 +99,7 @@ class ClockAITool(AITool):
             "alarm": AIToolOperationDefinition(
                 name="alarm",
                 handler=self._alarm,
+                extract_context=None,
                 allowed_parameters={"time", "format", "timezone"},
                 required_parameters={"time"},
                 description="sleep until a specific time, then return current time"

@@ -634,6 +634,9 @@ class ConversationMessage(QFrame):
 
         self._layout.addWidget(self._approval_widget)
 
+        # Expand the message for context when showing the approval UI
+        self.set_expanded(True)
+
     def _approve_tool_call(self, tool_call: AIToolCall) -> None:
         """Handle tool call approval."""
         self.tool_call_approved.emit(tool_call)
@@ -646,6 +649,9 @@ class ConversationMessage(QFrame):
 
     def remove_tool_approval_ui(self) -> None:
         """Remove the tool approval UI."""
+        # Collapse the message when removing approval UI
+        self.set_expanded(False)
+
         if self._approval_widget:
             self._layout.removeWidget(self._approval_widget)
             self._approval_widget.deleteLater()

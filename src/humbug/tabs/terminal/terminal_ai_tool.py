@@ -107,6 +107,7 @@ class TerminalAITool(AITool):
             "write": AIToolOperationDefinition(
                 name="write",
                 handler=self._write,
+                extract_context=self.write_context,
                 allowed_parameters={"tab_id", "keystrokes"},
                 required_parameters={"tab_id", "keystrokes"},
                 description="Send keystrokes to a terminal tab. Requires user authorization before execution. "
@@ -120,6 +121,7 @@ class TerminalAITool(AITool):
             "read": AIToolOperationDefinition(
                 name="read",
                 handler=self._read,
+                extract_context=None,
                 allowed_parameters={"tab_id", "lines"},
                 required_parameters={"tab_id"},
                 description="Read the current terminal buffer (output display) content. This returns the raw "
@@ -129,11 +131,70 @@ class TerminalAITool(AITool):
             "get_status": AIToolOperationDefinition(
                 name="get_status",
                 handler=self._get_status,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get terminal status and process information"
             ),
         }
+
+    def _get_str_value_from_key(self, key: str, arguments: Dict[str, Any]) -> str:
+        """
+        Extract string value from arguments dictionary.
+
+        Args:
+            key: Key to extract from arguments
+            arguments: Dictionary containing operation parameters
+
+        Returns:
+            String value for the given key
+
+        Raises:
+            AIToolExecutionError: If key is missing or value is not a string
+        """
+        if key not in arguments:
+            raise AIToolExecutionError(f"No '{key}' argument provided")
+
+        value = arguments[key]
+        if not isinstance(value, str):
+            raise AIToolExecutionError(f"'{key}' must be a string")
+
+        return value
+
+    def extract_context(self, tool_call: AIToolCall) -> str | None:
+        """
+        Extract context from the tool call.
+
+        Args:
+            tool_call: The tool call object
+
+        Returns:
+            Context string if applicable, otherwise None
+        """
+        arguments = tool_call.arguments
+        operation = arguments.get("operation")
+        if not operation:
+            return None
+
+        if not isinstance(operation, str):
+            return None
+
+        # Get operation definition
+        operation_definitions = self.get_operation_definitions()
+        if operation not in operation_definitions:
+            return None
+
+        operation_def = operation_definitions[operation]
+        extract_context = operation_def.extract_context
+        if extract_context is None:
+            return None
+
+        try:
+            return extract_context(arguments)
+
+        except AIToolExecutionError:
+            # Ignore errors during context extraction
+            return None
 
     async def execute(
         self,
@@ -203,10 +264,7 @@ class TerminalAITool(AITool):
         if "tab_id" not in arguments:
             raise AIToolExecutionError("No 'tab_id' argument provided")
 
-        tab_id = arguments["tab_id"]
-        if not isinstance(tab_id, str):
-            raise AIToolExecutionError("'tab_id' must be a string")
-
+        tab_id = self._get_str_value_from_key("tab_id", arguments)
         tab = self._column_manager.get_tab_by_id(tab_id)
         if not tab:
             raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
@@ -287,6 +345,7 @@ class TerminalAITool(AITool):
         # Process information
         if status_info.process_id:
             lines.append(f"Process ID: {status_info.process_id}")
+
         else:
             lines.append("Process ID: None")
 
@@ -305,6 +364,20 @@ class TerminalAITool(AITool):
 
         return '\n'.join(lines)
 
+    def write_context(self, arguments: Dict[str, Any]) -> str | None:
+        """
+        Extract context for write operation.
+
+        Args:
+            tool_call: Tool call containing arguments
+
+        Returns:
+            Context string for write operation
+        """
+        raw_keystrokes = self._get_str_value_from_key("keystrokes", arguments)
+        preview_keystrokes = self._preview_ai_escape_sequences(raw_keystrokes)
+        return f"`keystrokes` is:\n```\n{preview_keystrokes}\n```"
+
     async def _write(
         self,
         tool_call: AIToolCall,
@@ -314,13 +387,8 @@ class TerminalAITool(AITool):
         arguments = tool_call.arguments
 
         # Get and validate keystrokes
-        raw_keystrokes = arguments.get("keystrokes")
-        if not raw_keystrokes or not isinstance(raw_keystrokes, str):
-            raise AIToolExecutionError("'keystrokes' must be a non-empty string")
-
-        # Process escape sequences from AI
+        raw_keystrokes = self._get_str_value_from_key("keystrokes", arguments)
         processed_keystrokes = self._process_ai_escape_sequences(raw_keystrokes)
-        preview_keystrokes = self._preview_ai_escape_sequences(raw_keystrokes)
 
         # Get terminal tab
         terminal_tab = self._get_terminal_tab(arguments)
@@ -330,7 +398,7 @@ class TerminalAITool(AITool):
         context = f"Send keystrokes to terminal (tab {tab_id}):"
 
         # Request authorization - commands can be destructive
-        authorized = await request_authorization("terminal", arguments, context, preview_keystrokes, True)
+        authorized = await request_authorization("terminal", arguments, context, None, True)
         if not authorized:
             raise AIToolAuthorizationDenied(f"User denied permission to send keystrokes: {raw_keystrokes}")
 

@@ -131,6 +131,7 @@ class PreviewAITool(AITool):
             "get_info": AIToolOperationDefinition(
                 name="get_info",
                 handler=self._get_info,
+                extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
                 description="Get high-level metadata about preview content including path, content type, and block count"
@@ -138,6 +139,7 @@ class PreviewAITool(AITool):
             "search": AIToolOperationDefinition(
                 name="search",
                 handler=self._search,
+                extract_context=None,
                 allowed_parameters={"tab_id", "search_text", "case_sensitive", "max_results"},
                 required_parameters={"tab_id", "search_text"},
                 description="Search for text in preview content. "
@@ -146,6 +148,7 @@ class PreviewAITool(AITool):
             "scroll_to": AIToolOperationDefinition(
                 name="scroll_to",
                 handler=self._scroll_to,
+                extract_context=None,
                 allowed_parameters={"tab_id", "block_index", "section_index", "text_position", "position"},
                 required_parameters={"tab_id", "block_index"},
                 description="Scroll preview to a specific content position. "
