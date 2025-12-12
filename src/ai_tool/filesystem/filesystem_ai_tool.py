@@ -956,7 +956,7 @@ Modified: {modified_time}
 Permissions: {oct(stat_info.st_mode)[-3:]}
 Extension: {path.suffix or 'None'}"""
 
-            if path.is_dir():
+            elif path.is_dir():
                 try:
                     items = list(path.iterdir())
                     file_count = sum(1 for item in items if item.is_file())
@@ -972,7 +972,8 @@ Items: {items_info}
 Modified: {modified_time}
 Permissions: {oct(stat_info.st_mode)[-3:]}"""
 
-            result = f"""Path: {display_path}
+            else:
+                result = f"""Path: {display_path}
 Type: Other (neither file nor directory)
 Modified: {modified_time}
 Permissions: {oct(stat_info.st_mode)[-3:]}"""
