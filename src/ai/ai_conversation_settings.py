@@ -29,15 +29,6 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-3-5-haiku-20241022": AIModel(
-            name="claude-3-5-haiku-20241022",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=4096,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
         "claude-sonnet-4-5-20250929": AIModel(
             name="claude-sonnet-4-5-20250929",
             provider="anthropic",
@@ -67,24 +58,6 @@ class AIConversationSettings:
         ),
         "claude-sonnet-4-20250514 (thinking)": AIModel(
             name="claude-sonnet-4-20250514",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-3-7-sonnet-20250219": AIModel(
-            name="claude-3-7-sonnet-20250219",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-3-7-sonnet-20250219 (thinking)": AIModel(
-            name="claude-3-7-sonnet-20250219",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
@@ -435,12 +408,30 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "gpt-5.2 (non-reasoning)": AIModel(
+            name="gpt-5.2",
+            provider="openai",
+            context_window=400000,
+            max_output_tokens=128000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-5.2": AIModel(
+            name="gpt-5.2",
+            provider="openai",
+            context_window=400000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "gpt-5.1 (non-reasoning)": AIModel(
             name="gpt-5.1",
             provider="openai",
             context_window=400000,
             max_output_tokens=128000,
-            supports_temperature=False,
+            supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),

@@ -14,6 +14,8 @@ New features:
 - Updated the editor AI tool diff applier to pretty-print the diff that was applied.
 - Updated the AIFPL AI tool evaluate operation to pretty-print the expression being evaluated.
 - Updated the filesystem AI tool to show the diff in the approval widget.
+- Removed Claude Haiku 3.5 and Claude Sonnet 3.7 models.
+- Added GPT 5.2 models.
 
 Bug fixes:
 
