@@ -420,9 +420,6 @@ class AIConversation:
                 tool_call.arguments
             )
 
-            # Validate operation arguments before execution
-            tool.validate_operation_arguments(tool_call.arguments)
-
             result = await tool.execute(tool_call, self, self._request_tool_authorization)
 
             self._logger.debug(

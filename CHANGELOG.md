@@ -23,6 +23,10 @@ Bug fixes:
 - Resolved problem if you deleted a message and the changed the zoom level (this would duplicate the text in the input
   prompt box).
 
+Internal structure changes:
+
+- Harmonized all the AI tools to use a new standard operation-based approach.
+
 ## v0.33 (2025-12-08)
 
 New features:

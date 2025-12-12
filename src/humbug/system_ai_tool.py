@@ -49,32 +49,14 @@ class SystemAITool(AITool):
         Returns:
             Tool definition with parameters and description
         """
-        operations = self.get_operation_definitions()
-        operation_names = list(operations.keys())
-
-        # Build description from operations
-        operation_list = []
-        for name, op_def in operations.items():
-            operation_list.append(f"- {name}: {op_def.description}")
-
-        description = (
+        return self._build_definition_from_operations(
+            name="system",
+            description_prefix=(
             "Tab lifecycle and workspace management operations. Use this tool to create, open, "
             "close, and organize tabs. Returns tab IDs (GUIDs) that can be used with specific tab tools "
-            "(editor, terminal, conversation, log, preview) to work with tab content.\n\n"
-            "Available operations:\n\n" + "\n".join(operation_list)
-        )
-
-        return AIToolDefinition(
-            name="system",
-            description=description,
-            parameters=[
-                AIToolParameter(
-                    name="operation",
-                    type="string",
-                    description="System operation to perform",
-                    required=True,
-                    enum=operation_names
-                ),
+                "(editor, terminal, conversation, log, preview) to work with tab content."
+            ),
+            additional_parameters=[
                 AIToolParameter(
                     name="file_path",
                     type="string",
@@ -277,6 +259,8 @@ class SystemAITool(AITool):
         """
         Execute a system operation.
 
+        Validates mindspace access before delegating to base class.
+
         Args:
             tool_call: Tool call containing operation name and arguments
             requester_ref: Reference to the requester
@@ -288,43 +272,16 @@ class SystemAITool(AITool):
         Raises:
             AIToolExecutionError: If operation fails
         """
-        # Validate mindspace is open
+        # Validate mindspace is open before any operation
         self._validate_mindspace_access()
 
-        # Extract operation name
-        arguments = tool_call.arguments
-        operation = arguments.get("operation")
-        if not operation:
-            raise AIToolExecutionError("No 'operation' argument provided")
-
-        if not isinstance(operation, str):
-            raise AIToolExecutionError("'operation' must be a string")
-
-        # Get operation definition
-        operation_definitions = self.get_operation_definitions()
-        if operation not in operation_definitions:
-            available_operations = ", ".join(sorted(operation_definitions.keys()))
-            raise AIToolExecutionError(
-                f"Unsupported operation: {operation}. Available operations: {available_operations}"
-            )
-
-        operation_def = operation_definitions[operation]
-
-        self._logger.debug("System operation requested: %s", operation)
-
-        try:
-            return await operation_def.handler(tool_call, request_authorization)
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            self._logger.error("Unexpected error in system operation '%s': %s", operation, str(e), exc_info=True)
-            raise AIToolExecutionError(f"System operation failed: {str(e)}") from e
+        # Delegate to base class for operation routing
+        return await super().execute(tool_call, requester_ref, request_authorization)
 
     async def _open_editor_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Open or create a file in an editor tab."""
@@ -373,6 +330,7 @@ class SystemAITool(AITool):
     async def _new_terminal_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Create a new terminal tab."""
@@ -400,6 +358,7 @@ class SystemAITool(AITool):
     async def _open_conversation_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Open an existing conversation tab."""
@@ -450,6 +409,7 @@ class SystemAITool(AITool):
     async def _new_conversation_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Create a new conversation tab."""
@@ -523,6 +483,7 @@ class SystemAITool(AITool):
     async def _show_system_shell_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Show the system shell tab."""
@@ -550,6 +511,7 @@ class SystemAITool(AITool):
     async def _show_log_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Show the mindspace log tab."""
@@ -577,6 +539,7 @@ class SystemAITool(AITool):
     async def _open_preview_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Open preview view for a specific location or mindspace root."""
@@ -617,6 +580,7 @@ class SystemAITool(AITool):
     async def _get_tab_info(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get information about a specific tab by ID or the current tab."""
@@ -660,6 +624,7 @@ class SystemAITool(AITool):
     async def _close_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Close an existing tab by ID."""
@@ -691,6 +656,7 @@ class SystemAITool(AITool):
     async def _list_tabs(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """List all currently open tabs across all columns."""
@@ -731,6 +697,7 @@ class SystemAITool(AITool):
     async def _move_tab(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Move a tab to a specific column."""

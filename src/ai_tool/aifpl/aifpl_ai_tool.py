@@ -2,12 +2,13 @@
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Dict
 
 from aifpl import AIFPL, AIFPLError
 from ai_tool import (
     AITool, AIToolCall, AIToolDefinition, AIToolParameter, AIToolResult,
-    AIToolExecutionError, AIToolTimeoutError, AIToolAuthorizationCallback
+    AIToolExecutionError, AIToolTimeoutError, AIToolAuthorizationCallback,
+    AIToolOperationDefinition
 )
 
 
@@ -26,9 +27,9 @@ class AIFPLAITool(AITool):
         Returns:
             Tool definition with parameters and description
         """
-        return AIToolDefinition(
+        return self._build_definition_from_operations(
             name="AIFPL",
-            description=(
+            description_prefix=(
                 "The AIFPL (AI Functional Programming Language) tool offers a LISP-like (S expression) syntax for "
                 "mathematical expressions, string/boolean operations, list manipulation, conditional evaluation, "
                 "pattern matching, and functional programming with lambda expressions and iteration. "
@@ -146,7 +147,7 @@ class AIFPLAITool(AITool):
                 "- The user will not see the AIFPL code or AIFPL results directly; if you want to show either, you must "
                 "format it as a message to the user."
             ),
-            parameters=[
+            additional_parameters=[
                 AIToolParameter(
                     name="expression",
                     type="string",
@@ -156,7 +157,25 @@ class AIFPLAITool(AITool):
             ]
         )
 
-    def _evaluate_expression(self, expression: str) -> str:
+    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+        """
+        Get operation definitions for this tool.
+
+        Returns:
+            Dictionary mapping operation names to their definitions
+        """
+        return {
+            "evaluate": AIToolOperationDefinition(
+                name="evaluate",
+                handler=self._evaluate,
+                extract_context=self._extract_evaluate_context,
+                allowed_parameters={"expression"},
+                required_parameters={"expression"},
+                description="Evaluate an AIFPL expression"
+            )
+        }
+
+    def _evaluate_expression_sync(self, expression: str) -> str:
         """
         Synchronous helper for expression evaluation.
 
@@ -172,33 +191,31 @@ class AIFPLAITool(AITool):
         # Use the new evaluate_and_format method for proper LISP formatting
         return self._tool.evaluate_and_format(expression)
 
-    def extract_context(self, tool_call: AIToolCall) -> str | None:
+    def _extract_evaluate_context(self, arguments: Dict[str, Any]) -> str | None:
         """
-        Extract context from the tool call.
+        Extract context for evaluate operation.
 
         Args:
-            tool_call: The tool call object
+            arguments: Tool arguments
 
         Returns:
             Context string if applicable, otherwise None
         """
-        arguments = tool_call.arguments
         expression = arguments.get("expression", "")
         return f"AIFPL `expression` is:\n```aifpl\n{expression}\n```"
 
-    async def execute(
+    async def _evaluate(
         self,
         tool_call: AIToolCall,
-        requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
+        _requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
-        Execute the AIFPL tool with timeout protection.
+        Evaluate an AIFPL expression with timeout protection.
 
         Args:
             tool_call: Tool call containing the expression to evaluate
-            requester_ref: Reference to the requester
-            request_authorization: Function to call if we need to request authorization
+            request_authorization: Authorization callback (not used for AIFPL)
 
         Returns:
             AIToolResult containing the calculation result
@@ -210,12 +227,7 @@ class AIFPLAITool(AITool):
         arguments = tool_call.arguments
         expression = arguments.get("expression", "")
 
-        # Validate expression is provided
-        if not expression:
-            self._logger.error("AIFPL tool called without expression argument")
-            raise AIToolExecutionError("Expression is required")
-
-        # Validate expression is a string
+        # Validate expression type
         if not isinstance(expression, str):
             self._logger.error("AIFPL tool called with non-string expression: %s", type(expression).__name__)
             raise AIToolExecutionError("Expression must be a string")
@@ -226,7 +238,7 @@ class AIFPLAITool(AITool):
             # Run calculation with timeout protection
             try:
                 result = await asyncio.wait_for(
-                    asyncio.to_thread(self._evaluate_expression, expression),
+                    asyncio.to_thread(self._evaluate_expression_sync, expression),
                     timeout=10.0  # Increased timeout for complex functional programming
                 )
             except asyncio.TimeoutError as e:

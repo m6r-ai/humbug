@@ -237,29 +237,6 @@ class FileSystemAITool(AITool):
             )
         }
 
-    def _get_str_value_from_key(self, key: str, arguments: Dict[str, Any]) -> str:
-        """
-        Extract string value from arguments dictionary.
-
-        Args:
-            key: Key to extract from arguments
-            arguments: Dictionary containing operation parameters
-
-        Returns:
-            String value for the given key
-
-        Raises:
-            AIToolExecutionError: If key is missing or value is not a string
-        """
-        if key not in arguments:
-            raise AIToolExecutionError(f"No '{key}' argument provided")
-
-        value = arguments[key]
-        if not isinstance(value, str):
-            raise AIToolExecutionError(f"'{key}' must be a string")
-
-        return value
-
     def _validate_and_resolve_path(self, key: str, path_str: str) -> Tuple[Path, str]:
         """
         Validate path and resolve to absolute path with display path.
@@ -321,72 +298,14 @@ class FileSystemAITool(AITool):
             # Ignore errors during context extraction
             return None
 
-    async def execute(
-        self,
-        tool_call: AIToolCall,
-        requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """
-        Execute the filesystem operation with proper validation and authorization.
-
-        Args:
-            tool_call: Tool call containing operation name and arguments
-            requester_ref: Reference to the requester
-            request_authorization: Function to call for user authorization
-
-        Returns:
-            AIToolResult containing the operation result
-
-        Raises:
-            AIToolExecutionError: If operation fails
-            AIToolAuthorizationDenied: If user denies authorization
-        """
-        # Extract operation name
-        arguments = tool_call.arguments
-        operation = arguments.get("operation")
-        if not operation:
-            raise AIToolExecutionError("No 'operation' argument provided")
-
-        if not isinstance(operation, str):
-            raise AIToolExecutionError("'operation' must be a string")
-
-        # Get operation definition
-        operation_definitions = self.get_operation_definitions()
-        if operation not in operation_definitions:
-            available_operations = ", ".join(sorted(operation_definitions.keys()))
-            raise AIToolExecutionError(
-                f"Unsupported operation: {operation}. Available operations: {available_operations}"
-            )
-
-        operation_def = operation_definitions[operation]
-
-        self._logger.debug("Filesystem operation requested: %s", operation)
-
-        try:
-            result = await operation_def.handler(arguments, request_authorization)
-            self._logger.info("Filesystem operation completed successfully: %s", operation)
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="filesystem",
-                content=result
-            )
-
-        except (AIToolExecutionError, AIToolAuthorizationDenied):
-            # Re-raise our own errors
-            raise
-
-        except Exception as e:
-            self._logger.error("Unexpected error in filesystem operation '%s': %s", operation, str(e), exc_info=True)
-            raise AIToolExecutionError(f"Filesystem operation failed: {str(e)}") from e
-
     async def _read_file(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Read file contents."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -424,14 +343,20 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
 
-        return f"File: {display_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"File: {display_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
+        )
 
     async def _read_file_lines(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Read file contents with line numbers."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -510,7 +435,11 @@ class FileSystemAITool(AITool):
         if start_line is not None or end_line is not None:
             range_desc = f" (lines {start_line or 1}-{end_line or 'end'})"
 
-        return f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}"
+        )
 
     def _write_file_context(self, arguments: Dict[str, Any]) -> str | None:
         """Extract context for write_file operation."""
@@ -520,8 +449,14 @@ class FileSystemAITool(AITool):
         language_str = ProgrammingLanguageUtils.get_name(language)
         return f"`content` is:\n```{language_str}\n{context}\n```"
 
-    async def _write_file(self, arguments: Dict[str, Any], request_authorization: AIToolAuthorizationCallback) -> str:
+    async def _write_file(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
         """Write content to file (create or overwrite)."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -593,7 +528,11 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
 
-        return f"File written successfully: {display_path} ({content_size:,} bytes)"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"File written successfully: {display_path} ({content_size:,} bytes)"
+        )
 
     def _append_to_file_context(self, arguments: Dict[str, Any]) -> str | None:
         """Extract context for append_to_file operation."""
@@ -608,10 +547,12 @@ class FileSystemAITool(AITool):
 
     async def _append_to_file(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Append content to existing file."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -656,14 +597,20 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to append to file: {str(e)}") from e
 
-        return f"Content appended successfully: {display_path} (+{content_size:,} bytes)"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"Content appended successfully: {display_path} (+{content_size:,} bytes)"
+        )
 
     async def _list_directory(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """List directory contents."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -724,14 +671,20 @@ class FileSystemAITool(AITool):
                 size_str = f" ({item['size']:,} bytes)" if item['size'] is not None else ""
                 result_lines.append(f"📄 {item['name']}{size_str}")
 
-        return "\n".join(result_lines)
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content="\n".join(result_lines)
+        )
 
     async def _create_directory(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Create directory (with parents if needed)."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
         create_parents = arguments.get("create_parents", True)
@@ -766,14 +719,20 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to create directory: {str(e)}") from e
 
-        return f"Directory created successfully: {display_path}"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"Directory created successfully: {display_path}"
+        )
 
     async def _remove_directory(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Remove empty directory."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -809,14 +768,20 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to remove directory: {str(e)}") from e
 
-        return f"Directory removed successfully: {display_path}"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"Directory removed successfully: {display_path}"
+        )
 
     async def _delete_file(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Delete file."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -844,14 +809,20 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to delete file: {str(e)}") from e
 
-        return f"File deleted successfully: {display_path}"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"File deleted successfully: {display_path}"
+        )
 
     async def _copy_file(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Copy file to destination."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         source_path, source_display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -900,14 +871,20 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to copy file: {str(e)}") from e
 
-        return f"File copied successfully: {source_display_path} -> {dest_display_path}"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"File copied successfully: {source_display_path} -> {dest_display_path}"
+        )
 
     async def _move(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Move/rename file or directory."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         source_path, source_display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -953,14 +930,20 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to move: {str(e)}") from e
 
-        return f"Moved successfully: {source_display_path} -> {dest_display_path}"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"Moved successfully: {source_display_path} -> {dest_display_path}"
+        )
 
     async def _get_info(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Get detailed information about file or directory."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -973,7 +956,7 @@ class FileSystemAITool(AITool):
             modified_time = datetime.fromtimestamp(stat_info.st_mtime).isoformat()
 
             if path.is_file():
-                return f"""File: {display_path}
+                result = f"""File: {display_path}
 Type: File
 Size: {stat_info.st_size:,} bytes
 Modified: {modified_time}
@@ -990,16 +973,22 @@ Extension: {path.suffix or 'None'}"""
                 except PermissionError:
                     items_info = "Permission denied"
 
-                return f"""Directory: {display_path}
+                result = f"""Directory: {display_path}
 Type: Directory
 Items: {items_info}
 Modified: {modified_time}
 Permissions: {oct(stat_info.st_mode)[-3:]}"""
 
-            return f"""Path: {display_path}
+            result = f"""Path: {display_path}
 Type: Other (neither file nor directory)
 Modified: {modified_time}
 Permissions: {oct(stat_info.st_mode)[-3:]}"""
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="filesystem",
+                content=result
+            )
 
         except PermissionError as e:
             raise AIToolExecutionError(f"Permission denied getting info: {str(e)}") from e
@@ -1014,10 +1003,12 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
 
     async def _apply_diff_to_file(
         self,
-        arguments: Dict[str, Any],
+        tool_call: AIToolCall,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
-    ) -> str:
+    ) -> AIToolResult:
         """Apply a unified diff to a file."""
+        arguments = tool_call.arguments
         path_arg = self._get_str_value_from_key("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
@@ -1093,7 +1084,11 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
 
         # If dry run, return validation result
         if dry_run:
-            return f"Diff validation successful for '{display_path}': {result.hunks_applied} hunk(s) can be applied"
+            return AIToolResult(
+                id=tool_call.id,
+                name="filesystem",
+                content=f"Diff validation successful for '{display_path}': {result.hunks_applied} hunk(s) can be applied"
+            )
 
         # Request authorization to save modified file
         context = f"This will apply a diff to file '{display_path}' ({result.hunks_applied} hunk(s)). " \
@@ -1131,4 +1126,8 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
         except OSError as e:
             raise AIToolExecutionError(f"Failed to write file: {str(e)}") from e
 
-        return f"Diff applied successfully to '{display_path}': {result.hunks_applied} hunk(s) applied"
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=f"Diff applied successfully to '{display_path}': {result.hunks_applied} hunk(s) applied"
+        )

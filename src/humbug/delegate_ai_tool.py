@@ -6,7 +6,7 @@ from ai import AIConversation, AIConversationSettings, AIManager, AIReasoningCap
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
-    AIToolResult, AIToolCall
+    AIToolResult, AIToolCall, AIToolOperationDefinition
 )
 
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
@@ -45,9 +45,9 @@ class DelegateAITool(AITool):
         Returns:
             Tool definition with parameters and description
         """
-        return AIToolDefinition(
+        return self._build_definition_from_operations(
             name="delegate_ai",
-            description=(
+            description_prefix=(
                 "The delegate_ai tool lets you (the parent AI) delegate cognitive tasks to specialized child AI instances "
                 "by creating a focused AI conversation for a specific task. The delegated AI has access to the same tools as "
                 "you and can engage in multi-turn collaboration with you if you provide it with a session_id returned from a "
@@ -81,7 +81,7 @@ class DelegateAITool(AITool):
 
                 "Returns: the delegated AI's response to the task_prompt, or an error message if the operation fails"
             ),
-            parameters=[
+            additional_parameters=[
                 AIToolParameter(
                     name="task_prompt",
                     type="string",
@@ -111,6 +111,24 @@ class DelegateAITool(AITool):
             ]
         )
 
+    def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
+        """
+        Get operation definitions for this tool.
+
+        Returns:
+            Dictionary mapping operation names to their definitions
+        """
+        return {
+            "delegate": AIToolOperationDefinition(
+                name="delegate",
+                handler=self._delegate,
+                extract_context=None,
+                allowed_parameters={"task_prompt", "session_id", "model", "temperature"},
+                required_parameters={"task_prompt"},
+                description="Delegate a task to a specialized child AI instance"
+            )
+        }
+
     def _validate_mindspace_access(self) -> None:
         """
         Validate that a mindspace is currently open.
@@ -122,29 +140,6 @@ class DelegateAITool(AITool):
             raise AIToolExecutionError(
                 "No mindspace is currently open. AI delegation requires an active mindspace."
             )
-
-    def _get_str_value_from_key(self, key: str, arguments: Dict[str, Any]) -> str:
-        """
-        Extract string value from arguments dictionary.
-
-        Args:
-            key: Key to extract from arguments
-            arguments: Dictionary containing operation parameters
-
-        Returns:
-            String value for the given key
-
-        Raises:
-            AIToolExecutionError: If key is missing or value is not a string
-        """
-        if key not in arguments:
-            raise AIToolExecutionError(f"No '{key}' argument provided")
-
-        value = arguments[key]
-        if not isinstance(value, str):
-            raise AIToolExecutionError(f"'{key}' must be a string")
-
-        return value
 
     def _validate_and_resolve_session_id(self, session_id: str) -> str:
         """
@@ -183,14 +178,14 @@ class DelegateAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"Invalid session ID '{session_id}': {str(e)}") from e
 
-    async def execute(
+    async def _delegate(
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
+        _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
-        Execute the AI delegation with continuation support.
+        Delegate a task to a specialized child AI instance.
 
         Args:
             tool_call: Tool call containing task prompt and arguments

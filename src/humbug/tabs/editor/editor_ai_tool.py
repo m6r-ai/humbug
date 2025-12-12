@@ -240,58 +240,6 @@ class EditorAITool(AITool):
         diff_content = arguments["diff_content"]
         return f"Diff content:\n```diff\n{diff_content}\n```"
 
-    async def execute(
-        self,
-        tool_call: AIToolCall,
-        requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """
-        Execute an editor operation.
-
-        Args:
-            tool_call: Tool call containing operation and arguments
-            requester_ref: Reference to the requester
-            request_authorization: Function to request user authorization
-
-        Returns:
-            Result of the operation
-
-        Raises:
-            AIToolExecutionError: If operation fails
-            AIToolAuthorizationDenied: If user denies authorization
-        """
-        arguments = tool_call.arguments
-        operation = arguments.get("operation")
-
-        if not operation:
-            raise AIToolExecutionError("No 'operation' argument provided")
-
-        if not isinstance(operation, str):
-            raise AIToolExecutionError("'operation' must be a string")
-
-        # Get operation definition
-        operation_definitions = self.get_operation_definitions()
-        if operation not in operation_definitions:
-            available_operations = ", ".join(sorted(operation_definitions.keys()))
-            raise AIToolExecutionError(
-                f"Unsupported operation: {operation}. Available operations: {available_operations}"
-            )
-
-        operation_def = operation_definitions[operation]
-
-        self._logger.debug("Editor operation requested: %s", operation)
-
-        try:
-            return await operation_def.handler(tool_call, request_authorization)
-
-        except (AIToolExecutionError, AIToolAuthorizationDenied):
-            raise
-
-        except Exception as e:
-            self._logger.error("Unexpected error in editor operation '%s': %s", operation, str(e), exc_info=True)
-            raise AIToolExecutionError(f"Editor operation failed: {str(e)}") from e
-
     def _get_editor_tab(self, arguments: Dict[str, Any]) -> EditorTab:
         """
         Get an editor tab by ID.
@@ -324,6 +272,7 @@ class EditorAITool(AITool):
     async def _read_lines(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read content from an editor tab."""
@@ -377,6 +326,7 @@ class EditorAITool(AITool):
     async def _get_cursor_info(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get cursor position and selection information."""
@@ -404,6 +354,7 @@ class EditorAITool(AITool):
     async def _get_info(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get editor metadata and document information."""
@@ -431,6 +382,7 @@ class EditorAITool(AITool):
     async def _goto_line(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Move cursor to specific line and column."""
@@ -473,6 +425,7 @@ class EditorAITool(AITool):
     async def _search(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Find all occurrences of text."""
@@ -526,6 +479,7 @@ class EditorAITool(AITool):
     async def _get_selected_text(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get the currently selected text."""
@@ -560,6 +514,7 @@ class EditorAITool(AITool):
     async def _get_diff(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get unified diff between saved file and current buffer."""
@@ -609,6 +564,7 @@ class EditorAITool(AITool):
     async def _save_file(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Save the current editor content to file."""
@@ -655,6 +611,7 @@ class EditorAITool(AITool):
     async def _apply_diff(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Apply a unified diff to editor content."""

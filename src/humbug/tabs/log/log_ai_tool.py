@@ -195,57 +195,6 @@ class LogAITool(AITool):
             ),
         }
 
-    async def execute(
-        self,
-        tool_call: AIToolCall,
-        requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """
-        Execute a log operation.
-
-        Args:
-            tool_call: Tool call containing operation and arguments
-            requester_ref: Reference to the requester
-            request_authorization: Function to request user authorization
-
-        Returns:
-            Result of the operation
-
-        Raises:
-            AIToolExecutionError: If operation fails
-        """
-        arguments = tool_call.arguments
-        operation = arguments.get("operation")
-
-        if not operation:
-            raise AIToolExecutionError("No 'operation' argument provided")
-
-        if not isinstance(operation, str):
-            raise AIToolExecutionError("'operation' must be a string")
-
-        # Get operation definition
-        operation_definitions = self.get_operation_definitions()
-        if operation not in operation_definitions:
-            available_operations = ", ".join(sorted(operation_definitions.keys()))
-            raise AIToolExecutionError(
-                f"Unsupported operation: {operation}. Available operations: {available_operations}"
-            )
-
-        operation_def = operation_definitions[operation]
-
-        self._logger.debug("Log operation requested: %s", operation)
-
-        try:
-            return await operation_def.handler(tool_call, request_authorization)
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            self._logger.error("Unexpected error in log operation '%s': %s", operation, str(e), exc_info=True)
-            raise AIToolExecutionError(f"Log operation failed: {str(e)}") from e
-
     def _get_log_tab(self, arguments: Dict[str, Any]) -> LogTab:
         """
         Get a log tab by ID.
@@ -278,6 +227,7 @@ class LogAITool(AITool):
     async def _get_info(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get log metadata."""
@@ -305,6 +255,7 @@ class LogAITool(AITool):
     async def _read_messages(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read log messages."""
@@ -370,6 +321,7 @@ class LogAITool(AITool):
     async def _get_message(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get a specific log message by ID or index."""
@@ -416,6 +368,7 @@ class LogAITool(AITool):
     async def _search(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Search for text in log messages."""
@@ -466,6 +419,7 @@ class LogAITool(AITool):
     async def _scroll_to(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Scroll log to a specific message."""

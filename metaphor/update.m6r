@@ -16,15 +16,17 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        The application contains an editor tab type and an AI tool that can control the editor.
-
-        The code can be found in src/humbug/tabs/editor
+        The application contains a series of AI tools.  These can be found in src/humbug/system_ai_tool.py,
+        src/ai_tool/*.py src/ai_tool/*/*.py, src/humbug/tabs/conversation/conversation_ai_tool.py,
+        src/humbug/tabs/editor/editor_ai_tool.py, src/humbug/tabs/preview/preview_ai_tool.py,
+        src/humbug/tabs/log/log_ai_tool.py, src/humbug/tabs/terminal/terminal_ai_tool.py
 
 Action:
     # Describe the details of the change required.
-    I would like to add a feature to capture unified diffs between the editor buffer content and the file
-    on which the editor is operating.  The idea is so I can ask an AI to show me diffs before I agree to
-    save a modified file.
+    The current AI tools are generally based on the idea of having an "operation" but the AIFPL tool does not
+    use this approach.  I want to harmonize things so all the tools are implemented the same way as this
+    will allow a lot more scope to extract common logic and features.  In many cases functionality needs to
+    move to the base class.
 
     Please propose changes to achieve this.
 

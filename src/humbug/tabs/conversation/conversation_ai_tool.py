@@ -197,57 +197,6 @@ class ConversationAITool(AITool):
             ),
         }
 
-    async def execute(
-        self,
-        tool_call: AIToolCall,
-        requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """
-        Execute a conversation operation.
-
-        Args:
-            tool_call: Tool call containing operation and arguments
-            requester_ref: Reference to the requester
-            request_authorization: Function to request user authorization
-
-        Returns:
-            Result of the operation
-
-        Raises:
-            AIToolExecutionError: If operation fails
-        """
-        arguments = tool_call.arguments
-        operation = arguments.get("operation")
-
-        if not operation:
-            raise AIToolExecutionError("No 'operation' argument provided")
-
-        if not isinstance(operation, str):
-            raise AIToolExecutionError("'operation' must be a string")
-
-        # Get operation definition
-        operation_definitions = self.get_operation_definitions()
-        if operation not in operation_definitions:
-            available_operations = ", ".join(sorted(operation_definitions.keys()))
-            raise AIToolExecutionError(
-                f"Unsupported operation: {operation}. Available operations: {available_operations}"
-            )
-
-        operation_def = operation_definitions[operation]
-
-        self._logger.debug("Conversation operation requested: %s", operation)
-
-        try:
-            return await operation_def.handler(tool_call, request_authorization)
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            self._logger.error("Unexpected error in conversation operation '%s': %s", operation, str(e), exc_info=True)
-            raise AIToolExecutionError(f"Conversation operation failed: {str(e)}") from e
-
     def _get_conversation_tab(self, arguments: Dict[str, Any]) -> ConversationTab:
         """
         Get a conversation tab by ID.
@@ -280,6 +229,7 @@ class ConversationAITool(AITool):
     async def _get_info(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get conversation metadata."""
@@ -311,6 +261,7 @@ class ConversationAITool(AITool):
     async def _read_messages(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read messages from conversation."""
@@ -376,6 +327,7 @@ class ConversationAITool(AITool):
     async def _get_message(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get a specific message by ID or index."""
@@ -422,6 +374,7 @@ class ConversationAITool(AITool):
     async def _search(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Search for text in conversation."""
@@ -472,6 +425,7 @@ class ConversationAITool(AITool):
     async def _scroll_to(
         self,
         tool_call: AIToolCall,
+        _requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Scroll conversation to a specific message."""

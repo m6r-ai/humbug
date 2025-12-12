@@ -202,54 +202,38 @@ class ClockAITool(AITool):
             f"Unable to parse time '{time_str}'. Supported formats: ISO format (2024-01-15T14:30:00), timestamp (1705339800)"
         )
 
-    async def execute(
+    async def _get_time(
         self,
         tool_call: AIToolCall,
-        requester_ref: Any,
-        request_authorization: AIToolAuthorizationCallback
+        _requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
-        """Execute the clock tool operation."""
-        arguments = tool_call.arguments
-
-        # Validate operation arguments
-        self.validate_operation_arguments(arguments)
-
-        # Get operation definition
-        operation_definitions = self.get_operation_definitions()
-        operation = arguments["operation"]
-        operation_def = operation_definitions[operation]
-
-        try:
-            result = await operation_def.handler(arguments)
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="clock",
-                content=result
-            )
-
-        except AIToolExecutionError:
-            # Re-raise our own errors
-            raise
-
-        except Exception as e:
-            self._logger.error("Unexpected error in clock operation '%s': %s", operation, str(e), exc_info=True)
-            raise AIToolExecutionError(f"Clock operation failed: {str(e)}") from e
-
-    async def _get_time(self, arguments: Dict[str, Any]) -> str:
         """Get current time operation."""
+        arguments = tool_call.arguments
         format_type = arguments.get("format", "iso")
         timezone_str = arguments.get("timezone")
 
         try:
             now = self._get_current_time(timezone_str)
-            return self._format_time(now, format_type)
+            result = self._format_time(now, format_type)
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to get current time: {str(e)}") from e
 
-    async def _sleep(self, arguments: Dict[str, Any]) -> str:
+        return AIToolResult(
+            id=tool_call.id,
+            name="clock",
+            content=result
+        )
+
+    async def _sleep(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
         """Sleep operation."""
+        arguments = tool_call.arguments
         duration = arguments.get("duration")
         format_type = arguments.get("format", "iso")
         timezone_str = arguments.get("timezone")
@@ -275,7 +259,12 @@ class ClockAITool(AITool):
             result = self._format_time(now, format_type)
 
             self._logger.debug("Sleep completed, current time: %s", result)
-            return result
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="clock",
+                content=result
+            )
 
         except asyncio.CancelledError:
             self._logger.info("Sleep operation was cancelled")
@@ -285,8 +274,14 @@ class ClockAITool(AITool):
             self._logger.error("Error during sleep operation: %s", str(e), exc_info=True)
             raise AIToolExecutionError(f"Failed to sleep: {str(e)}") from e
 
-    async def _alarm(self, arguments: Dict[str, Any]) -> str:
+    async def _alarm(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
         """Alarm operation - sleep until specified time."""
+        arguments = tool_call.arguments
         time_str = arguments.get("time")
         format_type = arguments.get("format", "iso")
         timezone_str = arguments.get("timezone")
@@ -309,7 +304,11 @@ class ClockAITool(AITool):
             if target_time <= current_time:
                 self._logger.debug("Alarm time %s is in the past, returning immediately", target_time)
                 now = self._get_current_time(timezone_str)
-                return self._format_time(now, format_type)
+                return AIToolResult(
+                    id=tool_call.id,
+                    name="clock",
+                    content=self._format_time(now, format_type)
+                )
 
             # Calculate sleep duration
             sleep_duration = (target_time - current_time).total_seconds()
@@ -322,9 +321,12 @@ class ClockAITool(AITool):
             # Return current time after alarm
             now = self._get_current_time(timezone_str)
             result = self._format_time(now, format_type)
-
             self._logger.debug("Alarm completed, current time: %s", result)
-            return result
+            return AIToolResult(
+                id=tool_call.id,
+                name="clock",
+                content=result
+            )
 
         except asyncio.CancelledError:
             self._logger.info("Alarm operation was cancelled")
