@@ -204,27 +204,20 @@ class DelegateAITool(AITool):
 
         # Extract arguments
         arguments = tool_call.arguments
-        task_prompt = self._get_str_value_from_key("task_prompt", arguments)
+        task_prompt = self._get_required_str_value("task_prompt", arguments)
 
-        session_id_arg = arguments.get("session_id")
-        model = arguments.get("model")
+        session_id_arg = self._get_optional_str_value("session_id", arguments)
+        model = self._get_optional_str_value("model", arguments)
         temperature = arguments.get("temperature")
 
         # Validate session_id if provided
         session_id = None
         if session_id_arg:
-            if not isinstance(session_id_arg, str):
-                raise AIToolExecutionError("'session_id' must be a string")
-
             if session_id_arg == "current":
                 session_id = "current"
 
             else:
                 session_id = self._validate_and_resolve_session_id(session_id_arg)
-
-        # Validate model if provided
-        if model and not isinstance(model, str):
-            raise AIToolExecutionError("'model' must be a string")
 
         # Validate temperature if provided
         if temperature is not None:

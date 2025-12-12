@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from ai_tool import (
     AITool,
@@ -364,7 +364,7 @@ class LogAITool(AITool):
 
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         levels = self._get_optional_list_value("levels", arguments)
-        max_results = self._get_optional_int_value("max_results", arguments, 50)
+        max_results = cast(int, self._get_optional_int_value("max_results", arguments, 50))
 
         try:
             result = log_tab.search_messages(

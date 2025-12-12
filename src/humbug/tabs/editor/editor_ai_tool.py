@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from ai_tool import (
     AITool,
@@ -391,7 +391,7 @@ class EditorAITool(AITool):
         if not isinstance(line, int):
             raise AIToolExecutionError("'line' must be an integer")
 
-        column = self._get_optional_int_value("column", arguments, 1)
+        column = cast(int, self._get_optional_int_value("column", arguments, 1))
 
         try:
             editor_tab.goto_line(line, column)
@@ -507,7 +507,7 @@ class EditorAITool(AITool):
         editor_tab = self._get_editor_tab(arguments)
         tab_id = editor_tab.tab_id()
 
-        context_lines = self._get_optional_int_value("context_lines", arguments, 3)
+        context_lines = cast(int, self._get_optional_int_value("context_lines", arguments, 3))
         if context_lines < 0:
             raise AIToolExecutionError("'context_lines' must be non-negative")
 

@@ -454,7 +454,7 @@ class FileSystemAITool(AITool):
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         content = self._get_required_str_value("content", arguments)
-        encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
+        encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
         create_parents = self._get_optional_bool_value("create_parents", arguments, False)
 
         # Check content size
@@ -557,7 +557,7 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
         content = self._get_required_str_value("content", arguments)
-        encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
+        encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
 
         # Check total size after append
         current_size = path.stat().st_size

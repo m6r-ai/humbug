@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from ai_tool import (
     AITool,
@@ -370,7 +370,7 @@ class ConversationAITool(AITool):
 
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         message_types = self._get_optional_list_value("message_types", arguments)
-        max_results = self._get_optional_int_value("max_results", arguments, 50)
+        max_results = cast(int, self._get_optional_int_value("max_results", arguments, 50))
 
         try:
             result = conversation_tab.search_messages(

@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, cast
 
 from ai_tool import (
     AITool,
@@ -229,7 +229,7 @@ class PreviewAITool(AITool):
         search_text = self._get_required_str_value("search_text", arguments)
 
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
-        max_results = self._get_optional_int_value("max_results", arguments, 50)
+        max_results = cast(int, self._get_optional_int_value("max_results", arguments, 50))
 
         try:
             result = preview_tab.search_content(
@@ -270,8 +270,8 @@ class PreviewAITool(AITool):
         if not isinstance(block_index, int):
             raise AIToolExecutionError("'block_index' must be an integer")
 
-        section_index = self._get_optional_int_value("section_index", arguments, 0)
-        text_position = self._get_optional_int_value("text_position", arguments, 0)
+        section_index = cast(int, self._get_optional_int_value("section_index", arguments, 0))
+        text_position = cast(int, self._get_optional_int_value("text_position", arguments, 0))
         position = self._get_optional_str_value("position", arguments, "center")
 
         if position not in ("top", "center", "bottom"):
