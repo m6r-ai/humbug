@@ -61,7 +61,7 @@ def mock_authorization():
     """Fixture providing a mocked authorization callback."""
     mock = MagicMock()
 
-    async def mock_auth_callback(_tool_name, _arguments, _context, _destructive):
+    async def mock_auth_callback(_tool_name, _arguments, _context, _requester_ref, _destructive):
         return True  # Default to authorized
 
     mock.side_effect = mock_auth_callback
@@ -73,7 +73,7 @@ def mock_authorization_denied():
     """Fixture providing a mocked authorization callback that denies requests."""
     mock = MagicMock()
 
-    async def mock_auth_callback(_tool_name, _arguments, _context, _destructive):
+    async def mock_auth_callback(_tool_name, _arguments, _context, _requester_ref, _destructive):
         return False  # Always deny
 
     mock.side_effect = mock_auth_callback

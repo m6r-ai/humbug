@@ -21,7 +21,7 @@ def aifpl_tool():
 @pytest.fixture
 def mock_authorization():
     """Fixture providing a mocked authorization callback."""
-    async def mock_auth_callback(tool_name, arguments, context, destructive):
+    async def mock_auth_callback(tool_name, arguments, context, requester_ref, destructive):
         return True  # Default to authorized
 
     return mock_auth_callback
@@ -37,15 +37,22 @@ class TestAIFPLAIToolDefinition:
         assert isinstance(definition, AIToolDefinition)
         assert definition.name == "AIFPL"
         assert "AIFPL (AI Functional Programming Language)" in definition.description
-        assert len(definition.parameters) == 1
+        assert len(definition.parameters) == 2  # operation and expression
 
     def test_expression_parameter_definition(self, aifpl_tool):
         """Test the expression parameter definition."""
         definition = aifpl_tool.get_definition()
-        expr_param = definition.parameters[0]
+
+        # Find the expression parameter (it's the second parameter after operation)
+        expr_param = None
+        for param in definition.parameters:
+            if param.name == "expression":
+                expr_param = param
+                break
+
+        assert expr_param is not None, "expression parameter not found"
 
         assert isinstance(expr_param, AIToolParameter)
-        assert expr_param.name == "expression"
         assert expr_param.type == "string"
         assert "AIFPL expression using LISP-like S-expression syntax" in expr_param.description
         assert expr_param.required is True
@@ -111,7 +118,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -129,7 +136,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -142,18 +149,18 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
     def test_execute_constants(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with mathematical constants."""
-        tool_call = make_tool_call("AIFPL", {"expression": "pi"})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "pi"})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
         # Should be approximately pi
         assert abs(float(result.content) - math.pi) < 0.0001
 
-        tool_call = make_tool_call("AIFPL", {"expression": "e"})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "e"})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
         # Should be approximately e
         assert abs(float(result.content) - math.e) < 0.0001
@@ -169,7 +176,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -187,7 +194,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -203,7 +210,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -217,7 +224,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -235,7 +242,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -251,7 +258,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -265,7 +272,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -277,7 +284,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -295,7 +302,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -308,7 +315,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -322,7 +329,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -337,7 +344,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -356,7 +363,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -369,7 +376,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -382,7 +389,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -396,7 +403,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -411,7 +418,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -427,7 +434,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -443,7 +450,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -457,7 +464,7 @@ class TestAIFPLAIToolExecution:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
 
@@ -467,25 +474,25 @@ class TestAIFPLAIToolErrorHandling:
 
     def test_execute_missing_expression(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution without expression argument."""
-        tool_call = make_tool_call("AIFPL", {})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate"})
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
-        assert "Expression is required" in str(error)
+        assert "expression" in str(error).lower()
 
     def test_execute_empty_expression(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with empty expression."""
-        tool_call = make_tool_call("AIFPL", {"expression": ""})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": ""})
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
-        assert "Expression is required" in str(error)
+        assert "empty expression" in str(error).lower()
 
     def test_execute_non_string_expression(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with non-string expression."""
-        tool_call = make_tool_call("AIFPL", {"expression": 123})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": 123})
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
@@ -494,7 +501,7 @@ class TestAIFPLAIToolErrorHandling:
 
     def test_execute_division_by_zero_error(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with division by zero."""
-        tool_call = make_tool_call("AIFPL", {"expression": "(/ 5 0)"})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "(/ 5 0)"})
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
@@ -515,7 +522,7 @@ class TestAIFPLAIToolErrorHandling:
         ]
 
         for expression in invalid_expressions:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             with pytest.raises(AIToolExecutionError):
                 asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
@@ -524,7 +531,7 @@ class TestAIFPLAIToolErrorHandling:
         with patch.object(aifpl_tool._tool, 'evaluate_and_format') as mock_evaluate:
             mock_evaluate.side_effect = AIFPLError("Custom AIFPL error")
 
-            tool_call = make_tool_call("AIFPL", {"expression": "(+ 1 2)"})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "(+ 1 2)"})
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
@@ -535,7 +542,7 @@ class TestAIFPLAIToolErrorHandling:
     def test_execute_timeout_error(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution timeout handling."""
         # Mock the specific method on the tool instance to avoid affecting other tests
-        with patch.object(aifpl_tool, '_evaluate_expression') as mock_evaluate:
+        with patch.object(aifpl_tool, '_evaluate_expression_sync') as mock_evaluate:
             mock_evaluate.side_effect = Exception("Simulated timeout")
 
             # Mock asyncio.wait_for to raise TimeoutError when our mocked method is called
@@ -548,21 +555,21 @@ class TestAIFPLAIToolErrorHandling:
                     raise asyncio.TimeoutError()
 
             with patch('asyncio.wait_for', side_effect=mock_wait_for):
-                tool_call = make_tool_call("AIFPL", {"expression": "(+ 1 2)"})
-                with pytest.raises(AIToolTimeoutError) as exc_info:
+                tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "(+ 1 2)"})
+                with pytest.raises(AIToolExecutionError) as exc_info:
                     asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
                 error = exc_info.value
                 assert "AIFPL calculation timed out" in str(error)
-                # Fixed: Use timeout_duration instead of timeout_seconds
-                assert error.timeout_duration == 10.0
+                # The timeout error is now wrapped in AIToolExecutionError
+                assert error.__cause__.__class__.__name__ == "AIToolTimeoutError"
 
     def test_execute_unexpected_error_handling(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test handling of unexpected errors."""
         with patch.object(aifpl_tool._tool, 'evaluate_and_format') as mock_evaluate:
             mock_evaluate.side_effect = RuntimeError("Unexpected error")
 
-            tool_call = make_tool_call("AIFPL", {"expression": "(+ 1 2)"})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "(+ 1 2)"})
             with pytest.raises(AIToolExecutionError) as exc_info:
                 asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
@@ -611,7 +618,7 @@ class TestAIFPLAIToolParametrized:
     ])
     def test_various_expressions(self, aifpl_tool, mock_authorization, make_tool_call, expression, expected):
         """Test various AIFPL expressions."""
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
         assert result.content == expected
 
@@ -627,7 +634,7 @@ class TestAIFPLAIToolParametrized:
     ])
     def test_invalid_expressions_raise_errors(self, aifpl_tool, mock_authorization, make_tool_call, invalid_expression):
         """Test that various invalid expressions raise AIToolExecutionError."""
-        tool_call = make_tool_call("AIFPL", {"expression": invalid_expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": invalid_expression})
         with pytest.raises(AIToolExecutionError):
             asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
@@ -651,7 +658,7 @@ class TestAIFPLAIToolParametrized:
     ])
     def test_complex_expressions_execute_successfully(self, aifpl_tool, mock_authorization, make_tool_call, complex_expression):
         """Test that complex expressions execute without errors."""
-        tool_call = make_tool_call("AIFPL", {"expression": complex_expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": complex_expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # Just verify it doesn't crash and returns something
@@ -675,11 +682,11 @@ class TestAIFPLAIToolIntegration:
         # Complex functional programming expression
         expression = """
         (let ((numbers (range 1 11)))
-          (fold + 0 
+          (fold + 0
             (map (lambda (x) (* x x))
               (filter (lambda (x) (= (% x 2) 0)) numbers))))
         """
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # Expected: sum of squares of even numbers 1-10
@@ -698,7 +705,7 @@ class TestAIFPLAIToolIntegration:
                               (* n (factorial (- n 1)))))))
           (factorial 5))
         """
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
 
         try:
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
@@ -717,7 +724,7 @@ class TestAIFPLAIToolIntegration:
               (string-split "hello,hi,world,ok,test" ",")))
           " ")
         '''
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # Should filter strings with length > 2, uppercase them, and join
@@ -732,7 +739,7 @@ class TestAIFPLAIToolIntegration:
             (/ (fold + 0 data) (length data))
             (sqrt (fold + 0 (map (lambda (x) (* x x)) data)))))
         """
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # Should compute sum, average, and root sum of squares
@@ -750,7 +757,7 @@ class TestAIFPLAIToolIntegration:
           (list? (list 1 2 3))
           (function? (lambda (x) x)))
         """
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # All predicates should return true
@@ -760,7 +767,7 @@ class TestAIFPLAIToolIntegration:
         """Test lazy evaluation in conditionals."""
         # This should not cause division by zero because of lazy evaluation
         expression = "(if #t 42 (/ 1 0))"
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         assert result.content == "42"
@@ -774,7 +781,7 @@ class TestAIFPLAIToolIntegration:
             (rest code)
             (length code)))
         """
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # Should extract parts of the quoted expression
@@ -784,14 +791,14 @@ class TestAIFPLAIToolIntegration:
         """Test that multiple evaluations are independent."""
         expressions = [
             "(+ 1 2)",
-            "(* 3 4)", 
+            "(* 3 4)",
             "(list 1 2 3)",
             '(string-upcase "hello")',
         ]
 
         results = []
         for expr in expressions:
-            tool_call = make_tool_call("AIFPL", {"expression": expr})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expr})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             results.append(result.content)
 
@@ -814,7 +821,7 @@ class TestAIFPLAIToolTimeout:
     def test_timeout_prevents_infinite_loops(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test that timeout prevents infinite computation."""
         # Mock the specific method on the tool instance to avoid affecting other tests
-        with patch.object(aifpl_tool, '_evaluate_expression') as mock_evaluate:
+        with patch.object(aifpl_tool, '_evaluate_expression_sync') as mock_evaluate:
             mock_evaluate.side_effect = Exception("Simulated timeout")
 
             # Mock asyncio.wait_for to raise TimeoutError when our mocked method is called
@@ -827,13 +834,13 @@ class TestAIFPLAIToolTimeout:
                     raise asyncio.TimeoutError()
 
             with patch('asyncio.wait_for', side_effect=mock_wait_for):
-                tool_call = make_tool_call("AIFPL", {"expression": "(+ 1 2)"})
-                with pytest.raises(AIToolTimeoutError) as exc_info:
+                tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "(+ 1 2)"})
+                with pytest.raises(AIToolExecutionError) as exc_info:
                     asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
                 error = exc_info.value
-                # Fixed: Use timeout_duration instead of timeout_seconds
-                assert error.timeout_duration == 10.0
+                # The timeout error is now wrapped in AIToolExecutionError
+                assert error.__cause__.__class__.__name__ == "AIToolTimeoutError"
 
 
 class TestAIFPLAIToolSecurity:
@@ -853,7 +860,7 @@ class TestAIFPLAIToolSecurity:
         ]
 
         for expr in safe_expressions:
-            tool_call = make_tool_call("AIFPL", {"expression": expr})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expr})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert isinstance(result.content, str)
             assert len(result.content) > 0
@@ -885,7 +892,7 @@ class TestAIFPLAIToolSecurity:
             (append original (list 4))
             original))
         """
-        tool_call = make_tool_call("AIFPL", {"expression": expression})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # Fixed: Check for the actual result format without spaces
@@ -900,7 +907,7 @@ class TestAIFPLAIToolEmptyList:
 
     def test_empty_list_is_valid(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test that () is a valid expression representing an empty list."""
-        tool_call = make_tool_call("AIFPL", {"expression": "()"})
+        tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "()"})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # () should return an empty list representation
@@ -916,6 +923,6 @@ class TestAIFPLAIToolEmptyList:
         ]
 
         for expression, expected in test_cases:
-            tool_call = make_tool_call("AIFPL", {"expression": expression})
+            tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected

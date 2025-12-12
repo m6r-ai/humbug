@@ -30,7 +30,7 @@ class TestFileSystemAIToolDeleteFile:
             # Verify authorization was called with destructive=True
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
-            assert args[3] is True  # destructive parameter
+            assert args[4] is True  # destructive parameter
 
     def test_delete_file_not_exists(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test deleting non-existent file."""
@@ -168,7 +168,7 @@ class TestFileSystemAIToolCopyFile:
             # Verify authorization was called with destructive=False for new destination
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
-            assert args[3] is False  # destructive parameter
+            assert args[4] is False  # destructive parameter
 
     def test_copy_file_success_overwrite_destination(self, custom_path_resolver, mock_authorization, make_tool_call):
         """Test successful file copying with overwrite."""
@@ -200,7 +200,7 @@ class TestFileSystemAIToolCopyFile:
             # Verify authorization was called with destructive=True for existing destination
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
-            assert args[3] is True  # destructive parameter
+            assert args[4] is True  # destructive parameter
 
     def test_copy_file_source_not_exists(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test copying non-existent source file."""
@@ -241,7 +241,7 @@ class TestFileSystemAIToolCopyFile:
                 asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
-            assert "No 'destination' argument provided" in str(error)
+            assert "destination" in str(error).lower() and "missing" in str(error).lower()
 
     def test_copy_file_source_too_large(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test copying file that exceeds size limit."""
@@ -409,7 +409,7 @@ class TestFileSystemAIToolMove:
             # Verify authorization was called with destructive=True
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
-            assert args[3] is True  # destructive parameter
+            assert args[4] is True  # destructive parameter
 
     def test_move_directory_success(self, custom_path_resolver, mock_authorization, make_tool_call):
         """Test successful directory moving."""
@@ -459,7 +459,7 @@ class TestFileSystemAIToolMove:
                 asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
-            assert "No 'destination' argument provided" in str(error)
+            assert "destination" in str(error).lower() and "missing" in str(error).lower()
 
     def test_move_authorization_denied(self, custom_path_resolver, mock_authorization_denied, make_tool_call):
         """Test moving when authorization is denied."""

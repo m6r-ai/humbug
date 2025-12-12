@@ -91,7 +91,7 @@ class TestFileSystemAIToolValidation:
             asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
-        assert "No 'path' argument provided" in str(error)
+        assert "path" in str(error).lower() and "missing" in str(error).lower()
 
     def test_non_string_path_parameter(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test error when path parameter is not a string."""

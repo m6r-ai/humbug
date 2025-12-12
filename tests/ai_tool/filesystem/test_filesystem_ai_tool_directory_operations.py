@@ -175,7 +175,7 @@ class TestFileSystemAIToolCreateDirectory:
             # Verify authorization was called with destructive=False
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
-            assert args[3] is False  # destructive parameter
+            assert args[4] is False  # destructive parameter
 
     def test_create_directory_with_create_parents_false(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test directory creation with create_parents=False."""
@@ -301,7 +301,7 @@ class TestFileSystemAIToolRemoveDirectory:
             # Verify authorization was called with destructive=True
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
-            assert args[3] is True  # destructive parameter
+            assert args[4] is True  # destructive parameter
 
     def test_remove_directory_not_exists(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test removing non-existent directory."""

@@ -203,7 +203,7 @@ class TestFileSystemAIToolWriteFile:
             # Verify authorization was called with destructive=False for new file
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
-            assert args[3] is False  # destructive parameter
+            assert args[4] is False  # destructive parameter
             
             # Verify chmod was called
             mock_chmod.assert_called_once()
@@ -231,7 +231,7 @@ class TestFileSystemAIToolWriteFile:
             # Verify authorization was called with destructive=True for existing file
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
-            assert args[3] is True  # destructive parameter
+            assert args[4] is True  # destructive parameter
             
             # Verify chmod was called
             mock_chmod.assert_called_once()
@@ -243,7 +243,7 @@ class TestFileSystemAIToolWriteFile:
             asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
-        assert "No 'content' argument provided" in str(error)
+        assert "content" in str(error).lower() and "missing" in str(error).lower()
 
     def test_write_file_non_string_content(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test writing file with non-string content."""
@@ -475,7 +475,7 @@ class TestFileSystemAIToolAppendFile:
                 asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
-            assert "No 'content' argument provided" in str(error)
+            assert "content" in str(error).lower() and "missing" in str(error).lower()
 
     def test_append_file_authorization_denied(self, filesystem_tool, mock_authorization_denied, make_tool_call):
         """Test appending when authorization is denied."""

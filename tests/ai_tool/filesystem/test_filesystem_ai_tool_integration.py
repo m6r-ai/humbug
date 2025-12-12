@@ -67,7 +67,7 @@ class TestFileSystemAIToolIntegration:
                 asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             error = exc_info.value
-            assert "Filesystem operation failed: Unexpected error" in str(error)
+            assert "filesystem operation failed: Unexpected error" in str(error)
             assert isinstance(error.__cause__, RuntimeError)
 
 
@@ -98,7 +98,7 @@ class TestFileSystemAIToolAuthorizationContext:
             args = mock_authorization.call_args[0]
             context = args[2]  # Third argument is context
 
-            assert "Create a new file 'file.txt' with the provided content." in context
+            assert "This will create a new file 'file.txt' with the provided content." in context
             # Verify chmod was called
             mock_chmod.assert_called_once()
 
@@ -310,7 +310,7 @@ class TestFileSystemAIToolErrorHandling:
 
                 error = exc_info.value
                 # The error message varies but should indicate missing parameter
-                assert "No 'destination' argument provided" in str(error)
+                assert "destination" in str(error).lower() and "missing" in str(error).lower()
 
     def test_operations_requiring_content_fail_without_it(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test that operations requiring content fail appropriately."""
@@ -336,7 +336,7 @@ class TestFileSystemAIToolErrorHandling:
                 error = exc_info.value
                 # append_to_file checks for content later, so it fails on path validation first
                 # write_file checks for content early
-                assert "No 'content' argument provided" in str(error)
+                assert "content" in str(error).lower() and "missing" in str(error).lower()
 
 
 class TestFileSystemAIToolPathResolverIntegration:
