@@ -270,27 +270,11 @@ class ConversationAITool(AITool):
         tab_id = conversation_tab.tab_id()
 
         # Extract optional parameters
-        start_index = arguments.get("start_index")
-        end_index = arguments.get("end_index")
-        message_types = arguments.get("message_types")
-        limit = arguments.get("limit")
-        include_tool_details = arguments.get("include_tool_details", True)
-
-        # Validate types
-        if start_index is not None and not isinstance(start_index, int):
-            raise AIToolExecutionError("'start_index' must be an integer")
-
-        if end_index is not None and not isinstance(end_index, int):
-            raise AIToolExecutionError("'end_index' must be an integer")
-
-        if message_types is not None and not isinstance(message_types, list):
-            raise AIToolExecutionError("'message_types' must be a list")
-
-        if limit is not None and not isinstance(limit, int):
-            raise AIToolExecutionError("'limit' must be an integer")
-
-        if not isinstance(include_tool_details, bool):
-            raise AIToolExecutionError("'include_tool_details' must be a boolean")
+        start_index = self._get_optional_int_value("start_index", arguments)
+        end_index = self._get_optional_int_value("end_index", arguments)
+        message_types = self._get_optional_list_value("message_types", arguments)
+        limit = self._get_optional_int_value("limit", arguments)
+        include_tool_details = self._get_optional_bool_value("include_tool_details", arguments, True)
 
         try:
             result = conversation_tab.read_messages(
@@ -382,24 +366,11 @@ class ConversationAITool(AITool):
         conversation_tab = self._get_conversation_tab(arguments)
         tab_id = conversation_tab.tab_id()
 
-        if "search_text" not in arguments:
-            raise AIToolExecutionError("No 'search_text' argument provided")
+        search_text = self._get_required_str_value("search_text", arguments)
 
-        search_text = arguments["search_text"]
-        if not isinstance(search_text, str):
-            raise AIToolExecutionError("'search_text' must be a string")
-
-        case_sensitive = arguments.get("case_sensitive", False)
-        if not isinstance(case_sensitive, bool):
-            raise AIToolExecutionError("'case_sensitive' must be a boolean")
-
-        message_types = arguments.get("message_types")
-        if message_types is not None and not isinstance(message_types, list):
-            raise AIToolExecutionError("'message_types' must be a list")
-
-        max_results = arguments.get("max_results", 50)
-        if not isinstance(max_results, int):
-            raise AIToolExecutionError("'max_results' must be an integer")
+        case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
+        message_types = self._get_optional_list_value("message_types", arguments)
+        max_results = self._get_optional_int_value("max_results", arguments, 50)
 
         try:
             result = conversation_tab.search_messages(

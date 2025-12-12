@@ -264,27 +264,11 @@ class LogAITool(AITool):
         tab_id = log_tab.tab_id()
 
         # Extract optional parameters
-        start_index = arguments.get("start_index")
-        end_index = arguments.get("end_index")
-        levels = arguments.get("levels")
-        limit = arguments.get("limit")
-        include_content = arguments.get("include_content", True)
-
-        # Validate types
-        if start_index is not None and not isinstance(start_index, int):
-            raise AIToolExecutionError("'start_index' must be an integer")
-
-        if end_index is not None and not isinstance(end_index, int):
-            raise AIToolExecutionError("'end_index' must be an integer")
-
-        if levels is not None and not isinstance(levels, list):
-            raise AIToolExecutionError("'levels' must be a list")
-
-        if limit is not None and not isinstance(limit, int):
-            raise AIToolExecutionError("'limit' must be an integer")
-
-        if not isinstance(include_content, bool):
-            raise AIToolExecutionError("'include_content' must be a boolean")
+        start_index = self._get_optional_int_value("start_index", arguments)
+        end_index = self._get_optional_int_value("end_index", arguments)
+        levels = self._get_optional_list_value("levels", arguments)
+        limit = self._get_optional_int_value("limit", arguments)
+        include_content = self._get_optional_bool_value("include_content", arguments, True)
 
         try:
             result = log_tab.read_messages(
@@ -376,24 +360,11 @@ class LogAITool(AITool):
         log_tab = self._get_log_tab(arguments)
         tab_id = log_tab.tab_id()
 
-        if "search_text" not in arguments:
-            raise AIToolExecutionError("No 'search_text' argument provided")
+        search_text = self._get_required_str_value("search_text", arguments)
 
-        search_text = arguments["search_text"]
-        if not isinstance(search_text, str):
-            raise AIToolExecutionError("'search_text' must be a string")
-
-        case_sensitive = arguments.get("case_sensitive", False)
-        if not isinstance(case_sensitive, bool):
-            raise AIToolExecutionError("'case_sensitive' must be a boolean")
-
-        levels = arguments.get("levels")
-        if levels is not None and not isinstance(levels, list):
-            raise AIToolExecutionError("'levels' must be a list")
-
-        max_results = arguments.get("max_results", 50)
-        if not isinstance(max_results, int):
-            raise AIToolExecutionError("'max_results' must be an integer")
+        case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
+        levels = self._get_optional_list_value("levels", arguments)
+        max_results = self._get_optional_int_value("max_results", arguments, 50)
 
         try:
             result = log_tab.search_messages(

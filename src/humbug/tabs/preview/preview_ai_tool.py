@@ -226,20 +226,10 @@ class PreviewAITool(AITool):
         preview_tab = self._get_preview_tab(arguments)
         tab_id = preview_tab.tab_id()
 
-        if "search_text" not in arguments:
-            raise AIToolExecutionError("No 'search_text' argument provided")
+        search_text = self._get_required_str_value("search_text", arguments)
 
-        search_text = arguments["search_text"]
-        if not isinstance(search_text, str):
-            raise AIToolExecutionError("'search_text' must be a string")
-
-        case_sensitive = arguments.get("case_sensitive", False)
-        if not isinstance(case_sensitive, bool):
-            raise AIToolExecutionError("'case_sensitive' must be a boolean")
-
-        max_results = arguments.get("max_results", 50)
-        if not isinstance(max_results, int):
-            raise AIToolExecutionError("'max_results' must be an integer")
+        case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
+        max_results = self._get_optional_int_value("max_results", arguments, 50)
 
         try:
             result = preview_tab.search_content(
@@ -280,17 +270,9 @@ class PreviewAITool(AITool):
         if not isinstance(block_index, int):
             raise AIToolExecutionError("'block_index' must be an integer")
 
-        section_index = arguments.get("section_index", 0)
-        if not isinstance(section_index, int):
-            raise AIToolExecutionError("'section_index' must be an integer")
-
-        text_position = arguments.get("text_position", 0)
-        if not isinstance(text_position, int):
-            raise AIToolExecutionError("'text_position' must be an integer")
-
-        position = arguments.get("position", "center")
-        if not isinstance(position, str):
-            raise AIToolExecutionError("'position' must be a string")
+        section_index = self._get_optional_int_value("section_index", arguments, 0)
+        text_position = self._get_optional_int_value("text_position", arguments, 0)
+        position = self._get_optional_str_value("position", arguments, "center")
 
         if position not in ("top", "center", "bottom"):
             raise AIToolExecutionError("'position' must be 'top', 'center', or 'bottom'")

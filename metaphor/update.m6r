@@ -23,11 +23,9 @@ Context:
 
 Action:
     # Describe the details of the change required.
-    The current AI tools are generally based on the idea of having an "operation" but the AIFPL tool does not
-    use this approach.  I want to harmonize things so all the tools are implemented the same way as this
-    will allow a lot more scope to extract common logic and features.  In many cases functionality needs to
-    move to the base class.
+    We have just unified the approach for all the AI tools but we can probably go further.
 
-    Please propose changes to achieve this.
+    Please check all the tools and see which ones could/should be using `_get_str_value_from_key` for
+    mandatory arguments.
 
     Don't code anything - I want to discuss first.

@@ -237,11 +237,11 @@ class AITool(ABC):
             parameters=parameters
         )
 
-    def _get_str_value_from_key(self, key: str, arguments: Dict[str, Any]) -> str:
+    def _get_required_str_value(self, key: str, arguments: Dict[str, Any]) -> str:
         """
-        Extract string value from arguments dictionary.
+        Extract required string value from arguments dictionary.
 
-        Common helper for operation handlers.
+        Helper for mandatory string parameters in operation handlers.
 
         Args:
             key: Key to extract from arguments
@@ -259,5 +259,138 @@ class AITool(ABC):
         value = arguments[key]
         if not isinstance(value, str):
             raise AIToolExecutionError(f"'{key}' must be a string")
+
+        return value
+
+    def _get_optional_str_value(
+        self,
+        key: str,
+        arguments: Dict[str, Any],
+        default: str | None = None
+    ) -> str | None:
+        """
+        Extract optional string value from arguments dictionary.
+
+        Helper for optional string parameters in operation handlers.
+
+        Args:
+            key: Key to extract from arguments
+            arguments: Dictionary containing operation parameters
+            default: Default value if key not present (defaults to None)
+
+        Returns:
+            String value, default value, or None
+
+        Raises:
+            AIToolExecutionError: If value exists but is not a string
+        """
+        if key not in arguments:
+            return default
+
+        value = arguments[key]
+        if value is None:
+            return None
+
+        if not isinstance(value, str):
+            raise AIToolExecutionError(f"'{key}' must be a string")
+
+        return value
+
+    def _get_optional_int_value(
+        self,
+        key: str,
+        arguments: Dict[str, Any],
+        default: int | None = None
+    ) -> int | None:
+        """
+        Extract optional integer value from arguments dictionary.
+
+        Helper for optional integer parameters in operation handlers.
+
+        Args:
+            key: Key to extract from arguments
+            arguments: Dictionary containing operation parameters
+            default: Default value if key not present (defaults to None)
+
+        Returns:
+            Integer value, default value, or None
+
+        Raises:
+            AIToolExecutionError: If value exists but is not an integer
+        """
+        if key not in arguments:
+            return default
+
+        value = arguments[key]
+        if value is None:
+            return None
+
+        if not isinstance(value, int):
+            raise AIToolExecutionError(f"'{key}' must be an integer")
+
+        return value
+
+    def _get_optional_bool_value(
+        self,
+        key: str,
+        arguments: Dict[str, Any],
+        default: bool = False
+    ) -> bool:
+        """
+        Extract optional boolean value from arguments dictionary.
+
+        Helper for optional boolean parameters in operation handlers.
+
+        Args:
+            key: Key to extract from arguments
+            arguments: Dictionary containing operation parameters
+            default: Default value if key not present (defaults to False)
+
+        Returns:
+            Boolean value or default
+
+        Raises:
+            AIToolExecutionError: If value exists but is not a boolean
+        """
+        if key not in arguments:
+            return default
+
+        value = arguments[key]
+        if not isinstance(value, bool):
+            raise AIToolExecutionError(f"'{key}' must be a boolean")
+
+        return value
+
+    def _get_optional_list_value(
+        self,
+        key: str,
+        arguments: Dict[str, Any],
+        default: list | None = None
+    ) -> list | None:
+        """
+        Extract optional list value from arguments dictionary.
+
+        Helper for optional list parameters in operation handlers.
+
+        Args:
+            key: Key to extract from arguments
+            arguments: Dictionary containing operation parameters
+            default: Default value if key not present (defaults to None)
+
+        Returns:
+            List value, default value, or None
+
+        Raises:
+            AIToolExecutionError: If value exists but is not a list
+        """
+        if key not in arguments:
+            return default
+
+        value = arguments[key]
+        if value is None:
+            return None
+
+        if not isinstance(value, list):
+            raise AIToolExecutionError(f"'{key}' must be a list")
 
         return value

@@ -280,14 +280,8 @@ class EditorAITool(AITool):
         editor_tab = self._get_editor_tab(arguments)
         tab_id = editor_tab.tab_id()
 
-        start_line = arguments.get("start_line")
-        end_line = arguments.get("end_line")
-
-        if start_line is not None and not isinstance(start_line, int):
-            raise AIToolExecutionError("'start_line' must be an integer")
-
-        if end_line is not None and not isinstance(end_line, int):
-            raise AIToolExecutionError("'end_line' must be an integer")
+        start_line = self._get_optional_int_value("start_line", arguments)
+        end_line = self._get_optional_int_value("end_line", arguments)
 
         try:
             content = editor_tab.get_text_range(start_line, end_line)
@@ -397,9 +391,7 @@ class EditorAITool(AITool):
         if not isinstance(line, int):
             raise AIToolExecutionError("'line' must be an integer")
 
-        column = arguments.get("column", 1)
-        if not isinstance(column, int):
-            raise AIToolExecutionError("'column' must be an integer")
+        column = self._get_optional_int_value("column", arguments, 1)
 
         try:
             editor_tab.goto_line(line, column)
@@ -433,16 +425,9 @@ class EditorAITool(AITool):
         editor_tab = self._get_editor_tab(arguments)
         tab_id = editor_tab.tab_id()
 
-        if "search_text" not in arguments:
-            raise AIToolExecutionError("No 'search_text' argument provided")
+        search_text = self._get_required_str_value("search_text", arguments)
 
-        search_text = arguments["search_text"]
-        if not isinstance(search_text, str):
-            raise AIToolExecutionError("'search_text' must be a string")
-
-        case_sensitive = arguments.get("case_sensitive", False)
-        if not isinstance(case_sensitive, bool):
-            raise AIToolExecutionError("'case_sensitive' must be a boolean")
+        case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
 
         try:
             matches = editor_tab.find_all_occurrences(search_text, case_sensitive)
@@ -522,10 +507,7 @@ class EditorAITool(AITool):
         editor_tab = self._get_editor_tab(arguments)
         tab_id = editor_tab.tab_id()
 
-        context_lines = arguments.get("context_lines", 3)
-        if not isinstance(context_lines, int):
-            raise AIToolExecutionError("'context_lines' must be an integer")
-
+        context_lines = self._get_optional_int_value("context_lines", arguments, 3)
         if context_lines < 0:
             raise AIToolExecutionError("'context_lines' must be non-negative")
 
@@ -619,12 +601,7 @@ class EditorAITool(AITool):
         editor_tab = self._get_editor_tab(arguments)
         tab_id = editor_tab.tab_id()
 
-        if "diff_content" not in arguments:
-            raise AIToolExecutionError("No 'diff_content' argument provided")
-
-        diff_content = arguments["diff_content"]
-        if not isinstance(diff_content, str):
-            raise AIToolExecutionError("'diff_content' must be a string")
+        diff_content = self._get_required_str_value("diff_content", arguments)
 
         try:
             result = editor_tab.apply_diff(diff_content)

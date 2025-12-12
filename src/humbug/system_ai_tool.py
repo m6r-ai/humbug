@@ -287,12 +287,7 @@ class SystemAITool(AITool):
         """Open or create a file in an editor tab."""
         arguments = tool_call.arguments
 
-        if "file_path" not in arguments:
-            raise AIToolExecutionError("No 'file_path' argument provided")
-
-        file_path_arg = arguments["file_path"]
-        if not isinstance(file_path_arg, str):
-            raise AIToolExecutionError("'file_path' must be a string")
+        file_path_arg = self._get_required_str_value("file_path", arguments)
 
         file_path = self._validate_and_resolve_path(file_path_arg)
 
@@ -364,12 +359,7 @@ class SystemAITool(AITool):
         """Open an existing conversation tab."""
         arguments = tool_call.arguments
 
-        if "file_path" not in arguments:
-            raise AIToolExecutionError("No 'file_path' argument provided")
-
-        file_path_arg = arguments["file_path"]
-        if not isinstance(file_path_arg, str):
-            raise AIToolExecutionError("'file_path' must be a string")
+        file_path_arg = self._get_required_str_value("file_path", arguments)
 
         conversation_path = self._validate_and_resolve_path(file_path_arg)
 
@@ -414,12 +404,8 @@ class SystemAITool(AITool):
     ) -> AIToolResult:
         """Create a new conversation tab."""
         arguments = tool_call.arguments
-        model = arguments.get("model")
+        model = self._get_optional_str_value("model", arguments)
         temperature = arguments.get("temperature")
-
-        # Validate model if provided
-        if model and not isinstance(model, str):
-            raise AIToolExecutionError("'model' must be a string")
 
         # Validate temperature if provided
         if temperature is not None:

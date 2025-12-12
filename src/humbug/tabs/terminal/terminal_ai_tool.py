@@ -189,7 +189,7 @@ class TerminalAITool(AITool):
         if "tab_id" not in arguments:
             raise AIToolExecutionError("No 'tab_id' argument provided")
 
-        tab_id = self._get_str_value_from_key("tab_id", arguments)
+        tab_id = self._get_required_str_value("tab_id", arguments)
         tab = self._column_manager.get_tab_by_id(tab_id)
         if not tab:
             raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
@@ -299,7 +299,7 @@ class TerminalAITool(AITool):
         Returns:
             Context string for write operation
         """
-        raw_keystrokes = self._get_str_value_from_key("keystrokes", arguments)
+        raw_keystrokes = self._get_required_str_value("keystrokes", arguments)
         preview_keystrokes = self._preview_ai_escape_sequences(raw_keystrokes)
         return f"`keystrokes` is:\n```\n{preview_keystrokes}\n```"
 
@@ -313,7 +313,7 @@ class TerminalAITool(AITool):
         arguments = tool_call.arguments
 
         # Get and validate keystrokes
-        raw_keystrokes = self._get_str_value_from_key("keystrokes", arguments)
+        raw_keystrokes = self._get_required_str_value("keystrokes", arguments)
         processed_keystrokes = self._process_ai_escape_sequences(raw_keystrokes)
 
         # Get terminal tab
@@ -357,9 +357,7 @@ class TerminalAITool(AITool):
         terminal_tab = self._get_terminal_tab(arguments)
         tab_id = terminal_tab.tab_id()
 
-        lines = arguments.get("lines")
-        if lines is not None and not isinstance(lines, int):
-            raise AIToolExecutionError("'lines' must be an integer")
+        lines = self._get_optional_int_value("lines", arguments)
 
         try:
             buffer_content = terminal_tab.get_terminal_buffer_content(lines)

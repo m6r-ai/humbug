@@ -306,7 +306,7 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Read file contents."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         # Validate file exists and is readable
@@ -323,7 +323,7 @@ class FileSystemAITool(AITool):
             max_mb = self._max_file_size_bytes / (1024 * 1024)
             raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
 
-        encoding = arguments.get("encoding", "utf-8")
+        encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
 
         # Read file content
         try:
@@ -357,7 +357,7 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Read file contents with line numbers."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         # Validate file exists and is readable
@@ -374,16 +374,9 @@ class FileSystemAITool(AITool):
             max_mb = self._max_file_size_bytes / (1024 * 1024)
             raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
 
-        encoding = arguments.get("encoding", "utf-8")
-        start_line = arguments.get("start_line")
-        end_line = arguments.get("end_line")
-
-        # Validate line parameters
-        if start_line is not None and not isinstance(start_line, int):
-            raise AIToolExecutionError("'start_line' must be an integer")
-
-        if end_line is not None and not isinstance(end_line, int):
-            raise AIToolExecutionError("'end_line' must be an integer")
+        encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
+        start_line = self._get_optional_int_value("start_line", arguments)
+        end_line = self._get_optional_int_value("end_line", arguments)
 
         # Read file content
         try:
@@ -443,8 +436,8 @@ class FileSystemAITool(AITool):
 
     def _write_file_context(self, arguments: Dict[str, Any]) -> str | None:
         """Extract context for write_file operation."""
-        path_arg = self._get_str_value_from_key("path", arguments)
-        context = self._get_str_value_from_key("content", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
+        context = self._get_required_str_value("content", arguments)
         language = ProgrammingLanguageUtils.from_file_extension(path_arg)
         language_str = ProgrammingLanguageUtils.get_name(language)
         return f"`content` is:\n```{language_str}\n{context}\n```"
@@ -457,12 +450,12 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Write content to file (create or overwrite)."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
-        content = self._get_str_value_from_key("content", arguments)
-        encoding = arguments.get("encoding", "utf-8")
-        create_parents = arguments.get("create_parents", False)
+        content = self._get_required_str_value("content", arguments)
+        encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
+        create_parents = self._get_optional_bool_value("create_parents", arguments, False)
 
         # Check content size
         content_size = len(content.encode(encoding))
@@ -536,11 +529,11 @@ class FileSystemAITool(AITool):
 
     def _append_to_file_context(self, arguments: Dict[str, Any]) -> str | None:
         """Extract context for append_to_file operation."""
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         if not path_arg:
             return None
 
-        context = self._get_str_value_from_key("content", arguments)
+        context = self._get_required_str_value("content", arguments)
         language = ProgrammingLanguageUtils.from_file_extension(path_arg)
         language_str = ProgrammingLanguageUtils.get_name(language)
         return f"`content` is:\n```{language_str}\n{context}\n```"
@@ -553,7 +546,7 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Append content to existing file."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         # File must exist for append
@@ -563,8 +556,8 @@ class FileSystemAITool(AITool):
         if not path.is_file():
             raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
-        content = self._get_str_value_from_key("content", arguments)
-        encoding = arguments.get("encoding", "utf-8")
+        content = self._get_required_str_value("content", arguments)
+        encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
 
         # Check total size after append
         current_size = path.stat().st_size
@@ -611,7 +604,7 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """List directory contents."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not path.exists():
@@ -685,9 +678,9 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Create directory (with parents if needed)."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
-        create_parents = arguments.get("create_parents", True)
+        create_parents = self._get_optional_bool_value("create_parents", arguments, True)
 
         if path.exists():
             if path.is_dir():
@@ -733,7 +726,7 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Remove empty directory."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not path.exists():
@@ -782,7 +775,7 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Delete file."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not path.exists():
@@ -823,7 +816,7 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Copy file to destination."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         source_path, source_display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not source_path.exists():
@@ -832,7 +825,7 @@ class FileSystemAITool(AITool):
         if not source_path.is_file():
             raise AIToolExecutionError(f"Source path is not a file: {arguments['path']}")
 
-        destination_arg = self._get_str_value_from_key("destination", arguments)
+        destination_arg = self._get_required_str_value("destination", arguments)
         destination_path, dest_display_path = self._validate_and_resolve_path("destination", destination_arg)
 
         # Check source file size
@@ -885,13 +878,13 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Move/rename file or directory."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         source_path, source_display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not source_path.exists():
             raise AIToolExecutionError(f"Source path does not exist: {arguments['path']}")
 
-        destination_arg = self._get_str_value_from_key("destination", arguments)
+        destination_arg = self._get_required_str_value("destination", arguments)
         destination_path, dest_display_path = self._validate_and_resolve_path("destination", destination_arg)
 
         # Build authorization context
@@ -944,7 +937,7 @@ class FileSystemAITool(AITool):
     ) -> AIToolResult:
         """Get detailed information about file or directory."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         if not path.exists():
@@ -998,7 +991,7 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
 
     def _apply_diff_to_file_context(self, arguments: Dict[str, Any]) -> str | None:
         """Extract context for append_to_file operation."""
-        context = self._get_str_value_from_key("diff_content", arguments)
+        context = self._get_required_str_value("diff_content", arguments)
         return f"`diff_content` is:\n```diff\n{context}\n```"
 
     async def _apply_diff_to_file(
@@ -1009,7 +1002,7 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
     ) -> AIToolResult:
         """Apply a unified diff to a file."""
         arguments = tool_call.arguments
-        path_arg = self._get_str_value_from_key("path", arguments)
+        path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
         # Validate file exists and is readable
@@ -1019,14 +1012,11 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
         if not path.is_file():
             raise AIToolExecutionError(f"Path is not a file: {arguments['path']}")
 
-        diff_content = self._get_str_value_from_key("diff_content", arguments)
-        dry_run = arguments.get("dry_run", False)
-
-        if not isinstance(dry_run, bool):
-            raise AIToolExecutionError("'dry_run' must be a boolean")
+        diff_content = self._get_required_str_value("diff_content", arguments)
+        dry_run = self._get_optional_bool_value("dry_run", arguments, False)
 
         # Read current file content
-        encoding = arguments.get("encoding", "utf-8")
+        encoding = self._get_optional_str_value("encoding", arguments, "utf-8")
 
         try:
             with open(path, 'r', encoding=encoding) as f:
