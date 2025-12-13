@@ -2,6 +2,10 @@
 
 ## v0.35 (2025-12-xx)
 
+Bug fixes:
+
+- Updated the AI tool documentation.
+
 ## v0.34 (2025-12-12)
 
 New features:
