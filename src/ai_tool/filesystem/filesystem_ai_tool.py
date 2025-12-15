@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Callable, Tuple, cast
 
@@ -96,6 +96,13 @@ class FileSystemAITool(AITool):
                     description="Text encoding to use for file operations",
                     required=False,
                     enum=["utf-8", "utf-16", "ascii", "latin-1"]
+                ),
+                AIToolParameter(
+                    name="format",
+                    type="string",
+                    description="Time format for timestamps ('iso' or 'timestamp')",
+                    required=False,
+                    enum=["iso", "timestamp"]
                 ),
                 AIToolParameter(
                     name="create_parents",
@@ -231,9 +238,10 @@ class FileSystemAITool(AITool):
                 name="get_info",
                 handler=self._get_info,
                 extract_context=None,
-                allowed_parameters={"path"},
+                allowed_parameters={"path", "format"},
                 required_parameters={"path"},
-                description="Get detailed information about file or directory"
+                description="Get detailed information about file or directory. "
+                    "If format is not specified timestamps are in ISO format."
             )
         }
 
@@ -262,6 +270,27 @@ class FileSystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"{key}: failed to resolve path '{path_str}': {str(e)}") from e
+
+    def _format_time(self, dt: datetime, format_type: str | None) -> str:
+        """
+        Format datetime according to the specified format.
+
+        Args:
+            dt: Datetime to format
+            format_type: Format type ('iso' or 'timestamp'), defaults to 'iso' if None
+
+        Returns:
+            Formatted time string
+        """
+        # Default to ISO format if not specified
+        if format_type is None or format_type == "iso":
+            return dt.isoformat()[:26] + "Z" if dt.tzinfo == timezone.utc else dt.isoformat()
+
+        if format_type == "timestamp":
+            return str(int(dt.timestamp()))
+
+        # Fallback to ISO format for unknown types
+        return dt.isoformat()[:26] + "Z" if dt.tzinfo == timezone.utc else dt.isoformat()
 
     def extract_context(self, tool_call: AIToolCall) -> str | None:
         """
@@ -940,13 +969,17 @@ class FileSystemAITool(AITool):
         path_arg = self._get_required_str_value("path", arguments)
         path, display_path = self._validate_and_resolve_path("path", path_arg)
 
+        # Get format parameter (defaults to None, which will become 'iso' in _format_time)
+        format_type = self._get_optional_str_value("format", arguments, None)
+
         if not path.exists():
             raise AIToolExecutionError(f"Path does not exist: {arguments['path']}")
 
         # Get file or directory information
         try:
             stat_info = path.stat()
-            modified_time = datetime.fromtimestamp(stat_info.st_mtime).isoformat()
+            modified_dt = datetime.fromtimestamp(stat_info.st_mtime, tz=timezone.utc)
+            modified_time = self._format_time(modified_dt, format_type)
 
             if path.is_file():
                 result = f"""File: {display_path}

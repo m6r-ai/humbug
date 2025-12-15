@@ -2,11 +2,17 @@
 
 ## v0.35 (2025-12-xx)
 
+New features:
+
+- The filesystem AI tool now has an option to set the date/time format for `get_info` requests.  This allows it to be more
+  consistent with the clock AI tool.
+
 Bug fixes:
 
 - Updated the AI tool documentation.
 - Fixed a minor race condition in the message UI that could lead to queued messages becoming the active message without
   updating the display to show that had happened.
+- The clock AI tool never used to indicate which format it would use for outputs.  It now states that it defaults to ISO.
 
 ## v0.34 (2025-12-12)
 
