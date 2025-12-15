@@ -5,6 +5,8 @@
 Bug fixes:
 
 - Updated the AI tool documentation.
+- Fixed a minor race condition in the message UI that could lead to queued messages becoming the active message without
+  updating the display to show that had happened.
 
 ## v0.34 (2025-12-12)
 

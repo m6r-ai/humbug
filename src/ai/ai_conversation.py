@@ -177,7 +177,7 @@ class AIConversation:
                         reasoning=reasoning
                     ))
 
-    async def submit_message(self, message: AIMessage) -> None:
+    async def submit_message(self, requester: str | None, user_message: str) -> None:
         """
         Submit a user message to the conversation.
 
@@ -186,16 +186,34 @@ class AIConversation:
         the message will be queued and processed after the current cycle completes.
 
         Args:
-            message: The user message to submit
+            requester: Name of the user submitting the message (or None)
+            user_message: The user message to submit
         """
+        settings = self.conversation_settings()
+
         # If we're actively processing, queue the message
         if self._state in (ConversationState.EXECUTING_TOOLS, ConversationState.STREAMING_AI_RESPONSE):
             self._logger.debug("Queuing message during active processing")
+            message = AIMessage.create(
+                AIMessageSource.USER_QUEUED,
+                user_message,
+                model=settings.model,
+                temperature=settings.temperature,
+                reasoning_capability=settings.reasoning
+            )
             self._pending_user_messages.append(message)
-            await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
+            await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, message)
             return
 
         # Normal submission when idle
+        message = AIMessage.create(
+            AIMessageSource.USER,
+            user_message,
+            user_name=requester,
+            model=settings.model,
+            temperature=settings.temperature,
+            reasoning_capability=settings.reasoning
+        )
         self._conversation.add_message(message)
         await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
 

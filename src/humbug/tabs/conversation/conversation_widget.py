@@ -2189,21 +2189,13 @@ class ConversationWidget(QWidget):
             settings = ai_conversation.conversation_settings()
 
             sanitized_content = self._sanitize_input(content)
-            message = AIMessage.create(
-                AIMessageSource.USER_QUEUED,
-                sanitized_content,
-                model=settings.model,
-                temperature=settings.temperature,
-                reasoning_capability=settings.reasoning
-            )
 
             # Submit the queued message
             loop = asyncio.get_event_loop()
             if not loop.is_running():
                 return
 
-            loop.create_task(ai_conversation.submit_message(message))
-            self._append_message_to_transcript(message)
+            loop.create_task(ai_conversation.submit_message(requester, sanitized_content))
             return
 
         self._input.clear()
@@ -2223,15 +2215,6 @@ class ConversationWidget(QWidget):
             reasoning_capability = settings.reasoning
 
         sanitized_content = self._sanitize_input(content)
-        message = AIMessage.create(
-            AIMessageSource.USER,
-            sanitized_content,
-            user_name=requester,
-            model=model,
-            temperature=temperature,
-            reasoning_capability=reasoning_capability
-        )
-
         self._last_submitted_message = content
 
         # Submit the message to the AIConversation instance
@@ -2239,8 +2222,7 @@ class ConversationWidget(QWidget):
         if not loop.is_running():
             return
 
-        loop.create_task(ai_conversation.submit_message(message))
-        self._append_message_to_transcript(message)
+        loop.create_task(ai_conversation.submit_message(requester, sanitized_content))
 
         # Start animation if not already animating
         if not self._is_animating:
