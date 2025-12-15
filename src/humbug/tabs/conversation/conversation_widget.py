@@ -90,7 +90,7 @@ class ConversationWidget(QWidget):
 
         self._last_submitted_message: str = ""
 
-        # We need to track any unfinished message because that won't appear in the transcript until
+        # We need to track any unfinished message because it won't appear in the transcript until
         # it completes.  If we move a conversation to a new tab, we need to ensure it doesn't get lost.
         self._current_unfinished_message: AIMessage | None = None
 
@@ -512,7 +512,11 @@ class ConversationWidget(QWidget):
         message.content = strings.ai_thinking
 
         self._add_message(message)
-        self._append_message_to_transcript(message)
+        try:
+            self._transcript_handler.append_message(message.to_transcript_dict())
+
+        except AIConversationTranscriptError:
+            self._logger.exception("Failed to write to transcript")
 
         # Start animation if not already animating
         if not self._is_animating:
@@ -702,7 +706,11 @@ class ConversationWidget(QWidget):
             message: The error that occurred
         """
         self._add_message(message)
-        self._append_message_to_transcript(message)
+        try:
+            self._transcript_handler.append_message(message.to_transcript_dict())
+
+        except AIConversationTranscriptError:
+            self._logger.exception("Failed to write to transcript")
 
         if retries_exhausted:
             self._is_streaming = False
@@ -885,7 +893,12 @@ class ConversationWidget(QWidget):
 
         # Update with the completed message immediately
         self._update_last_message(message)
-        self._append_message_to_transcript(message)
+        try:
+            self._transcript_handler.append_message(message.to_transcript_dict())
+
+        except AIConversationTranscriptError:
+            self._logger.exception("Failed to write to transcript")
+
         self.status_updated.emit()
 
     async def _on_message_added_and_completed(self, message: AIMessage) -> None:
@@ -927,19 +940,6 @@ class ConversationWidget(QWidget):
 
         # Emit signal for status update
         self.status_updated.emit()
-
-    def _append_message_to_transcript(self, message: AIMessage) -> None:
-        """
-        Append messages to transcript file.
-
-        Args:
-            message: AIMessage to append to transcript
-        """
-        try:
-            self._transcript_handler.append_message(message.to_transcript_dict())
-
-        except AIConversationTranscriptError:
-            self._logger.exception("Failed to write to transcript")
 
     def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
