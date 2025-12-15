@@ -24,7 +24,7 @@ class TestFileSystemAIToolDefinition:
         assert isinstance(definition, AIToolDefinition)
         assert definition.name == "filesystem"
         assert "The filesystem tool lets you" in definition.description
-        assert len(definition.parameters) == 10
+        assert len(definition.parameters) == 11
 
     def test_operation_parameter_definition(self, mock_path_resolver):
         """Test the operation parameter definition."""

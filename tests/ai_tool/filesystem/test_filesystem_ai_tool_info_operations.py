@@ -2,6 +2,7 @@
 Tests for filesystem tool info operations: get_info.
 """
 import asyncio
+from datetime import timezone
 from unittest.mock import patch, MagicMock
 
 import pytest
@@ -334,5 +335,5 @@ class TestFileSystemAIToolGetInfo:
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
             # Verify that fromtimestamp was called with the correct timestamp
-            mock_datetime.fromtimestamp.assert_called_with(1672531200.0)
+            mock_datetime.fromtimestamp.assert_called_with(1672531200.0, tz=timezone.utc)
             assert "Modified: 2023-01-01T00:00:00" in result.content
