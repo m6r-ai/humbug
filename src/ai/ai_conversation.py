@@ -215,7 +215,7 @@ class AIConversation:
             reasoning_capability=settings.reasoning
         )
         self._conversation.add_message(message)
-        await self._trigger_event(AIConversationEvent.MESSAGE_ADDED, message)
+        await self._trigger_event(AIConversationEvent.MESSAGE_ADDED_AND_COMPLETED, message)
 
         # Start AI response
         task = asyncio.create_task(self._start_ai())

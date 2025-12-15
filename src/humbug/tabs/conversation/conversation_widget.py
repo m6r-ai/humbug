@@ -2161,61 +2161,39 @@ class ConversationWidget(QWidget):
 
     def submit(
         self,
-        requester: str | None = None,
-        model: str | None = None,
-        temperature: float | None = None,
-        reasoning_capability: AIReasoningCapability | None = None
+        requester: str | None = None
     ) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
         if not content:
             return
 
-        if self._is_streaming:
-            # Clear input
-            self._input.clear()
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        sanitized_content = self._sanitize_input(content)
+        self._input.clear()
 
-            # Auto-reject any pending tool approval
+        # We need to decide if we're already streaming or if this is a new message.
+        if self._is_streaming:
+            # We're streaming, so auto-reject any pending tool approval
             if self._pending_tool_call_approval:
                 self._pending_tool_call_approval.remove_tool_approval_ui()
                 self._pending_tool_call_approval = None
 
-                ai_conversation = cast(AIConversation, self._ai_conversation)
                 loop = asyncio.get_event_loop()
                 loop.create_task(ai_conversation.reject_pending_tool_calls("User interrupted with new message"))
 
-            # Create queued message
-            ai_conversation = cast(AIConversation, self._ai_conversation)
-            settings = ai_conversation.conversation_settings()
+        else:
+            # We're not streaming, so mark that we are now
+            self._input.set_streaming(True)
+            self._is_streaming = True
+            self.status_updated.emit()
 
-            sanitized_content = self._sanitize_input(content)
+            # Remember the last submitted message in case we need to restore it after an error or user cancellation
+            self._last_submitted_message = content
 
-            # Submit the queued message
-            loop = asyncio.get_event_loop()
-            if not loop.is_running():
-                return
-
-            loop.create_task(ai_conversation.submit_message(requester, sanitized_content))
-            return
-
-        self._input.clear()
-        self._input.set_streaming(True)
-        self._is_streaming = True
-        self.status_updated.emit()
-
-        ai_conversation = cast(AIConversation, self._ai_conversation)
-        settings = ai_conversation.conversation_settings()
-        if model is None:
-            model = settings.model
-
-        if temperature is None:
-            temperature = settings.temperature
-
-        if reasoning_capability is None:
-            reasoning_capability = settings.reasoning
-
-        sanitized_content = self._sanitize_input(content)
-        self._last_submitted_message = content
+            # Scroll to the bottom and restore auto-scrolling
+            self._auto_scroll = True
+            self._scroll_to_bottom()
 
         # Submit the message to the AIConversation instance
         loop = asyncio.get_event_loop()
@@ -2223,14 +2201,6 @@ class ConversationWidget(QWidget):
             return
 
         loop.create_task(ai_conversation.submit_message(requester, sanitized_content))
-
-        # Start animation if not already animating
-        if not self._is_animating:
-            self._start_message_border_animation()
-
-        # When we call this we should always scroll to the bottom and restore auto-scrolling
-        self._auto_scroll = True
-        self._scroll_to_bottom()
 
     def _on_stop_requested(self) -> None:
         """Handle stop request from input widget."""
