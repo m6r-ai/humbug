@@ -6,6 +6,8 @@ New features:
 
 - The filesystem AI tool now has an option to set the date/time format for `get_info` requests.  This allows it to be more
   consistent with the clock AI tool.
+- Added the ability for tool results to provide pretty-printed context information.  Updated file reads and AIFPL evaluations
+  to use this.
 
 Bug fixes:
 
