@@ -465,9 +465,14 @@ class MarkdownParser(Parser):
                 if token.type == TokenType.LIST_MARKER:
                     # We've found a list marker - determine its nesting level
                     matches = list(re.finditer(r'\S+', token.value))
-                    assert len(matches) >= 2, "List marker must have at least two elements (marker and text)"
-                    second_word_match = matches[1]
-                    current_indent = second_word_match.start() + token.start
+                    assert len(matches) > 0, "Cannot have zero matches"
+                    if len(matches) == 1:
+                        # Only whitespace in the token - ignore!
+                        current_indent = matches[0].end() + token.start
+
+                    else:
+                        # Normal case: marker followed by text
+                        current_indent = matches[1].start() + token.start
 
                     # Handle nesting level logic
                     if not in_list_item:
