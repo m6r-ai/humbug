@@ -1,4 +1,5 @@
 import logging
+from math import log10
 import os
 import shutil
 import tempfile
@@ -431,6 +432,7 @@ class FileSystemAITool(AITool):
 
         # Build line-numbered content
         context_object = {}
+        context_str = ""
         if not content:
             context_object[1] = ""
 
@@ -453,22 +455,22 @@ class FileSystemAITool(AITool):
                 raise AIToolExecutionError(f"'start_line' ({actual_start}) exceeds file length ({total_lines} lines)")
 
             # Build result (end_line can exceed total_lines, just truncate)
-            for line_num in range(actual_start, min(actual_end + 1, total_lines + 1)):
+            last_line = min(actual_end, total_lines)
+            digits = int(log10(last_line)) + 1
+            for line_num in range(actual_start, last_line + 1):
                 context_object[line_num] = content_lines[line_num - 1]
+                context_str += f"{line_num:{digits}}:  {content_lines[line_num - 1]}\n"
 
         # Build header with optional range description
         range_desc = ""
         if start_line is not None or end_line is not None:
             range_desc = f" (lines {start_line or 1}-{end_line or 'end'})"
 
-        language = ProgrammingLanguageUtils.from_file_extension(path.name)
-        language_str = ProgrammingLanguageUtils.get_name(language)
-
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
             content=f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}",
-            context=f"`content` is:\n```{language_str}\n{content}\n```"
+            context=f"`content` is:\n```text\n{context_str}\n```"
         )
 
     def _write_file_context(self, arguments: Dict[str, Any]) -> str | None:
