@@ -539,6 +539,12 @@ class AIConversation:
                 # Create tool result message
                 tool_result_dict = tool_result.to_dict()
                 content = f"""```json\n{json.dumps(tool_result_dict, indent=4)}\n```"""
+
+                # See if there's extra context to add for this tool result
+                context = tool_result.context
+                if context is not None:
+                    content += f"\n{context}"
+
                 tool_result_message = AIMessage.create(
                     source=AIMessageSource.TOOL_RESULT,
                     content=content,
@@ -564,6 +570,12 @@ class AIConversation:
                         # Create tool result message
                         tool_result_dict = tool_result.to_dict()
                         content = f"""```json\n{json.dumps(tool_result_dict, indent=4)}\n```"""
+
+                        # See if there's extra context to add for this tool result
+                        context = tool_result.context
+                        if context is not None:
+                            content += f"\n{context}"
+
                         tool_result_message = AIMessage.create(
                             source=AIMessageSource.TOOL_RESULT,
                             content=content,

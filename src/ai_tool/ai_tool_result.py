@@ -12,6 +12,7 @@ class AIToolResult:
     name: str
     content: str
     error: str | None = None
+    context: str | None = None
     continuation: asyncio.Task | None = None
 
     def to_dict(self) -> Dict[str, Any]:

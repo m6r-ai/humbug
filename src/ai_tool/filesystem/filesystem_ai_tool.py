@@ -372,10 +372,14 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
 
+        language = ProgrammingLanguageUtils.from_file_extension(path.name)
+        language_str = ProgrammingLanguageUtils.get_name(language)
+
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
-            content=f"File: {display_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}"
+            content=f"File: {display_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}",
+            context=f"`content` is:\n```{language_str}\n{content}\n```"
         )
 
     async def _read_file_lines(
@@ -457,10 +461,14 @@ class FileSystemAITool(AITool):
         if start_line is not None or end_line is not None:
             range_desc = f" (lines {start_line or 1}-{end_line or 'end'})"
 
+        language = ProgrammingLanguageUtils.from_file_extension(path.name)
+        language_str = ProgrammingLanguageUtils.get_name(language)
+
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
-            content=f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}"
+            content=f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}",
+            context=f"`content` is:\n```{language_str}\n{content}\n```"
         )
 
     def _write_file_context(self, arguments: Dict[str, Any]) -> str | None:
