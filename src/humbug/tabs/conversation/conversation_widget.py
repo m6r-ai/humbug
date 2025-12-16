@@ -1583,7 +1583,7 @@ class ConversationWidget(QWidget):
             # After initial layout is complete, check for visibility changes after resize
             self._lazy_update_visible_sections()
 
-    def cancel_current_tasks(self) -> None:
+    def cancel_current_tasks(self, notify: bool = True) -> None:
         """Cancel any ongoing AI response tasks."""
         # First remove any active tool approval UI
         if self._pending_tool_call_approval:
@@ -1591,7 +1591,7 @@ class ConversationWidget(QWidget):
             self._pending_tool_call_approval = None
 
         ai_conversation = cast(AIConversation, self._ai_conversation)
-        ai_conversation.cancel_current_tasks()
+        ai_conversation.cancel_current_tasks(notify)
 
     def _build_widget_style(self) -> str:
         """Build styles for the conversation widget."""
@@ -2044,6 +2044,20 @@ class ConversationWidget(QWidget):
             return
 
         assert self._messages[index].message_source() == AIMessageSource.USER, "Only user messages can be deleted."
+
+        # If we're currently streaming, cancel the AI interaction first
+        if self._is_streaming:
+            self.cancel_current_tasks(False)
+            self._is_streaming = False
+            self._input.set_streaming(False)
+            self._stop_message_border_animation()
+
+            # Clear any pending message updates
+            self._pending_messages.clear()
+            if self._update_timer.isActive():
+                self._update_timer.stop()
+
+            self.status_updated.emit()
 
         # Update the underlying AI conversation history
         ai_conversation = cast(AIConversation, self._ai_conversation)

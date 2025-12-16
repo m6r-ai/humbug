@@ -14,6 +14,8 @@ Bug fixes:
   updating the display to show that had happened.
 - The clock AI tool never used to indicate which format it would use for outputs.  It now states that it defaults to ISO.
 - Relax an assertion that can occur when processing an empty markdown list.
+- Resolved a problem with deleting messages while the AI is streaming a response.
+- Resolved a problem with deleting messages where a tool approval is visible.
 
 ## v0.34 (2025-12-12)
 

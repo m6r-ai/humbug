@@ -59,6 +59,7 @@ class AIConversation:
         self._current_ai_message: AIMessage | None = None
         self._current_reasoning_message: AIMessage | None = None
         self._is_streaming = False
+        self._expecting_cancellation = False
 
         # Tool approval state
         self._pending_tool_calls: List[AIToolCall] = []
@@ -232,6 +233,7 @@ class AIConversation:
 
     async def _start_ai(self) -> None:
         """Start an AI response based on the conversation history."""
+        self._expecting_cancellation = False
         self._state = ConversationState.STREAMING_AI_RESPONSE
         stream = None
         settings = self.conversation_settings()
@@ -655,7 +657,9 @@ class AIConversation:
             error: AIError object containing error details
         """
         # For cancellation, don't log as warning since it's user-initiated
+        notify = True
         if error.code == "cancelled":
+            notify = not self._expecting_cancellation
             self._logger.debug("AI response cancelled by user")
 
         else:
@@ -689,6 +693,9 @@ class AIConversation:
                 await self._trigger_event(AIConversationEvent.MESSAGE_COMPLETED, message)
 
             self._current_ai_message = None
+
+        if not notify:
+            return
 
         error_msg = error.message
         error_message = AIMessage.create(
@@ -945,8 +952,11 @@ class AIConversation:
             await self._handle_usage(reasoning, content, tool_calls, redacted_reasoning)
             await self._handle_pending_user_messages()
 
-    def cancel_current_tasks(self) -> None:
+    def cancel_current_tasks(self, notify: bool = True) -> None:
         """Cancel any ongoing AI response tasks."""
+        # If notify is False, we are expecting a cancellation and should not log it as unexpected
+        self._expecting_cancellation = not notify
+
         # Cancel pending tool authorization if present
         if self._pending_authorization_future and not self._pending_authorization_future.done():
             self._logger.debug("Cancelling pending tool authorization due to task cancellation")
