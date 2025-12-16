@@ -13,6 +13,7 @@ Bug fixes:
 - Fixed a minor race condition in the message UI that could lead to queued messages becoming the active message without
   updating the display to show that had happened.
 - The clock AI tool never used to indicate which format it would use for outputs.  It now states that it defaults to ISO.
+- Relax an assertion that can occur when processing an empty markdown list.
 
 ## v0.34 (2025-12-12)
 
