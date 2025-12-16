@@ -202,7 +202,7 @@ class AIFPLAITool(AITool):
             Context string if applicable, otherwise None
         """
         expression = arguments.get("expression", "")
-        return f"AIFPL `expression` is:\n```aifpl\n{expression}\n```"
+        return f"`expression` is:\n```aifpl\n{expression}\n```"
 
     async def _evaluate(
         self,
@@ -250,7 +250,8 @@ class AIFPLAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="AIFPL",
-                content=result
+                content=result,
+                context=f"`content` is:\n```aifpl\n{result}\n```"
             )
 
         except AIToolTimeoutError:
