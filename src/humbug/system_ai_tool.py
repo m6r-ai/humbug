@@ -1,4 +1,5 @@
 import logging
+import json
 import os
 from typing import Any, Dict
 
@@ -595,10 +596,12 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI requested info for tab ID: {tab_id}"
             )
+            result_str = str(tab_info)
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=str(tab_info)
+                content=result_str,
+                context=f"`content` is:\n```json\n{json.dumps(tab_info, indent=2)}\n```"
             )
 
         except AIToolExecutionError:
@@ -674,7 +677,8 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Current tabs:\n{result}"
+                content=f"Current tabs:\n{json.dumps(result, indent=2)}",
+                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
             )
 
         except Exception as e:

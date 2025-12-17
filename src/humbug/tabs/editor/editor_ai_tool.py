@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, Dict, cast
 
@@ -308,7 +309,8 @@ class EditorAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="editor",
-                content=str(context_object)
+                content=str(context_object),
+                context=f"`content` is:\n```json\n{json.dumps(context_object, indent=2)}\n```"
             )
 
         except ValueError as e:

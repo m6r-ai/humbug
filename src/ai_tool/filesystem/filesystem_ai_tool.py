@@ -1,3 +1,4 @@
+import json
 import logging
 from math import log10
 import os
@@ -160,7 +161,10 @@ class FileSystemAITool(AITool):
                 extract_context=None,
                 allowed_parameters={"path", "encoding", "start_line", "end_line"},
                 required_parameters={"path"},
-                description="Read file contents with line numbers. Returns line numbers and content as a dictionary-like structure"
+                description="Read file contents with line numbers. Optionally specify start_line and end_line "
+                    "(1-indexed, inclusive) to read a specific range of lines. Returns a dictionary with integer "
+                    "line numbers as keys and line content as string values. Use this when you only need specific "
+                    "lines or when line numbers are important"
             ),
             "write_file": AIToolOperationDefinition(
                 name="write_file",
@@ -432,7 +436,6 @@ class FileSystemAITool(AITool):
 
         # Build line-numbered content
         context_object = {}
-        context_str = ""
         if not content:
             context_object[1] = ""
 
@@ -456,10 +459,8 @@ class FileSystemAITool(AITool):
 
             # Build result (end_line can exceed total_lines, just truncate)
             last_line = min(actual_end, total_lines)
-            digits = int(log10(last_line)) + 1
             for line_num in range(actual_start, last_line + 1):
                 context_object[line_num] = content_lines[line_num - 1]
-                context_str += f"{line_num:{digits}}:  {content_lines[line_num - 1]}\n"
 
         # Build header with optional range description
         range_desc = ""
@@ -470,7 +471,7 @@ class FileSystemAITool(AITool):
             id=tool_call.id,
             name="filesystem",
             content=f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}",
-            context=f"`content` is:\n```text\n{context_str}\n```"
+            context=f"`content` is:\n```json\n{json.dumps(context_object, indent=2)}\n```"
         )
 
     def _write_file_context(self, arguments: Dict[str, Any]) -> str | None:
@@ -703,10 +704,13 @@ class FileSystemAITool(AITool):
                 size_str = f" ({item['size']:,} bytes)" if item['size'] is not None else ""
                 result_lines.append(f"📄 {item['name']}{size_str}")
 
+        result_str = "\n".join(result_lines)
+
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
-            content="\n".join(result_lines)
+            content=result_str,
+            context=f"`content` is:\n```text\n{result_str}\n```"
         )
 
     async def _create_directory(
@@ -1024,7 +1028,8 @@ Permissions: {oct(stat_info.st_mode)[-3:]}"""
             return AIToolResult(
                 id=tool_call.id,
                 name="filesystem",
-                content=result
+                content=result,
+                context=f"`content` is:\n```text\n{result}\n```"
             )
 
         except PermissionError as e:

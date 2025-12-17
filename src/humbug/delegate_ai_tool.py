@@ -307,7 +307,9 @@ class DelegateAITool(AITool):
                 return AIToolResult(
                     id=tool_call.id,
                     name="delegate_ai",
-                    content=f"Delegated AI task failed, session_id: {session_id}: error: {error_msg}"
+                    content="",
+                    error=f"Delegated AI task failed, session_id: {session_id}: error: {error_msg}",
+                    context=f"`error` is:\n```text\n{error_msg}\n```"
                 )
 
             response_content = result.get("content", "")
@@ -327,20 +329,26 @@ class DelegateAITool(AITool):
                 f"Delegated AI task completed\ntab ID: {tab_id}\nsession ID: {session_id}\nresponse: {response_content[:50]}..."
             )
 
+            result_str = "\n\n".join(result_parts)
+
             return AIToolResult(
                 id=tool_call.id,
                 name="delegate_ai",
-                content="\n\n".join(result_parts)
+                content=result_str,
+                context=f"`content` is:\n```text\n{result_str}\n```"
             )
 
         except Exception as e:
             self._logger.error("Error in AI delegation: %s", str(e), exc_info=True)
             self._column_manager.close_tab_by_id(conversation_tab.tab_id())
 
+            error_str = str(e)
             return AIToolResult(
                 id=tool_call.id,
                 name="delegate_ai",
-                content="Delegated AI task failed: " + str(e)
+                content="",
+                error="Delegated AI task failed: " + error_str,
+                context=f"`error` is:\n```text\n{error_str}\n```"
             )
 
     async def _delegate_task(

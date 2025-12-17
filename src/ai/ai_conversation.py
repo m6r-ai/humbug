@@ -496,7 +496,7 @@ class AIConversation:
 
             # Create and add tool call message
             tool_call_dict = tool_call.to_dict()
-            content = f"""```json\n{json.dumps(tool_call_dict, indent=4)}\n```"""
+            content = f"""```json\n{json.dumps(tool_call_dict, indent=2)}\n```"""
 
             # See if there's extra context to add for this tool call
             context = self._extract_context(tool_call)
@@ -539,7 +539,7 @@ class AIConversation:
             if tool_result.continuation is None:
                 # Create tool result message
                 tool_result_dict = tool_result.to_dict()
-                content = f"""```json\n{json.dumps(tool_result_dict, indent=4)}\n```"""
+                content = f"""```json\n{json.dumps(tool_result_dict, indent=2)}\n```"""
 
                 # See if there's extra context to add for this tool result
                 context = tool_result.context
@@ -567,10 +567,11 @@ class AIConversation:
                     if tool_result.id == continuation.id:
                         tool_result.continuation = None
                         tool_result.content = continuation.content
+                        tool_result.context = continuation.context
 
                         # Create tool result message
                         tool_result_dict = tool_result.to_dict()
-                        content = f"""```json\n{json.dumps(tool_result_dict, indent=4)}\n```"""
+                        content = f"""```json\n{json.dumps(tool_result_dict, indent=2)}\n```"""
 
                         # See if there's extra context to add for this tool result
                         context = tool_result.context
