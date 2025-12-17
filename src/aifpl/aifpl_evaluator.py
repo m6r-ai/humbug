@@ -931,6 +931,7 @@ class AIFPLEvaluator:
                 # Call function with already-evaluated argument
                 item_result = self._call_function_with_evaluated_args(func_expr, [item], env, depth + 1)
                 result_elements.append(item_result)
+
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
                     message=f"Error in map function at element {i+1}",

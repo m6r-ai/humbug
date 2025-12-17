@@ -68,6 +68,7 @@ class AITool(ABC):
 
         try:
             return extract_context(arguments)
+
         except AIToolExecutionError:
             # Ignore errors during context extraction
             return None

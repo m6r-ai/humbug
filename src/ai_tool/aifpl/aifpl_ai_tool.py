@@ -241,6 +241,7 @@ class AIFPLAITool(AITool):
                     asyncio.to_thread(self._evaluate_expression_sync, expression),
                     timeout=10.0  # Increased timeout for complex functional programming
                 )
+
             except asyncio.TimeoutError as e:
                 self._logger.warning("AIFPL expression evaluation timed out: %s", expression)
                 raise AIToolTimeoutError("AIFPL calculation timed out", 10.0) from e
@@ -264,6 +265,7 @@ class AIFPLAITool(AITool):
             error_msg = str(e).lower()
             if "division by zero" in error_msg:
                 raise AIToolExecutionError("Division by zero") from e
+
             raise AIToolExecutionError(str(e)) from e
 
         except ZeroDivisionError as e:
