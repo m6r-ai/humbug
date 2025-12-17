@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from typing import Any, Dict
@@ -252,43 +253,6 @@ class TerminalAITool(AITool):
 
         return preview_text
 
-    def _format_terminal_status(self, status_info: TerminalStatusInfo) -> str:
-        """
-        Format terminal status information as readable text.
-
-        Args:
-            status_info: TerminalStatusInfo instance
-
-        Returns:
-            Formatted status text
-        """
-        lines = []
-
-        lines.append(f"Tab ID: {status_info.tab_id}")
-        lines.append(f"Running: {status_info.tab_running}")
-
-        # Process information
-        if status_info.process_id:
-            lines.append(f"Process ID: {status_info.process_id}")
-
-        else:
-            lines.append("Process ID: None")
-
-        lines.append(f"Process Running: {status_info.process_running}")
-        lines.append(f"Process Name: {status_info.process_name}")
-
-        # Terminal dimensions
-        rows, cols = status_info.terminal_size
-        lines.append(f"Terminal Size: {rows} rows x {cols} cols")
-
-        # Cursor position
-        cursor_row, cursor_col = status_info.cursor_position
-        lines.append(f"Cursor Position: row {cursor_row}, col {cursor_col} (visible: {status_info.cursor_visible})")
-
-        lines.append(f"Buffer Lines: {status_info.buffer_lines}")
-
-        return '\n'.join(lines)
-
     def write_context(self, arguments: Dict[str, Any]) -> str | None:
         """
         Extract context for write operation.
@@ -370,7 +334,8 @@ class TerminalAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="terminal",
-                content=buffer_content
+                content=buffer_content,
+                context=f"`content` is:\n```text\n{buffer_content}\n```"
             )
 
         except Exception as e:
@@ -396,12 +361,28 @@ class TerminalAITool(AITool):
                 f"AI requested terminal status\ntab ID: {tab_id}"
             )
 
-            status_text = self._format_terminal_status(status_info)
-
+            status_dict = {
+                "tab_id": status_info.tab_id,
+                "tab_running": status_info.tab_running,
+                "process_id": status_info.process_id,
+                "process_running": status_info.process_running,
+                "process_name": status_info.process_name,
+                "terminal_size": {
+                    "rows": status_info.terminal_size[0],
+                    "cols": status_info.terminal_size[1]
+                },
+                "cursor_position": {
+                    "row": status_info.cursor_position[0],
+                    "col": status_info.cursor_position[1],
+                    "visible": status_info.cursor_visible
+                },
+                "buffer_lines": status_info.buffer_lines
+            }
             return AIToolResult(
                 id=tool_call.id,
                 name="terminal",
-                content=status_text
+                content=str(status_dict),
+                context=f"`content` is:\n```json\n{json.dumps(status_dict, indent=2)}\n```"
             )
 
         except Exception as e:
