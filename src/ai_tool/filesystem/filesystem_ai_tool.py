@@ -1,6 +1,5 @@
 import json
 import logging
-from math import log10
 import os
 import shutil
 import tempfile
