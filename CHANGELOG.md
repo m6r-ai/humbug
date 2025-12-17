@@ -19,6 +19,7 @@ Bug fixes:
 - Resolved a problem with deleting messages while the AI is streaming a response.
 - Resolved a problem with deleting messages where a tool approval is visible.
 - Fixed a problem in the markdown parser where we have multiple paragraphs in a list item.
+- Fixed a problem with rendering horizontal rules following tables.
 
 ## v0.34 (2025-12-12)
 

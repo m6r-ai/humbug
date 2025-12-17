@@ -1031,6 +1031,14 @@ class MarkdownRenderer(MarkdownASTVisitor):
         Returns:
             None
         """
+        orig_block_format = self._cursor.blockFormat()
+
+        # Insert blocks after the HR with clean formatting (no margins)
+        clean_block_format = QTextBlockFormat()
+        clean_block_format.setTopMargin(0)
+        clean_block_format.setBottomMargin(0)
+        self._cursor.setBlockFormat(clean_block_format)
+
         # We need to add a new block before the horizontal rule to ensure proper spacing.
         # However, if the previous sibling is a table then we don't need to do this because
         # one already exists.
@@ -1046,10 +1054,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         img_format.setHeight(1)
         self._cursor.insertImage(img_format)
 
+        # We neeed to add 2 new blocks after the horizontal rule to ensure proper spacing.
+        self._cursor.insertBlock()
         self._cursor.insertBlock()
 
-        # In most cases we need to add 2 new blocks after the horizontal rule
-        # to ensure proper spacing.  However, if the previous sibling is a
-        # MarkdownASTTableNode then we only need to add one.
-        if not previous_sibling or not isinstance(previous_sibling, MarkdownASTTableNode):
-            self._cursor.insertBlock()
+        # Restore the original block format
+        self._cursor.setBlockFormat(orig_block_format)
