@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, Dict, cast
 
@@ -209,7 +210,8 @@ class PreviewAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="preview",
-                content=str(info)
+                content=str(info),
+                context=f"`content` is:\n```json\n{json.dumps(info, indent=2)}\n```"
             )
 
         except Exception as e:
@@ -246,7 +248,8 @@ class PreviewAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="preview",
-                content=str(result)
+                content=str(result),
+                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
             )
 
         except Exception as e:
