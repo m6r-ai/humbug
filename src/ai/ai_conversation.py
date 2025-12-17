@@ -478,7 +478,8 @@ class AIConversation:
                 id=tool_call.id,
                 name=tool_call.name,
                 content="",
-                error=error_msg
+                error=error_msg,
+                context=f"`error` is:\n```text\n{str(e)}\n```"
             )
 
     async def _execute_tool_calls(self, tool_calls: List[AIToolCall]) -> None:
