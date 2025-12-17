@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, Dict, cast
 
@@ -246,7 +247,8 @@ class LogAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="log",
-                content=str(info)
+                content=str(info),
+                context=f"`content` is:\n```json\n{json.dumps(info, indent=2)}\n```"
             )
 
         except Exception as e:
@@ -296,7 +298,8 @@ class LogAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="log",
-                content=str(result)
+                content=str(result),
+                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
             )
 
         except Exception as e:
@@ -340,7 +343,8 @@ class LogAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="log",
-                content=str(message)
+                content=str(message),
+                context=f"`content` is:\n```json\n{json.dumps(message, indent=2)}\n```"
             )
 
         except AIToolExecutionError:
@@ -381,7 +385,8 @@ class LogAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="log",
-                content=str(result)
+                content=str(result),
+                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
             )
 
         except Exception as e:
