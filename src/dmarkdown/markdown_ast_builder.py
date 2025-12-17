@@ -236,10 +236,6 @@ class MarkdownASTBuilder:
             self._code_block_indents.append(indent)
             return 'code_block_start', language_name
 
-        # Check for a line break
-        if indent >= 2 and not lstripped_line:
-            return 'line_break', None
-
         # Check for blank line
         stripped_line = line.strip()
         if not stripped_line:
@@ -1119,19 +1115,47 @@ class MarkdownASTBuilder:
 
             formatted_text = text.lstrip()
 
-            # Find the paragraph within the last list item and continue it
             last_item = list_state.last_item
-            paragraph = cast(MarkdownASTParagraphNode, last_item.children[-1])
 
-            # If we weren't just preceded by a line break then add a space
-            if paragraph.children and not isinstance(paragraph.children[-1], MarkdownASTLineBreakNode):
-                paragraph.add_child(MarkdownASTTextNode(" "))
+            # Determine if we need a new paragraph
+            needs_new_paragraph = False
 
-            for node in self._parse_inline_formatting(formatted_text):
-                paragraph.add_child(node)
+            # Need new paragraph if we had a blank line before this
+            if self._blank_line_count > 0:
+                needs_new_paragraph = True
 
-            paragraph.line_end = line_num
-            self._register_node_line(paragraph, line_num)
+            # Need new paragraph if last child is not a paragraph
+            if last_item.children and not isinstance(last_item.children[-1], MarkdownASTParagraphNode):
+                needs_new_paragraph = True
+
+            # Need new paragraph if there are no children yet
+            if not last_item.children:
+                needs_new_paragraph = True
+
+            if needs_new_paragraph:
+                # Create a new paragraph in this list item
+                paragraph = MarkdownASTParagraphNode()
+                for node in self._parse_inline_formatting(formatted_text):
+                    paragraph.add_child(node)
+
+                paragraph.line_start = line_num
+                paragraph.line_end = line_num
+                last_item.add_child(paragraph)
+                self._register_node_line(paragraph, line_num)
+
+            else:
+                # Continue the existing paragraph
+                paragraph = cast(MarkdownASTParagraphNode, last_item.children[-1])
+
+                # If we weren't just preceded by a line break then add a space
+                if paragraph.children and not isinstance(paragraph.children[-1], MarkdownASTLineBreakNode):
+                    paragraph.add_child(MarkdownASTTextNode(" "))
+
+                for node in self._parse_inline_formatting(formatted_text):
+                    paragraph.add_child(node)
+
+                paragraph.line_end = line_num
+                self._register_node_line(paragraph, line_num)
 
             last_item.line_end = line_num
             self._register_node_line(last_item, line_num)

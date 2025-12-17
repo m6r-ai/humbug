@@ -1107,13 +1107,12 @@ Another paragraph
 continues normally"""
 
     doc = ast_builder.build_ast(mixed_continuation)
-    # Should have heading, paragraph, list, line break, and another paragraph
-    assert len(doc.children) == 5
+    # Should have heading, paragraph, list, and another paragraph
+    assert len(doc.children) == 4
     assert doc.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
     assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
     assert doc.children[2].__class__.__name__ == "MarkdownASTUnorderedListNode"
-    assert doc.children[3].__class__.__name__ == "MarkdownASTLineBreakNode"
-    assert doc.children[4].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[3].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_unclosed_code_block(ast_builder):
