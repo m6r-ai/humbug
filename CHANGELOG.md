@@ -8,6 +8,7 @@ New features:
   consistent with the clock AI tool.
 - Added the ability for tool results to provide pretty-printed context information.  Updated all tools to offer this
   capability where relevant.
+- Added a mindspace setting to allow terminal tabs to auto-close when the underlying shell exits (default enabled).
 
 Bug fixes:
 
