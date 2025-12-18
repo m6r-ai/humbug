@@ -313,6 +313,10 @@ class ConversationWidget(QWidget):
         """
         self._hide_last_ai_connected_message()
 
+        # If this is a USER message, hide any previous USER_QUEUED messages
+        if message.source == AIMessageSource.USER:
+            self._hide_user_queued_messages()
+
         msg_widget = ConversationMessage(
             message.source,
             message.timestamp,
@@ -384,6 +388,26 @@ class ConversationWidget(QWidget):
         # If this was the animated message, stop animation (new message will start it)
         if self._animated_message == last_message_widget:
             self._animated_message = None
+
+    def _hide_user_queued_messages(self) -> None:
+        """
+        Hide all USER_QUEUED messages from the UI.
+
+        This is called when a USER message is added, indicating that any
+        queued messages have been consumed to create the actual user prompt.
+        The messages remain in the transcript for history but are removed
+        from the visual conversation flow.
+        """
+        for message_widget in self._messages:
+            if message_widget.message_source() != AIMessageSource.USER_QUEUED:
+                continue
+
+            # Remove from UI
+            message_widget.set_rendered(False)
+
+            # Clear selection if this message was selected
+            if self._message_with_selection == message_widget:
+                self._message_with_selection = None
 
     def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
         """

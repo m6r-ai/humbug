@@ -9,6 +9,7 @@ New features:
 - Added the ability for tool results to provide pretty-printed context information.  Updated all tools to offer this
   capability where relevant.
 - Added a mindspace setting to allow terminal tabs to auto-close when the underlying shell exits (default enabled).
+- Auto-hide queued user messages after they have been used for the next user prompt.
 
 Bug fixes:
 
@@ -21,6 +22,7 @@ Bug fixes:
 - Resolved a problem with deleting messages where a tool approval is visible.
 - Fixed a problem in the markdown parser where we have multiple paragraphs in a list item.
 - Fixed a problem with rendering horizontal rules following tables.
+- Fixed a problem with the AIFPL syntax lexer/parser so it handles multi-line strings correctly.
 
 ## v0.34 (2025-12-12)
 

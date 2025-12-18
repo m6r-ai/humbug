@@ -16,15 +16,16 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        The application contains a terminal tool.  You can find the code in src/terminal and src/humbug/tabs/terminal
+        The application contains an AI conversation view.  This is driven by a tab that contains a widget, that
+        in turn contains messages and those contain message sections.  The code for these is in
+        src/humbug/tabs/conversation.
 
-        Mindspace settings are handled in src/humbug/mindspace/mindspace_settings.py and
-        src/humbug/mindspace/mindspaces_settings_dialog.py
+        Currently we display "user_queued" messages although eventually these messages are replaced when their
+        contents are unqueued and used for the next user prompt.  When this happens I want those user_queued
+        messages to be hidden.  Similarly, when loading a conversation from a file these should be hidden too.
 
 Action:
     # Describe the details of the change required.
-    When the user exits the terminal by typing "exit" the terminal could automatically close, just as happens with
-    Linux and MacOS terminals.  How might we do this?  Linux and MacOS typically make this a setting the user can
-    adjust so we might want to plan for that too.
+    How might we do this?
 
     Don't code anything - I want to discuss first.
