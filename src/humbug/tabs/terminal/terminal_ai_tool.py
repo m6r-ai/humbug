@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 from typing import Any, Dict
@@ -379,7 +380,7 @@ class TerminalAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="terminal",
-                content=str(status_dict),
+                content=json.dumps(status_dict, indent=2),
                 context="json"
             )
 

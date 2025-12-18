@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, Dict, cast
 
@@ -246,7 +247,7 @@ class LogAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="log",
-                content=str(info),
+                content=json.dumps(info, indent=2),
                 context="json"
             )
 
@@ -297,7 +298,7 @@ class LogAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="log",
-                content=str(result),
+                content=json.dumps(result, indent=2),
                 context="json"
             )
 
@@ -342,7 +343,7 @@ class LogAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="log",
-                content=str(message),
+                content=json.dumps(message, indent=2),
                 context="json"
             )
 
@@ -384,7 +385,7 @@ class LogAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="log",
-                content=str(result),
+                content=json.dumps(result, indent=2),
                 context="json"
             )
 

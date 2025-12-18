@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, Dict, cast
 
@@ -252,7 +253,7 @@ class ConversationAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="conversation",
-                content=str(info),
+                content=json.dumps(info, indent=2),
                 context="json"
             )
 
@@ -303,7 +304,7 @@ class ConversationAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="conversation",
-                content=str(result),
+                content=json.dumps(result, indent=2),
                 context="json"
             )
 
@@ -390,7 +391,7 @@ class ConversationAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="conversation",
-                content=str(result),
+                content=json.dumps(result, indent=2),
                 context="json"
             )
 

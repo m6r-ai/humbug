@@ -1,3 +1,4 @@
+import json
 import logging
 from typing import Any, Dict, cast
 
@@ -305,10 +306,19 @@ class EditorAITool(AITool):
 
             self._mindspace_manager.add_interaction(MindspaceLogLevel.INFO, log_msg)
 
+            range_value = "all lines"
+            if start_line is not None or end_line is not None:
+                range_value = f"{start_line or 1}-{end_line or 'end'}"
+
+            result_object = {
+                "range": range_value,
+                "lines": context_object
+            }
+
             return AIToolResult(
                 id=tool_call.id,
                 name="editor",
-                content=str(context_object),
+                content=json.dumps(result_object, indent=2),
                 context="json"
             )
 
@@ -340,7 +350,8 @@ class EditorAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="editor",
-                content=str(cursor_info)
+                content=json.dumps(cursor_info, indent=2),
+                context="json"
             )
 
         except Exception as e:
@@ -368,7 +379,7 @@ class EditorAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="editor",
-                content=str(editor_info),
+                content=json.dumps(editor_info, indent=2),
                 context="json"
             )
 
@@ -457,7 +468,7 @@ class EditorAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="editor",
-                content=str(result),
+                content=json.dumps(result, indent=2),
                 context="json"
             )
 

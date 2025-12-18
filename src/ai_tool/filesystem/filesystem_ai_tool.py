@@ -393,7 +393,7 @@ class FileSystemAITool(AITool):
         """Read file contents with line numbers."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, _ = self._validate_and_resolve_path("path", path_arg)
 
         # Validate file exists and is readable
         if not path.exists():
@@ -417,8 +417,6 @@ class FileSystemAITool(AITool):
         try:
             with open(path, 'r', encoding=encoding) as f:
                 content = f.read()
-
-            actual_size = path.stat().st_size
 
         except UnicodeDecodeError as e:
             raise AIToolExecutionError(
@@ -465,10 +463,7 @@ class FileSystemAITool(AITool):
             range_value = f"{start_line or 1}-{end_line or 'end'}"
 
         result_object = {
-            "file": display_path,
             "range": range_value,
-            "size_bytes": actual_size,
-            "encoding": encoding,
             "lines": context_object
         }
 
