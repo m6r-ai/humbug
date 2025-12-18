@@ -697,6 +697,7 @@ class ConversationMessage(QFrame):
 
             return
 
+        # If we were given context, append it to the message for section extraction
         if self._context:
             text += f"\n{self._context}"
 
