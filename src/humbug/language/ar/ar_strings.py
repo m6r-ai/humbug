@@ -155,6 +155,7 @@ def get_arabic_strings() -> LanguageStrings:
         ),
         terminal_scrollback_enabled="تحديد مخزن التمرير المؤقت",
         terminal_scrollback_lines="خطوط التمرير",
+        terminal_close_on_exit="إغلاق الطرفية عند خروج الصدفة",
         tool_settings="إعدادات أدوات الذكاء الاصطناعي",
         tools_description="تفعيل أو إلغاء تفعيل الأدوات الفردية لهذا المساحة الذهنية",
 

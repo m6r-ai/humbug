@@ -155,6 +155,7 @@ def get_french_strings() -> LanguageStrings:
         ),
         terminal_scrollback_enabled="Limiter le tampon de défilement",
         terminal_scrollback_lines="Lignes de défilement",
+        terminal_close_on_exit="Fermer le terminal à la sortie du shell",
         tool_settings="Paramètres des outils IA",
         tools_description="Activer ou désactiver des outils individuels pour cet espace mental",
 

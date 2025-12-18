@@ -155,6 +155,7 @@ def get_english_strings() -> LanguageStrings:
         ),
         terminal_scrollback_enabled="Limit Scrollback Buffer",
         terminal_scrollback_lines="Scrollback Lines",
+        terminal_close_on_exit="Close terminal when shell exits",
         tool_settings="AI Tool Settings",
         tools_description="Enable or disable individual tools for this mindspace",
 

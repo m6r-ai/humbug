@@ -39,6 +39,7 @@ class TabBase(QFrame):
     file_state_changed = Signal(str, bool)  # Emits (tab_id, file_exists)
     status_message = Signal(StatusMessage)
     activated = Signal()  # Emits when tab is activated by user interaction
+    close_requested = Signal()  # Emits when tab requests to be closed
 
     def __init__(self, tab_id: str, parent: QWidget | None = None) -> None:
         """

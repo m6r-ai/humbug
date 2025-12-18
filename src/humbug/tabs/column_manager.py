@@ -470,6 +470,7 @@ class ColumnManager(QWidget):
         tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
         tab.modified_state_changed.connect(self._on_tab_modified_state_changed)
         tab.file_state_changed.connect(self._on_tab_file_state_changed)
+        tab.close_requested.connect(lambda: self.close_tab_by_id(tab_id, force_close=True))
 
         self._tabs[tab_id] = tab
         self._tab_labels[tab_id] = label

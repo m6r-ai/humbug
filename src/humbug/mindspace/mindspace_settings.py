@@ -23,6 +23,7 @@ class MindspaceSettings:
     auto_backup_interval: int = 300  # Default 5 minutes in seconds
     terminal_scrollback_enabled: bool = True  # Default to limited scrollback
     terminal_scrollback_lines: int = 10000  # Default 10000 lines
+    terminal_close_on_exit: bool = True  # Default to native terminal behavior
 
     @classmethod
     def load(cls, path: str) -> "MindspaceSettings":
@@ -61,6 +62,7 @@ class MindspaceSettings:
                 auto_backup_interval=editor.get("autoBackupInterval", 300),
                 terminal_scrollback_enabled=terminal.get("scrollbackEnabled", True),
                 terminal_scrollback_lines=terminal.get("scrollbackLines", 10000),
+                terminal_close_on_exit=terminal.get("closeOnExit", True),
                 enabled_tools=enabled_tools
             )
 
@@ -81,6 +83,7 @@ class MindspaceSettings:
             "terminal": {
                 "scrollbackEnabled": self.terminal_scrollback_enabled,
                 "scrollbackLines": self.terminal_scrollback_lines,
+                "closeOnExit": self.terminal_close_on_exit,
             },
             "tools": {
                 "enabled": self.enabled_tools,

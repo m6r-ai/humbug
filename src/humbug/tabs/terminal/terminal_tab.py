@@ -246,12 +246,26 @@ class TerminalTab(TabBase):
             self._logger.exception("Error in read loop: %s", str(e))
 
         finally:
+            # Check if we should auto-close the terminal
+            should_auto_close = False
             if self._running and not self._transferring:
-                try:
-                    self._terminal_widget.put_data(b"\r\n[Process completed]\r\n")
+                settings = self._mindspace_manager.settings()
+                if settings and settings.terminal_close_on_exit:
+                    should_auto_close = True
 
-                except Exception as e:
-                    self._logger.debug("Could not write completion message: %s", e)
+            if should_auto_close:
+                # Request tab closure via signal
+                self._logger.debug("Shell exited, requesting tab closure")
+                self.close_requested.emit()
+
+            else:
+                # Show completion message if not auto-closing
+                if self._running and not self._transferring:
+                    try:
+                        self._terminal_widget.put_data(b"\r\n[Process completed]\r\n")
+
+                    except Exception as e:
+                        self._logger.debug("Could not write completion message: %s", e)
 
     def _on_data_ready(self, data: bytes) -> None:
         """Handle data from terminal."""

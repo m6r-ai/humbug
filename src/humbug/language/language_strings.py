@@ -147,6 +147,7 @@ class LanguageStrings:
     terminal_settings_description: str
     terminal_scrollback_enabled: str
     terminal_scrollback_lines: str
+    terminal_close_on_exit: str
     tool_settings: str
     tools_description: str
 

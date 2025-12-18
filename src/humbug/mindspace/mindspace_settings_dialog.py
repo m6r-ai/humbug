@@ -151,6 +151,12 @@ class MindspaceSettingsDialog(QDialog):
         )
         self._settings_container.add_setting(self._terminal_scrollback_spin)
 
+        # Terminal close on exit
+        self._terminal_close_on_exit_check = SettingsFactory.create_checkbox(
+            strings.terminal_close_on_exit
+        )
+        self._settings_container.add_setting(self._terminal_close_on_exit_check)
+
         # Add stretch to push content up
         self._settings_container.add_stretch()
 
@@ -281,6 +287,7 @@ class MindspaceSettingsDialog(QDialog):
             auto_backup_interval=self._backup_interval_spin.get_value(),
             terminal_scrollback_enabled=self._terminal_scrollback_check.get_value(),
             terminal_scrollback_lines=self._terminal_scrollback_spin.get_value(),
+            terminal_close_on_exit=self._terminal_close_on_exit_check.get_value(),
             model=self._model_combo.get_text(),
             temperature=self._temp_spin.get_value(),
             reasoning=self._reasoning_combo.get_value(),
@@ -297,6 +304,7 @@ class MindspaceSettingsDialog(QDialog):
             auto_backup_interval=settings.auto_backup_interval,
             terminal_scrollback_enabled=settings.terminal_scrollback_enabled,
             terminal_scrollback_lines=settings.terminal_scrollback_lines,
+            terminal_close_on_exit=settings.terminal_close_on_exit,
             model=settings.model,
             temperature=settings.temperature,
             reasoning=settings.reasoning,
@@ -314,6 +322,7 @@ class MindspaceSettingsDialog(QDialog):
         self._terminal_scrollback_check.set_value(settings.terminal_scrollback_enabled)
         self._terminal_scrollback_spin.set_value(settings.terminal_scrollback_lines)
         self._terminal_scrollback_spin.set_enabled(settings.terminal_scrollback_enabled)
+        self._terminal_close_on_exit_check.set_value(settings.terminal_close_on_exit)
 
         # Populate model combo
         ai_backends = self._user_manager.get_ai_backends()

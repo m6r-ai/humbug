@@ -16,16 +16,15 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        The application contains a series of AI tools.  These can be found in src/humbug/system_ai_tool.py,
-        src/ai_tool/*.py src/ai_tool/*/*.py, src/humbug/tabs/conversation/conversation_ai_tool.py,
-        src/humbug/tabs/editor/editor_ai_tool.py, src/humbug/tabs/preview/preview_ai_tool.py,
-        src/humbug/tabs/log/log_ai_tool.py, src/humbug/tabs/terminal/terminal_ai_tool.py
+        The application contains a terminal tool.  You can find the code in src/terminal and src/humbug/tabs/terminal
+
+        Mindspace settings are handled in src/humbug/mindspace/mindspace_settings.py and
+        src/humbug/mindspace/mindspaces_settings_dialog.py
 
 Action:
     # Describe the details of the change required.
-    We have just unified the approach for all the AI tools but we can probably go further.
-
-    Please check all the tools and see which ones could/should be using `_get_str_value_from_key` for
-    mandatory arguments.
+    When the user exits the terminal by typing "exit" the terminal could automatically close, just as happens with
+    Linux and MacOS terminals.  How might we do this?  Linux and MacOS typically make this a setting the user can
+    adjust so we might want to plan for that too.
 
     Don't code anything - I want to discuss first.
