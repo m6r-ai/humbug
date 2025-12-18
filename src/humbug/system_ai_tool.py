@@ -302,6 +302,7 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 editor_tab = self._column_manager.open_file(file_path, False)
+
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -334,6 +335,7 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 terminal_tab = self._column_manager.new_terminal()
+
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -440,6 +442,7 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 conversation_tab = self._column_manager.new_conversation(False, None, model, temperature, reasoning)
+
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -478,6 +481,7 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 shell_tab = self._column_manager.show_system_shell()
+
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -506,6 +510,7 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 log_tab = self._column_manager.show_system_log()
+
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -535,6 +540,7 @@ class SystemAITool(AITool):
 
         if file_path_arg:
             preview_path = self._validate_and_resolve_path(file_path_arg)
+
         else:
             # Use mindspace root if no path provided
             preview_path = self._mindspace_manager.get_absolute_path(".")
@@ -544,6 +550,7 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 preview_tab = self._column_manager.open_preview_page(preview_path, False)
+
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -596,11 +603,11 @@ class SystemAITool(AITool):
                 MindspaceLogLevel.INFO,
                 f"AI requested info for tab ID: {tab_id}"
             )
-            result_str = str(tab_info)
+
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=result_str,
+                content=json.dumps(tab_info, indent=2),
                 context="json"
             )
 
