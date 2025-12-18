@@ -8,7 +8,11 @@ from syntax.lexer import Lexer, LexerState, Token, TokenType
 class AIFPLLexerState(LexerState):
     """
     State information for the AIFPL lexer.
+
+    Attributes:
+        in_string: Indicates if we're currently parsing a multi-line string
     """
+    in_string: bool = False
 
 
 class AIFPLLexer(Lexer):
@@ -18,6 +22,10 @@ class AIFPLLexer(Lexer):
     This lexer handles AIFPL-specific syntax including identifiers, numbers,
     strings, and special forms.
     """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._in_string = False
 
     def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> AIFPLLexerState:
         """
@@ -32,8 +40,20 @@ class AIFPLLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
-        self._inner_lex()
-        return AIFPLLexerState()
+        if prev_lexer_state:
+            assert isinstance(prev_lexer_state, AIFPLLexerState), \
+                f"Expected AIFPLLexerState, got {type(prev_lexer_state).__name__}"
+            self._in_string = prev_lexer_state.in_string
+
+        if self._in_string:
+            self._continue_string()
+
+        if not self._in_string:
+            self._inner_lex()
+
+        lexer_state = AIFPLLexerState()
+        lexer_state.in_string = self._in_string
+        return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
         """
@@ -276,6 +296,80 @@ class AIFPLLexer(Lexer):
             start=self._position
         ))
         self._position = self._input_len
+
+    def _read_string(self) -> None:
+        """
+        Read a string literal token.
+
+        Handles escape sequences and multi-line strings.
+        """
+        start = self._position
+        self._in_string = True
+        self._position += 1  # Skip opening quote
+
+        while self._position < self._input_len:
+            ch = self._input[self._position]
+
+            if ch == '\\':
+                # Skip escape sequence
+                self._position += 1
+                if self._position < self._input_len:
+                    self._position += 1
+                continue
+
+            if ch == '"':
+                # Found closing quote
+                self._in_string = False
+                self._position += 1
+                break
+
+            self._position += 1
+
+        # If we're still in a string, we've reached end of line
+        if self._in_string:
+            self._position = self._input_len
+
+        self._tokens.append(Token(
+            type=TokenType.STRING,
+            value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _continue_string(self) -> None:
+        """
+        Continue reading a multi-line string from a previous line.
+
+        This is called when we start lexing a line and we're already in a string.
+        """
+        start = self._position
+
+        while self._position < self._input_len:
+            ch = self._input[self._position]
+
+            if ch == '\\':
+                # Skip escape sequence
+                self._position += 1
+                if self._position < self._input_len:
+                    self._position += 1
+                continue
+
+            if ch == '"':
+                # Found closing quote
+                self._in_string = False
+                self._position += 1
+                break
+
+            self._position += 1
+
+        # If we're still in a string, we've reached end of line
+        if self._in_string:
+            self._position = self._input_len
+
+        self._tokens.append(Token(
+            type=TokenType.STRING,
+            value=self._input[start:self._position],
+            start=start
+        ))
 
     def _is_delimiter(self, ch: str) -> bool:
         """

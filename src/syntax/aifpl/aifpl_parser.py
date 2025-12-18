@@ -33,8 +33,14 @@ class AIFPLParser(Parser):
         Returns:
             The updated parser state after parsing
         """
+        prev_lexer_state = None
+        if prev_parser_state:
+            assert isinstance(prev_parser_state, AIFPLParserState), \
+                f"Expected AIFPLParserState, got {type(prev_parser_state).__name__}"
+            prev_lexer_state = prev_parser_state.lexer_state
+
         lexer = AIFPLLexer()
-        lexer_state = lexer.lex(None, input_str)
+        lexer_state = lexer.lex(prev_lexer_state, input_str)
 
         while True:
             token = lexer.get_next_token()
@@ -44,5 +50,7 @@ class AIFPLParser(Parser):
             self._tokens.append(token)
 
         parser_state = AIFPLParserState()
+        parser_state.continuation_state = 1 if lexer_state.in_string else 0
+        parser_state.parsing_continuation = lexer_state.in_string
         parser_state.lexer_state = lexer_state
         return parser_state
