@@ -23,6 +23,7 @@ Bug fixes:
 - Fixed a problem in the markdown parser where we have multiple paragraphs in a list item.
 - Fixed a problem with rendering horizontal rules following tables.
 - Fixed a problem with the AIFPL syntax lexer/parser so it handles multi-line strings correctly.
+- Fixed a problem with the Scheme syntax lexer/parser so it handles multi-line strings correctly.
 
 ## v0.34 (2025-12-12)
 

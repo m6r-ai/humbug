@@ -82,8 +82,8 @@ class SchemeParser(Parser):
             self._tokens.append(token)
 
         parser_state = SchemeParserState()
-        parser_state.continuation_state = 1 if lexer_state.in_comment else 0
-        parser_state.parsing_continuation = lexer_state.in_comment
+        parser_state.continuation_state = 1 if (lexer_state.in_comment or lexer_state.in_string) else 0
+        parser_state.parsing_continuation = lexer_state.in_comment or lexer_state.in_string
         parser_state.lexer_state = lexer_state
         parser_state.in_vector = in_vector
         return parser_state
