@@ -43,6 +43,7 @@ class ConversationMessage(QFrame):
         message_id: str | None = None,
         user_name: str | None = None,
         content: str | None = None,
+        context: str | None = None,
         parent: QWidget | None = None,
         is_input: bool = False,
         do_not_style: bool = False
@@ -57,6 +58,7 @@ class ConversationMessage(QFrame):
             message_id: Optional message ID for tracking
             user_name: Optional user name for the message
             content: Optional initial content for the message
+            context: Optional context for the message
             parent: Optional parent widget
             is_input: Whether this is an input widget (affects styling)
             do_not_style: Whether to skip initial styling
@@ -186,6 +188,7 @@ class ConversationMessage(QFrame):
         if not do_not_style:
             self._on_style_changed()
 
+        self._context = context
         if content:
             self.set_content(content)
 
@@ -693,6 +696,9 @@ class ConversationMessage(QFrame):
                     self.show()
 
             return
+
+        if self._context:
+            text += f"\n{self._context}"
 
         # Extract sections directly using the markdown converter
         sections_data = self._markdown_converter.extract_sections(text, None)

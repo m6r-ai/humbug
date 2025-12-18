@@ -601,7 +601,7 @@ class SystemAITool(AITool):
                 id=tool_call.id,
                 name="system",
                 content=result_str,
-                context=f"`content` is:\n```json\n{json.dumps(tab_info, indent=2)}\n```"
+                context="json"
             )
 
         except AIToolExecutionError:
@@ -677,8 +677,8 @@ class SystemAITool(AITool):
             return AIToolResult(
                 id=tool_call.id,
                 name="system",
-                content=f"Current tabs:\n{json.dumps(result, indent=2)}",
-                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
+                content=json.dumps(result, indent=2),
+                context="json"
             )
 
         except Exception as e:

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from typing import Dict, Any, cast
 
@@ -309,33 +310,30 @@ class DelegateAITool(AITool):
                     name="delegate_ai",
                     content="",
                     error=f"Delegated AI task failed, session_id: {session_id}: error: {error_msg}",
-                    context=f"`error` is:\n```text\n{error_msg}\n```"
+                    context="text"
                 )
 
             response_content = result.get("content", "")
             usage_info = result.get("usage")
 
-            # Create a formatted response
-            result_parts = [f"Delegated AI task completed, session_id: {session_id}:\n{response_content}"]
-
-            if usage_info:
-                result_parts.append(
-                    f"Token usage: {usage_info['prompt_tokens']} prompt + {usage_info['completion_tokens']} "
-                    f"completion = {usage_info['total_tokens']} total"
-                )
+            # Create a structured response
+            result_object = {
+                "session_id": session_id,
+                "status": "completed",
+                "response": response_content,
+                "usage": usage_info
+            }
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"Delegated AI task completed\ntab ID: {tab_id}\nsession ID: {session_id}\nresponse: {response_content[:50]}..."
             )
 
-            result_str = "\n\n".join(result_parts)
-
             return AIToolResult(
                 id=tool_call.id,
                 name="delegate_ai",
-                content=result_str,
-                context=f"`content` is:\n```text\n{result_str}\n```"
+                content=json.dumps(result_object, indent=2),
+                context="json"
             )
 
         except Exception as e:
@@ -348,7 +346,7 @@ class DelegateAITool(AITool):
                 name="delegate_ai",
                 content="",
                 error="Delegated AI task failed: " + error_str,
-                context=f"`error` is:\n```text\n{error_str}\n```"
+                context="text"
             )
 
     async def _delegate_task(

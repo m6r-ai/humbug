@@ -15,6 +15,7 @@ from ai.ai_model import AIReasoningCapability
 from ai.ai_response import AIError
 from ai.ai_usage import AIUsage
 from ai_tool import AIToolManager, AIToolCall, AIToolResult, AIToolAuthorizationDenied
+from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 
 class ConversationState(Enum):
@@ -497,16 +498,12 @@ class AIConversation:
             # Create and add tool call message
             tool_call_dict = tool_call.to_dict()
             content = f"""```json\n{json.dumps(tool_call_dict, indent=2)}\n```"""
-
-            # See if there's extra context to add for this tool call
             context = self._extract_context(tool_call)
-            if context is not None:
-                content += f"\n{context}"
-
             tool_call_message = AIMessage.create(
                 source=AIMessageSource.TOOL_CALL,
                 content=content,
                 tool_calls=[tool_call],
+                tool_call_context=context,
                 completed=True
             )
             self._conversation.add_message(tool_call_message)
@@ -542,9 +539,13 @@ class AIConversation:
                 content = f"""```json\n{json.dumps(tool_result_dict, indent=2)}\n```"""
 
                 # See if there's extra context to add for this tool result
-                context = tool_result.context
-                if context is not None:
-                    content += f"\n{context}"
+                content_language = tool_result.context
+                if content_language is not None:
+                    # Before we use the context as a language, ensure it's valid
+                    if ProgrammingLanguageUtils.from_name(content_language) == ProgrammingLanguage.TEXT:
+                        content_language = "text"
+
+                    content += f"\n`content` is:\n```{content_language}\n{tool_result.content}\n```"
 
                 tool_result_message = AIMessage.create(
                     source=AIMessageSource.TOOL_RESULT,
@@ -574,9 +575,13 @@ class AIConversation:
                         content = f"""```json\n{json.dumps(tool_result_dict, indent=2)}\n```"""
 
                         # See if there's extra context to add for this tool result
-                        context = tool_result.context
-                        if context is not None:
-                            content += f"\n{context}"
+                        content_language = tool_result.context
+                        if content_language is not None:
+                            # Before we use the context as a language, ensure it's valid
+                            if ProgrammingLanguageUtils.from_name(content_language) == ProgrammingLanguage.TEXT:
+                                content_language = "text"
+
+                            content += f"\n`content` is:\n```{content_language}\n{tool_result.content}\n```"
 
                         tool_result_message = AIMessage.create(
                             source=AIMessageSource.TOOL_RESULT,

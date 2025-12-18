@@ -5,6 +5,7 @@ modules:
   ai:
     internal_dependencies:
       - ai_tool
+      - syntax
     external_dependencies:
       - "standard_library"
       - "aiohttp"

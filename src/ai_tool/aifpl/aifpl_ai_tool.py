@@ -252,7 +252,7 @@ class AIFPLAITool(AITool):
                 id=tool_call.id,
                 name="AIFPL",
                 content=result,
-                context=f"`content` is:\n```aifpl\n{result}\n```"
+                context="aifpl"
             )
 
         except AIToolTimeoutError:

@@ -382,8 +382,8 @@ class FileSystemAITool(AITool):
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
-            content=f"File: {display_path}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{content}",
-            context=f"`content` is:\n```{language_str}\n{content}\n```"
+            content=content,
+            context=language_str
         )
 
     async def _read_file_lines(
@@ -461,16 +461,24 @@ class FileSystemAITool(AITool):
             for line_num in range(actual_start, last_line + 1):
                 context_object[line_num] = content_lines[line_num - 1]
 
-        # Build header with optional range description
-        range_desc = ""
+        # Build result object with metadata
+        range_value = "all lines"
         if start_line is not None or end_line is not None:
-            range_desc = f" (lines {start_line or 1}-{end_line or 'end'})"
+            range_value = f"{start_line or 1}-{end_line or 'end'}"
+
+        result_object = {
+            "file": display_path,
+            "range": range_value,
+            "size_bytes": actual_size,
+            "encoding": encoding,
+            "lines": context_object
+        }
 
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
-            content=f"File: {display_path}{range_desc}\nSize: {actual_size:,} bytes\nEncoding: {encoding}\n\n{str(context_object)}",
-            context=f"`content` is:\n```json\n{json.dumps(context_object, indent=2)}\n```"
+            content=json.dumps(result_object, indent=2),
+            context="json"
         )
 
     def _write_file_context(self, arguments: Dict[str, Any]) -> str | None:
@@ -693,23 +701,17 @@ class FileSystemAITool(AITool):
         except OSError as e:
             raise AIToolExecutionError(f"Failed to list directory: {str(e)}") from e
 
-        result_lines = [f"Directory: {display_path}", f"Items: {len(items)}", ""]
-
-        for item in sorted(items, key=lambda x: (x['type'], x['name'])):
-            if item['type'] == 'directory':
-                result_lines.append(f"📁 {item['name']}/")
-
-            else:
-                size_str = f" ({item['size']:,} bytes)" if item['size'] is not None else ""
-                result_lines.append(f"📄 {item['name']}{size_str}")
-
-        result_str = "\n".join(result_lines)
+        result_object = {
+            "directory": display_path,
+            "total_items": len(items),
+            "items": sorted(items, key=lambda x: (x['type'], x['name']))
+        }
 
         return AIToolResult(
             id=tool_call.id,
             name="filesystem",
-            content=result_str,
-            context=f"`content` is:\n```text\n{result_str}\n```"
+            content=json.dumps(result_object, indent=2),
+            context="json"
         )
 
     async def _create_directory(
@@ -995,40 +997,50 @@ class FileSystemAITool(AITool):
             modified_time = self._format_time(modified_dt, format_type)
 
             if path.is_file():
-                result = f"""File: {display_path}
-Type: File
-Size: {stat_info.st_size:,} bytes
-Modified: {modified_time}
-Permissions: {oct(stat_info.st_mode)[-3:]}
-Extension: {path.suffix or 'None'}"""
+                result_object = {
+                    "path": display_path,
+                    "type": "file",
+                    "size_bytes": stat_info.st_size,
+                    "modified": modified_time,
+                    "permissions": oct(stat_info.st_mode)[-3:],
+                    "extension": path.suffix or None
+                }
 
             elif path.is_dir():
                 try:
                     items = list(path.iterdir())
                     file_count = sum(1 for item in items if item.is_file())
                     dir_count = sum(1 for item in items if item.is_dir())
-                    items_info = f"{len(items)} total ({file_count} files, {dir_count} directories)"
+                    items_info: Dict[str, Any] = {
+                        "total": len(items),
+                        "files": file_count,
+                        "directories": dir_count
+                    }
 
                 except PermissionError:
-                    items_info = "Permission denied"
+                    items_info = {"error": "Permission denied"}
 
-                result = f"""Directory: {display_path}
-Type: Directory
-Items: {items_info}
-Modified: {modified_time}
-Permissions: {oct(stat_info.st_mode)[-3:]}"""
+                result_object = {
+                    "path": display_path,
+                    "type": "directory",
+                    "items": items_info,
+                    "modified": modified_time,
+                    "permissions": oct(stat_info.st_mode)[-3:]
+                }
 
             else:
-                result = f"""Path: {display_path}
-Type: Other (neither file nor directory)
-Modified: {modified_time}
-Permissions: {oct(stat_info.st_mode)[-3:]}"""
+                result_object = {
+                    "path": display_path,
+                    "type": "other",
+                    "modified": modified_time,
+                    "permissions": oct(stat_info.st_mode)[-3:]
+                }
 
             return AIToolResult(
                 id=tool_call.id,
                 name="filesystem",
-                content=result,
-                context=f"`content` is:\n```text\n{result}\n```"
+                content=json.dumps(result_object, indent=2),
+                context="json"
             )
 
         except PermissionError as e:

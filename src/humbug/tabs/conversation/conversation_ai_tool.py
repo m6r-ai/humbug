@@ -254,7 +254,7 @@ class ConversationAITool(AITool):
                 id=tool_call.id,
                 name="conversation",
                 content=str(info),
-                context=f"`content` is:\n```json\n{json.dumps(info, indent=2)}\n```"
+                context="json"
             )
 
         except Exception as e:
@@ -305,7 +305,7 @@ class ConversationAITool(AITool):
                 id=tool_call.id,
                 name="conversation",
                 content=str(result),
-                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
+                context="json"
             )
 
         except Exception as e:
@@ -350,7 +350,7 @@ class ConversationAITool(AITool):
                 id=tool_call.id,
                 name="conversation",
                 content=str(message),
-                context=f"`content` is:\n```json\n{json.dumps(message, indent=2)}\n```"
+                context="json"
             )
 
         except AIToolExecutionError:
@@ -392,7 +392,7 @@ class ConversationAITool(AITool):
                 id=tool_call.id,
                 name="conversation",
                 content=str(result),
-                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
+                context="json"
             )
 
         except Exception as e:

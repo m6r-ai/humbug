@@ -264,7 +264,7 @@ class TerminalAITool(AITool):
         """
         raw_keystrokes = self._get_required_str_value("keystrokes", arguments)
         preview_keystrokes = self._preview_ai_escape_sequences(raw_keystrokes)
-        return f"`keystrokes` is:\n```\n{preview_keystrokes}\n```"
+        return f"`keystrokes` is:\n```text\n{preview_keystrokes}\n```"
 
     async def _write(
         self,
@@ -334,7 +334,7 @@ class TerminalAITool(AITool):
                 id=tool_call.id,
                 name="terminal",
                 content=buffer_content,
-                context=f"`content` is:\n```text\n{buffer_content}\n```"
+                context="text"
             )
 
         except Exception as e:
@@ -381,7 +381,7 @@ class TerminalAITool(AITool):
                 id=tool_call.id,
                 name="terminal",
                 content=str(status_dict),
-                context=f"`content` is:\n```json\n{json.dumps(status_dict, indent=2)}\n```"
+                context="json"
             )
 
         except Exception as e:

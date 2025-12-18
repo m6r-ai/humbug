@@ -310,7 +310,7 @@ class EditorAITool(AITool):
                 id=tool_call.id,
                 name="editor",
                 content=str(context_object),
-                context=f"`content` is:\n```json\n{json.dumps(context_object, indent=2)}\n```"
+                context="json"
             )
 
         except ValueError as e:
@@ -370,7 +370,7 @@ class EditorAITool(AITool):
                 id=tool_call.id,
                 name="editor",
                 content=str(editor_info),
-                context=f"`content` is:\n```json\n{json.dumps(editor_info, indent=2)}\n```"
+                context="json"
             )
 
         except Exception as e:
@@ -459,7 +459,7 @@ class EditorAITool(AITool):
                 id=tool_call.id,
                 name="editor",
                 content=str(result),
-                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
+                context="json"
             )
 
         except Exception as e:
@@ -495,7 +495,7 @@ class EditorAITool(AITool):
                 id=tool_call.id,
                 name="editor",
                 content=selected_text,
-                context=f"`content` is:\n```text\n{selected_text}\n```"
+                context="text"
             )
 
         except Exception as e:
@@ -543,7 +543,7 @@ class EditorAITool(AITool):
                 id=tool_call.id,
                 name="editor",
                 content=diff,
-                context=f"`content` is:\n```diff\n{diff}\n```"
+                context="diff"
             )
 
         except Exception as e:

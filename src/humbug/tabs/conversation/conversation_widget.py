@@ -314,7 +314,13 @@ class ConversationWidget(QWidget):
         self._hide_last_ai_connected_message()
 
         msg_widget = ConversationMessage(
-            message.source, message.timestamp, message.model or "", message.id, message.user_name, message.content, self
+            message.source,
+            message.timestamp,
+            message.model or "",
+            message.id,
+            message.user_name,
+            message.content,
+            message.tool_call_context
         )
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)

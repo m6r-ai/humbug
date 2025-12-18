@@ -211,7 +211,7 @@ class PreviewAITool(AITool):
                 id=tool_call.id,
                 name="preview",
                 content=str(info),
-                context=f"`content` is:\n```json\n{json.dumps(info, indent=2)}\n```"
+                context="json"
             )
 
         except Exception as e:
@@ -249,7 +249,7 @@ class PreviewAITool(AITool):
                 id=tool_call.id,
                 name="preview",
                 content=str(result),
-                context=f"`content` is:\n```json\n{json.dumps(result, indent=2)}\n```"
+                context="json"
             )
 
         except Exception as e:
