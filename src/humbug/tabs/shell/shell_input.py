@@ -3,7 +3,7 @@
 import sys
 from typing import Dict, List, cast
 
-from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QEvent, QObject
+from PySide6.QtCore import Signal, Qt, QRect, QEvent, QObject
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
@@ -147,12 +147,6 @@ class ShellInput(ShellMessageWidget):
 
         self.style().unpolish(self)
         self.style().polish(self)
-
-    def _insert_from_mime_data(self, source: QMimeData) -> None:
-        """Override default paste behavior to insert only plain text."""
-        if source.hasText():
-            cursor = self._text_area.textCursor()
-            cursor.insertText(source.text())
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """

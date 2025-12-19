@@ -3,7 +3,7 @@
 import sys
 from typing import cast, Dict
 
-from PySide6.QtCore import Signal, Qt, QMimeData, QRect, QSize
+from PySide6.QtCore import Signal, Qt, QRect, QSize
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
 from PySide6.QtWidgets import QWidget, QToolButton
 
@@ -230,12 +230,6 @@ class ConversationInput(ConversationMessage):
     def _on_settings_button_clicked(self) -> None:
         """Handle settings button click."""
         self.settings_requested.emit()
-
-    def _insert_from_mime_data(self, source: QMimeData) -> None:
-        """Override default paste behavior to insert only plain text."""
-        if source.hasText():
-            cursor = self._text_area.textCursor()
-            cursor.insertText(source.text())
 
     def clear(self) -> None:
         """Clear the input area."""
