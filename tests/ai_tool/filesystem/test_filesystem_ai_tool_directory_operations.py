@@ -1,6 +1,7 @@
 """
 Tests for filesystem tool directory operations: list_directory, create_directory, remove_directory.
 """
+import json
 import asyncio
 from unittest.mock import patch, MagicMock
 
@@ -37,10 +38,15 @@ class TestFileSystemAIToolListDirectory:
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Directory: dir" in result.content
-            assert "Items: 2" in result.content
-            assert "📄 file.txt (100 bytes)" in result.content
-            assert "📁 subdir/" in result.content
+            # New format returns JSON
+            listing = json.loads(result.content)
+            assert listing["directory"] == "dir"
+            assert listing["total_items"] == 2
+            assert result.context == "json"
+            # Check items
+            items = {item["name"]: item for item in listing["items"]}
+            assert items["file.txt"]["type"] == "file"
+            assert items["subdir"]["type"] == "directory"
 
     def test_list_directory_empty(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test listing empty directory."""
@@ -55,8 +61,11 @@ class TestFileSystemAIToolListDirectory:
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "empty_dir"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Directory: empty_dir" in result.content
-            assert "Items: 0" in result.content
+            # New format returns JSON
+            listing = json.loads(result.content)
+            assert listing["directory"] == "empty_dir"
+            assert listing["total_items"] == 0
+            assert listing["items"] == []
 
     def test_list_directory_with_other_types(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test listing directory with various item types."""
@@ -88,11 +97,15 @@ class TestFileSystemAIToolListDirectory:
             tool_call = make_tool_call("filesystem", {"operation": "list_directory", "path": "dir"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Directory: dir" in result.content
-            assert "Items: 3" in result.content
-            assert "📄 file.txt (100 bytes)" in result.content
-            assert "📄 symlink" in result.content
-            assert "📄 unknown" in result.content
+            # New format returns JSON
+            listing = json.loads(result.content)
+            assert listing["directory"] == "dir"
+            assert listing["total_items"] == 3
+            # Check items
+            items = {item["name"]: item for item in listing["items"]}
+            assert items["file.txt"]["type"] == "file"
+            assert items["symlink"]["type"] == "other"
+            assert items["unknown"]["type"] == "unknown"
 
     def test_list_directory_not_exists(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test listing non-existent directory."""

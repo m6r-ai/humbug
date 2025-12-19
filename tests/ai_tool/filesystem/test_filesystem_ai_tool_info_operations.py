@@ -1,6 +1,7 @@
 """
 Tests for filesystem tool info operations: get_info.
 """
+import json
 import asyncio
 from datetime import timezone
 from unittest.mock import patch, MagicMock
@@ -38,12 +39,15 @@ class TestFileSystemAIToolGetInfo:
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "file.txt"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "File: file.txt" in result.content
-            assert "Type: File" in result.content
-            assert "Size: 1,024 bytes" in result.content
-            assert "Modified: 2022-01-01T00:00:00" in result.content
-            assert "Permissions: 644" in result.content
-            assert "Extension: .txt" in result.content
+            # New format returns JSON
+            info = json.loads(result.content)
+            assert info["path"] == "file.txt"
+            assert info["type"] == "file"
+            assert info["size_bytes"] == 1024
+            assert info["modified"] == "2022-01-01T00:00:00"
+            assert info["permissions"] == "644"
+            assert info["extension"] == ".txt"
+            assert result.context == "json"
 
     def test_get_info_file_no_extension(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test file info retrieval for file without extension."""
@@ -71,8 +75,11 @@ class TestFileSystemAIToolGetInfo:
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "README"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "File: README" in result.content
-            assert "Extension: None" in result.content
+            # New format returns JSON
+            info = json.loads(result.content)
+            assert info["path"] == "README"
+            assert info["type"] == "file"
+            assert info["extension"] is None
 
     def test_get_info_directory_success(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test successful directory info retrieval."""
@@ -113,11 +120,14 @@ class TestFileSystemAIToolGetInfo:
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "dir"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Directory: dir" in result.content
-            assert "Type: Directory" in result.content
-            assert "Items: 3 total (1 files, 1 directories)" in result.content
-            assert "Modified: 2022-01-01T00:00:00" in result.content
-            assert "Permissions: 755" in result.content
+            # New format returns JSON
+            info = json.loads(result.content)
+            assert info["path"] == "dir"
+            assert info["type"] == "directory"
+            assert info["items"]["total"] == 3
+            assert info["items"]["files"] == 1
+            assert info["items"]["directories"] == 1
+            assert info["permissions"] == "755"
 
     def test_get_info_directory_empty(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test directory info retrieval for empty directory."""
@@ -145,7 +155,12 @@ class TestFileSystemAIToolGetInfo:
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "empty_dir"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Items: 0 total (0 files, 0 directories)" in result.content
+            # New format returns JSON
+            info = json.loads(result.content)
+            assert info["path"] == "empty_dir"
+            assert info["items"]["total"] == 0
+            assert info["items"]["files"] == 0
+            assert info["items"]["directories"] == 0
 
     def test_get_info_directory_permission_denied_listing(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test directory info retrieval with permission denied for listing."""
@@ -173,7 +188,11 @@ class TestFileSystemAIToolGetInfo:
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "protected_dir"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Items: Permission denied" in result.content
+            # New format returns JSON
+            info = json.loads(result.content)
+            assert info["path"] == "protected_dir"
+            assert info["type"] == "directory"
+            assert info["items"]["error"] == "Permission denied"
 
     def test_get_info_other_type(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test info retrieval for other types (neither file nor directory)."""
@@ -199,10 +218,11 @@ class TestFileSystemAIToolGetInfo:
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "special"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Path: special" in result.content
-            assert "Type: Other (neither file nor directory)" in result.content
-            assert "Modified: 2022-01-01T00:00:00" in result.content
-            assert "Permissions: 666" in result.content
+            # New format returns JSON
+            info = json.loads(result.content)
+            assert info["path"] == "special"
+            assert info["type"] == "other"
+            assert info["permissions"] == "666"
 
     def test_get_info_path_not_exists(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test info retrieval for non-existent path."""
@@ -271,8 +291,11 @@ class TestFileSystemAIToolGetInfo:
             tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "large.bin"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            # Check that large numbers are formatted with commas
-            assert "Size: 1,234,567,890 bytes" in result.content
+            # New format returns JSON with size_bytes (no comma formatting)
+            info = json.loads(result.content)
+            assert info["path"] == "large.bin"
+            assert info["type"] == "file"
+            assert info["size_bytes"] == 1234567890
 
     def test_get_info_different_permissions(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test info retrieval with different permission modes."""
@@ -307,7 +330,9 @@ class TestFileSystemAIToolGetInfo:
                 tool_call = make_tool_call("filesystem", {"operation": "get_info", "path": "test_file"})
                 result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-                assert f"Permissions: {expected_perms}" in result.content
+                # New format returns JSON
+                info = json.loads(result.content)
+                assert info["permissions"] == expected_perms
 
     def test_get_info_datetime_formatting(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test that datetime formatting works correctly."""
@@ -336,4 +361,7 @@ class TestFileSystemAIToolGetInfo:
 
             # Verify that fromtimestamp was called with the correct timestamp
             mock_datetime.fromtimestamp.assert_called_with(1672531200.0, tz=timezone.utc)
-            assert "Modified: 2023-01-01T00:00:00" in result.content
+
+            # New format returns JSON
+            info = json.loads(result.content)
+            assert info["modified"] == "2023-01-01T00:00:00"

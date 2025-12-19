@@ -32,8 +32,8 @@ class TestFileSystemAIToolIntegration:
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "File: file.txt" in result.content
-            assert "test content" in result.content
+            # New format returns just the content
+            assert result.content == "test content"
 
     def test_execute_write_file_success(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test execute with write_file operation."""
@@ -383,8 +383,8 @@ class TestFileSystemAIToolPathResolverIntegration:
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            # Verify the custom display path is used in the result
-            assert "File: custom_prefix/file.txt" in result.content
+            # New format returns just the content (display path not in read_file output)
+            assert result.content == "test content"
 
     def test_path_resolver_absolute_vs_relative_handling(self, mock_authorization, make_tool_call):
         """Test that path resolver handles both absolute and relative paths correctly."""
@@ -426,4 +426,5 @@ class TestFileSystemAIToolPathResolverIntegration:
                 tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": input_path})
                 result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-                assert f"File: {expected_display}" in result.content
+                # New format returns just the content (display path not in read_file output)
+                assert result.content == "test content"

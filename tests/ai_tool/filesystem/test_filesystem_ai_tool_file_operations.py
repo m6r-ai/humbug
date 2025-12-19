@@ -30,9 +30,8 @@ class TestFileSystemAIToolReadFile:
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "File: file.txt" in result.content
-            assert "Size: 12 bytes" in result.content
-            assert "Encoding: utf-8" in result.content
+            # New format returns just the content
+            assert result.content == "test content"
             assert "test content" in result.content
 
     def test_read_file_not_exists(self, filesystem_tool, mock_authorization, make_tool_call):
@@ -99,7 +98,8 @@ class TestFileSystemAIToolReadFile:
             tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt", "encoding": "utf-16"})
             result = asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
-            assert "Encoding: utf-16" in result.content
+            # New format returns just the content (encoding info not in output)
+            assert result.content == "test content"
             assert "test content" in result.content
             # Verify the encoding was passed to open
             mock_file.assert_called_with(Path("/test/sandbox/file.txt"), 'r', encoding='utf-16')
