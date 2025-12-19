@@ -303,5 +303,6 @@ def get_arabic_strings() -> LanguageStrings:
 
         # Tool use
         approve_tool_call="الموافقة على استدعاء الأداة",
+        i_am_unsure_about_tool_call="لست متأكداً من هذا",
         reject_tool_call="رفض استدعاء الأداة"
     )

@@ -305,5 +305,6 @@ def get_english_strings() -> LanguageStrings:
 
         # Tool use
         approve_tool_call="Approve Tool Call",
+        i_am_unsure_about_tool_call="I'm Unsure About This",
         reject_tool_call="Reject Tool Call"
     )

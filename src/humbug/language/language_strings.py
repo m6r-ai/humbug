@@ -289,4 +289,5 @@ class LanguageStrings:
 
     # Tool use
     approve_tool_call: str
+    i_am_unsure_about_tool_call: str
     reject_tool_call: str

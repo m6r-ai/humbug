@@ -10,6 +10,8 @@ New features:
   capability where relevant.
 - Added a mindspace setting to allow terminal tabs to auto-close when the underlying shell exits (default enabled).
 - Auto-hide queued user messages after they have been used for the next user prompt.
+- Added a third "I'm not sure" button to the AI tool approval widget.  This tells the AI the user is not actually ready
+  to approve and wants to discuss further.
 
 Bug fixes:
 

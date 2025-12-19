@@ -16,16 +16,21 @@ Context:
         unless a depdency is already in use.
 
     Context: Existing code
-        The application contains an AI conversation view.  This is driven by a tab that contains a widget, that
-        in turn contains messages and those contain message sections.  The code for these is in
-        src/humbug/tabs/conversation.
+        The application contains an AI conversation view.  This includes a tool approval capability for allowing
+        a user to accept or reject a potentially dangerous tool use by an AI.
 
-        Currently we display "user_queued" messages although eventually these messages are replaced when their
-        contents are unqueued and used for the next user prompt.  When this happens I want those user_queued
-        messages to be hidden.  Similarly, when loading a conversation from a file these should be hidden too.
+        The code can be found in src/humbug/tabs/conversation/conversation_message.py
 
 Action:
     # Describe the details of the change required.
+    There is a behaviour that is not necessarily obvious to a user when the tool approval UI activates.  The user
+    can choose not to accept or reject the tool call but can instead submit a new message to the AI via the
+    on-screen input box assuming the input box is visible (it may not be in some conversations).
+
+    If the input box is available then underneath the buttons we should include text (in any supported language
+    see src/humbug/language) telling them they can reject the request but leave a message for the AI explaining
+    why they are doing this by submitting a new message.
+
     How might we do this?
 
     Don't code anything - I want to discuss first.

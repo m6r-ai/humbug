@@ -335,6 +335,7 @@ class ConversationWidget(QWidget):
         msg_widget.delete_requested.connect(self._on_message_delete_requested)
         msg_widget.expand_requested.connect(self._on_message_expand_requested)
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
+        msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
 
         # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
@@ -798,6 +799,26 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         loop = asyncio.get_event_loop()
         loop.create_task(ai_conversation.approve_pending_tool_calls())
+
+    def _on_tool_call_i_am_unsure(self) -> None:
+        """Handle user indicating uncertainty about tool calls."""
+        # Clean up the tool approval UI
+        if self._pending_tool_call_approval:
+            self._pending_tool_call_approval.remove_tool_approval_ui()
+            self._pending_tool_call_approval = None
+
+        # Get the AI conversation instance
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+
+        # Reject the pending tool calls with explanation
+        loop = asyncio.get_event_loop()
+        loop.create_task(ai_conversation.reject_pending_tool_calls(
+            "User is unsure about this tool request and wants to discuss"
+        ))
+
+        # Submit the user's message to continue the conversation
+        loop.create_task(ai_conversation.submit_message(
+            None, "I'm not sure about this tool request. Let's discuss."))
 
     def _on_tool_call_rejected(self, reason: str) -> None:
         """Handle user rejection of tool calls."""
@@ -1819,6 +1840,18 @@ class ConversationWidget(QWidget):
             }}
             #ConversationMessage #_approval_approve_button[recommended="false"]:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+            }}
+
+            #ConversationMessage #_approval_i_am_unsure_button {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border-radius: 4px;
+            }}
+            #ConversationMessage #_approval_i_am_unsure_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+            }}
+            #ConversationMessage #_approval_i_am_unsure_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
             }}
 
             #ConversationMessage #_approval_reject_button {{

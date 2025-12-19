@@ -33,6 +33,7 @@ class ConversationMessage(QFrame):
     delete_requested = Signal()
     expand_requested = Signal(bool)
     tool_call_approved = Signal(AIToolCall)
+    tool_call_i_am_unsure = Signal()
     tool_call_rejected = Signal(str)
 
     def __init__(
@@ -154,6 +155,7 @@ class ConversationMessage(QFrame):
         self._approval_text_edit: MarkdownTextEdit | None = None
         self._approval_context_text_edit: MarkdownTextEdit | None = None
         self._approval_approve_button: QPushButton | None = None
+        self._approval_i_am_unsure_button: QPushButton | None = None
         self._approval_reject_button: QPushButton | None = None
 
         # Track sections
@@ -390,6 +392,9 @@ class ConversationMessage(QFrame):
         if self._approval_approve_button:
             self._approval_approve_button.setText(strings.approve_tool_call)
 
+        if self._approval_i_am_unsure_button:
+            self._approval_i_am_unsure_button.setText(strings.i_am_unsure_about_tool_call)
+
         if self._approval_reject_button:
             self._approval_reject_button.setText(strings.reject_tool_call)
 
@@ -621,6 +626,13 @@ class ConversationMessage(QFrame):
         self._approval_approve_button.setProperty("recommended", not destructive)
         self._approval_approve_button.setContentsMargins(8, 8, 8, 8)
 
+        self._approval_i_am_unsure_button = QPushButton(strings.i_am_unsure_about_tool_call)
+        self._approval_i_am_unsure_button.setObjectName("_approval_i_am_unsure_button")
+        self._approval_i_am_unsure_button.clicked.connect(self._i_am_unsure_about_tool_call)
+        self._approval_i_am_unsure_button.setMinimumWidth(min_button_width)
+        self._approval_i_am_unsure_button.setMinimumHeight(min_button_height)
+        self._approval_i_am_unsure_button.setContentsMargins(8, 8, 8, 8)
+
         self._approval_reject_button = QPushButton(strings.reject_tool_call)
         self._approval_reject_button.setObjectName("_approval_reject_button")
         self._approval_reject_button.clicked.connect(self._reject_tool_call)
@@ -629,6 +641,7 @@ class ConversationMessage(QFrame):
         self._approval_reject_button.setContentsMargins(8, 8, 8, 8)
 
         button_layout.addWidget(self._approval_approve_button)
+        button_layout.addWidget(self._approval_i_am_unsure_button)
         button_layout.addWidget(self._approval_reject_button)
         button_layout.addStretch()
 
@@ -643,6 +656,11 @@ class ConversationMessage(QFrame):
     def _approve_tool_call(self, tool_call: AIToolCall) -> None:
         """Handle tool call approval."""
         self.tool_call_approved.emit(tool_call)
+        self.remove_tool_approval_ui()
+
+    def _i_am_unsure_about_tool_call(self) -> None:
+        """Handle unsure about tool call."""
+        self.tool_call_i_am_unsure.emit()
         self.remove_tool_approval_ui()
 
     def _reject_tool_call(self) -> None:
@@ -663,6 +681,7 @@ class ConversationMessage(QFrame):
             self._approval_context_text_edit = None
             self._approval_context_widget = None
             self._approval_approve_button = None
+            self._approval_i_am_unsure_button = None
             self._approval_reject_button = None
 
     def _get_border_color(self) -> str:
@@ -885,6 +904,9 @@ class ConversationMessage(QFrame):
         # Apply fonts to approval buttons if present
         if self._approval_approve_button:
             self._approval_approve_button.setFont(font)
+
+        if self._approval_i_am_unsure_button:
+            self._approval_i_am_unsure_button.setFont(font)
 
         if self._approval_reject_button:
             self._approval_reject_button.setFont(font)
