@@ -214,6 +214,9 @@ class HTMLLexer(Lexer):
         """
         Read a script block.
         """
+        # Important note: this may seem fragile but it's actually doing what browsers do.  If a closing
+        # script tag appears even within the JavaScript code the browser will immediately switch back
+        # to HTML mode, just as we'll force here.
         start = self._position
         script_close = self._input.lower().find('</script', self._position)
         if script_close != -1:
@@ -233,6 +236,9 @@ class HTMLLexer(Lexer):
         """
         Read a style block.
         """
+        # Important note: this may seem fragile but it's actually doing what browsers do.  If a closing
+        # style tag appears even within the CSS code the browser will immediately switch back
+        # to HTML mode, just as we'll force here.
         start = self._position
         style_close = self._input.lower().find('</style', self._position)
         if style_close != -1:
