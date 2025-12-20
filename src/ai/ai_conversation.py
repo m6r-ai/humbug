@@ -545,7 +545,11 @@ class AIConversation:
                     if ProgrammingLanguageUtils.from_name(content_language) == ProgrammingLanguage.TEXT:
                         content_language = "text"
 
-                    content += f"\n`content` is:\n```{content_language}\n{tool_result.content}\n```"
+                    if tool_result.error:
+                        content += f"\n`error` is:\n```{content_language}\n{tool_result.error}\n```"
+
+                    else:
+                        content += f"\n`content` is:\n```{content_language}\n{tool_result.content}\n```"
 
                 tool_result_message = AIMessage.create(
                     source=AIMessageSource.TOOL_RESULT,
@@ -581,6 +585,10 @@ class AIConversation:
                             if ProgrammingLanguageUtils.from_name(content_language) == ProgrammingLanguage.TEXT:
                                 content_language = "text"
 
+                        if tool_result.error:
+                            content += f"\n`error` is:\n```{content_language}\n{tool_result.error}\n```"
+
+                        else:
                             content += f"\n`content` is:\n```{content_language}\n{tool_result.content}\n```"
 
                         tool_result_message = AIMessage.create(
