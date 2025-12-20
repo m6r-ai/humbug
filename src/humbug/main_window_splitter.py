@@ -16,7 +16,7 @@ class MainWindowSplitterHandle(QSplitterHandle):
     def __init__(self, orientation: Qt.Orientation, parent: QSplitter) -> None:
         super().__init__(orientation, parent)
 
-    def paintEvent(self, event: Any) -> None:
+    def paintEvent(self, _event: Any) -> None:
         """Paint the handle with the current style."""
         style_manager = StyleManager()
         painter = QPainter(self)
