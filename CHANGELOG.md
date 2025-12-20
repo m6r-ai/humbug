@@ -2,6 +2,11 @@
 
 ## v0.36 (2025-12-xx)
 
+Bug fixes:
+
+- Tightened up parameter `message_types` checking for `read_messages` and `search` operations in the conversation AI tool.
+  Removed unnecessary tool-call filter.
+
 ## v0.35 (2025-12-19)
 
 New features:
