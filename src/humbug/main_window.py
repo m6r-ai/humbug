@@ -977,23 +977,23 @@ class MainWindow(QMainWindow):
         self._column_manager.swap_column(swap_left)
 
     def _on_style_changed(self) -> None:
+        """Handle style changes by updating all styled widgets."""
+        # Apply styles to individual top-level widgets
+        self._apply_menubar_style()
+        self._apply_all_menu_styles()
+        self._apply_statusbar_style()
+        self._apply_splitter_style()
+
+        # Apply styles to the mindspace view and column manager
+        self._mindspace_view.apply_style()
+        self._column_manager.apply_style()
+
+    def _apply_menubar_style(self) -> None:
+        """Apply styling to menu bar."""
         style_manager = self._style_manager
-        zoom_factor = style_manager.zoom_factor()
         base_font_size = style_manager.base_font_size()
 
-        # Determine status bar background color based on canary state
-        status_bg_color = (
-            style_manager.get_color_str(ColorRole.CANARY_BACKGROUND)
-            if self._canary_active
-            else style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)
-        )
-
-        self.setStyleSheet(f"""
-            QMainWindow {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-            }}
-
+        self._menu_bar.setStyleSheet(f"""
             QMenuBar {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
                 padding: 4px;
@@ -1008,7 +1008,13 @@ class MainWindow(QMainWindow):
             QMenuBar::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)};
             }}
+        """)
 
+    def _apply_menu_style(self, menu: QMenu) -> None:
+        """Apply styling to a specific menu."""
+        style_manager = self._style_manager
+
+        menu.setStyleSheet(f"""
             QMenu {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
@@ -1029,27 +1035,42 @@ class MainWindow(QMainWindow):
             QMenu::item:selected {{
                 background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)}
             }}
+        """)
 
+    def _apply_all_menu_styles(self) -> None:
+        """Apply styling to all menus."""
+        for menu in [self._humbug_menu, self._file_menu, self._edit_menu,
+                     self._view_menu, self._theme_menu]:
+            if menu:
+                self._apply_menu_style(menu)
+
+    def _apply_statusbar_style(self) -> None:
+        """Apply styling to status bar."""
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
+        base_font_size = style_manager.base_font_size()
+
+        # Determine background based on canary state
+        status_bg_color = (
+            style_manager.get_color_str(ColorRole.CANARY_BACKGROUND)
+            if self._canary_active
+            else style_manager.get_color_str(ColorRole.STATUS_BAR_BACKGROUND)
+        )
+
+        self._status_bar.setStyleSheet(f"""
             QStatusBar {{
                 background-color: {status_bg_color};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border-top: 1px solid {style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
             QStatusBar::item {{
                 border: 0;
                 padding: 0;
             }}
-
             QStatusBar QLabel {{
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0px;
                 padding: {int(2 * zoom_factor)}px;
-            }}
-
-            QSplitter::handle {{
-                background-color: {style_manager.get_color_str(ColorRole.SPLITTER)};
-                margin: 0;
-                width: 1px;
             }}
         """)
 
@@ -1059,9 +1080,17 @@ class MainWindow(QMainWindow):
         self._status_bar.setFont(status_font)
         self._status_message_label.setFont(status_font)
 
-        # Apply styles to the mindspace view and column manager
-        self._mindspace_view.apply_style()
-        self._column_manager.apply_style()
+    def _apply_splitter_style(self) -> None:
+        """Apply styling to splitter."""
+        style_manager = self._style_manager
+
+        self._splitter.setStyleSheet(f"""
+            QSplitter::handle {{
+                background-color: {style_manager.get_color_str(ColorRole.SPLITTER)};
+                margin: 0;
+                width: 1px;
+            }}
+        """)
 
     def _new_conversation(self) -> ConversationTab | None:
         """Create new conversation tab."""
