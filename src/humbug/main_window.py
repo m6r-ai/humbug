@@ -1033,7 +1033,6 @@ class MainWindow(QMainWindow):
             QStatusBar {{
                 background-color: {status_bg_color};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: {2 * zoom_factor}px;
                 border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
             QStatusBar::item {{
@@ -1043,7 +1042,8 @@ class MainWindow(QMainWindow):
 
             QStatusBar QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 0;
+                margin: 0px;
+                padding: {int(2 * zoom_factor)}px;
             }}
 
             QSplitter::handle {{
