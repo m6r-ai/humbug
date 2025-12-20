@@ -1813,7 +1813,7 @@ class ColumnManager(QWidget):
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
         # Apply styles to individual widgets
-        self._apply_column_splitter_style()
+        self._update_column_splitter()
         self._apply_all_tab_bar_styles()
 
         # Update all tab labels, setting active state only for the current active tab.
@@ -1831,15 +1831,10 @@ class ColumnManager(QWidget):
             if isinstance(tab_bar, TabBar):
                 tab_bar.update_tab_size()
 
-    def _apply_column_splitter_style(self) -> None:
-        """Apply styling to the column splitter."""
-        self._column_splitter.setStyleSheet(f"""
-            QSplitter::handle {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
-                margin: 0;
-                width: 1px;
-            }}
-        """)
+    def _update_column_splitter(self) -> None:
+        """Trigger repaint of column splitter handles."""
+        # The column splitter uses custom painted handles, so we just need to trigger a repaint
+        self._column_splitter.update()
 
     def _apply_tab_bar_style(self, tab_bar: QTabBar) -> None:
         """Apply styling to a specific tab bar."""
