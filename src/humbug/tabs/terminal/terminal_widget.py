@@ -89,9 +89,6 @@ class TerminalWidget(QAbstractScrollArea):
             15: ColorRole.TERM_BRIGHT_WHITE,
         }
 
-        # Initialize color mapping in state
-        self._update_colors()
-
         # Blink handling
         self._blink_state = False
         self._blink_timer = QTimer(self)
