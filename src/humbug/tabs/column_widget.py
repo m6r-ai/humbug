@@ -45,6 +45,7 @@ class ColumnWidget(QTabWidget):
     def addTab(self, widget: QWidget, *args: Any, **kwargs: Any) -> int:
         """Override addTab to install event filter on new tabs."""
         result = super().addTab(widget, *args, **kwargs)
+
         # Install event filter on the widget to catch focus/mouse events
         widget.installEventFilter(self)
         return result

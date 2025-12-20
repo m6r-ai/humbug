@@ -8,7 +8,7 @@ from typing import cast, Dict, Tuple
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
-    QSplitter, QLabel, QApplication, QDialog, QMenu, QStatusBar
+    QLabel, QApplication, QDialog, QMenu, QStatusBar
 )
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
@@ -36,6 +36,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_settings_dialog import MindspaceSettingsDialog
 from humbug.mindspace.mindspace_view import MindspaceView
+from humbug.main_window_splitter import MainWindowSplitter
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
@@ -323,7 +324,7 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Create splitter
-        self._splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._splitter = MainWindowSplitter(Qt.Orientation.Horizontal)
         layout.addWidget(self._splitter)
 
         # Create and add mindspace view
@@ -1059,16 +1060,9 @@ class MainWindow(QMainWindow):
         self._status_message_label.setFont(status_font)
 
     def _apply_splitter_style(self) -> None:
-        """Apply styling to splitter."""
-        style_manager = self._style_manager
-
-        self._splitter.setStyleSheet(f"""
-            QSplitter::handle {{
-                background-color: {style_manager.get_color_str(ColorRole.SPLITTER)};
-                margin: 0;
-                width: 1px;
-            }}
-        """)
+        """Trigger repaint of main window splitter handle."""
+        # The main window splitter uses custom painted handles, so we just need to trigger a repaint
+        self._splitter.update()
 
     def _new_conversation(self) -> ConversationTab | None:
         """Create new conversation tab."""
