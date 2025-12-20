@@ -218,6 +218,7 @@ class HTMLLexer(Lexer):
         script_close = self._input.lower().find('</script', self._position)
         if script_close != -1:
             self._in_script = False
+
         else:
             script_close = self._input_len
 
@@ -236,6 +237,7 @@ class HTMLLexer(Lexer):
         style_close = self._input.lower().find('</style', self._position)
         if style_close != -1:
             self._in_style = False
+
         else:
             style_close = self._input_len
 
