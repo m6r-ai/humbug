@@ -1013,29 +1013,7 @@ class MainWindow(QMainWindow):
     def _apply_menu_style(self, menu: QMenu) -> None:
         """Apply styling to a specific menu."""
         style_manager = self._style_manager
-
-        menu.setStyleSheet(f"""
-            QMenu {{
-                background-color: {style_manager.get_color_str(ColorRole.MENU_BACKGROUND)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border-color: {style_manager.get_color_str(ColorRole.MENU_BORDER)};
-                border-width: 1px;
-                border-style: solid;
-                border-radius: 8px;
-                margin: 0px;
-            }}
-            QMenu::item {{
-                margin: 2px;
-                padding: 4px 8px 4px 8px;
-                border-radius: 4px;
-            }}
-            QMenu::item:disabled {{
-                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-            }}
-            QMenu::item:selected {{
-                background-color: {style_manager.get_color_str(ColorRole.MENU_HOVER)}
-            }}
-        """)
+        menu.setStyleSheet(style_manager.get_menu_stylesheet())
 
     def _apply_all_menu_styles(self) -> None:
         """Apply styling to all menus."""

@@ -641,6 +641,8 @@ class LogWidget(QWidget):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
+            {self._style_manager.get_menu_stylesheet()}
+
             QScrollArea {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;

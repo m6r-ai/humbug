@@ -342,6 +342,8 @@ class MindspaceView(QWidget):
 
         # Style the mindspace view
         self.setStyleSheet(f"""
+            {self._style_manager.get_menu_stylesheet()}
+
             #_header_widget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND)};
                 margin: 0px;

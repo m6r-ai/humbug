@@ -1091,6 +1091,8 @@ class EditorWidget(QPlainTextEdit):
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
+            {self._style_manager.get_menu_stylesheet()}
+
             QPlainTextEdit {{
                 border: none;
                 selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};

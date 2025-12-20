@@ -86,6 +86,8 @@ class ColumnManager(QWidget):
         # Connect to the splitter's moved signal
         self._column_splitter.splitterMoved.connect(self._on_column_splitter_splitter_moved)
 
+        self._style_manager = StyleManager()
+
         # Create initial column
         self._tab_columns: List[ColumnWidget] = []
         self._create_column(0)
@@ -111,8 +113,6 @@ class ColumnManager(QWidget):
         # Are we protecting the current tab against being ovewrwritten?
         self._protect_current_tab = False
         self._protected_tab: TabBase | None = None
-
-        self._style_manager = StyleManager()
 
         self._current_status_tab: TabBase | None = None
 
@@ -765,6 +765,10 @@ class ColumnManager(QWidget):
         self._tab_columns.insert(index, column_widget)
 
         self._column_mru_order[column_widget] = []
+
+        tab_bar = column_widget.tabBar()
+        if tab_bar:
+            self._apply_tab_bar_style(tab_bar)
 
         return column_widget
 
@@ -1808,13 +1812,38 @@ class ColumnManager(QWidget):
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
-        style = f"""
+        # Apply styles to individual widgets
+        self._apply_column_splitter_style()
+        self._apply_all_tab_bar_styles()
+
+        # Update all tab labels, setting active state only for the current active tab.
+        for tab_id, label in self._tab_labels.items():
+            tab = self._tabs[tab_id]
+            tab_column = self._find_column_for_tab(tab)
+            if tab_column is None:
+                continue
+
+            label.handle_style_changed()
+
+        # Trigger repaint of the tab bar to show updated colors
+        for column in self._tab_columns:
+            tab_bar = column.tabBar()
+            if isinstance(tab_bar, TabBar):
+                tab_bar.update_tab_size()
+
+    def _apply_column_splitter_style(self) -> None:
+        """Apply styling to the column splitter."""
+        self._column_splitter.setStyleSheet(f"""
             QSplitter::handle {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
                 margin: 0;
                 width: 1px;
             }}
+        """)
 
+    def _apply_tab_bar_style(self, tab_bar: QTabBar) -> None:
+        """Apply styling to a specific tab bar."""
+        tab_bar.setStyleSheet(f"""
             QTabBar {{
                 border: none;
                 margin: 0px;
@@ -1846,23 +1875,14 @@ class ColumnManager(QWidget):
                 width: 12px;
                 height: 12px;
             }}
-        """
-        self.setStyleSheet(style)
+        """)
 
-        # Update all tab labels, setting active state only for the current active tab.
-        for tab_id, label in self._tab_labels.items():
-            tab = self._tabs[tab_id]
-            tab_column = self._find_column_for_tab(tab)
-            if tab_column is None:
-                continue
-
-            label.handle_style_changed()
-
-        # Trigger repaint of the tab bar to show updated colors
+    def _apply_all_tab_bar_styles(self) -> None:
+        """Apply styling to all tab bars in all columns."""
         for column in self._tab_columns:
             tab_bar = column.tabBar()
-            if isinstance(tab_bar, TabBar):
-                tab_bar.update_tab_size()
+            if tab_bar:
+                self._apply_tab_bar_style(tab_bar)
 
     def can_undo(self) -> bool:
         """Check if the last action can be undone."""

@@ -1244,6 +1244,31 @@ class StyleManager(QObject):
         """Get the number of pixels to use in message bubble spacing."""
         return 10.0
 
+    def get_menu_stylesheet(self) -> str:
+        """Apply styling to a specific menu."""
+        return f"""
+            QMenu {{
+                background-color: {self.get_color_str(ColorRole.MENU_BACKGROUND)};
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border-color: {self.get_color_str(ColorRole.MENU_BORDER)};
+                border-width: 1px;
+                border-style: solid;
+                border-radius: 8px;
+                margin: 0px;
+            }}
+            QMenu::item {{
+                margin: 2px;
+                padding: 4px 8px 4px 8px;
+                border-radius: 4px;
+            }}
+            QMenu::item:disabled {{
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+            QMenu::item:selected {{
+                background-color: {self.get_color_str(ColorRole.MENU_HOVER)}
+            }}
+        """
+
     def get_dialog_stylesheet(self) -> str:
         """
         Get a complete stylesheet for dialog windows.
