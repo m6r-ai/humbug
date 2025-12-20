@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from ai import AIConversationHistory, AIConversationSettings, AIMessage
+from ai import AIConversationHistory, AIConversationSettings
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
