@@ -48,6 +48,10 @@ class ConversationAITool(AITool):
         operations = self.get_operation_definitions()
         operation_names = list(operations.keys())
 
+        # Get valid message types for parameter description
+        valid_message_types = sorted(AIMessage.get_message_types())
+        message_types_list = ", ".join(valid_message_types)
+
         # Build description from operations
         operation_list = []
         for name, op_def in operations.items():
@@ -92,9 +96,8 @@ class ConversationAITool(AITool):
                 AIToolParameter(
                     name="message_types",
                     type="array",
-                    description="List of message types to include in operation. "
-                        "Valid types: user_message, ai_response, ai_connected, tool_call, tool_result, "
-                        "system_message, ai_reasoning, user_queued",
+                    description=f"List of message types to include in operation. "
+                        f"Valid types: {message_types_list}",
                     required=False
                 ),
                 AIToolParameter(
@@ -240,7 +243,7 @@ class ConversationAITool(AITool):
         invalid_types = set(message_types) - valid_types
         if invalid_types:
             raise AIToolExecutionError(
-                f"Invalid message type(s): {', '.join(sorted(invalid_types))}. "
+                f"Invalid value(s) for 'message_types' parameter: {', '.join(sorted(invalid_types))}. "
                 f"Valid types: {', '.join(sorted(valid_types))}"
             )
 
