@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from ai import AIConversationHistory, AIConversationSettings
+from ai import AIConversationHistory, AIConversationSettings, AIMessage
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
@@ -391,8 +391,7 @@ class ConversationTab(TabBase):
         start_index: int | None = None,
         end_index: int | None = None,
         message_types: list[str] | None = None,
-        limit: int | None = None,
-        include_tool_details: bool = True
+        limit: int | None = None
     ) -> Dict[str, Any]:
         """
         Read messages with filtering and pagination.
@@ -402,14 +401,11 @@ class ConversationTab(TabBase):
             end_index: Ending message index (0-based, inclusive)
             message_types: List of message types to include
             limit: Maximum number of messages to return
-            include_tool_details: Include full tool call/result details
 
         Returns:
             Dictionary containing messages and metadata
         """
-        return self._conversation_widget.read_messages(
-            start_index, end_index, message_types, limit, include_tool_details
-        )
+        return self._conversation_widget.read_messages(start_index, end_index, message_types, limit)
 
     def get_message_by_id_or_index(
         self,

@@ -2672,8 +2672,7 @@ class ConversationWidget(QWidget):
         start_index: int | None = None,
         end_index: int | None = None,
         message_types: List[str] | None = None,
-        limit: int | None = None,
-        include_tool_details: bool = True
+        limit: int | None = None
     ) -> Dict[str, Any]:
         """
         Read messages with filtering and pagination.
@@ -2683,13 +2682,21 @@ class ConversationWidget(QWidget):
             end_index: Ending message index (0-based, inclusive)
             message_types: List of message types to include
             limit: Maximum number of messages to return
-            include_tool_details: Include full tool call/result details
 
         Returns:
             Dictionary containing messages and metadata
         """
         if self._ai_conversation is None:
             raise ValueError("No conversation available")
+
+        # Assert message types are valid (should be validated by caller)
+        if message_types is not None:
+            valid_types = AIMessage.get_message_types()
+            invalid_types = set(message_types) - valid_types
+            assert not invalid_types, (
+                f"Invalid message types: {', '.join(sorted(invalid_types))}. "
+                f"Valid types: {', '.join(sorted(valid_types))}"
+            )
 
         history = self.get_conversation_history()
         messages = history.get_messages()
@@ -2726,12 +2733,6 @@ class ConversationWidget(QWidget):
         for msg in filtered_messages:
             msg_dict = msg.to_transcript_dict()
             msg_dict['index'] = messages.index(msg)  # Original index in full conversation
-
-            # Optionally remove tool details
-            if not include_tool_details:
-                msg_dict.pop('tool_calls', None)
-                msg_dict.pop('tool_results', None)
-
             result_messages.append(msg_dict)
 
         return {
@@ -2805,6 +2806,15 @@ class ConversationWidget(QWidget):
         """
         if self._ai_conversation is None:
             raise ValueError("No conversation available")
+
+        # Assert message types are valid (should be validated by caller)
+        if message_types is not None:
+            valid_types = AIMessage.get_message_types()
+            invalid_types = set(message_types) - valid_types
+            assert not invalid_types, (
+                f"Invalid message types: {', '.join(sorted(invalid_types))}. "
+                f"Valid types: {', '.join(sorted(valid_types))}"
+            )
 
         if not search_text:
             return {

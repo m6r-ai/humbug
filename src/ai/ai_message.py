@@ -50,6 +50,16 @@ class AIMessage:
     _TYPE_SOURCE_MAP = {v: k for k, v in _SOURCE_TYPE_MAP.items()}
 
     @classmethod
+    def get_message_types(cls) -> set[str]:
+        """
+        Get the set of message type strings.
+
+        Returns:
+            Set of valid message type strings (e.g., 'user_message', 'ai_response', etc.)
+        """
+        return set(cls._SOURCE_TYPE_MAP.values())
+
+    @classmethod
     def create(
         cls,
         source: AIMessageSource,

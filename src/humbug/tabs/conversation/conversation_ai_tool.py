@@ -2,6 +2,7 @@ import json
 import logging
 from typing import Any, Dict, cast
 
+from ai import AIMessage
 from ai_tool import (
     AITool,
     AIToolAuthorizationCallback,
@@ -91,21 +92,15 @@ class ConversationAITool(AITool):
                 AIToolParameter(
                     name="message_types",
                     type="array",
-                    description="List of message types to filter by. "
+                    description="List of message types to include in operation. "
                         "Valid types: user_message, ai_response, ai_connected, tool_call, tool_result, "
-                        "system_message, ai_reasoning",
+                        "system_message, ai_reasoning, user_queued",
                     required=False
                 ),
                 AIToolParameter(
                     name="limit",
                     type="integer",
                     description="Maximum number of messages to return",
-                    required=False
-                ),
-                AIToolParameter(
-                    name="include_tool_details",
-                    type="boolean",
-                    description="Include full tool call/result details (for read_messages operation)",
                     required=False
                 ),
                 AIToolParameter(
@@ -162,11 +157,12 @@ class ConversationAITool(AITool):
                 name="read_messages",
                 handler=self._read_messages,
                 extract_context=None,
-                allowed_parameters={"tab_id", "start_index", "end_index", "message_types", "limit", "include_tool_details"},
+                allowed_parameters={"tab_id", "start_index", "end_index", "message_types", "limit"},
                 required_parameters={"tab_id"},
                 description="Read messages from a conversation with filtering and pagination. "
-                    "Supports filtering by index range, message types (user_message, ai_response, tool_call, tool_result, etc.), "
-                    "and limiting results. Can optionally exclude tool call details for efficiency"
+                    "Supports filtering by index range, message types, and limiting results. "
+                    "If not specified, message_types defaults to [\"user_message\", "
+                    "\"ai_response\", \"ai_reasoning\"]"
             ),
             "get_message": AIToolOperationDefinition(
                 name="get_message",
@@ -227,6 +223,27 @@ class ConversationAITool(AITool):
 
         return tab
 
+    def _validate_message_types(self, message_types: list[str] | None) -> None:
+        """
+        Validate that message types are valid.
+
+        Args:
+            message_types: List of message type strings to validate
+
+        Raises:
+            AIToolExecutionError: If any message types are invalid
+        """
+        if message_types is None:
+            return
+
+        valid_types = AIMessage.get_message_types()
+        invalid_types = set(message_types) - valid_types
+        if invalid_types:
+            raise AIToolExecutionError(
+                f"Invalid message type(s): {', '.join(sorted(invalid_types))}. "
+                f"Valid types: {', '.join(sorted(valid_types))}"
+            )
+
     async def _get_info(
         self,
         tool_call: AIToolCall,
@@ -276,12 +293,19 @@ class ConversationAITool(AITool):
         end_index = self._get_optional_int_value("end_index", arguments)
         message_types = self._get_optional_list_value("message_types", arguments)
         limit = self._get_optional_int_value("limit", arguments)
-        include_tool_details = self._get_optional_bool_value("include_tool_details", arguments, True)
+
+        # Validate message types if provided
+        self._validate_message_types(message_types)
+
+        if message_types is None:
+            message_types = [
+                "user_message",
+                "ai_response",
+                "ai_reasoning"
+            ]
 
         try:
-            result = conversation_tab.read_messages(
-                start_index, end_index, message_types, limit, include_tool_details
-            )
+            result = conversation_tab.read_messages(start_index, end_index, message_types, limit)
 
             # Build log message
             log_parts = ["AI read conversation messages"]
@@ -375,6 +399,9 @@ class ConversationAITool(AITool):
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         message_types = self._get_optional_list_value("message_types", arguments)
         max_results = cast(int, self._get_optional_int_value("max_results", arguments, 50))
+
+        # Validate message types if provided
+        self._validate_message_types(message_types)
 
         try:
             result = conversation_tab.search_messages(
