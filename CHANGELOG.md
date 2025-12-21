@@ -6,6 +6,8 @@ Bug fixes:
 
 - Tightened up parameter `message_types` checking for `read_messages` and `search` operations in the conversation AI tool.
   Removed unnecessary tool-call filter.
+- Fixed a problem with zoom scaling of markdown text blocks.
+- Improved the performance of style changes.
 
 ## v0.35 (2025-12-19)
 
