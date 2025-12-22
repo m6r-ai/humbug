@@ -47,7 +47,6 @@ class PreviewContentWidget(QFrame):
 
         # Initialize style manager
         self._style_manager = StyleManager()
-        self._style_manager.style_changed.connect(self._on_style_changed)
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -55,9 +54,9 @@ class PreviewContentWidget(QFrame):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(0)
 
-    def _on_style_changed(self) -> None:
+    def apply_style(self) -> None:
         """
-        Handle style changes.
+        Apply styling to this content widget.
 
         This method is called when the application style changes, such as
         when the zoom factor or color scheme is updated. Subclasses should

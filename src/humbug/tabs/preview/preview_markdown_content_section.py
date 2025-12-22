@@ -142,6 +142,7 @@ class PreviewMarkdownContentSection(QFrame):
         if language is None:
             self._use_markdown = True
             self._highlighter = None
+
         else:
             self._use_markdown = False
             highlighter = MarkdownLanguageHighlighter(self._text_area.document())
@@ -283,7 +284,8 @@ class PreviewMarkdownContentSection(QFrame):
         base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
 
-        self._text_area.setFont(font)
+        self._text_area.apply_style()
+
         if self._language_header:
             self._language_header.setFont(font)
 

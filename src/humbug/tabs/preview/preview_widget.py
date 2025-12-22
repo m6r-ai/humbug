@@ -904,11 +904,9 @@ class PreviewWidget(QWidget):
 
     def _on_style_changed(self) -> None:
         """Handle style changes."""
-        factor = self._style_manager.zoom_factor()
-        font = self.font()
-        base_font_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
-        self.setFont(font)
+        # Apply style to all content blocks
+        for content_block in self._content_blocks:
+            content_block.apply_style()
 
         stylesheet_parts = [
             self._build_widget_style(),

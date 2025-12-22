@@ -44,6 +44,10 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
 
         self._path: str | None = None
 
+    def apply_style(self) -> None:
+        """Apply styling from the style manager."""
+        self._markdown_content.apply_style()
+
     def set_content(self, text: str, path: str | None) -> None:
         """
         Set content, processing markdown.

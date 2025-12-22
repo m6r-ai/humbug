@@ -55,8 +55,8 @@ class PreviewMarkdownContent(PreviewContentWidget):
 
         self.setProperty("contained", contained)
 
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        # Call apply_style directly to initialize styling
+        self.apply_style()
         self._on_language_changed()
 
     def _on_language_changed(self) -> None:
@@ -193,15 +193,8 @@ class PreviewMarkdownContent(PreviewContentWidget):
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
 
-    def _on_style_changed(self) -> None:
-        """Handle the style changing."""
-        factor = self._style_manager.zoom_factor()
-        font = self.font()
-        base_font_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
-        self.setFont(font)
-
-        # Apply styles to all sections
+    def apply_style(self) -> None:
+        """Apply styling to this content widget and all sections."""
         for section in self._sections:
             section.apply_style()
 

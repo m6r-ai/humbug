@@ -101,10 +101,9 @@ class PreviewFileContent(PreviewContentWidget):
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
 
-        # Apply initial styles
+        # Call apply_style directly to initialize styling
         self._on_language_changed()
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        self.apply_style()
 
     def _on_edit_clicked(self) -> None:
         """Handle the edit button being clicked."""
@@ -351,8 +350,8 @@ class PreviewFileContent(PreviewContentWidget):
 
         return actions
 
-    def _on_style_changed(self) -> None:
-        """Handle style changes."""
+    def apply_style(self) -> None:
+        """Apply styling to this content widget."""
         factor = self._style_manager.zoom_factor()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()

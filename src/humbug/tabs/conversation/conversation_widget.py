@@ -2002,6 +2002,12 @@ class ConversationWidget(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
 
+        for message in self._messages:
+            message.apply_style()
+
+        if self._input is not None:
+            self._input.apply_style()
+
         stylesheet_parts = [
             self._build_widget_style(),
             self._build_conversation_message_styles(),

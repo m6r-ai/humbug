@@ -119,8 +119,7 @@ class LogMessage(QFrame):
         # Set the content in the text area
         self._text_area.set_text(text)
 
-        self._style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
+        self.apply_style()
         self._on_language_changed()
 
     def message_id(self) -> str | None:
@@ -228,8 +227,8 @@ class LogMessage(QFrame):
         """Handle resize events."""
         super().resizeEvent(event)
 
-    def _on_style_changed(self) -> None:
-        """Handle the style changing"""
+    def apply_style(self) -> None:
+        """Apply style changes."""
         factor = self._style_manager.zoom_factor()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
@@ -238,6 +237,8 @@ class LogMessage(QFrame):
 
         # Apply font to components
         self._level_label.setFont(font)
+
+        self._text_area.apply_style()
 
     def find_text(self, text: str) -> List[Tuple[int, int]]:
         """

@@ -487,8 +487,7 @@ class ConversationMessageSection(QFrame):
             self._language_header.setFont(font)
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
-        self._text_area.setFont(font)
-
+        self._text_area.apply_style()
         self._apply_button_style()
 
         self._renderer.apply_style()

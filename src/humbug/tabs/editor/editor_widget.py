@@ -1086,6 +1086,11 @@ class EditorWidget(QPlainTextEdit):
             self._init_colour_mode = self._style_manager.color_mode()
             self._highlighter.rehighlight()
 
+        # Scale line number area
+        self._update_line_number_area_width()
+
+        self._highlight_matches()
+
         self.setStyleSheet(f"""
             QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
@@ -1121,11 +1126,6 @@ class EditorWidget(QPlainTextEdit):
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
         """)
-
-        # Scale line number area
-        self._update_line_number_area_width()
-
-        self._highlight_matches()
 
     def _find_closest_match_to_cursor(self) -> int:
         """

@@ -747,6 +747,9 @@ class LogWidget(QWidget):
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
 
+        for message in self._messages:
+            message.apply_style()
+
         stylesheet_parts = [
             self._build_widget_style(),
             self._build_log_message_styles()

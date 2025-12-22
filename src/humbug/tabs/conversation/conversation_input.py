@@ -60,7 +60,7 @@ class ConversationInput(ConversationMessage):
         self._text_area.textChanged.connect(self._on_text_changed)
 
         self._update_header_text()
-        self._on_style_changed()
+        self.apply_style()
         self._update_button_states()
 
     def set_model(self, model: str) -> None:
@@ -99,9 +99,9 @@ class ConversationInput(ConversationMessage):
 
         return "Ctrl+J"
 
-    def _on_style_changed(self) -> None:
-        """Handle the style changing."""
-        super()._on_style_changed()
+    def apply_style(self) -> None:
+        """Apply style changes."""
+        super().apply_style()
         self._set_role_style()
         self._update_button_styling()
 

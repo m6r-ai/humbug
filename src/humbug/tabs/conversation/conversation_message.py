@@ -176,7 +176,6 @@ class ConversationMessage(QFrame):
 
         self._is_focused = False
 
-        self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_language_changed()
 
         self._needs_lazy_update = True
@@ -188,7 +187,7 @@ class ConversationMessage(QFrame):
 
         # We don't want to style subclasses immediately
         if not do_not_style:
-            self._on_style_changed()
+            self.apply_style()
 
         self._context = context
         if content:
@@ -884,8 +883,8 @@ class ConversationMessage(QFrame):
             # Update the expand button icon and tooltip
             self._update_expand_button()
 
-    def _on_style_changed(self) -> None:
-        """Handle the style changing."""
+    def apply_style(self) -> None:
+        """Apply style changes."""
         style_manager = self._style_manager
 
         zoom_factor = style_manager.zoom_factor()
