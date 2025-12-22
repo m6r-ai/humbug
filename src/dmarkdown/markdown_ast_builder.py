@@ -1274,6 +1274,7 @@ class MarkdownASTBuilder:
         # Try to handle as a continuation first
         if self._handle_text_continuation(content, line_num):
             self._last_processed_line_type = line_type
+            self._blank_line_count = 0
             return
 
         # Regular paragraph
