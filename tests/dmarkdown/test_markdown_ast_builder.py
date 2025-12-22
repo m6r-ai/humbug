@@ -373,6 +373,271 @@ continues on this line
     assert len(paragraph.children) == 3
 
 
+def test_list_item_multi_line_paragraph_continuation(ast_builder):
+    """
+    Test that consecutive lines in a list item form a single paragraph.
+
+    This tests the fix for the bug where _blank_line_count was not being
+    reset after handling text continuation, causing each line to be treated
+    as a separate paragraph.
+    """
+    markdown = """- First item with bold text
+
+  Line 1 of paragraph.
+  Line 2 of paragraph.
+  Line 3 of paragraph.
+
+- Second item
+
+  Line A of paragraph.
+  Line B of paragraph.
+  Line C of paragraph.
+  Line D of paragraph."""
+
+    doc = ast_builder.build_ast(markdown)
+
+    # Should have one unordered list
+    assert len(doc.children) == 1
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+
+    # Should have two list items
+    assert len(list_node.children) == 2
+
+    # First item should have two paragraphs (the item text and the indented paragraph)
+    first_item = list_node.children[0]
+    assert len(first_item.children) == 2
+
+    # First paragraph is the item text
+    first_para = first_item.children[0]
+    assert first_para.__class__.__name__ == "MarkdownASTParagraphNode"
+
+    # Second paragraph should contain all three lines as ONE paragraph
+    second_para = first_item.children[1]
+    assert second_para.__class__.__name__ == "MarkdownASTParagraphNode"
+
+    # Verify it spans lines 2-4 (the three consecutive lines)
+    assert second_para.line_start == 2
+    assert second_para.line_end == 4
+
+    # Should contain text nodes with spaces between them
+    text_content = []
+    for child in second_para.children:
+        if child.__class__.__name__ == "MarkdownASTTextNode":
+            text_content.append(child.content)
+
+    # Should have: "Line 1 of paragraph." + " " + "Line 2 of paragraph." + " " + "Line 3 of paragraph."
+    full_text = "".join(text_content)
+    assert "Line 1 of paragraph." in full_text
+    assert "Line 2 of paragraph." in full_text
+    assert "Line 3 of paragraph." in full_text
+
+    # Second item should also have two paragraphs
+    second_item = list_node.children[1]
+    assert len(second_item.children) == 2
+
+    # The indented paragraph should contain all four lines as ONE paragraph
+    second_item_para = second_item.children[1]
+    assert second_item_para.__class__.__name__ == "MarkdownASTParagraphNode"
+
+    # Verify it spans lines 8-11 (the four consecutive lines)
+    assert second_item_para.line_start == 8
+    assert second_item_para.line_end == 11
+
+    # Should contain all four lines
+    text_content = []
+    for child in second_item_para.children:
+        if child.__class__.__name__ == "MarkdownASTTextNode":
+            text_content.append(child.content)
+
+    full_text = "".join(text_content)
+    assert "Line A of paragraph." in full_text
+    assert "Line B of paragraph." in full_text
+    assert "Line C of paragraph." in full_text
+    assert "Line D of paragraph." in full_text
+
+
+def test_list_item_paragraph_with_formatting(ast_builder):
+    """
+    Test multi-line paragraphs in list items with inline formatting.
+
+    Ensures that paragraph continuation works correctly even when
+    the text contains bold, italic, or other formatting.
+    """
+    markdown = """- **Item with bold header**
+
+  This is the first line of the paragraph.
+  This is the second line with **bold text** in it.
+  This is the third line with *italic text* too.
+  And a fourth line with `inline code`."""
+
+    doc = ast_builder.build_ast(markdown)
+
+    list_node = doc.children[0]
+    first_item = list_node.children[0]
+
+    # Should have two children: the bold header paragraph and the multi-line paragraph
+    assert len(first_item.children) == 2
+
+    # The second paragraph should be a single paragraph spanning all four lines
+    paragraph = first_item.children[1]
+    assert paragraph.__class__.__name__ == "MarkdownASTParagraphNode"
+    assert paragraph.line_start == 2
+    assert paragraph.line_end == 5
+
+    # Should contain various formatting nodes
+    has_bold = False
+    has_italic = False
+    has_code = False
+
+    for child in paragraph.children:
+        if child.__class__.__name__ == "MarkdownASTBoldNode":
+            has_bold = True
+        elif child.__class__.__name__ == "MarkdownASTEmphasisNode":
+            has_italic = True
+        elif child.__class__.__name__ == "MarkdownASTInlineCodeNode":
+            has_code = True
+
+    assert has_bold, "Should contain bold formatting"
+    assert has_italic, "Should contain italic formatting"
+    assert has_code, "Should contain inline code"
+
+
+def test_nested_list_paragraph_continuation(ast_builder):
+    """
+    Test paragraph continuation in nested list items.
+
+    Ensures the fix works correctly for nested list structures.
+    """
+    markdown = """- Outer item
+
+  First line of outer paragraph.
+  Second line of outer paragraph.
+
+  - Nested item
+
+    First line of nested paragraph.
+    Second line of nested paragraph.
+    Third line of nested paragraph."""
+
+    doc = ast_builder.build_ast(markdown)
+
+    list_node = doc.children[0]
+    outer_item = list_node.children[0]
+
+    # Outer item should have: paragraph (item text), paragraph (multi-line), nested list
+    assert len(outer_item.children) == 3
+
+    # Check outer multi-line paragraph
+    outer_para = outer_item.children[1]
+    assert outer_para.__class__.__name__ == "MarkdownASTParagraphNode"
+    assert outer_para.line_start == 2
+    assert outer_para.line_end == 3
+
+    # Check nested list
+    nested_list = outer_item.children[2]
+    assert nested_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
+
+    nested_item = nested_list.children[0]
+
+    # Nested item should have two paragraphs
+    assert len(nested_item.children) == 2
+
+    # Check nested multi-line paragraph
+    nested_para = nested_item.children[1]
+    assert nested_para.__class__.__name__ == "MarkdownASTParagraphNode"
+    assert nested_para.line_start == 7
+    assert nested_para.line_end == 9
+
+
+def test_tight_list_with_multi_line_items(ast_builder):
+    """
+    Test that tight lists remain tight even with multi-line items.
+
+    A tight list should not have blank lines between list items,
+    but can have multi-line content within each item.
+    """
+    markdown = """- First item line 1
+  continues on line 2
+- Second item line 1
+  continues on line 2
+- Third item"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+
+    # Should be a tight list (no blank lines between items)
+    assert list_node.tight is True
+
+    # First item should have a single paragraph with both lines
+    first_item = list_node.children[0]
+    first_para = first_item.children[0]
+    assert first_para.line_start == 0
+    assert first_para.line_end == 1
+
+    # Second item should also have a single paragraph with both lines
+    second_item = list_node.children[1]
+    second_para = second_item.children[0]
+    assert second_para.line_start == 2
+    assert second_para.line_end == 3
+
+
+def test_loose_list_with_multi_line_paragraphs(ast_builder):
+    """
+    Test that loose lists with multi-line paragraphs are handled correctly.
+
+    A loose list has blank lines between items, and each item can have
+    multi-line paragraphs.
+    """
+    markdown = """- First item
+
+  First paragraph line 1.
+  First paragraph line 2.
+  
+  Second paragraph line 1.
+  Second paragraph line 2.
+
+- Second item
+
+  Another paragraph line 1.
+  Another paragraph line 2."""
+
+    doc = ast_builder.build_ast(markdown)
+
+    list_node = doc.children[0]
+
+    # Should be a loose list (has blank lines between items)
+    assert list_node.tight is False
+
+    # First item should have three paragraphs:
+    # 1. The item text ("First item")
+    # 2. First multi-line paragraph
+    # 3. Second multi-line paragraph
+    first_item = list_node.children[0]
+    assert len(first_item.children) == 3
+
+    # Check first multi-line paragraph
+    first_para = first_item.children[1]
+    assert first_para.line_start == 2
+    assert first_para.line_end == 3
+
+    # Check second multi-line paragraph
+    second_para = first_item.children[2]
+    assert second_para.line_start == 5
+    assert second_para.line_end == 6
+
+    # Second item should have two paragraphs
+    second_item = list_node.children[1]
+    assert len(second_item.children) == 2
+
+    # Check the multi-line paragraph
+    second_item_para = second_item.children[1]
+    assert second_item_para.line_start == 10
+    assert second_item_para.line_end == 11
+
+
 def test_code_block(ast_builder):
     """Test parsing a code block."""
     markdown = """```python
