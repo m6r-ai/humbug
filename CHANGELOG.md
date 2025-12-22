@@ -8,6 +8,7 @@ Bug fixes:
   Removed unnecessary tool-call filter.
 - Fixed a problem with zoom scaling of markdown text blocks.
 - Improved the performance of style changes (makes zoom and colour mode changes quicker).
+- Fixed a markdown parsing issue affecting paragraphs inside lists.
 
 ## v0.35 (2025-12-19)
 
