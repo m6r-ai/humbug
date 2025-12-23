@@ -8,12 +8,12 @@ from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
 )
 
-from humbug.min_height_text_edit import MinHeightTextEdit
+from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
 from humbug.style_manager import StyleManager
 from humbug.tabs.shell.shell_command_highlighter import ShellCommandHighlighter
 
 
-class ShellTextEdit(MinHeightTextEdit):
+class ShellTextEdit(MinHeightPlainTextEdit):
     """Text edit widget that handles shell commands and responses."""
 
     mouse_pressed = Signal(QMouseEvent)
@@ -40,7 +40,6 @@ class ShellTextEdit(MinHeightTextEdit):
             )
         )
 
-        self.setAcceptRichText(False)
         self.setReadOnly(not is_input)
 
         self._style_manager = StyleManager()
