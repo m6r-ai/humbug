@@ -19,8 +19,9 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.style_manager import StyleManager
+from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
+from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
 from humbug.tabs.conversation.conversation_highlighter import ConversationHighlighter
-from humbug.tabs.conversation.conversation_language_highlighter import ConversationLanguageHighlighter
 from humbug.tabs.markdown_renderer import MarkdownRenderer
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 
@@ -95,26 +96,33 @@ class ConversationMessageSection(QFrame):
         # Determine if this section should use markdown (only AI responses without language)
         self._use_markdown = not is_input and language is None
 
-        # Create text area
-        self._text_area = MarkdownTextEdit(self)
-        self._text_area.setAcceptRichText(self._use_markdown)
-        self._text_area.setReadOnly(not is_input)
+        # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for everything else
+        self._text_area: MarkdownTextEdit | CodeBlockTextEdit
+        self._renderer: MarkdownRenderer | None
+        if language is not None:
+            # Code block - use code block text widget
+            self._text_area = CodeBlockTextEdit(self)
+            self._text_area.set_language(language)
+            self._renderer = None
+
+        else:
+            # Markdown or user input - use rich text widget
+            self._text_area = MarkdownTextEdit(self)
+            self._text_area.setReadOnly(not is_input)
+            document = self._text_area.document()
+            self._renderer = MarkdownRenderer(document)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
 
         self._content_node: MarkdownASTNode | None = None
 
-        # Render directly to the document
-        document = self._text_area.document()
-        self._renderer = MarkdownRenderer(document)
-
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
 
-        self._highlighter: ConversationHighlighter | ConversationLanguageHighlighter | None = None
+        self._highlighter: ConversationHighlighter | CodeBlockHighlighter | None = None
 
         self._set_language(language)
 
@@ -127,7 +135,7 @@ class ConversationMessageSection(QFrame):
         self._layout.addWidget(self._text_area)
         self.setLayout(self._layout)
 
-    def text_area(self) -> MarkdownTextEdit:
+    def text_area(self) -> MarkdownTextEdit | CodeBlockTextEdit:
         """Get the text area widget."""
         return self._text_area
 
@@ -178,6 +186,10 @@ class ConversationMessageSection(QFrame):
         """Lazy update - called when section becomes visible."""
         if self._language is None:
             return
+
+        # Initialize highlighter for code blocks lazily
+        if isinstance(self._text_area, CodeBlockTextEdit):
+            self._text_area.lazy_init_highlighter()
 
         strings = self._language_manager.strings()
 
@@ -314,16 +326,14 @@ class ConversationMessageSection(QFrame):
 
             # If we have code block node, extract its content as plain text
             if isinstance(content, MarkdownASTCodeBlockNode):
-                if self._highlighter is None:
-                    self._highlighter = ConversationLanguageHighlighter(self._text_area.document(), self._content_node)
-
-                else:
-                    cast(ConversationLanguageHighlighter, self._highlighter).update_content(content)
-
-                self._text_area.set_text(content.content)
+                # For CodeBlockTextEdit, just set the plain text
+                # Highlighter is initialized lazily in lazy_update
+                assert isinstance(self._text_area, CodeBlockTextEdit), "Text area must be CodeBlockTextEdit"
+                self._text_area.setPlainText(content.content)
                 return
 
-        self._renderer.visit(content)
+        if self._renderer is not None:
+            self._renderer.visit(content)
 
     def has_selection(self) -> bool:
         """Check if text is selected in the text area."""
@@ -490,7 +500,9 @@ class ConversationMessageSection(QFrame):
         self._text_area.apply_style()
         self._apply_button_style()
 
-        self._renderer.apply_style()
+        # Only apply renderer style for MarkdownTextEdit
+        if self._renderer is not None:
+            self._renderer.apply_style()
 
         # Style the language header if present, or the inline code style if it's not
         if not self._language_header:
@@ -499,12 +511,10 @@ class ConversationMessageSection(QFrame):
                 # If we have a text node, extract its content as plain text
                 if isinstance(content, MarkdownASTTextNode):
                     self._text_area.set_text(content.content)
-
-                else:
+                elif self._renderer is not None:
                     self._renderer.visit(content)
 
         # If we changed colour mode then re-highlight
         if self._style_manager.color_mode() != self._init_colour_mode:
             self._init_colour_mode = self._style_manager.color_mode()
-            if self._highlighter:
-                self._highlighter.rehighlight()
+            # Highlighter rehighlighting is handled by each widget's apply_style

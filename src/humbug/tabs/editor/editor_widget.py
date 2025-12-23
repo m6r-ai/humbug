@@ -20,8 +20,8 @@ from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.style_manager import StyleManager
+from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 from humbug.tabs.editor.editor_diff_applier import EditorDiffApplier
-from humbug.tabs.editor.editor_highlighter import EditorHighlighter
 from humbug.tabs.editor.editor_line_number_area import EditorLineNumberArea
 
 
@@ -126,7 +126,7 @@ class EditorWidget(QPlainTextEdit):
 
         # Programming language and syntax highlighting
         self._current_programming_language = ProgrammingLanguage.TEXT
-        self._highlighter = EditorHighlighter(self.document())
+        self._highlighter = CodeBlockHighlighter(self.document())
 
         # Auto-backup functionality
         self._auto_backup_timer = QTimer(self)

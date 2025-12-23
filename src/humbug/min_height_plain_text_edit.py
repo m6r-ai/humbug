@@ -1,14 +1,15 @@
-"""Widget for displaying messages with minimal height possible."""
+"""Widget for displaying plain text with minimal height possible."""
 
+import logging
 from PySide6.QtWidgets import (
-    QFrame, QTextEdit, QSizePolicy, QWidget
+    QFrame, QPlainTextEdit, QSizePolicy, QWidget
 )
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QTextOption, QTextCursor
+from PySide6.QtCore import Qt, QSize, QEvent
+from PySide6.QtGui import QTextOption, QTextCursor, QFontMetricsF
 
 
-class MinHeightTextEdit(QTextEdit):
-    """QTextEdit that automatically adjusts its height."""
+class MinHeightPlainTextEdit(QPlainTextEdit):
+    """QPlainTextEdit that automatically adjusts its height."""
 
     def __init__(
         self,
@@ -17,7 +18,7 @@ class MinHeightTextEdit(QTextEdit):
         word_wrap_mode: QTextOption.WrapMode = QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere
     ) -> None:
         """
-        Initialize the MinHeightTextEdit widget.
+        Initialize the MinHeightPlainTextEdit widget.
 
         Args:
             parent: Parent widget
@@ -25,7 +26,8 @@ class MinHeightTextEdit(QTextEdit):
             word_wrap_mode: Word wrap mode for text
         """
         super().__init__(parent)
-        self.document().documentLayout().documentSizeChanged.connect(self._on_content_resized)
+        self._logger = logging.getLogger("MinHeightPlainTextEdit")
+
         self.document().setDocumentMargin(0)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(horizontal_scrollbar_policy)
@@ -40,10 +42,13 @@ class MinHeightTextEdit(QTextEdit):
         self._current_text = ""
         self.clear()
 
-    def _on_content_resized(self) -> None:
-        """Handle resizing this widget based on the document content."""
-        self.updateGeometry()
-        print(f"{self}: resize")
+    def event(self, e: QEvent) -> bool:
+        """Handle events."""
+        # Look for layout requests as they will occur when we change horizontal scrollbar visibility
+        if e.type() == QEvent.Type.LayoutRequest:
+            self.updateGeometry()
+
+        return super().event(e)
 
     def set_text(self, text: str) -> None:
         """Update text content incrementally based on differences."""
@@ -103,8 +108,14 @@ class MinHeightTextEdit(QTextEdit):
 
     def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
-        document_size = self.document().size()
-        height = int(document_size.height())
+        doc = self.document()
+        block_count = doc.blockCount()
+
+        # Calculate line height from font metrics.  QPlainTextEdit does some slightly odd rounding so we need to match it.
+        font_metrics = QFontMetricsF(self.font())
+        line_height = int(font_metrics.height() + 0.99)
+
+        height = block_count * line_height
         if self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14

@@ -5,7 +5,7 @@ import logging
 from typing import List, Tuple
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QTextEdit
 )
 from PySide6.QtCore import Signal, QPoint, Qt
 from PySide6.QtGui import (
@@ -301,7 +301,7 @@ class LogMessage(QFrame):
             cursor.setPosition(start)
             cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
 
-            extra_selection = self._text_area.ExtraSelection()
+            extra_selection = QTextEdit.ExtraSelection()
             extra_selection.cursor = cursor  # type: ignore
             extra_selection.format = current_format if i == current_match_index else other_format  # type: ignore
 

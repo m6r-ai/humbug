@@ -10,14 +10,14 @@ from syntax import ProgrammingLanguage, ParserState, ParserRegistry
 from humbug.style_manager import StyleManager
 
 
-class EditorHighlighterBlockData(QTextBlockUserData):
+class CodeBlockHighlighterBlockData(QTextBlockUserData):
     """Data associated with each text block."""
     def __init__(self) -> None:
         super().__init__()
         self.parser_state: ParserState | None = None
 
 
-class EditorHighlighter(QSyntaxHighlighter):
+class CodeBlockHighlighter(QSyntaxHighlighter):
     """Syntax highlighter for source code files."""
 
     def __init__(self, parent: QTextDocument) -> None:
@@ -27,7 +27,7 @@ class EditorHighlighter(QSyntaxHighlighter):
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
         self._language = ProgrammingLanguage.TEXT
-        self._logger = logging.getLogger("EditorHighlighter")
+        self._logger = logging.getLogger("CodeBlockHighlighter")
 
     def set_language(self, language: ProgrammingLanguage) -> None:
         """
@@ -46,16 +46,16 @@ class EditorHighlighter(QSyntaxHighlighter):
             current_block = self.currentBlock()
             prev_block = current_block.previous()
 
-            prev_block_data: EditorHighlighterBlockData | None = None
+            prev_block_data: CodeBlockHighlighterBlockData | None = None
             prev_parser_state = None
 
             if prev_block:
-                prev_block_data = cast(EditorHighlighterBlockData, prev_block.userData())
+                prev_block_data = cast(CodeBlockHighlighterBlockData, prev_block.userData())
                 if prev_block_data:
                     prev_parser_state = prev_block_data.parser_state
 
             continuation_state = -1
-            current_block_data = cast(EditorHighlighterBlockData, current_block.userData())
+            current_block_data = cast(CodeBlockHighlighterBlockData, current_block.userData())
 
             # Use the appropriate language parser
             parser = ParserRegistry.create_parser(self._language)
@@ -86,7 +86,7 @@ class EditorHighlighter(QSyntaxHighlighter):
                 if continuation_state != parser_state.continuation_state:
                     self.setCurrentBlockState(self.currentBlockState() + 1)
 
-            block_data = EditorHighlighterBlockData()
+            block_data = CodeBlockHighlighterBlockData()
             block_data.parser_state = parser_state
             current_block.setUserData(block_data)
 

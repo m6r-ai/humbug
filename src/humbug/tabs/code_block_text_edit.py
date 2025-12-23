@@ -1,4 +1,4 @@
-"""Widget for displaying log message text content."""
+"""Widget for displaying code blocks with syntax highlighting."""
 
 import logging
 
@@ -6,19 +6,23 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QTextOption, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
 
+from syntax import ProgrammingLanguage
+
 from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
 from humbug.style_manager import StyleManager
+from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 
 
-class LogTextEdit(MinHeightPlainTextEdit):
-    """Text edit widget used for log messages."""
+class CodeBlockTextEdit(MinHeightPlainTextEdit):
+    """Plain text edit widget optimized for displaying code blocks."""
 
     mouse_pressed = Signal(QMouseEvent)
     mouse_released = Signal(QMouseEvent)
+    page_key_scroll_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """
-        Initialize the LogTextEdit widget.
+        Initialize the CodeBlockTextEdit widget.
 
         Args:
             parent: Parent widget
@@ -29,20 +33,43 @@ class LogTextEdit(MinHeightPlainTextEdit):
             word_wrap_mode=QTextOption.WrapMode.NoWrap
         )
 
-        self.setReadOnly(True)  # Log messages are always read-only
+        self.setReadOnly(True)  # Code blocks are always read-only
 
         self._style_manager = StyleManager()
         self._init_colour_mode = self._style_manager.color_mode()
 
-        # Calculate tab stops
-        self.apply_style()
-
-        self._logger = logging.getLogger("LogTextEdit")
+        self._logger = logging.getLogger("CodeBlockTextEdit")
 
         # Highlighted text should retain any underlying colours (e.g. syntax highlighting)
         palette = self.palette()
         palette.setBrush(QPalette.ColorRole.HighlightedText, QBrush(Qt.BrushStyle.NoBrush))
         self.setPalette(palette)
+
+        # Syntax highlighting - created lazily
+        self._highlighter: CodeBlockHighlighter | None = None
+        self._language: ProgrammingLanguage = ProgrammingLanguage.TEXT
+
+        # Apply initial style
+        self.apply_style()
+
+    def set_language(self, language: ProgrammingLanguage) -> None:
+        """
+        Set the programming language for syntax highlighting.
+
+        Args:
+            language: The programming language to use
+        """
+        self._language = language
+
+        # Update highlighter if it exists
+        if self._highlighter is not None:
+            self._highlighter.set_language(language)
+
+    def lazy_init_highlighter(self) -> None:
+        """Initialize the syntax highlighter lazily when widget becomes visible."""
+        if self._highlighter is None:
+            self._highlighter = CodeBlockHighlighter(self.document())
+            self._highlighter.set_language(self._language)
 
     def apply_style(self) -> None:
         """Apply style changes."""
@@ -53,6 +80,12 @@ class LogTextEdit(MinHeightPlainTextEdit):
         self.setFont(font)
 
         self.setTabStopDistance(self._style_manager.get_space_width() * 8)
+
+        # If we changed colour mode then re-highlight
+        if self._style_manager.color_mode() != self._init_colour_mode:
+            self._init_colour_mode = self._style_manager.color_mode()
+            if self._highlighter:
+                self._highlighter.rehighlight()
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
@@ -86,13 +119,6 @@ class LogTextEdit(MinHeightPlainTextEdit):
     def keyPressEvent(self, e: QKeyEvent) -> None:
         """Handle special key events."""
         # Since this is read-only, we handle navigation keys differently
-        # Let parent handle terminal navigation keys
-        if e.key() in (
-            Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_PageUp, Qt.Key.Key_PageDown,
-            Qt.Key.Key_Return
-        ):
-            e.ignore()
-            return
 
         # Handle horizontal scrolling
         if e.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
@@ -105,9 +131,32 @@ class LogTextEdit(MinHeightPlainTextEdit):
 
                 else:
                     hbar.setValue(min(hbar.maximum(), current + step))
-
                 e.accept()
                 return
 
+        # Let parent handle page up/down and vertical navigation
+        if e.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown, Qt.Key.Key_Up, Qt.Key.Key_Down):
+            e.ignore()
+            return
+
         # For read-only widgets, ignore most other key events
         e.ignore()
+
+    def set_has_code_block(self, has_code: bool) -> None:
+        """
+        Compatibility method for MarkdownTextEdit interface.
+        
+        CodeBlockTextEdit always has code blocks, so this is a no-op.
+        
+        Args:
+            has_code: Ignored
+        """
+
+    def has_code_block(self) -> bool:
+        """
+        Check if content contains code blocks.
+        
+        Returns:
+            Always True for CodeBlockTextEdit
+        """
+        return True
