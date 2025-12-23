@@ -6,7 +6,7 @@ import colorsys
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QRect, QObject
+from PySide6.QtCore import Signal, QPoint, QSize, Qt, QObject
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
 
 from ai import AIMessageSource
@@ -476,7 +476,7 @@ class ConversationMessage(QFrame):
 
         return section
 
-    def lazy_update(self, viewport_rect: QRect, scroll_container: QWidget, event_filter: QObject, is_streaming: bool) -> None:
+    def lazy_update(self, event_filter: QObject, is_streaming: bool) -> None:
         """
         Handle lazy updates for sections based on viewport visibility.
 
@@ -489,13 +489,7 @@ class ConversationMessage(QFrame):
             if not section.isVisible():
                 continue
 
-            # Get section position relative to scroll container
-            section_pos = section.mapTo(scroll_container, QPoint(0, 0))
-            section_rect = QRect(section_pos, section.size())
-
-            # Only create highlighter if section intersects with viewport
-            if section_rect.intersects(viewport_rect):
-                section.lazy_update(event_filter)
+            section.lazy_update(event_filter)
 
         # If we're streaming we don't want our buttons yet
         if is_streaming:

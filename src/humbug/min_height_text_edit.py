@@ -43,7 +43,6 @@ class MinHeightTextEdit(QTextEdit):
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
         self.updateGeometry()
-        print(f"{self}: resize")
 
     def set_text(self, text: str) -> None:
         """Update text content incrementally based on differences."""

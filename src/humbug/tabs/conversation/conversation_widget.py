@@ -453,7 +453,7 @@ class ConversationWidget(QWidget):
             # Only check sections if message intersects with viewport
             if message_rect.intersects(visible_rect):
                 is_streaming = self._is_streaming and i == len(self._messages) - 1
-                message.lazy_update(visible_rect, self._messages_container, self._event_filter, is_streaming)
+                message.lazy_update(self._event_filter, is_streaming)
 
     def _enable_messages_container_updates(self) -> None:
         """Re-enable updates for the messages container after layout has settled."""
