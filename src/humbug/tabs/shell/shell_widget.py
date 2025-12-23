@@ -804,6 +804,7 @@ class ShellWidget(QWidget):
         """
 
     def _on_style_changed(self) -> None:
+        """Handle style changes by updating fonts and stylesheets."""
         factor = self._style_manager.zoom_factor()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
