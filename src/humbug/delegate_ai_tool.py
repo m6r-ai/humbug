@@ -14,6 +14,7 @@ from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 
 
@@ -386,9 +387,16 @@ class DelegateAITool(AITool):
             if session_id is None or session_id == "current":
                 # Create new conversation
                 history = ai_conversation.get_conversation_history() if session_id == "current" else None
-                conversation_tab = self._column_manager.new_conversation(
-                    True, history, model, temperature, reasoning_capability
-                )
+
+                try:
+                    conversation_tab = self._column_manager.new_conversation(
+                        True, history, model, temperature, reasoning_capability
+                    )
+
+                except ColumnManagerError as e:
+                    raise AIToolExecutionError(
+                        f"Failed to create new conversation for delegation: {str(e)}"
+                    ) from e
 
             else:
                 # Open existing conversation

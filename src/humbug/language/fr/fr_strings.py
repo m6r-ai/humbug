@@ -216,6 +216,7 @@ def get_french_strings() -> LanguageStrings:
         error_creating_conversation="Échec de la création de la conversation : {}",
         error_opening_conversation="Impossible de charger {} : {}",
         error_forking_conversation="Impossible de dupliquer la conversation : {}",
+        error_opening_preview="Impossible d'ouvrir l'aperçu : {}",
         error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
         error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}",
         error_saving_user_settings="Échec de l'enregistrement des paramètres utilisateur : {}",

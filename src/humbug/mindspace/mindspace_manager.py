@@ -523,12 +523,8 @@ class MindspaceManager(QObject):
 
         Returns:
             The created MindspaceMessage
-
-        Raises:
-            MindspaceNotFoundError: If no mindspace is open
         """
-        if not self.has_mindspace():
-            raise MindspaceNotFoundError("No mindspace is currently open")
+        assert self.has_mindspace(), "No mindspace is currently open"
 
         message = MindspaceMessage.create(level, content)
         self._interactions.add_message(message)
@@ -542,34 +538,13 @@ class MindspaceManager(QObject):
 
         Returns:
             List of MindspaceMessage objects
-
-        Raises:
-            MindspaceNotFoundError: If no mindspace is open
         """
-        if not self.has_mindspace():
-            raise MindspaceNotFoundError("No mindspace is currently open")
+        assert self.has_mindspace(), "No mindspace is currently open"
 
         return self._interactions.get_messages()
 
-    def clear_interactions(self) -> None:
-        """
-        Clear all system interaction messages.
-
-        Raises:
-            MindspaceNotFoundError: If no mindspace is open
-        """
-        if not self.has_mindspace():
-            raise MindspaceNotFoundError("No mindspace is currently open")
-
-        self._interactions.clear()
-        self._save_interactions()
-        self.interactions_updated.emit()
-
     def _save_interactions(self) -> None:
         """Save system interactions to disk."""
-        if not self.has_mindspace():
-            return
-
         try:
             # Ensure .humbug directory exists
             mindspace_dir = os.path.join(self._mindspace_path, self.MINDSPACE_DIR)
@@ -585,9 +560,6 @@ class MindspaceManager(QObject):
 
     def _load_interactions(self) -> None:
         """Load system interactions from disk."""
-        if not self.has_mindspace():
-            return
-
         try:
             interactions_path = os.path.join(
                 self._mindspace_path,

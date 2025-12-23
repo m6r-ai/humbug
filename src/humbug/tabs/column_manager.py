@@ -16,6 +16,7 @@ from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
 from humbug.style_manager import StyleManager
+from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.column_splitter import ColumnSplitter
 from humbug.tabs.column_widget import ColumnWidget
 from humbug.tabs.conversation.conversation_error import ConversationError
@@ -538,17 +539,26 @@ class ColumnManager(QWidget):
             if os.path.isdir(path):
                 return None
 
-            conversation_tab = self.open_conversation(path, ephemeral)
-            if conversation_tab:
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"User opened conversation: '{path}'\ntab ID: {conversation_tab.tab_id()}"
-                )
+            try:
+                conversation_tab = self.open_conversation(path, ephemeral)
+
+            except ColumnManagerError:
+                return None
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened conversation: '{path}'\ntab ID: {conversation_tab.tab_id()}"
+            )
 
             return conversation_tab
 
         if source == MindspaceViewType.PREVIEW:
-            preview_tab = self.open_preview_page(path, ephemeral)
+            try:
+                preview_tab = self.open_preview_page(path, ephemeral)
+
+            except ColumnManagerError:
+                return None
+
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
                 f"User opened preview page: '{path}'\ntab ID: {preview_tab.tab_id()}"
@@ -1413,7 +1423,13 @@ class ColumnManager(QWidget):
         filename = os.path.join("conversations", f"{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
-        conversation_tab = ConversationTab("", full_path, self)
+        try:
+            conversation_tab = ConversationTab("", full_path, self)
+
+        except ConversationError as e:
+            self._logger.exception("Failed to create new conversation: %s", str(e))
+            raise ColumnManagerError("Failed to create new conversation tab") from e
+
         conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
         conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
 
@@ -1440,7 +1456,7 @@ class ColumnManager(QWidget):
         self._add_tab(conversation_tab, conversation_title)
         return conversation_tab
 
-    def open_conversation(self, path: str, ephemeral: bool) -> ConversationTab | None:
+    def open_conversation(self, path: str, ephemeral: bool) -> ConversationTab:
         """Open an existing conversation file."""
         assert os.path.isabs(path), "Path must be absolute"
 
@@ -1466,7 +1482,7 @@ class ColumnManager(QWidget):
 
         except ConversationError as e:
             self._logger.exception("Failed to open conversation: %s", str(e))
-            raise
+            raise ColumnManagerError("Failed to open conversation tab") from e
 
     def can_fork_conversation(self) -> bool:
         """Check if the current tab can be forked."""
@@ -1563,7 +1579,7 @@ class ColumnManager(QWidget):
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
-            raise
+            raise ColumnManagerError("Failed to fork conversation tab") from e
 
         finally:
             self.protect_current_tab(False)
@@ -1635,7 +1651,7 @@ class ColumnManager(QWidget):
 
         except PreviewError as e:
             self._logger.exception("Failed to open preview page: %s", str(e))
-            raise
+            raise ColumnManagerError("Failed to open preview tab") from e
 
     def save_state(self) -> Dict:
         """Get current state of all tabs and columns."""

@@ -63,6 +63,7 @@ class ConversationTab(TabBase):
         self._conversation_widget = ConversationWidget(
             path, self, use_existing_ai_conversation
         )
+
         self._conversation_widget.fork_requested.connect(self.fork_requested)
         self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index_requested)
         self._conversation_widget.conversation_settings_requested.connect(

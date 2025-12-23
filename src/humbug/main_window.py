@@ -42,8 +42,8 @@ from humbug.style_manager import StyleManager, ColorMode
 from humbug.status_message import StatusMessage
 from humbug.system_ai_tool import SystemAITool
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_ai_tool import ConversationAITool
-from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_ai_tool import EditorAITool
 from humbug.tabs.log.log_ai_tool import LogAITool
@@ -59,7 +59,6 @@ from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.terminal.terminal_ai_tool import TerminalAITool
-from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.user.user_manager import UserManager, UserError
 from humbug.user.user_settings import UserSettings
@@ -869,8 +868,17 @@ class MainWindow(QMainWindow):
 
     def _on_mindspace_view_file_opened_in_preview(self, path: str, ephemeral: bool) -> None:
         """Handle click of a preview link from the mindspace view."""
-        preview_tab = self._column_manager.open_preview_page(path, ephemeral)
-        if preview_tab is None:
+        try:
+            preview_tab = self._column_manager.open_preview_page(path, ephemeral)
+
+        except ColumnManagerError as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.preview_error_title,
+                strings.error_opening_preview.format(path, str(e))
+            )
             return
 
         self._mindspace_manager.add_interaction(
@@ -1071,14 +1079,30 @@ class MainWindow(QMainWindow):
 
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
-            conversation_tab = self._column_manager.new_conversation()
 
         except MindspaceError as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
-                strings.mindspace_error_title,
+                strings.conversation_error_title,
+                strings.error_opening_conversation.format(str(e))
+            )
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.ERROR,
+                f"User failed to create new conversation: {str(e)}"
+            )
+            return None
+
+        try:
+            conversation_tab = self._column_manager.new_conversation()
+
+        except ColumnManagerError as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.conversation_error_title,
                 strings.error_opening_conversation.format(str(e))
             )
             self._mindspace_manager.add_interaction(
@@ -1181,8 +1205,7 @@ class MainWindow(QMainWindow):
             tab = self._column_manager.open_conversation(path, ephemeral)
             return tab
 
-        except ConversationError as e:
-            self._logger.error("Error opening conversation: %s: %s", path, str(e))
+        except ColumnManagerError as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -1198,7 +1221,7 @@ class MainWindow(QMainWindow):
         try:
             self._column_manager.fork_conversation_from_index(None)
 
-        except ConversationError as e:
+        except ColumnManagerError as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -1216,7 +1239,7 @@ class MainWindow(QMainWindow):
         try:
             self._column_manager.fork_conversation_from_index(index)
 
-        except ConversationError as e:
+        except ColumnManagerError as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -1230,14 +1253,14 @@ class MainWindow(QMainWindow):
         try:
             self._column_manager.open_preview_page(path, True)
 
-        except PreviewError as e:
+        except ColumnManagerError as e:
             self._logger.info("Error opening preview page: %s: %s", path, str(e))
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
                 MessageBoxType.CRITICAL,
                 strings.preview_error_title,
-                strings.could_not_open.format(path, str(e))
+                strings.error_opening_preview.format(path, str(e))
             )
 
     def _on_column_manager_edit_file_requested(self, path: str) -> None:

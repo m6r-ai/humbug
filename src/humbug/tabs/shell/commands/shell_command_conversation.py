@@ -7,6 +7,7 @@ from ai import AIConversationSettings, AIReasoningCapability
 from syntax import Token, TokenType
 
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.tabs.shell.shell_command import ShellCommand
@@ -117,14 +118,6 @@ class ShellCommandConversation(ShellCommand):
                 self._mindspace_manager.ensure_mindspace_dir("conversations")
                 conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
 
-            except MindspaceError as e:
-                self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.ERROR,
-                    f"Shell failed to create conversation: {str(e)}"
-                )
-                return False
-
             finally:
                 self._column_manager.protect_current_tab(False)
 
@@ -137,6 +130,14 @@ class ShellCommandConversation(ShellCommand):
                 f"Shell created new conversion\ntab ID: {conversation_tab.tab_id()}"
             )
             return True
+
+        except (MindspaceError, ColumnManagerError) as e:
+            self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.ERROR,
+                f"Shell failed to create conversation: {str(e)}"
+            )
+            return False
 
         except Exception as e:
             self._logger.exception("Failed to create conversation: %s", str(e))

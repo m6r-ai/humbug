@@ -18,6 +18,7 @@ from humbug.mindspace.mindspace_error import MindspaceError, MindspaceNotFoundEr
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.user.user_manager import UserManager
 
 
@@ -374,13 +375,9 @@ class SystemAITool(AITool):
             self._column_manager.protect_current_tab(True)
             try:
                 conversation_tab = self._column_manager.open_conversation(conversation_path, False)
+
             finally:
                 self._column_manager.protect_current_tab(False)
-
-            if conversation_tab is None:
-                raise AIToolExecutionError(
-                    f"Conversation file '{file_path_arg}' does not exist or is not a valid conversation."
-                )
 
             tab_id = conversation_tab.tab_id()
             self._mindspace_manager.add_interaction(
@@ -395,6 +392,9 @@ class SystemAITool(AITool):
 
         except MindspaceError as e:
             raise AIToolExecutionError(f"Failed to create conversation directory: {str(e)}") from e
+
+        except ColumnManagerError as e:
+            raise AIToolExecutionError(f"Failed to open conversation: {str(e)}") from e
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to open conversation: {str(e)}") from e
@@ -435,12 +435,11 @@ class SystemAITool(AITool):
                 reasoning = model_config.reasoning_capabilities
 
         try:
-            # Ensure conversations directory exists
-            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            self._column_manager.protect_current_tab(True)
 
             # Create conversation
-            self._column_manager.protect_current_tab(True)
             try:
+                self._mindspace_manager.ensure_mindspace_dir("conversations")
                 conversation_tab = self._column_manager.new_conversation(False, None, model, temperature, reasoning)
 
             finally:
@@ -464,8 +463,8 @@ class SystemAITool(AITool):
                 content=", ".join(result_parts)
             )
 
-        except MindspaceError as e:
-            raise AIToolExecutionError(f"Failed to create conversation directory: {str(e)}") from e
+        except (MindspaceError, ColumnManagerError) as e:
+            raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
@@ -567,6 +566,9 @@ class SystemAITool(AITool):
                 name="system",
                 content=f"Opened preview tab for: '{location}', tab ID: {tab_id}"
             )
+
+        except ColumnManagerError as e:
+            raise AIToolExecutionError(f"Failed to open preview: {str(e)}") from e
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to open preview: {str(e)}") from e

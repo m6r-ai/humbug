@@ -208,6 +208,7 @@ class LanguageStrings:
     error_creating_conversation: str
     error_opening_conversation: str
     error_forking_conversation: str
+    error_opening_preview: str
     error_processing_metaphor: str
     error_saving_mindspace_settings: str
     error_saving_user_settings: str

@@ -216,6 +216,7 @@ def get_arabic_strings() -> LanguageStrings:
         error_creating_conversation="فشل في إنشاء المحادثة: {}",
         error_opening_conversation="لا يمكن تحميل {}: {}",
         error_forking_conversation="لا يمكن نسخ المحادثة: {}",
+        error_opening_preview="لا يمكن فتح المعاينة: {}",
         error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
         error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}",
         error_saving_user_settings="فشل في حفظ إعدادات المستخدم: {}",

@@ -216,6 +216,7 @@ def get_english_strings() -> LanguageStrings:
         error_creating_conversation="Failed to create conversation: {}",
         error_opening_conversation="Could not load {}: {}",
         error_forking_conversation="Could not fork conversation: {}",
+        error_opening_preview="Could not open preview: {}",
         error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
         error_saving_user_settings="Failed to save user settings: {}",

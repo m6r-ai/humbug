@@ -2,13 +2,17 @@
 
 ## v0.36 (2025-12-xx)
 
+New features:
+
+- Improved the performance of style changes (makes zoom and colour mode changes quicker).
+
 Bug fixes:
 
 - Tightened up parameter `message_types` checking for `read_messages` and `search` operations in the conversation AI tool.
   Removed unnecessary tool-call filter.
 - Fixed a problem with zoom scaling of markdown text blocks.
-- Improved the performance of style changes (makes zoom and colour mode changes quicker).
 - Fixed a markdown parsing issue affecting paragraphs inside lists.
+- Improved exception handling for UI interactions.
 
 ## v0.35 (2025-12-19)
 
