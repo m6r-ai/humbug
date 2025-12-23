@@ -59,47 +59,38 @@ class ShellCommandEdit(ShellCommand):
             )
             return False
 
+        full_path = self._mindspace_manager.get_absolute_path(args[0])
+        if not os.path.exists(full_path):
+            # Create directory if needed
+            directory = os.path.dirname(full_path)
+            if directory and not os.path.exists(directory):
+                try:
+                    os.makedirs(directory, exist_ok=True)
+
+                except OSError as e:
+                    self._history_manager.add_message(
+                        ShellMessageSource.ERROR,
+                        f"Failed to create directory: {str(e)}"
+                    )
+                    return False
+
+        self._column_manager.protect_current_tab(True)
+
         try:
-            full_path = self._mindspace_manager.get_absolute_path(args[0])
-            if not os.path.exists(full_path):
-                # Create directory if needed
-                directory = os.path.dirname(full_path)
-                if directory and not os.path.exists(directory):
-                    try:
-                        os.makedirs(directory, exist_ok=True)
+            editor_tab = self._column_manager.open_file(full_path, False)
 
-                    except OSError as e:
-                        self._history_manager.add_message(
-                            ShellMessageSource.ERROR,
-                            f"Failed to create directory: {str(e)}"
-                        )
-                        return False
+        finally:
+            self._column_manager.protect_current_tab(False)
 
-            self._column_manager.protect_current_tab(True)
-
-            try:
-                editor_tab = self._column_manager.open_file(full_path, False)
-
-            finally:
-                self._column_manager.protect_current_tab(False)
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"Shell opened editor for: '{full_path}'\ntab ID: {editor_tab.tab_id()}"
-            )
-            self._history_manager.add_message(
-                ShellMessageSource.SUCCESS,
-                f"Editing file: {args[0]}"
-            )
-            return True
-
-        except Exception as e:
-            self._logger.exception("Error processing file: %s", str(e))
-            self._history_manager.add_message(
-                ShellMessageSource.ERROR,
-                f"Error processing file: {str(e)}"
-            )
-            return False
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Shell opened editor for: '{full_path}'\ntab ID: {editor_tab.tab_id()}"
+        )
+        self._history_manager.add_message(
+            ShellMessageSource.SUCCESS,
+            f"Editing file: {args[0]}"
+        )
+        return True
 
     def get_token_completions(
         self,

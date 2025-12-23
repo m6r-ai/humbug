@@ -202,7 +202,7 @@ class ColumnManager(QWidget):
             "is_ephemeral": tab.is_ephemeral()
         }
 
-    def get_tab_info_by_id(self, tab_id: str) -> Dict[str, str | int | bool]:
+    def get_tab_info_by_id(self, tab_id: str) -> Dict[str, str | int | bool] | None:
         """
         Get information about a specific tab or the current tab.
 
@@ -210,12 +210,12 @@ class ColumnManager(QWidget):
             tab_id: ID of the tab to get information for. If None, uses the current tab.
 
         Returns:
-            Dictionary containing tab information
+            Dictionary containing tab information or None if tab not found
         """
         # Find the tab by ID
         tab = self._tabs.get(tab_id)
         if not tab:
-            raise ValueError(f"Tab with ID '{tab_id}' not found")
+            return None
 
         return self._get_tab_info(tab)
 

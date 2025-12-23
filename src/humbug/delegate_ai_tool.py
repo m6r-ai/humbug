@@ -12,7 +12,7 @@ from ai_tool import (
 
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.mindspace_error import MindspaceNotFoundError, MindspaceError
+from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_tab import ConversationTab
@@ -159,26 +159,19 @@ class DelegateAITool(AITool):
         if not session_id:
             raise AIToolExecutionError("Session ID parameter is required")
 
-        try:
-            # Remove leading separator if present
-            if session_id.startswith("/"):
-                session_id = session_id[1:]
+        # Remove leading separator if present
+        if session_id.startswith("/"):
+            session_id = session_id[1:]
 
-            # Convert to absolute path via mindspace manager
-            abs_path = self._mindspace_manager.get_absolute_path(session_id)
+        # Convert to absolute path via mindspace manager
+        abs_path = self._mindspace_manager.get_absolute_path(session_id)
 
-            # Verify the resolved path is still within mindspace
-            relative_path = self._mindspace_manager.get_mindspace_relative_path(abs_path)
-            if relative_path is None:
-                raise AIToolExecutionError(f"Session ID is outside mindspace boundaries: {session_id}")
+        # Verify the resolved path is still within mindspace
+        relative_path = self._mindspace_manager.get_mindspace_relative_path(abs_path)
+        if relative_path is None:
+            raise AIToolExecutionError(f"Session ID is outside mindspace boundaries: {session_id}")
 
-            return abs_path
-
-        except MindspaceNotFoundError as e:
-            raise AIToolExecutionError(f"Mindspace error: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Invalid session ID '{session_id}': {str(e)}") from e
+        return abs_path
 
     async def _delegate(
         self,
@@ -285,70 +278,56 @@ class DelegateAITool(AITool):
             if not completion_future.done():
                 completion_future.set_result(result_dict)
 
-        try:
-            # Connect to completion signal
-            conversation_tab.conversation_completed.connect(on_completion)
+        # Connect to completion signal
+        conversation_tab.conversation_completed.connect(on_completion)
 
-            tab_id = conversation_tab.tab_id()
-            session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())
+        tab_id = conversation_tab.tab_id()
+        session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())
 
-            # Wait for completion
-            result = await completion_future
+        # Wait for completion
+        result = await completion_future
 
-            self._column_manager.close_tab_by_id(conversation_tab.tab_id())
+        self._column_manager.close_tab_by_id(conversation_tab.tab_id())
 
-            # Return appropriate result
-            success = result.get("success", False)
-            if not success:
-                error_msg = result.get("error", "Unknown error")
-                self._logger.warning("Delegated AI task failed: %s", error_msg)
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"Delegated AI task failed\ntab ID: {tab_id}\nsession ID: {session_id}\nerror: {error_msg}"
-                )
-                return AIToolResult(
-                    id=tool_call.id,
-                    name="delegate_ai",
-                    content="",
-                    error=f"Delegated AI task failed, session_id: {session_id}: error: {error_msg}",
-                    context="text"
-                )
-
-            response_content = result.get("content", "")
-            usage_info = result.get("usage")
-
-            # Create a structured response
-            result_object = {
-                "session_id": session_id,
-                "status": "completed",
-                "response": response_content,
-                "usage": usage_info
-            }
-
+        # Return appropriate result
+        success = result.get("success", False)
+        if not success:
+            error_msg = result.get("error", "Unknown error")
+            self._logger.warning("Delegated AI task failed: %s", error_msg)
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Delegated AI task completed\ntab ID: {tab_id}\nsession ID: {session_id}\nresponse: {response_content[:50]}..."
+                f"Delegated AI task failed\ntab ID: {tab_id}\nsession ID: {session_id}\nerror: {error_msg}"
             )
-
-            return AIToolResult(
-                id=tool_call.id,
-                name="delegate_ai",
-                content=json.dumps(result_object, indent=2),
-                context="json"
-            )
-
-        except Exception as e:
-            self._logger.error("Error in AI delegation: %s", str(e), exc_info=True)
-            self._column_manager.close_tab_by_id(conversation_tab.tab_id())
-
-            error_str = str(e)
             return AIToolResult(
                 id=tool_call.id,
                 name="delegate_ai",
                 content="",
-                error="Delegated AI task failed: " + error_str,
+                error=f"Delegated AI task failed, session_id: {session_id}: error: {error_msg}",
                 context="text"
             )
+
+        response_content = result.get("content", "")
+        usage_info = result.get("usage")
+
+        # Create a structured response
+        result_object = {
+            "session_id": session_id,
+            "status": "completed",
+            "response": response_content,
+            "usage": usage_info
+        }
+
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Delegated AI task completed\ntab ID: {tab_id}\nsession ID: {session_id}\nresponse: {response_content[:50]}..."
+        )
+
+        return AIToolResult(
+            id=tool_call.id,
+            name="delegate_ai",
+            content=json.dumps(result_object, indent=2),
+            context="json"
+        )
 
     async def _delegate_task(
         self,

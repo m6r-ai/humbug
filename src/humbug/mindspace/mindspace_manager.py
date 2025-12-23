@@ -98,10 +98,8 @@ class MindspaceManager(QObject):
 
         Raises:
             MindspaceError: If settings cannot be saved
-            MindspaceNotFoundError: If no mindspace is open
         """
-        if not self.has_mindspace():
-            raise MindspaceNotFoundError("No mindspace is currently open")
+        assert self.has_mindspace(), "No mindspace is currently open"
 
         # Save settings to file
         settings_path = os.path.join(
@@ -278,6 +276,7 @@ class MindspaceManager(QObject):
                             tab_state['path'],
                             self._mindspace_path
                         )
+
                     except ValueError:
                         # Path is outside mindspace, keep as absolute
                         pass
@@ -355,12 +354,8 @@ class MindspaceManager(QObject):
 
         Returns:
             Absolute path.
-
-        Raises:
-            MindspaceNotFoundError: If no mindspace is currently open.
         """
-        if not self.has_mindspace():
-            raise MindspaceNotFoundError("No mindspace is currently open")
+        assert self.has_mindspace(), "No mindspace is currently open"
 
         path = os.path.expanduser(path)
         if os.path.isabs(path):
@@ -411,13 +406,8 @@ class MindspaceManager(QObject):
 
         Returns:
             Path relative to mindspace root if within mindspace, None if outside mindspace.
-
-        Raises:
-            MindspaceNotFoundError: If no mindspace is currently open.
         """
-        if not self.has_mindspace():
-            raise MindspaceNotFoundError("No mindspace is currently open")
-
+        assert self.has_mindspace(), "No mindspace is currently open"
         abs_path = os.path.abspath(os.path.expanduser(path))
 
         try:
@@ -447,12 +437,9 @@ class MindspaceManager(QObject):
             Absolute path to the created directory.
 
         Raises:
-            MindspaceNotFoundError: If no mindspace is currently open.
-            OSError: If directory cannot be created.
+            MindspaceError: If directory cannot be created.
         """
-        if not self.has_mindspace():
-            raise MindspaceNotFoundError("No mindspace is currently open")
-
+        assert self.has_mindspace(), "No mindspace is currently open"
         abs_path = self.get_absolute_path(dir_path)
         try:
             os.makedirs(abs_path, exist_ok=True)

@@ -14,7 +14,7 @@ from ai_tool import (
     AIToolParameter,
     AIToolResult,
 )
-from humbug.mindspace.mindspace_error import MindspaceError, MindspaceNotFoundError
+from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
@@ -231,26 +231,19 @@ class SystemAITool(AITool):
         if not path_str:
             raise AIToolExecutionError("Path parameter is required")
 
-        try:
-            # Check if our path starts with a separator - assume it's for the root of the mindspace
-            if path_str.startswith(os.sep):
-                path_str = path_str[1:]
+        # Check if our path starts with a separator - assume it's for the root of the mindspace
+        if path_str.startswith(os.sep):
+            path_str = path_str[1:]
 
-            # Convert to absolute path via mindspace manager
-            abs_path = self._mindspace_manager.get_absolute_path(path_str)
+        # Convert to absolute path via mindspace manager
+        abs_path = self._mindspace_manager.get_absolute_path(path_str)
 
-            # Verify the resolved path is still within mindspace
-            relative_path = self._mindspace_manager.get_mindspace_relative_path(abs_path)
-            if relative_path is None:
-                raise AIToolExecutionError(f"Path is outside mindspace boundaries: {path_str}")
+        # Verify the resolved path is still within mindspace
+        relative_path = self._mindspace_manager.get_mindspace_relative_path(abs_path)
+        if relative_path is None:
+            raise AIToolExecutionError(f"Path is outside mindspace boundaries: {path_str}")
 
-            return abs_path
-
-        except MindspaceNotFoundError as e:
-            raise AIToolExecutionError(f"Mindspace error: {str(e)}") from e
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Invalid path '{path_str}': {str(e)}") from e
+        return abs_path
 
     async def execute(
         self,
@@ -583,41 +576,34 @@ class SystemAITool(AITool):
         arguments = tool_call.arguments
         tab_id = arguments.get("tab_id")
 
-        try:
-            # If no tab ID provided, use the current tab
-            if not tab_id:
-                current_tab = self._column_manager.get_current_tab()
-                if not current_tab:
-                    raise AIToolExecutionError("No current tab is open")
+        # If no tab ID provided, use the current tab
+        if not tab_id:
+            current_tab = self._column_manager.get_current_tab()
+            if not current_tab:
+                raise AIToolExecutionError("No current tab is open")
 
-                tab_id = current_tab.tab_id()
+            tab_id = current_tab.tab_id()
 
-            # Validate tab_id is a string if provided
-            if not isinstance(tab_id, str):
-                raise AIToolExecutionError("'tab_id' must be a string")
+        # Validate tab_id is a string if provided
+        if not isinstance(tab_id, str):
+            raise AIToolExecutionError("'tab_id' must be a string")
 
-            # Get tab info
-            tab_info = self._column_manager.get_tab_info_by_id(tab_id)
-            if not tab_info:
-                raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+        # Get tab info
+        tab_info = self._column_manager.get_tab_info_by_id(tab_id)
+        if not tab_info:
+            raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
 
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI requested info for tab ID: {tab_id}"
-            )
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI requested info for tab ID: {tab_id}"
+        )
 
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=json.dumps(tab_info, indent=2),
-                context="json"
-            )
-
-        except AIToolExecutionError:
-            raise
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to get tab info for ID {tab_id}: {str(e)}") from e
+        return AIToolResult(
+            id=tool_call.id,
+            name="system",
+            content=json.dumps(tab_info, indent=2),
+            context="json"
+        )
 
     async def _close_tab(
         self,

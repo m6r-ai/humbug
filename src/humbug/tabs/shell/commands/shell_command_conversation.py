@@ -111,25 +111,11 @@ class ShellCommandConversation(ShellCommand):
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
+        # Create new conversation with model if specified
+        self._column_manager.protect_current_tab(True)
         try:
-            # Create new conversation with model if specified
-            self._column_manager.protect_current_tab(True)
-            try:
-                self._mindspace_manager.ensure_mindspace_dir("conversations")
-                conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
-
-            finally:
-                self._column_manager.protect_current_tab(False)
-
-            self._history_manager.add_message(
-                ShellMessageSource.SUCCESS,
-                "Started new conversation"
-            )
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"Shell created new conversion\ntab ID: {conversation_tab.tab_id()}"
-            )
-            return True
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
 
         except (MindspaceError, ColumnManagerError) as e:
             self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
@@ -139,13 +125,18 @@ class ShellCommandConversation(ShellCommand):
             )
             return False
 
-        except Exception as e:
-            self._logger.exception("Failed to create conversation: %s", str(e))
-            self._history_manager.add_message(
-                ShellMessageSource.ERROR,
-                f"Failed to create conversation: {str(e)}"
-            )
-            return False
+        finally:
+            self._column_manager.protect_current_tab(False)
+
+        self._history_manager.add_message(
+            ShellMessageSource.SUCCESS,
+            "Started new conversation"
+        )
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"Shell created new conversion\ntab ID: {conversation_tab.tab_id()}"
+        )
+        return True
 
     def _complete_model_names(self, partial_value: str) -> List[str]:
         """

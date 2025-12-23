@@ -6,8 +6,10 @@ from typing import List
 
 from syntax import Token, TokenType
 
-from humbug.tabs.column_manager import ColumnManager
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
 
@@ -54,43 +56,42 @@ class ShellCommandPreview(ShellCommand):
             )
             return False
 
+        full_path = self._mindspace_manager.get_absolute_path(args[0])
+        if not os.path.exists(full_path):
+            # Create directory if ned
+            directory = os.path.dirname(full_path)
+            if directory and not os.path.exists(directory):
+                try:
+                    os.makedirs(directory, exist_ok=True)
+
+                except OSError as e:
+                    self._history_manager.add_message(
+                        ShellMessageSource.ERROR,
+                        f"Failed to create directory: {str(e)}"
+                    )
+                    return False
+
+        self._column_manager.protect_current_tab(True)
+
         try:
-            full_path = self._mindspace_manager.get_absolute_path(args[0])
-            if not os.path.exists(full_path):
-                # Create directory if ned
-                directory = os.path.dirname(full_path)
-                if directory and not os.path.exists(directory):
-                    try:
-                        os.makedirs(directory, exist_ok=True)
+            self._column_manager.open_preview_page(full_path, False)
 
-                    except OSError as e:
-                        self._history_manager.add_message(
-                            ShellMessageSource.ERROR,
-                            f"Failed to create directory: {str(e)}"
-                        )
-                        return False
-
-            self._column_manager.protect_current_tab(True)
-
-            try:
-                self._column_manager.open_preview_page(full_path, False)
-
-            finally:
-                self._column_manager.protect_current_tab(False)
-
-            self._history_manager.add_message(
-                ShellMessageSource.SUCCESS,
-                f"Opening page: {args[0]}"
-            )
-            return True
-
-        except Exception as e:
-            self._logger.exception("Error processing page: %s", str(e))
-            self._history_manager.add_message(
-                ShellMessageSource.ERROR,
-                f"Error processing page: {str(e)}"
+        except ColumnManagerError as e:
+            self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to open preview page: {str(e)}")
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.ERROR,
+                f"Shell failed to open preview page: {str(e)}"
             )
             return False
+
+        finally:
+            self._column_manager.protect_current_tab(False)
+
+        self._history_manager.add_message(
+            ShellMessageSource.SUCCESS,
+            f"Opening page: {args[0]}"
+        )
+        return True
 
     def get_token_completions(
         self,

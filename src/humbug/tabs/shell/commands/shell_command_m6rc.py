@@ -10,9 +10,11 @@ from metaphor import (
 )
 from syntax import Token, TokenType
 
-from humbug.tabs.column_manager import ColumnManager
 from humbug.mindspace.mindspace_error import MindspaceError
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_message_source import ShellMessageSource
 from humbug.user.user_manager import UserManager
@@ -133,68 +135,62 @@ class ShellCommandM6rc(ShellCommand):
             if model_config:
                 reasoning = model_config.reasoning_capabilities
 
-        try:
-            # Check if the path exists.  Convert to absolute path if it's relative
-            file_path = self._mindspace_manager.get_absolute_path(args[0])
-            if not os.path.exists(file_path):
-                self._history_manager.add_message(
-                    ShellMessageSource.ERROR,
-                    f"File not found: {file_path}"
-                )
-                return False
-
-            search_path = self._mindspace_manager.mindspace_path()
-
-            metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
-            try:
-                syntax_tree = MetaphorASTRootNode()
-                metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, args)
-                formatter = MetaphorFormatVisitor()
-                prompt = format_preamble() + formatter.format(syntax_tree)
-
-            except FileNotFoundError:
-                error = f"File not found: {file_path}"
-                self._history_manager.add_message(ShellMessageSource.ERROR, error)
-                return False
-
-            except MetaphorASTBuilderError as e:
-                error = f"m6rc compile failed:\n\n{format_errors(e.errors)}"
-                self._history_manager.add_message(ShellMessageSource.ERROR, error)
-                return False
-
-            self._column_manager.protect_current_tab(True)
-            try:
-                self._mindspace_manager.ensure_mindspace_dir("conversations")
-                conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
-
-            except MindspaceError as e:
-                self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
-                return False
-
-            finally:
-                self._column_manager.protect_current_tab(False)
-
-            if conversation_tab is None:
-                return False
-
-            conversation_tab.set_input_text(prompt)
-
-            if should_submit:
-                conversation_tab.submit()
-
-            self._history_manager.add_message(
-                ShellMessageSource.SUCCESS,
-                f"Started Metaphor conversation from {file_path}"
-            )
-            return True
-
-        except Exception as e:
-            self._logger.error("Failed to create Metaphor conversation: %s", str(e), exc_info=True)
+        # Check if the path exists.  Convert to absolute path if it's relative
+        file_path = self._mindspace_manager.get_absolute_path(args[0])
+        if not os.path.exists(file_path):
             self._history_manager.add_message(
                 ShellMessageSource.ERROR,
-                f"Failed to create Metaphor conversation: {str(e)}"
+                f"File not found: {file_path}"
             )
             return False
+
+        search_path = self._mindspace_manager.mindspace_path()
+
+        metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
+        try:
+            syntax_tree = MetaphorASTRootNode()
+            metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, args)
+            formatter = MetaphorFormatVisitor()
+            prompt = format_preamble() + formatter.format(syntax_tree)
+
+        except FileNotFoundError:
+            error = f"File not found: {file_path}"
+            self._history_manager.add_message(ShellMessageSource.ERROR, error)
+            self._mindspace_manager.add_interaction(MindspaceLogLevel.ERROR, error)
+            return False
+
+        except MetaphorASTBuilderError as e:
+            error = f"m6rc compile failed:\n\n{format_errors(e.errors)}"
+            self._history_manager.add_message(ShellMessageSource.ERROR, error)
+            self._mindspace_manager.add_interaction(MindspaceLogLevel.ERROR, error)
+            return False
+
+        self._column_manager.protect_current_tab(True)
+        try:
+            self._mindspace_manager.ensure_mindspace_dir("conversations")
+            conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
+
+        except (MindspaceError, ColumnManagerError) as e:
+            self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.ERROR,
+                f"Shell failed to create conversation: {str(e)}"
+            )
+            return False
+
+        finally:
+            self._column_manager.protect_current_tab(False)
+
+        conversation_tab.set_input_text(prompt)
+
+        if should_submit:
+            conversation_tab.submit()
+
+        self._history_manager.add_message(
+            ShellMessageSource.SUCCESS,
+            f"Started Metaphor conversation from {file_path}"
+        )
+        return True
 
     def _complete_model_names(self, partial_value: str) -> List[str]:
         """

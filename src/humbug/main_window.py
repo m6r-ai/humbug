@@ -1127,6 +1127,9 @@ class MainWindow(QMainWindow):
 
     def _resolve_mindspace_path(self, path: str) -> Tuple[Path, str]:
         # Check if our path starts with a separator.  If it does we'll assume it's for the root of the mindspace.
+        if not self._mindspace_manager.has_mindspace():
+            raise ValueError("No mindspace open")
+
         if path.startswith(os.sep):
             path = path[1:]
 
@@ -1337,7 +1340,7 @@ class MainWindow(QMainWindow):
             try:
                 self._mindspace_manager.update_settings(new_settings)
 
-            except OSError as e:
+            except MindspaceError as e:
                 self._logger.error("Failed to save mindspace settings: %s", str(e))
                 strings = self._language_manager.strings()
                 MessageBox.show_message(
