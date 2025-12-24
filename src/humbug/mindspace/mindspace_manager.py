@@ -146,7 +146,7 @@ class MindspaceManager(QObject):
 
         Raises:
             MindspaceExistsError: If a mindspace already exists at the specified path.
-            OSError: If there are filesystem errors creating the mindspace.
+            MindspaceError: If there are filesystem errors creating the mindspace.
         """
         mindspace_dir = os.path.join(path, self.MINDSPACE_DIR)
         if os.path.exists(mindspace_dir):
@@ -174,6 +174,7 @@ class MindspaceManager(QObject):
             if os.path.exists(mindspace_dir):
                 try:
                     shutil.rmtree(mindspace_dir)
+
                 except OSError:
                     pass  # Ignore cleanup errors
 
@@ -183,10 +184,12 @@ class MindspaceManager(QObject):
                     folder_path = os.path.join(path, folder)
                     if os.path.exists(folder_path):
                         try:
+
                             shutil.rmtree(folder_path)
                         except OSError:
                             pass  # Ignore cleanup errors
-            raise
+
+            raise MindspaceError(f"Failed to create mindspace: {str(e)}") from e
 
     def check_mindspace(self, path: str) -> bool:
         """
