@@ -326,10 +326,8 @@ class ConversationMessageSection(QFrame):
 
             # If we have code block node, extract its content as plain text
             if isinstance(content, MarkdownASTCodeBlockNode):
-                # For CodeBlockTextEdit, just set the plain text
-                # Highlighter is initialized lazily in lazy_update
                 assert isinstance(self._text_area, CodeBlockTextEdit), "Text area must be CodeBlockTextEdit"
-                self._text_area.setPlainText(content.content)
+                self._text_area.set_text(content.content)
                 return
 
         if self._renderer is not None:

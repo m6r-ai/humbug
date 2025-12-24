@@ -66,6 +66,7 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         if not old_text:
             self.setPlainText(text)
             self._current_text = text
+            self.updateGeometry()
             return
 
         # Find common prefix
@@ -104,6 +105,7 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
 
         # Update our cached text
         self._current_text = text
+        self.updateGeometry()
 
     def clear(self) -> None:
         """Override clear to reset current text."""
