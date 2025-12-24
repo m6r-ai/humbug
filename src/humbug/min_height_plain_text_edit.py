@@ -4,8 +4,8 @@ import logging
 from PySide6.QtWidgets import (
     QFrame, QPlainTextEdit, QSizePolicy, QWidget
 )
-from PySide6.QtCore import Qt, QSize, QEvent
-from PySide6.QtGui import QTextOption, QTextCursor, QFontMetricsF
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QTextOption, QTextCursor, QFontMetricsF, QResizeEvent
 
 
 class MinHeightPlainTextEdit(QPlainTextEdit):
@@ -31,6 +31,9 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         self.document().setDocumentMargin(0)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(horizontal_scrollbar_policy)
+        if horizontal_scrollbar_policy != Qt.ScrollBarPolicy.ScrollBarAlwaysOff:
+            self.horizontalScrollBar().rangeChanged.connect(self.scroll_changed)
+
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
         # Force the widget to always use the width of its container
@@ -42,13 +45,14 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         self._current_text = ""
         self.clear()
 
-    def event(self, e: QEvent) -> bool:
-        """Handle events."""
-        # Look for layout requests as they will occur when we change horizontal scrollbar visibility
-        if e.type() == QEvent.Type.LayoutRequest:
-            self.updateGeometry()
+    def resizeEvent(self, e: QResizeEvent) -> None:
+        """Handle resize events."""
+        self.updateGeometry()
+        return super().resizeEvent(e)
 
-        return super().event(e)
+    def scroll_changed(self, _min: int, _max: int) -> None:
+        """Handle scrollbar range changes."""
+        self.updateGeometry()
 
     def set_text(self, text: str) -> None:
         """Update text content incrementally based on differences."""
