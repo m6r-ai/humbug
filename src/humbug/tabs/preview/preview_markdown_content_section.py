@@ -3,7 +3,7 @@
 import logging
 from typing import List, Tuple, cast
 
-from PySide6.QtWidgets import QVBoxLayout, QFrame, QLabel, QHBoxLayout, QWidget
+from PySide6.QtWidgets import QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout, QWidget
 from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent
 from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor
 
@@ -13,8 +13,9 @@ from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
+from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
+from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
 from humbug.tabs.markdown_block_data import HeadingBlockData
-from humbug.tabs.markdown_language_highlighter import MarkdownLanguageHighlighter
 from humbug.tabs.markdown_renderer import MarkdownRenderer
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 
@@ -89,12 +90,24 @@ class PreviewMarkdownContentSection(QFrame):
         # Determine if this section should use markdown (always true if no language)
         self._use_markdown = language is None
 
-        # Create text area
-        self._text_area = MarkdownTextEdit()
-        self._text_area.setAcceptRichText(self._use_markdown)
-        self._text_area.setReadOnly(True)  # Always read-only for preview
-        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for markdown
+        self._text_area: MarkdownTextEdit | CodeBlockTextEdit
+        self._renderer: MarkdownRenderer | None
+        if language is not None:
+            # Code block - use code block text widget
+            self._text_area = CodeBlockTextEdit()
+            self._text_area.set_language(language)
+            self._renderer = None
+
+        else:
+            # Markdown content - use rich text widget
+            self._text_area = MarkdownTextEdit()
+            self._text_area.setReadOnly(True)  # Always read-only for preview
+            self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+            self._text_area.link_clicked.connect(self.link_clicked)
+            document = self._text_area.document()
+            self._renderer = MarkdownRenderer(document)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -103,22 +116,17 @@ class PreviewMarkdownContentSection(QFrame):
 
         self._content_node: MarkdownASTNode | None = None
 
-        # Render directly to the document
-        document = self._text_area.document()
-        self._renderer = MarkdownRenderer(document)
-
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
-        self._text_area.link_clicked.connect(self.link_clicked)
 
         # Add mouse move tracking for cursor changes on links
         self._text_area.viewport().setMouseTracking(True)
         self._text_area.viewport().installEventFilter(self)
 
         # Add appropriate highlighter
-        self._highlighter: MarkdownLanguageHighlighter | None = None
+        self._highlighter: CodeBlockHighlighter | None = None
         self.set_language(language)
 
         self._mouse_left_button_pressed = False
@@ -127,7 +135,7 @@ class PreviewMarkdownContentSection(QFrame):
 
         self._on_language_changed()
 
-    def text_area(self) -> MarkdownTextEdit:
+    def text_area(self) -> MarkdownTextEdit | CodeBlockTextEdit:
         """Get the text area widget."""
         return self._text_area
 
@@ -145,9 +153,12 @@ class PreviewMarkdownContentSection(QFrame):
 
         else:
             self._use_markdown = False
-            highlighter = MarkdownLanguageHighlighter(self._text_area.document())
-            highlighter.set_language(language)
-            self._highlighter = highlighter
+
+            # Initialize highlighter for code blocks lazily
+            if isinstance(self._text_area, CodeBlockTextEdit):
+                self._text_area.lazy_init_highlighter()
+
+            self._highlighter = None
             self._text_area.set_has_code_block(True)
 
         strings = self._language_manager.strings()
@@ -233,15 +244,18 @@ class PreviewMarkdownContentSection(QFrame):
         Args:
             content: A MarkdownASTNode text content
         """
+        self._content_node = content
+
         # If we have code block node, extract its content as plain text
         if not self._use_markdown:
             text_content = cast(MarkdownASTTextNode, content)
+            assert isinstance(self._text_area, CodeBlockTextEdit), "Text area must be CodeBlockTextEdit"
             self._text_area.set_text(text_content.content)
             return
 
-        # Store for re-styling
-        self._content_node = content
-        self._renderer.visit(content)
+        # Render markdown content
+        if self._renderer is not None:
+            self._renderer.visit(content)
 
     def has_selection(self) -> bool:
         """Check if text is selected in the text area."""
@@ -289,7 +303,7 @@ class PreviewMarkdownContentSection(QFrame):
         if self._language_header:
             self._language_header.setFont(font)
 
-        if self._content_node:
+        if self._content_node and self._renderer is not None:
             # Re-render markdown content with new font
             self._renderer.visit(self._content_node)
 
@@ -382,7 +396,7 @@ class PreviewMarkdownContentSection(QFrame):
             cursor.setPosition(start)
             cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
 
-            extra_selection = self._text_area.ExtraSelection()
+            extra_selection = QTextEdit.ExtraSelection()
             extra_selection.cursor = cursor  # type: ignore
             extra_selection.format = current_format if i == current_match_index else other_format  # type: ignore
 

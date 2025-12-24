@@ -3,7 +3,7 @@
 import logging
 from typing import List, Tuple, Callable
 
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QHBoxLayout, QLabel, QToolButton
+from PySide6.QtWidgets import QVBoxLayout, QWidget, QHBoxLayout, QLabel, QToolButton, QTextEdit
 from PySide6.QtCore import QPoint, Qt, QSize
 from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QIcon
 
@@ -12,8 +12,8 @@ from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
-from humbug.tabs.markdown_language_highlighter import MarkdownLanguageHighlighter
-from humbug.tabs.markdown_text_edit import MarkdownTextEdit
+from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
+from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
 from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
 
 
@@ -77,10 +77,8 @@ class PreviewFileContent(PreviewContentWidget):
         self._content_layout.addWidget(self._header_container)
 
         # Create text area for source code
-        self._text_area = MarkdownTextEdit()
+        self._text_area = CodeBlockTextEdit()
         self._text_area.setObjectName("_text_area")
-        self._text_area.setAcceptRichText(False)  # No rich text for source code
-        self._text_area.setReadOnly(True)  # Always read-only in preview
         self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
@@ -92,7 +90,7 @@ class PreviewFileContent(PreviewContentWidget):
 
         # Initialize variables
         self._language: ProgrammingLanguage | None = None
-        self._highlighter: MarkdownLanguageHighlighter | None = None
+        self._highlighter: CodeBlockHighlighter | None = None
         self._mouse_left_button_pressed = False
         self._init_colour_mode = self._style_manager.color_mode()
 
@@ -176,9 +174,9 @@ class PreviewFileContent(PreviewContentWidget):
             # Default to text if no language detected
             self._language = ProgrammingLanguage.TEXT
 
-        highlighter = MarkdownLanguageHighlighter(self._text_area.document())
-        highlighter.set_language(self._language)
-        self._highlighter = highlighter
+        # Set language and initialize highlighter
+        self._text_area.set_language(self._language)
+        self._text_area.lazy_init_highlighter()
         self._text_area.set_has_code_block(True)
 
         # Update header text
@@ -285,7 +283,7 @@ class PreviewFileContent(PreviewContentWidget):
             cursor.setPosition(start)
             cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
 
-            extra_selection = self._text_area.ExtraSelection()
+            extra_selection = QTextEdit.ExtraSelection()
             extra_selection.cursor = cursor  # type: ignore
             extra_selection.format = current_format if i == current_match_index else other_format  # type: ignore
 
