@@ -251,7 +251,7 @@ class ColumnManager(QWidget):
 
         return tab_info
 
-    def move_tab_to_column(self, tab_id: str, target_column_index: int) -> bool:
+    def move_tab_to_column(self, tab_id: str, target_column_index: int) -> None:
         """
         Move a tab to a specific column by index.
 
@@ -259,29 +259,26 @@ class ColumnManager(QWidget):
             tab_id: ID of the tab to move
             target_column_index: Index of the target column (0-based)
 
-        Returns:
-            True if the tab was successfully moved, False otherwise
-
         Raises:
-            ValueError: If target_column_index is invalid or tab_id doesn't exist
+            ColumnManagerError: If target_column_index is invalid or tab_id doesn't exist
         """
         # Validate tab exists
         tab = self._tabs.get(tab_id)
         if not tab:
-            raise ValueError(f"Tab with ID '{tab_id}' not found")
+            raise ColumnManagerError(f"Tab with ID '{tab_id}' not found")
 
         # Find source column
         source_column = self._find_column_for_tab(tab)
         if source_column is None:
-            raise ValueError(f"Could not find column for tab '{tab_id}'")
+            raise ColumnManagerError(f"Could not find column for tab '{tab_id}'")
 
         # Validate target column index
         if target_column_index < 0:
-            raise ValueError(f"Target column index must be non-negative, got {target_column_index}")
+            raise ColumnManagerError(f"Target column index must be non-negative, got {target_column_index}")
 
         # Validate target column index
         if target_column_index >= 6:
-            raise ValueError(f"Target column index must be less than 6, got {target_column_index}")
+            raise ColumnManagerError(f"Target column index must be less than 6, got {target_column_index}")
 
         # Create new columns if necessary (up to maximum of 6)
         if target_column_index >= len(self._tab_columns):
@@ -292,7 +289,7 @@ class ColumnManager(QWidget):
 
         # Don't move if already in target column
         if source_column == target_column:
-            return False
+            return
 
         # Move the tab
         self._move_tab_between_columns(tab, source_column, target_column)
@@ -314,8 +311,6 @@ class ColumnManager(QWidget):
 
         # Update tab states
         self._update_tabs()
-
-        return True
 
     def _update_mru_order(self, tab: TabBase, column: ColumnWidget) -> None:
         """

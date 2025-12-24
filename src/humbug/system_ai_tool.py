@@ -702,37 +702,22 @@ class SystemAITool(AITool):
         if not isinstance(target_column, int):
             raise AIToolExecutionError("'target_column' must be an integer")
 
+        # Validate target column is non-negative
+        if target_column < 0:
+            raise AIToolExecutionError(f"Target column must be non-negative, got {target_column}")
+
         try:
-            # Validate target column is non-negative
-            if target_column < 0:
-                raise AIToolExecutionError(f"Target column must be non-negative, got {target_column}")
+            self._column_manager.move_tab_to_column(tab_id, target_column)
 
-            # Attempt to move the tab
-            success = self._column_manager.move_tab_to_column(tab_id, target_column)
-            if not success:
-                # If not successful, it means the tab was already in the target column
-                self._mindspace_manager.add_interaction(
-                    MindspaceLogLevel.INFO,
-                    f"AI attempted to move tab {tab_id} to column {target_column} (already in target column)"
-                )
-                return AIToolResult(
-                    id=tool_call.id,
-                    name="system",
-                    content=f"Tab {tab_id} was already in column {target_column}"
-                )
-
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI moved tab {tab_id} to column {target_column}"
-            )
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Successfully moved tab {tab_id} to column {target_column}"
-            )
-
-        except ValueError as e:
+        except ColumnManagerError as e:
             raise AIToolExecutionError(str(e)) from e
 
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to move tab {tab_id} to column {target_column}: {str(e)}") from e
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"AI moved tab {tab_id} to column {target_column}"
+        )
+        return AIToolResult(
+            id=tool_call.id,
+            name="system",
+            content=f"Moved tab {tab_id} to column {target_column}"
+        )
