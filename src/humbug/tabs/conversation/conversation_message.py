@@ -17,7 +17,7 @@ from syntax import ProgrammingLanguage
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
-from humbug.tabs.markdown_language_highlighter import MarkdownLanguageHighlighter
+from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.conversation.conversation_message_section import ConversationMessageSection
@@ -598,7 +598,7 @@ class ConversationMessage(QFrame):
             self._approval_context_text_edit.set_text(context)
             self._approval_context_text_edit.setReadOnly(True)
             self._approval_context_text_edit.set_has_code_block(True)
-            highlighter = MarkdownLanguageHighlighter(self._approval_context_text_edit.document())
+            highlighter = CodeBlockHighlighter(self._approval_context_text_edit.document())
             highlighter.set_language(ProgrammingLanguage.DIFF)
             layout2.addWidget(self._approval_context_text_edit)
             layout.addWidget(self._approval_context_widget)

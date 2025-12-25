@@ -147,6 +147,7 @@ class ConversationMessageSection(QFrame):
         """Set the programming language to use for this message section"""
         self._language = language
 
+        print(f"{self}: Setting language to: {language}")
         if language is None:
             self._use_markdown = not self._is_input
             if self._use_markdown:
@@ -162,6 +163,8 @@ class ConversationMessageSection(QFrame):
             # Defer creation of expensive language highlighter until section becomes visible
             self._highlighter = None
             self._text_area.set_has_code_block(True)
+            if isinstance(self._text_area, CodeBlockTextEdit):
+                self._text_area.lazy_init_highlighter()
 
         if self._language_header:
             strings = self._language_manager.strings()

@@ -5,7 +5,7 @@ from typing import cast
 
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 
-from syntax import ProgrammingLanguage, ParserState, ParserRegistry
+from syntax import TokenType, ProgrammingLanguage, ParserState, ParserRegistry
 
 from humbug.style_manager import StyleManager
 
@@ -65,26 +65,32 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
             parser_state = parser.parse(prev_parser_state, text)
 
             # Apply syntax highlighting based on token types
+            last_token_pos = 0
             while True:
                 token = parser.get_next_token()
                 if token is None:
+                    # If we've reached the end of the line check if we had whitespace at the end.  If we
+                    # did then we need to highlight that too.
+                    if last_token_pos < len(text):
+                        self.setFormat(
+                            last_token_pos,
+                            len(text) - last_token_pos,
+                            self._style_manager.get_highlight(TokenType.TEXT)
+                        )
                     break
 
-                self.setFormat(
-                    token.start,
-                    len(token.value),
-                    self._style_manager.get_highlight(token.type)
-                )
+                highlight_len = len(token.value) + token.start - last_token_pos
+                self.setFormat(last_token_pos, highlight_len, self._style_manager.get_highlight(token.type))
+                last_token_pos += highlight_len
 
             # Check if we need to rehighlight everything from this block onwards
-            if current_block_data:
-                current_parser_state = cast(ParserState, current_block_data.parser_state)
-                if current_parser_state:
+            if current_block_data is not None:
+                current_parser_state = current_block_data.parser_state
+                if current_parser_state is not None:
                     continuation_state = current_parser_state.continuation_state
 
-            if parser_state is not None:
-                if continuation_state != parser_state.continuation_state:
-                    self.setCurrentBlockState(self.currentBlockState() + 1)
+            if parser_state is not None and continuation_state != parser_state.continuation_state:
+                self.setCurrentBlockState(self.currentBlockState() + 1)
 
             block_data = CodeBlockHighlighterBlockData()
             block_data.parser_state = parser_state
