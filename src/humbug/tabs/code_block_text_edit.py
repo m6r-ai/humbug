@@ -59,6 +59,9 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
         Args:
             language: The programming language to use
         """
+        if self._language == language:
+            return
+
         self._language = language
 
         # Update highlighter if it exists

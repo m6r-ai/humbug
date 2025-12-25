@@ -19,7 +19,6 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.style_manager import StyleManager
-from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
 from humbug.tabs.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.tabs.markdown_renderer import MarkdownRenderer
@@ -122,9 +121,9 @@ class ConversationMessageSection(QFrame):
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
 
-        self._highlighter: ConversationHighlighter | CodeBlockHighlighter | None = None
+        self._highlighter: ConversationHighlighter | None = None
 
-        self._set_language(language)
+        self.set_language(language)
 
         self._mouse_left_button_pressed = False
 
@@ -143,8 +142,11 @@ class ConversationMessageSection(QFrame):
         """Provide the language in use by this section."""
         return self._language
 
-    def _set_language(self, language: ProgrammingLanguage | None) -> None:
+    def set_language(self, language: ProgrammingLanguage | None) -> None:
         """Set the programming language to use for this message section"""
+        if self._language == language:
+            return
+
         self._language = language
 
         print(f"{self}: Setting language to: {language}")
@@ -165,6 +167,7 @@ class ConversationMessageSection(QFrame):
             self._text_area.set_has_code_block(True)
             if isinstance(self._text_area, CodeBlockTextEdit):
                 self._text_area.lazy_init_highlighter()
+                self._text_area.set_language(language)
 
         if self._language_header:
             strings = self._language_manager.strings()
@@ -172,18 +175,6 @@ class ConversationMessageSection(QFrame):
                 language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
             )
             self._language_header.setText(language_header)
-
-    def update_language(self, language: ProgrammingLanguage | None) -> None:
-        """
-        Update the programming language for this section.
-
-        Args:
-            language: The programming language to set.
-        """
-        if self._language == language:
-            return
-
-        self._set_language(language)
 
     def lazy_update(self, event_filter: QObject) -> None:
         """Lazy update - called when section becomes visible."""
