@@ -13,7 +13,6 @@ from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
-from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
 from humbug.tabs.markdown_block_data import HeadingBlockData
 from humbug.tabs.markdown_renderer import MarkdownRenderer
@@ -96,6 +95,7 @@ class PreviewMarkdownContentSection(QFrame):
         if language is not None:
             # Code block - use code block text widget
             self._text_area = CodeBlockTextEdit()
+            self._text_area.lazy_init_highlighter()
             self._text_area.set_language(language)
             self._renderer = None
 
@@ -125,8 +125,6 @@ class PreviewMarkdownContentSection(QFrame):
         self._text_area.viewport().setMouseTracking(True)
         self._text_area.viewport().installEventFilter(self)
 
-        # Add appropriate highlighter
-        self._highlighter: CodeBlockHighlighter | None = None
         self.set_language(language)
 
         self._mouse_left_button_pressed = False
@@ -149,16 +147,15 @@ class PreviewMarkdownContentSection(QFrame):
 
         if language is None:
             self._use_markdown = True
-            self._highlighter = None
 
         else:
             self._use_markdown = False
 
             # Initialize highlighter for code blocks lazily
             if isinstance(self._text_area, CodeBlockTextEdit):
+                self._text_area.lazy_init_highlighter()
                 self._text_area.set_language(language)
 
-            self._highlighter = None
             self._text_area.set_has_code_block(True)
 
         strings = self._language_manager.strings()
@@ -306,12 +303,6 @@ class PreviewMarkdownContentSection(QFrame):
         if self._content_node and self._renderer is not None:
             # Re-render markdown content with new font
             self._renderer.visit(self._content_node)
-
-        # Re-render markdown content if needed and color mode changed
-        if self._style_manager.color_mode() != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode()
-            if self._highlighter:
-                self._highlighter.rehighlight()
 
     def find_text(self, text: str) -> List[Tuple[int, int]]:
         """

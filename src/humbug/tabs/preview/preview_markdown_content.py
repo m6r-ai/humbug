@@ -131,40 +131,18 @@ class PreviewMarkdownContent(PreviewContentWidget):
         sections_data = self._markdown_converter.extract_sections(text, path)
 
         # Create or update sections
-        for i, (node, language) in enumerate(sections_data):
-            # Create new section if needed
-            if i >= len(self._sections):
-                section = self._create_section_widget(language)
-                self._sections.append(section)
-                self._sections_layout.addWidget(section)
+        for _, (node, language) in enumerate(sections_data):
+            section = self._create_section_widget(language)
+            self._sections.append(section)
+            self._sections_layout.addWidget(section)
 
-                # Apply font and set content
-                factor = self._style_manager.zoom_factor()
-                font = self.font()
-                base_font_size = self._style_manager.base_font_size()
-                font.setPointSizeF(base_font_size * factor)
-                section.apply_style()
-                section.set_content(node)
-                continue
-
-            if i == len(self._sections) - 1:
-                # Update the last section with new content
-                section = self._sections[-1]
-                if language != section.language():
-                    section.set_language(language)
-
-                    # Update section type property
-                    section_type = "code" if language is not None else "text"
-                    section.setProperty("section_type", section_type)
-                    section.setProperty("contained", self._contained)
-
-                section.set_content(node)
-
-        # Remove any extra sections
-        while len(self._sections) > len(sections_data):
-            section = self._sections.pop()
-            self._sections_layout.removeWidget(section)
-            section.deleteLater()
+            # Apply font and set content
+            factor = self._style_manager.zoom_factor()
+            font = self.font()
+            base_font_size = self._style_manager.base_font_size()
+            font.setPointSizeF(base_font_size * factor)
+            section.apply_style()
+            section.set_content(node)
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""
