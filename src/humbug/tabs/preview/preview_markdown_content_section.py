@@ -300,8 +300,8 @@ class PreviewMarkdownContentSection(QFrame):
         if self._language_header:
             self._language_header.setFont(font)
 
-        if self._content_node and self._renderer is not None:
-            # Re-render markdown content with new font
+        if self._renderer is not None and self._content_node is not None:
+            self._renderer.apply_style()
             self._renderer.visit(self._content_node)
 
     def find_text(self, text: str) -> List[Tuple[int, int]]:

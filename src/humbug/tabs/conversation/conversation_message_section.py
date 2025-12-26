@@ -127,8 +127,6 @@ class ConversationMessageSection(QFrame):
 
         self._mouse_left_button_pressed = False
 
-        self._init_colour_mode = self._style_manager.color_mode()
-
         self._on_language_changed()
 
         self._layout.addWidget(self._text_area)
@@ -149,7 +147,6 @@ class ConversationMessageSection(QFrame):
 
         self._language = language
 
-        print(f"{self}: Setting language to: {language}")
         if language is None:
             self._use_markdown = not self._is_input
             if self._use_markdown:
@@ -493,20 +490,6 @@ class ConversationMessageSection(QFrame):
         self._apply_button_style()
 
         # Only apply renderer style for MarkdownTextEdit
-        if self._renderer is not None:
+        if self._renderer is not None and self._content_node is not None:
             self._renderer.apply_style()
-
-        # Style the language header if present, or the inline code style if it's not
-        if not self._language_header:
-            content = self._content_node
-            if content:
-                # If we have a text node, extract its content as plain text
-                if isinstance(content, MarkdownASTTextNode):
-                    self._text_area.set_text(content.content)
-                elif self._renderer is not None:
-                    self._renderer.visit(content)
-
-        # If we changed colour mode then re-highlight
-        if self._style_manager.color_mode() != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode()
-            # Highlighter rehighlighting is handled by each widget's apply_style
+            self._renderer.visit(self._content_node)
