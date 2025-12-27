@@ -29,7 +29,6 @@ class PreviewMarkdownContentSection(QFrame):
 
     def __init__(
         self,
-        is_input: bool,
         language: ProgrammingLanguage | None = None,
         parent: QWidget | None = None
     ) -> None:
@@ -37,7 +36,6 @@ class PreviewMarkdownContentSection(QFrame):
         Initialize a content section widget.
 
         Args:
-            is_input: Whether this section is for user input (always False for preview)
             language: Optional programming language for this section
             parent: Optional parent widget
         """
@@ -63,7 +61,18 @@ class PreviewMarkdownContentSection(QFrame):
         self._language_header = None
         self._header_container = None
 
-        if language is not None:
+        # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for markdown
+        self._text_area: MarkdownTextEdit | CodeBlockTextEdit
+        self._renderer: MarkdownRenderer | None
+
+        if language is None:
+            # Markdown content - use rich text widget
+            self._text_area = MarkdownTextEdit(False, self)
+            self._text_area.link_clicked.connect(self.link_clicked)
+            document = self._text_area.document()
+            self._renderer = MarkdownRenderer(document)
+
+        else:
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
             # Create a container for header (language label only, no buttons)
@@ -84,27 +93,11 @@ class PreviewMarkdownContentSection(QFrame):
             # Add header container to main layout
             self._layout.addWidget(self._header_container)
 
-        self._is_input = is_input  # Always False for preview
-
-        # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for markdown
-        self._text_area: MarkdownTextEdit | CodeBlockTextEdit
-        self._renderer: MarkdownRenderer | None
-        if language is not None:
             # Code block - use code block text widget
             self._text_area = CodeBlockTextEdit(self)
             self._text_area.lazy_init_highlighter()
             self._text_area.set_language(language)
             self._renderer = None
-
-        else:
-            # Markdown content - use rich text widget
-            self._text_area = MarkdownTextEdit(False, self)
-            self._text_area.setReadOnly(True)  # Always read-only for preview
-            self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-            self._text_area.link_clicked.connect(self.link_clicked)
-            document = self._text_area.document()
-            self._renderer = MarkdownRenderer(document)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)

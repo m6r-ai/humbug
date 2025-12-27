@@ -72,8 +72,7 @@ class PreviewMarkdownContent(PreviewContentWidget):
         Returns:
             A new PreviewMarkdownContentSection instance
         """
-        is_input = False  # Preview sections are never input
-        section = PreviewMarkdownContentSection(is_input, language, self._sections_container)
+        section = PreviewMarkdownContentSection(language, self._sections_container)
         section_type = "code" if language is not None else "text"
         section.setProperty("section_type", section_type)
         section.setProperty("contained", self._contained)

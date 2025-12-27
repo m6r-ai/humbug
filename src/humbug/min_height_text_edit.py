@@ -12,9 +12,7 @@ class MinHeightTextEdit(QTextEdit):
 
     def __init__(
         self,
-        parent: QWidget | None = None,
-        horizontal_scrollbar_policy: Qt.ScrollBarPolicy = Qt.ScrollBarPolicy.ScrollBarAlwaysOff,
-        word_wrap_mode: QTextOption.WrapMode = QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere
+        parent: QWidget | None = None
     ) -> None:
         """
         Initialize the MinHeightTextEdit widget.
@@ -28,14 +26,14 @@ class MinHeightTextEdit(QTextEdit):
         self.document().documentLayout().documentSizeChanged.connect(self._on_content_resized)
         self.document().setDocumentMargin(0)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self.setHorizontalScrollBarPolicy(horizontal_scrollbar_policy)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
         # Force the widget to always use the width of its container
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         # Set word wrap mode
-        self.setWordWrapMode(word_wrap_mode)
+        self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
 
         self._current_text = ""
         self.clear()

@@ -69,7 +69,19 @@ class ConversationMessageSection(QFrame):
         self._layout = QVBoxLayout(self)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
-        if language is not None:
+        self._is_input = is_input
+
+        # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for everything else
+        self._text_area: MarkdownTextEdit | CodeBlockTextEdit
+        self._renderer: MarkdownRenderer | None
+
+        if language is None:
+            # Markdown or user input - use rich text widget
+            self._text_area = MarkdownTextEdit(is_input, self)
+            document = self._text_area.document()
+            self._renderer = MarkdownRenderer(document)
+
+        else:
             # Create a container for header (language label + buttons)
             self._header_container = QWidget()
             self._header_container.setObjectName("_header_container")
@@ -89,22 +101,10 @@ class ConversationMessageSection(QFrame):
             # Add header container to main layout
             self._layout.addWidget(self._header_container)
 
-        self._is_input = is_input
-
-        # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for everything else
-        self._text_area: MarkdownTextEdit | CodeBlockTextEdit
-        self._renderer: MarkdownRenderer | None
-        if language is not None:
             # Code block - use code block text widget
             self._text_area = CodeBlockTextEdit(self)
             self._text_area.set_language(language)
             self._renderer = None
-
-        else:
-            # Markdown or user input - use rich text widget
-            self._text_area = MarkdownTextEdit(is_input, self)
-            document = self._text_area.document()
-            self._renderer = MarkdownRenderer(document)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
