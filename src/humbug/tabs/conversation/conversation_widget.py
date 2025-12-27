@@ -8,7 +8,7 @@ from typing import Dict, List, Tuple, Any, Set, cast
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QRect
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QResizeEvent, QShowEvent
 
 from ai import (
@@ -433,28 +433,6 @@ class ConversationWidget(QWidget):
         if self._is_animating:
             self._update_animated_message()
 
-    def _lazy_update_visible_sections(self) -> None:
-        """Ensure all visible code sections have highlighters created."""
-        viewport = self._scroll_area.viewport()
-        viewport_rect = viewport.rect()
-        scroll_offset = self._scroll_area.verticalScrollBar().value()
-
-        # Create viewport rect in scroll area content coordinates
-        visible_rect = QRect(0, scroll_offset, viewport_rect.width(), viewport_rect.height())
-
-        for i, message in enumerate(self._messages):
-            if not message.is_rendered():
-                continue
-
-            # Get message position relative to scroll area content
-            message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
-            message_rect = QRect(message_pos, message.size())
-
-            # Only check sections if message intersects with viewport
-            if message_rect.intersects(visible_rect):
-                is_streaming = self._is_streaming and i == len(self._messages) - 1
-                message.lazy_update(self._event_filter, is_streaming)
-
     def _enable_messages_container_updates(self) -> None:
         """Re-enable updates for the messages container after layout has settled."""
         self._messages_container.setUpdatesEnabled(True)
@@ -466,7 +444,6 @@ class ConversationWidget(QWidget):
     def _on_initial_layout_stabilized(self) -> None:
         """Handle the initial layout stabilization - do the first visibility check."""
         self._initial_layout_complete = True
-        self._lazy_update_visible_sections()
 
         # If we have an initial scroll position, set it now
         if self._initial_scroll_position is not None:
@@ -841,10 +818,6 @@ class ConversationWidget(QWidget):
         if expanded:
             self._auto_scroll = False
 
-            # When a message is expanded, ensure its sections are highlighted if layout is complete
-            if self._initial_layout_complete:
-                self._lazy_update_visible_sections()
-
         # Update animation target if visibility changed
         if self._is_animating:
             self._update_animated_message()
@@ -986,8 +959,6 @@ class ConversationWidget(QWidget):
         result = self._create_completion_result()
         self.submit_finished.emit(result)
         self.update_label.emit()
-        if self._initial_layout_complete:
-            self._lazy_update_visible_sections()
 
     def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
@@ -1126,10 +1097,6 @@ class ConversationWidget(QWidget):
 
         self.has_seen_latest_update_changed.emit(at_bottom)
 
-        # Check for newly visible sections that need highlighting (only after initial layout is complete)
-        if self._initial_layout_complete:
-            self._lazy_update_visible_sections()
-
     def _on_scroll_range_changed(self, _minimum: int, maximum: int) -> None:
         """Handle the scroll range changing."""
         # If we're set to auto-scroll then do so now
@@ -1153,7 +1120,6 @@ class ConversationWidget(QWidget):
         """Scroll to the bottom of the content."""
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
-        self._lazy_update_visible_sections()
 
     def activate(self) -> None:
         """Activate the conversation widget."""
@@ -1634,10 +1600,6 @@ class ConversationWidget(QWidget):
         if not self._initial_layout_complete:
             # Reset the timer each time we get a resize during initial loading
             self._layout_stabilization_timer.start(100)
-
-        else:
-            # After initial layout is complete, check for visibility changes after resize
-            self._lazy_update_visible_sections()
 
     def cancel_current_tasks(self, notify: bool = True) -> None:
         """Cancel any ongoing AI response tasks."""

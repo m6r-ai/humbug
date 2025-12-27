@@ -46,7 +46,7 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
         self.setPalette(palette)
 
         # Syntax highlighting - created lazily
-        self._highlighter: CodeBlockHighlighter | None = None
+        self._highlighter: CodeBlockHighlighter = CodeBlockHighlighter(self.document())
         self._language: ProgrammingLanguage = ProgrammingLanguage.TEXT
 
         # Apply initial style
@@ -67,12 +67,6 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
         # Update highlighter if it exists
         if self._highlighter is not None:
             self._highlighter.set_language(language)
-
-    def lazy_init_highlighter(self) -> None:
-        """Initialize the syntax highlighter lazily when widget becomes visible."""
-        if self._highlighter is None:
-            self._highlighter = CodeBlockHighlighter(self.document())
-            self._highlighter.set_language(self._language)
 
     def apply_style(self) -> None:
         """Apply style changes."""

@@ -95,7 +95,6 @@ class PreviewMarkdownContentSection(QFrame):
 
             # Code block - use code block text widget
             self._text_area = CodeBlockTextEdit(self)
-            self._text_area.lazy_init_highlighter()
             self._text_area.set_language(language)
             self._renderer = None
 
@@ -138,7 +137,6 @@ class PreviewMarkdownContentSection(QFrame):
         if language is not None:
             # Initialize highlighter for code blocks lazily
             if isinstance(self._text_area, CodeBlockTextEdit):
-                self._text_area.lazy_init_highlighter()
                 self._text_area.set_language(language)
 
         strings = self._language_manager.strings()

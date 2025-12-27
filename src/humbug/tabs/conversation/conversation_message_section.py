@@ -95,6 +95,22 @@ class ConversationMessageSection(QFrame):
             self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._header_layout.addWidget(self._language_header)
 
+            strings = self._language_manager.strings()
+
+            # Add Copy button with icon
+            self._copy_button = QToolButton()
+            self._copy_button.clicked.connect(self._copy_all_content)
+            self._copy_button.setToolTip(strings.tooltip_copy_contents)
+            self._header_layout.addWidget(self._copy_button)
+
+            # Add Save As button with icon
+            self._save_as_button = QToolButton()
+            self._save_as_button.clicked.connect(self._save_as)
+            self._save_as_button.setToolTip(strings.tooltip_save_contents)
+            self._header_layout.addWidget(self._save_as_button)
+
+            self._apply_button_style()
+
             # Add stretch to push buttons to the right
             self._header_layout.addStretch()
 
@@ -142,7 +158,6 @@ class ConversationMessageSection(QFrame):
 
         if language is not None:
             if isinstance(self._text_area, CodeBlockTextEdit):
-                self._text_area.lazy_init_highlighter()
                 self._text_area.set_language(language)
 
         if self._language_header:
@@ -151,37 +166,6 @@ class ConversationMessageSection(QFrame):
                 language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
             )
             self._language_header.setText(language_header)
-
-    def lazy_update(self, event_filter: QObject) -> None:
-        """Lazy update - called when section becomes visible."""
-        if self._language is None:
-            return
-
-        # Initialize highlighter for code blocks lazily
-        if isinstance(self._text_area, CodeBlockTextEdit):
-            self._text_area.lazy_init_highlighter()
-
-        strings = self._language_manager.strings()
-
-        # Add Copy button with icon
-        if self._copy_button is None:
-            self._copy_button = QToolButton()
-            self._copy_button.clicked.connect(self._copy_all_content)
-            self._copy_button.setToolTip(strings.tooltip_copy_contents)
-            self._copy_button.installEventFilter(event_filter)
-            assert self._header_layout is not None, "Header layout should be initialized"
-            self._header_layout.addWidget(self._copy_button)
-
-        # Add Save As button with icon
-        if self._save_as_button is None:
-            self._save_as_button = QToolButton()
-            self._save_as_button.clicked.connect(self._save_as)
-            self._save_as_button.setToolTip(strings.tooltip_save_contents)
-            self._save_as_button.installEventFilter(event_filter)
-            assert self._header_layout is not None, "Header layout should be initialized"
-            self._header_layout.addWidget(self._save_as_button)
-
-        self._apply_button_style()
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""

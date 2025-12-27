@@ -175,7 +175,6 @@ class PreviewFileContent(PreviewContentWidget):
             self._language = ProgrammingLanguage.TEXT
 
         # Set language and initialize highlighter
-        self._text_area.lazy_init_highlighter()
         self._text_area.set_language(self._language)
 
         # Update header text

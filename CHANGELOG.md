@@ -14,6 +14,10 @@ Bug fixes:
 - Fixed a markdown parsing issue affecting paragraphs inside lists.
 - Improved exception handling for UI interactions.
 
+Internal structure changes:
+
+- Removed the lazy UI updates as they added a lot of complexity and more significant performance issues have been resolved.
+
 ## v0.35 (2025-12-19)
 
 New features:

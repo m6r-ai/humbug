@@ -6,7 +6,7 @@ import colorsys
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QObject
+from PySide6.QtCore import Signal, QPoint, QSize, Qt
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
 
 from ai import AIMessageSource
@@ -111,6 +111,9 @@ class ConversationMessage(QFrame):
             self._expand_button.clicked.connect(self._toggle_expanded)
             self._header_layout.addWidget(self._expand_button)
 
+        # Expanded state - default to True, will be updated in set_content based on message type
+        self._is_expanded = True
+
         # Create role and timestamp labels
         self._role_label = QLabel(self._header)
         self._role_label.setObjectName("_role_label")
@@ -138,6 +141,39 @@ class ConversationMessage(QFrame):
         self._fork_message_button: QToolButton | None = None
         self._delete_message_button: QToolButton | None = None
 
+        # Add fork button only for AI messages
+        style = self._message_source
+        if style == AIMessageSource.AI:
+            strings = self._language_manager.strings()
+            self._fork_message_button = QToolButton(self)
+            self._fork_message_button.setObjectName("_fork_button")
+            self._fork_message_button.clicked.connect(self._fork_message)
+            self._fork_message_button.setToolTip(strings.tooltip_fork_message)
+            self._header_layout.addWidget(self._fork_message_button)
+
+        # Add delete button only for user messages
+        elif style == AIMessageSource.USER and not self._is_input:
+            strings = self._language_manager.strings()
+            self._delete_message_button = QToolButton(self)
+            self._delete_message_button.setObjectName("_delete_button")
+            self._delete_message_button.clicked.connect(self._delete_message)
+            self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
+            self._header_layout.addWidget(self._delete_message_button)
+
+        # We have copy and save buttons for several message sources
+        if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
+            self._copy_message_button = QToolButton(self)
+            self._copy_message_button.setObjectName("_copy_button")
+            self._copy_message_button.clicked.connect(self._copy_message)
+            self._header_layout.addWidget(self._copy_message_button)
+
+            self._save_message_button = QToolButton(self)
+            self._save_message_button.setObjectName("_save_button")
+            self._save_message_button.clicked.connect(self._save_message)
+            self._header_layout.addWidget(self._save_message_button)
+
+        self._apply_button_style()
+
         # Container for message sections
         self._sections_container = QWidget(self)
         self._sections_container.setObjectName("_sections_container")
@@ -162,9 +198,6 @@ class ConversationMessage(QFrame):
         self._sections: List[ConversationMessageSection] = []
         self._section_with_selection: ConversationMessageSection | None = None
 
-        # Expanded state - default to True, will be updated in set_content based on message type
-        self._is_expanded = True
-
         # If this is an input widget then create the input section
         if is_input:
             section = self._create_section_widget()
@@ -177,8 +210,6 @@ class ConversationMessage(QFrame):
         self._is_focused = False
 
         self._on_language_changed()
-
-        self._needs_lazy_update = True
 
         # Set default expanded state based on message type
         # Tool calls and tool results should be collapsed by default
@@ -475,67 +506,6 @@ class ConversationMessage(QFrame):
         section.apply_style()
 
         return section
-
-    def lazy_update(self, event_filter: QObject, is_streaming: bool) -> None:
-        """
-        Handle lazy updates for sections based on viewport visibility.
-
-        Args:
-            viewport_rect: The visible viewport rectangle in scroll container coordinates
-            scroll_container: The scroll container widget for coordinate mapping
-        """
-        # Cascade lazy updates to all sections
-        for section in self._sections:
-            if not section.isVisible():
-                continue
-
-            section.lazy_update(event_filter)
-
-        # If we're streaming we don't want our buttons yet
-        if is_streaming:
-            return
-
-        if not self._needs_lazy_update:
-            return
-
-        self._needs_lazy_update = False
-
-        # Add fork button only for AI messages
-        style = self._message_source
-        if style == AIMessageSource.AI:
-            strings = self._language_manager.strings()
-            self._fork_message_button = QToolButton(self)
-            self._fork_message_button.setObjectName("_fork_button")
-            self._fork_message_button.clicked.connect(self._fork_message)
-            self._fork_message_button.setToolTip(strings.tooltip_fork_message)
-            self._fork_message_button.installEventFilter(event_filter)
-            self._header_layout.addWidget(self._fork_message_button)
-
-        # Add delete button only for user messages
-        elif style == AIMessageSource.USER and not self._is_input:
-            strings = self._language_manager.strings()
-            self._delete_message_button = QToolButton(self)
-            self._delete_message_button.setObjectName("_delete_button")
-            self._delete_message_button.clicked.connect(self._delete_message)
-            self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
-            self._delete_message_button.installEventFilter(event_filter)
-            self._header_layout.addWidget(self._delete_message_button)
-
-        # We have copy and save buttons for several message sources
-        if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
-            self._copy_message_button = QToolButton(self)
-            self._copy_message_button.setObjectName("_copy_button")
-            self._copy_message_button.clicked.connect(self._copy_message)
-            self._copy_message_button.installEventFilter(event_filter)
-            self._header_layout.addWidget(self._copy_message_button)
-
-            self._save_message_button = QToolButton(self)
-            self._save_message_button.setObjectName("_save_button")
-            self._save_message_button.clicked.connect(self._save_message)
-            self._save_message_button.installEventFilter(event_filter)
-            self._header_layout.addWidget(self._save_message_button)
-
-        self._apply_button_style()
 
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
         """
@@ -873,7 +843,6 @@ class ConversationMessage(QFrame):
 
         if self._expand_button:
             self._expand_button.setIconSize(icon_size)
-            # Update the expand button icon and tooltip
             self._update_expand_button()
 
     def apply_style(self) -> None:
