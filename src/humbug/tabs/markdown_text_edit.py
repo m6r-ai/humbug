@@ -13,6 +13,7 @@ from humbug.min_height_text_edit import MinHeightTextEdit
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.style_manager import StyleManager
+from humbug.tabs.markdown_highlighter import MarkdownHighlighter
 
 
 class MarkdownTextEdit(MinHeightTextEdit):
@@ -23,12 +24,14 @@ class MarkdownTextEdit(MinHeightTextEdit):
     link_clicked = Signal(str)
     page_key_scroll_requested = Signal()
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, is_input: bool, parent: QWidget | None = None, ) -> None:
         super().__init__(parent)
 
         # Calculate tab stops
         self._style_manager = StyleManager()
         self.apply_style()
+
+        self._is_input = is_input
 
         # Track code block state
         self._has_code_block = False
@@ -39,6 +42,30 @@ class MarkdownTextEdit(MinHeightTextEdit):
         palette = self.palette()
         palette.setBrush(QPalette.ColorRole.HighlightedText, QBrush(Qt.BrushStyle.NoBrush))
         self.setPalette(palette)
+
+        self.setReadOnly(not is_input)
+
+        # We only use the highlighter for input areas
+        if is_input:
+            self._highlighter = MarkdownHighlighter(self.document())
+            self._highlighter.code_block_state_changed.connect(self._on_code_block_state_changed)
+
+    def _on_code_block_state_changed(self, has_code_block: bool) -> None:
+        """Handle changes in code block state."""
+        if has_code_block == self._has_code_block:
+            return
+
+        self._has_code_block = has_code_block
+        if has_code_block:
+            self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        else:
+            self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
+            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
+        # Force layout update
+        self._on_content_resized()
 
     def apply_style(self) -> None:
         """Apply style changes."""
@@ -69,27 +96,6 @@ class MarkdownTextEdit(MinHeightTextEdit):
         """Propagate mouse release events to parent."""
         super().mouseReleaseEvent(e)
         self.mouse_released.emit(e)
-
-    def set_has_code_block(self, has_code: bool) -> None:
-        """Update word wrap mode based on whether content contains code blocks."""
-        if has_code == self._has_code_block:
-            return
-
-        self._has_code_block = has_code
-        if has_code:
-            self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
-        else:
-            self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
-            self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-
-        # Force layout update
-        self._on_content_resized()
-
-    def has_code_block(self) -> bool:
-        """Check if content contains code blocks."""
-        return self._has_code_block
 
     def wheelEvent(self, e: QWheelEvent) -> None:
         """Handle wheel events for horizontal scrolling."""
@@ -313,9 +319,9 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         """Handle special key events."""
-        # Is this a read-only widget?  If it is then we don't want to process certain key events,
+        # Is this a display-only widget?  If it is then we don't want to process certain key events,
         # leaving it to the parent to handle them.
-        if self.isReadOnly():
+        if not self._is_input:
             # Handle horizontal scrolling
             if self._has_code_block and e.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
                 hbar = self.horizontalScrollBar()

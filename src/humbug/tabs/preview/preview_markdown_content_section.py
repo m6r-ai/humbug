@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayou
 from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent
 from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor
 
-from dmarkdown import MarkdownASTNode, MarkdownASTTextNode
+from dmarkdown import MarkdownASTNode, MarkdownASTCodeBlockNode
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
@@ -86,22 +86,19 @@ class PreviewMarkdownContentSection(QFrame):
 
         self._is_input = is_input  # Always False for preview
 
-        # Determine if this section should use markdown (always true if no language)
-        self._use_markdown = language is None
-
         # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for markdown
         self._text_area: MarkdownTextEdit | CodeBlockTextEdit
         self._renderer: MarkdownRenderer | None
         if language is not None:
             # Code block - use code block text widget
-            self._text_area = CodeBlockTextEdit()
+            self._text_area = CodeBlockTextEdit(self)
             self._text_area.lazy_init_highlighter()
             self._text_area.set_language(language)
             self._renderer = None
 
         else:
             # Markdown content - use rich text widget
-            self._text_area = MarkdownTextEdit()
+            self._text_area = MarkdownTextEdit(False, self)
             self._text_area.setReadOnly(True)  # Always read-only for preview
             self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
             self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -145,18 +142,11 @@ class PreviewMarkdownContentSection(QFrame):
         """Set the programming language to use for this section"""
         self._language = language
 
-        if language is None:
-            self._use_markdown = True
-
-        else:
-            self._use_markdown = False
-
+        if language is not None:
             # Initialize highlighter for code blocks lazily
             if isinstance(self._text_area, CodeBlockTextEdit):
                 self._text_area.lazy_init_highlighter()
                 self._text_area.set_language(language)
-
-            self._text_area.set_has_code_block(True)
 
         strings = self._language_manager.strings()
         if self._language_header:
@@ -243,11 +233,9 @@ class PreviewMarkdownContentSection(QFrame):
         """
         self._content_node = content
 
-        # If we have code block node, extract its content as plain text
-        if not self._use_markdown:
-            text_content = cast(MarkdownASTTextNode, content)
-            assert isinstance(self._text_area, CodeBlockTextEdit), "Text area must be CodeBlockTextEdit"
-            self._text_area.set_text(text_content.content)
+        if isinstance(self._text_area, CodeBlockTextEdit):
+            assert isinstance(content, MarkdownASTCodeBlockNode), "Content must be code block node"
+            self._text_area.set_text(content.content)
             return
 
         # Render markdown content
@@ -282,10 +270,6 @@ class PreviewMarkdownContentSection(QFrame):
         cursor = self._text_area.textCursor()
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
-
-    def has_code_block(self) -> bool:
-        """Check if this section contains a code block."""
-        return self._text_area.has_code_block()
 
     def apply_style(self) -> None:
         """Apply styling to this section."""

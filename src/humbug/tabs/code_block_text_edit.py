@@ -121,8 +121,6 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         """Handle special key events."""
-        # Since this is read-only, we handle navigation keys differently
-
         # Handle horizontal scrolling
         if e.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
             hbar = self.horizontalScrollBar()
@@ -134,32 +132,8 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
 
                 else:
                     hbar.setValue(min(hbar.maximum(), current + step))
+
                 e.accept()
                 return
 
-        # Let parent handle page up/down and vertical navigation
-        if e.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown, Qt.Key.Key_Up, Qt.Key.Key_Down):
-            e.ignore()
-            return
-
-        # For read-only widgets, ignore most other key events
         e.ignore()
-
-    def set_has_code_block(self, has_code: bool) -> None:
-        """
-        Compatibility method for MarkdownTextEdit interface.
-        
-        CodeBlockTextEdit always has code blocks, so this is a no-op.
-        
-        Args:
-            has_code: Ignored
-        """
-
-    def has_code_block(self) -> bool:
-        """
-        Check if content contains code blocks.
-        
-        Returns:
-            Always True for CodeBlockTextEdit
-        """
-        return True

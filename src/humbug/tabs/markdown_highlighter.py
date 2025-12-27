@@ -1,4 +1,4 @@
-"""Conversation code highlighter."""
+"""Markdown code highlighter."""
 
 import logging
 from typing import cast
@@ -12,7 +12,7 @@ from syntax.markdown.markdown_parser import MarkdownParser, MarkdownParserState
 from humbug.style_manager import StyleManager
 
 
-class ConversationHighlighterBlockData(QTextBlockUserData):
+class MarkdownHighlighterBlockData(QTextBlockUserData):
     """User data for each block of text in the conversation highlighter."""
     def __init__(self) -> None:
         super().__init__()
@@ -21,8 +21,8 @@ class ConversationHighlighterBlockData(QTextBlockUserData):
         self.parser_state: ParserState | None = None
 
 
-class ConversationHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for Conversation code blocks."""
+class MarkdownHighlighter(QSyntaxHighlighter):
+    """Syntax highlighter for Markdown code blocks."""
 
     # Signal emitted when code block state changes
     code_block_state_changed = Signal(bool)
@@ -32,9 +32,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._has_code_block = False
-
-        self._logger = logging.getLogger("ConversationHighlighter")
+        self._logger = logging.getLogger("MarkdownHighlighter")
 
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
@@ -42,12 +40,12 @@ class ConversationHighlighter(QSyntaxHighlighter):
             current_block = self.currentBlock()
             prev_block = current_block.previous()
 
-            prev_block_data: ConversationHighlighterBlockData | None = None
+            prev_block_data: MarkdownHighlighterBlockData | None = None
             prev_parser_state = None
             fence_depth = 0
             seen_fence = False
             if prev_block is not None:
-                prev_block_data = cast(ConversationHighlighterBlockData, prev_block.userData())
+                prev_block_data = cast(MarkdownHighlighterBlockData, prev_block.userData())
                 if prev_block_data is not None:
                     prev_parser_state = prev_block_data.parser_state
                     fence_depth = prev_block_data.fence_depth
@@ -56,7 +54,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
             language = ProgrammingLanguage.UNKNOWN
             continuation_state = -1
             current_fence_depth = 0
-            current_block_data = cast(ConversationHighlighterBlockData, current_block.userData())
+            current_block_data = cast(MarkdownHighlighterBlockData, current_block.userData())
             if current_block_data is not None:
                 current_fence_depth = current_block_data.fence_depth
                 current_parser_data = current_block_data.parser_state
@@ -125,7 +123,7 @@ class ConversationHighlighter(QSyntaxHighlighter):
                     # It doesn't matter what we set this to, it just needs to be different to what it was before
                     self.setCurrentBlockState(self.currentBlockState() + 1)
 
-            block_data = ConversationHighlighterBlockData()
+            block_data = MarkdownHighlighterBlockData()
             block_data.parser_state = parser_state
             block_data.fence_depth = fence_depth
             block_data.seen_fence = seen_fence

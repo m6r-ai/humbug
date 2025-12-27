@@ -20,7 +20,6 @@ from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType
 from humbug.style_manager import StyleManager
 from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
-from humbug.tabs.conversation.conversation_highlighter import ConversationHighlighter
 from humbug.tabs.markdown_renderer import MarkdownRenderer
 from humbug.tabs.markdown_text_edit import MarkdownTextEdit
 
@@ -92,9 +91,6 @@ class ConversationMessageSection(QFrame):
 
         self._is_input = is_input
 
-        # Determine if this section should use markdown (only AI responses without language)
-        self._use_markdown = not is_input and language is None
-
         # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for everything else
         self._text_area: MarkdownTextEdit | CodeBlockTextEdit
         self._renderer: MarkdownRenderer | None
@@ -106,8 +102,7 @@ class ConversationMessageSection(QFrame):
 
         else:
             # Markdown or user input - use rich text widget
-            self._text_area = MarkdownTextEdit(self)
-            self._text_area.setReadOnly(not is_input)
+            self._text_area = MarkdownTextEdit(is_input, self)
             document = self._text_area.document()
             self._renderer = MarkdownRenderer(document)
 
@@ -120,8 +115,6 @@ class ConversationMessageSection(QFrame):
         self._text_area.selectionChanged.connect(self._on_selection_changed)
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
-
-        self._highlighter: ConversationHighlighter | None = None
 
         self.set_language(language)
 
@@ -147,21 +140,7 @@ class ConversationMessageSection(QFrame):
 
         self._language = language
 
-        if language is None:
-            self._use_markdown = not self._is_input
-            if self._use_markdown:
-                self._highlighter = None
-
-            else:
-                self._highlighter = ConversationHighlighter(self._text_area.document())
-                self._highlighter.code_block_state_changed.connect(self._on_code_block_state_changed)
-
-        else:
-            self._use_markdown = False
-
-            # Defer creation of expensive language highlighter until section becomes visible
-            self._highlighter = None
-            self._text_area.set_has_code_block(True)
+        if language is not None:
             if isinstance(self._text_area, CodeBlockTextEdit):
                 self._text_area.lazy_init_highlighter()
                 self._text_area.set_language(language)
@@ -241,13 +220,6 @@ class ConversationMessageSection(QFrame):
 
         self.selection_changed.emit(has_selection)
 
-    def _on_code_block_state_changed(self, has_code_block: bool) -> None:
-        """Handle changes in code block state."""
-        self._text_area.set_has_code_block(has_code_block)
-
-        # Ensure proper scroll behavior
-        self.updateGeometry()
-
     def _copy_all_content(self) -> None:
         """Copy all content in the text area to clipboard."""
         # Store current selection
@@ -309,20 +281,19 @@ class ConversationMessageSection(QFrame):
             content: A MarkdownASTNode text content
         """
         self._content_node = content
-        if not self._use_markdown:
-            # If we have a text node, extract its content as plain text
-            if isinstance(content, MarkdownASTTextNode):
-                self._text_area.set_text(content.content)
-                return
 
-            # If we have code block node, extract its content as plain text
-            if isinstance(content, MarkdownASTCodeBlockNode):
-                assert isinstance(self._text_area, CodeBlockTextEdit), "Text area must be CodeBlockTextEdit"
-                self._text_area.set_text(content.content)
-                return
+        if isinstance(self._text_area, CodeBlockTextEdit):
+            assert isinstance(content, MarkdownASTCodeBlockNode), "Content must be code block node"
+            self._text_area.set_text(content.content)
+            return
 
         if self._renderer is not None:
             self._renderer.visit(content)
+            return
+
+        # We have a text node, extract its content as plain text
+        assert isinstance(content, MarkdownASTTextNode), "Content must be text node"
+        self._text_area.set_text(content.content)
 
     def has_selection(self) -> bool:
         """Check if text is selected in the text area."""
@@ -352,10 +323,6 @@ class ConversationMessageSection(QFrame):
         cursor = self._text_area.textCursor()
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
-
-    def has_code_block(self) -> bool:
-        """Check if this section contains a code block."""
-        return self._text_area.has_code_block()
 
     def find_text(self, text: str) -> List[Tuple[int, int]]:
         """
