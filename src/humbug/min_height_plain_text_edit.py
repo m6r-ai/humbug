@@ -1,11 +1,11 @@
 """Widget for displaying plain text with minimal height possible."""
 
 import logging
+from PySide6.QtCore import Qt, QSize
+from PySide6.QtGui import QTextOption, QTextCursor, QFontMetricsF
 from PySide6.QtWidgets import (
     QFrame, QPlainTextEdit, QSizePolicy, QWidget
 )
-from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QTextOption, QTextCursor, QFontMetricsF, QResizeEvent
 
 
 class MinHeightPlainTextEdit(QPlainTextEdit):
@@ -28,11 +28,11 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         super().__init__(parent)
         self._logger = logging.getLogger("MinHeightPlainTextEdit")
 
+        self.document().documentLayout().documentSizeChanged.connect(self._on_content_resized)
         self.document().setDocumentMargin(0)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(horizontal_scrollbar_policy)
-        if horizontal_scrollbar_policy != Qt.ScrollBarPolicy.ScrollBarAlwaysOff:
-            self.horizontalScrollBar().rangeChanged.connect(self.scroll_changed)
+        self.horizontalScrollBar().rangeChanged.connect(self.scroll_changed)
 
         self.setFrameStyle(QFrame.Shape.NoFrame)
 
@@ -45,10 +45,9 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         self._current_text = ""
         self.clear()
 
-    def resizeEvent(self, e: QResizeEvent) -> None:
-        """Handle resize events."""
+    def _on_content_resized(self) -> None:
+        """Handle resizing this widget based on the document content."""
         self.updateGeometry()
-        return super().resizeEvent(e)
 
     def scroll_changed(self, _min: int, _max: int) -> None:
         """Handle scrollbar range changes."""
@@ -114,14 +113,19 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
 
     def _size_hint_height(self) -> int:
         """Calculate the height of the widget including scrollbar if visible."""
-        doc = self.document()
-        block_count = doc.blockCount()
+        # This is a bit of a bizarre workaround.  When text wraps around there is a short window where our
+        # height is actually too small to show all the text and despite us saying not to use a vertical scrollbar,
+        # Qt will adjust it anyway!  We reset it back so things render correctly.
+        self.verticalScrollBar().setValue(0)
+
+        document_size = self.document().size()
+        line_count = int(document_size.height())
 
         # Calculate line height from font metrics.  QPlainTextEdit does some slightly odd rounding so we need to match it.
         font_metrics = QFontMetricsF(self.font())
         line_height = int(font_metrics.height() + 0.99)
 
-        height = block_count * line_height
+        height = line_count * line_height
         if self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14

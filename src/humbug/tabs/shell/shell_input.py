@@ -3,7 +3,7 @@
 import sys
 from typing import Dict, List, cast
 
-from PySide6.QtCore import Signal, Qt, QRect, QEvent, QObject
+from PySide6.QtCore import Signal, Qt, QRect, QEvent, QObject, QTimer
 from PySide6.QtGui import QKeyEvent, QTextCursor, QTextDocument
 from PySide6.QtWidgets import QWidget
 
@@ -66,7 +66,7 @@ class ShellInput(ShellMessageWidget):
 
             # Handle Tab key for command completion
             if key_event.key() == Qt.Key.Key_Tab:
-                # Emit signal requesting tab completion
+                # Handle Tab for tab completion
                 current_text = self._text_area.toPlainText()
                 cursor = self._text_area.textCursor()
                 self.tab_completion_requested.emit(current_text, self._tab_completion_active, True, cursor.position())
@@ -107,18 +107,14 @@ class ShellInput(ShellMessageWidget):
                 self._navigate_history_down()
                 return True
 
-            # Handle PageUp key to move to start of input
-            if key_event.key() == Qt.Key.Key_PageUp:
-                cursor = self._text_area.textCursor()
-                cursor.movePosition(QTextCursor.MoveOperation.Start)
-                self._text_area.setTextCursor(cursor)
+            # Handle Home key to move to start of input
+            if key_event.key() == Qt.Key.Key_Home:
+                self._move_cursor_to_start()
                 return True
 
-            # Handle PageDown key to move to end of input
-            if key_event.key() == Qt.Key.Key_PageDown:
-                cursor = self._text_area.textCursor()
-                cursor.movePosition(QTextCursor.MoveOperation.End)
-                self._text_area.setTextCursor(cursor)
+            # Handle End key to move to end of input
+            if key_event.key() == Qt.Key.Key_End:
+                self._move_cursor_to_end()
                 return True
 
         # Let the event continue to the target
@@ -148,23 +144,17 @@ class ShellInput(ShellMessageWidget):
         self.style().unpolish(self)
         self.style().polish(self)
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:
-        """
-        Handle special key events for terminal-like behavior.
+    def _move_cursor_to_start(self) -> None:
+        """Move the text cursor to the start of the input area."""
+        cursor = QTextCursor(self._text_area.document())
+        cursor.movePosition(QTextCursor.MoveOperation.Start)
+        self._text_area.setTextCursor(cursor)
 
-        This only handles keys that bubble up to the ShellInput,
-        most keys are handled by the eventFilter.
-        """
-        # Handle Ctrl+J or Cmd+J for command submission (original behavior)
-        if event.key() == Qt.Key.Key_J and event.modifiers() & Qt.KeyboardModifier.ControlModifier:
-            text = self._text_area.toPlainText().strip()
-            if text:
-                self._add_to_history(text)
-                self.clear()
-                self.command_submitted.emit(text)
-                return
-
-        super().keyPressEvent(event)
+    def _move_cursor_to_end(self) -> None:
+        """Move the text cursor to the end of the input area."""
+        cursor = QTextCursor(self._text_area.document())
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self._text_area.setTextCursor(cursor)
 
     def _navigate_history_up(self) -> None:
         """Navigate up through command history."""
@@ -179,10 +169,9 @@ class ShellInput(ShellMessageWidget):
         if self._history_position < len(self._command_history) - 1:
             self._history_position += 1
             self._text_area.setPlainText(self._command_history[self._history_position])
-            # Move cursor to end of text
-            cursor = self._text_area.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            self._text_area.setTextCursor(cursor)
+
+        # Pause for a few event cycles to let layouts settle
+        QTimer.singleShot(5, self._move_cursor_to_end)
 
     def _navigate_history_down(self) -> None:
         """Navigate down through command history."""
@@ -196,10 +185,8 @@ class ShellInput(ShellMessageWidget):
             self._history_position = -1
             self._text_area.setPlainText(self._current_command)
 
-        # Move cursor to end of text
-        cursor = self._text_area.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.End)
-        self._text_area.setTextCursor(cursor)
+        # Pause for a few event cycles to let layouts settle
+        QTimer.singleShot(5, self._move_cursor_to_end)
 
     def _add_to_history(self, command: str) -> None:
         """Add command to history, avoiding duplicates at the front."""

@@ -4,7 +4,7 @@ import logging
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QTextOption, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
+from PySide6.QtGui import QTextOption, QMouseEvent, QPalette, QBrush, QWheelEvent
 
 from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
 from humbug.style_manager import StyleManager
@@ -81,33 +81,4 @@ class LogTextEdit(MinHeightPlainTextEdit):
                 return
 
         # For all other cases, propagate the event up
-        e.ignore()
-
-    def keyPressEvent(self, e: QKeyEvent) -> None:
-        """Handle special key events."""
-        # Since this is read-only, we handle navigation keys differently
-        # Let parent handle terminal navigation keys
-        if e.key() in (
-            Qt.Key.Key_Up, Qt.Key.Key_Down, Qt.Key.Key_PageUp, Qt.Key.Key_PageDown,
-            Qt.Key.Key_Return
-        ):
-            e.ignore()
-            return
-
-        # Handle horizontal scrolling
-        if e.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
-            hbar = self.horizontalScrollBar()
-            if hbar and hbar.isVisible():
-                current = hbar.value()
-                step = 50  # Adjust scroll step size as needed
-                if e.key() == Qt.Key.Key_Left:
-                    hbar.setValue(max(hbar.minimum(), current - step))
-
-                else:
-                    hbar.setValue(min(hbar.maximum(), current + step))
-
-                e.accept()
-                return
-
-        # For read-only widgets, ignore most other key events
         e.ignore()

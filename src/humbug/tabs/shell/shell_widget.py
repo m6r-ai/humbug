@@ -356,6 +356,7 @@ class ShellWidget(QWidget):
             return
 
         # Process as a command
+        self._input.clear()
         self._process_command(content)
 
     def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
