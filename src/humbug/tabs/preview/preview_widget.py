@@ -47,12 +47,12 @@ class PreviewWidgetEventFilter(QObject):
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Simply emit the signal with the object that received the event
             self.widget_activated.emit(watched)
-            return False  # Don't consume the event
+            return False
 
         if event.type() == QEvent.Type.FocusOut:
             # Emit a widget deactivated signal
             self.widget_deactivated.emit(watched)
-            return False  # Don't consume the event
+            return False
 
         return super().eventFilter(watched, event)
 
@@ -177,6 +177,10 @@ class PreviewWidget(QWidget):
         self._event_filter = PreviewWidgetEventFilter(self)
         self._event_filter.widget_activated.connect(self._on_widget_activated)
         self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
+
+    def activate(self) -> None:
+        """Activate the preview widget."""
+        self._scroll_area.setFocus()
 
     def _on_language_changed(self) -> None:
         """Update language-specific elements when language changes."""
@@ -380,7 +384,7 @@ class PreviewWidget(QWidget):
         # Emit activated signal to let the tab know this preview was clicked
         self.activated.emit()
 
-    def _on_widget_deactivated(self, widget: QWidget) -> None:
+    def _on_widget_deactivated(self, _widget: QWidget) -> None:
         """
         Handle deactivation of a widget.
 

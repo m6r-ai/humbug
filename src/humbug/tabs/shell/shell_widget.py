@@ -45,12 +45,12 @@ class ShellWidgetEventFilter(QObject):
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Simply emit the signal with the object that received the event
             self.widget_activated.emit(obj)
-            return False  # Don't consume the event
+            return False
 
         if event.type() == QEvent.Type.FocusOut:
             # Emit a widget deactivated signal
             self.widget_deactivated.emit(obj)
-            return False  # Don't consume the event
+            return False
 
         return super().eventFilter(obj, event)
 

@@ -80,6 +80,10 @@ class PreviewTab(TabBase):
 
         self._start_file_watching(self._path)
 
+    def activate(self) -> None:
+        """Activate the tab."""
+        self._preview_content_widget.activate()
+
     def _on_content_refreshed(self) -> None:
         """Handle when preview content has been refreshed due to file changes."""
         self._logger.debug("Preview content refreshed for path: %s", self._path)
