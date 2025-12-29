@@ -152,11 +152,21 @@ class ShellWidget(QWidget):
 
         self._language_manager = LanguageManager()
 
-        # Create timer for smooth scrolling
+        # Create timer for scrolling
         self._scroll_timer = QTimer(self)
         self._scroll_timer.setInterval(16)  # ~60fps
         self._scroll_timer.timeout.connect(self._update_scroll)
         self._last_mouse_pos: QPoint | None = None
+
+        # Timer for smooth animated scrolling
+        self._smooth_scroll_timer = QTimer(self)
+        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+        self._smooth_scroll_target: int = 0
+        self._smooth_scroll_start: int = 0
+        self._smooth_scroll_distance: int = 0
+        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_time: int = 0
 
         # Setup context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -412,6 +422,49 @@ class ShellWidget(QWidget):
         # Update mouse position
         self._last_mouse_pos = self._scroll_area.viewport().mapFromGlobal(QCursor.pos())
 
+    def _start_smooth_scroll(self, target_value: int) -> None:
+        """
+        Start smooth scrolling animation to target value.
+
+        Args:
+            target_value: Target scroll position
+        """
+        scrollbar = self._scroll_area.verticalScrollBar()
+
+        # If we're already scrolling, stop the current animation
+        if self._smooth_scroll_timer.isActive():
+            self._smooth_scroll_timer.stop()
+
+        # Set up the animation parameters
+        self._smooth_scroll_start = scrollbar.value()
+        self._smooth_scroll_target = target_value
+        self._smooth_scroll_distance = target_value - self._smooth_scroll_start
+        self._smooth_scroll_time = 0
+
+        # Start the animation timer
+        self._smooth_scroll_timer.start()
+
+    def _update_smooth_scroll(self) -> None:
+        """Update the smooth scrolling animation."""
+        self._smooth_scroll_time += self._smooth_scroll_timer.interval()
+
+        # Calculate progress (0 to 1)
+        progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
+
+        # Apply easing function (ease out cubic)
+        t = 1 - (1 - progress) ** 3
+
+        # Calculate new position
+        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+
+        # Update scrollbar position
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scrollbar.setValue(new_position)
+
+        # Stop the timer when animation is complete
+        if progress >= 1.0:
+            self._smooth_scroll_timer.stop()
+
     def _on_scroll_value_changed(self, value: int) -> None:
         """
         Handle scroll value changes to detect user scrolling.
@@ -604,6 +657,25 @@ class ShellWidget(QWidget):
         self._input.set_spotlighted(True)
         self._scroll_to_message(self._input)
 
+    def _perform_scroll_to_position(self, message: ShellMessageWidget, y_offset: int) -> None:
+        """
+        Scroll to position a message at a specific Y offset from the top of viewport.
+
+        This is a low-level helper that performs the actual scrolling operation.
+
+        Args:
+            message: Message widget to scroll to
+            y_offset: Offset from top of viewport (positive values move message down from top)
+        """
+        message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
+        scroll_value = message_pos.y() - y_offset
+
+        # Clamp to valid range
+        scrollbar = self._scroll_area.verticalScrollBar()
+        scroll_value = max(scrollbar.minimum(), min(scrollbar.maximum(), scroll_value))
+
+        self._start_smooth_scroll(scroll_value)
+
     def _scroll_to_message(self, message: ShellMessageWidget) -> None:
         """Ensure the message is visible in the scroll area."""
         # Get the position of the message in the scroll area
@@ -616,23 +688,22 @@ class ShellWidget(QWidget):
         delta = message_pos.y() - scroll_value
 
         message_spacing = int(self._style_manager.message_bubble_spacing())
-        message_y = message_pos.y()
 
         # Determine if scrolling is needed
         if delta < 0:
             # Message is above visible area
-            y = max(0, message_y - message_spacing)
-            self._scroll_area.verticalScrollBar().setValue(y)
+            self._perform_scroll_to_position(message, message_spacing)
 
         elif delta + message.height() > viewport_height:
             # Message is below visible area
             if message.height() > viewport_height:
-                y = max(0, message_y - message_spacing)
-                self._scroll_area.verticalScrollBar().setValue(y)
+                # Message is taller than viewport, position at top
+                self._perform_scroll_to_position(message, message_spacing)
 
             else:
-                y = message_y + message.height() - viewport_height + message_spacing
-                self._scroll_area.verticalScrollBar().setValue(y)
+                # Message fits in viewport, position at bottom
+                bottom_offset = viewport_height - message.height() - message_spacing
+                self._perform_scroll_to_position(message, bottom_offset)
 
     def can_navigate_next_message(self) -> bool:
         """Check if navigation to next message is possible."""

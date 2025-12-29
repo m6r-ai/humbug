@@ -5,6 +5,7 @@
 New features:
 
 - Improved the performance of style changes (makes zoom and colour mode changes quicker).
+- Added smooth scrolling for shell message navigation.
 
 Bug fixes:
 

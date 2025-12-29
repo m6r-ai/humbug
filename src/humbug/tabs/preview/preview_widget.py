@@ -144,7 +144,7 @@ class PreviewWidget(QWidget):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        # Create timer for smooth scrolling
+        # Create timer for scrolling
         self._scroll_timer = QTimer(self)
         self._scroll_timer.setInterval(16)  # ~60fps
         self._scroll_timer.timeout.connect(self._update_scroll)
