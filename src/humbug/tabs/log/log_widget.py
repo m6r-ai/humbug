@@ -128,8 +128,8 @@ class LogWidget(QWidget):
         # Setup signals for search highlights
         self._search_highlights: Dict[LogMessage, List[Tuple[int, int]]] = {}
 
-        # Tracking for focused message
-        self._focused_message_index = -1
+        # Tracking for spotlighted message
+        self._spotlighted_message_index = -1
 
         self._language_manager = LanguageManager()
 
@@ -412,14 +412,14 @@ class LogWidget(QWidget):
     def activate(self) -> None:
         """Activate the log widget."""
         # If we have a focus message then focus it
-        if self._focused_message_index != -1:
-            self._messages[self._focused_message_index].set_focused(True)
+        if self._spotlighted_message_index != -1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(True)
             return
 
         # Otherwise focus the first message if available
         if self._messages:
-            self._focused_message_index = 0
-            self._messages[0].set_focused(True)
+            self._spotlighted_message_index = 0
+            self._messages[0].set_spotlighted(True)
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """
@@ -455,13 +455,13 @@ class LogWidget(QWidget):
         if message_widget is None:
             return
 
-        if message_widget.is_focused():
+        if message_widget.is_spotlighted():
             return
 
         # Set focus on the new message
         if message_widget in self._messages:
-            self._focused_message_index = self._messages.index(message_widget)
-            message_widget.set_focused(True)
+            self._spotlighted_message_index = self._messages.index(message_widget)
+            message_widget.set_spotlighted(True)
 
     def _on_widget_deactivated(self, widget: QWidget) -> None:
         """
@@ -475,9 +475,9 @@ class LogWidget(QWidget):
         if message_widget is None:
             return
 
-        # Remove focus from the currently focused message
-        if self._focused_message_index != -1:
-            self._messages[self._focused_message_index].set_focused(False)
+        # Remove focus from the currently spotlighted message
+        if self._spotlighted_message_index != -1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
 
     def _find_log_message(self, widget: QWidget) -> LogMessage | None:
         """
@@ -503,17 +503,17 @@ class LogWidget(QWidget):
         if not self._messages:
             return False
 
-        # If no message is focused, focus the first one
-        if self._focused_message_index == -1:
-            self._focused_message_index = 0
-            self._focus_message()
+        # If no message is spotlighted, focus the first one
+        if self._spotlighted_message_index == -1:
+            self._spotlighted_message_index = 0
+            self._spotlight_message()
             return True
 
         # Otherwise move to next message if possible
-        if self._focused_message_index < len(self._messages) - 1:
-            self._messages[self._focused_message_index].set_focused(False)
-            self._focused_message_index += 1
-            self._focus_message()
+        if self._spotlighted_message_index < len(self._messages) - 1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            self._spotlighted_message_index += 1
+            self._spotlight_message()
             return True
 
         return False
@@ -523,26 +523,26 @@ class LogWidget(QWidget):
         if not self._messages:
             return False
 
-        # If no message is focused, focus the last one
-        if self._focused_message_index == -1:
-            self._focused_message_index = len(self._messages) - 1
-            self._focus_message()
+        # If no message is spotlighted, focus the last one
+        if self._spotlighted_message_index == -1:
+            self._spotlighted_message_index = len(self._messages) - 1
+            self._spotlight_message()
             return True
 
         # Otherwise move to previous message if possible
-        if self._focused_message_index > 0:
-            self._messages[self._focused_message_index].set_focused(False)
-            self._focused_message_index -= 1
-            self._focus_message()
+        if self._spotlighted_message_index > 0:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            self._spotlighted_message_index -= 1
+            self._spotlight_message()
             return True
 
         return False
 
-    def _focus_message(self) -> None:
-        """Focus and highlight the specified message."""
-        index = self._focused_message_index
+    def _spotlight_message(self) -> None:
+        """Spotlight the specified message."""
+        index = self._spotlighted_message_index
         if 0 <= index < len(self._messages):
-            self._messages[index].set_focused(True)
+            self._messages[index].set_spotlighted(True)
             self._scroll_to_message(self._messages[index])
 
     def _perform_scroll_to_position(self, message: LogMessage, y_offset: int) -> None:
@@ -597,14 +597,14 @@ class LogWidget(QWidget):
         """Check if navigation to next message is possible."""
         return (
             len(self._messages) > 0 and
-            (self._focused_message_index == -1 or self._focused_message_index < len(self._messages) - 1)
+            (self._spotlighted_message_index == -1 or self._spotlighted_message_index < len(self._messages) - 1)
         )
 
     def can_navigate_previous_message(self) -> bool:
         """Check if navigation to previous message is possible."""
         return (
             len(self._messages) > 0 and
-            (self._focused_message_index == -1 or self._focused_message_index > 0)
+            (self._spotlighted_message_index == -1 or self._spotlighted_message_index > 0)
         )
 
     def _on_selection_changed(self, message_widget: LogMessage, has_selection: bool) -> None:
@@ -676,8 +676,8 @@ class LogWidget(QWidget):
                 border-radius: {border_radius}px;
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
             }}
-            #LogMessage[border="focused"] {{
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
+            #LogMessage[border="spotlighted"] {{
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)};
             }}
 
             #LogMessage #_header {{
@@ -797,8 +797,8 @@ class LogWidget(QWidget):
         # Store current scroll position
         metadata["scroll_position"] = self._scroll_area.verticalScrollBar().value()
 
-        # Store focused message index
-        metadata["focused_message_index"] = self._focused_message_index
+        # Store spotlighted message index
+        metadata["spotlighted_message_index"] = self._spotlighted_message_index
 
         return metadata
 
@@ -820,11 +820,11 @@ class LogWidget(QWidget):
         if "scroll_position" in metadata:
             self._scroll_area.verticalScrollBar().setValue(metadata["scroll_position"])
 
-        # Restore focused message index if specified
-        if "focused_message_index" in metadata:
-            self._focused_message_index = metadata["focused_message_index"]
-            if 0 <= self._focused_message_index < len(self._messages):
-                self._messages[self._focused_message_index].set_focused(True)
+        # Restore spotlighted message index if specified
+        if "spotlighted_message_index" in metadata:
+            self._spotlighted_message_index = metadata["spotlighted_message_index"]
+            if 0 <= self._spotlighted_message_index < len(self._messages):
+                self._messages[self._spotlighted_message_index].set_spotlighted(True)
 
     def get_selected_text(self) -> str:
         """

@@ -107,7 +107,7 @@ class ColorRole(Enum):
     MESSAGE_USER_BACKGROUND_PRESSED = auto() # Message background pressed for user messages
     MESSAGE_BORDER = auto()             # Message border
     MESSAGE_USER_BORDER = auto()        # Message border for user messages
-    MESSAGE_FOCUSED = auto()            # For highlighting the focused message
+    MESSAGE_SPOTLIGHTED = auto()        # For highlighting the spotlighted message
     MESSAGE_USER = auto()               # User message
     MESSAGE_AI = auto()                 # AI response
     MESSAGE_REASONING = auto()          # AI reasoning

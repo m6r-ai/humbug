@@ -207,7 +207,7 @@ class ConversationMessage(QFrame):
         # Initialize markdown converter
         self._markdown_converter = MarkdownConverter()
 
-        self._is_focused = False
+        self._is_spotlighted = False
 
         self._on_language_changed()
 
@@ -282,8 +282,8 @@ class ConversationMessage(QFrame):
             border_color = self._get_fade_color()
             border_width = 2
 
-        elif self._is_focused and self.hasFocus():
-            border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
+        elif self._is_spotlighted and self.hasFocus():
+            border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)
             border_width = 2
 
         else:
@@ -325,20 +325,20 @@ class ConversationMessage(QFrame):
 
         self.show()
 
-    def is_focused(self) -> bool:
-        """Check if this message is focused."""
-        return self._is_focused
+    def is_spotlighted(self) -> bool:
+        """Check if this message is spotlighted."""
+        return self._is_spotlighted
 
-    def set_focused(self, focused: bool) -> None:
-        """Set the focused state of this message."""
+    def set_spotlighted(self, spotlighted: bool) -> None:
+        """Set the spotlighted state of this message."""
         if self.isHidden():
             return
 
-        if self._is_focused == focused:
+        if self._is_spotlighted == spotlighted:
             return
 
-        self._is_focused = focused
-        if focused:
+        self._is_spotlighted = spotlighted
+        if spotlighted:
             self.setFocus()
 
         self.style().unpolish(self)
@@ -651,8 +651,8 @@ class ConversationMessage(QFrame):
         if self._is_border_animated:
             return self._get_fade_color()
 
-        if self._is_focused and self.hasFocus():
-            return self._style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)
+        if self._is_spotlighted and self.hasFocus():
+            return self._style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)
 
         current_style = self._message_source or AIMessageSource.USER
         return self._style_manager.get_color_str(

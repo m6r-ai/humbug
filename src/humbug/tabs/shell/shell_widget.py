@@ -147,8 +147,8 @@ class ShellWidget(QWidget):
         # Setup signals for search highlights
         self._search_highlights: Dict[ShellMessageWidget, List[Tuple[int, int]]] = {}
 
-        # Tracking for focused message
-        self._focused_message_index = -1
+        # Tracking for spotlighted message
+        self._spotlighted_message_index = -1
 
         self._language_manager = LanguageManager()
 
@@ -460,11 +460,11 @@ class ShellWidget(QWidget):
     def activate(self) -> None:
         """Activate the shell widget."""
         # If we have a focus message then focus it
-        if self._focused_message_index != -1:
-            self._messages[self._focused_message_index].set_focused(True)
+        if self._spotlighted_message_index != -1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(True)
             return
 
-        self._input.set_focused(True)
+        self._input.set_spotlighted(True)
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """
@@ -490,7 +490,7 @@ class ShellWidget(QWidget):
         # Emit activated signal to let the tab know this shell was clicked
         self.activated.emit()
 
-        # If we are clicking the messages container, focus the last focused message or input
+        # If we are clicking the messages container, focus the last spotlighted message or input
         if widget == self._messages_container:
             self.activate()
             return
@@ -500,17 +500,17 @@ class ShellWidget(QWidget):
         if message_widget is None:
             return
 
-        if message_widget.is_focused():
+        if message_widget.is_spotlighted():
             return
 
         # Set focus on the new message
         if message_widget in self._messages:
-            self._focused_message_index = self._messages.index(message_widget)
-            message_widget.set_focused(True)
+            self._spotlighted_message_index = self._messages.index(message_widget)
+            message_widget.set_spotlighted(True)
             return
 
-        self._focused_message_index = -1
-        self._input.set_focused(True)
+        self._spotlighted_message_index = -1
+        self._input.set_spotlighted(True)
 
     def _on_widget_deactivated(self, widget: QWidget) -> None:
         """
@@ -524,12 +524,12 @@ class ShellWidget(QWidget):
         if message_widget is None:
             return
 
-        # Remove focus from the currently focused message
-        if self._focused_message_index != -1:
-            self._messages[self._focused_message_index].set_focused(False)
+        # Remove focus from the currently spotlighted message
+        if self._spotlighted_message_index != -1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
 
         else:
-            self._input.set_focused(False)
+            self._input.set_spotlighted(False)
 
     def _find_shell_message(self, widget: QWidget) -> ShellMessageWidget | None:
         """
@@ -552,56 +552,56 @@ class ShellWidget(QWidget):
 
     def navigate_to_next_message(self) -> bool:
         """Navigate to the next message or input box if possible."""
-        # If input box is focused, do nothing
-        if self._focused_message_index == -1:
+        # If input box is spotlighted, do nothing
+        if self._spotlighted_message_index == -1:
             return False
 
         # If we're at the last message, move to input box
-        if self._focused_message_index == len(self._messages) - 1:
-            self._messages[self._focused_message_index].set_focused(False)
-            self._focused_message_index = -1
-            self._focus_message()
+        if self._spotlighted_message_index == len(self._messages) - 1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            self._spotlighted_message_index = -1
+            self._spotlight_message()
             return True
 
         # Otherwise move to next message
-        if self._focused_message_index < len(self._messages) - 1:
-            self._messages[self._focused_message_index].set_focused(False)
-            self._focused_message_index += 1
-            self._focus_message()
+        if self._spotlighted_message_index < len(self._messages) - 1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            self._spotlighted_message_index += 1
+            self._spotlight_message()
             return True
 
         return False
 
     def navigate_to_previous_message(self) -> bool:
         """Navigate to the previous message if possible."""
-        # If input box is focused, move to the last message
-        if self._focused_message_index == -1:
+        # If input box is spotlighted, move to the last message
+        if self._spotlighted_message_index == -1:
             if self._messages:
-                self._input.set_focused(False)
-                self._focused_message_index = len(self._messages) - 1
-                self._focus_message()
+                self._input.set_spotlighted(False)
+                self._spotlighted_message_index = len(self._messages) - 1
+                self._spotlight_message()
                 return True
 
             return False
 
         # Otherwise move to previous message if possible
-        if self._focused_message_index > 0:
-            self._messages[self._focused_message_index].set_focused(False)
-            self._focused_message_index -= 1
-            self._focus_message()
+        if self._spotlighted_message_index > 0:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+            self._spotlighted_message_index -= 1
+            self._spotlight_message()
             return True
 
         return False
 
-    def _focus_message(self) -> None:
-        """Focus and highlight the specified message."""
-        index = self._focused_message_index
+    def _spotlight_message(self) -> None:
+        """Spotlight the specified message."""
+        index = self._spotlighted_message_index
         if 0 <= index < len(self._messages):
-            self._messages[index].set_focused(True)
+            self._messages[index].set_spotlighted(True)
             self._scroll_to_message(self._messages[index])
             return
 
-        self._input.set_focused(True)
+        self._input.set_spotlighted(True)
         self._scroll_to_message(self._input)
 
     def _scroll_to_message(self, message: ShellMessageWidget) -> None:
@@ -642,7 +642,7 @@ class ShellWidget(QWidget):
         """Check if navigation to previous message is possible."""
         return (
             self._input.hasFocus() or
-            (0 <= self._focused_message_index < len(self._messages) and self._focused_message_index > 0)
+            (0 <= self._spotlighted_message_index < len(self._messages) and self._spotlighted_message_index > 0)
         )
 
     def _on_selection_changed(self, message_widget: ShellMessageWidget, has_selection: bool) -> None:
@@ -747,8 +747,8 @@ class ShellWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
             }}
-            #ShellMessageWidget[border="focused"] {{
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_FOCUSED)};
+            #ShellMessageWidget[border="spotlighted"] {{
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)};
             }}
 
             #ShellMessageWidget #_header {{

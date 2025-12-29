@@ -99,7 +99,7 @@ class ShellMessageWidget(QFrame):
 
         self._layout.addWidget(self._text_area)
 
-        self._is_focused = False
+        self._is_spotlighted = False
         self._mouse_left_button_pressed = False
 
         self.apply_style()
@@ -109,18 +109,18 @@ class ShellMessageWidget(QFrame):
         """Get the message ID."""
         return self._message_id
 
-    def is_focused(self) -> bool:
-        """Check if this message is focused."""
-        return self._is_focused
+    def is_spotlighted(self) -> bool:
+        """Check if this message is spotlighted."""
+        return self._is_spotlighted
 
-    def set_focused(self, focused: bool) -> None:
-        """Set the focused state of this message."""
-        if self._is_focused == focused:
+    def set_spotlighted(self, spotlighted: bool) -> None:
+        """Set the spotlighted state of this message."""
+        if self._is_spotlighted == spotlighted:
             return
 
-        self._is_focused = focused
-        if focused:
-            self.setProperty("border", "focused")
+        self._is_spotlighted = spotlighted
+        if spotlighted:
+            self.setProperty("border", "spotlighted")
             self.setFocus()
 
         else:
