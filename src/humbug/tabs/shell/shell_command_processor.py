@@ -9,8 +9,8 @@ from syntax import TokenType, Token
 from humbug.tabs.shell.shell_command_completion_result import ShellCommandCompletionResult
 from humbug.tabs.shell.shell_command_parser import ShellCommandParser
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 from humbug.tabs.shell.shell_history_manager import ShellHistoryManager
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
 
 
 class ShellCommandProcessor:
@@ -92,7 +92,7 @@ class ShellCommandProcessor:
             return
 
         # Add user command to history
-        self._history_manager.add_message(ShellMessageSource.USER, command_text)
+        self._history_manager.add_message(ShellEventSource.USER, command_text)
 
         self._completion_start_pos = 0
 
@@ -100,7 +100,7 @@ class ShellCommandProcessor:
         cmd = self._get_command_name(self._current_tokens)
         if not cmd:
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 "Invalid command format. Type 'help' for a list of available commands."
             )
             return
@@ -108,7 +108,7 @@ class ShellCommandProcessor:
         command = self._command_registry.get_command(cmd)
         if not command:
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 f"Unknown command: {cmd}. Type 'help' for a list of available commands."
             )
             return
@@ -119,7 +119,7 @@ class ShellCommandProcessor:
         except Exception as e:
             self._logger.error("Error executing command '%s': %s", command_text, str(e), exc_info=True)
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
 

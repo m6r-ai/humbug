@@ -7,9 +7,9 @@ from typing import List
 from PySide6.QtCore import QObject, Signal
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.tabs.shell.shell_event import ShellEvent
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 from humbug.tabs.shell.shell_history import ShellHistory
-from humbug.tabs.shell.shell_message import ShellMessage
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
 
 
 class ShellHistoryManager(QObject):
@@ -56,7 +56,7 @@ class ShellHistoryManager(QObject):
 
         self.history_updated.emit()
 
-    def add_message(self, source: ShellMessageSource, content: str) -> ShellMessage:
+    def add_message(self, source: ShellEventSource, content: str) -> ShellEvent:
         """
         Add a new shell message to history.
 
@@ -65,9 +65,9 @@ class ShellHistoryManager(QObject):
             content: Content of the message
 
         Returns:
-            The created ShellMessage
+            The created ShellEvent
         """
-        message = ShellMessage.create(source, content)
+        message = ShellEvent.create(source, content)
         self._history.add_message(message)
 
         # Save to disk if we have a mindspace
@@ -77,12 +77,12 @@ class ShellHistoryManager(QObject):
         self.history_updated.emit()
         return message
 
-    def get_messages(self) -> List[ShellMessage]:
+    def get_messages(self) -> List[ShellEvent]:
         """
         Get all shell messages in chronological order.
 
         Returns:
-            List of ShellMessage objects
+            List of ShellEvent objects
         """
         return self._history.get_messages()
 

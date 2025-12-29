@@ -7,8 +7,8 @@ from typing import Dict, List
 from syntax import Token, TokenType
 
 from humbug.mindspace.mindspace_manager import MindspaceManager
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 from humbug.tabs.shell.shell_history_manager import ShellHistoryManager
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
 
 
 class ShellCommand:
@@ -112,7 +112,7 @@ class ShellCommand:
         except Exception as e:
             self._logger.error("Error executing command: %s", str(e), exc_info=True)
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 f"Error executing command: {str(e)}"
             )
             return False
@@ -226,7 +226,7 @@ class ShellCommand:
 
         # Display help
         self._history_manager.add_message(
-            ShellMessageSource.SUCCESS,
+            ShellEventSource.SUCCESS,
             help_text
         )
 

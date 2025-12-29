@@ -10,7 +10,7 @@ from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandEdit(ShellCommand):
@@ -54,7 +54,7 @@ class ShellCommandEdit(ShellCommand):
         args = self._get_positional_arguments(tokens)
         if not args:
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 "No filename specified. Usage: edit <filename>"
             )
             return False
@@ -69,7 +69,7 @@ class ShellCommandEdit(ShellCommand):
 
                 except OSError as e:
                     self._history_manager.add_message(
-                        ShellMessageSource.ERROR,
+                        ShellEventSource.ERROR,
                         f"Failed to create directory: {str(e)}"
                     )
                     return False
@@ -87,7 +87,7 @@ class ShellCommandEdit(ShellCommand):
             f"Shell opened editor for: '{full_path}'\ntab ID: {editor_tab.tab_id()}"
         )
         self._history_manager.add_message(
-            ShellMessageSource.SUCCESS,
+            ShellEventSource.SUCCESS,
             f"Editing file: {args[0]}"
         )
         return True

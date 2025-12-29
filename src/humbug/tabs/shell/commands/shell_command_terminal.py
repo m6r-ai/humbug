@@ -6,7 +6,7 @@ from syntax import Token, TokenType
 
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandTerminal(ShellCommand):
@@ -50,7 +50,7 @@ class ShellCommandTerminal(ShellCommand):
             self._column_manager.protect_current_tab(False)
 
         self._history_manager.add_message(
-            ShellMessageSource.SUCCESS,
+            ShellEventSource.SUCCESS,
             "Started new terminal"
         )
         return True

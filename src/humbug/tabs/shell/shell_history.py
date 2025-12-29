@@ -5,8 +5,8 @@ import logging
 import os
 from typing import List
 
-from humbug.tabs.shell.shell_message import ShellMessage
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
+from humbug.tabs.shell.shell_event import ShellEvent
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellHistory:
@@ -19,16 +19,16 @@ class ShellHistory:
         Args:
             max_messages: Maximum number of messages to keep in history
         """
-        self._messages: List[ShellMessage] = []
+        self._messages: List[ShellEvent] = []
         self._max_messages = max_messages
         self._logger = logging.getLogger("ShellHistory")
 
-    def add_message(self, message: ShellMessage) -> None:
+    def add_message(self, message: ShellEvent) -> None:
         """
         Add a message to the history.
 
         Args:
-            message: The ShellMessage to add
+            message: The ShellEvent to add
         """
         self._messages.append(message)
 
@@ -36,12 +36,12 @@ class ShellHistory:
         if len(self._messages) > self._max_messages:
             self._messages = self._messages[-self._max_messages:]
 
-    def get_messages(self) -> List[ShellMessage]:
+    def get_messages(self) -> List[ShellEvent]:
         """
         Get all messages in chronological order.
 
         Returns:
-            List of ShellMessage objects
+            List of ShellEvent objects
         """
         return self._messages.copy()
 
@@ -100,8 +100,9 @@ class ShellHistory:
             self._messages = []
             for msg_data in data.get("messages", []):
                 try:
-                    message = ShellMessage.from_dict(msg_data)
+                    message = ShellEvent.from_dict(msg_data)
                     self._messages.append(message)
+
                 except (KeyError, ValueError) as e:
                     self._logger.warning("Skipping invalid message in history: %s", str(e))
                     continue
@@ -131,7 +132,7 @@ class ShellHistory:
 
         # Process messages from newest to oldest
         for message in reversed(self._messages):
-            if message.source == ShellMessageSource.USER:
+            if message.source == ShellEventSource.USER:
                 content = message.content.strip()
                 if content and content not in user_commands:
                     user_commands.append(content)

@@ -15,10 +15,10 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.style_manager import StyleManager
 from humbug.tabs.shell.shell_command_processor import ShellCommandProcessor
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
+from humbug.tabs.shell.shell_event import ShellEvent
 from humbug.tabs.shell.shell_history_manager import ShellHistoryManager
 from humbug.tabs.shell.shell_input import ShellInput
 from humbug.tabs.shell.shell_message import ShellMessage
-from humbug.tabs.shell.shell_message_widget import ShellMessageWidget
 
 
 class ShellWidgetEventFilter(QObject):
@@ -89,8 +89,8 @@ class ShellWidget(QWidget):
         self._style_manager = StyleManager()
 
         # Widget tracking
-        self._messages: List[ShellMessageWidget] = []
-        self._message_with_selection: ShellMessageWidget | None = None
+        self._messages: List[ShellMessage] = []
+        self._message_with_selection: ShellMessage | None = None
 
         # Initialize tracking variables
         self._auto_scroll = True
@@ -145,7 +145,7 @@ class ShellWidget(QWidget):
         shell_layout.addWidget(self._scroll_area)
 
         # Setup signals for search highlights
-        self._search_highlights: Dict[ShellMessageWidget, List[Tuple[int, int]]] = {}
+        self._search_highlights: Dict[ShellMessage, List[Tuple[int, int]]] = {}
 
         # Tracking for spotlighted message
         self._spotlighted_message_index = -1
@@ -180,11 +180,11 @@ class ShellWidget(QWidget):
         self._on_style_changed()
 
         # Find functionality
-        self._matches: List[Tuple[ShellMessageWidget, List[Tuple[int, int]]]] = []
+        self._matches: List[Tuple[ShellMessage, List[Tuple[int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
         self._last_search = ""
-        self._highlighted_widgets: Set[ShellMessageWidget] = set()
+        self._highlighted_widgets: Set[ShellMessage] = set()
 
         # Set up activation tracking
         self._event_filter = ShellWidgetEventFilter(self)
@@ -322,16 +322,16 @@ class ShellWidget(QWidget):
 
         self._messages.clear()
 
-    def _add_shell_message(self, message: ShellMessage) -> None:
+    def _add_shell_message(self, message: ShellEvent) -> None:
         """Add a message from the shell message history."""
-        msg_widget = ShellMessageWidget(self)
+        msg_widget = ShellMessage(self)
         msg_widget.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(msg_widget, has_selection)
         )
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
 
-        # Set content using fields from ShellMessage model
+        # Set content using fields from ShellEvent model
         msg_widget.set_content(
             message.content,
             message.source,
@@ -548,7 +548,7 @@ class ShellWidget(QWidget):
             self.activate()
             return
 
-        # Find the ShellMessageWidget that contains this widget
+        # Find the ShellMessage that contains this widget
         message_widget = self._find_shell_message(widget)
         if message_widget is None:
             return
@@ -572,7 +572,7 @@ class ShellWidget(QWidget):
         Args:
             widget: The widget that lost focus
         """
-        # Find the ShellMessageWidget that contains this widget
+        # Find the ShellMessage that contains this widget
         message_widget = self._find_shell_message(widget)
         if message_widget is None:
             return
@@ -584,19 +584,19 @@ class ShellWidget(QWidget):
         else:
             self._input.set_spotlighted(False)
 
-    def _find_shell_message(self, widget: QWidget) -> ShellMessageWidget | None:
+    def _find_shell_message(self, widget: QWidget) -> ShellMessage | None:
         """
-        Find the ShellMessageWidget that contains the given widget.
+        Find the ShellMessage that contains the given widget.
 
         Args:
-            widget: The widget to find the containing ShellMessageWidget for
+            widget: The widget to find the containing ShellMessage for
 
         Returns:
-            The ShellMessageWidget containing the widget, or None if not found
+            The ShellMessage containing the widget, or None if not found
         """
         current: QObject = widget
         while current:
-            if isinstance(current, ShellMessageWidget):
+            if isinstance(current, ShellMessage):
                 return current
 
             current = current.parent()
@@ -657,7 +657,7 @@ class ShellWidget(QWidget):
         self._input.set_spotlighted(True)
         self._scroll_to_message(self._input)
 
-    def _perform_scroll_to_position(self, message: ShellMessageWidget, y_offset: int) -> None:
+    def _perform_scroll_to_position(self, message: ShellMessage, y_offset: int) -> None:
         """
         Scroll to position a message at a specific Y offset from the top of viewport.
 
@@ -676,7 +676,7 @@ class ShellWidget(QWidget):
 
         self._start_smooth_scroll(scroll_value)
 
-    def _scroll_to_message(self, message: ShellMessageWidget) -> None:
+    def _scroll_to_message(self, message: ShellMessage) -> None:
         """Ensure the message is visible in the scroll area."""
         # Get the position of the message in the scroll area
         message_pos = message.mapTo(self._messages_container, QPoint(0, 0))
@@ -716,7 +716,7 @@ class ShellWidget(QWidget):
             (0 <= self._spotlighted_message_index < len(self._messages) and self._spotlighted_message_index > 0)
         )
 
-    def _on_selection_changed(self, message_widget: ShellMessageWidget, has_selection: bool) -> None:
+    def _on_selection_changed(self, message_widget: ShellMessage, has_selection: bool) -> None:
         """Handle selection changes in message widgets."""
         if not has_selection:
             if self._message_with_selection:
@@ -808,21 +808,21 @@ class ShellWidget(QWidget):
         border_radius = int(self._style_manager.message_bubble_spacing())
 
         return f"""
-            #ShellMessageWidget {{
+            #ShellMessage {{
                 margin: 0;
                 border-radius: {border_radius}px;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
             }}
-            #ShellMessageWidget[message_source="user"] {{
+            #ShellMessage[message_source="user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
             }}
-            #ShellMessageWidget[border="spotlighted"] {{
+            #ShellMessage[border="spotlighted"] {{
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)};
             }}
 
-            #ShellMessageWidget #_header {{
+            #ShellMessage #_header {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;
@@ -830,24 +830,24 @@ class ShellWidget(QWidget):
                 margin: 0;
             }}
 
-            #ShellMessageWidget #_role_label {{
+            #ShellMessage #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 margin: 0;
                 padding: 0;
                 border: none;
                 background-color: transparent;
             }}
-            #ShellMessageWidget #_role_label[message_source="user"] {{
+            #ShellMessage #_role_label[message_source="user"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
             }}
-            #ShellMessageWidget #_role_label[message_source="success"] {{
+            #ShellMessage #_role_label[message_source="success"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_SUCCESS)};
             }}
-            #ShellMessageWidget #_role_label[message_source="error"] {{
+            #ShellMessage #_role_label[message_source="error"] {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
 
-            #ShellMessageWidget #_text_area {{
+            #ShellMessage #_text_area {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 border: none;
@@ -857,20 +857,20 @@ class ShellWidget(QWidget):
                 background-color: transparent;
             }}
 
-            #ShellMessageWidget #_text_area QScrollBar:horizontal {{
+            #ShellMessage #_text_area QScrollBar:horizontal {{
                 height: 12px;
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
             }}
-            #ShellMessageWidget #_text_area QScrollBar::handle:horizontal {{
+            #ShellMessage #_text_area QScrollBar::handle:horizontal {{
                 background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-width: 20px;
             }}
-            #ShellMessageWidget #_text_area QScrollBar::add-page:horizontal,
-            #ShellMessageWidget #_text_area QScrollBar::sub-page:horizontal {{
+            #ShellMessage #_text_area QScrollBar::add-page:horizontal,
+            #ShellMessage #_text_area QScrollBar::sub-page:horizontal {{
                 background: none;
             }}
-            #ShellMessageWidget #_text_area QScrollBar::add-line:horizontal,
-            #ShellMessageWidget #_text_area QScrollBar::sub-line:horizontal {{
+            #ShellMessage #_text_area QScrollBar::add-line:horizontal,
+            #ShellMessage #_text_area QScrollBar::sub-line:horizontal {{
                 width: 0px;
             }}
         """
@@ -1114,7 +1114,7 @@ class ShellWidget(QWidget):
             # Track highlighted widgets
             self._highlighted_widgets.add(widget)
 
-    def _handle_find_scroll(self, widget: ShellMessageWidget, position: int) -> None:
+    def _handle_find_scroll(self, widget: ShellMessage, position: int) -> None:
         """
         Handle scroll requests from find operations.
 

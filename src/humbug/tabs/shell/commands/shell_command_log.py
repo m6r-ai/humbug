@@ -7,7 +7,7 @@ from syntax import Token
 
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandLog(ShellCommand):
@@ -55,7 +55,7 @@ class ShellCommandLog(ShellCommand):
             self._column_manager.protect_current_tab(False)
 
         self._history_manager.add_message(
-            ShellMessageSource.SUCCESS,
+            ShellEventSource.SUCCESS,
             "Opened mindspace log"
         )
 

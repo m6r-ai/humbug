@@ -6,7 +6,7 @@ from syntax import Token, TokenType
 
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandHelp(ShellCommand):
@@ -54,7 +54,7 @@ class ShellCommandHelp(ShellCommand):
                 return True
 
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 f"Unknown command: {command_name}"
             )
             return False
@@ -74,7 +74,7 @@ class ShellCommandHelp(ShellCommand):
         help_text += "\nType 'help <command>' or '<command> --help' for detailed help on a specific command."
 
         self._history_manager.add_message(
-            ShellMessageSource.SUCCESS,
+            ShellEventSource.SUCCESS,
             help_text
         )
 

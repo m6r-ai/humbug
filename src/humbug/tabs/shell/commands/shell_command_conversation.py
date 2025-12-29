@@ -11,7 +11,7 @@ from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.tabs.shell.shell_command import ShellCommand
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 from humbug.user.user_manager import UserManager
 
 
@@ -93,14 +93,14 @@ class ShellCommandConversation(ShellCommand):
                 temperature_val = float(temp_values[0])
                 if temperature_val < 0.0 or temperature_val > 1.0:
                     self._history_manager.add_message(
-                        ShellMessageSource.ERROR,
+                        ShellEventSource.ERROR,
                         "Temperature must be between 0.0 and 1.0"
                     )
                     return False
 
             except ValueError:
                 self._history_manager.add_message(
-                    ShellMessageSource.ERROR,
+                    ShellEventSource.ERROR,
                     "Temperature must be a valid number"
                 )
                 return False
@@ -118,7 +118,7 @@ class ShellCommandConversation(ShellCommand):
             conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
 
         except (MindspaceError, ColumnManagerError) as e:
-            self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
+            self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to create conversation: {str(e)}")
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.ERROR,
                 f"Shell failed to create conversation: {str(e)}"
@@ -129,7 +129,7 @@ class ShellCommandConversation(ShellCommand):
             self._column_manager.protect_current_tab(False)
 
         self._history_manager.add_message(
-            ShellMessageSource.SUCCESS,
+            ShellEventSource.SUCCESS,
             "Started new conversation"
         )
         self._mindspace_manager.add_interaction(

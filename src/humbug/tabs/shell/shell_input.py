@@ -9,11 +9,11 @@ from PySide6.QtWidgets import QWidget
 
 from humbug.language.language_manager import LanguageManager
 from humbug.tabs.shell.shell_command_completion_result import ShellCommandCompletionResult
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
-from humbug.tabs.shell.shell_message_widget import ShellMessageWidget
+from humbug.tabs.shell.shell_event_source import ShellEventSource
+from humbug.tabs.shell.shell_message import ShellMessage
 
 
-class ShellInput(ShellMessageWidget):
+class ShellInput(ShellMessage):
     """Widget for shell message input that matches history styling and behaves like a terminal."""
 
     # Forward text cursor signals from the input area
@@ -46,7 +46,7 @@ class ShellInput(ShellMessageWidget):
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
-        self._message_source = ShellMessageSource.USER  # Set default source for styling
+        self._message_source = ShellEventSource.USER  # Set default source for styling
         self._update_header_text()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:

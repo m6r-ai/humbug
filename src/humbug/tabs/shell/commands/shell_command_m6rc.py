@@ -16,7 +16,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 from humbug.user.user_manager import UserManager
 
 
@@ -92,7 +92,7 @@ class ShellCommandM6rc(ShellCommand):
         args = self._get_positional_arguments(tokens)
         if not args:
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 "No file path provided"
             )
             return False
@@ -114,14 +114,14 @@ class ShellCommandM6rc(ShellCommand):
                 temperature_val = float(temp_values[0])
                 if temperature_val < 0.0 or temperature_val > 1.0:
                     self._history_manager.add_message(
-                        ShellMessageSource.ERROR,
+                        ShellEventSource.ERROR,
                         "Temperature must be between 0.0 and 1.0"
                     )
                     return False
 
             except ValueError:
                 self._history_manager.add_message(
-                    ShellMessageSource.ERROR,
+                    ShellEventSource.ERROR,
                     "Temperature must be a valid number"
                 )
                 return False
@@ -139,7 +139,7 @@ class ShellCommandM6rc(ShellCommand):
         file_path = self._mindspace_manager.get_absolute_path(args[0])
         if not os.path.exists(file_path):
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 f"File not found: {file_path}"
             )
             return False
@@ -155,13 +155,13 @@ class ShellCommandM6rc(ShellCommand):
 
         except FileNotFoundError:
             error = f"File not found: {file_path}"
-            self._history_manager.add_message(ShellMessageSource.ERROR, error)
+            self._history_manager.add_message(ShellEventSource.ERROR, error)
             self._mindspace_manager.add_interaction(MindspaceLogLevel.ERROR, error)
             return False
 
         except MetaphorASTBuilderError as e:
             error = f"m6rc compile failed:\n\n{format_errors(e.errors)}"
-            self._history_manager.add_message(ShellMessageSource.ERROR, error)
+            self._history_manager.add_message(ShellEventSource.ERROR, error)
             self._mindspace_manager.add_interaction(MindspaceLogLevel.ERROR, error)
             return False
 
@@ -171,7 +171,7 @@ class ShellCommandM6rc(ShellCommand):
             conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
 
         except (MindspaceError, ColumnManagerError) as e:
-            self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to create conversation: {str(e)}")
+            self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to create conversation: {str(e)}")
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.ERROR,
                 f"Shell failed to create conversation: {str(e)}"
@@ -187,7 +187,7 @@ class ShellCommandM6rc(ShellCommand):
             conversation_tab.submit()
 
         self._history_manager.add_message(
-            ShellMessageSource.SUCCESS,
+            ShellEventSource.SUCCESS,
             f"Started Metaphor conversation from {file_path}"
         )
         return True

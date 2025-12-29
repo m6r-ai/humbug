@@ -11,7 +11,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
-from humbug.tabs.shell.shell_message_source import ShellMessageSource
+from humbug.tabs.shell.shell_event_source import ShellEventSource
 
 
 class ShellCommandPreview(ShellCommand):
@@ -51,7 +51,7 @@ class ShellCommandPreview(ShellCommand):
         args = self._get_positional_arguments(tokens)
         if not args:
             self._history_manager.add_message(
-                ShellMessageSource.ERROR,
+                ShellEventSource.ERROR,
                 "No filename specified. Usage: preview <filename>"
             )
             return False
@@ -66,7 +66,7 @@ class ShellCommandPreview(ShellCommand):
 
                 except OSError as e:
                     self._history_manager.add_message(
-                        ShellMessageSource.ERROR,
+                        ShellEventSource.ERROR,
                         f"Failed to create directory: {str(e)}"
                     )
                     return False
@@ -77,7 +77,7 @@ class ShellCommandPreview(ShellCommand):
             self._column_manager.open_preview_page(full_path, False)
 
         except ColumnManagerError as e:
-            self._history_manager.add_message(ShellMessageSource.ERROR, f"Failed to open preview page: {str(e)}")
+            self._history_manager.add_message(ShellEventSource.ERROR, f"Failed to open preview page: {str(e)}")
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.ERROR,
                 f"Shell failed to open preview page: {str(e)}"
@@ -88,7 +88,7 @@ class ShellCommandPreview(ShellCommand):
             self._column_manager.protect_current_tab(False)
 
         self._history_manager.add_message(
-            ShellMessageSource.SUCCESS,
+            ShellEventSource.SUCCESS,
             f"Opening page: {args[0]}"
         )
         return True
