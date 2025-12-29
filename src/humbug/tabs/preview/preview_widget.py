@@ -335,9 +335,6 @@ class PreviewWidget(QWidget):
 
     def _on_edit_clicked(self) -> None:
         """Handle edit button clicks from content blocks."""
-        # Activate this widget
-        self.activated.emit()
-
         # Emit the edit_file signal
         self.edit_file.emit(self._path)
 
@@ -348,9 +345,6 @@ class PreviewWidget(QWidget):
         Args:
             url: The URL that was clicked
         """
-        # Activate this widget
-        self.activated.emit()
-
         # Handle local links (anchors starting with #)
         if url.startswith("#"):
             # Extract the target ID without the # prefix

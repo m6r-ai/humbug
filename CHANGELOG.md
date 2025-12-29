@@ -13,6 +13,7 @@ Bug fixes:
 - Fixed a problem with zoom scaling of markdown text blocks.
 - Fixed a markdown parsing issue affecting paragraphs inside lists.
 - Improved exception handling for UI interactions.
+- Fixed a problem where preview tabs needed to be clicked twice to correctly gain focus.
 
 Internal structure changes:
 
