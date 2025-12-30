@@ -170,8 +170,13 @@ class ConversationWidget(QWidget):
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
+        # Set up the event filter for activation tracking
+        self._event_filter = ConversationWidgetEventFilter(self)
+        self._event_filter.widget_activated.connect(self._on_widget_activated)
+        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
+
         # Set up the input box
-        self._input = ConversationInput(AIMessageSource.USER, self._messages_container)
+        self._input = ConversationInput(self._event_filter, AIMessageSource.USER, self._messages_container)
         self._input.cursor_position_changed.connect(self._ensure_cursor_visible)
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
@@ -237,11 +242,8 @@ class ConversationWidget(QWidget):
         self._last_search = ""
         self._highlighted_widgets: Set[ConversationMessage] = set()
 
-        # Set up activation tracking
-        self._event_filter = ConversationWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._on_widget_activated)
-        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
-        self._install_activation_tracking(self._input)
+        # Set up activation tracking for the messages container.  The messsages install their own
+        # activation tracking when they are created and when they add sections.
         self._install_activation_tracking(self._messages_container)
 
         # Create transcript handler with provided filename, then load the transcript data
@@ -323,6 +325,7 @@ class ConversationWidget(QWidget):
             self._hide_user_queued_messages()
 
         msg_widget = ConversationMessage(
+            self._event_filter,
             message.source,
             message.timestamp,
             message.model or "",
@@ -358,8 +361,6 @@ class ConversationWidget(QWidget):
             self._container_show_timer.start(5)
 
         self._messages.append(msg_widget)
-
-        self._install_activation_tracking(msg_widget)
 
         # If we're currently animating, transfer animation to this new message
         # but only if the new message is not hidden

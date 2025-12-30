@@ -3,7 +3,7 @@
 import sys
 from typing import cast, Dict
 
-from PySide6.QtCore import Signal, Qt, QRect, QSize
+from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
 from PySide6.QtWidgets import QWidget, QToolButton
 
@@ -24,7 +24,7 @@ class ConversationInput(ConversationMessage):
     settings_requested = Signal()
     modified = Signal()
 
-    def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
+    def __init__(self, event_filter: QObject, style: AIMessageSource, parent: QWidget | None = None) -> None:
         """Initialize the conversation input widget."""
         self._is_streaming = False
         self._current_model = ""
@@ -32,7 +32,7 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
 
-        super().__init__(style, parent=parent, is_input=True, do_not_style=True)
+        super().__init__(event_filter, style, parent=parent, is_input=True, do_not_style=True)
 
         # Connect text cursor signals
         self._text_area = self._sections[0].text_area()

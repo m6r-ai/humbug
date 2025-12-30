@@ -1,12 +1,12 @@
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, cast
 import colorsys
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt
+from PySide6.QtCore import Signal, QPoint, QSize, Qt, QObject
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
 
 from ai import AIMessageSource
@@ -38,6 +38,7 @@ class ConversationMessage(QFrame):
 
     def __init__(
         self,
+        event_filter: QObject,
         style: AIMessageSource,
         timestamp: datetime | None = None,
         model: str | None = None,
@@ -70,6 +71,7 @@ class ConversationMessage(QFrame):
         self.setObjectName("ConversationMessage")
 
         self._is_input = is_input
+        self._event_filter = event_filter
 
         self._logger = logging.getLogger("ConversationMessage")
 
@@ -198,6 +200,13 @@ class ConversationMessage(QFrame):
         self._sections: List[ConversationMessageSection] = []
         self._section_with_selection: ConversationMessageSection | None = None
 
+        # Install event filter to ensure activation events propagate to the our parent.  Do this before we add
+        # and message sections!
+        self.installEventFilter(self._event_filter)
+        child: QWidget
+        for child in self.findChildren(QWidget):
+            cast(QWidget, child).installEventFilter(self._event_filter)
+
         # If this is an input widget then create the input section
         if is_input:
             section = self._create_section_widget()
@@ -222,7 +231,7 @@ class ConversationMessage(QFrame):
 
         self._context = context
         if content:
-            self.set_content(content)
+            self.set_content(content,)
 
         self.setLayout(self._layout)
 
@@ -510,6 +519,12 @@ class ConversationMessage(QFrame):
         section.setProperty("section_style", style_class)
         section.apply_style()
 
+        # Install event filter to ensure activation events propagate to the our parent
+        section.installEventFilter(self._event_filter)
+        child: QWidget
+        for child in self.findChildren(QWidget):
+            cast(QWidget, child).installEventFilter(self._event_filter)
+
         return section
 
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
@@ -619,6 +634,12 @@ class ConversationMessage(QFrame):
 
         # Expand the message for context when showing the approval UI
         self.set_expanded(True)
+
+        # Install event filter to ensure activation events propagate to the our parent
+        self._approval_widget.installEventFilter(self._event_filter)
+        child: QWidget
+        for child in self._approval_widget.findChildren(QWidget):
+            cast(QWidget, child).installEventFilter(self._event_filter)
 
     def _approve_tool_call(self, tool_call: AIToolCall) -> None:
         """Handle tool call approval."""
