@@ -1123,12 +1123,13 @@ class ConversationWidget(QWidget):
 
     def activate(self) -> None:
         """Activate the conversation widget."""
-        # If we have a focus message then focus it
+        # If we have a spotlighted message then spotlight it
         if self._spotlighted_message_index != -1:
             self._messages[self._spotlighted_message_index].set_spotlighted(True)
+            self._messages[self._spotlighted_message_index].setFocus()
             return
 
-        # If our input box is hidden then focus the last message.
+        # If our input box is hidden then spotlight the last message.
         if self._input.isHidden():
             last_visible_index = self._find_last_visible_message()
             if last_visible_index == -1:
@@ -1136,9 +1137,11 @@ class ConversationWidget(QWidget):
 
             self._spotlighted_message_index = last_visible_index
             self._messages[self._spotlighted_message_index].set_spotlighted(True)
+            self._messages[self._spotlighted_message_index].setFocus()
             return
 
         self._input.set_spotlighted(True)
+        self._input.setFocus()
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """
@@ -1156,7 +1159,7 @@ class ConversationWidget(QWidget):
 
     def _on_widget_activated(self, widget: QWidget) -> None:
         """
-        Handle activation of a widget, focusing the associated message.
+        Handle activation of a widget, spotlighting the associated message.
 
         Args:
             widget: The widget that was activated
@@ -1164,7 +1167,7 @@ class ConversationWidget(QWidget):
          # Emit activated signal to let the tab know this conversation was clicked
         self.activated.emit()
 
-        # If we are clicking the messages container, focus the last spotlighted message or input
+        # If we are clicking the messages container, spotlight the last spotlighted message or input
         if widget == self._messages_container:
             self.activate()
             return
@@ -1177,7 +1180,7 @@ class ConversationWidget(QWidget):
         if message_widget.is_spotlighted():
             return
 
-        # Set focus on the new message
+        # Set spotlight on the new message
         if message_widget in self._messages:
             self._spotlighted_message_index = self._messages.index(message_widget)
             message_widget.set_spotlighted(True)
@@ -1188,7 +1191,7 @@ class ConversationWidget(QWidget):
 
     def _on_widget_deactivated(self, widget: QWidget) -> None:
         """
-        Handle deactivation of a widget, checking if focus is leaving the associated message.
+        Handle deactivation of a widget, checking if spotlight is leaving the associated message.
 
         Args:
             widget: The widget that lost focus
@@ -1335,10 +1338,12 @@ class ConversationWidget(QWidget):
         index = self._spotlighted_message_index
         if 0 <= index < len(self._messages):
             self._messages[index].set_spotlighted(True)
+            self._messages[index].setFocus()
             self._scroll_to_message(self._messages[index])
             return
 
         self._input.set_spotlighted(True)
+        self._input.setFocus()
         self._scroll_to_message(self._input)
 
     def _perform_scroll_to_position(self, message: ConversationMessage, y_offset: int) -> None:
@@ -2146,10 +2151,11 @@ class ConversationWidget(QWidget):
             # Emit status update
             self.status_updated.emit()
 
-            # Put the focus back to the input
+            # Put the spotlight back to the input
             self._spotlighted_message_index = -1
             self._input.set_content(prompt)
             self._input.set_spotlighted(True)
+            self._input.setFocus()
 
             # Scroll to bottom
             self._auto_scroll = True

@@ -4,7 +4,7 @@ from typing import Dict, List, Tuple
 import colorsys
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
 from PySide6.QtCore import Signal, QPoint, QSize, Qt
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
@@ -270,6 +270,14 @@ class ConversationMessage(QFrame):
         self.style().unpolish(self)
         self.style().polish(self)
 
+    def _has_focus_in_hierarchy(self) -> bool:
+        """Check if this widget or any of its descendants has focus."""
+        focus_widget = QApplication.focusWidget()
+        if focus_widget is None:
+            return False
+
+        return focus_widget == self or self.isAncestorOf(focus_widget)
+
     def paintEvent(self, arg__1: QPaintEvent) -> None:
         """Override paint event to paint custom borders."""
         super().paintEvent(arg__1)
@@ -282,7 +290,7 @@ class ConversationMessage(QFrame):
             border_color = self._get_fade_color()
             border_width = 2
 
-        elif self._is_spotlighted and self.hasFocus():
+        elif self._is_spotlighted and self._has_focus_in_hierarchy():
             border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_SPOTLIGHTED)
             border_width = 2
 
@@ -338,9 +346,6 @@ class ConversationMessage(QFrame):
             return
 
         self._is_spotlighted = spotlighted
-        if spotlighted:
-            self.setFocus()
-
         self.style().unpolish(self)
         self.style().polish(self)
 

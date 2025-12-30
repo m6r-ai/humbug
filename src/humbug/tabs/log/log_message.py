@@ -136,13 +136,7 @@ class LogMessage(QFrame):
             return
 
         self._is_spotlighted = spotlighted
-        if spotlighted:
-            self.setProperty("border", "spotlighted")
-            self.setFocus()
-
-        else:
-            self.setProperty("border", "default")
-
+        self.setProperty("border", "spotlighted" if spotlighted else "default")
         self.style().unpolish(self)
         self.style().polish(self)
 

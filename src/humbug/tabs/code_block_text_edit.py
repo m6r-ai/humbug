@@ -130,4 +130,5 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
                 e.accept()
                 return
 
+        # For all other cases, propagate the event up to the parent
         e.ignore()

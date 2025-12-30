@@ -5,7 +5,7 @@ import logging
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import (
-    QTextOption, QMouseEvent, QPalette, QBrush, QWheelEvent
+    QKeyEvent, QTextOption, QMouseEvent, QPalette, QBrush, QWheelEvent
 )
 
 from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
@@ -40,6 +40,7 @@ class ShellTextEdit(MinHeightPlainTextEdit):
             )
         )
 
+        self._is_input = is_input
         self.setReadOnly(not is_input)
 
         self._style_manager = StyleManager()
@@ -72,6 +73,31 @@ class ShellTextEdit(MinHeightPlainTextEdit):
             self._init_colour_mode = self._style_manager.color_mode()
             if self._highlighter:
                 self._highlighter.rehighlight()
+
+    def keyPressEvent(self, e: QKeyEvent) -> None:
+        """Handle special key events."""
+        # If we're an input widget, just propagate the event
+        if self._is_input:
+            super().keyPressEvent(e)
+            return
+
+        # Handle horizontal scrolling
+        if e.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            hbar = self.horizontalScrollBar()
+            if hbar and hbar.isVisible():
+                current = hbar.value()
+                step = 50  # Adjust scroll step size as needed
+                if e.key() == Qt.Key.Key_Left:
+                    hbar.setValue(max(hbar.minimum(), current - step))
+
+                else:
+                    hbar.setValue(min(hbar.maximum(), current + step))
+
+                e.accept()
+                return
+
+        # For all other cases, propagate the event up to the parent
+        e.ignore()
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""

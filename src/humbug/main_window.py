@@ -1361,6 +1361,7 @@ class MainWindow(QMainWindow):
         """Handle global key events."""
         if event.key() == Qt.Key.Key_Escape:
             if self._column_manager.handle_esc_key():
+                event.accept()
                 return
 
         super().keyPressEvent(event)

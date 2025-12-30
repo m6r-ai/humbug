@@ -31,7 +31,7 @@ class ShellWidgetEventFilter(QObject):
         """Initialize the event filter."""
         super().__init__(parent)
 
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # type: ignore[override]
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """
         Filter events to detect widget activation.
 
@@ -512,12 +512,14 @@ class ShellWidget(QWidget):
 
     def activate(self) -> None:
         """Activate the shell widget."""
-        # If we have a focus message then focus it
+        # If we have a spotlighted message then spotlight it
         if self._spotlighted_message_index != -1:
             self._messages[self._spotlighted_message_index].set_spotlighted(True)
+            self._messages[self._spotlighted_message_index].setFocus()
             return
 
         self._input.set_spotlighted(True)
+        self._input.setFocus()
 
     def _install_activation_tracking(self, widget: QWidget) -> None:
         """
@@ -535,7 +537,7 @@ class ShellWidget(QWidget):
 
     def _on_widget_activated(self, widget: QWidget) -> None:
         """
-        Handle activation of a widget, focusing the associated message.
+        Handle activation of a widget, spotlighting the associated message.
 
         Args:
             widget: The widget that was activated
@@ -543,7 +545,7 @@ class ShellWidget(QWidget):
         # Emit activated signal to let the tab know this shell was clicked
         self.activated.emit()
 
-        # If we are clicking the messages container, focus the last spotlighted message or input
+        # If we are clicking the messages container, spotlight the last spotlighted message or input
         if widget == self._messages_container:
             self.activate()
             return
@@ -556,7 +558,7 @@ class ShellWidget(QWidget):
         if message_widget.is_spotlighted():
             return
 
-        # Set focus on the new message
+        # Set spotlight on the new message
         if message_widget in self._messages:
             self._spotlighted_message_index = self._messages.index(message_widget)
             message_widget.set_spotlighted(True)
@@ -567,7 +569,7 @@ class ShellWidget(QWidget):
 
     def _on_widget_deactivated(self, widget: QWidget) -> None:
         """
-        Handle deactivation of a widget, checking if focus is leaving the associated message.
+        Handle deactivation of a widget, checking if spotlight is leaving the associated message.
 
         Args:
             widget: The widget that lost focus
@@ -577,7 +579,7 @@ class ShellWidget(QWidget):
         if message_widget is None:
             return
 
-        # Remove focus from the currently spotlighted message
+        # Remove spotlight from the currently spotlighted message
         if self._spotlighted_message_index != -1:
             self._messages[self._spotlighted_message_index].set_spotlighted(False)
 
@@ -651,10 +653,12 @@ class ShellWidget(QWidget):
         index = self._spotlighted_message_index
         if 0 <= index < len(self._messages):
             self._messages[index].set_spotlighted(True)
+            self._messages[index].setFocus()
             self._scroll_to_message(self._messages[index])
             return
 
         self._input.set_spotlighted(True)
+        self._input.setFocus()
         self._scroll_to_message(self._input)
 
     def _perform_scroll_to_position(self, message: ShellMessage, y_offset: int) -> None:

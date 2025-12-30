@@ -119,13 +119,7 @@ class ShellMessage(QFrame):
             return
 
         self._is_spotlighted = spotlighted
-        if spotlighted:
-            self.setProperty("border", "spotlighted")
-            self.setFocus()
-
-        else:
-            self.setProperty("border", "default")
-
+        self.setProperty("border", "spotlighted" if spotlighted else "default")
         self.style().unpolish(self)
         self.style().polish(self)
 
@@ -150,6 +144,7 @@ class ShellMessage(QFrame):
         if self._message_timestamp is not None:
             timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             self._role_label.setText(f"{role_text} @ {timestamp_str}")
+
         else:
             self._role_label.setText(role_text)
 

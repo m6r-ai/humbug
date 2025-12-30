@@ -319,27 +319,10 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
     def keyPressEvent(self, e: QKeyEvent) -> None:
         """Handle special key events."""
-        # Is this a display-only widget?  If it is then we don't want to process certain key events,
+        # Is this a display-only widget?  If it is then we don't want to process key events,
         # leaving it to the parent to handle them.
         if not self._is_input:
-            # Handle horizontal scrolling
-            if self._has_code_block and e.key() in (Qt.Key.Key_Left, Qt.Key.Key_Right):
-                hbar = self.horizontalScrollBar()
-                if hbar and hbar.isVisible():
-                    current = hbar.value()
-                    step = 50  # Adjust scroll step size as needed
-                    if e.key() == Qt.Key.Key_Left:
-                        hbar.setValue(max(hbar.minimum(), current - step))
-
-                    else:
-                        hbar.setValue(min(hbar.maximum(), current + step))
-
-                    e.accept()
-                    return
-
-            if e.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown, Qt.Key.Key_Up, Qt.Key.Key_Down):
-                e.ignore()
-
+            e.ignore()
             return
 
         if e.key() in (Qt.Key.Key_PageUp, Qt.Key.Key_PageDown):
