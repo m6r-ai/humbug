@@ -2,7 +2,7 @@
 
 import logging
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QTextOption, QTextCursor, QFontMetricsF
+from PySide6.QtGui import QResizeEvent, QTextOption, QTextCursor, QFontMetricsF
 from PySide6.QtWidgets import (
     QFrame, QPlainTextEdit, QSizePolicy, QWidget
 )
@@ -48,6 +48,11 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
         self.updateGeometry()
+
+    def resizeEvent(self, e: QResizeEvent) -> None:
+        """Handle resize events."""
+        self.updateGeometry()
+        return super().resizeEvent(e)
 
     def scroll_changed(self, _min: int, _max: int) -> None:
         """Handle scrollbar range changes."""
