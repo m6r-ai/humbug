@@ -6,6 +6,8 @@ New features:
 
 - Improved the performance of style changes (makes zoom and colour mode changes quicker).
 - Added smooth scrolling for shell message navigation.
+- Added support for GLM 4.7 via the Z.ai and Ollama backends.
+- Updated the Z.ai backend to support thinking mode enabled/disabled.
 
 Bug fixes:
 
@@ -15,6 +17,8 @@ Bug fixes:
 - Fixed a markdown parsing issue affecting paragraphs inside lists.
 - Improved exception handling for UI interactions.
 - Fixed a problem where preview tabs needed to be clicked twice to correctly gain focus.
+- Fixed problem with widget focus that meant horizontally-scrollable text could be scrolled with a mouse wheel but not with
+  the left and right arrow keys.
 
 Internal structure changes:
 
