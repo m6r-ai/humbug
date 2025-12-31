@@ -2,7 +2,7 @@
 
 import logging
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QResizeEvent, QTextOption, QTextCursor, QFontMetricsF
+from PySide6.QtGui import QResizeEvent, QTextOption, QTextCursor
 from PySide6.QtWidgets import (
     QFrame, QPlainTextEdit, QSizePolicy, QWidget
 )
@@ -123,19 +123,20 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         # Qt will adjust it anyway!  We reset it back so things render correctly.
         self.verticalScrollBar().setValue(0)
 
-        document_size = self.document().size()
-        line_count = int(document_size.height())
+        doc = self.document()
+        layout = doc.documentLayout()
 
-        # Calculate line height from font metrics.  QPlainTextEdit does some slightly odd rounding so we need to match it.
-        font_metrics = QFontMetricsF(self.font())
-        line_height = int(font_metrics.height() + 0.99)
+        height = 0
+        block = doc.begin()
+        while block.isValid():
+            height += layout.blockBoundingRect(block).height()
+            block = block.next()
 
-        height = line_count * line_height
         if self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14
 
-        return height
+        return int(height)
 
     def minimumSizeHint(self) -> QSize:
         """Calculate minimum size based on content."""

@@ -2,6 +2,10 @@
 
 ## v0.37 (2025-12-xx)
 
+Bug fixes:
+
+- Fixed a problem with rendering code blocks that contained emojis that meant line heights were not fixed.
+
 ## v0.36 (2025-12-30)
 
 New features:
