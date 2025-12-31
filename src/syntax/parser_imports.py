@@ -12,6 +12,7 @@ from syntax.html.html_parser import HTMLParser
 from syntax.java.java_parser import JavaParser
 from syntax.javascript.javascript_parser import JavaScriptParser
 from syntax.json.json_parser import JSONParser
+from syntax.lua.lua_parser import LuaParser
 from syntax.kotlin.kotlin_parser import KotlinParser
 from syntax.markdown.markdown_parser import MarkdownParser
 from syntax.metaphor.metaphor_parser import MetaphorParser
