@@ -126,7 +126,7 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         doc = self.document()
         layout = doc.documentLayout()
 
-        height = 0
+        height: float = 0
         block = doc.begin()
         while block.isValid():
             height += layout.blockBoundingRect(block).height()
