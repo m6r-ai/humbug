@@ -51,12 +51,24 @@ def serialize_parser_state(parser_state: ParserState | None) -> Dict[str, Any] |
         if hasattr(lexer_state, 'in_block_comment'):
             lexer_state_dict['in_block_comment'] = lexer_state.in_block_comment
 
+        if hasattr(lexer_state, 'in_multiline_string'):
+            lexer_state_dict['in_multiline_string'] = lexer_state.in_multiline_string
+
+        if hasattr(lexer_state, 'string_bracket_level'):
+            lexer_state_dict['string_bracket_level'] = lexer_state.string_bracket_level
+
+        if hasattr(lexer_state, 'in_table_access'):
+            lexer_state_dict['in_table_access'] = lexer_state.in_table_access
+
         if lexer_state_dict:
             result['lexer_state'] = lexer_state_dict
 
     # Add parser-specific state if available
     if hasattr(parser_state, 'in_element'):
         result['in_element'] = parser_state.in_element
+
+    if hasattr(parser_state, 'in_table_access'):
+        result['in_table_access'] = parser_state.in_table_access
 
     return result
 
@@ -117,7 +129,7 @@ def load_tokens_from_json(file_path: str) -> Dict[str, Any]:
         file_path: Path to the JSON file
 
     Returns:
-        Dictionary containing the serialized data
+        Dictionary containing serialized data
     """
     with open(file_path, 'r', encoding='utf-8') as f:
         return json.load(f)

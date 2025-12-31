@@ -67,6 +67,9 @@ class LuaLexer(Lexer):
         """
         self._input = input_str
         self._input_len = len(input_str)
+        self._position = 0
+        self._tokens = []
+        self._next_token = 0
         if prev_lexer_state is not None:
             assert isinstance(prev_lexer_state, LuaLexerState), \
                 f"Expected LuaLexerState, got {type(prev_lexer_state).__name__}"
@@ -78,7 +81,7 @@ class LuaLexer(Lexer):
             self._read_block_comment(0)
 
         if self._in_multiline_string:
-            self._read_multiline_string(0)
+            self._continue_multiline_string()
 
         if not self._in_block_comment and not self._in_multiline_string:
             self._inner_lex()
@@ -140,6 +143,7 @@ class LuaLexer(Lexer):
                     self._input[self._position + 3] == '['):
                 # Block comment start: --[[
                 self._read_block_comment(4)
+                return
 
             # Single-line comment
             self._read_comment()
@@ -150,11 +154,22 @@ class LuaLexer(Lexer):
 
     def _read_dot(self) -> None:
         """
-        Read a dot operator.
+        Read a dot operator or number starting with dot.
 
-        Handles: . (field access), .. (concatenation), ... (varargs)
+        Handles:
+        - .5 (number, equivalent to 0.5)
+        - . (field access)
+        - .. (concatenation)
+        - ... (varargs)
         These are all handled by the operator map's greedy matching.
         """
+        # Check if this is a number starting with a dot (like .5)
+        if (self._position + 1 < self._input_len and
+            self._is_digit(self._input[self._position + 1])):
+            self._read_number()
+            return
+
+        # Otherwise it's an operator
         self._read_operator()
 
     def _read_comment(self) -> None:
@@ -205,7 +220,7 @@ class LuaLexer(Lexer):
         """
         if self._position + 1 < self._input_len and self._input[self._position + 1] == '[':
             # Multi-line string start: [[
-            self._read_multiline_string(2)
+            self._read_multiline_string(0)
             return
 
         if self._position + 1 < self._input_len and self._input[self._position + 1] == '=':
@@ -219,7 +234,7 @@ class LuaLexer(Lexer):
 
             if pos < self._input_len and self._input[pos] == '[':
                 # Multi-line string with = signs: [=[ or [==[ etc.
-                self._read_multiline_string(bracket_level + 2)
+                self._read_multiline_string(bracket_level)
                 return
 
         # It's just a regular bracket (table indexing)
@@ -258,26 +273,65 @@ class LuaLexer(Lexer):
         # Not closing a multi-line string, treat as operator
         self._read_operator()
 
-    def _read_multiline_string(self, skip_chars: int) -> None:
+    def _read_multiline_string(self, bracket_level: int) -> None:
         """
         Read a multi-line string token.
 
         Args:
-            skip_chars: Number of characters to skip at the start (includes the brackets)
+            bracket_level: Number of = signs in the bracket (0 for [[, 1 for [=[, etc.)
         """
         self._in_multiline_string = True
+        self._string_bracket_level = bracket_level
 
-        # Calculate bracket level from the opening
-        if skip_chars > 2:
-            self._string_bracket_level = skip_chars - 2
-        else:
-            self._string_bracket_level = 0
+        # Calculate skip_chars from bracket_level
+        # [[ = 2 chars, [=[ = 3 chars, [==[ = 4 chars, etc.
+        skip_chars = bracket_level + 2
 
         start = self._position
         self._position += skip_chars
 
         # Look for the closing bracket sequence
-        while self._position + 1 < self._input_len:
+        while self._position < self._input_len:
+            if self._input[self._position] == ']':
+                # Check if this could be the closing bracket
+                bracket_level = 0
+                pos = self._position + 1
+
+                while pos < self._input_len and self._input[pos] == '=':
+                    bracket_level += 1
+                    pos += 1
+
+                if pos < self._input_len and self._input[pos] == ']':
+                    # Check if bracket levels match
+                    if bracket_level == self._string_bracket_level:
+                        self._in_multiline_string = False
+                        self._string_bracket_level = 0
+                        self._position = pos + 1
+                        break
+
+            self._position += 1
+
+        # If we're still in a multi-line string, we've reached end of line
+        if self._in_multiline_string:
+            self._position = self._input_len
+
+        self._tokens.append(Token(
+            type=TokenType.STRING,
+            value=self._input[start:self._position],
+            start=start
+        ))
+
+    def _continue_multiline_string(self) -> None:
+        """
+        Continue reading a multi-line string from a previous line.
+
+        This is called when we're already in a multiline string state from
+        a previous line. The bracket level is already set in self._string_bracket_level.
+        """
+        start = self._position
+
+        # Look for the closing bracket sequence
+        while self._position < self._input_len:
             if self._input[self._position] == ']':
                 # Check if this could be the closing bracket
                 bracket_level = 0
@@ -312,6 +366,7 @@ class LuaLexer(Lexer):
         Read a numeric literal.
 
         Handles:
+        - Leading dot: .5
         - Decimal integers: 42
         - Decimal floats: 3.14
         - Hexadecimal: 0x2A
@@ -319,6 +374,32 @@ class LuaLexer(Lexer):
         - Scientific notation: 1e10, 0x1p4
         """
         start = self._position
+
+        # Check for leading dot (like .5)
+        if self._input[self._position] == '.':
+            self._position += 1
+            # Read fractional part
+            while (self._position < self._input_len and
+                   self._is_digit(self._input[self._position])):
+                self._position += 1
+
+            # Check for exponent (e or E)
+            if (self._position < self._input_len and
+                    self._input[self._position].lower() == 'e'):
+                self._position += 1
+                if self._position < self._input_len and self._input[self._position] in ('+', '-'):
+                    self._position += 1
+
+                while (self._position < self._input_len and
+                       self._is_digit(self._input[self._position])):
+                    self._position += 1
+
+            self._tokens.append(Token(
+                type=TokenType.NUMBER,
+                value=self._input[start:self._position],
+                start=start
+            ))
+            return
 
         # Check for hexadecimal
         if (self._input[self._position] == '0' and
