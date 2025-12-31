@@ -97,6 +97,9 @@ class ConversationMessageSection(QFrame):
 
             strings = self._language_manager.strings()
 
+            # Add stretch to push buttons to the right
+            self._header_layout.addStretch()
+
             # Add Copy button with icon
             self._copy_button = QToolButton()
             self._copy_button.clicked.connect(self._copy_all_content)
@@ -110,9 +113,6 @@ class ConversationMessageSection(QFrame):
             self._header_layout.addWidget(self._save_as_button)
 
             self._apply_button_style()
-
-            # Add stretch to push buttons to the right
-            self._header_layout.addStretch()
 
             # Add header container to main layout
             self._layout.addWidget(self._header_container)
