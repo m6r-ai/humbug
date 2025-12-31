@@ -5,10 +5,13 @@
 New features:
 
 - Added a Lua syntax highlighter.
+- Lazily render conversation message sections when they are expanded.
+- Automatically expand message sections during find operations.
 
 Bug fixes:
 
 - Fixed a problem with rendering code blocks that contained emojis that meant line heights were not fixed.
+- Conversation message section buttons should be on the right of the widget (this was a regression in the last version).
 
 ## v0.36 (2025-12-30)
 

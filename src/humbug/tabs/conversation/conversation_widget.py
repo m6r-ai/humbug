@@ -2571,9 +2571,37 @@ class ConversationWidget(QWidget):
         )
 
     def _scroll_to_current_match(self) -> None:
-        """Request scroll to ensure the current match is visible."""
+        """
+        Request scroll to ensure the current match is visible.
+
+        If the match is in a collapsed message, expands it first and re-searches
+        to get accurate section positions after rendering.
+        """
         widget, matches = self._matches[self._current_widget_index]
         section_num, start, _ = matches[self._current_match_index]
+
+        # If this is a ConversationMessage (not input), check if it needs expansion
+        if isinstance(widget, ConversationMessage) and not widget.is_expanded():
+            # Expand the message first
+            widget.set_expanded(True)
+
+            # Re-search this specific message to get accurate section positions
+            # after rendering (the raw text positions won't map correctly to sections)
+            search_text = self._last_search
+            new_matches = widget.find_text(search_text)
+
+            # Update the matches for this widget
+            self._matches[self._current_widget_index] = (widget, new_matches)
+            matches = new_matches
+
+            # Re-highlight all matches with updated positions
+            self._highlight_matches()
+
+            # Use the same match index if possible, otherwise use first match
+            if self._current_match_index >= len(new_matches):
+                self._current_match_index = 0
+
+            section_num, start, _ = new_matches[self._current_match_index]
 
         # Trigger scrolling to this position
         self._handle_find_scroll(widget, section_num, start)

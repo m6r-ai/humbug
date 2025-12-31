@@ -116,6 +116,10 @@ class ConversationMessage(QFrame):
         # Expanded state - default to True, will be updated in set_content based on message type
         self._is_expanded = True
 
+        # Pending content for deferred rendering (when collapsed)
+        self._pending_content: str | None = None
+        self._pending_context: str | None = None
+
         # Create role and timestamp labels
         self._role_label = QLabel(self._header)
         self._role_label.setObjectName("_role_label")
@@ -375,6 +379,12 @@ class ConversationMessage(QFrame):
         self._is_expanded = expanded
 
         if expanded:
+            # If we have pending content, render it now
+            if self._pending_content is not None:
+                self._render_content(self._pending_content, self._pending_context)
+                self._pending_content = None
+                self._pending_context = None
+
             self._sections_container.show()
 
         else:
@@ -689,6 +699,8 @@ class ConversationMessage(QFrame):
         """
         Set content with style, handling incremental updates for AI responses.
 
+        For collapsed messages, content rendering is deferred until expansion.
+
         Args:
             text: The message text content
         """
@@ -704,9 +716,33 @@ class ConversationMessage(QFrame):
 
             return
 
+        # Check if we should defer rendering
+        if not self._is_expanded:
+            # Store content for later rendering
+            self._pending_content = text
+            self._pending_context = self._context
+
+            # Show the message widget (even if collapsed)
+            if text and not self._message_rendered:
+                self._message_rendered = True
+                self.show()
+
+            return
+
+        # Expanded - render immediately
+        self._render_content(text, self._context)
+
+    def _render_content(self, text: str, context: str | None) -> None:
+        """
+        Actually render the content into sections.
+
+        Args:
+            text: The message text content
+            context: Optional context to append to the message
+        """
         # If we were given context, append it to the message for section extraction
-        if self._context:
-            text += f"\n{self._context}"
+        if context:
+            text += f"\n{context}"
 
         # Extract sections directly using the markdown converter
         sections_data = self._markdown_converter.extract_sections(text, None)
@@ -912,12 +948,22 @@ class ConversationMessage(QFrame):
         """
         Find all instances of text in this message.
 
+        For collapsed messages with pending content, searches the raw text.
+        For expanded messages, searches rendered sections.
+
+        Note: Search is case-insensitive.
+
         Args:
             text: Text to search for
 
         Returns:
             List of (section, start_position, end_position) tuples for each match
         """
+        # If collapsed with pending content, search raw text
+        if not self._is_expanded and self._pending_content:
+            return self._find_text_in_raw_content(text)
+
+        # Otherwise search rendered sections normally
         all_matches: List[Tuple[int, int, int]] = []
         for i, section in enumerate(self._sections):
             section_matches = section.find_text(text)
@@ -927,6 +973,38 @@ class ConversationMessage(QFrame):
                     all_matches.append((i, match[0], match[1]))
 
         return all_matches
+
+    def _find_text_in_raw_content(self, text: str) -> List[Tuple[int, int, int]]:
+        """
+        Search in raw unrendered content (case-insensitive).
+
+        Returns matches as if they're all in section 0, since sections
+        don't exist yet. Positions are character offsets in the raw text.
+
+        Args:
+            text: Text to search for
+
+        Returns:
+            List of (section, start_position, end_position) tuples for each match
+        """
+        if not self._pending_content:
+            return []
+
+        matches = []
+        content_lower = self._pending_content.lower()
+        search_lower = text.lower()
+        pos = 0
+
+        while True:
+            pos = content_lower.find(search_lower, pos)
+            if pos == -1:
+                break
+
+            # All matches reported as section 0 (placeholder)
+            matches.append((0, pos, pos + len(text)))
+            pos += 1
+
+        return matches
 
     def highlight_matches(
         self,
@@ -938,6 +1016,7 @@ class ConversationMessage(QFrame):
         """
         Highlight matches in this message.
 
+        Note: Cannot highlight matches in collapsed messages with pending content.
         Args:
             matches: List of (section, start_position, end_position) tuples to highlight
             current_match_index: Index of current match to highlight differently, or -1 for none
@@ -948,6 +1027,10 @@ class ConversationMessage(QFrame):
         self.clear_highlights()
 
         if not matches:
+            return
+
+        # Can't highlight if we have pending content (no sections yet)
+        if self._pending_content is not None:
             return
 
         # Group matches by section
