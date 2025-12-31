@@ -16,6 +16,7 @@ class ProgrammingLanguage(IntEnum):
     JAVASCRIPT = auto()
     JSON = auto()
     KOTLIN = auto()
+    LUA = auto()
     MARKDOWN = auto()
     METAPHOR = auto()
     MOVE = auto()

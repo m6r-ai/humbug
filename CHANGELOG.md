@@ -2,6 +2,10 @@
 
 ## v0.37 (2025-12-xx)
 
+New features:
+
+- Added a Lua syntax highlighter.
+
 Bug fixes:
 
 - Fixed a problem with rendering code blocks that contained emojis that meant line heights were not fixed.
