@@ -15,6 +15,10 @@ Bug fixes:
 - Resolved a problem where new message sections and tool approvals would not trigger tab activation when clicking in from
   a different tab, or from the mindspace view.
 
+Internal structure changes:
+
+- Added pytest tests for the python syntax highlighter.
+
 ## v0.36 (2025-12-30)
 
 New features:
