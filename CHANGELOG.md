@@ -12,6 +12,8 @@ Bug fixes:
 
 - Fixed a problem with rendering code blocks that contained emojis that meant line heights were not fixed.
 - Conversation message section buttons should be on the right of the widget (this was a regression in the last version).
+- Resolved a problem where new message sections and tool approvals would not trigger tab activation when clicking in from
+  a different tab, or from the mindspace view.
 
 ## v0.36 (2025-12-30)
 
