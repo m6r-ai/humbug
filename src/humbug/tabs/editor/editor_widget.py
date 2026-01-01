@@ -5,7 +5,7 @@ from difflib import unified_diff
 from typing import List, Tuple, Dict, Any, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
-from PySide6.QtCore import Qt, QRect, Signal, QObject, QEvent, QTimer
+from PySide6.QtCore import Qt, QRect, Signal, QTimer
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
     QResizeEvent, QPaintEvent, QTextDocument
@@ -25,40 +25,6 @@ from humbug.tabs.editor.editor_diff_applier import EditorDiffApplier
 from humbug.tabs.editor.editor_line_number_area import EditorLineNumberArea
 
 
-class EditorWidgetEventFilter(QObject):
-    """Event filter to track activation events from child widgets."""
-
-    widget_activated = Signal(object)
-    widget_deactivated = Signal(object)
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the event filter."""
-        super().__init__(parent)
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        """
-        Filter events to detect widget activation.
-
-        Args:
-            obj: The object that received the event
-            event: The event that was received
-
-        Returns:
-            True if event was handled, False to pass to the target object
-        """
-        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
-            # Simply emit the signal with the object that received the event
-            self.widget_activated.emit(watched)
-            return False
-
-        if event.type() == QEvent.Type.FocusOut:
-            # Emit a widget deactivated signal
-            self.widget_deactivated.emit(watched)
-            return False
-
-        return super().eventFilter(watched, event)
-
-
 class EditorWidget(QPlainTextEdit):
     """Text editor widget with line numbers, syntax highlighting, and find functionality."""
 
@@ -66,7 +32,6 @@ class EditorWidget(QPlainTextEdit):
     content_modified = Signal(bool)  # True if modified, False if saved
     text_changed = Signal()          # Emitted on every text change
     status_updated = Signal()        # Request status bar update
-    activated = Signal()             # User interaction occurred
     file_saved = Signal(str)         # File path saved
 
     def __init__(self, path: str = "", untitled_number: int | None = None, parent: QWidget | None = None) -> None:
@@ -135,12 +100,6 @@ class EditorWidget(QPlainTextEdit):
         # Mindspace integration
         self._mindspace_manager = MindspaceManager()
         self._mindspace_manager.settings_changed.connect(self._on_mindspace_settings_changed)
-
-        # Set up activation tracking
-        self._event_filter = EditorWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._on_widget_activated)
-        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
-        self.installEventFilter(self._event_filter)
 
         # Connect text changes
         self.textChanged.connect(self._on_text_changed)
@@ -292,24 +251,6 @@ class EditorWidget(QPlainTextEdit):
     def _on_mindspace_settings_changed(self) -> None:
         """Handle mindspace settings changes."""
         self._update_auto_backup_from_settings()
-
-    def _on_widget_activated(self, _widget: QWidget) -> None:
-        """
-        Handle activation of a widget.
-
-        Args:
-            widget: The widget that was activated
-        """
-        # Emit activated signal to let the tab know this editor was clicked
-        self.activated.emit()
-
-    def _on_widget_deactivated(self, widget: QWidget) -> None:
-        """
-        Handle deactivation of a widget.
-
-        Args:
-            widget: The widget lost focus
-        """
 
     def _on_language_changed(self) -> None:
         """Handle language changes by updating the UI."""

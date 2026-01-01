@@ -1,12 +1,12 @@
 """Log widget implementation for displaying mindspace message log."""
 
 import logging
-from typing import Dict, List, Tuple, Any, Set, cast
+from typing import Dict, List, Tuple, Any, Set
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QEvent, QObject
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.color_role import ColorRole
@@ -17,40 +17,6 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.log.log_message import LogMessage
 
 
-class LogWidgetEventFilter(QObject):
-    """Event filter to track activation events from child widgets."""
-
-    widget_activated = Signal(object)
-    widget_deactivated = Signal(object)
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the event filter."""
-        super().__init__(parent)
-
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
-        """
-        Filter events to detect widget activation.
-
-        Args:
-            obj: The object that received the event
-            event: The event that was received
-
-        Returns:
-            True if event was handled, False to pass to the target object
-        """
-        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
-            # Simply emit the signal with the object that received the event
-            self.widget_activated.emit(obj)
-            return False
-
-        if event.type() == QEvent.Type.FocusOut:
-            # Emit a widget deactivated signal
-            self.widget_deactivated.emit(obj)
-            return False
-
-        return super().eventFilter(obj, event)
-
-
 class LogWidget(QWidget):
     """Widget for displaying mindspace message log with message history."""
 
@@ -59,9 +25,6 @@ class LogWidget(QWidget):
 
     # Signal to request scrolling to a specific widget and position
     scroll_requested = Signal(QWidget, int)  # Widget to scroll to, position within widget
-
-    # Emits when parent should be activated by user interaction
-    activated = Signal()
 
     # Signal to notify tab when content is updated while user is scrolled up
     update_label = Signal()
@@ -167,12 +130,6 @@ class LogWidget(QWidget):
         self._last_search = ""
         self._highlighted_widgets: Set[LogMessage] = set()
 
-        # Set up activation tracking
-        self._event_filter = LogWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._on_widget_activated)
-        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
-        self._install_activation_tracking(self._messages_container)
-
         # Load messages when initialized
         if self._mindspace_manager.has_mindspace():
             self.load_messages()
@@ -267,8 +224,6 @@ class LogWidget(QWidget):
         count = self._messages_layout.count()
         self._messages_layout.insertWidget(count - 1, msg_widget)
         self._messages.append(msg_widget)
-
-        self._install_activation_tracking(msg_widget)
 
     def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
         """Begin scroll handling for selection drag."""
@@ -409,63 +364,57 @@ class LogWidget(QWidget):
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
-    def activate(self) -> None:
-        """Activate the log widget."""
-        # If we have a spotlighted message then spotlight it
-        if self._spotlighted_message_index != -1:
-            self._messages[self._spotlighted_message_index].set_spotlighted(True)
-            self._messages[self._spotlighted_message_index].setFocus()
-            return
-
-        # Otherwise spotlight the first message if available
-        if self._messages:
-            self._spotlighted_message_index = 0
-            self._messages[0].set_spotlighted(True)
-            self._messages[0].setFocus()
-
-    def _install_activation_tracking(self, widget: QWidget) -> None:
+    def set_active(self, widget: QWidget, active: bool) -> None:
         """
-        Install event filter on widget and all its children recursively.
-
-        Call this for any new widgets added to the log widget.
+        Handle tab activation state changes.
 
         Args:
-            widget: Widget to track for activation events
+            widget: The widget that triggered the activation change
+            active: True if the tab is now active, False otherwise
         """
-        widget.installEventFilter(self._event_filter)
-        child: QWidget
-        for child in widget.findChildren(QWidget):
-            cast(QWidget, child).installEventFilter(self._event_filter)
+        if not active:
+            self._deactivate_widget(widget)
+            return
 
-    def _on_widget_activated(self, widget: QWidget) -> None:
+        self._activate_widget(widget)
+
+    def _activate_widget(self, widget: QWidget) -> None:
         """
         Handle activation of a widget, spotlighting the associated message.
 
         Args:
             widget: The widget that was activated
         """
-        # Emit activated signal to let the tab know this log was clicked
-        self.activated.emit()
-
-        # If we are clicking the messages container, spotlight the first message
-        if widget == self._messages_container:
-            self.activate()
-            return
-
         # Find the LogMessage that contains this widget
         message_widget = self._find_log_message(widget)
         if message_widget is None:
+            # We couldn't find it so active the last spotlighted message or input
+            if self._spotlighted_message_index != -1:
+                self._messages[self._spotlighted_message_index].set_spotlighted(True)
+                self._messages[self._spotlighted_message_index].setFocus()
+                return
+
+            # Otherwise spotlight the first message if available
+            if self._messages:
+                self._spotlighted_message_index = 0
+                self._messages[0].set_spotlighted(True)
+                self._messages[0].setFocus()
+
             return
 
         if message_widget.is_spotlighted():
             return
+
+        # Remove spotlight from the currently spotlighted message
+        if self._spotlighted_message_index != -1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
 
         # Set spotlight on the new message
         if message_widget in self._messages:
             self._spotlighted_message_index = self._messages.index(message_widget)
             message_widget.set_spotlighted(True)
 
-    def _on_widget_deactivated(self, widget: QWidget) -> None:
+    def _deactivate_widget(self, widget: QWidget) -> None:
         """
         Handle deactivation of a widget, checking if spotlight is leaving the associated message.
 

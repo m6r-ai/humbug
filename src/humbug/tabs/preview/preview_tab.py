@@ -69,9 +69,6 @@ class PreviewTab(TabBase):
 
         layout.addWidget(self._preview_content_widget)
 
-        # Install activation tracking
-        self._preview_content_widget.activated.connect(self.activated)
-
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 

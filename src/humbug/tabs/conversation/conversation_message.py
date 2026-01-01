@@ -1,12 +1,12 @@
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Tuple
 import colorsys
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QObject
+from PySide6.QtCore import Signal, QPoint, QSize, Qt
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
 
 from ai import AIMessageSource
@@ -38,7 +38,6 @@ class ConversationMessage(QFrame):
 
     def __init__(
         self,
-        event_filter: QObject,
         style: AIMessageSource,
         timestamp: datetime | None = None,
         model: str | None = None,
@@ -71,7 +70,6 @@ class ConversationMessage(QFrame):
         self.setObjectName("ConversationMessage")
 
         self._is_input = is_input
-        self._event_filter = event_filter
 
         self._logger = logging.getLogger("ConversationMessage")
 
@@ -108,7 +106,7 @@ class ConversationMessage(QFrame):
         self._expand_button: QToolButton | None = None
 
         if not is_input:
-            self._expand_button = QToolButton(self._header)
+            self._expand_button = QToolButton()
             self._expand_button.setObjectName("_expand_button")
             self._expand_button.clicked.connect(self._toggle_expanded)
             self._header_layout.addWidget(self._expand_button)
@@ -151,7 +149,7 @@ class ConversationMessage(QFrame):
         style = self._message_source
         if style == AIMessageSource.AI:
             strings = self._language_manager.strings()
-            self._fork_message_button = QToolButton(self)
+            self._fork_message_button = QToolButton()
             self._fork_message_button.setObjectName("_fork_button")
             self._fork_message_button.clicked.connect(self._fork_message)
             self._fork_message_button.setToolTip(strings.tooltip_fork_message)
@@ -160,7 +158,7 @@ class ConversationMessage(QFrame):
         # Add delete button only for user messages
         elif style == AIMessageSource.USER and not self._is_input:
             strings = self._language_manager.strings()
-            self._delete_message_button = QToolButton(self)
+            self._delete_message_button = QToolButton()
             self._delete_message_button.setObjectName("_delete_button")
             self._delete_message_button.clicked.connect(self._delete_message)
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
@@ -168,12 +166,12 @@ class ConversationMessage(QFrame):
 
         # We have copy and save buttons for several message sources
         if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
-            self._copy_message_button = QToolButton(self)
+            self._copy_message_button = QToolButton()
             self._copy_message_button.setObjectName("_copy_button")
             self._copy_message_button.clicked.connect(self._copy_message)
             self._header_layout.addWidget(self._copy_message_button)
 
-            self._save_message_button = QToolButton(self)
+            self._save_message_button = QToolButton()
             self._save_message_button.setObjectName("_save_button")
             self._save_message_button.clicked.connect(self._save_message)
             self._header_layout.addWidget(self._save_message_button)
@@ -204,13 +202,6 @@ class ConversationMessage(QFrame):
         self._sections: List[ConversationMessageSection] = []
         self._section_with_selection: ConversationMessageSection | None = None
 
-        # Install event filter to ensure activation events propagate to the our parent.  Do this before we add
-        # and message sections!
-        self.installEventFilter(self._event_filter)
-        child: QWidget
-        for child in self.findChildren(QWidget):
-            cast(QWidget, child).installEventFilter(self._event_filter)
-
         # If this is an input widget then create the input section
         if is_input:
             section = self._create_section_widget()
@@ -228,6 +219,9 @@ class ConversationMessage(QFrame):
         # Tool calls and tool results should be collapsed by default
         default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
         self.set_expanded(default_expanded)
+
+        # Set a strong focus policy on this message so any button presses will give focus to the message
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         # We don't want to style subclasses immediately
         if not do_not_style:
@@ -359,8 +353,7 @@ class ConversationMessage(QFrame):
             return
 
         self._is_spotlighted = spotlighted
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self._update_border_style()
 
     def is_expanded(self) -> bool:
         """Check if this message is expanded."""
@@ -529,12 +522,6 @@ class ConversationMessage(QFrame):
         section.setProperty("section_style", style_class)
         section.apply_style()
 
-        # Install event filter to ensure activation events propagate to the our parent
-        section.installEventFilter(self._event_filter)
-        child: QWidget
-        for child in self.findChildren(QWidget):
-            cast(QWidget, child).installEventFilter(self._event_filter)
-
         return section
 
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
@@ -644,12 +631,6 @@ class ConversationMessage(QFrame):
 
         # Expand the message for context when showing the approval UI
         self.set_expanded(True)
-
-        # Install event filter to ensure activation events propagate to the our parent
-        self._approval_widget.installEventFilter(self._event_filter)
-        child: QWidget
-        for child in self._approval_widget.findChildren(QWidget):
-            cast(QWidget, child).installEventFilter(self._event_filter)
 
     def _approve_tool_call(self, tool_call: AIToolCall) -> None:
         """Handle tool call approval."""

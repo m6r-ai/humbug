@@ -3,31 +3,11 @@ import os
 import logging
 
 from PySide6.QtWidgets import QFrame, QWidget
-from PySide6.QtCore import Signal, QObject, QEvent
+from PySide6.QtCore import Signal
 
 from humbug.mindspace.mindspace_file_watcher import MindspaceFileWatcher
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_state import TabState
-
-
-class TabEventFilter(QObject):
-    """Event filter to track activation events from child widgets."""
-
-    tab_activated = Signal()
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the event filter."""
-        super().__init__(parent)
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        """Filter events to detect widget activation."""
-        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
-            if isinstance(watched, TabBase):
-                self.tab_activated.emit()
-
-            return False  # Don't consume the event
-
-        return super().eventFilter(watched, event)
 
 
 class TabBase(QFrame):
@@ -65,10 +45,14 @@ class TabBase(QFrame):
         self._file_watcher = MindspaceFileWatcher()
         self._file_exists = True
 
-        # Set up activation tracking
-        self._event_filter = TabEventFilter(self)
-        self._event_filter.tab_activated.connect(self.activated)
-        self.installEventFilter(self._event_filter)
+    def set_active(self, widget: QWidget, active: bool) -> None:
+        """
+        Set the tab as active or inactive.
+
+        Args:
+            widget: The widget that triggered the activation change
+            active: True if the tab is now active, False otherwise
+        """
 
     def activate(self) -> None:
         """Activate the tab."""

@@ -12,6 +12,7 @@ from types import TracebackType
 from typing import List
 
 from PySide6.QtCore import QObject, QEvent
+from PySide6.QtWidgets import QWidget
 from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 
 # pylint: disable=unused-import
@@ -20,6 +21,7 @@ import syntax.parser_imports
 
 from humbug.exception_notifier import get_exception_notifier
 from humbug.main_window import MainWindow
+from humbug.tabs.tab_base import TabBase
 
 
 def setup_logging() -> None:
@@ -100,6 +102,7 @@ class HumbugApplication(QApplication):
     def __init__(self, argv: List[str]) -> None:
         super().__init__(argv)
         self._start_time = time.monotonic()
+        self.installEventFilter(self)
 
     def notify(self, arg__1: QObject, arg__2: QEvent) -> bool:
         event_type = arg__2.type()
@@ -114,6 +117,31 @@ class HumbugApplication(QApplication):
 
         return ret
 
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
+        if not isinstance(watched, QWidget):
+            return False
+
+        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
+            # Notify any TabBase ancestor
+            parent = watched.parent()
+            while parent:
+                if isinstance(parent, TabBase):
+                    parent.set_active(watched, True)
+                    return False
+
+                parent = parent.parent()
+
+        if event.type() == QEvent.Type.FocusOut:
+            # Notify any TabBase ancestor
+            parent = watched.parent()
+            while parent:
+                if isinstance(parent, TabBase):
+                    parent.set_active(watched, False)
+                    return False
+
+                parent = parent.parent()
+
+        return False
 
 def main() -> int:
     """Main function to run the application."""

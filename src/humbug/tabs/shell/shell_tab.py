@@ -56,15 +56,22 @@ class ShellTab(TabBase):
         self._shell_widget.status_updated.connect(self.update_status)
         layout.addWidget(self._shell_widget)
 
-        # Install activation tracking
-        self._shell_widget.activated.connect(self.activated)
-
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
+    def set_active(self, widget: QWidget, active: bool) -> None:
+        """
+        Set the active state of the tab.
+
+        Args:
+            widget: The widget that triggered the activation change
+            active: True if the tab is now active, False otherwise
+        """
+        self._shell_widget.set_active(widget, active)
+
     def activate(self) -> None:
         """Activate the tab."""
-        self._shell_widget.activate()
+        self._shell_widget.set_active(self._shell_widget, True)
 
     def refresh(self) -> None:
         """Refresh shell command history display."""

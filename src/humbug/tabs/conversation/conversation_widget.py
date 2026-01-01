@@ -26,7 +26,6 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
 from humbug.tabs.conversation.conversation_message import ConversationMessage
-from humbug.tabs.conversation.conversation_widget_event_filter import ConversationWidgetEventFilter
 
 
 class ConversationWidget(QWidget):
@@ -41,9 +40,6 @@ class ConversationWidget(QWidget):
 
     # Emits when conversation settings are requested
     conversation_settings_requested = Signal()
-
-    # Emits when parent should be activated by user interaction
-    activated = Signal()
 
     # Emits when the conversation label should be updated
     update_label = Signal()
@@ -159,6 +155,7 @@ class ConversationWidget(QWidget):
 
         # Set up the scroll area
         self._scroll_area = QScrollArea()
+        self._scroll_area.setObjectName("ConversationScrollArea")
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -170,13 +167,8 @@ class ConversationWidget(QWidget):
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
-        # Set up the event filter for activation tracking
-        self._event_filter = ConversationWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._on_widget_activated)
-        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
-
         # Set up the input box
-        self._input = ConversationInput(self._event_filter, AIMessageSource.USER, self._messages_container)
+        self._input = ConversationInput(AIMessageSource.USER, self._messages_container)
         self._input.cursor_position_changed.connect(self._ensure_cursor_visible)
         self._input.selection_changed.connect(
             lambda has_selection: self._on_selection_changed(self._input, has_selection)
@@ -242,10 +234,6 @@ class ConversationWidget(QWidget):
         self._last_search = ""
         self._highlighted_widgets: Set[ConversationMessage] = set()
 
-        # Set up activation tracking for the messages container.  The messsages install their own
-        # activation tracking when they are created and when they add sections.
-        self._install_activation_tracking(self._messages_container)
-
         # Create transcript handler with provided filename, then load the transcript data
         self._transcript_handler = AIConversationTranscriptHandler(path)
         try:
@@ -259,6 +247,90 @@ class ConversationWidget(QWidget):
 
         # Any active tool approval
         self._pending_tool_call_approval: ConversationMessage | None = None
+
+    def _activate_widget(self, widget: QWidget) -> None:
+        """
+        Handle activation of a widget, spotlighting the associated message.
+
+        Args:
+            widget: The widget that was activated
+        """
+        # Find the ConversationMessage that contains this widget
+        message_widget = self._find_conversation_message(widget)
+        if message_widget is None:
+            # We couldn't find it so active the last spotlighted message or input
+            if self._spotlighted_message_index != -1:
+                self._messages[self._spotlighted_message_index].set_spotlighted(True)
+                self._messages[self._spotlighted_message_index].setFocus()
+                return
+
+            # If our input box is hidden then spotlight the last message.
+            if self._input.isHidden():
+                last_visible_index = self._find_last_visible_message()
+                if last_visible_index == -1:
+                    return
+
+                self._spotlighted_message_index = last_visible_index
+                self._messages[self._spotlighted_message_index].set_spotlighted(True)
+                self._messages[self._spotlighted_message_index].setFocus()
+                return
+
+            self._input.set_spotlighted(True)
+            self._input.setFocus()
+            return
+
+        if message_widget.is_spotlighted():
+            return
+
+        # Remove focus from the currently spotlighted message
+        if self._spotlighted_message_index != -1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+
+        else:
+            self._input.set_spotlighted(False)
+
+        # Set spotlight on the new message
+        if message_widget in self._messages:
+            self._spotlighted_message_index = self._messages.index(message_widget)
+            message_widget.set_spotlighted(True)
+            return
+
+        self._spotlighted_message_index = -1
+        self._input.set_spotlighted(True)
+
+    def _deactivate_widget(self, widget: QWidget) -> None:
+        """
+        Handle deactivation of a widget, checking if spotlight is leaving the associated message.
+
+        Args:
+            widget: The widget that lost focus
+        """
+        # Find the ConversationMessage that contains this widget
+        message_widget = self._find_conversation_message(widget)
+        if message_widget is None:
+            return
+
+        # Remove focus from the currently spotlighted message
+        if self._spotlighted_message_index != -1:
+            self._messages[self._spotlighted_message_index].set_spotlighted(False)
+
+        else:
+            self._input.set_spotlighted(False)
+
+    def set_active(self, widget: QWidget, active: bool) -> None:
+        """
+        Set the active state of the conversation widget.
+
+        Args:
+            widget: The widget that triggered the activation change
+            active: True if the conversation is now active, False otherwise
+        """
+        # Propagate to input box
+        if active:
+            self._activate_widget(widget)
+            return
+
+        self._deactivate_widget(widget)
 
     def _set_delegated_conversation_mode(self, enabled: bool) -> None:
         """
@@ -325,7 +397,6 @@ class ConversationWidget(QWidget):
             self._hide_user_queued_messages()
 
         msg_widget = ConversationMessage(
-            self._event_filter,
             message.source,
             message.timestamp,
             message.model or "",
@@ -1121,93 +1192,6 @@ class ConversationWidget(QWidget):
         """Scroll to the bottom of the content."""
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
-
-    def activate(self) -> None:
-        """Activate the conversation widget."""
-        # If we have a spotlighted message then spotlight it
-        if self._spotlighted_message_index != -1:
-            self._messages[self._spotlighted_message_index].set_spotlighted(True)
-            self._messages[self._spotlighted_message_index].setFocus()
-            return
-
-        # If our input box is hidden then spotlight the last message.
-        if self._input.isHidden():
-            last_visible_index = self._find_last_visible_message()
-            if last_visible_index == -1:
-                return
-
-            self._spotlighted_message_index = last_visible_index
-            self._messages[self._spotlighted_message_index].set_spotlighted(True)
-            self._messages[self._spotlighted_message_index].setFocus()
-            return
-
-        self._input.set_spotlighted(True)
-        self._input.setFocus()
-
-    def _install_activation_tracking(self, widget: QWidget) -> None:
-        """
-        Install event filter on widget and all its children recursively.
-
-        Call this for any new widgets added to the conversation widget.
-
-        Args:
-            widget: Widget to track for activation events
-        """
-        widget.installEventFilter(self._event_filter)
-        child: QWidget
-        for child in widget.findChildren(QWidget):
-            cast(QWidget, child).installEventFilter(self._event_filter)
-
-    def _on_widget_activated(self, widget: QWidget) -> None:
-        """
-        Handle activation of a widget, spotlighting the associated message.
-
-        Args:
-            widget: The widget that was activated
-        """
-         # Emit activated signal to let the tab know this conversation was clicked
-        self.activated.emit()
-
-        # If we are clicking the messages container, spotlight the last spotlighted message or input
-        if widget == self._messages_container:
-            self.activate()
-            return
-
-        # Find the ConversationMessage that contains this widget
-        message_widget = self._find_conversation_message(widget)
-        if message_widget is None:
-            return
-
-        if message_widget.is_spotlighted():
-            return
-
-        # Set spotlight on the new message
-        if message_widget in self._messages:
-            self._spotlighted_message_index = self._messages.index(message_widget)
-            message_widget.set_spotlighted(True)
-            return
-
-        self._spotlighted_message_index = -1
-        self._input.set_spotlighted(True)
-
-    def _on_widget_deactivated(self, widget: QWidget) -> None:
-        """
-        Handle deactivation of a widget, checking if spotlight is leaving the associated message.
-
-        Args:
-            widget: The widget that lost focus
-        """
-        # Find the ConversationMessage that contains this widget
-        message_widget = self._find_conversation_message(widget)
-        if message_widget is None:
-            return
-
-        # Remove focus from the currently spotlighted message
-        if self._spotlighted_message_index != -1:
-            self._messages[self._spotlighted_message_index].set_spotlighted(False)
-
-        else:
-            self._input.set_spotlighted(False)
 
     def _find_conversation_message(self, widget: QWidget) -> ConversationMessage | None:
         """

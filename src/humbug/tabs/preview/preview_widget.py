@@ -3,12 +3,12 @@
 import logging
 import os
 import re
-from typing import Dict, List, Any, Set, Tuple, cast
+from typing import Dict, List, Any, Set, Tuple
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy
 )
-from PySide6.QtCore import Signal, Qt, QPoint, QEvent, QObject, QTimer
+from PySide6.QtCore import Signal, Qt, QPoint, QTimer
 from PySide6.QtGui import QCursor, QResizeEvent
 
 from humbug.color_role import ColorRole
@@ -23,48 +23,11 @@ from humbug.tabs.preview.preview_markdown_content import PreviewMarkdownContent
 from humbug.tabs.preview.preview_markdown_preview_content import PreviewMarkdownPreviewContent
 
 
-class PreviewWidgetEventFilter(QObject):
-    """Event filter to track activation events from child widgets."""
-
-    widget_activated = Signal(object)
-    widget_deactivated = Signal(object)
-
-    def __init__(self, parent: QWidget | None = None) -> None:
-        """Initialize the event filter."""
-        super().__init__(parent)
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        """
-        Filter events to detect widget activation.
-
-        Args:
-            obj: The object that received the event
-            event: The event that was received
-
-        Returns:
-            True if event was handled, False to pass to the target object
-        """
-        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
-            # Simply emit the signal with the object that received the event
-            self.widget_activated.emit(watched)
-            return False
-
-        if event.type() == QEvent.Type.FocusOut:
-            # Emit a widget deactivated signal
-            self.widget_deactivated.emit(watched)
-            return False
-
-        return super().eventFilter(watched, event)
-
-
 class PreviewWidget(QWidget):
     """Widget for displaying preview content with automatic refresh capability."""
 
     # Signal to notify tab of status changes
     status_updated = Signal()
-
-    # Emits when parent should be activated by user interaction
-    activated = Signal()
 
     # Emits when a link is clicked
     open_link = Signal(str)
@@ -172,11 +135,6 @@ class PreviewWidget(QWidget):
         self._current_match_index = -1
         self._last_search = ""
         self._highlighted_widgets: Set[PreviewContentWidget] = set()
-
-        # Set up activation tracking
-        self._event_filter = PreviewWidgetEventFilter(self)
-        self._event_filter.widget_activated.connect(self._on_widget_activated)
-        self._event_filter.widget_deactivated.connect(self._on_widget_deactivated)
 
     def activate(self) -> None:
         """Activate the preview widget."""
@@ -329,8 +287,6 @@ class PreviewWidget(QWidget):
         self._content_layout.insertWidget(self._content_layout.count() - 1, content_widget)
         self._content_blocks.append(content_widget)
 
-        self._install_activation_tracking(content_widget)
-
         return content_widget
 
     def _on_edit_clicked(self) -> None:
@@ -353,38 +309,6 @@ class PreviewWidget(QWidget):
             return
 
         self.open_link.emit(url)
-
-    def _install_activation_tracking(self, widget: QWidget) -> None:
-        """
-        Install event filter on widget and all its children recursively.
-
-        Call this for any new widgets added to the preview widget.
-
-        Args:
-            widget: Widget to track for activation events
-        """
-        widget.installEventFilter(self._event_filter)
-        child: QWidget
-        for child in widget.findChildren(QWidget):
-            cast(QWidget, child).installEventFilter(self._event_filter)
-
-    def _on_widget_activated(self, _widget: QWidget) -> None:
-        """
-        Handle activation of a widget.
-
-        Args:
-            widget: The widget that was activated
-        """
-        # Emit activated signal to let the tab know this preview was clicked
-        self.activated.emit()
-
-    def _on_widget_deactivated(self, _widget: QWidget) -> None:
-        """
-        Handle deactivation of a widget.
-
-        Args:
-            widget: The widget lost focus
-        """
 
     def load_content(self) -> None:
         """Load content from the mindspace preview."""

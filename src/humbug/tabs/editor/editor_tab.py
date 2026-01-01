@@ -54,7 +54,6 @@ class EditorTab(TabBase):
         self._editor_widget.content_modified.connect(self._on_content_modified)
         self._editor_widget.text_changed.connect(self._on_text_changed)
         self._editor_widget.status_updated.connect(self.update_status)
-        self._editor_widget.activated.connect(self.activated)
         self._editor_widget.file_saved.connect(self._on_file_saved)
         layout.addWidget(self._editor_widget)
 

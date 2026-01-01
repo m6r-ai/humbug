@@ -76,17 +76,24 @@ class ConversationTab(TabBase):
         self._conversation_widget.conversation_modified.connect(self._on_conversation_modified)
         layout.addWidget(self._conversation_widget)
 
-        # Install activation tracking
-        self._conversation_widget.activated.connect(self.activated)
-
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._start_file_watching(self._path)
 
+    def set_active(self, widget: QWidget, active: bool) -> None:
+        """
+        Set the active state of the tab.
+
+        Args:
+            widget: The widget that triggered the activation change
+            active: True if the tab is now active, False otherwise
+        """
+        self._conversation_widget.set_active(widget, active)
+
     def activate(self) -> None:
         """Activate the tab."""
-        self._conversation_widget.activate()
+        self._conversation_widget.set_active(self._conversation_widget, True)
 
     def _on_conversation_modified(self) -> None:
         """Handle when the conversation is modified."""
