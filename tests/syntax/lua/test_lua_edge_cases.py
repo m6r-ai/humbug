@@ -261,12 +261,12 @@ class TestLuaEdgeCases:
         lexer = LuaLexer()
         lexer.lex(None, 'x = 42')
         tokens = list(lexer._tokens)
-        
+
         # Check that start positions are set
         for token in tokens:
             assert hasattr(token, 'start'), "Token should have start position"
             assert token.start >= 0, "Start position should be non-negative"
-        
+
         # Positions should be in order
         positions = [t.start for t in tokens]
         assert positions == sorted(positions), "Token positions should be in order"
