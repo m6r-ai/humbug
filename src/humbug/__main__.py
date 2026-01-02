@@ -121,7 +121,9 @@ class HumbugApplication(QApplication):
         if not isinstance(watched, QWidget):
             return False
 
-        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
+        event_type = event.type()
+
+        if event_type in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
             # Notify any TabBase ancestor
             parent = watched.parent()
             while parent:
@@ -131,7 +133,9 @@ class HumbugApplication(QApplication):
 
                 parent = parent.parent()
 
-        if event.type() == QEvent.Type.FocusOut:
+            return False
+
+        if event_type == QEvent.Type.FocusOut:
             # Notify any TabBase ancestor
             parent = watched.parent()
             while parent:
@@ -140,6 +144,8 @@ class HumbugApplication(QApplication):
                     return False
 
                 parent = parent.parent()
+
+            return False
 
         return False
 
