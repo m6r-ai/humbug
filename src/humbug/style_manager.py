@@ -60,6 +60,12 @@ class StyleManager(QObject):
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
 
+            # Two-level icon cache for performance.  Level 1: Cache original loaded icons by path
+            self._icon_cache: Dict[str, QPixmap] = {}
+
+            # Level 2: Cache scaled icons by (path, scaled_size)
+            self._scaled_icon_cache: Dict[tuple[str, int], QPixmap] = {}
+
             self._code_font_families = ["Menlo", "Consolas", "Monaco", "monospace"]
             self._initialize_highlights()
             self._initialize_proportional_highlights()
@@ -1076,7 +1082,7 @@ class StyleManager(QObject):
 
     def scale_icon(self, icon_path: str, target_size: int) -> QPixmap:
         """
-        Load and scale an icon to the appropriate size.
+        Load and scale an icon to the appropriate size
 
         Args:
             icon_path: Path to the icon file
@@ -1085,14 +1091,27 @@ class StyleManager(QObject):
         Returns:
             Scaled QPixmap of the icon
         """
-        pixmap = QPixmap(icon_path)
         scaled_size = int(target_size * self._zoom_factor)
-        return pixmap.scaled(
+        cache_key = (icon_path, scaled_size)
+
+        # Check if we already have this scaled icon cached
+        if cache_key in self._scaled_icon_cache:
+            return self._scaled_icon_cache[cache_key]
+
+        # Load original icon (with caching)
+        if icon_path not in self._icon_cache:
+            self._icon_cache[icon_path] = QPixmap(icon_path)
+
+        # Scale the icon and cache the result
+        scaled_pixmap = self._icon_cache[icon_path].scaled(
             scaled_size,
             scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
+
+        self._scaled_icon_cache[cache_key] = scaled_pixmap
+        return scaled_pixmap
 
     def get_color(self, role: ColorRole) -> QColor:
         """
@@ -1203,6 +1222,9 @@ class StyleManager(QObject):
         """
         Set the color mode and update application styles.
 
+        Clears both icon caches since icon paths include the theme name
+        (e.g., 'arrow-dark.svg' vs 'arrow-light.svg').
+
         Args:
             mode: The ColorMode to switch to
         """
@@ -1210,6 +1232,9 @@ class StyleManager(QObject):
             self._color_mode = mode
             self._initialize_highlights()
             self._initialize_proportional_highlights()
+            # Clear both caches since icon paths change with theme
+            self._icon_cache.clear()
+            self._scaled_icon_cache.clear()
             self.style_changed.emit()
 
     def zoom_factor(self) -> float:
@@ -1220,12 +1245,16 @@ class StyleManager(QObject):
         """
         Set new zoom factor and update application styles.
 
+        Clears the scaled icon cache since all icons need to be rescaled
+        at the new zoom level. The original icon cache is preserved.
+
         Args:
             factor: New zoom factor to apply (clamped between 0.5 and 2.0)
         """
         new_factor = max(0.5, min(2.0, factor))
         if new_factor != self._zoom_factor:
             self._zoom_factor = new_factor
+            self._scaled_icon_cache.clear()  # Invalidate scaled icons
             self.style_changed.emit()
 
     def get_space_width(self) -> float:
