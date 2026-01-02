@@ -94,6 +94,22 @@ class LuaParser(Parser):
                 if next_token.value == '.':
                     next_in_table_access = True
 
+                # Function call with table literal: identifier followed by '{'
+                # Lua allows: func{x=1} as shorthand for func({x=1})
+                if next_token.value == '{':
+                    in_table_access = False
+                    token.type = TokenType.FUNCTION_OR_METHOD
+                    self._tokens.append(token)
+                    continue
+
+            # Function call with string literal: identifier followed by string
+            # Lua allows: func"str" as shorthand for func("str")
+            if next_token and next_token.type == TokenType.STRING:
+                in_table_access = False
+                token.type = TokenType.FUNCTION_OR_METHOD
+                self._tokens.append(token)
+                continue
+
             # Table indexing: identifier followed by '['
             if next_token and next_token.type == TokenType.OPERATOR and next_token.value == '[':
                 # This could be table indexing: table[key]
