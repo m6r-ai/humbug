@@ -117,9 +117,6 @@ class LuaLexer(Lexer):
         if ch == '[':
             return self._read_bracket
 
-        if ch == ']':
-            return self._read_close_bracket
-
         if ch == '-':
             return self._read_minus_or_comment
 
@@ -238,39 +235,6 @@ class LuaLexer(Lexer):
                 return
 
         # It's just a regular bracket (table indexing)
-        self._read_operator()
-
-    def _read_close_bracket(self) -> None:
-        """
-        Read a closing bracket.
-
-        If we're in a multi-line string, check if this closes it.
-        """
-        if self._in_multiline_string:
-            # Check if this closes the multi-line string
-            bracket_level = 0
-            pos = self._position + 1
-
-            while pos < self._input_len and self._input[pos] == '=':
-                bracket_level += 1
-                pos += 1
-
-            if pos < self._input_len and self._input[pos] == ']':
-                # Check if bracket levels match
-                if bracket_level == self._string_bracket_level:
-                    # This closes the multi-line string
-                    start = self._position
-                    self._position = pos + 1
-                    self._in_multiline_string = False
-                    self._string_bracket_level = 0
-                    self._tokens.append(Token(
-                        type=TokenType.STRING,
-                        value=self._input[start:self._position],
-                        start=start
-                    ))
-                    return
-
-        # Not closing a multi-line string, treat as operator
         self._read_operator()
 
     def _read_multiline_string(self, bracket_level: int) -> None:
