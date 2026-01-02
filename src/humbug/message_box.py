@@ -169,8 +169,7 @@ class MessageBox(QDialog):
         if not icon_name:
             return None
 
-        icon_path = self._style_manager.get_icon_path(icon_name)
-        return self._style_manager.scale_icon(icon_path, 64)
+        return self._style_manager.scale_icon(icon_name, 64)
 
     def _get_button_text(self, button: MessageBoxButton) -> str:
         """Get display text for button type."""

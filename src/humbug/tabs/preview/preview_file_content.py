@@ -363,9 +363,7 @@ class PreviewFileContent(PreviewContentWidget):
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
-        self._edit_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path("edit"), icon_base_size
-        )))
+        self._edit_button.setIcon(QIcon(self._style_manager.scale_icon("edit", icon_base_size)))
         self._edit_button.setIconSize(icon_size)
 
         # If we changed colour mode then re-highlight

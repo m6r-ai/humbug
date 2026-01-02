@@ -110,9 +110,7 @@ class MindspaceCollapsibleHeader(QWidget):
 
         # Set icon size based on zoom factor
         icon_base_size = 16
-        self._expand_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path(icon_name), icon_base_size
-        )))
+        self._expand_button.setIcon(QIcon(self._style_manager.scale_icon( icon_name, icon_base_size)))
         icon_scaled_size = round(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
         self._expand_button.setIconSize(icon_size)

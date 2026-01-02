@@ -1080,30 +1080,30 @@ class StyleManager(QObject):
         theme = "dark" if self._color_mode == ColorMode.DARK else "light"
         return Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
 
-    def scale_icon(self, icon_path: str, target_size: int) -> QPixmap:
+    def scale_icon(self, icon_name: str, target_size: int) -> QPixmap:
         """
         Load and scale an icon to the appropriate size
 
         Args:
-            icon_path: Path to the icon file
+            icon_name: Name of the icon we want
             target_size: Desired size in pixels
 
         Returns:
             Scaled QPixmap of the icon
         """
         scaled_size = int(target_size * self._zoom_factor)
-        cache_key = (icon_path, scaled_size)
+        cache_key = (icon_name, scaled_size)
 
         # Check if we already have this scaled icon cached
         if cache_key in self._scaled_icon_cache:
             return self._scaled_icon_cache[cache_key]
 
         # Load original icon (with caching)
-        if icon_path not in self._icon_cache:
-            self._icon_cache[icon_path] = QPixmap(icon_path)
+        if icon_name not in self._icon_cache:
+            self._icon_cache[icon_name] = QPixmap(self.get_icon_path(icon_name))
 
         # Scale the icon and cache the result
-        scaled_pixmap = self._icon_cache[icon_path].scaled(
+        scaled_pixmap = self._icon_cache[icon_name].scaled(
             scaled_size,
             scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,

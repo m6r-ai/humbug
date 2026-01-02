@@ -318,9 +318,7 @@ class MindspaceView(QWidget):
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         # Update settings button
-        self._settings_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path("cog"), icon_base_size
-        )))
+        self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("cog", icon_base_size)))
         self._settings_button.setIconSize(icon_size)
 
     def apply_style(self) -> None:

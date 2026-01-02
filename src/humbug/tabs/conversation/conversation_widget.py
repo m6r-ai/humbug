@@ -383,19 +383,8 @@ class ConversationWidget(QWidget):
 
         return {"success": False, "error": "Conversation ended unexpectedly"}
 
-    def _add_message(self, message: AIMessage) -> None:
-        """
-        Add a new message to the conversation view.
-
-        Args:
-            message: The message that was added
-        """
-        self._hide_last_ai_connected_message()
-
-        # If this is a USER message, hide any previous USER_QUEUED messages
-        if message.source == AIMessageSource.USER:
-            self._hide_user_queued_messages()
-
+    def _add_message_core(self, message: AIMessage) -> ConversationMessage:
+        """Core of the _add_message method that avoid unecessary UI updates."""
         msg_widget = ConversationMessage(
             message.source,
             message.timestamp,
@@ -417,6 +406,25 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
 
+        self._messages.append(msg_widget)
+
+        # Add widget before input and the stretch
+        self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
+        return msg_widget
+
+    def _add_message(self, message: AIMessage) -> None:
+        """
+        Add a new message to the conversation view.
+
+        Args:
+            message: The message that was added
+        """
+        self._hide_last_ai_connected_message()
+
+        # If this is a USER message, hide any previous USER_QUEUED messages
+        if message.source == AIMessageSource.USER:
+            self._hide_user_queued_messages()
+
         # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
         if not self._auto_scroll:
             # Cancel any pending show timer and hide container during insertion
@@ -425,22 +433,23 @@ class ConversationWidget(QWidget):
 
             self._messages_container.setUpdatesEnabled(False)
 
-        # Add widget before input and the stretch
-        self._messages_layout.insertWidget(self._messages_layout.count() - 2, msg_widget)
+        msg_widget = self._add_message_core(message)
 
         if not self._auto_scroll:
             self._container_show_timer.start(5)
 
-        self._messages.append(msg_widget)
+        # If we're not animating then we've done everything we need to.
+        if not self._is_animating:
+            return
 
-        # If we're currently animating, transfer animation to this new message
+        # We're currently animating, transfer animation to this new message
         # but only if the new message is not hidden
-        if self._is_animating and msg_widget.is_rendered():
+        if msg_widget.is_rendered():
             self._transfer_animation_to_message(msg_widget)
 
-        # If we're animating but current animated message is no longer visible,
+        # We're animating but current animated message is no longer visible,
         # find a new visible message to animate
-        elif self._is_animating and self._animated_message and not self._animated_message.is_rendered():
+        elif self._animated_message and not self._animated_message.is_rendered():
             self._update_animated_message()
 
     def _hide_last_ai_connected_message(self) -> None:
@@ -1511,7 +1520,11 @@ class ConversationWidget(QWidget):
             self._input.set_model(conversation_settings.model)
 
         for message in messages:
-            self._add_message(message)
+            message_widget = self._add_message_core(message)
+
+            # Filter messages that shouldn't be shown in the UI
+            if message_widget.message_source() in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
+                message_widget.set_rendered(False)
 
         # Ensure we're scrolled to the end
         self._auto_scroll = True

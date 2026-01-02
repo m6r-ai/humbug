@@ -1453,6 +1453,9 @@ class ColumnManager(QWidget):
 
     def open_conversation(self, path: str, ephemeral: bool) -> ConversationTab:
         """Open an existing conversation file."""
+        import cProfile
+        profiler = cProfile.Profile()
+
         assert os.path.isabs(path), "Path must be absolute"
 
         # Check if already open
@@ -1467,7 +1470,10 @@ class ColumnManager(QWidget):
             return existing_tab
 
         try:
+            profiler.enable()
             conversation_tab = ConversationTab("", abs_path, self)
+            profiler.disable()
+            profiler.print_stats(sort="time")
             conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
             conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]

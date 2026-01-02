@@ -115,8 +115,6 @@ class ConversationMessageSection(QFrame):
             self._save_as_button.setToolTip(strings.tooltip_save_contents)
             self._header_layout.addWidget(self._save_as_button)
 
-            self._apply_button_style()
-
             # Add header container to main layout
             self._layout.addWidget(self._header_container)
 
@@ -405,24 +403,6 @@ class ConversationMessageSection(QFrame):
 
         return local_pos
 
-    def _apply_button_style(self) -> None:
-        """Apply styles to the copy and save buttons."""
-        icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
-        icon_size = QSize(icon_scaled_size, icon_scaled_size)
-
-        if self._copy_button:
-            self._copy_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("copy"), icon_base_size
-            )))
-            self._copy_button.setIconSize(icon_size)
-
-        if self._save_as_button:
-            self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("save"), icon_base_size
-            )))
-            self._save_as_button.setIconSize(icon_size)
-
     def apply_style(self) -> None:
         """Apply styling to this section."""
         style_manager = self._style_manager
@@ -440,10 +420,20 @@ class ConversationMessageSection(QFrame):
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         self._text_area.apply_style()
-        self._apply_button_style()
+
+        icon_base_size = 14
+        icon_scaled_size = int(icon_base_size * zoom_factor)
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+
+        if self._copy_button:
+            self._copy_button.setIcon(QIcon(self._style_manager.scale_icon("copy", icon_base_size)))
+            self._copy_button.setIconSize(icon_size)
+
+        if self._save_as_button:
+            self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon("save", icon_base_size)))
+            self._save_as_button.setIconSize(icon_size)
 
         # Only apply renderer style for MarkdownTextEdit
         if self._renderer is not None and self._content_node is not None:
             self._renderer.apply_style()
             self._renderer.visit(self._content_node)
-            return

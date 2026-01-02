@@ -66,26 +66,22 @@ class TabLabel(QWidget):
 
     def _create_type_pixmap(self) -> QPixmap:
         """Create a pixmap for the tab type."""
-        icon_path = self._style_manager.get_icon_path(self._icon_name)
-        return self._style_manager.scale_icon(icon_path, 16)
+        return self._style_manager.scale_icon(self._icon_name, 16)
 
     def _create_inactive_type_pixmap(self) -> QPixmap:
         """Create a pixmap for the inactive tab type."""
-        icon_path = self._style_manager.get_icon_path(f"inactive-{self._icon_name}")
-        return self._style_manager.scale_icon(icon_path, 16)
+        return self._style_manager.scale_icon(f"inactive-{self._icon_name}", 16)
 
     def _create_visible_close_icon(self) -> QIcon:
         icon = QIcon()
-        icon_path = self._style_manager.get_icon_path("close")
-        pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
+        pixmap = self._style_manager.scale_icon("close", 16)  # 16px base size
         icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon
 
     def _create_visible_inactive_close_icon(self) -> QIcon:
         icon = QIcon()
-        icon_path = self._style_manager.get_icon_path("inactive-close")
-        pixmap = self._style_manager.scale_icon(icon_path, 16)  # 16px base size
+        pixmap = self._style_manager.scale_icon("inactive-close", 16)  # 16px base size
         icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
         icon.addPixmap(pixmap, QIcon.Mode.Active, QIcon.State.Off)
         return icon

@@ -138,26 +138,20 @@ class ConversationInput(ConversationMessage):
 
         # Update submit/interrupt button
         submit_button = cast(QToolButton, self._submit_button)
-        submit_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path("submit"), icon_base_size
-        )))
+        submit_button.setIcon(QIcon(self._style_manager.scale_icon("submit", icon_base_size)))
         submit_button.setIconSize(icon_size)
         submit_button.setStyleSheet(button_style)
 
         # Update settings button
         submit_button = cast(QToolButton, self._settings_button)
-        submit_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path("cog"), icon_base_size
-        )))
+        submit_button.setIcon(QIcon(self._style_manager.scale_icon("cog", icon_base_size)))
         submit_button.setIconSize(icon_size)
         submit_button.setStyleSheet(button_style)
 
         # Update stop button if it exists
         if self._stop_button:
             stop_button = cast(QToolButton, self._stop_button)
-            stop_button.setIcon(QIcon(self._style_manager.scale_icon(
-                self._style_manager.get_icon_path("stop"), icon_base_size
-            )))
+            stop_button.setIcon(QIcon(self._style_manager.scale_icon("stop", icon_base_size)))
             stop_button.setIconSize(icon_size)
             stop_button.setStyleSheet(button_style)
 

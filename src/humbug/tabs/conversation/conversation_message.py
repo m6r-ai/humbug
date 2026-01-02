@@ -407,9 +407,7 @@ class ConversationMessage(QFrame):
 
         # Update icon
         icon_base_size = 14
-        self._expand_button.setIcon(QIcon(self._style_manager.scale_icon(
-            self._style_manager.get_icon_path(icon_name), icon_base_size
-        )))
+        self._expand_button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, icon_base_size)))
 
         # Update tooltip
         self._expand_button.setToolTip(tooltip)
@@ -849,43 +847,6 @@ class ConversationMessage(QFrame):
             self._section_with_selection.clear_selection()
             self._section_with_selection = None
 
-    def _apply_button_style(self) -> None:
-        """Apply the current style to all buttons."""
-        style_manager = self._style_manager
-
-        # Set icons and sizes for buttons
-        icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * style_manager.zoom_factor())
-        icon_size = QSize(icon_scaled_size, icon_scaled_size)
-
-        if self._copy_message_button:
-            self._copy_message_button.setIcon(QIcon(style_manager.scale_icon(
-                style_manager.get_icon_path("copy"), icon_base_size
-            )))
-            self._copy_message_button.setIconSize(icon_size)
-
-        if self._save_message_button:
-            self._save_message_button.setIcon(QIcon(style_manager.scale_icon(
-                style_manager.get_icon_path("save"), icon_base_size
-            )))
-            self._save_message_button.setIconSize(icon_size)
-
-        if self._fork_message_button:
-            self._fork_message_button.setIcon(QIcon(style_manager.scale_icon(
-                style_manager.get_icon_path("fork"), icon_base_size
-            )))
-            self._fork_message_button.setIconSize(icon_size)
-
-        if self._delete_message_button:
-            self._delete_message_button.setIcon(QIcon(style_manager.scale_icon(
-                style_manager.get_icon_path("delete"), icon_base_size
-            )))
-            self._delete_message_button.setIconSize(icon_size)
-
-        if self._expand_button:
-            self._expand_button.setIconSize(icon_size)
-            self._update_expand_button()
-
     def apply_style(self) -> None:
         """Apply style changes."""
         style_manager = self._style_manager
@@ -901,7 +862,30 @@ class ConversationMessage(QFrame):
         font.setPointSizeF(base_font_size * zoom_factor)
         self._role_label.setFont(font)
 
-        self._apply_button_style()
+        # Set icons and sizes for buttons
+        icon_base_size = 14
+        icon_scaled_size = int(icon_base_size * zoom_factor)
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+
+        if self._copy_message_button:
+            self._copy_message_button.setIcon(QIcon(style_manager.scale_icon("copy", icon_base_size)))
+            self._copy_message_button.setIconSize(icon_size)
+
+        if self._save_message_button:
+            self._save_message_button.setIcon(QIcon(style_manager.scale_icon("save", icon_base_size)))
+            self._save_message_button.setIconSize(icon_size)
+
+        if self._fork_message_button:
+            self._fork_message_button.setIcon(QIcon(style_manager.scale_icon("fork", icon_base_size)))
+            self._fork_message_button.setIconSize(icon_size)
+
+        if self._delete_message_button:
+            self._delete_message_button.setIcon(QIcon(style_manager.scale_icon("delete", icon_base_size)))
+            self._delete_message_button.setIconSize(icon_size)
+
+        if self._expand_button:
+            self._expand_button.setIconSize(icon_size)
+            self._update_expand_button()
 
         # Apply fonts to approval buttons if present
         if self._approval_approve_button:
