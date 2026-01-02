@@ -176,8 +176,6 @@ class ConversationMessage(QFrame):
             self._save_message_button.clicked.connect(self._save_message)
             self._header_layout.addWidget(self._save_message_button)
 
-        self._apply_button_style()
-
         # Container for message sections
         self._sections_container = QWidget(self)
         self._sections_container.setObjectName("_sections_container")
