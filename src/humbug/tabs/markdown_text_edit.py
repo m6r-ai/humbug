@@ -27,10 +27,6 @@ class MarkdownTextEdit(MinHeightTextEdit):
     def __init__(self, is_input: bool, parent: QWidget | None = None, ) -> None:
         super().__init__(parent)
 
-        # Calculate tab stops
-        self._style_manager = StyleManager()
-        self.apply_style()
-
         self._is_input = is_input
 
         # Track code block state
@@ -45,10 +41,16 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         self.setReadOnly(not is_input)
 
+        self._highlighter: MarkdownHighlighter | None = None
+
         # We only use the highlighter for input areas
         if is_input:
             self._highlighter = MarkdownHighlighter(self.document())
             self._highlighter.code_block_state_changed.connect(self._on_code_block_state_changed)
+
+        # Calculate tab stops
+        self._style_manager = StyleManager()
+        self.apply_style()
 
     def _on_code_block_state_changed(self, has_code_block: bool) -> None:
         """Handle changes in code block state."""
@@ -77,6 +79,9 @@ class MarkdownTextEdit(MinHeightTextEdit):
         self.setFont(font)
         self.setTabStopDistance(style_manager.get_space_width() * 8)
         self.document().setIndentWidth(style_manager.get_space_width() * 4)
+
+        if self._highlighter:
+            self._highlighter.rehighlight()
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""

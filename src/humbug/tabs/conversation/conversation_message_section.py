@@ -73,13 +73,16 @@ class ConversationMessageSection(QFrame):
 
         # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for everything else
         self._text_area: MarkdownTextEdit | CodeBlockTextEdit
-        self._renderer: MarkdownRenderer | None
+        self._renderer: MarkdownRenderer | None = None
 
         if language is None:
             # Markdown or user input - use rich text widget
             self._text_area = MarkdownTextEdit(is_input, self)
-            document = self._text_area.document()
-            self._renderer = MarkdownRenderer(document)
+
+            # Create a markdown renderer for non-input sections.  Input sections are syntax highlighted only.
+            if not is_input:
+                document = self._text_area.document()
+                self._renderer = MarkdownRenderer(document)
 
         else:
             # Create a container for header (language label + buttons)
@@ -120,7 +123,6 @@ class ConversationMessageSection(QFrame):
             # Code block - use code block text widget
             self._text_area = CodeBlockTextEdit(self)
             self._text_area.set_language(language)
-            self._renderer = None
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -444,3 +446,4 @@ class ConversationMessageSection(QFrame):
         if self._renderer is not None and self._content_node is not None:
             self._renderer.apply_style()
             self._renderer.visit(self._content_node)
+            return
