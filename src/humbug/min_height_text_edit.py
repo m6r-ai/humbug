@@ -23,8 +23,10 @@ class MinHeightTextEdit(QTextEdit):
             word_wrap_mode: Word wrap mode for text
         """
         super().__init__(parent)
-        self.document().documentLayout().documentSizeChanged.connect(self._on_content_resized)
-        self.document().setDocumentMargin(0)
+        document = self.document()
+        document.documentLayout().documentSizeChanged.connect(self._on_content_resized)
+        document.setDocumentMargin(0)
+
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setFrameStyle(QFrame.Shape.NoFrame)
@@ -36,7 +38,6 @@ class MinHeightTextEdit(QTextEdit):
         self.setWordWrapMode(QTextOption.WrapMode.WrapAtWordBoundaryOrAnywhere)
 
         self._current_text = ""
-        self.clear()
 
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""

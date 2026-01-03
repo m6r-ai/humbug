@@ -98,21 +98,17 @@ class ConversationMessageSection(QFrame):
             self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
             self._header_layout.addWidget(self._language_header)
 
-            strings = self._language_manager.strings()
-
             # Add stretch to push buttons to the right
             self._header_layout.addStretch()
 
             # Add Copy button with icon
             self._copy_button = QToolButton()
             self._copy_button.clicked.connect(self._copy_all_content)
-            self._copy_button.setToolTip(strings.tooltip_copy_contents)
             self._header_layout.addWidget(self._copy_button)
 
             # Add Save As button with icon
             self._save_as_button = QToolButton()
             self._save_as_button.clicked.connect(self._save_as)
-            self._save_as_button.setToolTip(strings.tooltip_save_contents)
             self._header_layout.addWidget(self._save_as_button)
 
             # Add header container to main layout

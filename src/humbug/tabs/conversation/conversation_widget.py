@@ -425,6 +425,7 @@ class ConversationWidget(QWidget):
             self._messages_container.setUpdatesEnabled(False)
 
         msg_widget = self._add_message_core(message)
+        msg_widget.apply_style()
 
         if not self._auto_scroll:
             self._container_show_timer.start(5)
@@ -1507,6 +1508,9 @@ class ConversationWidget(QWidget):
             if message_widget.message_source() in (AIMessageSource.USER_QUEUED, AIMessageSource.AI_CONNECTED):
                 message_widget.set_rendered(False)
 
+            else:
+                message_widget.apply_style()
+
         # Ensure we're scrolled to the end
         self._auto_scroll = True
         self._scroll_to_bottom()
@@ -1967,8 +1971,7 @@ class ConversationWidget(QWidget):
             if message.is_rendered():
                 message.apply_style()
 
-        if self._input.isVisible():
-            self._input.apply_style()
+        self._input.apply_style()
 
     def _show_conversation_context_menu(self, pos: QPoint) -> None:
         """

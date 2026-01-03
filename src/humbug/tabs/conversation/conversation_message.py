@@ -46,8 +46,7 @@ class ConversationMessage(QFrame):
         content: str | None = None,
         context: str | None = None,
         parent: QWidget | None = None,
-        is_input: bool = False,
-        do_not_style: bool = False
+        is_input: bool = False
     ) -> None:
         """
         Initialize the message widget.
@@ -62,7 +61,6 @@ class ConversationMessage(QFrame):
             context: Optional context for the message
             parent: Optional parent widget
             is_input: Whether this is an input widget (affects styling)
-            do_not_style: Whether to skip initial styling
         """
         super().__init__(parent)
         self.setFrameStyle(QFrame.Shape.Box | QFrame.Shadow.Plain)
@@ -148,20 +146,16 @@ class ConversationMessage(QFrame):
         # Add fork button only for AI messages
         style = self._message_source
         if style == AIMessageSource.AI:
-            strings = self._language_manager.strings()
             self._fork_message_button = QToolButton()
             self._fork_message_button.setObjectName("_fork_button")
             self._fork_message_button.clicked.connect(self._fork_message)
-            self._fork_message_button.setToolTip(strings.tooltip_fork_message)
             self._header_layout.addWidget(self._fork_message_button)
 
         # Add delete button only for user messages
         elif style == AIMessageSource.USER and not self._is_input:
-            strings = self._language_manager.strings()
             self._delete_message_button = QToolButton()
             self._delete_message_button.setObjectName("_delete_button")
             self._delete_message_button.clicked.connect(self._delete_message)
-            self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
             self._header_layout.addWidget(self._delete_message_button)
 
         # We have copy and save buttons for several message sources
@@ -217,10 +211,6 @@ class ConversationMessage(QFrame):
         # Tool calls and tool results should be collapsed by default
         default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
         self.set_expanded(default_expanded)
-
-        # We don't want to style subclasses immediately
-        if not do_not_style:
-            self.apply_style()
 
         self._context = context
         if content:

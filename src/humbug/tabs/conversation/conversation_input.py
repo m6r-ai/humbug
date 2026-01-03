@@ -31,7 +31,7 @@ class ConversationInput(ConversationMessage):
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
 
-        super().__init__(style, parent=parent, is_input=True, do_not_style=True)
+        super().__init__(style, parent=parent, is_input=True)
 
         # Connect text cursor signals
         self._text_area = self._sections[0].text_area()
@@ -62,7 +62,6 @@ class ConversationInput(ConversationMessage):
         self._text_area.textChanged.connect(self._on_text_changed)
 
         self._on_language_changed()
-        self.apply_style()
 
     def set_model(self, model: str) -> None:
         """Set the model name for the input prompt."""
@@ -72,10 +71,7 @@ class ConversationInput(ConversationMessage):
     def _on_language_changed(self) -> None:
         """Handle language change event."""
         self._update_header_text()
-        self._update_button_tooltips()
 
-    def _update_button_tooltips(self) -> None:
-        """Update button tooltips based on current state."""
         strings = self._language_manager.strings()
 
         if self._settings_button:
@@ -102,6 +98,7 @@ class ConversationInput(ConversationMessage):
 
     def apply_style(self) -> None:
         """Apply style changes."""
+        print("Applying style to ConversationInput")
         super().apply_style()
 
         # Apply icon and styling
@@ -163,9 +160,6 @@ class ConversationInput(ConversationMessage):
             if self._submit_button:
                 # Submit button only enabled if has content
                 self._submit_button.setEnabled(has_content)
-
-        # Update tooltips and styling
-        self._update_button_tooltips()
 
     def _on_submit_button_clicked(self) -> None:
         """Handle submit button click."""

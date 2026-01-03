@@ -28,8 +28,10 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         super().__init__(parent)
         self._logger = logging.getLogger("MinHeightPlainTextEdit")
 
-        self.document().documentLayout().documentSizeChanged.connect(self._on_content_resized)
-        self.document().setDocumentMargin(0)
+        document = self.document()
+        document.documentLayout().documentSizeChanged.connect(self._on_content_resized)
+        document.setDocumentMargin(0)
+
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(horizontal_scrollbar_policy)
         self.horizontalScrollBar().rangeChanged.connect(self.scroll_changed)
@@ -43,7 +45,6 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         self.setWordWrapMode(word_wrap_mode)
 
         self._current_text = ""
-        self.clear()
 
     def _on_content_resized(self) -> None:
         """Handle resizing this widget based on the document content."""
