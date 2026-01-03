@@ -1,7 +1,7 @@
 """Input widget that matches history message styling."""
 
 import sys
-from typing import cast, Dict
+from typing import Dict
 
 from PySide6.QtCore import Signal, Qt, QRect, QSize
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
@@ -9,7 +9,6 @@ from PySide6.QtWidgets import QWidget, QToolButton
 
 from ai import AIMessageSource
 
-from humbug.color_role import ColorRole
 from humbug.tabs.conversation.conversation_message import ConversationMessage
 
 
@@ -42,26 +41,28 @@ class ConversationInput(ConversationMessage):
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
+        self._stop_button.setObjectName("_stop_button")
         self._stop_button.clicked.connect(self._on_stop_button_clicked)
         self._stop_button.hide()
         self._header_layout.addWidget(self._stop_button)
 
         # Create submit button
         self._submit_button = QToolButton(self)
+        self._submit_button.setObjectName("_submit_button")
         self._submit_button.clicked.connect(self._on_submit_button_clicked)
         self._header_layout.addWidget(self._submit_button)
 
         # Create settings button
         self._settings_button = QToolButton(self)
+        self._settings_button.setObjectName("_settings_button")
         self._settings_button.clicked.connect(self._on_settings_button_clicked)
         self._header_layout.addWidget(self._settings_button)
 
         # Connect text changes to update button state
         self._text_area.textChanged.connect(self._on_text_changed)
 
-        self._update_header_text()
+        self._on_language_changed()
         self.apply_style()
-        self._update_button_states()
 
     def set_model(self, model: str) -> None:
         """Set the model name for the input prompt."""
@@ -102,34 +103,6 @@ class ConversationInput(ConversationMessage):
     def apply_style(self) -> None:
         """Apply style changes."""
         super().apply_style()
-        self._set_role_style()
-        self._update_button_styling()
-
-    def _update_button_styling(self) -> None:
-        """Update button styling and icons."""
-        if self._submit_button is None:
-            return
-
-        # Use the same button style pattern as other message action buttons
-        background_color = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)
-        button_style = f"""
-            QToolButton {{
-                background-color: {background_color};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                padding: 0px;
-            }}
-            QToolButton:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-            }}
-            QToolButton:pressed {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
-            }}
-            QToolButton:disabled {{
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                background-color: {background_color};
-            }}
-        """
 
         # Apply icon and styling
         icon_base_size = 14
@@ -137,49 +110,31 @@ class ConversationInput(ConversationMessage):
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
         # Update submit/interrupt button
-        submit_button = cast(QToolButton, self._submit_button)
-        submit_button.setIcon(QIcon(self._style_manager.scale_icon("submit", icon_base_size)))
-        submit_button.setIconSize(icon_size)
-        submit_button.setStyleSheet(button_style)
+        if self._submit_button:
+            self._submit_button.setIcon(QIcon(self._style_manager.scale_icon("submit", icon_base_size)))
+            self._submit_button.setIconSize(icon_size)
 
         # Update settings button
-        submit_button = cast(QToolButton, self._settings_button)
-        submit_button.setIcon(QIcon(self._style_manager.scale_icon("cog", icon_base_size)))
-        submit_button.setIconSize(icon_size)
-        submit_button.setStyleSheet(button_style)
+        if self._settings_button:
+            self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("cog", icon_base_size)))
+            self._settings_button.setIconSize(icon_size)
 
         # Update stop button if it exists
         if self._stop_button:
-            stop_button = cast(QToolButton, self._stop_button)
-            stop_button.setIcon(QIcon(self._style_manager.scale_icon("stop", icon_base_size)))
-            stop_button.setIconSize(icon_size)
-            stop_button.setStyleSheet(button_style)
+            self._stop_button.setIcon(QIcon(self._style_manager.scale_icon("stop", icon_base_size)))
+            self._stop_button.setIconSize(icon_size)
 
     def _update_header_text(self) -> None:
         """Update the header text based on current state."""
         strings = self._language_manager.strings()
         if self._is_streaming:
             self._role_label.setText(strings.processing_message)
+            self.setProperty("message_source", "ai_connected")
 
         else:
             submit_key = self._get_submit_key_text()
             self._role_label.setText(strings.input_prompt.format(model=self._current_model, key=submit_key))
-
-        self._set_role_style()
-
-    def _set_role_style(self) -> None:
-        """Set the role label color."""
-        colour = ColorRole.MESSAGE_STREAMING if self._is_streaming else ColorRole.MESSAGE_USER
-
-        # WARNING: This needs to stay in sync with ConversationMessage
-        self._role_label.setStyleSheet(f"""
-            QLabel {{
-                color: {self._style_manager.get_color_str(colour)};
-                margin: 0;
-                padding: 0;
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-            }}
-        """)
+            self.setProperty("message_source", "user")
 
     def _on_text_changed(self) -> None:
         """Handle text changes in the input area."""
@@ -211,7 +166,6 @@ class ConversationInput(ConversationMessage):
 
         # Update tooltips and styling
         self._update_button_tooltips()
-        self._update_button_styling()
 
     def _on_submit_button_clicked(self) -> None:
         """Handle submit button click."""

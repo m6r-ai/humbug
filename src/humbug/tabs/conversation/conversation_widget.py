@@ -396,6 +396,7 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
+        msg_widget.apply_style()
 
         self._messages.append(msg_widget)
 
@@ -1683,7 +1684,10 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_copy_button,
             #ConversationMessage #_save_button,
             #ConversationMessage #_fork_button,
-            #ConversationMessage #_delete_button {{
+            #ConversationMessage #_delete_button,
+            #ConversationMessage #_stop_button,
+            #ConversationMessage #_submit_button,
+            #ConversationMessage #_settings_button {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
@@ -1694,15 +1698,27 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_copy_button:hover,
             #ConversationMessage #_save_button:hover,
             #ConversationMessage #_fork_button:hover,
-            #ConversationMessage #_delete_button:hover {{
+            #ConversationMessage #_delete_button:hover,
+            #ConversationMessage #_stop_button:hover,
+            #ConversationMessage #_submit_button:hover,
+            #ConversationMessage #_settings_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
 
             #ConversationMessage #_copy_button:pressed,
             #ConversationMessage #_save_button:pressed,
             #ConversationMessage #_fork_button:pressed,
-            #ConversationMessage #_delete_button:pressed {{
+            #ConversationMessage #_delete_button:pressed,
+            #ConversationMessage #_stop_button:presse,
+            #ConversationMessage #_submit_button:pressed,
+            #ConversationMessage #_settings_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+            }}
+
+            #ConversationMessage #_stop_button:disabled,
+            #ConversationMessage #_submit_button:disabled {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: transparent;
             }}
 
             #ConversationMessage[message_source="user"] #_copy_button:hover,
