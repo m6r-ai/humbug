@@ -227,7 +227,7 @@ class ConversationMessage(QFrame):
 
         self._context = context
         if content:
-            self.set_content(content,)
+            self.set_content(content)
 
         self.setLayout(self._layout)
 
@@ -417,9 +417,45 @@ class ConversationMessage(QFrame):
         if self._is_input:
             return
 
-        self._update_role_text()
-
         strings = self._language_manager.strings()
+        if self._message_source:
+            match self._message_source:
+                case AIMessageSource.USER:
+                    if self._message_user_name:
+                        role_text = self._message_user_name
+
+                    else:
+                        role_text = strings.role_you
+
+                case AIMessageSource.USER_QUEUED:
+                    role_text = strings.role_you_queued
+
+                case AIMessageSource.AI_CONNECTED:
+                    role_text = strings.role_connected.format(model=self._message_model)
+
+                case AIMessageSource.AI:
+                    role_text = strings.role_assistant.format(model=self._message_model)
+
+                case AIMessageSource.REASONING:
+                    role_text = strings.role_reasoning.format(model=self._message_model)
+
+                case AIMessageSource.SYSTEM:
+                    role_text = strings.role_system
+
+                case AIMessageSource.TOOL_CALL:
+                    role_text = strings.role_tool_call
+
+                case AIMessageSource.TOOL_RESULT:
+                    role_text = strings.role_tool_result
+
+            # Format with timestamp
+            if self._message_timestamp is not None:
+                timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+                self._role_label.setText(f"{role_text} @ {timestamp_str}")
+
+            else:
+                self._role_label.setText(role_text)
+
         if self._copy_message_button:
             self._copy_message_button.setToolTip(strings.tooltip_copy_message)
 
@@ -443,49 +479,6 @@ class ConversationMessage(QFrame):
 
         # Update expand button tooltip
         self._update_expand_button()
-
-    def _update_role_text(self) -> None:
-        """Update the role text based on current language."""
-        if not self._message_source:
-            return
-
-        strings = self._language_manager.strings()
-        match self._message_source:
-            case AIMessageSource.USER:
-                if self._message_user_name:
-                    role_text = self._message_user_name
-
-                else:
-                    role_text = strings.role_you
-
-            case AIMessageSource.USER_QUEUED:
-                role_text = strings.role_you_queued
-
-            case AIMessageSource.AI_CONNECTED:
-                role_text = strings.role_connected.format(model=self._message_model)
-
-            case AIMessageSource.AI:
-                role_text = strings.role_assistant.format(model=self._message_model)
-
-            case AIMessageSource.REASONING:
-                role_text = strings.role_reasoning.format(model=self._message_model)
-
-            case AIMessageSource.SYSTEM:
-                role_text = strings.role_system
-
-            case AIMessageSource.TOOL_CALL:
-                role_text = strings.role_tool_call
-
-            case AIMessageSource.TOOL_RESULT:
-                role_text = strings.role_tool_result
-
-        # Format with timestamp
-        if self._message_timestamp is not None:
-            timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-            self._role_label.setText(f"{role_text} @ {timestamp_str}")
-
-        else:
-            self._role_label.setText(role_text)
 
     def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> ConversationMessageSection:
         """
