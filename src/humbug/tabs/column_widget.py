@@ -1,5 +1,3 @@
-from typing import Any
-
 from PySide6.QtWidgets import QTabWidget, QWidget
 from PySide6.QtCore import Signal, QEvent, QObject
 from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
