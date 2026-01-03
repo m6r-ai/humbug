@@ -153,6 +153,10 @@ class ConversationWidget(QWidget):
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
+        # Connect to the vertical scrollbar's change signals
+        self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
+        self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
+
         # Create messages container widget
         self._messages_container = QWidget()
         self._messages_layout = QVBoxLayout(self._messages_container)
@@ -172,6 +176,9 @@ class ConversationWidget(QWidget):
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
         self._input.modified.connect(self.conversation_modified)
+
+        style_manager.style_changed.connect(self._on_style_changed)
+        self._on_style_changed()
 
         self._messages_layout.addStretch()
         self._messages_layout.addWidget(self._input)
@@ -210,13 +217,6 @@ class ConversationWidget(QWidget):
         # Setup context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_conversation_context_menu)
-
-        # Connect to the vertical scrollbar's change signals
-        self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
-        self._scroll_area.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
-
-        style_manager.style_changed.connect(self._on_style_changed)
-        self._on_style_changed()
 
         # Find functionality
         self._matches: List[Tuple[ConversationMessage, List[Tuple[int, int, int]]]] = []
@@ -396,7 +396,6 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
-        msg_widget.apply_style()
 
         self._messages.append(msg_widget)
 
@@ -1955,12 +1954,6 @@ class ConversationWidget(QWidget):
         font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
 
-        for message in self._messages:
-            message.apply_style()
-
-        if self._input is not None:
-            self._input.apply_style()
-
         stylesheet_parts = [
             self._build_widget_style(),
             self._build_conversation_message_styles(),
@@ -1969,6 +1962,13 @@ class ConversationWidget(QWidget):
 
         shared_stylesheet = "\n".join(stylesheet_parts)
         self.setStyleSheet(shared_stylesheet)
+
+        for message in self._messages:
+            if message.is_rendered():
+                message.apply_style()
+
+        if self._input.isVisible():
+            self._input.apply_style()
 
     def _show_conversation_context_menu(self, pos: QPoint) -> None:
         """

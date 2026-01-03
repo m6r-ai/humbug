@@ -218,9 +218,6 @@ class ConversationMessage(QFrame):
         default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
         self.set_expanded(default_expanded)
 
-        # Set a strong focus policy on this message so any button presses will give focus to the message
-        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
         # We don't want to style subclasses immediately
         if not do_not_style:
             self.apply_style()
@@ -498,7 +495,6 @@ class ConversationMessage(QFrame):
 
         # Set property that QSS will match against
         section.setProperty("section_style", style_class)
-        section.apply_style()
 
         return section
 
@@ -712,6 +708,7 @@ class ConversationMessage(QFrame):
             if i >= len(self._sections):
                 section = self._create_section_widget(language)
                 section.set_content(node)
+                section.apply_style()
                 self._sections.append(section)
                 self._sections_layout.addWidget(section)
                 continue

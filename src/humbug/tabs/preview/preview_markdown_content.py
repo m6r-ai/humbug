@@ -132,16 +132,10 @@ class PreviewMarkdownContent(PreviewContentWidget):
         # Create or update sections
         for _, (node, language) in enumerate(sections_data):
             section = self._create_section_widget(language)
+            section.set_content(node)
+            section.apply_style()
             self._sections.append(section)
             self._sections_layout.addWidget(section)
-
-            # Apply font and set content
-            factor = self._style_manager.zoom_factor()
-            font = self.font()
-            base_font_size = self._style_manager.base_font_size()
-            font.setPointSizeF(base_font_size * factor)
-            section.apply_style()
-            section.set_content(node)
 
     def has_selection(self) -> bool:
         """Check if any section has selected text."""

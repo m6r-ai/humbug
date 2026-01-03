@@ -12,7 +12,6 @@ from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.style_manager import StyleManager
-from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 from humbug.tabs.code_block_text_edit import CodeBlockTextEdit
 from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
 
@@ -90,9 +89,7 @@ class PreviewFileContent(PreviewContentWidget):
 
         # Initialize variables
         self._language: ProgrammingLanguage | None = None
-        self._highlighter: CodeBlockHighlighter | None = None
         self._mouse_left_button_pressed = False
-        self._init_colour_mode = self._style_manager.color_mode()
 
         # Connect signals
         self._text_area.selectionChanged.connect(self._on_selection_changed)
@@ -348,10 +345,11 @@ class PreviewFileContent(PreviewContentWidget):
 
     def apply_style(self) -> None:
         """Apply styling to this content widget."""
-        factor = self._style_manager.zoom_factor()
+        style_manager = self._style_manager
+        zoom_factor = style_manager.zoom_factor()
         font = self.font()
-        base_font_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
+        base_font_size = style_manager.base_font_size()
+        font.setPointSizeF(base_font_size * zoom_factor)
 
         # Style text area
         self._text_area.setFont(font)
@@ -360,17 +358,11 @@ class PreviewFileContent(PreviewContentWidget):
         self._language_header.setFont(font)
 
         icon_base_size = 14
-        icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
+        icon_scaled_size = int(icon_base_size * zoom_factor)
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
-        self._edit_button.setIcon(QIcon(self._style_manager.scale_icon("edit", icon_base_size)))
+        self._edit_button.setIcon(QIcon(style_manager.scale_icon("edit", icon_base_size)))
         self._edit_button.setIconSize(icon_size)
-
-        # If we changed colour mode then re-highlight
-        if self._style_manager.color_mode() != self._init_colour_mode:
-            self._init_colour_mode = self._style_manager.color_mode()
-            if self._highlighter:
-                self._highlighter.rehighlight()
 
     def supports_editing(self) -> bool:
         """

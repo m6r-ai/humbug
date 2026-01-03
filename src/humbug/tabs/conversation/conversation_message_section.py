@@ -410,12 +410,10 @@ class ConversationMessageSection(QFrame):
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
         self._layout.setSpacing(spacing)
 
-        font = self.font()
-        base_font_size = style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * zoom_factor)
-        self.setFont(font)
-
         if self._language_header:
+            font = self.font()
+            base_font_size = style_manager.base_font_size()
+            font.setPointSizeF(base_font_size * zoom_factor)
             self._language_header.setFont(font)
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
