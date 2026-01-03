@@ -920,6 +920,12 @@ class ShellWidget(QWidget):
         metadata["content"] = self._input.to_plain_text()
         metadata['cursor'] = self._get_cursor_position()
 
+        # Store current scroll position
+        metadata["scroll_position"] = self._scroll_area.verticalScrollBar().value()
+
+        # Store spotlighted message index
+        metadata["spotlighted_message_index"] = self._spotlighted_message_index
+
         return metadata
 
     def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
@@ -932,6 +938,9 @@ class ShellWidget(QWidget):
         if not metadata:
             return
 
+        # Refresh messages
+        self.load_messages()
+
         # Restore input content if specified
         if "content" in metadata:
             self.set_input_text(metadata["content"])
@@ -939,8 +948,17 @@ class ShellWidget(QWidget):
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])
 
-        # Refresh messages
-        self.load_messages()
+        # Restore scroll position if specified
+        if "scroll_position" in metadata:
+            # Use a timer to ensure the scroll happens after layout is complete
+            QTimer.singleShot(0, lambda: self._scroll_area.verticalScrollBar().setValue(metadata["scroll_position"]))
+
+        # Restore spotlighted message index if specified
+        if "spotlighted_message_index" in metadata:
+            self._spotlighted_message_index = metadata["spotlighted_message_index"]
+            if 0 <= self._spotlighted_message_index < len(self._messages):
+                self._messages[self._spotlighted_message_index].set_spotlighted(True)
+                self._messages[self._spotlighted_message_index].setFocus()
 
     def _set_cursor_position(self, position: Dict[str, int]) -> None:
         """Set cursor position in input area.

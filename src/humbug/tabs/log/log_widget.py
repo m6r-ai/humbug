@@ -770,7 +770,8 @@ class LogWidget(QWidget):
 
         # Restore scroll position if specified
         if "scroll_position" in metadata:
-            self._scroll_area.verticalScrollBar().setValue(metadata["scroll_position"])
+            # Use a timer to ensure the scroll happens after layout is complete
+            QTimer.singleShot(0, lambda: self._scroll_area.verticalScrollBar().setValue(metadata["scroll_position"]))
 
         # Restore spotlighted message index if specified
         if "spotlighted_message_index" in metadata:

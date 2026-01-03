@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
-from PySide6.QtGui import QCursor, QResizeEvent, QShowEvent
+from PySide6.QtGui import QCursor, QResizeEvent
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
@@ -132,15 +132,6 @@ class ConversationWidget(QWidget):
         # Initialize tracking variables
         self._auto_scroll = True
         self._last_scroll_maximum = 0
-
-        # Layout stabilization tracking for lazy syntax highlighting.  We don't have a signal for when
-        # the layout has finalized so we watch resize events and wait for them to stop firing.
-        self._initial_layout_complete = False
-        self._initial_scroll_position: int | None = None
-        self._initial_auto_scroll = True
-        self._layout_stabilization_timer = QTimer(self)
-        self._layout_stabilization_timer.setSingleShot(True)
-        self._layout_stabilization_timer.timeout.connect(self._on_initial_layout_stabilized)
 
         # Timer for debouncing container visibility to eliminate jitter
         self._container_show_timer = QTimer(self)
@@ -521,16 +512,6 @@ class ConversationWidget(QWidget):
         # Only unpolish/polish the specific widget that changed, not the entire container
         self._messages_container.style().unpolish(self._messages_container)
         self._messages_container.style().polish(self._messages_container)
-
-    def _on_initial_layout_stabilized(self) -> None:
-        """Handle the initial layout stabilization - do the first visibility check."""
-        self._initial_layout_complete = True
-
-        # If we have an initial scroll position, set it now
-        if self._initial_scroll_position is not None:
-            self._auto_scroll = self._initial_auto_scroll
-            self._scroll_area.verticalScrollBar().setValue(self._initial_scroll_position)
-            self._initial_scroll_position = None
 
     def _unregister_ai_conversation_callbacks(self) -> None:
         """Unregister all callbacks from the AIConversation object."""
@@ -1595,15 +1576,6 @@ class ConversationWidget(QWidget):
         if self._auto_scroll:
             self._scroll_to_bottom()
 
-    def showEvent(self, event: QShowEvent) -> None:
-        """Ensure visible sections are highlighted when widget becomes visible."""
-        super().showEvent(event)
-
-        # Only check visibility if initial layout is complete
-        if not self._initial_layout_complete:
-            # Reset the timer each time we get a resize during initial loading
-            self._layout_stabilization_timer.start(100)
-
     def cancel_current_tasks(self, notify: bool = True) -> None:
         """Cancel any ongoing AI response tasks."""
         # First remove any active tool approval UI
@@ -1982,10 +1954,6 @@ class ConversationWidget(QWidget):
         shared_stylesheet = "\n".join(stylesheet_parts)
         self.setStyleSheet(shared_stylesheet)
 
-        if self._initial_layout_complete:
-            self._initial_layout_complete = False
-            self._layout_stabilization_timer.start(100)
-
     def _show_conversation_context_menu(self, pos: QPoint) -> None:
         """
         Create and show the context menu at the given position.
@@ -2346,10 +2314,11 @@ class ConversationWidget(QWidget):
 
         # Restore vertical scroll position if specified
         if "auto_scroll" in metadata:
-            self._initial_auto_scroll = metadata["auto_scroll"]
+            self._auto_scroll = metadata["auto_scroll"]
 
         if "vertical_scroll" in metadata:
-            self._initial_scroll_position = metadata["vertical_scroll"]
+            # Use a timer to ensure the scroll happens after layout is complete
+            QTimer.singleShot(0, lambda: self._scroll_area.verticalScrollBar().setValue(metadata["vertical_scroll"]))
 
         # Restore message expansion states if specified
         if "message_expansion" in metadata:
