@@ -28,9 +28,6 @@ class ColumnWidget(QTabWidget):
         tab_bar = self.tabBar()
         tab_bar.setDrawBase(False)
         tab_bar.setUsesScrollButtons(True)
-
-        # Install event filter on all child widgets
-        self.installEventFilter(self)
         tab_bar.installEventFilter(self)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
@@ -41,22 +38,6 @@ class ColumnWidget(QTabWidget):
             return False  # Don't consume the event
 
         return super().eventFilter(watched, event)
-
-    def addTab(self, widget: QWidget, *args: Any, **kwargs: Any) -> int:
-        """Override addTab to install event filter on new tabs."""
-        result = super().addTab(widget, *args, **kwargs)
-
-        # Install event filter on the widget to catch focus/mouse events
-        widget.installEventFilter(self)
-        return result
-
-    def removeTab(self, index: int) -> None:
-        """Override removeTab to properly clean up event filters."""
-        widget = self.widget(index)
-        if widget:
-            widget.removeEventFilter(self)
-
-        super().removeTab(index)
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
         """

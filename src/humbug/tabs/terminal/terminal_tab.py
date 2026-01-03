@@ -132,6 +132,17 @@ class TerminalTab(TabBase):
         if start_process:
             self._create_tracked_task(self._start_process())
 
+    def set_active(self, widget: QWidget, active: bool) -> None:
+        """
+        Set the active state of the tab.
+
+        Args:
+            widget: Widget that is being activated/deactivated
+            active: True if the tab is now active, False otherwise
+        """
+        if active:
+            self.activated.emit()
+
     def activate(self) -> None:
         """Activate the tab."""
         self._terminal_widget.setFocus()

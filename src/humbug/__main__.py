@@ -98,56 +98,47 @@ def install_global_exception_handler() -> None:
 
 
 class HumbugApplication(QApplication):
-    """Class for the application. Specialized to do event time reporting."""
+    """Class for the application. Specialized to do event time reporting and focus tracking."""
     def __init__(self, argv: List[str]) -> None:
         super().__init__(argv)
         self._start_time = time.monotonic()
-        self.installEventFilter(self)
 
-    def notify(self, arg__1: QObject, arg__2: QEvent) -> bool:
-        event_type = arg__2.type()
-        receiver_name = arg__1.objectName()
-        start = time.monotonic()
-        ret = super().notify(arg__1, arg__2)
-        end = time.monotonic()
-        elapsed_time = (end - start) * 1000
-        if elapsed_time > 20:
-            rel_end = end - self._start_time
-            print(f"{rel_end:.3f}: event {arg__2}, type {event_type}, object {receiver_name}, took {elapsed_time:.3f} msec")
-
-        return ret
-
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:
-        if not isinstance(watched, QWidget):
-            return False
-
+    def notify(self, receiver: QObject, event: QEvent) -> bool:
+        """Handle all event notifications."""
         event_type = event.type()
 
-        if event_type in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
-            # Notify any TabBase ancestor
-            parent = watched.parent()
-            while parent:
-                if isinstance(parent, TabBase):
-                    parent.set_active(watched, True)
-                    return False
+        # Look for focus changes, and update the focus when they occur
+        if isinstance(receiver, QWidget):
+            if event_type in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
+                parent = receiver.parent()
+                while parent:
+                    if isinstance(parent, TabBase):
+                        parent.set_active(receiver, True)
+                        break
 
-                parent = parent.parent()
+                    parent = parent.parent()
 
-            return False
+            elif event_type == QEvent.Type.FocusOut:
+                parent = receiver.parent()
+                while parent:
+                    if isinstance(parent, TabBase):
+                        parent.set_active(receiver, False)
+                        break
 
-        if event_type == QEvent.Type.FocusOut:
-            # Notify any TabBase ancestor
-            parent = watched.parent()
-            while parent:
-                if isinstance(parent, TabBase):
-                    parent.set_active(watched, False)
-                    return False
+                    parent = parent.parent()
 
-                parent = parent.parent()
+        # Monitor the performance of the event loop.  We don't need this in production code, but it's very useful in development.
+        receiver_name = receiver.objectName()
+        start = time.monotonic()
+        ret = super().notify(receiver, event)
+        end = time.monotonic()
+        elapsed_time = (end - start) * 1000
 
-            return False
+        if elapsed_time > 20:
+            rel_end = end - self._start_time
+            print(f"{rel_end:.3f}: event {event}, type {event_type}, object {receiver_name}, took {elapsed_time:.3f} msec")
 
-        return False
+        return ret
 
 def main() -> int:
     """Main function to run the application."""

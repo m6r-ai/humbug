@@ -71,6 +71,8 @@ class LogTab(TabBase):
             active: True if the tab is now active, False otherwise
         """
         self._log_widget.set_active(widget, active)
+        if active:
+            self.activated.emit()
 
     def activate(self) -> None:
         """Activate the tab."""

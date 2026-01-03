@@ -69,6 +69,17 @@ class EditorTab(TabBase):
 
         self.update_status()
 
+    def set_active(self, widget: QWidget, active: bool) -> None:
+        """
+        Set the active state of the tab.
+
+        Args:
+            widget: The widget that triggered the activation change
+            active: True if the tab is now active, False otherwise
+        """
+        if active:
+            self.activated.emit()
+
     def activate(self) -> None:
         """Activate the tab."""
         self._editor_widget.setFocus()

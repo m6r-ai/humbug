@@ -77,6 +77,17 @@ class PreviewTab(TabBase):
 
         self._start_file_watching(self._path)
 
+    def set_active(self, widget: QWidget, active: bool) -> None:
+        """
+        Set the active state of the tab.
+
+        Args:
+            widget: Widget that is being activated/deactivated
+            active: True if the tab is now active, False otherwise
+        """
+        if active:
+            self.activated.emit()
+
     def activate(self) -> None:
         """Activate the tab."""
         self._preview_content_widget.activate()
