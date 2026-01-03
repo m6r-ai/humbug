@@ -77,8 +77,9 @@ class MarkdownTextEdit(MinHeightTextEdit):
         base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * factor)
         self.setFont(font)
-        self.setTabStopDistance(style_manager.get_space_width() * 8)
-        self.document().setIndentWidth(style_manager.get_space_width() * 4)
+        space_width = style_manager.get_space_width()
+        self.setTabStopDistance(space_width * 8)
+        self.document().setIndentWidth(space_width * 4)
 
         if self._highlighter:
             self._highlighter.rehighlight()

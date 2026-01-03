@@ -367,7 +367,10 @@ class ConversationMessage(QFrame):
         if self._is_expanded == expanded:
             return
 
+        assert self._expand_button is not None, "Expand button should exist"
         self._is_expanded = expanded
+
+        strings = self._language_manager.strings()
 
         if expanded:
             # If we have pending content, render it now
@@ -377,31 +380,11 @@ class ConversationMessage(QFrame):
                 self._pending_context = None
 
             self._sections_container.show()
-
-        else:
-            self._sections_container.hide()
-
-        self._update_expand_button()
-
-    def _toggle_expanded(self) -> None:
-        """Toggle the expanded state of this message."""
-        self.set_expanded(not self._is_expanded)
-        self.expand_requested.emit(self._is_expanded)
-
-    def _update_expand_button(self) -> None:
-        """Update the expand button icon and tooltip based on current state."""
-        if not self._expand_button:
-            return
-
-        strings = self._language_manager.strings()
-
-        if self._is_expanded:
-            # Show down expand when expanded
             icon_name = "expand-down"
             tooltip = strings.tooltip_collapse_message
 
         else:
-            # Show right expand when collapsed
+            self._sections_container.hide()
             icon_name = "expand-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "expand-left"
             tooltip = strings.tooltip_expand_message
 
@@ -411,6 +394,11 @@ class ConversationMessage(QFrame):
 
         # Update tooltip
         self._expand_button.setToolTip(tooltip)
+
+    def _toggle_expanded(self) -> None:
+        """Toggle the expanded state of this message."""
+        self.set_expanded(not self._is_expanded)
+        self.expand_requested.emit(self._is_expanded)
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
@@ -477,8 +465,9 @@ class ConversationMessage(QFrame):
         if self._approval_reject_button:
             self._approval_reject_button.setText(strings.reject_tool_call)
 
-        # Update expand button tooltip
-        self._update_expand_button()
+        if self._expand_button:
+            tooltip = strings.tooltip_collapse_message if self._is_expanded else strings.tooltip_expand_message
+            self._expand_button.setToolTip(tooltip)
 
     def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> ConversationMessageSection:
         """
@@ -877,8 +866,14 @@ class ConversationMessage(QFrame):
             self._delete_message_button.setIconSize(icon_size)
 
         if self._expand_button:
+            if self._is_expanded:
+                icon_name = "expand-down"
+
+            else:
+                icon_name = "expand-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "expand-left"
+
+            self._expand_button.setIcon(QIcon(self._style_manager.scale_icon(icon_name, icon_base_size)))
             self._expand_button.setIconSize(icon_size)
-            self._update_expand_button()
 
         # Apply fonts to approval buttons if present
         if self._approval_approve_button:
