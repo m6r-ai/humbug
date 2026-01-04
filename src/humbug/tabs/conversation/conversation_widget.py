@@ -1592,25 +1592,26 @@ class ConversationWidget(QWidget):
 
     def _build_widget_style(self) -> str:
         """Build styles for the conversation widget."""
+        style_manager = self._style_manager
 
         return f"""
             QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
             }}
 
-            {self._style_manager.get_menu_stylesheet()}
+            {style_manager.get_menu_stylesheet()}
 
             QScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 border: none;
             }}
 
             QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;
             }}
             QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-height: 20px;
             }}
             QScrollBar::add-page:vertical,
@@ -1627,7 +1628,7 @@ class ConversationWidget(QWidget):
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        border_radius = int(self._style_manager.message_bubble_spacing() * zoom_factor)
+        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor)
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -1638,7 +1639,8 @@ class ConversationWidget(QWidget):
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
                 padding: -2px;
             }}
-            #ConversationMessage[message_source="user"] {{
+            #ConversationMessage[message_source="user"],
+            #ConversationMessage[message_source="ai_streaming"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
@@ -1661,7 +1663,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
             }}
-            #ConversationMessage[message_source="ai_connected"] #_role_label {{
+            #ConversationMessage[message_source="ai_connected"] #_role_label,
+            #ConversationMessage[message_source="ai_streaming"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_STREAMING)};
             }}
             #ConversationMessage[message_source="ai"] #_role_label {{
