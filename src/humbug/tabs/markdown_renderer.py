@@ -94,8 +94,9 @@ class MarkdownRenderer(MarkdownASTVisitor):
         cursor.removeSelectedText()
 
         # Set up the default font size
+        style_manager = self._style_manager
         font = QFont()
-        font.setPointSizeF(self._style_manager.base_font_size() * self._style_manager.zoom_factor())
+        font.setPointSizeF(style_manager.base_font_size() * style_manager.zoom_factor())
         font_metrics = QFontMetricsF(font)
         self._default_font_height = font_metrics.height()
 

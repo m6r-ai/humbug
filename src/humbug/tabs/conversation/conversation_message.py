@@ -109,8 +109,9 @@ class ConversationMessage(QFrame):
             self._expand_button.clicked.connect(self._toggle_expanded)
             self._header_layout.addWidget(self._expand_button)
 
-        # Expanded state - default to True, will be updated in set_content based on message type
-        self._is_expanded = True
+        # Tool calls and tool results should be collapsed by default
+        default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
+        self._is_expanded = default_expanded
 
         # Pending content for deferred rendering (when collapsed)
         self._pending_content: str | None = None
@@ -175,6 +176,8 @@ class ConversationMessage(QFrame):
         self._sections_container.setObjectName("_sections_container")
         self._sections_layout = QVBoxLayout(self._sections_container)
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
+        if not default_expanded:
+            self._sections_container.hide()
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -206,11 +209,6 @@ class ConversationMessage(QFrame):
         self._is_spotlighted = False
 
         self._on_language_changed()
-
-        # Set default expanded state based on message type
-        # Tool calls and tool results should be collapsed by default
-        default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
-        self.set_expanded(default_expanded)
 
         self._context = context
         if content:
