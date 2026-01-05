@@ -61,7 +61,6 @@ class ConversationInput(ConversationMessage):
         # Connect text changes to update button state
         self._text_area.textChanged.connect(self._on_text_changed)
 
-        print(self.objectName())
         self._on_language_changed()
 
     def set_model(self, model: str) -> None:
@@ -127,13 +126,11 @@ class ConversationInput(ConversationMessage):
         if self._is_streaming:
             self._role_label.setText(strings.processing_message)
             self.setProperty("message_source", "ai_streaming")
-            print("Set header", self.property("message_source"))
 
         else:
             submit_key = self._get_submit_key_text()
             self._role_label.setText(strings.input_prompt.format(model=self._current_model, key=submit_key))
             self.setProperty("message_source", "user")
-            print("Set header", self.property("message_source"))
 
         self._role_label.style().unpolish(self._role_label)
         self._role_label.style().polish(self._role_label)
