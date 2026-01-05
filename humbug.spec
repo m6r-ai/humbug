@@ -70,8 +70,8 @@ app = BUNDLE(
     bundle_identifier='ai.m6r.humbug',
     info_plist={
         'CFBundleDisplayName': 'Humbug',
-        'CFBundleShortVersionString': '0.37.0',
-        'CFBundleVersion': '0.37.0',
+        'CFBundleShortVersionString': '37',
+        'CFBundleVersion': '37',
         'NSPrincipalClass': 'NSApplication',
         'NSAppleScriptEnabled': False
     }

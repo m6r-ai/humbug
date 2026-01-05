@@ -1,12 +1,13 @@
 # Change log for Humbug
 
-## v0.37 (2026-01-xx)
+## v37 (2026-01-05)
 
 New features:
 
 - Added a Lua syntax highlighter.
 - Lazily render conversation message sections when they are expanded.
 - Automatically expand message sections during find operations.
+- Dropped the "0." prefix from the version number.
 
 Bug fixes:
 
