@@ -2097,7 +2097,43 @@ class ConversationWidget(QWidget):
         # Get all messages from history
         all_messages = history.get_messages()
 
+        # Diagnostic logging to understand sync issues
+        self._logger.debug("Delete requested for message at index %d", index)
+        self._logger.debug("Widget list length: %d, History list length: %d",
+                          len(self._messages), len(all_messages))
+
+        # Log the widget list state
+        self._logger.debug("Widget list (self._messages):")
+        for i, msg_widget in enumerate(self._messages):
+            self._logger.debug("  [%d] source=%s, id=%s, rendered=%s",
+                             i,
+                             msg_widget.message_source(),
+                             msg_widget.message_id(),
+                             msg_widget.is_rendered())
+
+        # Log the history list state
+        self._logger.debug("History list (all_messages):")
+        for i, msg in enumerate(all_messages):
+            self._logger.debug("  [%d] source=%s, id=%s",
+                             i,
+                             msg.source,
+                             msg.id)
+
+        # Check if lengths match
+        if len(self._messages) != len(all_messages):
+            self._logger.error("LIST LENGTH MISMATCH: widgets=%d, history=%d",
+                             len(self._messages), len(all_messages))
+
+        # Check if the message at index matches by ID
+        widget_msg_id = self._messages[index].message_id()
+        history_msg_id = all_messages[index].id if index < len(all_messages) else None
+        if widget_msg_id != history_msg_id:
+            self._logger.error("MESSAGE ID MISMATCH at index %d: widget_id=%s, history_id=%s",
+                             index, widget_msg_id, history_msg_id)
+
         # Capture the prompt from the first message we're deleting.
+        self._logger.debug("Asserting that message at index %d is USER (source=%s)",
+                          index, all_messages[index].source if index < len(all_messages) else "OUT_OF_BOUNDS")
         assert all_messages[index].source == AIMessageSource.USER, "Only user messages can be deleted."
         prompt = all_messages[index].content
 
