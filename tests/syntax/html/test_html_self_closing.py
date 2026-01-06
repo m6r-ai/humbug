@@ -28,7 +28,7 @@ class TestHTMLSelfClosing:
         tokens = list(lexer._tokens)
         tag_tokens = [t for t in tokens if t.type == TokenType.HTML_TAG]
         assert len(tag_tokens) == 1
-        
+
         attr_tokens = [t for t in tokens if t.type == TokenType.HTML_ATTRIBUTE]
         assert len(attr_tokens) == 1
         assert attr_tokens[0].value == 'src'
@@ -66,11 +66,11 @@ class TestHTMLSelfClosing:
     def test_void_elements(self):
         """Test common HTML void elements."""
         void_elements = ['br', 'hr', 'img', 'input', 'meta', 'link']
-        
+
         for element in void_elements:
             lexer = HTMLLexer()
             lexer.lex(None, f'<{element} />')
-            
+
             tokens = list(lexer._tokens)
             tag_tokens = [t for t in tokens if t.type == TokenType.HTML_TAG]
             assert len(tag_tokens) == 1
