@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import time
 from typing import Dict, Any
 
 from ai import AIMessage, AIConversationHistory
@@ -53,6 +54,42 @@ class AIConversationTranscriptHandler:
             str: Full path to the transcript file
         """
         return self._filename
+
+    def _atomic_replace(self, temp_file: str, target_file: str) -> None:
+        """
+        Atomically replace target file with temp file, with retry logic.
+
+        This method implements retry logic to handle transient file locking issues
+        that can occur on any platform, but are particularly common on Windows.
+
+        Args:
+            temp_file: Path to temporary file
+            target_file: Path to target file to replace
+
+        Raises:
+            OSError: If replacement fails after all retries
+        """
+        max_retries = 4
+        retry_delay = 0.05  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                os.replace(temp_file, target_file)
+                return
+
+            except PermissionError as e:
+                if attempt < max_retries - 1:
+                    self._logger.warning(
+                        "File replace failed (attempt %d/%d), retrying: %s",
+                        attempt + 1,
+                        max_retries,
+                        str(e)
+                    )
+                    time.sleep(retry_delay * (attempt + 1))  # Linear backoff
+                    continue
+
+                # All retries exhausted
+                raise e
 
     def set_path(self, new_path: str) -> None:
         """Set the transcript file path.
@@ -175,25 +212,20 @@ class AIConversationTranscriptHandler:
                 json.dump(data, f, indent=2, cls=FloatOneDecimalEncoder)
 
             # Atomic replace
-            os.replace(temp_file, self._filename)
+            self._atomic_replace(temp_file, self._filename)
 
         except Exception as e:
-            # Create backup of current file if possible
+            # Clean up temp file if it exists
             try:
-                if os.path.exists(self._filename):
-                    backup = f"{self._filename}.backup"
-                    os.replace(self._filename, backup)
-                    self._logger.info("Created transcript backup: %s", backup)
+                temp_file = f"{self._filename}.tmp"
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
 
             except Exception as backup_error:
-                self._logger.error(
-                    "Failed to create backup file: %s",
-                    str(backup_error)
-                )
+                self._logger.error("Failed to clean up temp file: %s", str(backup_error))
 
             raise AIConversationTranscriptIOError(
-                f"Failed to write transcript: {str(e)}",
-                details={"backup_created": os.path.exists(f"{self._filename}.backup")}
+                f"Failed to write transcript: {str(e)}"
             ) from e
 
     def write(self, history: AIConversationHistory) -> None:
@@ -226,23 +258,17 @@ class AIConversationTranscriptHandler:
                 json.dump(data, f, indent=2, cls=FloatOneDecimalEncoder)
 
             # Atomic replace
-            os.replace(temp_file, self._filename)
+            self._atomic_replace(temp_file, self._filename)
 
         except Exception as e:
-            # Create backup of current file if possible
+            # Clean up temp file if it exists
             try:
-                if os.path.exists(self._filename):
-                    backup = f"{self._filename}.backup"
-                    os.replace(self._filename, backup)
-                    self._logger.info("Created transcript backup: %s", backup)
-
+                temp_file = f"{self._filename}.tmp"
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
             except Exception as backup_error:
-                self._logger.error(
-                    "Failed to create backup file: %s",
-                    str(backup_error)
-                )
+                self._logger.error("Failed to clean up temp file: %s", str(backup_error))
 
             raise AIConversationTranscriptIOError(
-                f"Failed to replace messages in transcript: {str(e)}",
-                details={"backup_created": os.path.exists(f"{self._filename}.backup")}
+                f"Failed to replace messages in transcript: {str(e)}"
             ) from e
