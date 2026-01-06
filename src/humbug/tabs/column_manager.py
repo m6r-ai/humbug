@@ -32,7 +32,7 @@ from humbug.tabs.tab_type import TabType
 from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.preview.preview_tab import PreviewTab
-from humbug.welcome_widget import WelcomeWidget
+from humbug.tabs.welcome_widget import WelcomeWidget
 
 
 class ColumnManager(QWidget):
