@@ -102,9 +102,6 @@ class HTMLLexer(Lexer):
         Returns:
             The appropriate lexing function for the character
         """
-        if self._is_whitespace(ch):
-            return self._read_whitespace
-
         if ch == '<':
             return self._read_open
 
@@ -254,7 +251,7 @@ class HTMLLexer(Lexer):
             start=start
         ))
 
-    def _read_tag_or_attribute(self, token_type: TokenType) -> Token:
+    def _read_tag_or_attribute(self, token_type: TokenType, allow_slash: bool = False) -> Token:
         """
         Read a tag name or attribute name.
 
@@ -266,9 +263,14 @@ class HTMLLexer(Lexer):
         """
         start = self._position
         self._position += 1
+        allowed_special = ('-',)
+        if allow_slash:
+            allowed_special = ('-', '/')
+        
         while (self._position < self._input_len and
-               (self._is_letter_or_digit_or_underscore(self._input[self._position]) or
-                self._input[self._position] in ('-', '/'))):
+               (self._input[self._position].isalnum() or
+                self._input[self._position] == '_' or
+                self._input[self._position] in allowed_special)):
             self._position += 1
 
         return Token(
@@ -281,13 +283,24 @@ class HTMLLexer(Lexer):
         """
         Read tag content including tag names and attributes.
         """
+        # Skip whitespace inside tags
+        if self._is_whitespace(self._input[self._position]):
+            self._read_whitespace()
+            return
+        
         if not self._tag_name:
-            token = self._read_tag_or_attribute(TokenType.HTML_TAG)
+            token = self._read_tag_or_attribute(TokenType.HTML_TAG, allow_slash=True)
             self._tag_name = token.value
             self._tokens.append(token)
             return
 
         ch = self._input[self._position]
+        
+        # Skip standalone '/' in self-closing tags
+        if ch == '/' and self._position + 1 < self._input_len and self._input[self._position + 1] == '>':
+            self._position += 1
+            return
+        
         if ch == '=':
             self._position += 1
             self._seen_equals = True

@@ -2,6 +2,18 @@
 
 ## v38 (2026-01-xx)
 
+New features:
+
+- Added an XML syntax highlighter.
+
+Bug fixes:
+
+- Fixed some lexing problems in the HTML syntax highlighter
+
+Internal structure changes:
+
+- Added pytest tests for the HTML syntax highlighter.
+
 ## v37 (2026-01-06)
 
 New features:
