@@ -62,6 +62,7 @@ The module includes dedicated subdirectories for each supported programming lang
 
 ### Web Technologies
 - **`html/`** - HTML markup language support
+- **`xml/`** - XML markup language support
 - **`css/`** - CSS stylesheet language support
 - **`javascript/`** - JavaScript language support
 - **`typescript/`** - TypeScript language support

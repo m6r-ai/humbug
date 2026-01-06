@@ -27,3 +27,4 @@ class ProgrammingLanguage(IntEnum):
     SWIFT = auto()
     TEXT = auto()
     TYPESCRIPT = auto()
+    XML = auto()

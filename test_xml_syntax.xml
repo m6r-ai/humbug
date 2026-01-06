@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE note SYSTEM "note.dtd">
+<!-- This is a comment -->
+<note>
+    <to>User</to>
+    <from>System</from>
+    <heading>Test XML</heading>
+    <body>This is a test of the XML syntax highlighter.</body>
+    <data><![CDATA[Some <special> characters & symbols]]></data>
+    <attributes example="value" test:namespace="namespaced" />
+</note>

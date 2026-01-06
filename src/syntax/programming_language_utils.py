@@ -51,6 +51,7 @@ class ProgrammingLanguageUtils:
         "m6r": ProgrammingLanguage.METAPHOR,
         "move": ProgrammingLanguage.MOVE,
         "patch": ProgrammingLanguage.DIFF,
+        "plaintext": ProgrammingLanguage.TEXT,
         "python": ProgrammingLanguage.PYTHON,
         "py": ProgrammingLanguage.PYTHON,
         "rust": ProgrammingLanguage.RUST,
@@ -63,8 +64,9 @@ class ProgrammingLanguageUtils:
         "typescript": ProgrammingLanguage.TYPESCRIPT,
         "ts": ProgrammingLanguage.TYPESCRIPT,
         "text": ProgrammingLanguage.TEXT,
-        "plaintext": ProgrammingLanguage.TEXT,
         "txt": ProgrammingLanguage.TEXT,
+        "xml": ProgrammingLanguage.XML,
+
         # Empty string defaults to text
         "": ProgrammingLanguage.TEXT
     }
@@ -94,7 +96,8 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.SWIFT: "swift",
         ProgrammingLanguage.TYPESCRIPT: "typescript",
         ProgrammingLanguage.TEXT: "plaintext",
-        ProgrammingLanguage.UNKNOWN: ""
+        ProgrammingLanguage.UNKNOWN: "",
+        ProgrammingLanguage.XML: "xml"
     }
 
     # Mapping from file extensions to programming languages
@@ -136,6 +139,7 @@ class ProgrammingLanguageUtils:
         '.ts': ProgrammingLanguage.TYPESCRIPT,
         '.tsx': ProgrammingLanguage.TYPESCRIPT,
         '.txt': ProgrammingLanguage.TEXT,
+        '.xml': ProgrammingLanguage.XML
     }
 
     # Mapping from programming languages to display names
@@ -163,7 +167,8 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.SWIFT: "Swift",
         ProgrammingLanguage.TYPESCRIPT: "TypeScript",
         ProgrammingLanguage.TEXT: "None",
-        ProgrammingLanguage.UNKNOWN: "Unknown"
+        ProgrammingLanguage.UNKNOWN: "Unknown",
+        ProgrammingLanguage.XML: "XML"
     }
 
     # Mapping from programming languages to file extensions (with leading dot)
@@ -191,7 +196,8 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.SWIFT: ".swift",
         ProgrammingLanguage.TYPESCRIPT: ".ts",
         ProgrammingLanguage.TEXT: ".txt",
-        ProgrammingLanguage.UNKNOWN: ".txt"
+        ProgrammingLanguage.UNKNOWN: ".txt",
+        ProgrammingLanguage.XML: ".xml"
     }
 
     @classmethod
