@@ -5,6 +5,7 @@
 New features:
 
 - Added an XML syntax highlighter.
+- Added a vLLM backend and gemma3:27b model to go with it.
 
 Bug fixes:
 
