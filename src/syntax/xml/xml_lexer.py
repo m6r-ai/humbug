@@ -292,7 +292,7 @@ class XMLLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        allowed_special = ('-', ':')
+        allowed_special: tuple[str, ...] = ('-', ':')
         if allow_slash:
             allowed_special = ('-', ':', '/')
 

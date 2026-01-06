@@ -263,10 +263,10 @@ class HTMLLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        allowed_special = ('-',)
+        allowed_special: tuple[str, ...] = ('-',)
         if allow_slash:
             allowed_special = ('-', '/')
-        
+
         while (self._position < self._input_len and
                (self._input[self._position].isalnum() or
                 self._input[self._position] == '_' or
@@ -287,7 +287,7 @@ class HTMLLexer(Lexer):
         if self._is_whitespace(self._input[self._position]):
             self._read_whitespace()
             return
-        
+
         if not self._tag_name:
             token = self._read_tag_or_attribute(TokenType.HTML_TAG, allow_slash=True)
             self._tag_name = token.value
@@ -295,12 +295,12 @@ class HTMLLexer(Lexer):
             return
 
         ch = self._input[self._position]
-        
+
         # Skip standalone '/' in self-closing tags
         if ch == '/' and self._position + 1 < self._input_len and self._input[self._position + 1] == '>':
             self._position += 1
             return
-        
+
         if ch == '=':
             self._position += 1
             self._seen_equals = True
