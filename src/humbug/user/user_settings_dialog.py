@@ -139,6 +139,7 @@ class UserSettingsDialog(QDialog):
             ("mistral", strings.mistral_backend),
             ("ollama", strings.ollama_backend),
             ("openai", strings.openai_backend),
+            ("vllm", strings.vllm_backend),
             ("xai", strings.xai_backend),
             ("zai", strings.zai_backend)
         ]
@@ -303,6 +304,7 @@ class UserSettingsDialog(QDialog):
             "mistral": strings.mistral_backend,
             "ollama": strings.ollama_backend,
             "openai": strings.openai_backend,
+            "vllm": strings.vllm_backend,
             "xai": strings.xai_backend,
             "zai": strings.zai_backend
         }

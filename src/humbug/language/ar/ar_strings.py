@@ -116,6 +116,7 @@ def get_arabic_strings() -> LanguageStrings:
         openai_backend="أوبن إي آي",
         ollama_backend="أولاما",
         xai_backend="xAI",
+        vllm_backend="vLLM",
 
         # User Settings dialog - other settings
         select_language="اللغة",

@@ -34,6 +34,7 @@ class UserSettings:
                 "mistral": AIBackendSettings(),
                 "openai": AIBackendSettings(),
                 "ollama": AIBackendSettings(),
+                "vllm": AIBackendSettings(),
                 "xai": AIBackendSettings(),
                 "zai": AIBackendSettings()
             },

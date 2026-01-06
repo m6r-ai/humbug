@@ -526,6 +526,17 @@ class AIConversationSettings:
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
 
+        # vLLM models
+        "gemma3:27b": AIModel(
+            name="gemma3:27b",
+            provider="vllm",
+            context_window=131072,
+            max_output_tokens=2048,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.NO_TOOLS
+        ),
+
         # xAI models
         "grok-code-fast-1": AIModel(
             name="grok-code-fast-1",

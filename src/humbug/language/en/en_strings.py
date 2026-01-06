@@ -116,6 +116,7 @@ def get_english_strings() -> LanguageStrings:
         openai_backend="OpenAI",
         ollama_backend="Ollama",
         xai_backend="xAI",
+        vllm_backend="vLLM",
 
         # User Settings dialog - other settings
         select_language="Language",

@@ -111,6 +111,7 @@ class LanguageStrings:
     openai_backend: str
     ollama_backend: str
     xai_backend: str
+    vllm_backend: str
 
     # User Settings dialog - other settings
     select_language: str
