@@ -589,7 +589,7 @@ class ConversationWidget(QWidget):
 
         self._add_message(message)
         try:
-            self._transcript_handler.append_message(message.to_transcript_dict())
+            self._transcript_handler.write(self.get_conversation_history())
 
         except AIConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
@@ -783,7 +783,7 @@ class ConversationWidget(QWidget):
         """
         self._add_message(message)
         try:
-            self._transcript_handler.append_message(message.to_transcript_dict())
+            self._transcript_handler.write(self.get_conversation_history())
 
         except AIConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")
@@ -986,7 +986,7 @@ class ConversationWidget(QWidget):
         # Update with the completed message immediately
         self._update_last_message(message)
         try:
-            self._transcript_handler.append_message(message.to_transcript_dict())
+            self._transcript_handler.write(self.get_conversation_history())
 
         except AIConversationTranscriptError:
             self._logger.exception("Failed to write to transcript")

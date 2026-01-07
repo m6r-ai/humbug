@@ -188,49 +188,9 @@ class AIConversationTranscriptHandler:
             parent=data["metadata"].get("parent", None)
         )
 
-    def append_message(self, message: Dict) -> None:
-        """
-        Append a message to the transcript file.
-
-        Args:
-            message: Message dictionary to append
-
-        Raises:
-            AIConversationTranscriptIOError: If file operations fail
-        """
-        try:
-            # Read current content
-            with open(self._filename, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            # Add new messages
-            data["conversation"].append(message)
-
-            # Write to temp file then rename for atomic operation
-            temp_file = f"{self._filename}.tmp"
-            with open(temp_file, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, cls=FloatOneDecimalEncoder)
-
-            # Atomic replace
-            self._atomic_replace(temp_file, self._filename)
-
-        except Exception as e:
-            # Clean up temp file if it exists
-            try:
-                temp_file = f"{self._filename}.tmp"
-                if os.path.exists(temp_file):
-                    os.remove(temp_file)
-
-            except Exception as backup_error:
-                self._logger.error("Failed to clean up temp file: %s", str(backup_error))
-
-            raise AIConversationTranscriptIOError(
-                f"Failed to write transcript: {str(e)}"
-            ) from e
-
     def write(self, history: AIConversationHistory) -> None:
         """
-        Replace a transcript file with a new conversation history.
+        Write a conversation history to the transcript file.
 
         Args:
             history: AIConversationHistory object containing messages and metadata
@@ -266,6 +226,7 @@ class AIConversationTranscriptHandler:
                 temp_file = f"{self._filename}.tmp"
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
+
             except Exception as backup_error:
                 self._logger.error("Failed to clean up temp file: %s", str(backup_error))
 
