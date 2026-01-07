@@ -307,7 +307,7 @@ for imp in imports:
     is_stdlib = parser.is_standard_library_import(imp.module)
     is_third_party = parser.is_third_party_import(imp.module, config.get_all_modules())
     is_allowed = config.is_external_dependency_allowed("ai", imp.module)
-    
+
     print(f"Line {imp.line_number}: {imp.raw_statement}")
     print(f"  Module: {imp.module}")
     print(f"  Standard library: {is_stdlib}")
@@ -472,7 +472,7 @@ modules:
       - "standard_library"
       - "fastapi"          # Web framework
       - "pydantic"         # Data validation
-    
+
   # Core business logic should be framework-agnostic
   business:
     internal_dependencies: [data]

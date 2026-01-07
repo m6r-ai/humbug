@@ -22,7 +22,7 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
     def __init__(self, include_line_numbers: bool = False) -> None:
         """
         Initialize the AST serializer.
-        
+
         Args:
             include_line_numbers: Whether to include line numbers in the serialized output
         """

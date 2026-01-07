@@ -6,7 +6,7 @@ from aifpl import AIFPLTokenizer, AIFPLParser
 def test_empty_binding_in_let():
     """
     Test that empty binding () is parsed correctly.
-    
+
     This covers the case where the elif condition on line 455 is False,
     because current_token.type == RPAREN (empty binding).
     """

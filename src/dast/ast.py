@@ -41,7 +41,7 @@ class ASTNode:
 
         Args:
             child: The child node to remove
-            
+
         Raises:
             ValueError: If the child is not a child of this node
         """

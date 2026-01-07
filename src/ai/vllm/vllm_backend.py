@@ -11,7 +11,7 @@ from ai_tool import AIToolCall, AIToolResult, AIToolDefinition
 
 class VLLMBackend(AIBackend):
     """vLLM API backend implementation with streaming support.
-    
+
     vLLM provides an OpenAI-compatible API for serving LLMs locally or remotely.
     This backend is designed to work with vLLM's OpenAI-compatible endpoints.
     """

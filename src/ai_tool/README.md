@@ -150,16 +150,16 @@ class CalculatorAITool(AITool):
     ) -> AIToolResult:
         """Add operation handler."""
         arguments = tool_call.arguments
-        
+
         # Use helper methods for parameter extraction
         x = arguments.get("x")
         y = arguments.get("y")
-        
+
         if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
             raise AIToolExecutionError("Both x and y must be numbers")
-        
+
         result = x + y
-        
+
         return AIToolResult(
             id=tool_call.id,
             name="calculator",
@@ -175,12 +175,12 @@ class CalculatorAITool(AITool):
         """Square operation handler."""
         arguments = tool_call.arguments
         x = arguments.get("x")
-        
+
         if not isinstance(x, (int, float)):
             raise AIToolExecutionError("x must be a number")
-        
+
         result = x * x
-        
+
         return AIToolResult(
             id=tool_call.id,
             name="calculator",
@@ -256,7 +256,7 @@ async def _dangerous_operation(
     request_authorization: AIToolAuthorizationCallback
 ) -> AIToolResult:
     """Operation that requires authorization."""
-    
+
     # Request authorization before proceeding
     authorized = await request_authorization(
         tool_name="my_tool",
@@ -265,10 +265,10 @@ async def _dangerous_operation(
         context="This will delete files",
         auto_approve=False  # Force user approval
     )
-    
+
     if not authorized:
         raise AIToolAuthorizationDenied("User denied authorization")
-    
+
     # Proceed with operation...
     return AIToolResult(...)
 ```
@@ -280,7 +280,7 @@ Tools without operations must override the `execute()` method directly:
 ```python
 class SimpleTool(AITool):
     """Simple tool without operations."""
-    
+
     def get_definition(self) -> AIToolDefinition:
         return AIToolDefinition(
             name="simple_tool",
@@ -294,7 +294,7 @@ class SimpleTool(AITool):
                 )
             ]
         )
-    
+
     async def execute(
         self,
         tool_call: AIToolCall,
@@ -304,10 +304,10 @@ class SimpleTool(AITool):
         """Direct execution without operations."""
         arguments = tool_call.arguments
         input_text = arguments.get("input", "")
-        
+
         # Process input...
         result = input_text.upper()
-        
+
         return AIToolResult(
             id=tool_call.id,
             name="simple_tool",

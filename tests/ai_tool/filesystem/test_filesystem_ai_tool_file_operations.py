@@ -204,7 +204,7 @@ class TestFileSystemAIToolWriteFile:
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
             assert args[4] is False  # destructive parameter
-            
+
             # Verify chmod was called
             mock_chmod.assert_called_once()
 
@@ -232,7 +232,7 @@ class TestFileSystemAIToolWriteFile:
             mock_authorization.assert_called_once()
             args = mock_authorization.call_args[0]
             assert args[4] is True  # destructive parameter
-            
+
             # Verify chmod was called
             mock_chmod.assert_called_once()
 
@@ -290,7 +290,7 @@ class TestFileSystemAIToolWriteFile:
             mock_temp_file.assert_called_once()
             kwargs = mock_temp_file.call_args[1]
             assert kwargs['encoding'] == 'utf-16'
-            
+
             # Verify chmod was called
             mock_chmod.assert_called_once()
 
@@ -317,7 +317,7 @@ class TestFileSystemAIToolWriteFile:
             assert "File written successfully" in result.content
             # Verify mkdir was called with parents=True
             mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
-            
+
             # Verify chmod was called
             mock_chmod.assert_called_once()
 

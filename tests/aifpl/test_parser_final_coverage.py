@@ -7,7 +7,7 @@ from aifpl import AIFPLTokenizer, AIFPLParser, AIFPLParseError
 def test_nested_let_with_related_symbol_in_incomplete_bindings_stack():
     """
     Test nested let where incomplete bindings error shows related_symbol from outer binding.
-    
+
     This covers line 523 in _create_incomplete_bindings_error where it adds
     the related_symbol to the stack trace line.
     """

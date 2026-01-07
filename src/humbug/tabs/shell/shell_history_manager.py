@@ -15,7 +15,7 @@ from humbug.tabs.shell.shell_history import ShellHistory
 class ShellHistoryManager(QObject):
     """
     Manages shell command history within mindspaces.
-    
+
     This manager handles loading, saving, and managing shell command history
     that is specific to each mindspace.
     """

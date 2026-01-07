@@ -66,10 +66,10 @@ Context: AIFPL implementation rules
         (lambda (items)
           (if (null? items)
             (list)  ; Early return for empty case
-            
+
             (if (< (length items) 2)
               items  ; Early return for single item
-              
+
               (process-items items) ) ) )
         ```
 
@@ -89,10 +89,10 @@ Context: AIFPL implementation rules
         (lambda (data)
           (if (null? data)
             (list)  ; Handle empty case
-            
+
             (if (not (list? data) )
               (list)  ; Handle invalid type
-              
+
               (process-valid-data data) ) ) )
         ```
 
@@ -129,10 +129,10 @@ Context: AIFPL implementation rules
               (lambda (lst idx)
                 (if (not (list? lst) )
                   ""  ; Invalid input type
-                  
+
                   (if (or (< idx 0) (>= idx (length lst) ) )
                     ""  ; Index out of bounds
-                    
+
                     (list-ref lst idx) ) ) ) )
             ```
 
@@ -158,10 +158,10 @@ Context: AIFPL implementation rules
               (lambda (input)
                 (if (string=? input "")
                   (list "error" "Input cannot be empty")
-                  
+
                   (if (not (valid-format? input) )
                     (list "error" "Input format is invalid")
-                    
+
                     (list "success" (parse-input input) ) ) ) ) )
             ```
 
@@ -236,29 +236,29 @@ Context: AIFPL implementation rules
         ```aifpl
         (let (
           ; === Core parsing functions ===
-          
+
           (parse-char
             (lambda (c state)
               ...) )
-          
+
           (parse-line
             (lambda (chars state)
               ...) )
-          
+
           ; === Helper functions ===
-          
+
           (parse-string
             (lambda (str)
               (parse-line (string->list str) initial-state) ) )
-          
+
           ; === Public API ===
-          
+
           (parse
             (lambda (input)
               ...) )
-          
+
           ; === Utility functions ===
-          
+
           (get-column
             (lambda (data idx)
               ...) )
@@ -277,7 +277,7 @@ Context: AIFPL implementation rules
           (FIELD-DELIMITER ",")
           (QUOTE-CHAR "\"")
           (LINE-SEPARATOR "\n")
-          
+
           (parse-csv
             (lambda (text)
               (let ((lines (string-split text LINE-SEPARATOR) ) )
@@ -366,7 +366,7 @@ Context: AIFPL implementation rules
           ; ============================================================
           ; TESTS / DEMOS
           ; ============================================================
-          
+
           (let (
             (test1 (parse-csv-string "Alice,30,Engineer") )
             (test2 (parse-csv-string "\"Smith, John\",42,\"VP, Engineering\"") )

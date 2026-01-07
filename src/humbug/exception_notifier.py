@@ -33,7 +33,7 @@ class ExceptionNotifier(QObject):
     def notify_exception(self) -> None:
         """
         Notify the UI that an uncaught exception has occurred.
-        
+
         This method is thread-safe and can be called from any thread.
         """
         self._logger.debug("Notifying UI of uncaught exception")
@@ -43,7 +43,7 @@ class ExceptionNotifier(QObject):
 def get_exception_notifier() -> ExceptionNotifier:
     """
     Get the global exception notifier instance.
-    
+
     Returns:
         ExceptionNotifier: The singleton instance
     """

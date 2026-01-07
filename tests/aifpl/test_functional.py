@@ -610,7 +610,7 @@ class TestFunctional:
     def test_nested_lambdas_recursion_bug(self, aifpl, helpers):
         """
         Test cases that expose the _is_recursive_call bug.
-        
+
         These tests fail with the original implementation due to false positive
         recursion detection when nested lambdas have the same name ("<lambda>").
         They should pass once the bug is fixed.
@@ -743,7 +743,7 @@ class TestFunctional:
     def test_nested_lambda_bug_cases(self, aifpl, expression, expected):
         """
         Parameterized test for the core cases that expose the nested lambda bug.
-        
+
         These expressions currently fail with "Unexpected tail call in higher-order 
         function context" due to the _is_recursive_call bug, but should work correctly
         once the bug is fixed.

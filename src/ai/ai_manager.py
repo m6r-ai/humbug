@@ -19,7 +19,7 @@ from ai.zai.zai_backend import ZaiBackend
 class AIManager:
     """
     Singleton manager for AI backends.
-    
+
     Handles the creation and management of AI backend instances based on settings.
     Provides a clean interface for accessing AI backends without depending on user management.
     """

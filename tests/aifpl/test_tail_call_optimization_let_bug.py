@@ -28,7 +28,7 @@ class TestTailCallOptimizationWithLet:
     def test_direct_tail_recursion_works(self, aifpl, helpers):
         """
         Baseline test: Direct tail recursion works.
-        
+
         This demonstrates that TCO is functional for direct recursive calls.
         """
         # Simple countdown - direct tail call
@@ -44,7 +44,7 @@ class TestTailCallOptimizationWithLet:
     def test_tail_recursion_after_simple_let(self, aifpl, helpers):
         """
         Tail recursion after a simple let binding works.
-        
+
         This is the simplest case: the recursive call is in tail position
         inside a let body, and TCO should be applied.
         """
@@ -61,7 +61,7 @@ class TestTailCallOptimizationWithLet:
     def test_tail_recursion_with_let_accumulator(self, aifpl, helpers):
         """
         Tail recursion with accumulator using let works.
-        
+
         This is a common pattern: using let to compute the next accumulator value
         before making the tail call.
         """
@@ -79,7 +79,7 @@ class TestTailCallOptimizationWithLet:
     def test_tail_recursion_with_multiple_let_bindings(self, aifpl, helpers):
         """
         Tail recursion with multiple let bindings works.
-        
+
         This tests the case where we need to extract multiple intermediate
         values before making the tail call.
         """
@@ -100,11 +100,11 @@ class TestTailCallOptimizationWithLet:
     def test_character_by_character_parsing(self, aifpl, helpers):
         """
         Character-by-character parsing works with TCO.
-        
+
         This is the motivating use case: parsing strings character by character
         requires extracting the current character and rest of string using let,
         then making a tail call.
-        
+
         This pattern is essential for CSV parsing, JSON parsing, etc.
         """
         char_counter = '''
@@ -121,7 +121,7 @@ class TestTailCallOptimizationWithLet:
     def test_list_processing_with_let(self, aifpl, helpers):
         """
         List processing with let extraction works.
-        
+
         Common pattern: extract head and tail of list, process head,
         then recursively process tail.
         """
@@ -140,7 +140,7 @@ class TestTailCallOptimizationWithLet:
     def test_csv_parsing_pattern(self, aifpl, helpers):
         """
         CSV parsing pattern works with TCO.
-        
+
         This demonstrates the actual CSV parsing use case that motivated
         the TCO fix. We need to extract the current character,
         check if we're in quotes, and make a tail call.
@@ -166,7 +166,7 @@ class TestTailCallOptimizationWithLet:
     def test_nested_let_with_tail_call(self, aifpl, helpers):
         """
         Nested let expressions with tail call work.
-        
+
         Tests that TCO works even with multiple levels of let nesting.
         """
         nested_let = '''
@@ -183,7 +183,7 @@ class TestTailCallOptimizationWithLet:
     def test_let_with_conditional_tail_calls(self, aifpl, helpers):
         """
         Let with conditional tail calls works.
-        
+
         Tests that TCO works when the tail call is in an if branch
         that's inside a let.
         """
@@ -201,7 +201,7 @@ class TestTailCallOptimizationWithLet:
     def test_comparison_direct_vs_let_tail_calls(self, aifpl_custom):
         """
         Both direct and let-based tail calls work for deep recursion.
-        
+
         This test verifies that both forms of tail calls are properly optimized.
         """
         aifpl = aifpl_custom(max_depth=1000)
@@ -223,7 +223,7 @@ class TestTailCallOptimizationWithLet:
     def test_deep_recursion_with_let_bindings(self, aifpl_custom):
         """
         Deep recursion with let bindings works with TCO.
-        
+
         This test verifies that let-based recursion can handle hundreds
         of iterations without hitting depth limits.
         """
@@ -234,14 +234,14 @@ class TestTailCallOptimizationWithLet:
         (let ((f (lambda (n) (if (<= n 0) n (let ((x (- n 1))) (f x))))))
           (f 500))
         '''
-        
+
         # Should complete successfully and return 0
         assert aifpl.evaluate_and_format(test_depth) == '0'
 
     def test_practical_example_string_reversal(self, aifpl, helpers):
         """
         Practical example - string reversal using tail recursion with let.
-        
+
         This is a real-world use case that requires TCO with let bindings.
         """
         string_reverse = '''
@@ -258,7 +258,7 @@ class TestTailCallOptimizationWithLet:
     def test_practical_example_list_filter_custom(self, aifpl, helpers):
         """
         Custom filter implementation using tail recursion with let.
-        
+
         Shows that we can implement our own filter function with proper TCO.
         """
         custom_filter = '''
@@ -306,7 +306,7 @@ class TestTailCallOptimizationLetEdgeCases:
     def test_mutual_recursion_with_let(self, aifpl, helpers):
         """
         Edge case: Mutual recursion with let bindings works.
-        
+
         Tests that TCO works for mutually recursive functions that use let.
         Note: This test uses a smaller value (20) because mutual recursion
         with let bindings still has some limitations.
@@ -329,7 +329,7 @@ class TestTailCallOptimizationLetEdgeCases:
     def test_documentation_example_from_bug_report(self, aifpl_custom):
         """
         Test the exact example from the bug report documentation.
-        
+
         This is the canonical example that originally demonstrated the bug.
         Now it should work correctly.
         """
@@ -344,7 +344,7 @@ class TestTailCallOptimizationLetEdgeCases:
                            (test next-n (+ acc 1)))))))
           (test 500 0))
         '''
-        
+
         # Should complete successfully and return 500
         assert aifpl.evaluate_and_format(bug_example) == '500'
 
@@ -352,7 +352,7 @@ class TestTailCallOptimizationLetEdgeCases:
 class TestTailCallOptimizationVerification:
     """
     Tests that verify TCO works correctly in all tail positions.
-    
+
     These tests ensure that the fix doesn't break anything and that
     TCO works correctly for all forms of tail calls.
     """
@@ -406,7 +406,7 @@ class TestTailCallOptimizationVerification:
         Comprehensive test that all tail positions are properly optimized.
         """
         aifpl = aifpl_custom(max_depth=1000)
-        
+
         comprehensive = '''
         (let ((process (lambda (n mode acc)
                         (if (<= n 0)
@@ -423,7 +423,7 @@ class TestTailCallOptimizationVerification:
                                       (process next-n 0 next-acc))))))))
           (process 300 0 0))
         '''
-        
+
         # Should complete without hitting depth limit
         result = aifpl.evaluate(comprehensive)
         assert result is not None
@@ -437,7 +437,7 @@ class TestTailCallOptimizationPerformance:
         Test that very deep recursion (1000+ iterations) works with let-based TCO.
         """
         aifpl = aifpl_custom(max_depth=5000)
-        
+
         deep = '''
         (let ((countdown (lambda (n)
                           (if (<= n 0)
@@ -446,7 +446,7 @@ class TestTailCallOptimizationPerformance:
                                 (countdown next))))))
           (countdown 1000))
         '''
-        
+
         assert aifpl.evaluate_and_format(deep) == '"done"'
 
     def test_factorial_with_let_accumulator(self, aifpl, helpers):
