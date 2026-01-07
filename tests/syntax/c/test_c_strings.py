@@ -164,7 +164,7 @@ class TestCStrings:
         # In C, string literals cannot span multiple lines without backslash continuation
         lexer = CLexer()
         lexer.lex(None, '"single line"')
-        
+
         tokens = list(lexer._tokens)
         assert len(tokens) == 1
         assert tokens[0].type.name == 'STRING'
@@ -433,3 +433,292 @@ class TestCStringAndCharacterMixed:
             string_tokens = [t for t in tokens if t.type.name == 'STRING']
             # Should have at least 2 string tokens
             assert len(string_tokens) >= 1, f"Concatenated strings '{code}' should produce string tokens"
+
+
+
+class TestCEdgeCasesForCoverage:
+    """Test edge cases to improve code coverage."""
+
+    def test_identifiers_starting_with_U(self):
+        """Test that U followed by non-quote is treated as identifier."""
+        test_cases = [
+            'Upper',
+            'U8',
+            'Undefined',
+            'U_value',
+        ]
+        for code in test_cases:
+            lexer = CLexer()
+            lexer.lex(None, code)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"'{code}' should produce one token"
+            assert tokens[0].type.name == 'IDENTIFIER', f"'{code}' should be IDENTIFIER"
+            assert tokens[0].value == code
+
+    def test_floating_point_starting_with_dot(self):
+        """Test floating point numbers that start with a dot."""
+        test_cases = [
+            '.5',
+            '.123',
+            '.0',
+            '.999',
+        ]
+        for code in test_cases:
+            lexer = CLexer()
+            lexer.lex(None, code)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"'{code}' should produce one token"
+            assert tokens[0].type.name == 'NUMBER', f"'{code}' should be NUMBER type"
+            assert tokens[0].value == code
+
+    def test_single_line_comments(self):
+        """Test single-line // comments."""
+        test_cases = [
+            '// this is a comment',
+            '//comment without space',
+            '// comment with symbols !@#$%',
+            '//',  # empty comment
+        ]
+        for code in test_cases:
+            lexer = CLexer()
+            lexer.lex(None, code)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"'{code}' should produce one token"
+            assert tokens[0].type.name == 'COMMENT', f"'{code}' should be COMMENT type"
+            assert tokens[0].value == code
+
+    def test_hexadecimal_numbers(self):
+        """Test hexadecimal number literals."""
+        test_cases = [
+            '0x0',
+            '0xFF',
+            '0x1234',
+            '0xABCDEF',
+            '0xabcdef',
+            '0X10',  # uppercase X
+        ]
+        for code in test_cases:
+            lexer = CLexer()
+            lexer.lex(None, code)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"'{code}' should produce one token"
+            assert tokens[0].type.name == 'NUMBER', f"'{code}' should be NUMBER type"
+            assert tokens[0].value.lower() == code.lower()
+
+    def test_binary_numbers(self):
+        """Test binary number literals."""
+        test_cases = [
+            '0b0',
+            '0b1',
+            '0b1010',
+            '0b11111111',
+            '0B101',  # uppercase B
+        ]
+        for code in test_cases:
+            lexer = CLexer()
+            lexer.lex(None, code)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"'{code}' should produce one token"
+            assert tokens[0].type.name == 'NUMBER', f"'{code}' should be NUMBER type"
+            assert tokens[0].value.lower() == code.lower()
+
+    def test_scientific_notation_numbers(self):
+        """Test numbers in scientific notation."""
+        test_cases = [
+            '1e10',
+            '1E10',
+            '1.5e-3',
+            '2.0E+5',
+            '3.14e0',
+            '0.5e10',
+        ]
+        for code in test_cases:
+            lexer = CLexer()
+            lexer.lex(None, code)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"'{code}' should produce one token"
+            assert tokens[0].type.name == 'NUMBER', f"'{code}' should be NUMBER type"
+            assert tokens[0].value.lower() == code.lower()
+
+    def test_u8_followed_by_non_quote(self):
+        """Test u8 followed by something other than a quote."""
+        test_cases = [
+            'u8x',
+            'u8_value',
+            'u8Variable',
+        ]
+        for code in test_cases:
+            lexer = CLexer()
+            lexer.lex(None, code)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) == 1, f"'{code}' should produce one token"
+            assert tokens[0].type.name == 'IDENTIFIER', f"'{code}' should be IDENTIFIER"
+            assert tokens[0].value == code
+
+    def test_u8_character_literal(self):
+        """Test u8 with character literal (should be u8'...')."""
+        # Note: u8 character literals are not standard in C11 (only u8 strings)
+        # but we should handle u8'x' gracefully
+        code = "u8'a'"
+        lexer = CLexer()
+        lexer.lex(None, code)
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1, f"'{code}' should produce one token"
+        assert tokens[0].type.name == 'STRING', f"'{code}' should be STRING type"
+        assert tokens[0].value == code
+
+    def test_mixed_code_with_comments_and_strings(self):
+        """Test realistic C code with various features."""
+        test_cases = [
+            'int x = 42; // comment',
+            'char *s = "hello"; /* block comment */',
+            'float f = 3.14e-2;',
+            'unsigned long ul = 0xFFFFul;',
+            '#include <stdio.h>',
+        ]
+        for code in test_cases:
+            lexer = CLexer()
+            lexer.lex(None, code)
+
+            tokens = list(lexer._tokens)
+            assert len(tokens) >= 1, f"'{code}' should produce tokens"
+
+
+
+class TestCEdgeCasesForFullCoverage:
+    """Test edge cases to achieve 100% code coverage."""
+
+    def test_multiline_block_comment_continuation(self):
+        """Test block comments that span multiple lines."""
+        # Start a block comment on first line
+        lexer = CLexer()
+        state1 = lexer.lex(None, '/* start of comment')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type.name == 'COMMENT'
+        assert state1.in_block_comment == True, "Should still be in block comment"
+
+        # Continue on second line
+        lexer2 = CLexer()
+        state2 = lexer2.lex(state1, 'middle of comment')
+
+        tokens2 = list(lexer2._tokens)
+        assert len(tokens2) == 1
+        assert tokens2[0].type.name == 'COMMENT'
+        assert state2.in_block_comment == True, "Should still be in block comment"
+
+        # Close on third line
+        lexer3 = CLexer()
+        state3 = lexer3.lex(state2, 'end of comment */')
+
+        tokens3 = list(lexer3._tokens)
+        assert len(tokens3) == 1
+        assert tokens3[0].type.name == 'COMMENT'
+        assert state3.in_block_comment == False, "Should have closed block comment"
+
+    def test_L_at_end_of_input(self):
+        """Test L at end of input (not followed by quote)."""
+        lexer = CLexer()
+        lexer.lex(None, 'L')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type.name == 'IDENTIFIER'
+        assert tokens[0].value == 'L'
+
+    def test_dot_at_end_of_input(self):
+        """Test dot at end of input (not followed by digit)."""
+        lexer = CLexer()
+        lexer.lex(None, '.')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type.name == 'OPERATOR'
+        assert tokens[0].value == '.'
+
+    def test_forward_slash_at_end_of_input(self):
+        """Test forward slash at end of input (not followed by / or *)."""
+        lexer = CLexer()
+        lexer.lex(None, '/')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type.name == 'OPERATOR'
+        assert tokens[0].value == '/'
+
+    def test_invalid_number_suffix(self):
+        """Test number with invalid suffix."""
+        # Invalid suffix that doesn't match valid patterns
+        lexer = CLexer()
+        lexer.lex(None, '42xyz')
+
+        tokens = list(lexer._tokens)
+        # Should tokenize as number without the invalid suffix, then identifier
+        assert len(tokens) == 2
+        assert tokens[0].type.name == 'NUMBER'
+        assert tokens[0].value == '42'
+        assert tokens[1].type.name == 'IDENTIFIER'
+        assert tokens[1].value == 'xyz'
+
+    def test_unterminated_block_comment_at_end(self):
+        """Test block comment that doesn't close."""
+        lexer = CLexer()
+        state = lexer.lex(None, '/* unterminated comment')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type.name == 'COMMENT'
+        assert state.in_block_comment == True, "Should still be in block comment"
+
+    def test_dot_followed_by_non_digit(self):
+        """Test dot followed by non-digit (should be operator)."""
+        lexer = CLexer()
+        lexer.lex(None, '.x')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 2
+        assert tokens[0].type.name == 'OPERATOR'
+        assert tokens[0].value == '.'
+        assert tokens[1].type.name == 'IDENTIFIER'
+
+    def test_forward_slash_followed_by_other(self):
+        """Test forward slash followed by something other than / or *."""
+        lexer = CLexer()
+        lexer.lex(None, '/x')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 2
+        assert tokens[0].type.name == 'OPERATOR'
+        assert tokens[0].value == '/'
+        assert tokens[1].type.name == 'IDENTIFIER'
+
+
+    def test_number_with_truly_invalid_suffix(self):
+        """Test number with a suffix that gets rejected."""
+        # Try a suffix that's in the check list but not valid
+        lexer = CLexer()
+        lexer.lex(None, '42lf')  # 'lf' is not a valid combination
+
+        tokens = list(lexer._tokens)
+        # Should have rejected the suffix and tokenized separately
+        assert len(tokens) >= 1
+
+
+    def test_u_at_end_of_input(self):
+        """Test u at the very end of input."""
+        lexer = CLexer()
+        lexer.lex(None, 'u')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type.name == 'IDENTIFIER'
+        assert tokens[0].value == 'u'

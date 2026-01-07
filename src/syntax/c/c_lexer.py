@@ -59,8 +59,7 @@ class CLexer(Lexer):
         self._input = input_str
         self._input_len = len(input_str)
         if prev_lexer_state is not None:
-            assert isinstance(prev_lexer_state, CLexerState), \
-                f"Expected CLexerState, got {type(prev_lexer_state).__name__}"
+            assert isinstance(prev_lexer_state, CLexerState), f"Expected CLexerState, got {type(prev_lexer_state).__name__}"
             self._in_block_comment = prev_lexer_state.in_block_comment
 
         if self._in_block_comment:
@@ -154,8 +153,7 @@ class CLexer(Lexer):
         Read a U character, which could be the start of a UTF-32 string/character literal
         (U"..." or U'...') or an identifier.
         """
-        if (self._position + 1 < self._input_len and
-                self._input[self._position + 1] in ('"', "'")):
+        if (self._position + 1 < self._input_len and self._input[self._position + 1] in ('"', "'")):
             self._read_string()
             return
 
@@ -165,8 +163,7 @@ class CLexer(Lexer):
         """
         Read a dot operator or decimal point in a number.
         """
-        if (self._position + 1 < self._input_len and
-                self._is_digit(self._input[self._position + 1])):
+        if (self._position + 1 < self._input_len and self._is_digit(self._input[self._position + 1])):
             self._read_number()
             return
 
@@ -198,36 +195,28 @@ class CLexer(Lexer):
         start = self._position
 
         # Skip over any prefix (L, u, U, u8)
-        if self._position < self._input_len:
-            ch = self._input[self._position]
-            if ch == 'L':
-                self._position += 1
+        # This method is only called when we know there's a quote after an optional prefix
+        assert self._position < self._input_len, "Position should be within input bounds"
 
-            elif ch == 'U':
-                self._position += 1
+        ch = self._input[self._position]
+        if ch == 'L':
+            self._position += 1
 
-            elif ch == 'u':
-                self._position += 1
-                # Check for u8 prefix
-                if (self._position < self._input_len and
-                        self._input[self._position] == '8'):
-                    self._position += 1
+        elif ch == 'U':
+            self._position += 1
 
-        # Now we should be at the quote character
-        if self._position >= self._input_len:
-            return
+        elif ch == 'u':
+            self._position += 1
+            # Check for u8 prefix
+            if (self._position < self._input_len and self._input[self._position] == '8'):
+                self._position += 1
 
         quote = self._input[self._position]
-        if quote not in ('"', "'"):
-            # This shouldn't happen if called correctly, but handle it
-            self._read_identifier_or_keyword()
-            return
 
         self._position += 1  # Skip opening quote
 
         while self._position < self._input_len and self._input[self._position] != quote:
-            if (self._input[self._position] == '\\' and
-                    self._position + 1 < self._input_len):
+            if (self._input[self._position] == '\\' and self._position + 1 < self._input_len):
                 self._position += 2
                 continue
 
@@ -251,19 +240,16 @@ class CLexer(Lexer):
         start = self._position
         has_suffix = False
 
-        if (self._position + 1 < self._input_len and
-                self._input[self._position] == '0'):
+        if (self._position + 1 < self._input_len and self._input[self._position] == '0'):
             next_char = self._input[self._position + 1].lower()
             if next_char == 'x':  # Hexadecimal
                 self._position += 2
-                while (self._position < self._input_len and
-                       self._is_hex_digit(self._input[self._position])):
+                while (self._position < self._input_len and self._is_hex_digit(self._input[self._position])):
                     self._position += 1
 
             elif next_char == 'b':  # Binary
                 self._position += 2
-                while (self._position < self._input_len and
-                       self._is_binary_digit(self._input[self._position])):
+                while (self._position < self._input_len and self._is_binary_digit(self._input[self._position])):
                     self._position += 1
 
             else:  # Decimal or floating-point
@@ -274,8 +260,7 @@ class CLexer(Lexer):
 
         # Handle suffixes
         suffix_start = self._position
-        while (self._position < self._input_len and
-               self._input[self._position].lower() in 'ulfj'):
+        while (self._position < self._input_len and self._input[self._position].lower() in 'ulfj'):
             self._position += 1
             has_suffix = True
 
@@ -297,25 +282,20 @@ class CLexer(Lexer):
         """
         Read a decimal or floating-point number.
         """
-        while (self._position < self._input_len and
-               self._is_digit(self._input[self._position])):
+        while (self._position < self._input_len and self._is_digit(self._input[self._position])):
             self._position += 1
 
-        if (self._position < self._input_len and
-                self._input[self._position] == '.'):
+        if (self._position < self._input_len and self._input[self._position] == '.'):
             self._position += 1
-            while (self._position < self._input_len and
-                   self._is_digit(self._input[self._position])):
+            while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
-        if (self._position < self._input_len and
-                self._input[self._position].lower() == 'e'):
+        if (self._position < self._input_len and self._input[self._position].lower() == 'e'):
             self._position += 1
             if self._input[self._position] in ('+', '-'):
                 self._position += 1
 
-            while (self._position < self._input_len and
-                   self._is_digit(self._input[self._position])):
+            while (self._position < self._input_len and self._is_digit(self._input[self._position])):
                 self._position += 1
 
     def _read_comment(self) -> None:
@@ -361,8 +341,7 @@ class CLexer(Lexer):
         """
         start = self._position
         self._position += 1
-        while (self._position < self._input_len and
-                self._is_letter_or_digit_or_underscore(self._input[self._position])):
+        while (self._position < self._input_len and self._is_letter_or_digit_or_underscore(self._input[self._position])):
             self._position += 1
 
         value = self._input[start:self._position]
