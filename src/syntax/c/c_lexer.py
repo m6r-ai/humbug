@@ -89,6 +89,12 @@ class CLexer(Lexer):
         if ch == 'L':
             return self._read_l
 
+        if ch == 'u':
+            return self._read_u
+
+        if ch == 'U':
+            return self._read_U
+
         if self._is_letter(ch) or ch == '_':
             return self._read_identifier_or_keyword
 
@@ -111,11 +117,45 @@ class CLexer(Lexer):
 
     def _read_l(self) -> None:
         """
-        Read an L character, which could be the start of a wide string literal
-        or an identifier.
+        Read an L character, which could be the start of a wide string/character literal
+        (L"..." or L'...') or an identifier.
         """
         if (self._position + 1 < self._input_len and
-                self._input[self._position + 1] == '"'):
+                self._input[self._position + 1] in ('"', "'")):
+            self._read_string()
+            return
+
+        self._read_identifier_or_keyword()
+
+    def _read_u(self) -> None:
+        """
+        Read a u character, which could be the start of a UTF-16 string/character literal
+        (u"..." or u'...'), a UTF-8 string literal (u8"..."), or an identifier.
+        """
+        if self._position + 1 < self._input_len:
+            next_char = self._input[self._position + 1]
+
+            # Check for u8"..." or u8'...'
+            if next_char == '8' and self._position + 2 < self._input_len:
+                third_char = self._input[self._position + 2]
+                if third_char in ('"', "'"):
+                    self._read_string()
+                    return
+
+            # Check for u"..." or u'...'
+            if next_char in ('"', "'"):
+                self._read_string()
+                return
+
+        self._read_identifier_or_keyword()
+
+    def _read_U(self) -> None:  # pylint: disable=invalid-name
+        """
+        Read a U character, which could be the start of a UTF-32 string/character literal
+        (U"..." or U'...') or an identifier.
+        """
+        if (self._position + 1 < self._input_len and
+                self._input[self._position + 1] in ('"', "'")):
             self._read_string()
             return
 
@@ -149,17 +189,41 @@ class CLexer(Lexer):
 
     def _read_string(self) -> None:
         """
-        Read a string literal token, including wide string literals.
+        Read a string or character literal token, including prefixed literals.
+
+        Handles C11 prefixes: L, u, U, u8 for both strings and character literals.
 
         Handles escape sequences within strings.
         """
         start = self._position
-        quote = self._input[self._position]
-        self._position += 1
 
-        if quote == 'L':
-            self._position += 1
-            quote = '"'
+        # Skip over any prefix (L, u, U, u8)
+        if self._position < self._input_len:
+            ch = self._input[self._position]
+            if ch == 'L':
+                self._position += 1
+
+            elif ch == 'U':
+                self._position += 1
+
+            elif ch == 'u':
+                self._position += 1
+                # Check for u8 prefix
+                if (self._position < self._input_len and
+                        self._input[self._position] == '8'):
+                    self._position += 1
+
+        # Now we should be at the quote character
+        if self._position >= self._input_len:
+            return
+
+        quote = self._input[self._position]
+        if quote not in ('"', "'"):
+            # This shouldn't happen if called correctly, but handle it
+            self._read_identifier_or_keyword()
+            return
+
+        self._position += 1  # Skip opening quote
 
         while self._position < self._input_len and self._input[self._position] != quote:
             if (self._input[self._position] == '\\' and
@@ -169,8 +233,8 @@ class CLexer(Lexer):
 
             self._position += 1
 
-        if self._position < self._input_len:
-            self._position += 1
+        if self._position < self._input_len and self._input[self._position] == quote:
+            self._position += 1  # Skip closing quote
 
         self._tokens.append(Token(
             type=TokenType.STRING,
@@ -195,13 +259,16 @@ class CLexer(Lexer):
                 while (self._position < self._input_len and
                        self._is_hex_digit(self._input[self._position])):
                     self._position += 1
+
             elif next_char == 'b':  # Binary
                 self._position += 2
                 while (self._position < self._input_len and
                        self._is_binary_digit(self._input[self._position])):
                     self._position += 1
+
             else:  # Decimal or floating-point
                 self._read_decimal_number()
+
         else:
             self._read_decimal_number()
 
