@@ -58,8 +58,9 @@ class TerminalAITool(AITool):
         description = (
             "Operations for interacting with terminal tabs. Use this tool to send commands, "
             "read output, and check terminal status. Write operations require user authorization. "
-            "You must have a terminal tab open first "
-            "(use the system tool to create terminals).\n\n"
+            "You must have a terminal tab open first (use the system tool to create terminals). "
+            "You must not assume a terminal shell or operating system - if you are unsure, check"
+            "with the get_status operation.\n\n"
             "Available operations:\n\n" + "\n".join(operation_list)
         )
 
@@ -84,7 +85,7 @@ class TerminalAITool(AITool):
                     name="keystrokes",
                     type="string",
                     description="Keystrokes to send to terminal (for write operation). "
-                    "You MUST use \\u#### format for control characters (e.g., \\u000a for newline)",
+                    "You MUST use \\u#### format for control characters (e.g., \\u000a for newline, \\u000d for carriage return)",
                     required=False
                 ),
                 AIToolParameter(
@@ -113,7 +114,7 @@ class TerminalAITool(AITool):
                 description="Send keystrokes to a terminal tab. Requires user authorization before execution. "
                     "The terminal may have access beyond the project sandbox, so user will review commands before "
                     "they are sent. You may send more than one keystroke at a time by submitting them as a string. "
-                    "The string is not terminated with a newline automatically, so "
+                    "The string is not terminated with an enter/return keycode automatically, so "
                     "if you want to execute a command you must include appropriate end-of-line control characters. "
                     "You MUST use \\u#### format to send any control characters (ASCII values less than 0x20), "
                     "including newline (\\u000a), carriage return (\\u000d), tab (\\u0009), and escape (\\u001b)"
@@ -134,7 +135,9 @@ class TerminalAITool(AITool):
                 extract_context=None,
                 allowed_parameters={"tab_id"},
                 required_parameters={"tab_id"},
-                description="Get terminal status and process information"
+                description="Get terminal status and process information. This includes the shell program "
+                    "(e.g., /bin/sh, /bin/bash, cmd.exe, powershell.exe) and platform (e.g., linux, darwin, "
+                    "win32), which determine the command syntax and behavior for this terminal"
             ),
         }
 
@@ -363,6 +366,8 @@ class TerminalAITool(AITool):
             status_dict = {
                 "tab_id": status_info.tab_id,
                 "tab_running": status_info.tab_running,
+                "shell": status_info.shell,
+                "platform": status_info.platform,
                 "process_id": status_info.process_id,
                 "process_running": status_info.process_running,
                 "process_name": status_info.process_name,

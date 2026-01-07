@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 import logging
+import sys
 from typing import Tuple
 
 
@@ -88,6 +89,15 @@ class TerminalBase(ABC):
     def get_process_name(self) -> str:
         """Get process name."""
         return self._process_name
+
+    def get_platform(self) -> str:
+        """
+        Get platform identifier.
+
+        Returns:
+            Platform string (e.g., 'linux', 'darwin', 'win32')
+        """
+        return sys.platform
 
     def transfer_to(self, other: 'TerminalBase') -> None:
         """

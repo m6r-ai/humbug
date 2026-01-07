@@ -6,11 +6,13 @@ New features:
 
 - Added an XML syntax highlighter.
 - Added a vLLM backend and gemma3:27b model to go with it.
+- Updated the terminal AI tool `get_status` operation to return the operating system and shell type.  Updated the tool
+  description to avoid leading to any assumption of running on a Unix-like system.
 
 Bug fixes:
 
 - Fixed some lexing problems in the HTML syntax highlighter.
-- Resolved a problem where Windows anti-malware scanners could cause conversation transcript files to not write correctly
+- Resolved a problem where Windows anti-malware scanners could cause conversation transcript files to not write correctly.
 
 Internal structure changes:
 

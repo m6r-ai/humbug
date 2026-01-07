@@ -569,6 +569,8 @@ class TerminalTab(TabBase):
         process_id = self._terminal_process.get_process_id()
         process_running = self._terminal_process.is_running()
         process_name = self._terminal_process.get_process_name()
+        shell = self._terminal_process.get_process_name()
+        platform = self._terminal_process.get_platform()
 
         return TerminalStatusInfo(
             # Widget info
@@ -583,6 +585,10 @@ class TerminalTab(TabBase):
             process_id=process_id,
             process_running=process_running,
             process_name=process_name,
+
+            # Shell info
+            shell=shell,
+            platform=platform,
         )
 
     async def send_keystrokes(self, keystrokes: str) -> None:

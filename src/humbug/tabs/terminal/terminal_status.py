@@ -28,3 +28,7 @@ class TerminalStatusInfo:
     process_id: int | None
     process_running: bool
     process_name: str
+
+    # Shell info
+    shell: str
+    platform: str
