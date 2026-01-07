@@ -9,7 +9,8 @@ New features:
 
 Bug fixes:
 
-- Fixed some lexing problems in the HTML syntax highlighter
+- Fixed some lexing problems in the HTML syntax highlighter.
+- Resolved a problem where Windows anti-malware scanners could cause conversation transcript files to not write correctly
 
 Internal structure changes:
 
