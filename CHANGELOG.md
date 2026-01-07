@@ -13,10 +13,13 @@ Bug fixes:
 
 - Fixed some lexing problems in the HTML syntax highlighter.
 - Resolved a problem where Windows anti-malware scanners could cause conversation transcript files to not write correctly.
+- Correctly handle character and string literal formats in the C syntax highlighter.
+- Handle missing "override" and "final" keywords, and additional string formats for the C++ syntax highlighter.
 
 Internal structure changes:
 
 - Added pytest tests for the HTML syntax highlighter.
+- Added thorough pytest tests for the C++ syntax highlighter.
 
 ## v37 (2026-01-06)
 
