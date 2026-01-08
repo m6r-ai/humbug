@@ -188,10 +188,13 @@ class CppLexer(CLexer):
         ch = self._input[self._position]
         if ch == 'L':
             self._position += 1
+
         elif ch == 'U':
             self._position += 1
+
         elif ch == 'u':
             self._position += 1
+
             # Check for u8 prefix
             if self._position < self._input_len and self._input[self._position] == '8':
                 self._position += 1
