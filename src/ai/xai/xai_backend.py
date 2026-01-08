@@ -247,6 +247,13 @@ class XAIBackend(AIBackend):
         """Build complete request configuration for xAI."""
         messages = self._format_messages_for_provider(conversation_history)
 
+        # Prepend system message if configured
+        if self._system_prompt:
+            messages.insert(0, {
+                "role": "system",
+                "content": self._system_prompt
+            })
+
         # Build request data
         data = {
             "model": AIConversationSettings.get_name(settings.model),

@@ -8,6 +8,7 @@ New features:
 - Added a vLLM backend and gemma3:27b model to go with it.
 - Updated the terminal AI tool `get_status` operation to return the operating system and shell type.  Updated the tool
   description to avoid leading to any assumption of running on a Unix-like system.
+- Added a system prompt to provide initial guidance to all LLMs when starting conversations.
 
 Bug fixes:
 

@@ -278,6 +278,12 @@ class GoogleBackend(AIBackend):
             "generationConfig": generation_config
         }
 
+        # Add system instruction if configured
+        if self._system_prompt:
+            data["systemInstruction"] = {
+                "parts": [{"text": self._system_prompt}]
+            }
+
         # Add tools if supported
         if self._supports_tools(settings):
             tool_definitions = self._tool_manager.get_tool_definitions()

@@ -276,6 +276,10 @@ class AnthropicBackend(AIBackend):
             "stream": True
         }
 
+        # Add system prompt if configured
+        if self._system_prompt:
+            data["system"] = self._system_prompt
+
         # Add thinking configuration if VISIBLE_REASONING is enabled.  Set budget at 90% of the maximum token count.
         thinking = False
         if (settings.reasoning & AIReasoningCapability.VISIBLE_REASONING) == AIReasoningCapability.VISIBLE_REASONING:

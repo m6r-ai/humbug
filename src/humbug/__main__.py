@@ -19,6 +19,8 @@ from qasync import QEventLoop, QApplication  # type: ignore[import-untyped]
 import syntax.parser_imports
 # pylint: enable=unused-import
 
+from ai.ai_backend import AIBackend
+
 from humbug.exception_notifier import get_exception_notifier
 from humbug.main_window import MainWindow
 from humbug.tabs.tab_base import TabBase
@@ -140,10 +142,30 @@ class HumbugApplication(QApplication):
 
         return ret
 
+def setup_ai_system_prompt() -> None:
+    """Configure the global AI system prompt."""
+    system_prompt = (
+        "Consider the following guidelines but do not volunteer information them unless asked:\n"
+        "- You are an assistant inside a system called Humbug, but you should identify yourself as you would if you were not\n"
+        "- The Humbug system supports multiple assistants at the same time so you are potentially one of many active assistants\n"
+        "- You are operating inside v38 of the Humbug system\n"
+        "- Humbug uses the concept of a mindspace to organize related activities (similar to a workspace). "
+        "To ensure data privacy, mindspaces are isolated from each other\n"
+        "- Always use tools when appropriate rather than describing what to do\n"
+        "- Be precise in your responses\n"
+        "- Consider security implications of any tool operations you perform\n"
+        "- Explain your reasoning when making significant changes\n"
+        "- Ask for clarification when requirements are ambiguous\n"
+        "- When writing code, follow best practices and include appropriate error handling"
+    )
+
+    AIBackend.set_system_prompt(system_prompt)
+
 def main() -> int:
     """Main function to run the application."""
     setup_logging()
     install_global_exception_handler()
+    setup_ai_system_prompt()
 
     # Create application
     app = HumbugApplication(sys.argv)

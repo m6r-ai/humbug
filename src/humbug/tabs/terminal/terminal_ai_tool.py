@@ -112,7 +112,7 @@ class TerminalAITool(AITool):
                 allowed_parameters={"tab_id", "keystrokes"},
                 required_parameters={"tab_id", "keystrokes"},
                 description="Send keystrokes to a terminal tab. Requires user authorization before execution. "
-                    "The terminal may have access beyond the project sandbox, so user will review commands before "
+                    "The terminal may have access beyond the project mindspace, so user will review commands before "
                     "they are sent. You may send more than one keystroke at a time by submitting them as a string. "
                     "The string is not terminated with an enter/return keycode automatically, so "
                     "if you want to execute a command you must include appropriate end-of-line control characters. "

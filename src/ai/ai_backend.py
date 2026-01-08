@@ -32,6 +32,19 @@ class RequestConfig:
 class AIBackend(ABC):
     """Abstract base class for AI backends."""
 
+    # Class-level system prompt (shared across all backend instances)
+    _system_prompt: str | None = None
+
+    @classmethod
+    def set_system_prompt(cls, prompt: str | None) -> None:
+        """
+        Set the global system prompt for all AI backends.
+
+        Args:
+            prompt: The system prompt to use, or None to clear it
+        """
+        cls._system_prompt = prompt
+
     @classmethod
     def get_default_url(cls) -> str:
         """
