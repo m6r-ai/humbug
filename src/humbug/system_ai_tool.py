@@ -1,6 +1,8 @@
 import logging
 import json
 import os
+import platform
+import sys
 from typing import Any, Dict
 
 from ai import AIConversationSettings
@@ -200,6 +202,15 @@ class SystemAITool(AITool):
                 required_parameters={"tab_id", "target_column"},
                 description="Move a tab to a specific column by index. You must provide the tab_id and target_column "
                     "parameters. There are a maximum of 6 columns"
+            ),
+            "get_system_info": AIToolOperationDefinition(
+                name="get_system_info",
+                handler=self._get_system_info,
+                extract_context=None,
+                allowed_parameters=set(),
+                required_parameters=set(),
+                description="Get information about the Humbug system, current mindspace, operating system, "
+                    "available AI models, and default shell"
             ),
         }
 
@@ -721,3 +732,90 @@ class SystemAITool(AITool):
             name="system",
             content=f"Moved tab {tab_id} to column {target_column}"
         )
+
+    async def _get_system_info(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Get system and mindspace information."""
+        try:
+            # System information
+            system_info = {
+                "version": "v38",
+                "platform": sys.platform,
+                "platform_details": platform.platform(),
+                "architecture": platform.machine()
+            }
+
+            # Mindspace information
+            mindspace_path = self._mindspace_manager.mindspace_path()
+            mindspace_name = os.path.basename(mindspace_path)
+
+            mindspace_info = {
+                "name": mindspace_name,
+                "path": mindspace_path
+            }
+
+            # AI models information
+            ai_backends = self._user_manager.get_ai_backends()
+            available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
+
+            # Categorize models by backend
+            models_by_backend = {}
+            for model_name in available_models:
+                provider = AIConversationSettings.get_provider(model_name)
+                if provider not in models_by_backend:
+                    models_by_backend[provider] = []
+
+                models_by_backend[provider].append(model_name)
+
+            ai_info = {
+                "models_by_backend": models_by_backend
+            }
+
+            # Shell information
+            shell_env = os.environ.get('SHELL', '/bin/sh')
+
+            # For shell_path, try to resolve it if it's not absolute
+            if os.path.isabs(shell_env):
+                shell_path = shell_env
+
+            else:
+                # Try to find it in PATH
+                shell_path = shell_env
+                for path_dir in os.environ.get('PATH', '').split(os.pathsep):
+                    potential_path = os.path.join(path_dir, shell_env)
+                    if os.path.isfile(potential_path) and os.access(potential_path, os.X_OK):
+                        shell_path = potential_path
+                        break
+
+            shell_info = {
+                "default_shell": os.path.basename(shell_env),
+                "shell_path": shell_path,
+                "cwd": mindspace_path
+            }
+
+            # Combine all information
+            result = {
+                "system": system_info,
+                "mindspace": mindspace_info,
+                "ai": ai_info,
+                "shell": shell_info
+            }
+
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                "AI requested system information"
+            )
+
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=json.dumps(result, indent=2),
+                context="json"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to get system info: {str(e)}") from e
