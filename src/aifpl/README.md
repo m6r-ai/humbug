@@ -12,6 +12,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **String operations**: Manipulation, searching, conversion with full UTF-8 support
 - **Boolean operations**: Logic operations with strict type checking
 - **List operations**: Construction, manipulation, and conversion with heterogeneous support
+- **Association lists (alists)**: Immutable key-value mappings with O(1) lookup performance
 - **Conditional evaluation**: `if` expressions with lazy evaluation of branches
 - **Lazy evaluation**: `and` and `or` perform lazy evaluation of operands
 - **Lambda expressions**: Anonymous functions with lexical scoping and closures
@@ -1387,6 +1388,182 @@ String literals use double quotes and support escape sequences:
 - `\t` → tab
 - `\r` → carriage return
 - `\uXXXX` → Unicode code point (4 hex digits)
+
+### Association Lists (Alists)
+
+Association lists (alists) are immutable key-value mappings with O(1) lookup performance. They are first-class data structures optimized for structured data processing.
+
+#### Creating Alists
+
+```aifpl
+; Basic alist creation
+(alist ("name" "Alice") ("age" 30) ("city" "NYC"))
+; → (alist ("name" "Alice") ("age" 30) ("city" "NYC"))
+
+; Empty alist
+(alist)
+; → (alist)
+
+; Alists with different key types
+(alist (1 "one") (2 "two") (3 "three"))
+(alist (#t "yes") (#f "no"))
+
+; Nested alists
+(alist 
+  ("user" (alist ("name" "Bob") ("id" 123)))
+  ("status" "active"))
+```
+
+**Note**: `alist` is a special form that evaluates the key and value expressions within each pair, but treats the pair structure itself as data.
+
+#### Accessing Alist Values
+
+```aifpl
+; Get value by key
+(let ((person (alist ("name" "Alice") ("age" 30))))
+  (alist-get person "name"))
+; → "Alice"
+
+; Get with default value
+(alist-get person "email" "no-email")
+; → "no-email"
+
+; Missing keys return #f by default
+(alist-get person "phone")
+; → #f
+
+; Nested access
+(let ((data (alist ("user" (alist ("name" "Carol") ("id" 456))))))
+  (alist-get (alist-get data "user") "name"))
+; → "Carol"
+```
+
+#### Modifying Alists (Immutably)
+
+All alist operations return new alists without modifying the original:
+
+```aifpl
+; Set a key (returns new alist)
+(let ((person (alist ("name" "Alice") ("age" 30))))
+  (alist-set person "age" 31))
+; → (alist ("name" "Alice") ("age" 31))
+
+; Add a new key
+(alist-set person "email" "alice@example.com")
+; → (alist ("name" "Alice") ("age" 30) ("email" "alice@example.com"))
+
+; Original is unchanged
+(let ((original (alist ("x" 1)))
+      (modified (alist-set original "x" 2)))
+  (list (alist-get original "x") (alist-get modified "x")))
+; → (1 2)
+
+; Remove a key
+(alist-remove person "age")
+; → (alist ("name" "Alice"))
+```
+
+#### Alist Queries
+
+```aifpl
+; Check if key exists
+(alist-has? person "name")
+; → #t
+
+(alist-has? person "phone")
+; → #f
+
+; Get all keys
+(alist-keys (alist ("a" 1) ("b" 2) ("c" 3)))
+; → ("a" "b" "c")
+
+; Get all values
+(alist-values (alist ("a" 1) ("b" 2) ("c" 3)))
+; → (1 2 3)
+
+; Type checking
+(alist? (alist ("x" 1)))
+; → #t
+
+(alist? (list 1 2 3))
+; → #f
+```
+
+#### Merging Alists
+
+```aifpl
+; Merge two alists (second wins on conflicts)
+(let ((defaults (alist ("port" 8080) ("host" "localhost")))
+      (config (alist ("port" 3000) ("debug" #t))))
+  (alist-merge defaults config))
+; → (alist ("port" 3000) ("host" "localhost") ("debug" #t))
+
+; Merge multiple alists
+(let ((a (alist ("x" 1)))
+      (b (alist ("y" 2)))
+      (c (alist ("z" 3))))
+  (alist-merge (alist-merge a b) c))
+; → (alist ("x" 1) ("y" 2) ("z" 3))
+```
+
+#### Alists with Functional Operations
+
+```aifpl
+; Map over keys
+(let ((data (alist ("name" "alice") ("city" "nyc"))))
+  (map string-upcase (alist-keys data)))
+; → ("NAME" "CITY")
+
+; Filter values
+(let ((scores (alist ("alice" 85) ("bob" 92) ("carol" 78))))
+  (filter (lambda (score) (> score 80)) (alist-values scores)))
+; → (85 92)
+
+; Fold over values
+(let ((prices (alist ("apple" 1.5) ("banana" 0.8) ("orange" 1.2))))
+  (fold + 0 (alist-values prices)))
+; → 3.5
+
+; Process list of alists
+(let ((people (list 
+                (alist ("name" "Alice") ("age" 30))
+                (alist ("name" "Bob") ("age" 25))
+                (alist ("name" "Carol") ("age" 35)))))
+  (map (lambda (p) (alist-get p "name")) people))
+; → ("Alice" "Bob" "Carol")
+```
+
+#### Pattern Matching with Alists
+
+```aifpl
+; Match alist type
+(match (alist ("type" "user") ("name" "Alice"))
+  ((alist? data) (alist-get data "name"))
+  (_ "not-alist"))
+; → "Alice"
+
+; Distinguish alist from list
+(let ((process (lambda (data)
+                 (match data
+                   ((alist? a) "alist")
+                   ((list? l) "list")
+                   (_ "other")))))
+  (list (process (alist ("a" 1)))
+        (process (list 1 2 3))))
+; → ("alist" "list")
+```
+
+#### Alist Performance
+
+Alists in AIFPL use hash-backed storage for O(1) lookup performance:
+
+- `alist-get`: O(1) - constant time lookup
+- `alist-set`: O(n) - creates new alist with updated value
+- `alist-has?`: O(1) - constant time membership test
+- `alist-keys`/`alist-values`: O(n) - iterates all pairs
+- `alist-merge`: O(n+m) - combines two alists
+
+Alists maintain insertion order and are optimized for read-heavy workloads common in data processing.
 
 ### Complex Number Operations
 The `real` and `imag` functions extract components from any numeric value:

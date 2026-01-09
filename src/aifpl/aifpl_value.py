@@ -1,7 +1,7 @@
 """AIFPL Value hierarchy - immutable value types for the language."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, List, Tuple, Union, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
@@ -178,6 +178,162 @@ class AIFPLList(AIFPLValue):
     def drop(self, n: int) -> 'AIFPLList':
         """Drop the first n elements."""
         return AIFPLList(self.elements[n:])
+
+
+@dataclass(frozen=True)
+class AIFPLAlist(AIFPLValue):
+    """
+    Represents association lists (alists) - immutable key-value mappings.
+    
+    Internally uses a dict for O(1) lookups while maintaining insertion order.
+    Keys must be hashable (strings, numbers, booleans, symbols).
+    """
+    pairs: Tuple[Tuple[AIFPLValue, AIFPLValue], ...] = ()
+    _lookup: dict = field(default_factory=dict, init=False, repr=False, compare=False)
+
+    def __post_init__(self):
+        """Build internal lookup dict after initialization."""
+        # Use object.__setattr__ because dataclass is frozen
+        lookup = {}
+        for key, value in self.pairs:
+            hashable_key = self._to_hashable_key(key)
+            lookup[hashable_key] = (key, value)
+        object.__setattr__(self, '_lookup', lookup)
+
+    def to_python(self) -> dict:
+        """Convert to Python dict."""
+        result = {}
+        for key, value in self.pairs:
+            # Use string representation for Python dict keys
+            if isinstance(key, AIFPLString):
+                py_key = key.value
+
+            elif isinstance(key, AIFPLSymbol):
+                py_key = key.name
+
+            else:
+                py_key = str(key.to_python())
+
+            result[py_key] = value.to_python()
+
+        return result
+
+    def type_name(self) -> str:
+        """Return type name for error messages."""
+        return "alist"
+
+    def get(self, key: AIFPLValue) -> AIFPLValue | None:
+        """Get value by key, returns None if not found."""
+        hashable_key = self._to_hashable_key(key)
+        if hashable_key in self._lookup:
+            _, value = self._lookup[hashable_key]
+            return value
+
+        return None
+
+    def has_key(self, key: AIFPLValue) -> bool:
+        """Check if key exists."""
+        hashable_key = self._to_hashable_key(key)
+        return hashable_key in self._lookup
+
+    def set(self, key: AIFPLValue, value: AIFPLValue) -> 'AIFPLAlist':
+        """Return new alist with key set (immutable update)."""
+        hashable_key = self._to_hashable_key(key)
+
+        # Build new pairs list, replacing or appending
+        new_pairs = []
+        found = False
+
+        for k, v in self.pairs:
+            if self._to_hashable_key(k) == hashable_key:
+                new_pairs.append((key, value))  # Replace with new value
+                found = True
+
+            else:
+                new_pairs.append((k, v))
+
+        if not found:
+            new_pairs.append((key, value))  # Append new pair
+
+        return AIFPLAlist(tuple(new_pairs))
+
+    def remove(self, key: AIFPLValue) -> 'AIFPLAlist':
+        """Return new alist without key."""
+        hashable_key = self._to_hashable_key(key)
+        new_pairs = tuple(
+            (k, v) for k, v in self.pairs
+            if self._to_hashable_key(k) != hashable_key
+        )
+        return AIFPLAlist(new_pairs)
+
+    def keys(self) -> Tuple[AIFPLValue, ...]:
+        """Get all keys in insertion order."""
+        return tuple(k for k, _ in self.pairs)
+
+    def values(self) -> Tuple[AIFPLValue, ...]:
+        """Get all values in insertion order."""
+        return tuple(v for _, v in self.pairs)
+
+    def merge(self, other: 'AIFPLAlist') -> 'AIFPLAlist':
+        """Merge with another alist (other's values win on conflicts)."""
+        # Start with self's pairs
+        result_dict = {}
+        for k, v in self.pairs:
+            hashable_key = self._to_hashable_key(k)
+            result_dict[hashable_key] = (k, v)
+
+        # Override/add from other
+        for k, v in other.pairs:
+            hashable_key = self._to_hashable_key(k)
+            result_dict[hashable_key] = (k, v)
+
+        # Preserve insertion order: self's keys first, then other's new keys
+        new_pairs = []
+        seen = set()
+
+        # Add all of self's keys (with potentially updated values)
+        for k, _ in self.pairs:
+            hashable_key = self._to_hashable_key(k)
+            new_pairs.append(result_dict[hashable_key])
+            seen.add(hashable_key)
+
+        # Add other's keys that weren't in self
+        for k, v in other.pairs:
+            hashable_key = self._to_hashable_key(k)
+            if hashable_key not in seen:
+                new_pairs.append((k, v))
+
+        return AIFPLAlist(tuple(new_pairs))
+
+    def length(self) -> int:
+        """Number of key-value pairs."""
+        return len(self.pairs)
+
+    def is_empty(self) -> bool:
+        """Check if alist is empty."""
+        return len(self.pairs) == 0
+
+    @staticmethod
+    def _to_hashable_key(key: AIFPLValue):
+        """Convert AIFPL key to hashable Python value."""
+        if isinstance(key, AIFPLString):
+            return ('str', key.value)
+
+        if isinstance(key, AIFPLNumber):
+            return ('num', key.value)
+
+        if isinstance(key, AIFPLBoolean):
+            return ('bool', key.value)
+
+        if isinstance(key, AIFPLSymbol):
+            return ('sym', key.name)
+
+        raise AIFPLEvalError(
+            message="Alist keys must be strings, numbers, booleans, or symbols",
+            received=f"Key type: {key.type_name()}",
+            example='(alist ("name" "Alice") ("age" 30))',
+            suggestion="Use strings for most keys"
+        )
 
 
 @dataclass(frozen=True)

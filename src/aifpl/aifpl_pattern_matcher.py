@@ -6,7 +6,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
-    AIFPLList, AIFPLFunction, AIFPLBuiltinFunction
+    AIFPLList, AIFPLAlist, AIFPLFunction, AIFPLBuiltinFunction
 )
 
 
@@ -227,6 +227,7 @@ class AIFPLPatternMatcher:
             'string?': lambda v: isinstance(v, AIFPLString),
             'boolean?': lambda v: isinstance(v, AIFPLBoolean),
             'list?': lambda v: isinstance(v, AIFPLList),
+            'alist?': lambda v: isinstance(v, AIFPLAlist),
             'function?': lambda v: isinstance(v, (AIFPLFunction, AIFPLBuiltinFunction)),
             'symbol?': lambda v: isinstance(v, AIFPLSymbol),
         }
@@ -293,7 +294,7 @@ class AIFPLPatternMatcher:
         """
         valid_predicates = {
             'number?', 'integer?', 'float?', 'complex?',
-            'string?', 'boolean?', 'list?', 'function?', 'symbol?'
+            'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
         }
         return type_pred in valid_predicates
 

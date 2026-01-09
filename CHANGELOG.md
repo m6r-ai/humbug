@@ -9,7 +9,8 @@ New features:
 - Updated the terminal AI tool `get_status` operation to return the operating system and shell type.  Updated the tool
   description to avoid leading to any assumption of running on a Unix-like system.
 - Added a system prompt to provide initial guidance to all LLMs when starting conversations.
-- Add a `get_system_info` operation to the system AI tool.  This provides system and mindspace details.
+- Added a `get_system_info` operation to the system AI tool.  This provides system and mindspace details.
+- Added association lists (alists) to AIFPL to provide very efficient key/value lookup operations.
 
 Bug fixes:
 

@@ -4,7 +4,9 @@ from typing import List, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_environment import AIFPLEnvironment
-from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction, AIFPLBuiltinFunction
+from aifpl.aifpl_value import (
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAlist, AIFPLFunction, AIFPLBuiltinFunction
+)
 
 
 class AIFPLCollectionsFunctions:
@@ -69,6 +71,16 @@ class AIFPLCollectionsFunctions:
             'string?': self._builtin_string_p,
             'boolean?': self._builtin_boolean_p,
             'function?': self._builtin_function_p,
+
+            # Alist functions
+            'alist-get': self._builtin_alist_get,
+            'alist-set': self._builtin_alist_set,
+            'alist-has?': self._builtin_alist_has_p,
+            'alist-keys': self._builtin_alist_keys,
+            'alist-values': self._builtin_alist_values,
+            'alist-remove': self._builtin_alist_remove,
+            'alist-merge': self._builtin_alist_merge,
+            'alist?': self._builtin_alist_p,
         }
 
     # String functions
@@ -531,3 +543,184 @@ class AIFPLCollectionsFunctions:
         # Type narrowing: we know value.value is int here
         assert isinstance(value.value, int), "is_integer() should guarantee int type"
         return value.value
+
+    # Alist functions
+    def _builtin_alist_get(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+        """Get value from alist: (alist-get my-alist key [default])"""
+        if len(args) < 2 or len(args) > 3:
+            raise AIFPLEvalError(
+                message="alist-get requires 2 or 3 arguments",
+                received=f"Got {len(args)} arguments",
+                expected="2 or 3 arguments: (alist-get alist key) or (alist-get alist key default)",
+                example='(alist-get person "name") or (alist-get person "email" "none")',
+                suggestion="Provide alist, key, and optionally a default value"
+            )
+
+        alist_val = args[0]
+        key = args[1]
+        default = args[2] if len(args) == 3 else AIFPLBoolean(False)
+
+        if not isinstance(alist_val, AIFPLAlist):
+            raise AIFPLEvalError(
+                message="First argument must be an alist",
+                received=f"Got: {alist_val.type_name()}",
+                expected="alist",
+                example='(alist-get (alist ("name" "Alice")) "name")',
+                suggestion="Use (alist ...) to create an alist"
+            )
+
+        result = alist_val.get(key)
+        return result if result is not None else default
+
+    def _builtin_alist_set(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+        """Set key in alist (returns new alist): (alist-set my-alist key value)"""
+        if len(args) != 3:
+            raise AIFPLEvalError(
+                message="alist-set requires exactly 3 arguments",
+                received=f"Got {len(args)} arguments",
+                expected="3 arguments: (alist-set alist key value)",
+                example='(alist-set person "age" 31)',
+                suggestion="Provide alist, key, and new value"
+            )
+
+        alist_val, key, value = args
+
+        if not isinstance(alist_val, AIFPLAlist):
+            raise AIFPLEvalError(
+                message="First argument must be an alist",
+                received=f"Got: {alist_val.type_name()}",
+                expected="alist",
+                suggestion="Use (alist ...) to create an alist"
+            )
+
+        return alist_val.set(key, value)
+
+    def _builtin_alist_has_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+        """Check if alist has key: (alist-has? my-alist key)"""
+        if len(args) != 2:
+            raise AIFPLEvalError(
+                message="alist-has? requires exactly 2 arguments",
+                received=f"Got {len(args)} arguments",
+                expected="2 arguments: (alist-has? alist key)",
+                example='(alist-has? person "email")',
+                suggestion="Provide alist and key to check"
+            )
+
+        alist_val, key = args
+
+        if not isinstance(alist_val, AIFPLAlist):
+            raise AIFPLEvalError(
+                message="First argument must be an alist",
+                received=f"Got: {alist_val.type_name()}",
+                expected="alist"
+            )
+
+        return AIFPLBoolean(alist_val.has_key(key))
+
+    def _builtin_alist_keys(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+        """Get all keys from alist: (alist-keys my-alist)"""
+        if len(args) != 1:
+            raise AIFPLEvalError(
+                message="alist-keys requires exactly 1 argument",
+                received=f"Got {len(args)} arguments",
+                expected="1 argument: (alist-keys alist)",
+                example='(alist-keys person)',
+                suggestion="Provide an alist"
+            )
+
+        alist_val = args[0]
+
+        if not isinstance(alist_val, AIFPLAlist):
+            raise AIFPLEvalError(
+                message="Argument must be an alist",
+                received=f"Got: {alist_val.type_name()}",
+                expected="alist"
+            )
+
+        return AIFPLList(alist_val.keys())
+
+    def _builtin_alist_values(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+        """Get all values from alist: (alist-values my-alist)"""
+        if len(args) != 1:
+            raise AIFPLEvalError(
+                message="alist-values requires exactly 1 argument",
+                received=f"Got {len(args)} arguments",
+                expected="1 argument: (alist-values alist)",
+                example='(alist-values person)',
+                suggestion="Provide an alist"
+            )
+
+        alist_val = args[0]
+
+        if not isinstance(alist_val, AIFPLAlist):
+            raise AIFPLEvalError(
+                message="Argument must be an alist",
+                received=f"Got: {alist_val.type_name()}",
+                expected="alist"
+            )
+
+        return AIFPLList(alist_val.values())
+
+    def _builtin_alist_remove(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+        """Remove key from alist (returns new alist): (alist-remove my-alist key)"""
+        if len(args) != 2:
+            raise AIFPLEvalError(
+                message="alist-remove requires exactly 2 arguments",
+                received=f"Got {len(args)} arguments",
+                expected="2 arguments: (alist-remove alist key)",
+                example='(alist-remove person "age")',
+                suggestion="Provide alist and key to remove"
+            )
+
+        alist_val, key = args
+
+        if not isinstance(alist_val, AIFPLAlist):
+            raise AIFPLEvalError(
+                message="First argument must be an alist",
+                received=f"Got: {alist_val.type_name()}",
+                expected="alist"
+            )
+
+        return alist_val.remove(key)
+
+    def _builtin_alist_merge(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+        """Merge two alists (second wins on conflicts): (alist-merge alist1 alist2)"""
+        if len(args) != 2:
+            raise AIFPLEvalError(
+                message="alist-merge requires exactly 2 arguments",
+                received=f"Got {len(args)} arguments",
+                expected="2 arguments: (alist-merge alist1 alist2)",
+                example='(alist-merge defaults config)',
+                suggestion="Provide two alists to merge"
+            )
+
+        alist1, alist2 = args
+
+        if not isinstance(alist1, AIFPLAlist):
+            raise AIFPLEvalError(
+                message="First argument must be an alist",
+                received=f"Got: {alist1.type_name()}",
+                expected="alist"
+            )
+
+        if not isinstance(alist2, AIFPLAlist):
+            raise AIFPLEvalError(
+                message="Second argument must be an alist",
+                received=f"Got: {alist2.type_name()}",
+                expected="alist"
+            )
+
+        return alist1.merge(alist2)
+
+    def _builtin_alist_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+        """Check if value is an alist: (alist? value)"""
+        if len(args) != 1:
+            raise AIFPLEvalError(
+                message="alist? requires exactly 1 argument",
+                received=f"Got {len(args)} arguments",
+                expected="1 argument: (alist? value)",
+                example='(alist? my-data)',
+                suggestion="Provide a value to check"
+            )
+
+        return AIFPLBoolean(isinstance(args[0], AIFPLAlist))

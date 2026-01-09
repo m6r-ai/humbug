@@ -1,0 +1,559 @@
+"""Tests for AIFPL alist (association list) operations."""
+
+import pytest
+from aifpl import AIFPL, AIFPLEvalError
+
+
+@pytest.fixture
+def tool():
+    """Create AIFPL instance for testing."""
+    return AIFPL()
+
+
+class TestAlistConstruction:
+    """Test alist construction."""
+
+    def test_empty_alist(self, tool):
+        """Test creating an empty alist."""
+        result = tool.evaluate("(alist)")
+        assert result == {}
+
+    def test_simple_alist(self, tool):
+        """Test creating a simple alist with string keys."""
+        result = tool.evaluate('(alist ("name" "Alice") ("age" 30))')
+        assert result == {"name": "Alice", "age": 30}
+
+    def test_alist_with_number_keys(self, tool):
+        """Test alist with numeric keys."""
+        result = tool.evaluate("(alist (1 \"one\") (2 \"two\") (3 \"three\"))")
+        assert result == {"1": "one", "2": "two", "3": "three"}
+
+    def test_alist_with_boolean_keys(self, tool):
+        """Test alist with boolean keys."""
+        result = tool.evaluate('(alist (#t "true value") (#f "false value"))')
+        assert result == {"True": "true value", "False": "false value"}
+
+    def test_alist_with_mixed_value_types(self, tool):
+        """Test alist with different value types."""
+        result = tool.evaluate('(alist ("name" "Bob") ("age" 25) ("active" #t))')
+        assert result == {"name": "Bob", "age": 25, "active": True}
+
+    def test_alist_with_nested_values(self, tool):
+        """Test alist with nested lists as values."""
+        result = tool.evaluate('(alist ("numbers" (list 1 2 3)) ("letters" (list "a" "b")))')
+        assert result == {"numbers": [1, 2, 3], "letters": ["a", "b"]}
+
+    def test_alist_preserves_insertion_order(self, tool):
+        """Test that alist preserves insertion order."""
+        result = tool.evaluate('(alist ("z" 1) ("a" 2) ("m" 3))')
+        keys = list(result.keys())
+        assert keys == ["z", "a", "m"]
+
+
+class TestAlistConstructionErrors:
+    """Test alist construction error cases."""
+
+    def test_alist_pair_not_list(self, tool):
+        """Test error when pair is not a list."""
+        with pytest.raises(AIFPLEvalError, match="Alist pair 1 must be a list"):
+            tool.evaluate('(alist "not-a-pair")')
+
+    def test_alist_pair_wrong_length(self, tool):
+        """Test error when pair doesn't have exactly 2 elements."""
+        with pytest.raises(AIFPLEvalError, match="Alist pair 1 must have exactly 2 elements"):
+            tool.evaluate('(alist ("key"))')
+
+    def test_alist_pair_too_many_elements(self, tool):
+        """Test error when pair has more than 2 elements."""
+        with pytest.raises(AIFPLEvalError, match="Alist pair 1 must have exactly 2 elements"):
+            tool.evaluate('(alist ("key" "val1" "val2"))')
+
+    def test_alist_invalid_key_type(self, tool):
+        """Test error with invalid key type (list)."""
+        with pytest.raises(AIFPLEvalError, match="Alist keys must be strings, numbers, booleans, or symbols"):
+            tool.evaluate('(alist ((list 1 2) "value"))')
+
+
+class TestAlistGet:
+    """Test alist-get operation."""
+
+    def test_alist_get_existing_key(self, tool):
+        """Test getting an existing key."""
+        result = tool.evaluate('(alist-get (alist ("name" "Alice") ("age" 30)) "name")')
+        assert result == "Alice"
+
+    def test_alist_get_missing_key_default_false(self, tool):
+        """Test getting a missing key returns #f by default."""
+        result = tool.evaluate('(alist-get (alist ("name" "Alice")) "age")')
+        assert result is False
+
+    def test_alist_get_with_default(self, tool):
+        """Test getting a missing key with custom default."""
+        result = tool.evaluate('(alist-get (alist ("name" "Alice")) "age" 0)')
+        assert result == 0
+
+    def test_alist_get_number_key(self, tool):
+        """Test getting with numeric key."""
+        result = tool.evaluate('(alist-get (alist (1 "one") (2 "two")) 2)')
+        assert result == "two"
+
+    def test_alist_get_from_nested_alist(self, tool):
+        """Test getting from nested alists."""
+        result = tool.evaluate('''
+            (let ((data (alist ("user" (alist ("name" "Bob") ("id" 123))))))
+              (alist-get (alist-get data "user") "name"))
+        ''')
+        assert result == "Bob"
+
+
+class TestAlistGetErrors:
+    """Test alist-get error cases."""
+
+    def test_alist_get_wrong_arg_count_too_few(self, tool):
+        """Test error with too few arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist-get requires 2 or 3 arguments"):
+            tool.evaluate('(alist-get (alist ("a" 1)))')
+
+    def test_alist_get_wrong_arg_count_too_many(self, tool):
+        """Test error with too many arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist-get requires 2 or 3 arguments"):
+            tool.evaluate('(alist-get (alist ("a" 1)) "a" 0 "extra")')
+
+    def test_alist_get_not_alist(self, tool):
+        """Test error when first argument is not an alist."""
+        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+            tool.evaluate('(alist-get (list 1 2 3) "key")')
+
+
+class TestAlistSet:
+    """Test alist-set operation."""
+
+    def test_alist_set_new_key(self, tool):
+        """Test setting a new key."""
+        result = tool.evaluate('(alist-set (alist ("name" "Alice")) "age" 30)')
+        assert result == {"name": "Alice", "age": 30}
+
+    def test_alist_set_existing_key(self, tool):
+        """Test updating an existing key."""
+        result = tool.evaluate('(alist-set (alist ("name" "Alice") ("age" 30)) "age" 31)')
+        assert result == {"name": "Alice", "age": 31}
+
+    def test_alist_set_immutable(self, tool):
+        """Test that alist-set doesn't modify original."""
+        result = tool.evaluate('''
+            (let ((original (alist ("name" "Alice") ("age" 30)))
+                  (updated (alist-set original "age" 31)))
+              (list (alist-get original "age") (alist-get updated "age")))
+        ''')
+        assert result == [30, 31]
+
+    def test_alist_set_preserves_order(self, tool):
+        """Test that alist-set preserves insertion order when updating."""
+        result = tool.evaluate('(alist-set (alist ("a" 1) ("b" 2) ("c" 3)) "b" 20)')
+        keys = list(result.keys())
+        assert keys == ["a", "b", "c"]
+
+
+class TestAlistSetErrors:
+    """Test alist-set error cases."""
+
+    def test_alist_set_wrong_arg_count(self, tool):
+        """Test error with wrong number of arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist-set requires exactly 3 arguments"):
+            tool.evaluate('(alist-set (alist ("a" 1)) "b")')
+
+    def test_alist_set_not_alist(self, tool):
+        """Test error when first argument is not an alist."""
+        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+            tool.evaluate('(alist-set "not-alist" "key" "value")')
+
+
+class TestAlistHas:
+    """Test alist-has? operation."""
+
+    def test_alist_has_existing_key(self, tool):
+        """Test checking for existing key."""
+        result = tool.evaluate('(alist-has? (alist ("name" "Alice") ("age" 30)) "name")')
+        assert result is True
+
+    def test_alist_has_missing_key(self, tool):
+        """Test checking for missing key."""
+        result = tool.evaluate('(alist-has? (alist ("name" "Alice")) "age")')
+        assert result is False
+
+    def test_alist_has_empty_alist(self, tool):
+        """Test checking in empty alist."""
+        result = tool.evaluate('(alist-has? (alist) "any-key")')
+        assert result is False
+
+
+class TestAlistHasErrors:
+    """Test alist-has? error cases."""
+
+    def test_alist_has_wrong_arg_count(self, tool):
+        """Test error with wrong number of arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist-has\\? requires exactly 2 arguments"):
+            tool.evaluate('(alist-has? (alist ("a" 1)))')
+
+    def test_alist_has_not_alist(self, tool):
+        """Test error when first argument is not an alist."""
+        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+            tool.evaluate('(alist-has? 42 "key")')
+
+
+class TestAlistKeys:
+    """Test alist-keys operation."""
+
+    def test_alist_keys_simple(self, tool):
+        """Test getting keys from alist."""
+        result = tool.evaluate('(alist-keys (alist ("name" "Alice") ("age" 30) ("city" "NYC")))')
+        assert result == ["name", "age", "city"]
+
+    def test_alist_keys_empty(self, tool):
+        """Test getting keys from empty alist."""
+        result = tool.evaluate('(alist-keys (alist))')
+        assert result == []
+
+    def test_alist_keys_preserves_order(self, tool):
+        """Test that keys are returned in insertion order."""
+        result = tool.evaluate('(alist-keys (alist ("z" 1) ("a" 2) ("m" 3)))')
+        assert result == ["z", "a", "m"]
+
+
+class TestAlistKeysErrors:
+    """Test alist-keys error cases."""
+
+    def test_alist_keys_wrong_arg_count(self, tool):
+        """Test error with wrong number of arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist-keys requires exactly 1 argument"):
+            tool.evaluate('(alist-keys)')
+
+    def test_alist_keys_not_alist(self, tool):
+        """Test error when argument is not an alist."""
+        with pytest.raises(AIFPLEvalError, match="Argument must be an alist"):
+            tool.evaluate('(alist-keys (list 1 2 3))')
+
+
+class TestAlistValues:
+    """Test alist-values operation."""
+
+    def test_alist_values_simple(self, tool):
+        """Test getting values from alist."""
+        result = tool.evaluate('(alist-values (alist ("name" "Alice") ("age" 30) ("city" "NYC")))')
+        assert result == ["Alice", 30, "NYC"]
+
+    def test_alist_values_empty(self, tool):
+        """Test getting values from empty alist."""
+        result = tool.evaluate('(alist-values (alist))')
+        assert result == []
+
+    def test_alist_values_preserves_order(self, tool):
+        """Test that values are returned in insertion order."""
+        result = tool.evaluate('(alist-values (alist ("z" 1) ("a" 2) ("m" 3)))')
+        assert result == [1, 2, 3]
+
+
+class TestAlistValuesErrors:
+    """Test alist-values error cases."""
+
+    def test_alist_values_wrong_arg_count(self, tool):
+        """Test error with wrong number of arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist-values requires exactly 1 argument"):
+            tool.evaluate('(alist-values (alist ("a" 1)) "extra")')
+
+    def test_alist_values_not_alist(self, tool):
+        """Test error when argument is not an alist."""
+        with pytest.raises(AIFPLEvalError, match="Argument must be an alist"):
+            tool.evaluate('(alist-values #t)')
+
+
+class TestAlistRemove:
+    """Test alist-remove operation."""
+
+    def test_alist_remove_existing_key(self, tool):
+        """Test removing an existing key."""
+        result = tool.evaluate('(alist-remove (alist ("name" "Alice") ("age" 30) ("city" "NYC")) "age")')
+        assert result == {"name": "Alice", "city": "NYC"}
+
+    def test_alist_remove_missing_key(self, tool):
+        """Test removing a non-existent key (no-op)."""
+        result = tool.evaluate('(alist-remove (alist ("name" "Alice")) "age")')
+        assert result == {"name": "Alice"}
+
+    def test_alist_remove_immutable(self, tool):
+        """Test that alist-remove doesn't modify original."""
+        result = tool.evaluate('''
+            (let ((original (alist ("name" "Alice") ("age" 30)))
+                  (removed (alist-remove original "age")))
+              (list (alist-has? original "age") (alist-has? removed "age")))
+        ''')
+        assert result == [True, False]
+
+
+class TestAlistRemoveErrors:
+    """Test alist-remove error cases."""
+
+    def test_alist_remove_wrong_arg_count(self, tool):
+        """Test error with wrong number of arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist-remove requires exactly 2 arguments"):
+            tool.evaluate('(alist-remove (alist ("a" 1)))')
+
+    def test_alist_remove_not_alist(self, tool):
+        """Test error when first argument is not an alist."""
+        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+            tool.evaluate('(alist-remove (list 1 2) "key")')
+
+
+class TestAlistMerge:
+    """Test alist-merge operation."""
+
+    def test_alist_merge_no_conflicts(self, tool):
+        """Test merging alists with no overlapping keys."""
+        result = tool.evaluate('(alist-merge (alist ("a" 1) ("b" 2)) (alist ("c" 3) ("d" 4)))')
+        assert result == {"a": 1, "b": 2, "c": 3, "d": 4}
+
+    def test_alist_merge_with_conflicts(self, tool):
+        """Test merging alists with overlapping keys (second wins)."""
+        result = tool.evaluate('(alist-merge (alist ("a" 1) ("b" 2)) (alist ("b" 20) ("c" 3)))')
+        assert result == {"a": 1, "b": 20, "c": 3}
+
+    def test_alist_merge_empty_first(self, tool):
+        """Test merging empty alist with non-empty."""
+        result = tool.evaluate('(alist-merge (alist) (alist ("a" 1) ("b" 2)))')
+        assert result == {"a": 1, "b": 2}
+
+    def test_alist_merge_empty_second(self, tool):
+        """Test merging non-empty with empty alist."""
+        result = tool.evaluate('(alist-merge (alist ("a" 1) ("b" 2)) (alist))')
+        assert result == {"a": 1, "b": 2}
+
+    def test_alist_merge_preserves_order(self, tool):
+        """Test that merge preserves first alist's order, then adds new keys."""
+        result = tool.evaluate('(alist-merge (alist ("z" 1) ("a" 2)) (alist ("m" 3) ("b" 4)))')
+        keys = list(result.keys())
+        assert keys == ["z", "a", "m", "b"]
+
+
+class TestAlistMergeErrors:
+    """Test alist-merge error cases."""
+
+    def test_alist_merge_wrong_arg_count(self, tool):
+        """Test error with wrong number of arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist-merge requires exactly 2 arguments"):
+            tool.evaluate('(alist-merge (alist ("a" 1)))')
+
+    def test_alist_merge_first_not_alist(self, tool):
+        """Test error when first argument is not an alist."""
+        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+            tool.evaluate('(alist-merge (list 1 2) (alist ("a" 1)))')
+
+    def test_alist_merge_second_not_alist(self, tool):
+        """Test error when second argument is not an alist."""
+        with pytest.raises(AIFPLEvalError, match="Second argument must be an alist"):
+            tool.evaluate('(alist-merge (alist ("a" 1)) "not-alist")')
+
+
+class TestAlistPredicate:
+    """Test alist? type predicate."""
+
+    def test_alist_predicate_true(self, tool):
+        """Test alist? returns true for alist."""
+        result = tool.evaluate('(alist? (alist ("name" "Alice")))')
+        assert result is True
+
+    def test_alist_predicate_false_list(self, tool):
+        """Test alist? returns false for list."""
+        result = tool.evaluate('(alist? (list 1 2 3))')
+        assert result is False
+
+    def test_alist_predicate_false_number(self, tool):
+        """Test alist? returns false for number."""
+        result = tool.evaluate('(alist? 42)')
+        assert result is False
+
+    def test_alist_predicate_false_string(self, tool):
+        """Test alist? returns false for string."""
+        result = tool.evaluate('(alist? "hello")')
+        assert result is False
+
+
+class TestAlistPredicateErrors:
+    """Test alist? error cases."""
+
+    def test_alist_predicate_wrong_arg_count(self, tool):
+        """Test error with wrong number of arguments."""
+        with pytest.raises(AIFPLEvalError, match="alist\\? requires exactly 1 argument"):
+            tool.evaluate('(alist?)')
+
+
+class TestAlistFormatting:
+    """Test alist formatting."""
+
+    def test_alist_format_simple(self, tool):
+        """Test formatting a simple alist."""
+        result = tool.evaluate_and_format('(alist ("name" "Alice") ("age" 30))')
+        assert result == '(alist ("name" "Alice") ("age" 30))'
+
+    def test_alist_format_empty(self, tool):
+        """Test formatting an empty alist."""
+        result = tool.evaluate_and_format('(alist)')
+        assert result == '(alist)'
+
+    def test_alist_format_nested(self, tool):
+        """Test formatting alist with nested values."""
+        result = tool.evaluate_and_format('(alist ("items" (list 1 2 3)))')
+        assert result == '(alist ("items" (1 2 3)))'
+
+
+class TestAlistWithFunctionalOperations:
+    """Test alists with higher-order functions."""
+
+    def test_map_over_alist_keys(self, tool):
+        """Test mapping over alist keys."""
+        result = tool.evaluate('''
+            (let ((data (alist ("name" "Alice") ("age" 30))))
+              (map string-upcase (alist-keys data)))
+        ''')
+        assert result == ["NAME", "AGE"]
+
+    def test_filter_alist_values(self, tool):
+        """Test filtering alist values."""
+        result = tool.evaluate('''
+            (let ((data (alist ("a" 1) ("b" 2) ("c" 3) ("d" 4))))
+              (filter (lambda (v) (> v 2)) (alist-values data)))
+        ''')
+        assert result == [3, 4]
+
+    def test_fold_over_alist_values(self, tool):
+        """Test folding over alist values."""
+        result = tool.evaluate('''
+            (let ((data (alist ("a" 1) ("b" 2) ("c" 3))))
+              (fold + 0 (alist-values data)))
+        ''')
+        assert result == 6
+
+    def test_process_list_of_alists(self, tool):
+        """Test processing a list of alists."""
+        result = tool.evaluate('''
+            (let ((people (list 
+                           (alist ("name" "Alice") ("age" 30))
+                           (alist ("name" "Bob") ("age" 25))
+                           (alist ("name" "Carol") ("age" 35)))))
+              (map (lambda (p) (alist-get p "name")) people))
+        ''')
+        assert result == ["Alice", "Bob", "Carol"]
+
+
+class TestAlistPatternMatching:
+    """Test alists with pattern matching."""
+
+    def test_match_alist_type(self, tool):
+        """Test matching alist type."""
+        result = tool.evaluate('''
+            (match (alist ("name" "Alice"))
+              ((alist? a) "is-alist")
+              (_ "not-alist"))
+        ''')
+        assert result == "is-alist"
+
+    def test_match_alist_vs_list(self, tool):
+        """Test distinguishing alist from list in pattern matching."""
+        result = tool.evaluate('''
+            (let ((process (lambda (data)
+                             (match data
+                               ((alist? a) "alist")
+                               ((list? l) "list")
+                               (_ "other")))))
+              (list (process (alist ("a" 1)))
+                    (process (list 1 2 3))))
+        ''')
+        assert result == ["alist", "list"]
+
+    def test_match_with_alist_operations(self, tool):
+        """Test pattern matching combined with alist operations."""
+        result = tool.evaluate('''
+            (match (alist ("type" "user") ("name" "Alice"))
+              ((alist? data)
+               (if (= (alist-get data "type") "user")
+                   (alist-get data "name")
+                   "unknown"))
+              (_ "not-alist"))
+        ''')
+        assert result == "Alice"
+
+
+class TestAlistComplexScenarios:
+    """Test complex scenarios with alists."""
+
+    def test_nested_alists(self, tool):
+        """Test nested alist structures."""
+        result = tool.evaluate('''
+            (let ((user (alist 
+                         ("name" "Alice")
+                         ("address" (alist 
+                                     ("city" "NYC")
+                                     ("zip" "10001"))))))
+              (alist-get (alist-get user "address") "city"))
+        ''')
+        assert result == "NYC"
+
+    def test_alist_transformation_pipeline(self, tool):
+        """Test transforming alist through multiple operations."""
+        result = tool.evaluate('''
+            (let ((data (alist ("a" 1) ("b" 2) ("c" 3))))
+              (let ((with-d (alist-set data "d" 4))
+                    (without-b (alist-remove with-d "b"))
+                    (updated-c (alist-set without-b "c" 30)))
+                updated-c))
+        ''')
+        assert result == {"a": 1, "c": 30, "d": 4}
+
+    def test_merge_multiple_alists(self, tool):
+        """Test merging multiple alists."""
+        result = tool.evaluate('''
+            (let ((defaults (alist ("port" 8080) ("host" "localhost")))
+                  (config (alist ("port" 3000)))
+                  (overrides (alist ("debug" #t))))
+              (alist-merge (alist-merge defaults config) overrides))
+        ''')
+        assert result == {"port": 3000, "host": "localhost", "debug": True}
+
+    def test_convert_list_to_alist(self, tool):
+        """Test building alist from list data."""
+        result = tool.evaluate('''
+            (let ((pairs (list (list "name" "Alice") (list "age" 30) (list "city" "NYC"))))
+              (fold (lambda (acc pair)
+                      (alist-set acc (first pair) (first (rest pair))))
+                    (alist)
+                    pairs))
+        ''')
+        assert result == {"name": "Alice", "age": 30, "city": "NYC"}
+
+
+class TestAlistEquality:
+    """Test alist equality comparisons."""
+
+    def test_alist_equality_same_content(self, tool):
+        """Test that alists with same content are equal."""
+        result = tool.evaluate('(= (alist ("a" 1) ("b" 2)) (alist ("a" 1) ("b" 2)))')
+        assert result is True
+
+    def test_alist_equality_different_content(self, tool):
+        """Test that alists with different content are not equal."""
+        result = tool.evaluate('(= (alist ("a" 1) ("b" 2)) (alist ("a" 1) ("b" 3)))')
+        assert result is False
+
+    def test_alist_equality_different_keys(self, tool):
+        """Test that alists with different keys are not equal."""
+        result = tool.evaluate('(= (alist ("a" 1)) (alist ("b" 1)))')
+        assert result is False
+
+    def test_alist_inequality(self, tool):
+        """Test alist inequality operator."""
+        result = tool.evaluate('(!= (alist ("a" 1)) (alist ("a" 2)))')
+        assert result is True
+
+    def test_alist_not_equal_to_list(self, tool):
+        """Test that alist is not equal to list."""
+        result = tool.evaluate('(= (alist ("a" 1)) (list 1 2))')
+        assert result is False

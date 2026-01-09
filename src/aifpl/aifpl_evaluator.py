@@ -11,7 +11,7 @@ from aifpl.aifpl_math import AIFPLMathFunctions
 from aifpl.aifpl_pattern_matcher import AIFPLPatternMatcher
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
-    AIFPLList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction, AIFPLTailCall
+    AIFPLList, AIFPLAlist, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction, AIFPLTailCall
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
 
@@ -81,6 +81,7 @@ class AIFPLEvaluator:
         builtins['find'] = AIFPLBuiltinFunction('find', self._builtin_find_special)
         builtins['any?'] = AIFPLBuiltinFunction('any?', self._builtin_any_p_special)
         builtins['all?'] = AIFPLBuiltinFunction('all?', self._builtin_all_p_special)
+        builtins['alist'] = AIFPLBuiltinFunction('alist', self._builtin_alist_special)
 
         return builtins
 
@@ -134,7 +135,7 @@ class AIFPLEvaluator:
             )
 
         # AIFPLValue evaluation - handle all value types that should self-evaluate
-        if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLFunction, AIFPLBuiltinFunction)):
+        if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLAlist, AIFPLFunction, AIFPLBuiltinFunction)):
             # Self-evaluating values
             return expr
 
@@ -571,7 +572,7 @@ class AIFPLEvaluator:
 
     def _is_special_form(self, function_name: str) -> bool:
         """Check if a function name is a special form that needs unevaluated arguments."""
-        return function_name in ['and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']
+        return function_name in ['and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?', 'alist']
 
     def _call_lambda_function(
         self,
@@ -686,7 +687,7 @@ class AIFPLEvaluator:
             Either a regular result or a AIFPLTailCall object for optimization
         """
         # AIFPLValue evaluation - handle all value types that should self-evaluate
-        if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLFunction, AIFPLBuiltinFunction)):
+        if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLAlist, AIFPLFunction, AIFPLBuiltinFunction)):
             # Self-evaluating values
             return expr
 
@@ -1279,6 +1280,43 @@ class AIFPLEvaluator:
 
         return AIFPLBoolean(True)
 
+    def _builtin_alist_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+        """Create alist from key-value pairs: (alist (key1 val1) (key2 val2) ...)
+        This is a special form that receives unevaluated arguments."""
+        pairs = []
+
+        for i, arg in enumerate(args):
+            # Each arg is an unevaluated pair list - don't evaluate the list itself, just check structure
+            if not isinstance(arg, AIFPLList):
+                raise AIFPLEvalError(
+                    message=f"Alist pair {i+1} must be a list",
+                    received=f"Pair {i+1}: {arg.type_name()}",
+                    expected="2-element list: (key value)",
+                    example='(alist ("name" "Alice") ("age" 30))',
+                    suggestion="Each pair should be a list with key and value"
+                )
+
+            if arg.length() != 2:
+                raise AIFPLEvalError(
+                    message=f"Alist pair {i+1} must have exactly 2 elements",
+                    received=f"Pair {i+1} has {arg.length()} elements",
+                    expected="2 elements: (key value)",
+                    example='(alist ("name" "Alice") ("age" 30))',
+                    suggestion="Each pair needs exactly one key and one value"
+                )
+
+            # Get key and value expressions (unevaluated)
+            key_expr = arg.get(0)
+            value_expr = arg.get(1)
+
+            # Evaluate key and value in the current environment
+            key = self._evaluate_expression(key_expr, env, depth + 1)
+            value = self._evaluate_expression(value_expr, env, depth + 1)
+
+            pairs.append((key, value))
+
+        return AIFPLAlist(tuple(pairs))
+
     # Helper method for higher-order functions
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
         """Ensure value is an integer, raise error if not."""
@@ -1352,6 +1390,20 @@ class AIFPLEvaluator:
                 formatted_elements.append(self.format_result(element))
 
             return f"({' '.join(formatted_elements)})"
+
+        if isinstance(result, AIFPLAlist):
+            # Format alist in LISP notation: (alist (key1 val1) (key2 val2) ...)
+            if result.is_empty():
+                return "(alist)"
+
+            formatted_pairs = []
+            for key, value in result.pairs:
+                formatted_key = self.format_result(key)
+                formatted_value = self.format_result(value)
+                formatted_pairs.append(f"({formatted_key} {formatted_value})")
+
+            pairs_str = ' '.join(formatted_pairs)
+            return f"(alist {pairs_str})"
 
         if isinstance(result, AIFPLFunction):
             # Format lambda functions
