@@ -14,6 +14,22 @@ class AIFPLValue(ABC):
     All AIFPL values are immutable.
     """
 
+    # Type tags for fast dispatch (avoiding isinstance checks)
+    TYPE_NUMBER = 1
+    TYPE_STRING = 2
+    TYPE_BOOLEAN = 3
+    TYPE_SYMBOL = 4
+    TYPE_LIST = 5
+    TYPE_ALIST = 6
+    TYPE_FUNCTION = 7
+    TYPE_BUILTIN_FUNCTION = 8
+    TYPE_RECURSIVE_PLACEHOLDER = 9
+    TYPE_TAIL_CALL = 10
+
+    @abstractmethod
+    def type_tag(self) -> int:
+        """Return integer type tag for fast dispatch."""
+
     @abstractmethod
     def to_python(self) -> Any:
         """Convert to Python value for operations."""
@@ -27,6 +43,9 @@ class AIFPLValue(ABC):
 class AIFPLNumber(AIFPLValue):
     """Represents numeric values: integers, floats, complex numbers."""
     value: Union[int, float, complex]
+
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_NUMBER
 
     def to_python(self) -> Union[int, float, complex]:
         return self.value
@@ -58,6 +77,9 @@ class AIFPLString(AIFPLValue):
     """Represents string values."""
     value: str
 
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_STRING
+
     def to_python(self) -> str:
         return self.value
 
@@ -69,6 +91,9 @@ class AIFPLString(AIFPLValue):
 class AIFPLBoolean(AIFPLValue):
     """Represents boolean values."""
     value: bool
+
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_BOOLEAN
 
     def to_python(self) -> bool:
         return self.value
@@ -82,6 +107,9 @@ class AIFPLSymbol(AIFPLValue):
     """Represents symbols that require environment lookup."""
     name: str
     position: int = 0
+
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_SYMBOL
 
     def to_python(self) -> str:
         """Symbols convert to their name string."""
@@ -101,6 +129,9 @@ class AIFPLSymbol(AIFPLValue):
 class AIFPLList(AIFPLValue):
     """Represents lists of AIFPL values."""
     elements: Tuple[AIFPLValue, ...] = ()
+
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_LIST
 
     def to_python(self) -> List[Any]:
         """Convert to Python list with Python values."""
@@ -184,7 +215,7 @@ class AIFPLList(AIFPLValue):
 class AIFPLAlist(AIFPLValue):
     """
     Represents association lists (alists) - immutable key-value mappings.
-    
+
     Internally uses a dict for O(1) lookups while maintaining insertion order.
     Keys must be hashable (strings, numbers, booleans, symbols).
     """
@@ -199,6 +230,9 @@ class AIFPLAlist(AIFPLValue):
             hashable_key = self._to_hashable_key(key)
             lookup[hashable_key] = (key, value)
         object.__setattr__(self, '_lookup', lookup)
+
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_ALIST
 
     def to_python(self) -> dict:
         """Convert to Python dict."""
@@ -349,6 +383,9 @@ class AIFPLFunction(AIFPLValue):
     closure_environment: Any  # AIFPLEnvironment, avoiding circular import (this circularity is intentional!)
     name: str | None = None
 
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_FUNCTION
+
     def to_python(self) -> 'AIFPLFunction':
         """Functions return themselves as Python values."""
         return self
@@ -372,6 +409,9 @@ class AIFPLBuiltinFunction(AIFPLValue):
         """
         self.name = name
         self.native_impl = native_impl
+
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_BUILTIN_FUNCTION
 
     def to_python(self) -> str:
         return self.name
@@ -398,6 +438,9 @@ class AIFPLRecursivePlaceholder(AIFPLValue):
 
         return self._resolved_value
 
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_RECURSIVE_PLACEHOLDER
+
     def to_python(self) -> Any:
         return self.get_resolved_value().to_python()
 
@@ -417,6 +460,9 @@ class AIFPLTailCall(AIFPLValue):
     function: AIFPLValue
     arguments: List[AIFPLValue]
     environment: Any  # AIFPLEnvironment, avoiding circular import
+
+    def type_tag(self) -> int:
+        return AIFPLValue.TYPE_TAIL_CALL
 
     def to_python(self) -> Any:
         """Tail calls should never be converted to Python values."""
