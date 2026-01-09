@@ -18,6 +18,7 @@ Bug fixes:
 - Resolved a problem where Windows anti-malware scanners could cause conversation transcript files to not write correctly.
 - Correctly handle character and string literal formats in the C syntax highlighter.
 - Handle missing "override" and "final" keywords, and additional string formats for the C++ syntax highlighter.
+- Resolved a problem with deleting message sections when a queued user message was submitted.
 
 Internal structure changes:
 
