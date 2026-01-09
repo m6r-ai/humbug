@@ -11,8 +11,10 @@ class JavaScriptLexerState(LexerState):
 
     Attributes:
         in_block_comment: Indicates if we're currently parsing a block comment
+        in_template_literal: Indicates if we're currently parsing a template literal
     """
     in_block_comment: bool = False
+    in_template_literal: bool = False
 
 
 class JavaScriptLexer(Lexer):
@@ -40,6 +42,7 @@ class JavaScriptLexer(Lexer):
     def __init__(self) -> None:
         super().__init__()
         self._in_block_comment = False
+        self._in_template_literal = False
 
     def lex(self, prev_lexer_state: LexerState | None, input_str: str) -> JavaScriptLexerState:
         """
@@ -58,15 +61,22 @@ class JavaScriptLexer(Lexer):
             assert isinstance(prev_lexer_state, JavaScriptLexerState), \
                 f"Expected JavaScriptLexerState, got {type(prev_lexer_state).__name__}"
             self._in_block_comment = prev_lexer_state.in_block_comment
+            self._in_template_literal = prev_lexer_state.in_template_literal
 
         if self._in_block_comment:
             self._read_block_comment(0)
+        elif self._in_template_literal:
+            self._read_template_literal_continuation()
 
-        if not self._in_block_comment:
+        if not self._in_block_comment and not self._in_template_literal:
             self._inner_lex()
 
-        lexer_state = JavaScriptLexerState(in_block_comment=False)
+        lexer_state = JavaScriptLexerState(
+            in_block_comment=False,
+            in_template_literal=False
+        )
         lexer_state.in_block_comment = self._in_block_comment
+        lexer_state.in_template_literal = self._in_template_literal
         return lexer_state
 
     def _get_lexing_function(self, ch: str) -> Callable[[], None]:
@@ -108,6 +118,11 @@ class JavaScriptLexer(Lexer):
         or regular expression.
         """
         if self._position + 1 < self._input_len:
+            # Check for /= operator first
+            if self._input[self._position + 1] == '=':
+                self._read_operator()
+                return
+
             if self._input[self._position + 1] == '/':
                 self._read_comment()
                 return
@@ -132,8 +147,10 @@ class JavaScriptLexer(Lexer):
     def _read_hash(self) -> None:
         """
         Read a hash token, which could be a hashbang or an error.
+        Hashbang is only valid at the very start of the file (position 0).
         """
-        if (self._position + 1 < self._input_len and
+        if (self._position == 0 and
+                self._position + 1 < self._input_len and
                 self._input[self._position + 1] == '!'):
             self._read_hashbang()
             return
@@ -213,7 +230,8 @@ class JavaScriptLexer(Lexer):
         if (self._position < self._input_len and
                 self._input[self._position].lower() == 'e'):
             self._position += 1
-            if self._input[self._position] in ('+', '-'):
+            if (self._position < self._input_len and
+                    self._input[self._position] in ('+', '-')):
                 self._position += 1
 
             while (self._position < self._input_len and
@@ -280,43 +298,133 @@ class JavaScriptLexer(Lexer):
         """
         Read a regular expression literal or divide operator.
         """
-        self._position += 1
+        start = self._position
+        self._position += 1  # Skip initial /
 
-        # Look for a potential end of line. If we find one then this isn't a regexp literal
+        # Try to find the closing / for a regex
         index = self._position
         escaped = False
+        found_closing_slash = False
+
         while index < self._input_len:
             ch = self._input[index]
-            index += 1
-
-            if index >= self._input_len:
-                start = self._position - 1
-                self._tokens.append(Token(
-                    type=TokenType.OPERATOR,
-                    value='/',
-                    start=start
-                ))
-                return
 
             if ch == '\\':
                 escaped = not escaped
+                index += 1
                 continue
 
             if escaped:
                 escaped = False
+                index += 1
                 continue
 
             if ch == '/':
+                found_closing_slash = True
+                index += 1
                 break
+
+            index += 1
+
+        # If we didn't find a closing slash, it's a division operator
+        if not found_closing_slash:
+            self._tokens.append(Token(type=TokenType.OPERATOR, value='/', start=start))
+            return
 
         # Check if the next characters seem to be valid regexp flags
         while index < self._input_len and self._input[index] in 'dgimsuy':
             index += 1
 
-        start = self._position - 1
         regexp = self._input[start:index]
         self._position = index
         self._tokens.append(Token(type=TokenType.REGEXP, value=regexp, start=start))
+
+    def _read_string(self) -> None:
+        """
+        Reads a string token, with special handling for template literals.
+        """
+        quote = self._input[self._position]
+
+        # Handle template literals (backticks) specially
+        if quote == '`':
+            self._read_template_literal()
+            return
+
+        # Regular string handling (single or double quotes)
+        start = self._position
+        self._position += 1
+
+        while self._position < self._input_len and self._input[self._position] != quote:
+            if self._input[self._position] == '\\' and (self._position + 1) < self._input_len:
+                self._position += 1  # Skip the escape character
+
+            self._position += 1
+
+        if self._position < self._input_len:  # Skip the closing quote if found
+            self._position += 1
+
+        string_value = self._input[start:self._position]
+        self._tokens.append(Token(type=TokenType.STRING, value=string_value, start=start))
+
+    def _read_template_literal(self) -> None:
+        """
+        Read a template literal (backtick string), which can span multiple lines.
+        """
+        start = self._position
+        self._position += 1  # Skip opening backtick
+        self._in_template_literal = True
+
+        while self._position < self._input_len:
+            ch = self._input[self._position]
+
+            if ch == '\\' and (self._position + 1) < self._input_len:
+                self._position += 2  # Skip escape sequence
+                continue
+
+            if ch == '`':
+                self._position += 1  # Include closing backtick
+                self._in_template_literal = False
+                break
+
+            self._position += 1
+
+        # Emit the token for this line
+        string_value = self._input[start:self._position]
+        self._tokens.append(Token(type=TokenType.STRING, value=string_value, start=start))
+
+    def _read_template_literal_continuation(self) -> None:
+        """
+        Continue reading a template literal from a previous line.
+        """
+        start = 0
+        # Read from start of line, looking for closing backtick
+        self._read_template_literal_content(start)
+
+        # After reading, continue with normal lexing if template is closed
+        if not self._in_template_literal:
+            self._inner_lex()
+
+    def _read_template_literal_content(self, start: int) -> None:
+        """
+        Read template literal content (for continuation lines).
+        """
+        while self._position < self._input_len:
+            ch = self._input[self._position]
+
+            if ch == '\\' and (self._position + 1) < self._input_len:
+                self._position += 2
+                continue
+
+            if ch == '`':
+                self._position += 1
+                self._in_template_literal = False
+                break
+
+            self._position += 1
+
+        # Emit token for this line's content
+        string_value = self._input[start:self._position]
+        self._tokens.append(Token(type=TokenType.STRING, value=string_value, start=start))
 
     def _is_keyword(self, value: str) -> bool:
         """

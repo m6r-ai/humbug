@@ -29,7 +29,7 @@ class TypeScriptLexer(JavaScriptLexer):
             'false', 'finally', 'for', 'from', 'function', 'get',
             'if', 'implements', 'import', 'in', 'infer', 'instanceof',
             'interface', 'is', 'keyof', 'let', 'module', 'namespace',
-            'new', 'null', 'number', 'object', 'of', 'private',
+            'new', 'never', 'null', 'number', 'object', 'of', 'private',
             'protected', 'public', 'readonly', 'return', 'require',
             'set', 'static', 'string', 'super', 'switch', 'symbol',
             'this', 'throw', 'true', 'try', 'type', 'typeof',
