@@ -412,9 +412,9 @@ class ConversationWidget(QWidget):
         """
         self._hide_last_ai_connected_message()
 
-        # If this is a USER message, hide any previous USER_QUEUED messages
+        # If this is a USER message, delete any previous USER_QUEUED messages
         if message.source == AIMessageSource.USER:
-            self._hide_user_queued_messages()
+            self._delete_user_queued_messages()
 
         # If we're not auto-scrolling we want to disable updates during insertion to prevent jitter
         if not self._auto_scroll:
@@ -468,25 +468,34 @@ class ConversationWidget(QWidget):
         if self._animated_message == last_message_widget:
             self._animated_message = None
 
-    def _hide_user_queued_messages(self) -> None:
+    def _delete_user_queued_messages(self) -> None:
         """
-        Hide all USER_QUEUED messages from the UI.
+        Delete all USER_QUEUED messages from the UI.
 
         This is called when a USER message is added, indicating that any
         queued messages have been consumed to create the actual user prompt.
-        The messages remain in the transcript for history but are removed
-        from the visual conversation flow.
+        These messages are temporary UI-only widgets and should be completely
+        removed when no longer needed.
         """
-        for message_widget in self._messages:
-            if message_widget.message_source() != AIMessageSource.USER_QUEUED:
+        for i in range(len(self._messages) - 1, -1, -1):
+            if self._messages[i].message_source() != AIMessageSource.USER_QUEUED:
                 continue
 
-            # Remove from UI
-            message_widget.set_rendered(False)
+            # Remove widgets
+            message_widget = self._messages[i]
 
             # Clear selection if this message was selected
             if self._message_with_selection == message_widget:
                 self._message_with_selection = None
+
+            # Remove from layout
+            self._messages_layout.removeWidget(message_widget)
+
+            # Delete the widget
+            message_widget.deleteLater()
+
+            # Remove from list
+            del self._messages[i]
 
     def _change_message_expansion(self, message_index: int, expanded: bool) -> None:
         """
@@ -2097,43 +2106,6 @@ class ConversationWidget(QWidget):
         # Get all messages from history
         all_messages = history.get_messages()
 
-        # Diagnostic logging to understand sync issues
-        self._logger.debug("Delete requested for message at index %d", index)
-        self._logger.debug("Widget list length: %d, History list length: %d",
-                          len(self._messages), len(all_messages))
-
-        # Log the widget list state
-        self._logger.debug("Widget list (self._messages):")
-        for i, msg_widget in enumerate(self._messages):
-            self._logger.debug("  [%d] source=%s, id=%s, rendered=%s",
-                             i,
-                             msg_widget.message_source(),
-                             msg_widget.message_id(),
-                             msg_widget.is_rendered())
-
-        # Log the history list state
-        self._logger.debug("History list (all_messages):")
-        for i, msg in enumerate(all_messages):
-            self._logger.debug("  [%d] source=%s, id=%s",
-                             i,
-                             msg.source,
-                             msg.id)
-
-        # Check if lengths match
-        if len(self._messages) != len(all_messages):
-            self._logger.error("LIST LENGTH MISMATCH: widgets=%d, history=%d",
-                             len(self._messages), len(all_messages))
-
-        # Check if the message at index matches by ID
-        widget_msg_id = self._messages[index].message_id()
-        history_msg_id = all_messages[index].id if index < len(all_messages) else None
-        if widget_msg_id != history_msg_id:
-            self._logger.error("MESSAGE ID MISMATCH at index %d: widget_id=%s, history_id=%s",
-                             index, widget_msg_id, history_msg_id)
-
-        # Capture the prompt from the first message we're deleting.
-        self._logger.debug("Asserting that message at index %d is USER (source=%s)",
-                          index, all_messages[index].source if index < len(all_messages) else "OUT_OF_BOUNDS")
         assert all_messages[index].source == AIMessageSource.USER, "Only user messages can be deleted."
         prompt = all_messages[index].content
 
