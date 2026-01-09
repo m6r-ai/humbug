@@ -1,7 +1,7 @@
 """Evaluator for AIFPL Abstract Syntax Trees with detailed error messages."""
 
 import math
-from typing import List
+from typing import List, Dict
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
@@ -140,6 +140,7 @@ class AIFPLEvaluator:
 
         # Symbol lookup
         if tag == AIFPLValue.TYPE_SYMBOL:
+            assert isinstance(expr, AIFPLSymbol)
             try:
                 return env.lookup(expr.name)
 
@@ -157,6 +158,7 @@ class AIFPLEvaluator:
 
         # List evaluation - check for special forms FIRST before any symbol evaluation
         assert tag == AIFPLValue.TYPE_LIST, "Non-list expressions should be handled earlier"
+        assert isinstance(expr, AIFPLList)
 
         # Empty list evaluates to itself
         if expr.is_empty():
@@ -165,6 +167,7 @@ class AIFPLEvaluator:
         # Non-empty list - check first element for special forms
         first_elem = expr.first()
         if first_elem.type_tag() == AIFPLValue.TYPE_SYMBOL:
+            assert isinstance(first_elem, AIFPLSymbol)
             # Handle special forms BEFORE attempting any symbol lookup
             if self._is_symbol_with_name(first_elem, "quote"):
                 return self._evaluate_quote_form(expr, env, depth + 1)
@@ -429,7 +432,7 @@ class AIFPLEvaluator:
     ) -> AIFPLEnvironment:
         """Evaluate a recursive binding group using recursive placeholders."""
         # Step 1: Create environment with recursive placeholders
-        placeholders = {}
+        placeholders: Dict[str, AIFPLValue] = {}
         for name, _ in group.bindings:
             placeholder = AIFPLRecursivePlaceholder(name)
             placeholders[name] = placeholder
@@ -453,6 +456,7 @@ class AIFPLEvaluator:
 
         # Step 3: Update placeholders with resolved values
         for name, placeholder in placeholders.items():
+            assert isinstance(placeholder, AIFPLRecursivePlaceholder)
             placeholder.resolve(resolved_values[name])
 
         # Step 4: Create final environment with resolved values (batch for efficiency)
@@ -551,13 +555,16 @@ class AIFPLEvaluator:
                 ) from e
 
             if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+                assert isinstance(func_value, AIFPLFunction)
                 result = self._call_lambda_function(func_value, arg_values, env, depth)
 
             else:  # AIFPLBuiltinFunction
+                assert isinstance(func_value, AIFPLBuiltinFunction)
                 result = self._call_builtin_function(func_value, arg_values, env, depth)
 
             # Check if result is a tail call
             if result.type_tag() == AIFPLValue.TYPE_TAIL_CALL:
+                assert isinstance(result, AIFPLTailCall)
                 # Continue the loop with the tail call
                 current_call = AIFPLList((result.function,) + tuple(result.arguments))
                 current_env = result.environment
@@ -609,7 +616,9 @@ class AIFPLEvaluator:
             param_bindings[param] = arg_value
 
         # Create new environment for function execution with all bindings at once
-        func_env = AIFPLEnvironment(bindings={}, parent=func.closure_environment, name=f"{func.name}-call").define_many(param_bindings)
+        func_env = AIFPLEnvironment(
+            bindings={}, parent=func.closure_environment, name=f"{func.name}-call"
+        ).define_many(param_bindings)
 
         # Add call frame to stack for error reporting
         self.call_stack.push(
@@ -691,6 +700,7 @@ class AIFPLEvaluator:
 
         # Symbol lookup
         if tag == AIFPLValue.TYPE_SYMBOL:
+            assert isinstance(expr, AIFPLSymbol)
             try:
                 return env.lookup(expr.name)
 
@@ -708,6 +718,7 @@ class AIFPLEvaluator:
 
         # If this isn't a list, evaluate normally
         assert tag == AIFPLValue.TYPE_LIST, "Non-list expressions should be handled earlier"
+        assert isinstance(expr, AIFPLList)
 
         # Empty list evaluates to itself
         if expr.is_empty():
@@ -715,7 +726,8 @@ class AIFPLEvaluator:
 
         first_elem = expr.first()
         if first_elem.type_tag() == AIFPLValue.TYPE_SYMBOL:
-                # Handle special forms BEFORE attempting any symbol lookup
+            assert isinstance(first_elem, AIFPLSymbol)
+            # Handle special forms BEFORE attempting any symbol lookup
             if self._is_symbol_with_name(first_elem, 'quote'):
                 return self._evaluate_quote_form(expr, env, depth + 1)
 
@@ -828,13 +840,19 @@ class AIFPLEvaluator:
         # Evaluate the function expression
         func_value = self._evaluate_expression(func_expr, env, depth)
         if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+            assert isinstance(func_value, AIFPLFunction)
             result = self._call_lambda_function(func_value, arg_values, env, depth)
-            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, "Tail calls should not propagate out of higher-order function calls"
+            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, (
+                "Tail calls should not propagate out of higher-order function calls"
+            )
             return result
 
         if func_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
+            assert isinstance(func_value, AIFPLBuiltinFunction)
             result = self._call_builtin_function(func_value, arg_values, env, depth)
-            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, "Tail calls should not propagate out of higher-order function calls"
+            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, (
+                "Tail calls should not propagate out of higher-order function calls"
+            )
             return result
 
         raise AIFPLEvalError(
@@ -923,12 +941,54 @@ class AIFPLEvaluator:
                 suggestion="Use (list ...) to create a list"
             )
 
-        # Apply function to each element
+        # Evaluate the function once
+        func_value = self._evaluate_expression(func_expr, env, depth + 1)
+
+        # Fast path for lambda functions with single parameter
+        if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+            assert isinstance(func_value, AIFPLFunction)
+            if len(func_value.parameters) == 1:
+                # Optimized path: skip full function call machinery
+                result_elements = []
+                param_name = func_value.parameters[0]
+
+                for i, item in enumerate(list_value.elements):
+                    try:
+                        # Create environment with single binding (fast)
+                        item_env = func_value.closure_environment.define(param_name, item)
+                        # Evaluate body directly
+                        item_result = self._evaluate_expression(func_value.body, item_env, depth + 1)
+                        result_elements.append(item_result)
+
+                    except AIFPLEvalError as e:
+                        raise AIFPLEvalError(
+                            message=f"Error in map function at element {i+1}",
+                            received=f"Element {i+1}: {self.format_result(item)}",
+                            context=str(e),
+                            suggestion="Check that your function works with all list elements"
+                        ) from e
+
+                return AIFPLList(tuple(result_elements))
+
+        # Standard path for other functions (built-ins, multi-param lambdas)
         result_elements = []
         for i, item in enumerate(list_value.elements):
             try:
-                # Call function with already-evaluated argument
-                item_result = self._call_function_with_evaluated_args(func_expr, [item], env, depth + 1)
+                # Use the already-evaluated function
+                if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+                    assert isinstance(func_value, AIFPLFunction)
+                    item_result = self._call_lambda_function(func_value, [item], env, depth + 1)
+
+                elif func_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
+                    assert isinstance(func_value, AIFPLBuiltinFunction)
+                    item_result = self._call_builtin_function(func_value, [item], env, depth + 1)
+
+                else:
+                    raise AIFPLEvalError(
+                        message="Cannot call non-function value",
+                        received=f"Got: {func_value.type_name()}",
+                        expected="Function (lambda or builtin)"
+                    )
                 result_elements.append(item_result)
 
             except AIFPLEvalError as e:
@@ -965,14 +1025,68 @@ class AIFPLEvaluator:
                 suggestion="Use (list ...) to create a list"
             )
 
-        # Filter elements based on predicate
+        # Evaluate the predicate once
+        pred_value = self._evaluate_expression(pred_expr, env, depth + 1)
+
+        # Fast path for lambda predicates with single parameter
+        if pred_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+            assert isinstance(pred_value, AIFPLFunction)
+            if len(pred_value.parameters) == 1:
+                # Optimized path: skip full function call machinery
+                result_elements = []
+                param_name = pred_value.parameters[0]
+
+                for i, item in enumerate(list_value.elements):
+                    try:
+                        # Create environment with single binding (fast)
+                        item_env = pred_value.closure_environment.define(param_name, item)
+                        # Evaluate body directly
+                        pred_result = self._evaluate_expression(pred_value.body, item_env, depth + 1)
+
+                        if pred_result.type_tag() != AIFPLValue.TYPE_BOOLEAN:
+                            raise AIFPLEvalError(
+                                message=f"Filter predicate must return boolean at element {i+1}",
+                                received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
+                                expected="Boolean value (#t or #f)",
+                                example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
+                                suggestion="Predicate function should use comparison operators"
+                            )
+
+                        assert isinstance(pred_result, AIFPLBoolean)
+                        if pred_result.value:
+                            result_elements.append(item)
+
+                    except AIFPLEvalError as e:
+                        raise AIFPLEvalError(
+                            message=f"Error in filter predicate at element {i+1}",
+                            received=f"Element {i+1}: {self.format_result(item)}",
+                            context=str(e),
+                            suggestion="Check that your predicate works with all list elements"
+                        ) from e
+
+                return AIFPLList(tuple(result_elements))
+
+        # Standard path for other functions
         result_elements = []
         for i, item in enumerate(list_value.elements):
             try:
-                # Call predicate with already-evaluated argument
-                pred_result = self._call_function_with_evaluated_args(pred_expr, [item], env, depth + 1)
+                # Use the already-evaluated predicate
+                if pred_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+                    assert isinstance(pred_value, AIFPLFunction)
+                    pred_result = self._call_lambda_function(pred_value, [item], env, depth + 1)
 
-                if not isinstance(pred_result, AIFPLBoolean):
+                elif pred_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
+                    assert isinstance(pred_value, AIFPLBuiltinFunction)
+                    pred_result = self._call_builtin_function(pred_value, [item], env, depth + 1)
+
+                else:
+                    raise AIFPLEvalError(
+                        message="Cannot call non-function value",
+                        received=f"Got: {pred_value.type_name()}",
+                        expected="Function (lambda or builtin)"
+                    )
+
+                if pred_result.type_tag() != AIFPLValue.TYPE_BOOLEAN:
                     raise AIFPLEvalError(
                         message=f"Filter predicate must return boolean at element {i+1}",
                         received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
@@ -981,6 +1095,7 @@ class AIFPLEvaluator:
                         suggestion="Predicate function should use comparison operators"
                     )
 
+                assert isinstance(pred_result, AIFPLBoolean)
                 if pred_result.value:
                     result_elements.append(item)
 
@@ -1020,11 +1135,52 @@ class AIFPLEvaluator:
                 suggestion="Use (list ...) to create a list"
             )
 
-        # Fold over the list
+        # Evaluate the function once
+        func_value = self._evaluate_expression(func_expr, env, depth + 1)
+
+        # Fast path for lambda functions with two parameters
+        if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+            assert isinstance(func_value, AIFPLFunction)
+            if len(func_value.parameters) == 2:
+                # Optimized path: skip full function call machinery
+                param_acc, param_item = func_value.parameters
+
+                for i, item in enumerate(list_value.elements):
+                    try:
+                        # Create environment with both bindings (batch for efficiency)
+                        bindings = {param_acc: accumulator, param_item: item}
+                        item_env = func_value.closure_environment.define_many(bindings)
+                        # Evaluate body directly
+                        accumulator = self._evaluate_expression(func_value.body, item_env, depth + 1)
+
+                    except AIFPLEvalError as e:
+                        raise AIFPLEvalError(
+                            message=f"Error in fold function at element {i+1}",
+                            received=f"Accumulator: {self.format_result(accumulator)}, Element {i+1}: {self.format_result(item)}",
+                        context=str(e),
+                        suggestion="Check that your function works with accumulator and all list elements"
+                    ) from e
+
+            return accumulator
+
+        # Standard path for other functions
         for i, item in enumerate(list_value.elements):
             try:
-                # Call function with already-evaluated arguments
-                accumulator = self._call_function_with_evaluated_args(func_expr, [accumulator, item], env, depth + 1)
+                # Use the already-evaluated function
+                if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+                    assert isinstance(func_value, AIFPLFunction)
+                    accumulator = self._call_lambda_function(func_value, [accumulator, item], env, depth + 1)
+
+                elif func_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
+                    assert isinstance(func_value, AIFPLBuiltinFunction)
+                    accumulator = self._call_builtin_function(func_value, [accumulator, item], env, depth + 1)
+
+                else:
+                    raise AIFPLEvalError(
+                        message="Cannot call non-function value",
+                        received=f"Got: {func_value.type_name()}",
+                        expected="Function (lambda or builtin)"
+                    )
 
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(

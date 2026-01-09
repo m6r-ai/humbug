@@ -222,7 +222,7 @@ class AIFPLAlist(AIFPLValue):
     pairs: Tuple[Tuple[AIFPLValue, AIFPLValue], ...] = ()
     _lookup: dict = field(default_factory=dict, init=False, repr=False, compare=False)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Build internal lookup dict after initialization."""
         # Use object.__setattr__ because dataclass is frozen
         lookup = {}
@@ -348,7 +348,7 @@ class AIFPLAlist(AIFPLValue):
         return len(self.pairs) == 0
 
     @staticmethod
-    def _to_hashable_key(key: AIFPLValue):
+    def _to_hashable_key(key: AIFPLValue) -> Tuple[str, Any]:
         """Convert AIFPL key to hashable Python value."""
         if isinstance(key, AIFPLString):
             return ('str', key.value)
