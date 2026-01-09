@@ -33,6 +33,25 @@ class AIFPLEnvironment:
         new_bindings = {**self.bindings, name: value}
         return AIFPLEnvironment(new_bindings, self.parent, self.name)
 
+    def define_many(self, new_bindings: Dict[str, AIFPLValue]) -> 'AIFPLEnvironment':
+        """
+        Return new environment with multiple variables defined at once.
+
+        This is more efficient than calling define() multiple times because
+        it only does one dictionary copy instead of N copies for N bindings.
+
+        Args:
+            new_bindings: Dictionary of name -> value bindings to add
+
+        Returns:
+            New environment with all bindings added
+        """
+        if not new_bindings:
+            return self
+
+        merged_bindings = {**self.bindings, **new_bindings}
+        return AIFPLEnvironment(merged_bindings, self.parent, self.name)
+
     def lookup(self, name: str) -> AIFPLValue:
         """
         Look up a variable in this environment or parent environments.

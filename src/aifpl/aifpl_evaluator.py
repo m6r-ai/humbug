@@ -105,13 +105,9 @@ class AIFPLEvaluator:
         """
         env = AIFPLEnvironment(name="global")
 
-        # Add constants to global environment
-        for name, value in self.CONSTANTS.items():
-            env = env.define(name, value)
-
-        # Add built-in functions to global environment
-        for name, builtin_func in self._builtin_functions.items():
-            env = env.define(name, builtin_func)
+        # Add constants and built-in functions to global environment (batch for efficiency)
+        global_bindings = {**self.CONSTANTS, **self._builtin_functions}
+        env = env.define_many(global_bindings)
 
         # All code paths in the evaluator raise AIFPLEvalError, so the generic exception
         # wrapper is unreachable. We only need to re-raise AIFPLEvalError.
@@ -430,13 +426,12 @@ class AIFPLEvaluator:
     ) -> AIFPLEnvironment:
         """Evaluate a recursive binding group using recursive placeholders."""
         # Step 1: Create environment with recursive placeholders
-        recursive_env = env
         placeholders = {}
-
         for name, _ in group.bindings:
             placeholder = AIFPLRecursivePlaceholder(name)
             placeholders[name] = placeholder
-            recursive_env = recursive_env.define(name, placeholder)
+
+        recursive_env = env.define_many(placeholders)
 
         # Step 2: Evaluate all binding expressions in the recursive environment
         resolved_values = {}
@@ -457,10 +452,8 @@ class AIFPLEvaluator:
         for name, placeholder in placeholders.items():
             placeholder.resolve(resolved_values[name])
 
-        # Step 4: Create final environment with resolved values
-        final_env = env
-        for name, value in resolved_values.items():
-            final_env = final_env.define(name, value)
+        # Step 4: Create final environment with resolved values (batch for efficiency)
+        final_env = env.define_many(resolved_values)
 
         return final_env
 
@@ -607,14 +600,13 @@ class AIFPLEvaluator:
                 suggestion=f"Provide exactly {len(func.parameters)} argument{'s' if len(func.parameters) != 1 else ''}"
             )
 
-        # Create new environment for function execution
-        func_env = AIFPLEnvironment(bindings={}, parent=func.closure_environment, name=f"{func.name}-call")
-
-        # Bind parameters to arguments
+        # Bind parameters to arguments (build dict once)
         param_bindings = {}
         for param, arg_value in zip(func.parameters, arg_values):
-            func_env = func_env.define(param, arg_value)
             param_bindings[param] = arg_value
+
+        # Create new environment for function execution with all bindings at once
+        func_env = AIFPLEnvironment(bindings={}, parent=func.closure_environment, name=f"{func.name}-call").define_many(param_bindings)
 
         # Add call frame to stack for error reporting
         self.call_stack.push(
