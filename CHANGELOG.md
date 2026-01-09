@@ -11,6 +11,7 @@ New features:
 - Added a system prompt to provide initial guidance to all LLMs when starting conversations.
 - Added a `get_system_info` operation to the system AI tool.  This provides system and mindspace details.
 - Added association lists (alists) to AIFPL to provide very efficient key/value lookup operations.
+- Improved AIFPL performance by about 40%
 
 Bug fixes:
 
