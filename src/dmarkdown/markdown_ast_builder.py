@@ -83,6 +83,39 @@ class ListState:
         self.contains_blank_line = False
 
 
+class ContainerContext:
+    """
+    Represents a container that can hold block elements.
+
+    This tracks the current nesting context during parsing, allowing proper
+    handling of block elements within lists, blockquotes, and other containers.
+    """
+
+    def __init__(
+        self,
+        node: MarkdownASTNode,
+        indent_level: int,
+        container_type: str,
+        can_contain_blocks: bool = True,
+        lazy_continuation: bool = False
+    ) -> None:
+        """
+        Initialize a container context.
+
+        Args:
+            node: The AST node representing this container
+            indent_level: Required indentation level for content in this container
+            container_type: Type identifier ('document', 'list_item', 'blockquote', etc.)
+            can_contain_blocks: Whether this container can hold block-level elements
+            lazy_continuation: Whether lazy continuation is allowed (for lists/blockquotes)
+        """
+        self.node = node
+        self.indent_level = indent_level
+        self.container_type = container_type
+        self.can_contain_blocks = can_contain_blocks
+        self.lazy_continuation = lazy_continuation
+
+
 class MarkdownASTBuilder:
     """
     Builder class for constructing an AST from markdown text.
@@ -116,6 +149,10 @@ class MarkdownASTBuilder:
         # Track header IDs to allow us to create unique link anchors for headings with the same text
         self._used_header_ids: Dict[str, int] = {}
 
+        # Container stack for tracking nesting context
+        # Initialize with document as root container
+        self._container_stack: List[ContainerContext] = []
+
         # List state tracking
         self._list_stack: List[ListState] = []
 
@@ -139,6 +176,9 @@ class MarkdownASTBuilder:
         # Table state tracking using the new buffer approach
         self._table_buffer = TableBufferState()
 
+        # Track where code blocks should be added
+        self._code_block_start_container: MarkdownASTNode | None = None
+
     def document(self) -> MarkdownASTDocumentNode:
         """
         Get the current document node.
@@ -147,6 +187,48 @@ class MarkdownASTBuilder:
             The document node
         """
         return self._document
+
+    def _current_container(self) -> MarkdownASTNode:
+        """
+        Get the current container for adding block elements.
+
+        Returns:
+            The AST node that should receive new block elements
+        """
+        if not self._container_stack:
+            return self._document
+        return self._container_stack[-1].node
+
+    def _current_indent(self) -> int:
+        """
+        Get the required indentation level for the current container.
+
+        Returns:
+            The indentation level required for content in the current container
+        """
+        if not self._container_stack:
+            return 0
+        return self._container_stack[-1].indent_level
+
+    def _initialize_container_stack(self) -> None:
+        """Initialize the container stack with the document as root."""
+        self._container_stack = [
+            ContainerContext(
+                node=self._document,
+                indent_level=0,
+                container_type='document',
+                can_contain_blocks=True,
+                lazy_continuation=False
+            )
+        ]
+
+    def _reset_container_stack(self) -> None:
+        """Reset the container stack to just the document root."""
+        if self._container_stack:
+            self._container_stack = [self._container_stack[0]]
+
+        else:
+            self._initialize_container_stack()
 
     def _parse_code_line(
         self,
@@ -550,7 +632,8 @@ class MarkdownASTBuilder:
         heading.line_end = line_num
         self._register_node_line(heading, line_num)
 
-        self._document.add_child(heading)
+        # Add heading to current container
+        self._current_container().add_child(heading)
 
     def _parse_text(self, text: str, line_num: int) -> MarkdownASTParagraphNode:
         """
@@ -568,7 +651,8 @@ class MarkdownASTBuilder:
         paragraph.line_end = line_num
         self._register_node_line(paragraph, line_num)
 
-        self._document.add_child(paragraph)
+        # Add paragraph to current container
+        self._current_container().add_child(paragraph)
         return paragraph
 
     def _current_list_state(self) -> ListState | None:
@@ -602,6 +686,11 @@ class MarkdownASTBuilder:
                 break
 
             self._list_stack.pop()
+
+            # Also pop the corresponding list item container from the container stack
+            if self._container_stack and self._container_stack[-1].container_type == 'list_item':
+                self._container_stack.pop()
+
             closed_lists = True
 
         return closed_lists
@@ -703,6 +792,17 @@ class MarkdownASTBuilder:
         current_list.last_item = item
         self._last_processed_line_type = 'ordered_list_item'
 
+        # Push list item as a container so subsequent indented blocks go inside it
+        content_indent = indent + current_list.marker_length
+        context = ContainerContext(
+            node=item,
+            indent_level=content_indent,
+            container_type='list_item',
+            can_contain_blocks=True,
+            lazy_continuation=True  # List items allow lazy continuation
+        )
+        self._container_stack.append(context)
+
     def _find_or_create_unordered_list(self, indent: int) -> MarkdownASTUnorderedListNode:
         """
         Find or create an unordered list at the given indent level.
@@ -780,6 +880,17 @@ class MarkdownASTBuilder:
         # Update tracking variables
         current_list.last_item = item
         self._last_processed_line_type = 'unordered_list_item'
+
+        # Push list item as a container so subsequent indented blocks go inside it
+        content_indent = indent + current_list.marker_length
+        context = ContainerContext(
+            node=item,
+            indent_level=content_indent,
+            container_type='list_item',
+            can_contain_blocks=True,
+            lazy_continuation=True  # List items allow lazy continuation
+        )
+        self._container_stack.append(context)
 
     def _parse_horizontal_rule(self, line_num: int) -> MarkdownASTHorizontalRuleNode:
         """
@@ -975,8 +1086,8 @@ class MarkdownASTBuilder:
 
         body_node.line_end = self._table_buffer.current_line
 
-        # Add the table to the document
-        self._document.add_child(table_node)
+        # Add the table to the current container
+        self._current_container().add_child(table_node)
 
         # Register table with line mappings
         for i in range(self._table_buffer.start_line, self._table_buffer.current_line + 1):
@@ -1041,8 +1152,12 @@ class MarkdownASTBuilder:
         code_block.line_start = self._code_block_start_line
         code_block.line_end = end_line
 
-        # Add to document
-        self._document.add_child(code_block)
+        # Add to the container where the code block started
+        if self._code_block_start_container:
+            self._code_block_start_container.add_child(code_block)
+
+        else:
+            self._current_container().add_child(code_block)
 
         # Register code block with all lines it spans
         for i in range(self._code_block_start_line, end_line + 1):
@@ -1091,9 +1206,9 @@ class MarkdownASTBuilder:
             # Get the indentation of the current line
             current_indent = len(text) - len(text.lstrip())
 
-            # If the indent is zero and we weren't preceded by a blank line, we have a continuation of the previous list item.
-            # Anything else and we need to consider closing the list.
-            if current_indent > 0 or self._last_processed_line_type == 'blank':
+            # Handle indented text - may need to close some lists
+            if current_indent > 0:
+                # Close lists that are deeper than current indent
                 if self._close_lists_at_indent(current_indent, True):
                     # We closed one or more lists, we should treat it as if a blank line was encountered
                     # This will ensure proper formatting when returning to an outer list
@@ -1104,14 +1219,21 @@ class MarkdownASTBuilder:
                     # Reset the paragraph continuity as well
                     self._last_paragraph = None
 
+            # For zero-indented text:
+            # - If we're right after a list item (no blank), it's lazy continuation (allowed)
+            # - If we had a blank line, it should have been caught earlier and closed the list
+            # So if we get here with zero indent, we allow lazy continuation
+
+            # Check if we still have a list after potential closing
+            list_state = self._current_list_state()
+            if not list_state or not list_state.last_item:
+                # No list to continue
+                return False
+
             # If we're continuing a list item and we've seen a blank line, mark the list as loose
             if self._list_stack and self._blank_line_count > 0:
                 self._list_stack[-1].contains_blank_line = True
                 self._list_stack[-1].list_node.tight = False
-
-            list_state = self._current_list_state()
-            if not list_state or not list_state.last_item:
-                return False
 
             formatted_text = text.lstrip()
 
@@ -1219,6 +1341,7 @@ class MarkdownASTBuilder:
 
         if line_type == 'code_block_start':
             self._in_code_block = True
+            self._code_block_start_container = self._current_container()
             self._code_block_language_name = content
             self._embedded_language = ProgrammingLanguageUtils.from_name(content)
             self._code_block_content = []
@@ -1235,7 +1358,7 @@ class MarkdownASTBuilder:
 
         if line_type == 'code_block_end':
             self._finalize_code_block(line_num)
-            self._reset_list_state()
+            # Don't reset list state - code blocks can be inside lists
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
             return
@@ -1256,21 +1379,38 @@ class MarkdownASTBuilder:
         # Process other line types
         if line_type == 'heading':
             level, heading_text = content
-            self._parse_heading(level, heading_text, line_num)
+            self._reset_container_stack()  # Headings close all containers
             self._reset_list_state()
+            self._parse_heading(level, heading_text, line_num)
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
             return
 
         if line_type == 'horizontal_rule':
             horizontal_rule = self._parse_horizontal_rule(line_num)
-            self._document.add_child(horizontal_rule)
-            self._reset_list_state()
+
+            # Check indentation - if not indented, close all containers
+            stripped = line.lstrip()
+            indent = len(line) - len(stripped)
+            if indent == 0:
+                self._reset_container_stack()
+                self._reset_list_state()
+
+            self._current_container().add_child(horizontal_rule)
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
             return
 
         # We have text left
+        # Check if this is a zero-indented paragraph that should close containers
+        # Only close if we had a blank line before (not lazy continuation)
+        stripped = content.lstrip()
+        indent = len(content) - len(stripped)
+        if indent == 0 and self._list_stack and self._blank_line_count > 0:
+            # Zero-indented text after blank line closes all lists
+            self._reset_container_stack()
+            self._reset_list_state()
+
         # Try to handle as a continuation first
         if self._handle_text_continuation(content, line_num):
             self._last_processed_line_type = line_type
@@ -1296,6 +1436,7 @@ class MarkdownASTBuilder:
         """
         self._document = MarkdownASTDocumentNode(self._source_path)
         self._line_to_node_map = {}
+        self._initialize_container_stack()
         self._reset_list_state()
         self._last_paragraph = None
         self._last_processed_line_type = ""
