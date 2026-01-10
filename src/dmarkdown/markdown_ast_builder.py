@@ -220,12 +220,9 @@ class MarkdownASTBuilder:
             indent: The indentation level of the current line
             line_type: The type of line being processed
         """
-        # Don't adjust for certain line types that have special handling
-        # Code blocks have special handling
-        if line_type in (
-            'code_block_start', 'code_block_content', 'code_block_end'
-        ):
-            return
+        assert line_type not in ('code_block_start', 'code_block_content', 'code_block_end'), (
+            "Code block lines should not adjust container stack"
+        )
 
         # Headings close all containers except document and blockquotes
         # (CommonMark allows headings inside blockquotes)
