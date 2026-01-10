@@ -680,3 +680,64 @@ class TestAIFPLTokenizerEdgeCases:
                 error_msg = str(e)
                 assert "control character" in error_msg.lower(), \
                     f"Expected control character error for {description}, got: {error_msg}"
+
+    def test_positive_sign_number_literals(self, aifpl):
+        """Test that numbers with explicit positive sign (+) are correctly tokenized as numbers, not symbols."""
+        # Positive integers
+        positive_integer_cases = [
+            ("+0", 0),
+            ("+42", 42),
+            ("+123", 123),
+            ("+999", 999),
+        ]
+
+        for expr, expected in positive_integer_cases:
+            result = aifpl.evaluate(expr)
+            assert result == expected, f"Expected {expr} to evaluate to {expected}, got {result}"
+
+        # Positive floats
+        positive_float_cases = [
+            ("+0.0", 0.0),
+            ("+3.14", 3.14),
+            ("+0.5", 0.5),
+            ("+5.0", 5.0),
+            ("+123.456", 123.456),
+        ]
+
+        for expr, expected in positive_float_cases:
+            result = aifpl.evaluate(expr)
+            assert abs(result - expected) < 1e-10, f"Expected {expr} to evaluate to {expected}, got {result}"
+
+        # Positive decimals starting with dot
+        positive_dot_cases = [
+            ("+.5", 0.5),
+            ("+.25", 0.25),
+            ("+.999", 0.999),
+        ]
+
+        for expr, expected in positive_dot_cases:
+            result = aifpl.evaluate(expr)
+            assert abs(result - expected) < 1e-10, f"Expected {expr} to evaluate to {expected}, got {result}"
+
+        # Positive numbers in expressions
+        expression_cases = [
+            ("(+ +1 +2)", 3),
+            ("(* +5 +3)", 15),
+            ("(- +10 +3)", 7),
+            ("(/ +20 +4)", 5),
+        ]
+
+        for expr, expected in expression_cases:
+            result = aifpl.evaluate(expr)
+            assert result == expected, f"Expected {expr} to evaluate to {expected}, got {result}"
+
+        # Mixed positive and negative
+        mixed_cases = [
+            ("(+ +5 -3)", 2),
+            ("(- +10 -5)", 15),
+            ("(* +2 -3)", -6),
+        ]
+
+        for expr, expected in mixed_cases:
+            result = aifpl.evaluate(expr)
+            assert result == expected, f"Expected {expr} to evaluate to {expected}, got {result}"

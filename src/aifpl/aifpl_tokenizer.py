@@ -284,6 +284,13 @@ class AIFPLTokenizer:
             if next_char.isdigit() or (next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit()):
                 return True
 
+        # Positive numbers (explicit + sign)
+        if char == '+' and pos + 1 < len(expression):
+            next_char = expression[pos + 1]
+            # Positive digit or positive decimal starting with dot (only if followed by digit)
+            if next_char.isdigit() or (next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit()):
+                return True
+
         return False
 
     def _is_delimiter(self, char: str) -> bool:

@@ -21,6 +21,7 @@ Bug fixes:
 - Handle missing "override" and "final" keywords, and additional string formats for the C++ syntax highlighter.
 - Resolved a problem with deleting message sections when a queued user message was submitted.
 - Fixed some lexing problems in the JavaScript and TypeScript syntax highlighters.
+- Fixed AIFPL so '+' can be used for positive numbers.
 
 Internal structure changes:
 
