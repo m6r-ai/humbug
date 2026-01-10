@@ -203,6 +203,7 @@ class MarkdownASTBuilder:
         """
         if not self._container_stack:
             return self._document
+
         return self._container_stack[-1].node
 
     def _current_indent(self) -> int:
@@ -214,6 +215,7 @@ class MarkdownASTBuilder:
         """
         if not self._container_stack:
             return 0
+
         return self._container_stack[-1].indent_level
 
     def _initialize_container_stack(self) -> None:
@@ -235,6 +237,58 @@ class MarkdownASTBuilder:
 
         else:
             self._initialize_container_stack()
+
+    def _adjust_containers_for_indent(self, indent: int, line_type: str) -> None:
+        """
+        Adjust the container stack based on current line indentation.
+
+        This closes containers when dedenting, and maintains them when properly indented.
+        Handles lazy continuation for lists and blockquotes.
+
+        Args:
+            indent: The indentation level of the current line
+            line_type: The type of line being processed
+        """
+        # Don't adjust for certain line types that have special handling
+        # List items are handled by _close_lists_at_indent() in their parse methods
+        if line_type in (
+            'code_block_start', 'code_block_content', 'code_block_end', 'blockquote', 'ordered_list_item', 'unordered_list_item'
+        ):
+            return
+
+        # Headings always close all containers except document
+        if line_type == 'heading':
+            self._reset_container_stack()
+            self._reset_list_state()
+            return
+
+        # Close containers that require more indentation than we have
+        while len(self._container_stack) > 1:
+            current_context = self._container_stack[-1]
+            required_indent = current_context.indent_level
+
+            # If we have enough indentation, keep this container
+            if indent >= required_indent:
+                break
+
+            # Check if lazy continuation is allowed
+            if current_context.lazy_continuation:
+                # For lazy continuation, we allow less indentation for text
+                # BUT only if there wasn't a blank line before (which breaks continuation)
+                if line_type == 'text' and self._blank_line_count == 0:
+                    # Allow lazy continuation for text without preceding blank
+                    break
+
+                if line_type == 'blank':
+                    # Blank lines don't close containers
+                    break
+
+            # Close this container
+            self._container_stack.pop()
+
+            # Also pop from list stack if it's a list item
+            if current_context.container_type == 'list_item' and self._list_stack:
+                self._list_stack.pop()
 
     def _parse_code_line(
         self,
@@ -337,6 +391,7 @@ class MarkdownASTBuilder:
             # (to preserve indentation for nested blockquotes)
             if content.startswith(' ') and not content.startswith(' >'):
                 content = content[1:]
+
             # Return the indent level and content
             return 'blockquote', (indent, content)
 
@@ -947,7 +1002,7 @@ class MarkdownASTBuilder:
             # We're already in a blockquote at this level
             # Pop any containers that are on top of it (like list_item)
             while len(self._container_stack) > blockquote_index + 1:
-                popped = self._container_stack.pop()
+                self._container_stack.pop()
 
             # Already in this blockquote, continue
             return
@@ -982,9 +1037,8 @@ class MarkdownASTBuilder:
         """
         if self._container_stack and self._container_stack[-1].container_type == 'blockquote':
             blockquote = self._container_stack[-1].node
-            # Set end line
-            if hasattr(blockquote, 'line_end'):
-                blockquote.line_end = line_num
+            blockquote.line_end = line_num
+
             self._container_stack.pop()
 
     def _is_in_blockquote(self) -> bool:
@@ -994,8 +1048,10 @@ class MarkdownASTBuilder:
         Returns:
             True if inside a blockquote
         """
-        return (self._container_stack and
-                self._container_stack[-1].container_type == 'blockquote')
+        if not self._container_stack:
+            return False
+
+        return self._container_stack[-1].container_type == 'blockquote'
 
     def _parse_table_separator(self, separator_line: str) -> List[str]:
         """
@@ -1393,6 +1449,13 @@ class MarkdownASTBuilder:
 
         line_type, content = self.identify_line_type(line)
 
+        # Calculate indentation for container management
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+
+        # Adjust container stack based on indentation
+        self._adjust_containers_for_indent(indent, line_type)
+
         # Reset paragraph tracking if not continuing text or in blockquote
         if line_type not in ('text', 'blank', 'line_break', 'blockquote'):
             self._last_paragraph = None
@@ -1402,10 +1465,10 @@ class MarkdownASTBuilder:
             indent, blockquote_content = content
 
             # Exit any nested blockquotes that are deeper than this indent level
-            while (self._container_stack and 
-                   len(self._container_stack) > 1 and
-                   self._container_stack[-1].container_type == 'blockquote' and
-                   self._container_stack[-1].indent_level > indent):
+            while (self._container_stack and
+                    len(self._container_stack) > 1 and
+                    self._container_stack[-1].container_type == 'blockquote' and
+                    self._container_stack[-1].indent_level > indent):
                 # Exit this nested blockquote
                 self._exit_blockquote(line_num - 1)
 
@@ -1418,7 +1481,7 @@ class MarkdownASTBuilder:
             saved_last_type = self._last_processed_line_type
             saved_recursive_flag = self._in_recursive_parse
             self._in_recursive_parse = True
-            
+
             if blockquote_content.strip():  # Only parse non-empty content
                 self._parse_line(blockquote_content, line_num)
 
@@ -1432,10 +1495,10 @@ class MarkdownASTBuilder:
 
         # Check if we should exit blockquote (non-blockquote line)
         # But only if we're not processing content that was inside a blockquote marker
-        if (self._is_in_blockquote() and 
-            line_type not in ('blank',) and
-            self._last_processed_line_type != 'blockquote' and
-            not self._in_recursive_parse):
+        if (self._is_in_blockquote() and
+                line_type not in ('blank',) and
+                self._last_processed_line_type != 'blockquote' and
+                not self._in_recursive_parse):
             # Exit blockquote when we encounter non-blockquote, non-blank line after non-blockquote
             self._exit_blockquote(line_num)
 
@@ -1450,11 +1513,12 @@ class MarkdownASTBuilder:
                 self._handle_incomplete_table()
 
         if line_type == 'line_break':
-            self._document.add_child(MarkdownASTLineBreakNode())
+            self._current_container().add_child(MarkdownASTLineBreakNode())
             return
 
         if line_type == 'blank':
             self._blank_line_count += 1
+            self._last_paragraph = None
             self._last_processed_line_type = line_type
             return
 
@@ -1512,8 +1576,7 @@ class MarkdownASTBuilder:
         # Process other line types
         if line_type == 'heading':
             level, heading_text = content
-            self._reset_container_stack()  # Headings close all containers
-            self._reset_list_state()
+            # Container stack already reset by _adjust_containers_for_indent()
             self._parse_heading(level, heading_text, line_num)
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
@@ -1521,28 +1584,12 @@ class MarkdownASTBuilder:
 
         if line_type == 'horizontal_rule':
             horizontal_rule = self._parse_horizontal_rule(line_num)
-
-            # Check indentation - if not indented, close all containers
-            stripped = line.lstrip()
-            indent = len(line) - len(stripped)
-            if indent == 0:
-                self._reset_container_stack()
-                self._reset_list_state()
-
             self._current_container().add_child(horizontal_rule)
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
             return
 
         # We have text left
-        # Check if this is a zero-indented paragraph that should close containers
-        # Only close if we had a blank line before (not lazy continuation)
-        stripped = content.lstrip()
-        indent = len(content) - len(stripped)
-        if indent == 0 and self._list_stack and self._blank_line_count > 0:
-            # Zero-indented text after blank line closes all lists
-            self._reset_container_stack()
-            self._reset_list_state()
 
         # Try to handle as a continuation first
         if self._handle_text_continuation(content, line_num):
