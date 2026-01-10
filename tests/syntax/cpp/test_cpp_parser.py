@@ -182,7 +182,7 @@ class TestCppParser:
         tokens = list(parser._tokens)
         method_tokens = [t for t in tokens if t.value == 'method']
         field_tokens = [t for t in tokens if t.value == 'field']
-        
+
         assert len(method_tokens) == 1
         assert method_tokens[0].type == TokenType.FUNCTION_OR_METHOD
         assert len(field_tokens) == 1
@@ -255,17 +255,17 @@ class TestCppParser:
         state = parser.parse(None, 'obj->field.method(arg).result')
 
         tokens = list(parser._tokens)
-        
+
         # field should be ELEMENT
         field_tokens = [t for t in tokens if t.value == 'field']
         assert len(field_tokens) == 1
         assert field_tokens[0].type == TokenType.ELEMENT
-        
+
         # method should be FUNCTION_OR_METHOD
         method_tokens = [t for t in tokens if t.value == 'method']
         assert len(method_tokens) == 1
         assert method_tokens[0].type == TokenType.FUNCTION_OR_METHOD
-        
+
         # result should be ELEMENT
         result_tokens = [t for t in tokens if t.value == 'result']
         assert len(result_tokens) == 1
@@ -382,18 +382,18 @@ class TestCppParser:
         """Test multiline parsing with element continuation."""
         parser1 = CppParser()
         state1 = parser1.parse(None, 'obj.')
-        
+
         assert state1.in_element is True
-        
+
         parser2 = CppParser()
         state2 = parser2.parse(state1, 'field1.')
-        
+
         # After field1., should still be in element context
         assert state2.in_element is True
-        
+
         parser3 = CppParser()
         state3 = parser3.parse(state2, 'field2')
-        
+
         # field2 should be marked as ELEMENT
         tokens3 = list(parser3._tokens)
         field2_tokens = [t for t in tokens3 if t.value == 'field2']
