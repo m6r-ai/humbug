@@ -1,5 +1,5 @@
 {
-  "source_file": "tests/syntax/fixtures/2025-06-13-003/test.cpp",
+  "source_file": "fixtures/2025-06-13-003/test.cpp",
   "language": "CPP",
   "tokens": [
     {
@@ -523,7 +523,7 @@
       "start": 74
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural_digit",
       "start": 77
     },
@@ -6823,7 +6823,7 @@
       "start": 47
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 50
     },
@@ -7073,7 +7073,7 @@
       "start": 51
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 54
     },
@@ -7308,7 +7308,7 @@
       "start": 45
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "std",
       "start": 48
     },
@@ -7453,7 +7453,7 @@
       "start": 53
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 56
     },
@@ -7898,7 +7898,7 @@
       "start": 48
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 51
     },
@@ -8313,7 +8313,7 @@
       "start": 53
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 56
     },
@@ -8618,7 +8618,7 @@
       "start": 48
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 51
     },
@@ -8828,7 +8828,7 @@
       "start": 56
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 59
     },
@@ -9218,7 +9218,7 @@
       "start": 51
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 54
     },
@@ -9578,7 +9578,7 @@
       "start": 56
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 59
     },
@@ -9948,7 +9948,7 @@
       "start": 51
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 54
     },
@@ -10268,7 +10268,7 @@
       "start": 53
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 56
     },
@@ -10653,7 +10653,7 @@
       "start": 48
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 51
     },
@@ -11003,7 +11003,7 @@
       "start": 57
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "std",
       "start": 60
     },
@@ -11553,7 +11553,7 @@
       "start": 53
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 56
     },
@@ -11968,7 +11968,7 @@
       "start": 48
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 51
     },
@@ -12293,7 +12293,7 @@
       "start": 53
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 56
     },
@@ -12708,7 +12708,7 @@
       "start": 48
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 51
     },
@@ -13028,7 +13028,7 @@
       "start": 46
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "natural",
       "start": 49
     },
@@ -15053,7 +15053,7 @@
       "start": 61
     },
     {
-      "type": "IDENTIFIER",
+      "type": "ELEMENT",
       "value": "std",
       "start": 64
     },
