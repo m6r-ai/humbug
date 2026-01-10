@@ -2098,10 +2098,9 @@ def test_simple_blockquote(ast_builder):
     blockquote = doc.children[0]
     assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
     
-    # Should have one paragraph with both lines
-    assert len(blockquote.children) == 2
+    # Should have one paragraph with both lines merged (CommonMark behavior)
+    assert len(blockquote.children) == 1
     assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
-    assert blockquote.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
 
 
 def test_blockquote_with_multiple_paragraphs(ast_builder):
@@ -2188,9 +2187,9 @@ Not in quote
     assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
     assert doc.children[2].__class__.__name__ == "MarkdownASTBlockquoteNode"
     
-    # First blockquote should have 2 paragraphs
+    # First blockquote should have 1 paragraph (consecutive lines merge)
     first_blockquote = doc.children[0]
-    assert len(first_blockquote.children) == 2
+    assert len(first_blockquote.children) == 1
 
 
 def test_blockquote_with_code_block(ast_builder):
@@ -2228,25 +2227,20 @@ def test_empty_blockquote(ast_builder):
 
 
 def test_blockquote_with_heading(ast_builder):
-    """Test that heading breaks out of blockquote (CommonMark behavior)."""
+    """Test that heading stays inside blockquote (CommonMark behavior)."""
     markdown = """> # Heading in quote
 > 
 > Paragraph after heading"""
     
     doc = ast_builder.build_ast(markdown)
-    # Heading closes the blockquote, so we get: blockquote (empty), heading, blockquote
-    assert len(doc.children) == 3
+    # Heading stays inside blockquote (CommonMark allows headings in blockquotes)
+    assert len(doc.children) == 1
     
     blockquote = doc.children[0]
     assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
-    assert len(blockquote.children) == 0  # Empty blockquote before heading
-    
-    heading = doc.children[1]
-    assert heading.__class__.__name__ == "MarkdownASTHeadingNode"
-    
-    second_blockquote = doc.children[2]
-    assert second_blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
-    assert len(second_blockquote.children) == 1  # Contains the paragraph
+    assert len(blockquote.children) == 2  # Heading and paragraph
+    assert blockquote.children[0].__class__.__name__ == "MarkdownASTHeadingNode"
+    assert blockquote.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
 
 def test_blockquote_with_list_and_continuation(ast_builder):
     """Test blockquote containing a list followed by more blockquote content."""
