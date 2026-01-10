@@ -246,9 +246,12 @@ class MarkdownASTBuilder:
         ):
             return
 
-        # Headings always close all containers except document
+        # Headings close all containers except document and blockquotes
+        # (CommonMark allows headings inside blockquotes)
         if line_type == 'heading':
-            self._reset_container_stack()
+            if not self._is_in_blockquote():
+                self._reset_container_stack()
+
             return
 
         # Close containers that require more indentation than we have
@@ -343,15 +346,16 @@ class MarkdownASTBuilder:
             code_block_match = self._code_block_pattern.match(lstripped_line)
             if code_block_match:
                 language_name = code_block_match.group(1)
+                # Check if this would be a nested fence (has language or more indented)
                 if language_name is not None or indent > self._code_block_indents[-1]:
-                    self._code_block_nesting_level += 1
-                    self._code_block_indents.append(indent)
-                    return 'code_block_content', line
+                    return 'code_block_fence_nested', (language_name, indent)
 
-                self._code_block_indents.pop()
-                self._code_block_nesting_level -= 1
-                if self._code_block_nesting_level == 0:
+                # Check if closing this fence would exit the code block
+                if self._code_block_nesting_level == 1:
                     return 'code_block_end', None
+
+                # It's a closing fence for a nested block
+                return 'code_block_fence_close', None
 
             return 'code_block_content', line
 
@@ -359,9 +363,7 @@ class MarkdownASTBuilder:
         code_block_match = self._code_block_pattern.match(lstripped_line)
         if code_block_match:
             language_name = code_block_match.group(1) or ""
-            self._code_block_nesting_level = 1
-            self._code_block_indents.append(indent)
-            return 'code_block_start', language_name
+            return 'code_block_start', (language_name, indent)
 
         # Check for blank line
         stripped_line = line.strip()
@@ -1031,6 +1033,53 @@ class MarkdownASTBuilder:
 
         return self._container_stack[-1].container_type == 'blockquote'
 
+    def _accumulate_blockquote_lines(self, lines: List[str], start_index: int) -> Tuple[List[str], int]:
+        """
+        Accumulate consecutive blockquote lines starting from start_index.
+
+        Args:
+            lines: All lines in the document
+            start_index: The index of the first blockquote line
+
+        Returns:
+            Tuple of (accumulated_content_lines, last_line_index)
+        """
+        accumulated = []
+        current_index = start_index
+
+        # Get the indent level of the first blockquote line
+        first_line = lines[start_index]
+        first_stripped = first_line.lstrip()
+        base_indent = len(first_line) - len(first_stripped)
+
+        while current_index < len(lines):
+            line = lines[current_index]
+            stripped = line.lstrip()
+            indent = len(line) - len(stripped)
+
+            # Check if this is a blockquote line at the same or greater indent
+            if stripped.startswith('>'):
+                # Remove '>' and optional space, preserving nested structure
+                content = stripped[1:]
+                if content.startswith(' ') and not content.startswith(' >'):
+                    content = content[1:]
+
+                accumulated.append(content)
+                current_index += 1
+
+            # Blank lines are allowed within blockquotes (lazy continuation)
+            elif not stripped:
+                accumulated.append('')
+                current_index += 1
+
+            # Non-blockquote line ends the blockquote
+            else:
+                break
+
+        # Return accumulated lines and the index of the last line we processed
+        # (current_index - 1 is the last blockquote line)
+        return accumulated, current_index - 1
+
     def _parse_table_separator(self, separator_line: str) -> List[str]:
         """
         Parse a table separator line to determine column alignments.
@@ -1311,10 +1360,6 @@ class MarkdownASTBuilder:
             True if handled as a continuation, False otherwise
         """
         # Case 1: Continue a paragraph
-        # Don't do continuation when recursively parsing blockquote content
-        if self._in_recursive_parse:
-            return False
-
         if self._last_paragraph and self._last_processed_line_type == 'text':
             # Add a space between the continued text as long as we didn't just have a line break
             if not isinstance(self._last_paragraph.children[-1], MarkdownASTLineBreakNode):
@@ -1440,33 +1485,27 @@ class MarkdownASTBuilder:
             self._last_paragraph = None
 
         # Handle blockquote lines
+        # For nested blockquotes, we need to recursively handle them
         if line_type == 'blockquote':
             indent, blockquote_content = content
 
+            # Check if we need to exit nested blockquotes first
             # Exit any nested blockquotes that are deeper than this indent level
             while (self._container_stack and
                     len(self._container_stack) > 1 and
-                    self._container_stack[-1].container_type == 'blockquote' and
-                    self._container_stack[-1].indent_level > indent):
-                # Exit this nested blockquote
-                self._exit_blockquote(line_num - 1)
+                    self._container_stack[-1].container_type == 'blockquote'):
+                # Check if this blockquote is at a shallower level
+                if self._container_stack[-1].indent_level > indent:
+                    self._exit_blockquote(line_num - 1)
+                else:
+                    break
 
-            # Enter blockquote context
+            # Enter nested blockquote context
             self._enter_blockquote(indent, line_num)
 
-            # Recursively parse the content inside the blockquote
-            # This allows nested elements
-            # Save the last processed line type so recursive parsing doesn't affect it
-            saved_last_type = self._last_processed_line_type
-            saved_recursive_flag = self._in_recursive_parse
-            self._in_recursive_parse = True
-
-            if blockquote_content.strip():  # Only parse non-empty content
+            # Parse the nested content recursively
+            if blockquote_content.strip():
                 self._parse_line(blockquote_content, line_num)
-
-            # Restore the saved state
-            self._last_processed_line_type = saved_last_type
-            self._in_recursive_parse = saved_recursive_flag
 
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
@@ -1507,6 +1546,14 @@ class MarkdownASTBuilder:
         if line_type == 'blank':
             self._blank_line_count += 1
             self._last_paragraph = None
+
+            # Blank lines exit nested blockquotes (but not the outermost one in recursive parse)
+            if self._in_recursive_parse and self._is_in_blockquote():
+                # Exit nested blockquotes, but keep at least one level if we're in recursive parse
+                while (len(self._container_stack) > 2 and
+                       self._container_stack[-1].container_type == 'blockquote'):
+                    self._exit_blockquote(line_num)
+
             self._last_processed_line_type = line_type
             return
 
@@ -1526,11 +1573,15 @@ class MarkdownASTBuilder:
 
         if line_type == 'code_block_start':
             self._in_code_block = True
+            language_name, indent = content
             self._code_block_start_container = self._current_container()
-            self._code_block_language_name = content
-            self._embedded_language = ProgrammingLanguageUtils.from_name(content)
+            self._code_block_language_name = language_name
+            self._embedded_language = ProgrammingLanguageUtils.from_name(language_name)
             self._code_block_content = []
             self._code_block_start_line = line_num
+            # Initialize nesting tracking
+            self._code_block_nesting_level = 1
+            self._code_block_indents = [indent]
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
             return
@@ -1538,6 +1589,25 @@ class MarkdownASTBuilder:
         if line_type == 'code_block_content':
             self._code_block_content.append(content)
             self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
+
+        if line_type == 'code_block_fence_nested':
+            # Nested code fence - increment nesting level
+            language_name, indent = content
+            self._code_block_nesting_level += 1
+            self._code_block_indents.append(indent)
+            self._code_block_content.append(line)
+            self._last_processed_line_type = 'code_block_content'
+            self._blank_line_count = 0
+            return
+
+        if line_type == 'code_block_fence_close':
+            # Closing fence for nested block
+            self._code_block_indents.pop()
+            self._code_block_nesting_level -= 1
+            self._code_block_content.append(line)
+            self._last_processed_line_type = 'code_block_content'
             self._blank_line_count = 0
             return
 
@@ -1625,8 +1695,39 @@ class MarkdownASTBuilder:
 
         # Parse line by line
         lines = text.split('\n')
-        for i, line in enumerate(lines):
+        i = 0
+        while i < len(lines):
+            line = lines[i]
+            line_type, content = self.identify_line_type(line)
+
+            # Handle blockquotes specially - accumulate consecutive blockquote lines
+            if line_type == 'blockquote' and not self._in_code_block:
+                indent, _ = content
+                accumulated_lines, last_index = self._accumulate_blockquote_lines(lines, i)
+
+                # Enter blockquote context
+                self._enter_blockquote(indent, i)
+
+                # Parse the accumulated content as a sub-document
+                # Set recursive parse flag so container adjustments don't pop the blockquote
+                saved_recursive_flag = self._in_recursive_parse
+                self._in_recursive_parse = True
+                for j, acc_line in enumerate(accumulated_lines):
+                    self._parse_line(acc_line, i + j)
+
+                # Restore recursive parse flag
+                self._in_recursive_parse = saved_recursive_flag
+
+                # Exit the blockquote after parsing all its content
+                self._exit_blockquote(last_index)
+
+                # Move index past all processed blockquote lines
+                i = last_index + 1
+                continue
+
+            # Normal line processing
             self._parse_line(line, i)
+            i += 1
 
         # Check for any buffered table content at the end of the document
         if self._table_buffer.is_in_potential_table:
