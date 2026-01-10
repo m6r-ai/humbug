@@ -934,10 +934,21 @@ class MarkdownASTBuilder:
             indent: The indentation level of the '>' marker
             line_num: The line number
         """
-        # Check if we're already in a blockquote at this level
-        if (self._container_stack and
-                self._container_stack[-1].container_type == 'blockquote' and
-                self._container_stack[-1].indent_level == indent):
+        # Check if we're already in a blockquote at this level by searching through the stack
+        # We may have list_item or other containers on top of the blockquote
+        blockquote_index = -1
+        for i in range(len(self._container_stack) - 1, -1, -1):
+            if (self._container_stack[i].container_type == 'blockquote' and
+                    self._container_stack[i].indent_level == indent):
+                blockquote_index = i
+                break
+
+        if blockquote_index >= 0:
+            # We're already in a blockquote at this level
+            # Pop any containers that are on top of it (like list_item)
+            while len(self._container_stack) > blockquote_index + 1:
+                popped = self._container_stack.pop()
+
             # Already in this blockquote, continue
             return
 
