@@ -284,7 +284,7 @@ class TestAIFPLEdgeCases:
         lexer.lex(None, '(lambda (x) (if #t 42 "no")) ; comment')
 
         tokens = list(lexer._tokens)
-        
+
         # Should have various token types
         has_lparen = any(t.type == TokenType.LPAREN for t in tokens)
         has_rparen = any(t.type == TokenType.RPAREN for t in tokens)
@@ -294,7 +294,7 @@ class TestAIFPLEdgeCases:
         has_number = any(t.type == TokenType.NUMBER for t in tokens)
         has_string = any(t.type == TokenType.STRING for t in tokens)
         has_comment = any(t.type == TokenType.COMMENT for t in tokens)
-        
+
         assert has_lparen and has_rparen
         assert has_keyword
         assert has_identifier

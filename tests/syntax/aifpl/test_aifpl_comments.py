@@ -164,7 +164,7 @@ class TestAIFPLComments:
             'identifier ; name',
             '(+ 1 2) ; expression',
         ]
-        
+
         for code in test_cases:
             lexer = AIFPLLexer()
             lexer.lex(None, code)
@@ -196,10 +196,10 @@ class TestAIFPLComments:
         """Test that comment doesn't affect next line."""
         lexer1 = AIFPLLexer()
         state1 = lexer1.lex(None, '; comment')
-        
+
         lexer2 = AIFPLLexer()
         state2 = lexer2.lex(state1, '(+ 1 2)')
-        
+
         tokens2 = list(lexer2._tokens)
         # Should parse normally, no comment tokens
         comment_tokens = [t for t in tokens2 if t.type == TokenType.COMMENT]
@@ -209,10 +209,10 @@ class TestAIFPLComments:
         """Test that comments don't continue to next line."""
         lexer1 = AIFPLLexer()
         state1 = lexer1.lex(None, '; line 1')
-        
+
         lexer2 = AIFPLLexer()
         state2 = lexer2.lex(state1, '42')
-        
+
         tokens2 = list(lexer2._tokens)
         # Should parse 42 as number, not comment
         assert any(t.type == TokenType.NUMBER for t in tokens2)

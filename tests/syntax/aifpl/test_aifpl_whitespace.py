@@ -163,11 +163,11 @@ class TestAIFPLWhitespace:
         lexer1 = AIFPLLexer()
         lexer1.lex(None, '  x')
         tokens1 = list(lexer1._tokens)
-        
+
         lexer2 = AIFPLLexer()
         lexer2.lex(None, '\tx')
         tokens2 = list(lexer2._tokens)
-        
+
         # Both should have identifier token
         ident1 = [t for t in tokens1 if t.type == TokenType.IDENTIFIER]
         ident2 = [t for t in tokens2 if t.type == TokenType.IDENTIFIER]
@@ -228,11 +228,11 @@ class TestAIFPLWhitespace:
             '1    2',
             '1     2',
         ]
-        
+
         for expr in test_cases:
             lexer = AIFPLLexer()
             lexer.lex(None, expr)
-            
+
             tokens = list(lexer._tokens)
             number_tokens = [t for t in tokens if t.type == TokenType.NUMBER]
             assert len(number_tokens) == 2, f"Expression '{expr}' should have 2 numbers"
@@ -242,11 +242,11 @@ class TestAIFPLWhitespace:
         lexer1 = AIFPLLexer()
         lexer1.lex(None, '(+ 1 2)')
         tokens1 = list(lexer1._tokens)
-        
+
         lexer2 = AIFPLLexer()
         lexer2.lex(None, '(  +   1   2  )')
         tokens2 = list(lexer2._tokens)
-        
+
         # Should have same tokens (whitespace is skipped)
         assert len(tokens1) == len(tokens2)
 

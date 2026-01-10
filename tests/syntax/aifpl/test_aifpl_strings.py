@@ -88,7 +88,7 @@ class TestAIFPLStrings:
     def test_multiline_string_continuation(self):
         """Test multiline string continuation."""
         lexer = AIFPLLexer()
-        
+
         # First line - unclosed string
         state1 = lexer.lex(None, '"hello')
         tokens1 = list(lexer._tokens)
@@ -109,13 +109,13 @@ class TestAIFPLStrings:
         """Test string spanning multiple lines."""
         lexer1 = AIFPLLexer()
         state1 = lexer1.lex(None, '"line1')
-        
+
         lexer2 = AIFPLLexer()
         state2 = lexer2.lex(state1, 'line2')
-        
+
         lexer3 = AIFPLLexer()
         state3 = lexer3.lex(state2, 'line3"')
-        
+
         assert state1.in_string is True
         assert state2.in_string is True
         assert state3.in_string is False
@@ -220,13 +220,13 @@ class TestAIFPLStrings:
         """Test string continuation after other code."""
         lexer1 = AIFPLLexer()
         state1 = lexer1.lex(None, '(+ 1 "start')
-        
+
         lexer2 = AIFPLLexer()
         state2 = lexer2.lex(state1, 'end")')
-        
+
         assert state1.in_string is True
         assert state2.in_string is False
-        
+
         tokens2 = list(lexer2._tokens)
         assert tokens2[0].type == TokenType.STRING
 

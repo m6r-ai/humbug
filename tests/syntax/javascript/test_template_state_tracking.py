@@ -97,13 +97,13 @@ class TestTemplateLiteralStateTracking:
             "and \\t tab",
             "and \\\\ backslash`;",
         ]
-        
+
         state = None
         for line in lines:
             lexer = JavaScriptLexer()
             state = lexer.lex(state, line)
             tokens = list(lexer._tokens)
-        
+
         # Should handle escapes correctly
         assert state.in_template_literal == False, "Template should be closed"
 
@@ -114,17 +114,17 @@ class TestTemplateLiteralStateTracking:
             "second line",
             "third line`;",
         ]
-        
+
         state = None
         for i, line in enumerate(lines):
             lexer = JavaScriptLexer()
             state = lexer.lex(state, line)
             tokens = list(lexer._tokens)
-            
+
             print(f"\nLine {i+1}: '{line}'")
             print(f"  Tokens: {[t.type.name for t in tokens]}")
             print(f"  In template: {state.in_template_literal}")
-        
+
         # Should still be in template after line 1 (backtick was escaped)
         # Should close on line 3
         assert state.in_template_literal == False, "Template should be closed at end"
@@ -135,10 +135,10 @@ class TestTemplateLiteralStateTracking:
             "const x = `line ending with backslash\\",
             "continues here`;",
         ]
-        
+
         state = None
         for line in lines:
             lexer = JavaScriptLexer()
             state = lexer.lex(state, line)
-        
+
         assert state.in_template_literal == False, "Template should be closed"

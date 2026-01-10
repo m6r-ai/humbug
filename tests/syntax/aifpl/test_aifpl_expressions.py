@@ -347,13 +347,13 @@ class TestAIFPLExpressions:
         """Test multiline expression maintains state."""
         lexer1 = AIFPLLexer()
         state1 = lexer1.lex(None, '(let ((x 5)')
-        
+
         lexer2 = AIFPLLexer()
         state2 = lexer2.lex(state1, '      (y 10))')
-        
+
         lexer3 = AIFPLLexer()
         state3 = lexer3.lex(state2, '  (+ x y))')
-        
+
         # Should parse without errors
         tokens3 = list(lexer3._tokens)
         assert len(tokens3) > 0

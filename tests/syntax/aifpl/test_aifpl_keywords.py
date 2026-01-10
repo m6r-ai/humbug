@@ -80,7 +80,7 @@ class TestAIFPLKeywords:
             ('and', 'AND', 'And', 'AnD'),
             ('or', 'OR', 'Or', 'oR'),
         ]
-        
+
         for variations in test_cases:
             for keyword in variations:
                 lexer = AIFPLLexer()
@@ -195,7 +195,7 @@ class TestAIFPLKeywords:
             '(and #t #t)',
             '(or #f #t)',
         ]
-        
+
         for expr in test_cases:
             lexer = AIFPLLexer()
             lexer.lex(None, expr)
@@ -254,7 +254,7 @@ class TestAIFPLKeywords:
 
         tokens = list(lexer._tokens)
         keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
-        
+
         # Should have: let, lambda, if, and, or, quote
         assert len(keyword_tokens) == 6
         keyword_values = [t.value for t in keyword_tokens]

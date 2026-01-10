@@ -121,7 +121,7 @@ class TestAIFPLDelimiters:
         tokens = list(lexer._tokens)
         lparen = [t for t in tokens if t.type == TokenType.LPAREN][0]
         rparen = [t for t in tokens if t.type == TokenType.RPAREN][0]
-        
+
         assert lparen.start == 0
         assert rparen.start == 6
 
