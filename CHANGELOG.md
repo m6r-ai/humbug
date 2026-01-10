@@ -29,6 +29,7 @@ Internal structure changes:
 - Added thorough pytest tests for the C++ syntax highlighter.
 - Added pytest tests for the JavaScript and TypeScript syntax highlighters.
 - Increased test coverage for the Lua syntax highlighter to 100%
+- Added pytest tests for the AIFPL syntax highlighter.
 
 ## v37 (2026-01-06)
 
