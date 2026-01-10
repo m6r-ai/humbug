@@ -22,11 +22,12 @@ Bug fixes:
 - Resolved a problem with deleting message sections when a queued user message was submitted.
 - Fixed some lexing problems in the JavaScript and TypeScript syntax highlighters.
 - Fixed AIFPL so '+' can be used for positive numbers.
+- Fixed a syntax highlighting problem with detecting element tokens in the C and C++ syntax highlighters.
 
 Internal structure changes:
 
 - Added pytest tests for the HTML syntax highlighter.
-- Added thorough pytest tests for the C++ syntax highlighter.
+- Added pytest tests for the C and C++ syntax highlighters.
 - Added pytest tests for the JavaScript and TypeScript syntax highlighters.
 - Increased test coverage for the Lua syntax highlighter to 100%
 - Added pytest tests for the AIFPL syntax highlighter.
