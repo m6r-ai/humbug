@@ -731,14 +731,16 @@ class MarkdownASTBuilder:
                 if context.container_type == 'ordered_list':
                     # Same type, reuse it
                     return cast(MarkdownASTOrderedListNode, context.node)
-                else:
-                    # Different type - we need to close it and create new
-                    # Pop the wrong-type list from the container stack
-                    while self._container_stack and self._container_stack[-1] is not context:
-                        self._container_stack.pop()
-                    if self._container_stack and self._container_stack[-1] is context:
-                        self._container_stack.pop()
-                    break
+
+                # Different type - we need to close it and create new
+                # Pop the wrong-type list from the container stack
+                while self._container_stack and self._container_stack[-1] is not context:
+                    self._container_stack.pop()
+
+                if self._container_stack and self._container_stack[-1] is context:
+                    self._container_stack.pop()
+
+                break
 
         # No suitable list found, create a new one
         # The parent is the current container after adjustment
@@ -845,14 +847,16 @@ class MarkdownASTBuilder:
                 if context.container_type == 'unordered_list':
                     # Same type, reuse it
                     return cast(MarkdownASTUnorderedListNode, context.node)
-                else:
-                    # Different type - we need to close it and create new
-                    # Pop the wrong-type list from the container stack
-                    while self._container_stack and self._container_stack[-1] is not context:
-                        self._container_stack.pop()
-                    if self._container_stack and self._container_stack[-1] is context:
-                        self._container_stack.pop()
-                    break
+
+                # Different type - we need to close it and create new
+                # Pop the wrong-type list from the container stack
+                while self._container_stack and self._container_stack[-1] is not context:
+                    self._container_stack.pop()
+
+                if self._container_stack and self._container_stack[-1] is context:
+                    self._container_stack.pop()
+
+                break
 
         # No suitable list found, create a new one
         # The parent is the current container after adjustment
@@ -1325,7 +1329,9 @@ class MarkdownASTBuilder:
 
         # Case 2: Continue a list item paragraph
         # Check if we're in a list item container
-        if not self._container_stack or self._last_processed_line_type not in ('unordered_list_item', 'ordered_list_item', 'blank', 'text'):
+        if not self._container_stack or self._last_processed_line_type not in (
+            'unordered_list_item', 'ordered_list_item', 'blank', 'text'
+        ):
             return False
 
         # Find the current list item container
