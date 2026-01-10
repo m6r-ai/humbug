@@ -352,7 +352,7 @@ class TestAIFPLEdgeCases:
 
     def test_special_number_forms(self):
         """Test special number edge cases."""
-        test_cases = ['+0', '-0', '1e+0', '1e-0']
+        test_cases = ['+0', '-0', '+.5', '-.5', '1e+0', '1e-0']
         for num in test_cases:
             lexer = AIFPLLexer()
             lexer.lex(None, num)

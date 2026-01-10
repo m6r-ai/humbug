@@ -200,10 +200,17 @@ class AIFPLLexer(Lexer):
         """
         Read an operator as identifier or start of number.
         """
-        if (self._position + 1 < self._input_len and
-            self._is_digit(self._input[self._position + 1])):
-            self._read_number()
-            return
+        # Check if +/- is followed by a digit or by a dot and digit (like +.5)
+        next_pos = self._position + 1
+        if next_pos < self._input_len:
+            next_char = self._input[next_pos]
+            if self._is_digit(next_char):
+                self._read_number()
+                return
+
+            if next_char == '.' and next_pos + 1 < self._input_len and self._is_digit(self._input[next_pos + 1]):
+                self._read_number()
+                return
 
         self._read_identifier()
 
