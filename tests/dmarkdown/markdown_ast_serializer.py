@@ -306,6 +306,20 @@ class MarkdownASTSerializer(MarkdownASTVisitor):
         self._add_line_info(result, node)
         return result
 
+    def visit_MarkdownASTBlockquoteNode(self, node: MarkdownASTBlockquoteNode) -> Dict[str, Any]:
+        """Serialize a blockquote node."""
+        result = {
+            "type": "blockquote",
+            "children": []
+        }
+        self._add_line_info(result, node)
+
+        # Visit children
+        children = super().generic_visit(node)
+        result["children"] = children
+
+        return result
+
 
 def serialize_ast(node: MarkdownASTNode, include_line_numbers: bool = False) -> Dict[str, Any]:
     """
@@ -348,18 +362,3 @@ def load_ast_from_json(file_path: str) -> Dict[str, Any]:
     """
     with open(file_path, 'r', encoding='utf-8') as f:
         return json.load(f)
-
-
-    def visit_MarkdownASTBlockquoteNode(self, node) -> Dict[str, Any]:
-        """Serialize a blockquote node."""
-        result = {
-            "type": "blockquote",
-            "children": []
-        }
-        self._add_line_info(result, node)
-
-        # Visit children
-        children = super().generic_visit(node)
-        result["children"] = children
-
-        return result

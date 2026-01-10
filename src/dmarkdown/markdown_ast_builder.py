@@ -65,23 +65,6 @@ class TableBufferState:
                 len(self.body_rows) > 0)
 
 
-class ListState:
-    """Tracks the state of a list and its items during parsing."""
-
-    def __init__(self, list_node: MarkdownASTOrderedListNode | MarkdownASTUnorderedListNode, indent: int) -> None:
-        """
-        Initialize a list state tracker.
-
-        Args:
-            list_node: The list node (MarkdownASTOrderedListNode or MarkdownASTUnorderedListNode)
-            indent: The indentation level of the list marker
-        """
-        self.list_node = list_node
-        self.indent = indent
-        self.marker_length = 0
-        self.last_item: MarkdownASTListItemNode | None = None
-        self.contains_blank_line = False
-
 
 class ContainerContext:
     """
@@ -97,7 +80,9 @@ class ContainerContext:
         indent_level: int,
         container_type: str,
         can_contain_blocks: bool = True,
-        lazy_continuation: bool = False
+        lazy_continuation: bool = False,
+        marker_length: int = 0,
+        is_tight_list: bool = True
     ) -> None:
         """
         Initialize a container context.
@@ -108,12 +93,16 @@ class ContainerContext:
             container_type: Type identifier ('document', 'list_item', 'blockquote', etc.)
             can_contain_blocks: Whether this container can hold block-level elements
             lazy_continuation: Whether lazy continuation is allowed (for lists/blockquotes)
+            marker_length: Length of list marker (for list items)
+            is_tight_list: Whether the list is tight (for list containers)
         """
         self.node = node
         self.indent_level = indent_level
         self.container_type = container_type
         self.can_contain_blocks = can_contain_blocks
         self.lazy_continuation = lazy_continuation
+        self.marker_length = marker_length
+        self.is_tight_list = is_tight_list
 
 
 class MarkdownASTBuilder:
@@ -152,9 +141,6 @@ class MarkdownASTBuilder:
         # Container stack for tracking nesting context
         # Initialize with document as root container
         self._container_stack: List[ContainerContext] = []
-
-        # List state tracking
-        self._list_stack: List[ListState] = []
 
         # Text continuation tracking
         self._last_paragraph: MarkdownASTParagraphNode | None = None
@@ -250,16 +236,19 @@ class MarkdownASTBuilder:
             line_type: The type of line being processed
         """
         # Don't adjust for certain line types that have special handling
-        # List items are handled by _close_lists_at_indent() in their parse methods
+        # Skip adjustment when recursively parsing blockquote content
+        if self._in_recursive_parse:
+            return
+
+        # Code blocks have special handling
         if line_type in (
-            'code_block_start', 'code_block_content', 'code_block_end', 'blockquote', 'ordered_list_item', 'unordered_list_item'
+            'code_block_start', 'code_block_content', 'code_block_end'
         ):
             return
 
         # Headings always close all containers except document
         if line_type == 'heading':
             self._reset_container_stack()
-            self._reset_list_state()
             return
 
         # Close containers that require more indentation than we have
@@ -285,10 +274,6 @@ class MarkdownASTBuilder:
 
             # Close this container
             self._container_stack.pop()
-
-            # Also pop from list stack if it's a list item
-            if current_context.container_type == 'list_item' and self._list_stack:
-                self._list_stack.pop()
 
     def _parse_code_line(
         self,
@@ -727,61 +712,6 @@ class MarkdownASTBuilder:
         self._current_container().add_child(paragraph)
         return paragraph
 
-    def _current_list_state(self) -> ListState | None:
-        """
-        Return the current list state or None if not in a list.
-
-        Returns:
-            The current list state or None
-        """
-        return self._list_stack[-1] if self._list_stack else None
-
-    def _close_lists_at_indent(self, indent: int, consider_marker: bool) -> bool:
-        """
-        Close all lists deeper than the given indent level.
-
-        Args:
-            indent: The indentation level
-            consider_marker: Whether to consider the marker length for closing lists
-
-        Returns:
-            True if lists were closed, False otherwise
-        """
-        if not self._list_stack:
-            return False
-
-        closed_lists = False
-
-        while self._list_stack:
-            marker_adjust = self._list_stack[-1].marker_length if consider_marker else 0
-            if (self._list_stack[-1].indent + marker_adjust) <= indent:
-                break
-
-            self._list_stack.pop()
-
-            # Also pop the corresponding list item container from the container stack
-            if self._container_stack and self._container_stack[-1].container_type == 'list_item':
-                self._container_stack.pop()
-
-            closed_lists = True
-
-        return closed_lists
-
-    def _find_parent_for_list(self) -> MarkdownASTNode:
-        """
-        Find the appropriate parent for a new list.
-
-        Returns:
-            The parent node
-        """
-        if not self._list_stack:
-            return self._current_container()
-
-        # Find the last list item of the deepest list to be the parent
-        current_list = self._list_stack[-1]
-        assert current_list.last_item is not None, "Current list state should have a last item"
-        return current_list.last_item
-
     def _find_or_create_ordered_list(self, indent: int, start_number: int) -> MarkdownASTOrderedListNode:
         """
         Find or create an ordered list at the given indent level with specified start number.
@@ -793,25 +723,43 @@ class MarkdownASTBuilder:
         Returns:
             The created ordered list node
         """
-        # Check if we already have an ordered list at this level
-        if self._list_stack and self._list_stack[-1].indent == indent:
-            list_state = self._list_stack[-1]
-            if isinstance(list_state.list_node, MarkdownASTOrderedListNode):
-                return list_state.list_node
+        # Search the container stack for an ordered list at this indent level
+        for context in reversed(self._container_stack):
+            if (context.container_type in ('unordered_list', 'ordered_list') and
+                context.indent_level == indent):
+                # Found a list at this level
+                if context.container_type == 'ordered_list':
+                    # Same type, reuse it
+                    return cast(MarkdownASTOrderedListNode, context.node)
+                else:
+                    # Different type - we need to close it and create new
+                    # Pop the wrong-type list from the container stack
+                    while self._container_stack and self._container_stack[-1] is not context:
+                        self._container_stack.pop()
+                    if self._container_stack and self._container_stack[-1] is context:
+                        self._container_stack.pop()
+                    break
 
-            # Different list type, close it
-            self._list_stack.pop()
-
-        # Find parent
-        parent = self._find_parent_for_list()
+        # No suitable list found, create a new one
+        # The parent is the current container after adjustment
+        parent = self._current_container()
 
         # Create new ordered list
         new_list = MarkdownASTOrderedListNode(indent, start_number)
         parent.add_child(new_list)
 
-        # Create and add list state
-        list_state = ListState(new_list, indent)
-        self._list_stack.append(list_state)
+        # Push list as a container
+        # List containers don't require additional indentation themselves
+        # (list items will have their own indentation requirements)
+        list_context = ContainerContext(
+            node=new_list,
+            indent_level=indent,
+            container_type='ordered_list',
+            can_contain_blocks=True,
+            lazy_continuation=False,
+            is_tight_list=True  # Start as tight, will be set to False if we see blank lines
+        )
+        self._container_stack.append(list_context)
 
         return new_list
 
@@ -828,23 +776,27 @@ class MarkdownASTBuilder:
         # Extract the starting number
         start_number = int(number)
 
-        # Close deeper lists
-        self._close_lists_at_indent(indent, False)
+        # Calculate marker length
+        marker_length = len(number) + 2  # +2 for the "." and space after number
 
-        # If we're in a list, and we've seen a blank line, then mark the list as loose
-        if self._list_stack and self._blank_line_count > 0:
-            self._list_stack[-1].contains_blank_line = True
-            self._list_stack[-1].list_node.tight = False
-
+        # Find or create the list at this indent level
         list_node = self._find_or_create_ordered_list(indent, start_number)
-        current_list = cast(ListState, self._current_list_state())
+
+        # Find the list's container context to update tight/loose status
+        list_context = None
+        for context in reversed(self._container_stack):
+            if context.node is list_node:
+                list_context = context
+                break
+
+        # If we've seen a blank line, mark the list as loose
+        if list_context and self._blank_line_count > 0:
+            list_context.is_tight_list = False
+            list_node.tight = False
 
         # Create the list item
         item = MarkdownASTListItemNode()
         list_node.add_child(item)
-
-        # Calculate the actual content indentation for this specific marker
-        current_list.marker_length = len(number) + 2  # +2 for the "." and space after number
 
         # Create a paragraph for the content
         paragraph = MarkdownASTParagraphNode()
@@ -860,18 +812,18 @@ class MarkdownASTBuilder:
         item.line_end = line_num
         self._register_node_line(item, line_num)
 
-        # Update tracking variables
-        current_list.last_item = item
+        # Update tracking
         self._last_processed_line_type = 'ordered_list_item'
 
         # Push list item as a container so subsequent indented blocks go inside it
-        content_indent = indent + current_list.marker_length
+        content_indent = indent + marker_length
         context = ContainerContext(
             node=item,
             indent_level=content_indent,
             container_type='list_item',
             can_contain_blocks=True,
-            lazy_continuation=True  # List items allow lazy continuation
+            lazy_continuation=True,  # List items allow lazy continuation
+            marker_length=marker_length
         )
         self._container_stack.append(context)
 
@@ -885,25 +837,43 @@ class MarkdownASTBuilder:
         Returns:
             The created unordered list node
         """
-        # Check if we already have an unordered list at this level
-        if self._list_stack and self._list_stack[-1].indent == indent:
-            list_state = self._list_stack[-1]
-            if isinstance(list_state.list_node, MarkdownASTUnorderedListNode):
-                return list_state.list_node
+        # Search the container stack for an unordered list at this indent level
+        for context in reversed(self._container_stack):
+            if (context.container_type in ('unordered_list', 'ordered_list') and
+                context.indent_level == indent):
+                # Found a list at this level
+                if context.container_type == 'unordered_list':
+                    # Same type, reuse it
+                    return cast(MarkdownASTUnorderedListNode, context.node)
+                else:
+                    # Different type - we need to close it and create new
+                    # Pop the wrong-type list from the container stack
+                    while self._container_stack and self._container_stack[-1] is not context:
+                        self._container_stack.pop()
+                    if self._container_stack and self._container_stack[-1] is context:
+                        self._container_stack.pop()
+                    break
 
-            # Different list type, close it
-            self._list_stack.pop()
-
-        # Find parent
-        parent = self._find_parent_for_list()
+        # No suitable list found, create a new one
+        # The parent is the current container after adjustment
+        parent = self._current_container()
 
         # Create new unordered list
         new_list = MarkdownASTUnorderedListNode(indent)
         parent.add_child(new_list)
 
-        # Create and add list state
-        list_state = ListState(new_list, indent)
-        self._list_stack.append(list_state)
+        # Push list as a container
+        # List containers don't require additional indentation themselves
+        # (list items will have their own indentation requirements)
+        list_context = ContainerContext(
+            node=new_list,
+            indent_level=indent,
+            container_type='unordered_list',
+            can_contain_blocks=True,
+            lazy_continuation=False,
+            is_tight_list=True  # Start as tight, will be set to False if we see blank lines
+        )
+        self._container_stack.append(list_context)
 
         return new_list
 
@@ -917,23 +887,27 @@ class MarkdownASTBuilder:
             content: The item content
             line_num: The line number
         """
-        # Close deeper lists
-        self._close_lists_at_indent(indent, False)
+        # Calculate marker length
+        marker_length = len(marker) + 1  # +1 for the space after marker
 
-        # If we're in a list, and we've seen a blank line, then mark the list as loose
-        if self._list_stack and self._blank_line_count > 0:
-            self._list_stack[-1].contains_blank_line = True
-            self._list_stack[-1].list_node.tight = False
-
+        # Find or create the list at this indent level
         list_node = self._find_or_create_unordered_list(indent)
-        current_list = cast(ListState, self._current_list_state())
+
+        # Find the list's container context to update tight/loose status
+        list_context = None
+        for context in reversed(self._container_stack):
+            if context.node is list_node:
+                list_context = context
+                break
+
+        # If we've seen a blank line, mark the list as loose
+        if list_context and self._blank_line_count > 0:
+            list_context.is_tight_list = False
+            list_node.tight = False
 
         # Create the list item
         item = MarkdownASTListItemNode()
         list_node.add_child(item)
-
-        # Calculate the actual content indentation for this specific marker
-        current_list.marker_length = len(marker) + 1  # +1 for the space after marker
 
         # Create a paragraph for the content
         paragraph = MarkdownASTParagraphNode()
@@ -949,18 +923,18 @@ class MarkdownASTBuilder:
         item.line_end = line_num
         self._register_node_line(item, line_num)
 
-        # Update tracking variables
-        current_list.last_item = item
+        # Update tracking
         self._last_processed_line_type = 'unordered_list_item'
 
         # Push list item as a container so subsequent indented blocks go inside it
-        content_indent = indent + current_list.marker_length
+        content_indent = indent + marker_length
         context = ContainerContext(
             node=item,
             indent_level=content_indent,
             container_type='list_item',
             can_contain_blocks=True,
-            lazy_continuation=True  # List items allow lazy continuation
+            lazy_continuation=True,  # List items allow lazy continuation
+            marker_length=marker_length
         )
         self._container_stack.append(context)
 
@@ -1333,6 +1307,10 @@ class MarkdownASTBuilder:
             True if handled as a continuation, False otherwise
         """
         # Case 1: Continue a paragraph
+        # Don't do continuation when recursively parsing blockquote content
+        if self._in_recursive_parse:
+            return False
+
         if self._last_paragraph and self._last_processed_line_type == 'text':
             # Add a space between the continued text as long as we didn't just have a line break
             if not isinstance(self._last_paragraph.children[-1], MarkdownASTLineBreakNode):
@@ -1346,92 +1324,87 @@ class MarkdownASTBuilder:
             return True
 
         # Case 2: Continue a list item paragraph
-        if self._list_stack and self._last_processed_line_type in ('unordered_list_item', 'ordered_list_item', 'blank', 'text'):
-            # Get the indentation of the current line
-            current_indent = len(text) - len(text.lstrip())
+        # Check if we're in a list item container
+        if not self._container_stack or self._last_processed_line_type not in ('unordered_list_item', 'ordered_list_item', 'blank', 'text'):
+            return False
 
-            # Handle indented text - may need to close some lists
-            if current_indent > 0:
-                # Close lists that are deeper than current indent
-                if self._close_lists_at_indent(current_indent, True):
-                    # We closed one or more lists, we should treat it as if a blank line was encountered
-                    # This will ensure proper formatting when returning to an outer list
-                    if self._list_stack:
-                        self._last_processed_line_type = 'blank'
-                        self._blank_line_count = 1
+        # Find the current list item container
+        list_item_context = None
+        for context in reversed(self._container_stack):
+            if context.container_type == 'list_item':
+                list_item_context = context
+                break
 
-                    # Reset the paragraph continuity as well
-                    self._last_paragraph = None
+        if not list_item_context:
+            return False
 
-            # For zero-indented text:
-            # - If we're right after a list item (no blank), it's lazy continuation (allowed)
-            # - If we had a blank line, it should have been caught earlier and closed the list
-            # So if we get here with zero indent, we allow lazy continuation
+        # Check if text is unindented (at column 0)
+        current_indent = len(text) - len(text.lstrip())
 
-            # Check if we still have a list after potential closing
-            list_state = self._current_list_state()
-            if not list_state or not list_state.last_item:
-                # No list to continue
-                return False
+        # If we have unindented text after a blank line, don't continue the list
+        # This closes the list and allows the text to become a standalone paragraph
+        if current_indent == 0 and self._blank_line_count > 0:
+            return False
 
-            # If we're continuing a list item and we've seen a blank line, mark the list as loose
-            if self._list_stack and self._blank_line_count > 0:
-                self._list_stack[-1].contains_blank_line = True
-                self._list_stack[-1].list_node.tight = False
+        # Find the list container to update tight/loose status
+        list_context = None
+        for context in reversed(self._container_stack):
+            if context.container_type in ('unordered_list', 'ordered_list'):
+                list_context = context
+                break
 
-            formatted_text = text.lstrip()
+        # If we've seen a blank line, mark the list as loose
+        if list_context and self._blank_line_count > 0:
+            list_context.is_tight_list = False
+            if isinstance(list_context.node, (MarkdownASTUnorderedListNode, MarkdownASTOrderedListNode)):
+                list_context.node.tight = False
 
-            last_item = list_state.last_item
+        formatted_text = text.lstrip()
+        last_item = cast(MarkdownASTListItemNode, list_item_context.node)
 
-            # Determine if we need a new paragraph
-            needs_new_paragraph = False
+        # Determine if we need a new paragraph
+        needs_new_paragraph = False
 
-            # Need new paragraph if we had a blank line before this
-            if self._blank_line_count > 0:
-                needs_new_paragraph = True
+        # Need new paragraph if we had a blank line before this
+        if self._blank_line_count > 0:
+            needs_new_paragraph = True
 
-            # Need new paragraph if last child is not a paragraph
-            if last_item.children and not isinstance(last_item.children[-1], MarkdownASTParagraphNode):
-                needs_new_paragraph = True
+        # Need new paragraph if last child is not a paragraph
+        if last_item.children and not isinstance(last_item.children[-1], MarkdownASTParagraphNode):
+            needs_new_paragraph = True
 
-            # Need new paragraph if there are no children yet
-            if not last_item.children:
-                needs_new_paragraph = True
+        # Need new paragraph if there are no children yet
+        if not last_item.children:
+            needs_new_paragraph = True
 
-            if needs_new_paragraph:
-                # Create a new paragraph in this list item
-                paragraph = MarkdownASTParagraphNode()
-                for node in self._parse_inline_formatting(formatted_text):
-                    paragraph.add_child(node)
+        if needs_new_paragraph:
+            # Create a new paragraph in this list item
+            paragraph = MarkdownASTParagraphNode()
+            for node in self._parse_inline_formatting(formatted_text):
+                paragraph.add_child(node)
 
-                paragraph.line_start = line_num
-                paragraph.line_end = line_num
-                last_item.add_child(paragraph)
-                self._register_node_line(paragraph, line_num)
+            paragraph.line_start = line_num
+            paragraph.line_end = line_num
+            last_item.add_child(paragraph)
+            self._register_node_line(paragraph, line_num)
 
-            else:
-                # Continue the existing paragraph
-                paragraph = cast(MarkdownASTParagraphNode, last_item.children[-1])
+        else:
+            # Continue the existing paragraph
+            paragraph = cast(MarkdownASTParagraphNode, last_item.children[-1])
 
-                # If we weren't just preceded by a line break then add a space
-                if paragraph.children and not isinstance(paragraph.children[-1], MarkdownASTLineBreakNode):
-                    paragraph.add_child(MarkdownASTTextNode(" "))
+            # If we weren't just preceded by a line break then add a space
+            if paragraph.children and not isinstance(paragraph.children[-1], MarkdownASTLineBreakNode):
+                paragraph.add_child(MarkdownASTTextNode(" "))
 
-                for node in self._parse_inline_formatting(formatted_text):
-                    paragraph.add_child(node)
+            for node in self._parse_inline_formatting(formatted_text):
+                paragraph.add_child(node)
 
-                paragraph.line_end = line_num
-                self._register_node_line(paragraph, line_num)
+            paragraph.line_end = line_num
+            self._register_node_line(paragraph, line_num)
 
-            last_item.line_end = line_num
-            self._register_node_line(last_item, line_num)
-            return True
-
-        return False
-
-    def _reset_list_state(self) -> None:
-        """Reset all list tracking state."""
-        self._list_stack = []
+        last_item.line_end = line_num
+        self._register_node_line(last_item, line_num)
+        return True
 
     def _parse_line(self, line: str, line_num: int) -> None:
         """
@@ -1494,13 +1467,22 @@ class MarkdownASTBuilder:
             return
 
         # Check if we should exit blockquote (non-blockquote line)
-        # But only if we're not processing content that was inside a blockquote marker
+        # Exit blockquotes when we encounter a non-blockquote line (except blanks)
+        # But not when we're recursively parsing blockquote content
+        # Blank lines are allowed within blockquotes (lazy continuation)
+        # But any other non-blockquote line ends the blockquote
         if (self._is_in_blockquote() and
-                line_type not in ('blank',) and
-                self._last_processed_line_type != 'blockquote' and
+                line_type not in ('blank', 'blockquote') and
                 not self._in_recursive_parse):
-            # Exit blockquote when we encounter non-blockquote, non-blank line after non-blockquote
-            self._exit_blockquote(line_num)
+            # Exit all blockquotes when we see a non-blockquote line
+            # This handles the case where blockquote content ends and
+            # we return to the containing context (e.g., list item)
+            while self._is_in_blockquote():
+                self._exit_blockquote(line_num - 1)
+                # Continue to exit nested blockquotes if any
+                # (though typically there's only one level at this point)
+                if not self._is_in_blockquote():
+                    break
 
         # Handle table ends when a non-table line is encountered
         if self._table_buffer.is_in_potential_table and line_type not in ('table_row', 'table_separator'):
@@ -1597,10 +1579,15 @@ class MarkdownASTBuilder:
             self._blank_line_count = 0
             return
 
+        # If we have unindented text after a blank line, close all list containers
+        # This handles list interruption
+        if indent == 0 and self._blank_line_count > 0:
+            while self._container_stack and self._container_stack[-1].container_type in ('unordered_list', 'ordered_list', 'list_item'):
+                self._container_stack.pop()
+
         # Regular paragraph
         paragraph = self._parse_text(content, line_num)
         self._last_paragraph = paragraph
-        self._reset_list_state()
         self._last_processed_line_type = line_type
         self._blank_line_count = 0
 
@@ -1617,7 +1604,6 @@ class MarkdownASTBuilder:
         self._document = MarkdownASTDocumentNode(self._source_path)
         self._line_to_node_map = {}
         self._initialize_container_stack()
-        self._reset_list_state()
         self._last_paragraph = None
         self._last_processed_line_type = ""
         self._blank_line_count = 0
