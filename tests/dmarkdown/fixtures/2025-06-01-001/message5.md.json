@@ -121,22 +121,22 @@
                   "content": "and a fourth one."
                 }
               ]
-            },
-            {
-              "type": "code_block",
-              "language": "python",
-              "content": "    print(f\"\"\"```\n    print(\"hello\")\n```\n\"\"\")\n    x = x + 2"
-            },
-            {
-              "type": "paragraph",
-              "children": [
-                {
-                  "type": "text",
-                  "content": "More text please!"
-                }
-              ]
             }
           ]
+        }
+      ]
+    },
+    {
+      "type": "code_block",
+      "language": "python",
+      "content": "    print(f\"\"\"```\n    print(\"hello\")\n```\n\"\"\")\n    x = x + 2"
+    },
+    {
+      "type": "paragraph",
+      "children": [
+        {
+          "type": "text",
+          "content": "More text please!"
         }
       ]
     }

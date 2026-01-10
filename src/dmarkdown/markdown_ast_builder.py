@@ -1551,12 +1551,34 @@ class MarkdownASTBuilder:
             self._code_block_content.append(text_content)
             if self._embedded_language != ProgrammingLanguage.UNKNOWN:
                 self._parse_code_line(text_content)
+
             self._last_processed_line_type = 'code_block_content'
             self._blank_line_count = 0
             return
 
-        self._adjust_containers_for_indent(indent, line_type)
+        # Use the indent from line_data if available (which accounts for blockquote stripping),
+        # otherwise fall back to the indent calculated from the original line
+        effective_indent = line_data.get('indent', indent)
+        self._adjust_containers_for_indent(effective_indent, line_type)
 
+        # After a blank line, close list containers for block-level elements that are at
+        # the same or lesser indentation as the list. This prevents block elements from
+        # being added as children of lists when they should be siblings.
+        # This applies to non-list-item block elements (text, code blocks, headings, etc.)
+        if (self._blank_line_count > 0 and line_type not in ('blank', 'unordered_list_item', 'ordered_list_item')):
+            # Close list containers at or above the element's indentation
+            while self._container_stack:
+                top = self._container_stack[-1]
+                if top.container_type not in ('unordered_list', 'ordered_list'):
+                    break
+
+                # Close lists at the same or greater indent than the element
+                if top.indent_level < effective_indent:
+                    break
+
+                self._container_stack.pop()
+
+        # Handle table ends when a non-table line is encountered
         # Handle table ends when a non-table line is encountered
         if self._table_buffer.is_in_potential_table and line_type not in ('table_row', 'table_separator'):
             # Check if we have a complete table to create
@@ -1651,13 +1673,8 @@ class MarkdownASTBuilder:
             self._blank_line_count = 0
             return
 
-        # If we have unindented text after a blank line, close all list containers
-        # This handles list interruption
-        if content_indent == 0 and self._blank_line_count > 0:
-            while self._container_stack and self._container_stack[-1].container_type in (
-                'unordered_list', 'ordered_list', 'list_item'
-            ):
-                self._container_stack.pop()
+        # Note: List closing logic for block elements after blank lines is now handled
+        # earlier in _parse_line, right after _adjust_containers_for_indent.
 
         # Regular paragraph
         paragraph = self._parse_text(text_content, line_num)

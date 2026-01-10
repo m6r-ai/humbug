@@ -9,7 +9,7 @@ from dmarkdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownASTTextNode, MarkdownASTHeadingNode, MarkdownASTInlineCodeNode,
     MarkdownASTCodeBlockNode, MarkdownASTNode, MarkdownASTTableNode, MarkdownASTTableHeaderNode,
     MarkdownASTTableBodyNode, MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
-    MarkdownASTLinkNode, MarkdownASTImageNode
+    MarkdownASTLinkNode, MarkdownASTImageNode, MarkdownASTBlockquoteNode
 )
 
 
@@ -284,7 +284,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         print(f"{self._indent()}HorizontalRule{line_range}")
 
 
-    def visit_MarkdownASTBlockquoteNode(self, node) -> List[Any]:  # pylint: disable=invalid-name
+    def visit_MarkdownASTBlockquoteNode(self, node: MarkdownASTBlockquoteNode) -> List[Any]:  # pylint: disable=invalid-name
         """
         Visit a blockquote node and print its structure.
 
