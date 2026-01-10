@@ -189,18 +189,6 @@ class MarkdownASTBuilder:
 
         return self._container_stack[-1].node
 
-    def _current_indent(self) -> int:
-        """
-        Get the required indentation level for the current container.
-
-        Returns:
-            The indentation level required for content in the current container
-        """
-        if not self._container_stack:
-            return 0
-
-        return self._container_stack[-1].indent_level
-
     def _initialize_container_stack(self) -> None:
         """Initialize the container stack with the document as root."""
         self._container_stack = [
@@ -311,15 +299,12 @@ class MarkdownASTBuilder:
         # Return whether we're in a continuation
         return new_state is not None and new_state.parsing_continuation
 
-    def identify_line_type(self, line: str) -> Tuple[str, List[int], Dict[str, Any]]:
+    def _identify_line_type(self, line: str) -> Tuple[str, List[int], Dict[str, Any]]:
         """
         Identify the type of a markdown line (stateless).
 
         For lines with blockquote markers (>), this strips all markers and returns
         the innermost content type along with the blockquote nesting information.
-
-        This method does NOT consider parser state (like whether we're in a code block).
-        That logic is handled in _parse_line.
 
         Args:
             line: The line to identify
@@ -1479,7 +1464,7 @@ class MarkdownASTBuilder:
         # Store current line number for blockquote tracking
         self._current_line_num = line_num
 
-        line_type, blockquote_indents, line_data = self.identify_line_type(line)
+        line_type, blockquote_indents, line_data = self._identify_line_type(line)
 
         # Adjust blockquote contexts based on > markers in this line
         if blockquote_indents:
