@@ -209,7 +209,7 @@ class AIFPLParser:
             'map': 'map call',
             'filter': 'filter call',
             'fold': 'fold call',
-            'define': 'define',
+            'alist': 'alist construction',
             'cond': 'cond expression',
             'and': 'and expression',
             'or': 'or expression',
