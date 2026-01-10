@@ -3,7 +3,7 @@ import json
 import os
 import platform
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from ai import AIConversationSettings
 from ai_tool import (
@@ -763,7 +763,7 @@ class SystemAITool(AITool):
             available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
 
             # Categorize models by backend
-            models_by_backend = {}
+            models_by_backend: Dict[str, List[str]] = {}
             for model_name in available_models:
                 provider = AIConversationSettings.get_provider(model_name)
                 if provider not in models_by_backend:

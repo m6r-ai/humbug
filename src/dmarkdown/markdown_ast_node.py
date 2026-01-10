@@ -240,4 +240,3 @@ class MarkdownASTHorizontalRuleNode(MarkdownASTNode):
 
 class MarkdownASTBlockquoteNode(MarkdownASTNode):
     """Node representing a blockquote (>)."""
-    pass

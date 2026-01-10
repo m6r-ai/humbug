@@ -8,8 +8,8 @@ from aifpl.aifpl_error import AIFPLError, AIFPLTokenError, AIFPLParseError, AIFP
 
 # Value types
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLAlist, AIFPLRecursivePlaceholder, AIFPLFunction,
-    AIFPLBuiltinFunction
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLAlist,
+    AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction
 )
 
 # Lower-level components (for advanced usage)

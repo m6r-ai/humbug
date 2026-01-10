@@ -838,12 +838,16 @@ class AIFPLEvaluator:
         func_value = self._evaluate_expression(func_expr, env, depth)
         if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
             result = self._call_lambda_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
-            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, "Tail calls should not propagate out of higher-order function calls"
+            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, (
+                "Tail calls should not propagate out of higher-order function calls"
+            )
             return result
 
         if func_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
             result = self._call_builtin_function(cast(AIFPLBuiltinFunction, func_value), arg_values, env, depth)
-            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, "Tail calls should not propagate out of higher-order function calls"
+            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, (
+                "Tail calls should not propagate out of higher-order function calls"
+            )
             return result
 
         raise AIFPLEvalError(
@@ -1157,7 +1161,9 @@ class AIFPLEvaluator:
                     accumulator = self._call_lambda_function(cast(AIFPLFunction, func_value), [accumulator, item], env, depth + 1)
 
                 elif func_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
-                    accumulator = self._call_builtin_function(cast(AIFPLBuiltinFunction, func_value), [accumulator, item], env, depth + 1)
+                    accumulator = self._call_builtin_function(
+                        cast(AIFPLBuiltinFunction, func_value), [accumulator, item], env, depth + 1
+                    )
 
                 else:
                     raise AIFPLEvalError(

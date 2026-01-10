@@ -746,8 +746,7 @@ class MarkdownASTBuilder:
         """
         # Search the container stack for an ordered list at this indent level
         for context in reversed(self._container_stack):
-            if (context.container_type in ('unordered_list', 'ordered_list') and
-                context.indent_level == indent):
+            if (context.container_type in ('unordered_list', 'ordered_list') and context.indent_level == indent):
                 # Found a list at this level
                 if context.container_type == 'ordered_list':
                     # Same type, reuse it
@@ -1513,6 +1512,7 @@ class MarkdownASTBuilder:
                     self._code_block_content.append(text_content)
                     if self._embedded_language != ProgrammingLanguage.UNKNOWN:
                         self._parse_code_line(text_content)
+
                     self._last_processed_line_type = 'code_block_content'
                     self._blank_line_count = 0
                     return
@@ -1600,16 +1600,14 @@ class MarkdownASTBuilder:
             return
 
         if line_type == 'unordered_list_item':
-            self._parse_unordered_list_item(
-                line_data['indent'], line_data['marker'], line_data['text'], line_num)
+            self._parse_unordered_list_item(line_data['indent'], line_data['marker'], line_data['text'], line_num)
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
             self._last_paragraph = None
             return
 
         if line_type == 'ordered_list_item':
-            self._parse_ordered_list_item(
-                line_data['indent'], line_data['number'], line_data['text'], line_num)
+            self._parse_ordered_list_item(line_data['indent'], line_data['number'], line_data['text'], line_num)
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
             self._last_paragraph = None
@@ -1623,6 +1621,7 @@ class MarkdownASTBuilder:
             self._embedded_language = ProgrammingLanguageUtils.from_name(line_data['language'])
             self._code_block_content = []
             self._code_block_start_line = line_num
+
             # Initialize nesting tracking
             self._code_block_nesting_level = 1
             self._code_block_indents = [line_data['indent']]
@@ -1665,16 +1664,12 @@ class MarkdownASTBuilder:
 
         # We have text left
         text_content = line_data['text']
-        content_indent = line_data['indent']
 
         # Try to handle as a continuation first
         if self._handle_text_continuation(text_content, line_num):
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
             return
-
-        # Note: List closing logic for block elements after blank lines is now handled
-        # earlier in _parse_line, right after _adjust_containers_for_indent.
 
         # Regular paragraph
         paragraph = self._parse_text(text_content, line_num)
