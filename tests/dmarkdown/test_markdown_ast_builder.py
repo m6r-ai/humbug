@@ -2084,3 +2084,210 @@ def test_update_preserves_line_mapping(ast_builder):
     assert 0 in ast_builder._line_to_node_map  # First heading
     assert 2 in ast_builder._line_to_node_map  # Second heading
     assert 4 in ast_builder._line_to_node_map  # Paragraph
+
+
+
+def test_simple_blockquote(ast_builder):
+    """Test parsing a simple blockquote."""
+    markdown = """> This is a quote
+> It continues here"""
+    
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    
+    # Should have one paragraph with both lines
+    assert len(blockquote.children) == 2
+    assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert blockquote.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
+
+
+def test_blockquote_with_multiple_paragraphs(ast_builder):
+    """Test blockquote with multiple paragraphs separated by blank line."""
+    markdown = """> First paragraph
+>
+> Second paragraph"""
+    
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    
+    # Should have two paragraphs
+    assert len(blockquote.children) == 2
+    assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert blockquote.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
+
+
+def test_blockquote_with_list(ast_builder):
+    """Test blockquote containing a list."""
+    markdown = """> Quote with list:
+>
+> - Item 1
+> - Item 2"""
+    
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    
+    # Should have paragraph and list
+    assert len(blockquote.children) == 2
+    assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert blockquote.children[1].__class__.__name__ == "MarkdownASTUnorderedListNode"
+    
+    # List should have 2 items
+    list_node = blockquote.children[1]
+    assert len(list_node.children) == 2
+
+
+def test_nested_blockquotes(ast_builder):
+    """Test nested blockquotes."""
+    markdown = """> Outer quote
+>
+> > Nested quote
+>
+> Back to outer"""
+    
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    
+    outer_blockquote = doc.children[0]
+    assert outer_blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    
+    # Outer should have: paragraph, nested blockquote, paragraph
+    assert len(outer_blockquote.children) == 3
+    assert outer_blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert outer_blockquote.children[1].__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert outer_blockquote.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
+    
+    # Nested blockquote should have one paragraph
+    nested_blockquote = outer_blockquote.children[1]
+    assert len(nested_blockquote.children) == 1
+    assert nested_blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+
+
+def test_blockquote_interruption(ast_builder):
+    """Test that blank line interrupts blockquote."""
+    markdown = """> Quote line 1
+> Quote line 2
+
+Not in quote
+
+> New quote"""
+    
+    doc = ast_builder.build_ast(markdown)
+    
+    # Should have: blockquote, paragraph, blockquote
+    assert len(doc.children) == 3
+    assert doc.children[0].__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[2].__class__.__name__ == "MarkdownASTBlockquoteNode"
+    
+    # First blockquote should have 2 paragraphs
+    first_blockquote = doc.children[0]
+    assert len(first_blockquote.children) == 2
+
+
+def test_blockquote_with_code_block(ast_builder):
+    """Test blockquote containing a code block."""
+    markdown = """> Quote with code:
+>
+> ```python
+> print("hello")
+> ```"""
+    
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    
+    # Should have paragraph and code block
+    assert len(blockquote.children) == 2
+    assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert blockquote.children[1].__class__.__name__ == "MarkdownASTCodeBlockNode"
+
+
+def test_empty_blockquote(ast_builder):
+    """Test empty blockquote line."""
+    markdown = """>"""
+    
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    
+    # Should have no children (empty blockquote)
+    assert len(blockquote.children) == 0
+
+
+def test_blockquote_with_heading(ast_builder):
+    """Test that heading breaks out of blockquote (CommonMark behavior)."""
+    markdown = """> # Heading in quote
+> 
+> Paragraph after heading"""
+    
+    doc = ast_builder.build_ast(markdown)
+    # Heading closes the blockquote, so we get: blockquote (empty), heading, blockquote
+    assert len(doc.children) == 3
+    
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(blockquote.children) == 0  # Empty blockquote before heading
+    
+    heading = doc.children[1]
+    assert heading.__class__.__name__ == "MarkdownASTHeadingNode"
+    
+    second_blockquote = doc.children[2]
+    assert second_blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(second_blockquote.children) == 1  # Contains the paragraph
+
+def test_blockquote_with_list_and_continuation(ast_builder):
+    """Test blockquote containing a list followed by more blockquote content."""
+    markdown = """> This is a quote
+>
+> - List in quote
+> - Another item
+>
+> Another paragraph in quote"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    # Should have one blockquote at document level
+    assert len(doc.children) == 1
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Blockquote should have 3 children: paragraph, list, paragraph
+    assert len(blockquote.children) == 3
+
+    # First child: paragraph
+    assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert blockquote.children[0].children[0].content == "This is a quote"
+
+    # Second child: unordered list
+    assert blockquote.children[1].__class__.__name__ == "MarkdownASTUnorderedListNode"
+    list_node = blockquote.children[1]
+    assert len(list_node.children) == 2
+
+    # First list item should have only one child (the paragraph)
+    first_item = list_node.children[0]
+    assert len(first_item.children) == 1
+    assert first_item.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert first_item.children[0].children[0].content == "List in quote"
+
+    # Second list item should have only one child (the paragraph)
+    second_item = list_node.children[1]
+    assert len(second_item.children) == 1
+    assert second_item.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert second_item.children[0].children[0].content == "Another item"
+
+    # Third child: paragraph (back to blockquote level)
+    assert blockquote.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert blockquote.children[2].children[0].content == "Another paragraph in quote"

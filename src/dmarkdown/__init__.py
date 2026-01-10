@@ -2,6 +2,7 @@
 
 from dmarkdown.markdown_ast_builder import MarkdownASTBuilder
 from dmarkdown.markdown_ast_node import (
+    MarkdownASTBlockquoteNode,
     MarkdownASTBoldNode,
     MarkdownASTCodeBlockNode,
     MarkdownASTDocumentNode,
@@ -29,6 +30,7 @@ from dmarkdown.markdown_converter import MarkdownConverter
 
 
 __all__ = [
+    "MarkdownASTBlockquoteNode",
     "MarkdownASTBoldNode",
     "MarkdownASTBuilder",
     "MarkdownASTCodeBlockNode",

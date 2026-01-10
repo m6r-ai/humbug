@@ -282,3 +282,24 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
             line_range = f" (line {node.line_start})"
 
         print(f"{self._indent()}HorizontalRule{line_range}")
+
+
+    def visit_MarkdownASTBlockquoteNode(self, node) -> List[Any]:  # pylint: disable=invalid-name
+        """
+        Visit a blockquote node and print its structure.
+
+        Args:
+            node: The blockquote node to visit
+
+        Returns:
+            The results of visiting the children
+        """
+        line_range = ""
+        if node.line_start is not None and node.line_end is not None:
+            line_range = f" (lines {node.line_start}-{node.line_end})"
+
+        print(f"{self._indent()}Blockquote{line_range}")
+        self.indent_level += 1
+        results = super().generic_visit(node)
+        self.indent_level -= 1
+        return results

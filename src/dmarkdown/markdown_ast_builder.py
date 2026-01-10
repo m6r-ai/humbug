@@ -15,7 +15,7 @@ from dmarkdown.markdown_ast_node import (
     MarkdownASTListItemNode, MarkdownASTInlineCodeNode, MarkdownASTCodeBlockNode,
     MarkdownASTTableNode, MarkdownASTTableHeaderNode, MarkdownASTTableBodyNode,
     MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
-    MarkdownASTImageNode, MarkdownASTLinkNode
+    MarkdownASTImageNode, MarkdownASTLinkNode, MarkdownASTBlockquoteNode
 )
 
 
@@ -179,6 +179,12 @@ class MarkdownASTBuilder:
         # Track where code blocks should be added
         self._code_block_start_container: MarkdownASTNode | None = None
 
+        # Track current line number for blockquote handling
+        self._current_line_num: int = 0
+
+        # Track if we're in a recursive parse (for blockquote content)
+        self._in_recursive_parse: bool = False
+
     def document(self) -> MarkdownASTDocumentNode:
         """
         Get the current document node.
@@ -322,6 +328,17 @@ class MarkdownASTBuilder:
         stripped_line = line.strip()
         if not stripped_line:
             return 'blank', None
+
+        # Check for blockquote
+        if stripped_line.startswith('>'):
+            # Remove '>' and optional space
+            content = stripped_line[1:]
+            # Only remove the space if it's not followed by another '>'
+            # (to preserve indentation for nested blockquotes)
+            if content.startswith(' ') and not content.startswith(' >'):
+                content = content[1:]
+            # Return the indent level and content
+            return 'blockquote', (indent, content)
 
         # Check for heading
         heading_match = self._heading_pattern.match(line)
@@ -703,7 +720,7 @@ class MarkdownASTBuilder:
             The parent node
         """
         if not self._list_stack:
-            return self._document
+            return self._current_container()
 
         # Find the last list item of the deepest list to be the parent
         current_list = self._list_stack[-1]
@@ -908,6 +925,66 @@ class MarkdownASTBuilder:
         self._register_node_line(horizontal_rule, line_num)
 
         return horizontal_rule
+
+    def _enter_blockquote(self, indent: int, line_num: int) -> None:
+        """
+        Enter a blockquote context.
+
+        Args:
+            indent: The indentation level of the '>' marker
+            line_num: The line number
+        """
+        # Check if we're already in a blockquote at this level
+        if (self._container_stack and
+                self._container_stack[-1].container_type == 'blockquote' and
+                self._container_stack[-1].indent_level == indent):
+            # Already in this blockquote, continue
+            return
+
+        # Create new blockquote node
+        blockquote = MarkdownASTBlockquoteNode()
+        blockquote.line_start = line_num
+        blockquote.line_end = None  # Will be set when we exit
+
+        # Add to current container
+        self._current_container().add_child(blockquote)
+
+        # Push blockquote onto container stack
+        context = ContainerContext(
+            node=blockquote,
+            indent_level=indent,
+            container_type='blockquote',
+            can_contain_blocks=True,
+            lazy_continuation=True  # Blockquotes allow lazy continuation
+        )
+        self._container_stack.append(context)
+
+        # Track for line mapping
+        self._register_node_line(blockquote, line_num)
+
+    def _exit_blockquote(self, line_num: int) -> None:
+        """
+        Exit the current blockquote context.
+
+        Args:
+            line_num: The line number where the blockquote ends
+        """
+        if self._container_stack and self._container_stack[-1].container_type == 'blockquote':
+            blockquote = self._container_stack[-1].node
+            # Set end line
+            if hasattr(blockquote, 'line_end'):
+                blockquote.line_end = line_num
+            self._container_stack.pop()
+
+    def _is_in_blockquote(self) -> bool:
+        """
+        Check if we're currently inside a blockquote.
+
+        Returns:
+            True if inside a blockquote
+        """
+        return (self._container_stack and
+                self._container_stack[-1].container_type == 'blockquote')
 
     def _parse_table_separator(self, separator_line: str) -> List[str]:
         """
@@ -1300,11 +1377,56 @@ class MarkdownASTBuilder:
         Returns:
             None
         """
+        # Store current line number for blockquote tracking
+        self._current_line_num = line_num
+
         line_type, content = self.identify_line_type(line)
 
-        # Reset paragraph tracking if not continuing text
-        if line_type not in ('text', 'blank', 'line_break'):
+        # Reset paragraph tracking if not continuing text or in blockquote
+        if line_type not in ('text', 'blank', 'line_break', 'blockquote'):
             self._last_paragraph = None
+
+        # Handle blockquote lines
+        if line_type == 'blockquote':
+            indent, blockquote_content = content
+
+            # Exit any nested blockquotes that are deeper than this indent level
+            while (self._container_stack and 
+                   len(self._container_stack) > 1 and
+                   self._container_stack[-1].container_type == 'blockquote' and
+                   self._container_stack[-1].indent_level > indent):
+                # Exit this nested blockquote
+                self._exit_blockquote(line_num - 1)
+
+            # Enter blockquote context
+            self._enter_blockquote(indent, line_num)
+
+            # Recursively parse the content inside the blockquote
+            # This allows nested elements
+            # Save the last processed line type so recursive parsing doesn't affect it
+            saved_last_type = self._last_processed_line_type
+            saved_recursive_flag = self._in_recursive_parse
+            self._in_recursive_parse = True
+            
+            if blockquote_content.strip():  # Only parse non-empty content
+                self._parse_line(blockquote_content, line_num)
+
+            # Restore the saved state
+            self._last_processed_line_type = saved_last_type
+            self._in_recursive_parse = saved_recursive_flag
+
+            self._last_processed_line_type = line_type
+            self._blank_line_count = 0
+            return
+
+        # Check if we should exit blockquote (non-blockquote line)
+        # But only if we're not processing content that was inside a blockquote marker
+        if (self._is_in_blockquote() and 
+            line_type not in ('blank',) and
+            self._last_processed_line_type != 'blockquote' and
+            not self._in_recursive_parse):
+            # Exit blockquote when we encounter non-blockquote, non-blank line after non-blockquote
+            self._exit_blockquote(line_num)
 
         # Handle table ends when a non-table line is encountered
         if self._table_buffer.is_in_potential_table and line_type not in ('table_row', 'table_separator'):
@@ -1467,6 +1589,10 @@ class MarkdownASTBuilder:
         # Handle case where document ends while still in a code block
         if self._in_code_block:
             self._finalize_code_block(len(lines) - 1)
+
+        # Close any open blockquotes at the end of the document
+        while self._is_in_blockquote():
+            self._exit_blockquote(len(lines) - 1)
 
         return self._document
 

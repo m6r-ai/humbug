@@ -236,3 +236,8 @@ class MarkdownASTTableCellNode(MarkdownASTNode):
 
 class MarkdownASTHorizontalRuleNode(MarkdownASTNode):
     """Node representing a horizontal rule (<hr>)."""
+
+
+class MarkdownASTBlockquoteNode(MarkdownASTNode):
+    """Node representing a blockquote (>)."""
+    pass
