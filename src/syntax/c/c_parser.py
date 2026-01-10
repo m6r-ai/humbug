@@ -68,6 +68,10 @@ class CParser(Parser):
                 break
 
             if token.type != TokenType.IDENTIFIER:
+                # Check if this operator indicates the next identifier should be an element
+                if token.type == TokenType.OPERATOR:
+                    in_element = token.value in ('.', '->')
+
                 self._tokens.append(token)
                 continue
 

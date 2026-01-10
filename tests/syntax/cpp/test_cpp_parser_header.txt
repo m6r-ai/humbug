@@ -1,0 +1,12 @@
+"""
+Tests for C++ parser.
+"""
+import pytest
+
+from syntax.cpp.cpp_parser import CppParser, CppParserState
+from syntax.lexer import TokenType
+from syntax.programming_language import ProgrammingLanguage
+
+
+class TestCppParser:
+    """Test C++ parser."""

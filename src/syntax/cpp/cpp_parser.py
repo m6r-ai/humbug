@@ -64,8 +64,8 @@ class CppParser(CParser):
                 break
 
             if token.type != TokenType.IDENTIFIER:
-                if token.type == TokenType.OPERATOR and token.value not in ('.', '->'):
-                    in_element = False
+                if token.type == TokenType.OPERATOR:
+                    in_element = token.value in ('.', '->')
                     self._tokens.append(token)
                     continue
 
