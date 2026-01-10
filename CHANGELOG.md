@@ -12,6 +12,7 @@ New features:
 - Added a `get_system_info` operation to the system AI tool.  This provides system and mindspace details.
 - Added association lists (alists) to AIFPL to provide very efficient key/value lookup operations.
 - Improved AIFPL performance by about 40%
+- Added blockquote support to the dmarkdown Markdown parser.
 
 Bug fixes:
 
@@ -23,6 +24,7 @@ Bug fixes:
 - Fixed some lexing problems in the JavaScript and TypeScript syntax highlighters.
 - Fixed AIFPL so '+' can be used for positive numbers.
 - Fixed a syntax highlighting problem with detecting element tokens in the C and C++ syntax highlighters.
+- Resolve problems with complex nesting of block-level elements in Markdown.
 
 Internal structure changes:
 
