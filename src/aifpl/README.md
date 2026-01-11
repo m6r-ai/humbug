@@ -5,6 +5,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 ## Features
 
 - **Pure list representation**: Everything is data - true homoiconicity like traditional Lisp
+- **Pure functional**: No side effects, immutable data, safe for AI tool integration
 - **S-expression syntax**: `(function-or-operator arg1 arg2 ...)`
 - **Quote special form**: `(quote expr)` and shortcut `'expr` for preventing evaluation and creating data literals
 - **Pattern matching**: Comprehensive pattern matching with structural and type-based patterns
@@ -1101,54 +1102,54 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 
 AIFPL provides comprehensive type checking functions:
 
-#### Basic Type Predicates
 ```aifpl
-; Number type checking (excludes booleans)
-(number? 42)                          ; → #t
-(number? 3.14)                        ; → #t
-(number? (+ 1 j))                     ; → #t (complex)
+; Numeric type checking
+(number? 42)                          ; → #t (any numeric type)
 (number? #t)                          ; → #f (booleans are not numbers)
-(number? "42")                        ; → #f
-
-; Specific numeric type checking
 (integer? 42)                         ; → #t
 (integer? 3.14)                       ; → #f
-(integer? #t)                         ; → #f (booleans excluded)
-
 (float? 3.14)                         ; → #t
 (float? 42)                           ; → #f
 (float? (/ 1 2))                      ; → #t (division produces float)
-
 (complex? (+ 1 j))                    ; → #t
 (complex? 42)                         ; → #f
-(complex? 3.14)                       ; → #f
-```
 
-#### Other Type Predicates
-```aifpl
 ; String type checking
 (string? "hello")                     ; → #t
 (string? 42)                          ; → #f
-(string? (number->string 42))         ; → #t
 
 ; Boolean type checking
 (boolean? #t)                         ; → #t
-(boolean? #f)                         ; → #t
 (boolean? 1)                          ; → #f
-(boolean? 0)                          ; → #f
+
+; Collection type checking
+(list? (list 1 2 3))                  ; → #t
+(list? "hello")                       ; → #f
+(list? ())                            ; → #t (empty list)
+(alist? (alist ("x" 1)))              ; → #t
+(alist? (list 1 2 3))                 ; → #f
 
 ; Function type checking
 (function? (lambda (x) (* x 2)))      ; → #t
 (function? +)                         ; → #t
-(function? "hello")                   ; → #f
-
-; List type checking (already existed)
-(list? (list 1 2 3))                 ; → #t
-(list? "hello")                       ; → #f
-(list? ())                            ; → #t (empty list)
 ```
 
-#### Type Predicate Usage Patterns
+### Comments
+
+AIFPL supports single-line comments using the semicolon (`;`) character:
+
+```aifpl
+; This is a comment
+(+ 1 2)  ; Calculate sum
+
+; Comments can appear anywhere
+(let ((x 5))  ; Bind x to 5
+  (* x 2))    ; Double it
+```
+
+Comments extend to the end of the line and are ignored during evaluation.
+
+### Type Predicate Usage Patterns
 ```aifpl
 ; Conditional type handling
 (let ((process-value (lambda (x)
