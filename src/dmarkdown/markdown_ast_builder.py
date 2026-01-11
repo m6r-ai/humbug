@@ -184,9 +184,7 @@ class MarkdownASTBuilder:
         Returns:
             The AST node that should receive new block elements
         """
-        if not self._container_stack:
-            return self._document
-
+        assert self._container_stack, "Container stack should never be empty"
         return self._container_stack[-1].node
 
     def _initialize_container_stack(self) -> None:
@@ -203,11 +201,8 @@ class MarkdownASTBuilder:
 
     def _reset_container_stack(self) -> None:
         """Reset the container stack to just the document root."""
-        if self._container_stack:
-            self._container_stack = [self._container_stack[0]]
-
-        else:
-            self._initialize_container_stack()
+        assert self._container_stack, "Container stack should be initialized before reset"
+        self._container_stack = [self._container_stack[0]]
 
     def _adjust_containers_for_indent(self, indent: int, line_type: str) -> None:
         """
@@ -736,12 +731,10 @@ class MarkdownASTBuilder:
 
                 # Different type - we need to close it and create new
                 # Pop the wrong-type list from the container stack
-                while self._container_stack and self._container_stack[-1] is not context:
+                while self._container_stack[-1] is not context:
                     self._container_stack.pop()
-
-                if self._container_stack and self._container_stack[-1] is context:
-                    self._container_stack.pop()
-
+                assert self._container_stack[-1] is context, "Should have found the context in stack"
+                self._container_stack.pop()
                 break
 
         # No suitable list found, create a new one
@@ -853,12 +846,10 @@ class MarkdownASTBuilder:
 
                 # Different type - we need to close it and create new
                 # Pop the wrong-type list from the container stack
-                while self._container_stack and self._container_stack[-1] is not context:
+                while self._container_stack[-1] is not context:
                     self._container_stack.pop()
-
-                if self._container_stack and self._container_stack[-1] is context:
-                    self._container_stack.pop()
-
+                assert self._container_stack[-1] is context, "Should have found the context in stack"
+                self._container_stack.pop()
                 break
 
         # No suitable list found, create a new one
@@ -1030,9 +1021,7 @@ class MarkdownASTBuilder:
         Returns:
             True if inside a blockquote
         """
-        if not self._container_stack:
-            return False
-
+        assert self._container_stack, "Container stack should never be empty"
         return self._container_stack[-1].container_type == 'blockquote'
 
     def _adjust_blockquote_contexts(self, blockquote_indents: List[int], line_num: int) -> None:
@@ -1316,11 +1305,8 @@ class MarkdownASTBuilder:
         code_block.line_end = end_line
 
         # Add to the container where the code block started
-        if self._code_block_start_container:
-            self._code_block_start_container.add_child(code_block)
-
-        else:
-            self._current_container().add_child(code_block)
+        assert self._code_block_start_container, "Code block should have a start container"
+        self._code_block_start_container.add_child(code_block)
 
         # Register code block with all lines it spans
         for i in range(self._code_block_start_line, end_line + 1):
@@ -1416,10 +1402,7 @@ class MarkdownASTBuilder:
         if last_item.children and not isinstance(last_item.children[-1], MarkdownASTParagraphNode):
             needs_new_paragraph = True
 
-        # Need new paragraph if there are no children yet
-        if not last_item.children:
-            needs_new_paragraph = True
-
+        assert last_item.children, "List items should always have at least one paragraph"
         if needs_new_paragraph:
             # Create a new paragraph in this list item
             paragraph = MarkdownASTParagraphNode()
