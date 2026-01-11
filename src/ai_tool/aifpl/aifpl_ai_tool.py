@@ -147,6 +147,7 @@ class AIFPLAITool(AITool):
                 "- Strict type system with automatic numeric promotion\n"
                 "- Mixed-type lists supported: (list 1 \"hi\" #t)\n"
                 "- String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX\n"
+                "- Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment\n"
                 "- Literals: 42, 3.14, 0xFF, 0b1010, \"hello\", #t, #f, ()\n"
                 "- Constants: pi, e, j, true, false\n\n"
 
