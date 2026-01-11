@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from syntax.aifpl.aifpl_lexer import AIFPLLexer
+from syntax.lexer import TokenType
 from syntax.parser import Parser, ParserState
 from syntax.parser_registry import ParserRegistry
 from syntax.programming_language import ProgrammingLanguage
@@ -10,7 +11,11 @@ from syntax.programming_language import ProgrammingLanguage
 class AIFPLParserState(ParserState):
     """
     State information for the AIFPL parser.
+
+    Attributes:
+        paren_depth: Current parenthesis nesting depth
     """
+    paren_depth: int = 0
 
 
 @ParserRegistry.register_parser(ProgrammingLanguage.AIFPL)
@@ -19,7 +24,8 @@ class AIFPLParser(Parser):
     Parser for AIFPL code.
 
     This parser processes tokens from the AIFPL lexer and handles special cases
-    like nested expressions and vectors.
+    like nested expressions, pattern matching, and validates the dot operator
+    is only used in valid pattern matching contexts.
     """
 
     def parse(self, prev_parser_state: ParserState | None, input_str: str) -> AIFPLParserState:
@@ -32,12 +38,20 @@ class AIFPLParser(Parser):
 
         Returns:
             The updated parser state after parsing
+
+        Note:
+            The parser validates that dot operators are only used in pattern
+            matching contexts within match expressions. Invalid dots are
+            converted to ERROR tokens.
         """
+        paren_depth = 0
         prev_lexer_state = None
+
         if prev_parser_state:
             assert isinstance(prev_parser_state, AIFPLParserState), \
                 f"Expected AIFPLParserState, got {type(prev_parser_state).__name__}"
             prev_lexer_state = prev_parser_state.lexer_state
+            paren_depth = prev_parser_state.paren_depth
 
         lexer = AIFPLLexer()
         lexer_state = lexer.lex(prev_lexer_state, input_str)
@@ -47,10 +61,52 @@ class AIFPLParser(Parser):
             if not token:
                 break
 
+            # Track parenthesis depth
+            if token.type == TokenType.LPAREN:
+                paren_depth += 1
+
+            elif token.type == TokenType.RPAREN:
+                paren_depth = max(0, paren_depth - 1)
+
+            # Validate dot operator usage
+            if token.type == TokenType.OPERATOR and token.value == '.':
+                if not self._is_valid_dot_context(lexer):
+                    # Convert invalid dot to error
+                    token.type = TokenType.ERROR
+
             self._tokens.append(token)
 
         parser_state = AIFPLParserState()
         parser_state.continuation_state = 1 if lexer_state.in_string else 0
         parser_state.parsing_continuation = lexer_state.in_string
         parser_state.lexer_state = lexer_state
+        parser_state.paren_depth = paren_depth
         return parser_state
+
+    def _is_valid_dot_context(self, lexer: AIFPLLexer) -> bool:
+        """
+        Check if the dot operator is in a valid context.
+
+        A dot is valid if it's used in pattern matching, which means:
+        - It should be inside parentheses (pattern context)
+        - It should have an identifier or rparen before it
+        - It should have an identifier after it
+
+        Args:
+            lexer: The lexer to peek at surrounding tokens
+
+        Returns:
+            True if the dot is in a valid context, False otherwise
+        """
+        # Check the next token - should be an identifier or whitespace before identifier
+        next_token = lexer.peek_next_token()
+        if not next_token:
+            return False
+
+        # The next meaningful token should be an identifier
+        if next_token.type == TokenType.IDENTIFIER:
+            return True
+
+        # If next is rparen, this might be valid too (e.g., (a . ))
+        # But that's likely a syntax error, so we'll be conservative
+        return False

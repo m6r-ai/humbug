@@ -216,7 +216,7 @@ class AIFPLLexer(Lexer):
 
     def _read_dot(self) -> None:
         """
-        Read start of decimal number.
+        Read start of decimal number or dot operator.
         """
         if (self._position + 1 < self._input_len and
             self._is_digit(self._input[self._position + 1])):
@@ -225,7 +225,7 @@ class AIFPLLexer(Lexer):
 
         start = self._position
         self._position += 1
-        self._tokens.append(Token(type=TokenType.ERROR, value='.', start=start))
+        self._tokens.append(Token(type=TokenType.OPERATOR, value='.', start=start))
 
     def _read_number(self) -> None:
         """

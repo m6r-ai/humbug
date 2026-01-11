@@ -179,7 +179,7 @@ class TestAIFPLParser:
         has_string = any(t.type == TokenType.STRING for t in tokens)
         has_comment = any(t.type == TokenType.COMMENT for t in tokens)
 
-        assert all([has_lparen, has_rparen, has_keyword, has_identifier, 
+        assert all([has_lparen, has_rparen, has_keyword, has_identifier,
                    has_boolean, has_number, has_string, has_comment])
 
     def test_multiline_string_multiple_continuations(self):
@@ -239,3 +239,132 @@ class TestAIFPLParser:
         tokens = list(parser._tokens)
         # Should have tokens for expression and comment
         assert len(tokens) > 0
+
+    def test_parse_dot_operator_in_pattern(self):
+        """Test parsing dot operator in valid pattern matching context."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '(head . tail)')
+
+        tokens = list(parser._tokens)
+        dot_tokens = [t for t in tokens if t.value == '.']
+        assert len(dot_tokens) == 1
+        assert dot_tokens[0].type == TokenType.OPERATOR
+
+    def test_parse_dot_operator_in_match_expression(self):
+        """Test parsing dot in match expression."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '(match lst ((a . b) a))')
+
+        tokens = list(parser._tokens)
+        dot_tokens = [t for t in tokens if t.value == '.']
+        assert len(dot_tokens) == 1
+        assert dot_tokens[0].type == TokenType.OPERATOR
+
+    def test_parse_dot_followed_by_identifier(self):
+        """Test that dot followed by identifier is valid."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '(x . y)')
+
+        tokens = list(parser._tokens)
+        dot_tokens = [t for t in tokens if t.value == '.']
+        assert len(dot_tokens) == 1
+        assert dot_tokens[0].type == TokenType.OPERATOR
+
+    def test_parse_dot_not_followed_by_identifier(self):
+        """Test that dot not followed by identifier becomes error."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '(x . )')
+
+        tokens = list(parser._tokens)
+        dot_tokens = [t for t in tokens if t.value == '.']
+        assert len(dot_tokens) == 1
+        # Should be converted to ERROR by parser
+        assert dot_tokens[0].type == TokenType.ERROR
+
+    def test_parse_standalone_dot_not_followed_by_identifier(self):
+        """Test standalone dot not followed by identifier."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '.')
+
+        tokens = list(parser._tokens)
+        assert len(tokens) == 1
+        # Should be ERROR because not followed by identifier
+        assert tokens[0].type == TokenType.ERROR
+
+    def test_parse_dot_followed_by_number(self):
+        """Test dot followed by number (not identifier) becomes error."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '(x . 5)')
+
+        tokens = list(parser._tokens)
+        dot_tokens = [t for t in tokens if t.value == '.']
+        assert len(dot_tokens) == 1
+        # Should be ERROR because followed by number, not identifier
+        assert dot_tokens[0].type == TokenType.ERROR
+
+    def test_parse_multiple_dots_in_expression(self):
+        """Test multiple dot operators in one expression."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '((a . b) (c . d))')
+
+        tokens = list(parser._tokens)
+        dot_tokens = [t for t in tokens if t.value == '.']
+        assert len(dot_tokens) == 2
+        # Both should be valid operators
+        assert all(t.type == TokenType.OPERATOR for t in dot_tokens)
+
+    def test_parse_dot_in_nested_pattern(self):
+        """Test dot in nested pattern matching."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '(match data ((head . tail) head))')
+
+        tokens = list(parser._tokens)
+        dot_tokens = [t for t in tokens if t.value == '.']
+        assert len(dot_tokens) == 1
+        assert dot_tokens[0].type == TokenType.OPERATOR
+
+    def test_parse_dot_with_whitespace_variations(self):
+        """Test dot with various whitespace."""
+        test_cases = [
+            '( head . tail )',
+            '(head . tail)',
+            '( head  .  tail )',
+        ]
+
+        for expr in test_cases:
+            parser = AIFPLParser()
+            state = parser.parse(None, expr)
+
+            tokens = list(parser._tokens)
+            dot_tokens = [t for t in tokens if t.value == '.']
+            assert len(dot_tokens) == 1, f"Expression '{expr}' should have one dot"
+            assert dot_tokens[0].type == TokenType.OPERATOR
+
+    def test_parse_dot_without_whitespace_is_identifier(self):
+        """Test that dot without whitespace is part of identifier."""
+        parser = AIFPLParser()
+        state = parser.parse(None, '(head.tail)')
+
+        tokens = list(parser._tokens)
+
+        # Should not have a separate dot operator token
+        dot_tokens = [t for t in tokens if t.value == '.' and t.type == TokenType.OPERATOR]
+        assert len(dot_tokens) == 0
+
+        # Should have an identifier containing the dot
+        ident_tokens = [t for t in tokens if t.type == TokenType.IDENTIFIER]
+        assert any('.' in t.value for t in ident_tokens)
+
+    def test_parse_paren_depth_tracking(self):
+        """Test that parser tracks parenthesis depth."""
+        parser1 = AIFPLParser()
+        state1 = parser1.parse(None, '((')
+        assert state1.paren_depth == 2
+
+        parser2 = AIFPLParser()
+        state2 = parser2.parse(state1, '))')
+        assert state2.paren_depth == 0
+
+        parser3 = AIFPLParser()
+        state3 = parser3.parse(None, '(+ 1 2)')
+        assert state3.paren_depth == 0

@@ -56,8 +56,8 @@ class TestAIFPLEdgeCases:
 
         tokens = list(lexer._tokens)
         assert len(tokens) == 1
-        # Dot alone should be error
-        assert tokens[0].type == TokenType.ERROR
+        # Dot alone should be operator (used in pattern matching)
+        assert tokens[0].type == TokenType.OPERATOR
 
     def test_dot_not_followed_by_digit(self):
         """Test dot not followed by digit."""
@@ -65,7 +65,7 @@ class TestAIFPLEdgeCases:
         lexer.lex(None, '.x')
 
         tokens = list(lexer._tokens)
-        # Should have error for dot, then identifier
+        # Should have operator for dot, then identifier
         assert len(tokens) >= 1
 
     def test_plus_alone(self):
