@@ -794,7 +794,8 @@ class MarkdownASTBuilder:
                 break
 
         # If we've seen a blank line, mark the list as loose
-        if list_context and self._blank_line_count > 0:
+        # (but only if the list already has items - blank lines before first item don't count)
+        if list_context and self._blank_line_count > 0 and len(list_node.children) > 0:
             list_context.is_tight_list = False
             list_node.tight = False
 
@@ -907,7 +908,8 @@ class MarkdownASTBuilder:
                 break
 
         # If we've seen a blank line, mark the list as loose
-        if list_context and self._blank_line_count > 0:
+        # (but only if the list already has items - blank lines before first item don't count)
+        if list_context and self._blank_line_count > 0 and len(list_node.children) > 0:
             list_context.is_tight_list = False
             list_node.tight = False
 

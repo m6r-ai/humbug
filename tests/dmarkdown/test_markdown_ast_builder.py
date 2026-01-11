@@ -1048,6 +1048,43 @@ def test_loose_vs_tight_unordered_lists(ast_builder):
     list_node = doc.children[0]
     assert list_node.tight is False
 
+
+def test_blank_line_before_list_should_not_affect_tightness(ast_builder):
+    """Test that blank lines BEFORE a list do not affect tight/loose status.
+
+    According to CommonMark spec, only blank lines BETWEEN list items
+    should affect whether a list is tight or loose. Blank lines before
+    the list (e.g., after a heading) should not make the list loose.
+    """
+    # Blank line after heading, no blank lines between items -> should be TIGHT
+    list_after_heading_with_blank = """## Features
+
+- **Pure list representation**: Everything is data
+- **Pure functional**: No side effects
+- **S-expression syntax**: `(function-or-operator arg1 arg2 ...)`
+"""
+
+    # No blank line after heading, no blank lines between items -> should be TIGHT
+    list_after_heading_no_blank = """## Features
+- **Pure list representation**: Everything is data
+- **Pure functional**: No side effects
+- **S-expression syntax**: `(function-or-operator arg1 arg2 ...)`
+"""
+
+    # Test list with blank line before it
+    doc = ast_builder.build_ast(list_after_heading_with_blank)
+    assert len(doc.children) == 2
+    list_node = doc.children[1]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert list_node.tight is True, "List should be tight - blank line before list should not affect tightness"
+
+    # Test list without blank line before it
+    doc = ast_builder.build_ast(list_after_heading_no_blank)
+    assert len(doc.children) == 2
+    list_node = doc.children[1]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert list_node.tight is True, "List should be tight - no blank lines between items"
+
 def test_complex_nested_list_structures(ast_builder):
     """Test complex nested list scenarios."""
     complex_nested = """- Level 1 Item 1
@@ -2091,13 +2128,13 @@ def test_simple_blockquote(ast_builder):
     """Test parsing a simple blockquote."""
     markdown = """> This is a quote
 > It continues here"""
-    
+
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
-    
+
     blockquote = doc.children[0]
     assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
-    
+
     # Should have one paragraph with both lines merged (CommonMark behavior)
     assert len(blockquote.children) == 1
     assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
@@ -2108,13 +2145,13 @@ def test_blockquote_with_multiple_paragraphs(ast_builder):
     markdown = """> First paragraph
 >
 > Second paragraph"""
-    
+
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
-    
+
     blockquote = doc.children[0]
     assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
-    
+
     # Should have two paragraphs
     assert len(blockquote.children) == 2
     assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
@@ -2127,18 +2164,18 @@ def test_blockquote_with_list(ast_builder):
 >
 > - Item 1
 > - Item 2"""
-    
+
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
-    
+
     blockquote = doc.children[0]
     assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
-    
+
     # Should have paragraph and list
     assert len(blockquote.children) == 2
     assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
     assert blockquote.children[1].__class__.__name__ == "MarkdownASTUnorderedListNode"
-    
+
     # List should have 2 items
     list_node = blockquote.children[1]
     assert len(list_node.children) == 2
@@ -2151,19 +2188,19 @@ def test_nested_blockquotes(ast_builder):
 > > Nested quote
 >
 > Back to outer"""
-    
+
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
-    
+
     outer_blockquote = doc.children[0]
     assert outer_blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
-    
+
     # Outer should have: paragraph, nested blockquote, paragraph
     assert len(outer_blockquote.children) == 3
     assert outer_blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
     assert outer_blockquote.children[1].__class__.__name__ == "MarkdownASTBlockquoteNode"
     assert outer_blockquote.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
-    
+
     # Nested blockquote should have one paragraph
     nested_blockquote = outer_blockquote.children[1]
     assert len(nested_blockquote.children) == 1
@@ -2178,15 +2215,15 @@ def test_blockquote_interruption(ast_builder):
 Not in quote
 
 > New quote"""
-    
+
     doc = ast_builder.build_ast(markdown)
-    
+
     # Should have: blockquote, paragraph, blockquote
     assert len(doc.children) == 3
     assert doc.children[0].__class__.__name__ == "MarkdownASTBlockquoteNode"
     assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
     assert doc.children[2].__class__.__name__ == "MarkdownASTBlockquoteNode"
-    
+
     # First blockquote should have 1 paragraph (consecutive lines merge)
     first_blockquote = doc.children[0]
     assert len(first_blockquote.children) == 1
@@ -2199,13 +2236,13 @@ def test_blockquote_with_code_block(ast_builder):
 > ```python
 > print("hello")
 > ```"""
-    
+
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
-    
+
     blockquote = doc.children[0]
     assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
-    
+
     # Should have paragraph and code block
     assert len(blockquote.children) == 2
     assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
@@ -2215,13 +2252,13 @@ def test_blockquote_with_code_block(ast_builder):
 def test_empty_blockquote(ast_builder):
     """Test empty blockquote line."""
     markdown = """>"""
-    
+
     doc = ast_builder.build_ast(markdown)
     assert len(doc.children) == 1
-    
+
     blockquote = doc.children[0]
     assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
-    
+
     # Should have no children (empty blockquote)
     assert len(blockquote.children) == 0
 
@@ -2231,11 +2268,11 @@ def test_blockquote_with_heading(ast_builder):
     markdown = """> # Heading in quote
 > 
 > Paragraph after heading"""
-    
+
     doc = ast_builder.build_ast(markdown)
     # Heading stays inside blockquote (CommonMark allows headings in blockquotes)
     assert len(doc.children) == 1
-    
+
     blockquote = doc.children[0]
     assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
     assert len(blockquote.children) == 2  # Heading and paragraph
