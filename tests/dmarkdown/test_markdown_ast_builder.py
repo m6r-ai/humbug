@@ -2322,3 +2322,168 @@ def test_blockquote_with_list_and_continuation(ast_builder):
     # Third child: paragraph (back to blockquote level)
     assert blockquote.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
     assert blockquote.children[2].children[0].content == "Another paragraph in quote"
+
+
+def test_table_with_uneven_columns(ast_builder):
+    """Test table where body rows have more columns than header."""
+    markdown = """| A |
+|---|---|
+| B | C |"""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    assert doc.children[0].__class__.__name__ == "MarkdownASTTableNode"
+
+    table = doc.children[0]
+    assert len(table.children) == 2  # header and body
+
+    # Check header
+    header = table.children[0]
+    assert header.__class__.__name__ == "MarkdownASTTableHeaderNode"
+    assert len(header.children) == 1  # one row
+
+    header_row = header.children[0]
+    assert len(header_row.children) == 2  # Should be padded to 2 columns
+
+    # First cell should have "A"
+    assert header_row.children[0].children[0].content == "A"
+
+    # Second cell should be empty (padded) - empty strings produce no children
+    # This is correct behavior: _parse_inline_formatting("") returns []
+    assert len(header_row.children[1].children) == 0
+
+    # Check body
+    body = table.children[1]
+    assert body.__class__.__name__ == "MarkdownASTTableBodyNode"
+    assert len(body.children) == 1  # one row
+
+    body_row = body.children[0]
+    assert len(body_row.children) == 2
+    assert body_row.children[0].children[0].content == "B"
+    assert body_row.children[1].children[0].content == "C"
+
+
+def test_table_with_multiple_uneven_rows(ast_builder):
+    """Test table with varying column counts across rows."""
+    markdown = """| A | B |
+|---|---|---|
+| C | D | E |
+| F |"""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 1
+    table = doc.children[0]
+
+    # All rows should be normalized to 3 columns (max from separator)
+    header_row = table.children[0].children[0]
+    assert len(header_row.children) == 3
+    assert header_row.children[0].children[0].content == "A"
+    assert header_row.children[1].children[0].content == "B"
+    assert len(header_row.children[2].children) == 0  # padded, empty
+
+    body = table.children[1]
+    # First body row
+    assert len(body.children[0].children) == 3
+    assert body.children[0].children[0].children[0].content == "C"
+    assert body.children[0].children[1].children[0].content == "D"
+    assert body.children[0].children[2].children[0].content == "E"
+
+    # Second body row (padded)
+    assert len(body.children[1].children) == 3
+    assert body.children[1].children[0].children[0].content == "F"
+    assert len(body.children[1].children[1].children) == 0  # padded, empty
+    assert len(body.children[1].children[2].children) == 0  # padded, empty
+
+
+def test_blockquote_reentry_same_level(ast_builder):
+    """Test re-entering a blockquote at the same level after exiting."""
+    markdown = """> Quote 1
+> 
+> Quote 2
+
+Regular text
+
+> Quote 3"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    # Should have 3 top-level children: blockquote, paragraph, blockquote
+    assert len(doc.children) == 3
+
+    # First blockquote
+    assert doc.children[0].__class__.__name__ == "MarkdownASTBlockquoteNode"
+    blockquote1 = doc.children[0]
+    assert len(blockquote1.children) == 2  # Two paragraphs
+    assert blockquote1.children[0].children[0].content == "Quote 1"
+    assert blockquote1.children[1].children[0].content == "Quote 2"
+
+    # Regular paragraph
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[1].children[0].content == "Regular text"
+
+    # Second blockquote (re-entered at same level)
+    assert doc.children[2].__class__.__name__ == "MarkdownASTBlockquoteNode"
+    blockquote2 = doc.children[2]
+    assert len(blockquote2.children) == 1
+    assert blockquote2.children[0].children[0].content == "Quote 3"
+
+
+def test_deep_nested_lists_with_blank_lines(ast_builder):
+    """Test deeply nested lists with blank lines and content at various levels."""
+    markdown = """- Level 1
+  - Level 2
+    - Level 3
+
+      Text in level 3
+
+    Back to level 3
+
+  Back to level 2
+
+Back to level 1"""
+
+    doc = ast_builder.build_ast(markdown)
+    assert len(doc.children) == 2  # List and final paragraph
+
+    # Outer list
+    assert doc.children[0].__class__.__name__ == "MarkdownASTUnorderedListNode"
+    outer_list = doc.children[0]
+    assert len(outer_list.children) == 1  # One item
+
+    level1_item = outer_list.children[0]
+    # Level 1 item should have: paragraph + nested list + paragraph
+    assert len(level1_item.children) == 3
+    assert level1_item.children[0].children[0].content == "Level 1"
+
+    # Level 2 list
+    level2_list = level1_item.children[1]
+    assert level2_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    level2_item = level2_list.children[0]
+
+    # Level 2 item should have: paragraph + nested list + paragraph
+    assert len(level2_item.children) == 3
+    assert level2_item.children[0].children[0].content == "Level 2"
+
+    # Level 3 list
+    level3_list = level2_item.children[1]
+    assert level3_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    level3_item = level3_list.children[0]
+
+    # Level 3 item should have multiple paragraphs due to blank lines
+    assert len(level3_item.children) >= 2
+    assert level3_item.children[0].children[0].content == "Level 3"
+    # Find the "Text in level 3" paragraph
+    text_found = any("Text in level 3" in child.children[0].content 
+                     for child in level3_item.children 
+                     if child.__class__.__name__ == "MarkdownASTParagraphNode")
+    assert text_found, "Should find 'Text in level 3' in level 3 item"
+
+    # Check level 2 continuation
+    assert level2_item.children[2].children[0].content == "Back to level 3"
+
+    # Check level 1 continuation
+    assert level1_item.children[2].children[0].content == "Back to level 2"
+
+    # Final paragraph outside all lists
+    assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert doc.children[1].children[0].content == "Back to level 1"
