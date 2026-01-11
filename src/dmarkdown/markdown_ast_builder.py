@@ -306,7 +306,7 @@ class MarkdownASTBuilder:
             - line_type is one of:
             'heading', 'unordered_list_item', 'ordered_list_item', 'blank', 'text',
             'code_block_fence',
-            'table_row', 'table_separator', 'line_break', 'horizontal_rule'
+            'table_row', 'table_separator', 'horizontal_rule'
             - blockquote_indents is a list of column positions where > markers were found
             - line_data is a dict with line-type-specific data
         """
@@ -1555,10 +1555,6 @@ class MarkdownASTBuilder:
             else:
                 # Not a valid table, render as regular text
                 self._handle_incomplete_table()
-
-        if line_type == 'line_break':
-            self._current_container().add_child(MarkdownASTLineBreakNode())
-            return
 
         if line_type == 'blank':
             self._blank_line_count += 1
