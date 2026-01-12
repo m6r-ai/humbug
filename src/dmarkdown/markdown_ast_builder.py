@@ -204,53 +204,6 @@ class MarkdownASTBuilder:
         assert self._container_stack, "Container stack should be initialized before reset"
         self._container_stack = [self._container_stack[0]]
 
-    def _adjust_containers_for_indent(self, indent: int, line_type: str) -> None:
-        """
-        Adjust the container stack based on current line indentation.
-
-        This closes containers when dedenting, and maintains them when properly indented.
-        Handles lazy continuation for lists and blockquotes.
-
-        Args:
-            indent: The indentation level of the current line
-            line_type: The type of line being processed
-        """
-        assert line_type not in ('code_block_start', 'code_block_content', 'code_block_end'), (
-            "Code block lines should not adjust container stack"
-        )
-
-        # Headings close all containers except document and blockquotes
-        # (CommonMark allows headings inside blockquotes)
-        if line_type == 'heading':
-            if not self._is_in_blockquote():
-                self._reset_container_stack()
-
-            return
-
-        # Close containers that require more indentation than we have
-        while len(self._container_stack) > 1:
-            current_context = self._container_stack[-1]
-            required_indent = current_context.indent_level
-
-            # If we have enough indentation, keep this container
-            if indent >= required_indent:
-                break
-
-            # Check if lazy continuation is allowed
-            if current_context.lazy_continuation:
-                # For lazy continuation, we allow less indentation for text
-                # BUT only if there wasn't a blank line before (which breaks continuation)
-                if line_type == 'text' and self._blank_line_count == 0:
-                    # Allow lazy continuation for text without preceding blank
-                    break
-
-                if line_type == 'blank':
-                    # Blank lines don't close containers
-                    break
-
-            # Close this container
-            self._container_stack.pop()
-
     def _parse_code_line(
         self,
         line_content: str
@@ -1008,12 +961,12 @@ class MarkdownASTBuilder:
             if ctx.container_type == 'blockquote':
                 current_blockquotes.append(ctx)
 
-        # Exit blockquotes that are no longer present or at wrong levels
-        # Work backwards to maintain stack integrity
+        # Iterate backwards through the blockquote contexts and exit blockquotes that are no longer present or
+        # at wrong indent levels.  Work backwards to maintain stack integrity
         for i in range(len(current_blockquotes) - 1, -1, -1):
             if i >= len(blockquote_indents) or current_blockquotes[i].indent_level != blockquote_indents[i]:
                 # Need to exit this blockquote and all nested ones
-                while self._container_stack:
+                while True:
                     if self._container_stack[-1] is current_blockquotes[i]:
                         self._exit_blockquote(line_num - 1)
                         break
@@ -1489,7 +1442,30 @@ class MarkdownASTBuilder:
         # Use the indent from line_data if available (which accounts for blockquote stripping),
         # otherwise fall back to the indent calculated from the original line
         effective_indent = line_data.get('indent', indent)
-        self._adjust_containers_for_indent(effective_indent, line_type)
+
+        # Close containers that require more indentation than we have
+        while len(self._container_stack) > 1:
+            current_context = self._container_stack[-1]
+            required_indent = current_context.indent_level
+
+            # If we have enough indentation, keep this container
+            if effective_indent >= required_indent:
+                break
+
+            # Check if lazy continuation is allowed
+            if current_context.lazy_continuation:
+                # For lazy continuation, we allow less indentation for text
+                # BUT only if there wasn't a blank line before (which breaks continuation)
+                if line_type == 'text' and self._blank_line_count == 0:
+                    # Allow lazy continuation for text without preceding blank
+                    break
+
+                if line_type == 'blank':
+                    # Blank lines don't close containers
+                    break
+
+            # Close this container
+            self._container_stack.pop()
 
         # After a blank line, close block-level containers that are at the same or lesser indentation.
         if (self._blank_line_count > 0 and line_type not in ('blank', 'unordered_list_item', 'ordered_list_item')):
@@ -1497,7 +1473,7 @@ class MarkdownASTBuilder:
             while self._container_stack:
                 top = self._container_stack[-1]
 
-                # Break if we hit a non-list container (e.g., list_item, blockquote, document)
+                # Break if we hit a non-list container (e.g., list_item, document)
                 if not isinstance(top.node, MarkdownASTListNode):
                     break
 
@@ -1569,6 +1545,11 @@ class MarkdownASTBuilder:
 
         # Process other line types
         if line_type == 'heading':
+            # Headings close all containers except document and blockquotes
+            # (CommonMark allows headings inside blockquotes)
+            if not self._is_in_blockquote():
+                self._reset_container_stack()
+
             self._parse_heading(line_data['level'], line_data['text'], line_num)
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
