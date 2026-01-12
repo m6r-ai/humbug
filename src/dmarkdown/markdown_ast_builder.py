@@ -611,6 +611,22 @@ class MarkdownASTBuilder:
 
         return text
 
+    def _register_node_line(self, node: MarkdownASTNode, line_num: int) -> None:
+        """
+        Register a node with a line number for later reference.
+
+        Args:
+            node: The AST node
+            line_num: The line number
+
+        Returns:
+            None
+        """
+        if line_num not in self._line_to_node_map:
+            self._line_to_node_map[line_num] = []
+
+        self._line_to_node_map[line_num].append(node)
+
     def _parse_heading(self, level: int, content: str, line_num: int) -> None:
         """
         Parse a heading line and create a heading node.
@@ -1183,22 +1199,6 @@ class MarkdownASTBuilder:
         # Reset table buffer
         self._table_buffer.reset()
 
-    def _register_node_line(self, node: MarkdownASTNode, line_num: int) -> None:
-        """
-        Register a node with a line number for later reference.
-
-        Args:
-            node: The AST node
-            line_num: The line number
-
-        Returns:
-            None
-        """
-        if line_num not in self._line_to_node_map:
-            self._line_to_node_map[line_num] = []
-
-        self._line_to_node_map[line_num].append(node)
-
     def _finalize_code_block(self, end_line: int) -> None:
         """
         Finalize a code block that might be unclosed at document end.
@@ -1350,6 +1350,83 @@ class MarkdownASTBuilder:
         self._register_node_line(last_item, line_num)
         return True
 
+    def _adjust_containers_for_line(
+        self,
+        line_type: str,
+        blockquote_indents: List[int],
+        effective_indent: int,
+        line_num: int
+    ) -> None:
+        """
+        Adjust the container stack for the current line.
+
+        This handles:
+        1. Blockquote context adjustments based on > markers
+        2. Exiting blockquotes when they end
+        3. Closing containers based on indentation
+        4. Special handling for headings (which close most containers)
+        5. Closing lists after blank lines
+
+        Args:
+            line_type: The type of line being processed
+            blockquote_indents: List of column positions where > markers were found
+            effective_indent: The effective indentation level for this line
+            line_num: The line number
+        """
+        # 1. Adjust blockquote contexts based on > markers in this line
+        if blockquote_indents:
+            self._adjust_blockquote_contexts(blockquote_indents, line_num)
+
+        # 2. For non-blockquote lines, we might need to exit blockquotes
+        # (unless it's a blank line which allows lazy continuation)
+        elif self._is_in_blockquote() and line_type != 'blank':
+            # Exit all blockquotes
+            while self._is_in_blockquote():
+                self._exit_blockquote(line_num - 1)
+
+        # 3. Headings close all containers except document and blockquotes
+        if line_type == 'heading':
+            if not self._is_in_blockquote():
+                self._reset_container_stack()
+            return
+
+        # 4. Close containers that require more indentation than we have
+        while len(self._container_stack) > 1:
+            current_context = self._container_stack[-1]
+            required_indent = current_context.indent_level
+
+            # If we have enough indentation, keep this container
+            if effective_indent >= required_indent:
+                break
+
+            # Check if lazy continuation is allowed
+            if current_context.lazy_continuation:
+                # For lazy continuation, we allow less indentation for text
+                # BUT only if there wasn't a blank line before (which breaks continuation)
+                if line_type == 'text' and self._blank_line_count == 0:
+                    # Allow lazy continuation for text without preceding blank
+                    break
+
+                if line_type == 'blank':
+                    # Blank lines don't close containers
+                    break
+
+            # Close this container
+            self._container_stack.pop()
+
+        # 5. After a blank line, close list containers for block-level elements
+        if (self._blank_line_count > 0 and line_type not in ('blank', 'unordered_list_item', 'ordered_list_item')):
+            # Close list containers at or above the element's indentation
+            while True:
+                top = self._container_stack[-1]
+
+                # Break if we hit a non-list container (e.g., list_item, document)
+                if not isinstance(top.node, MarkdownASTListNode):
+                    break
+
+                # Close this list
+                self._container_stack.pop()
+
     def _parse_line(self, line: str, line_num: int) -> None:
         """
         Parse a single line and add the resulting nodes to the AST.
@@ -1365,17 +1442,6 @@ class MarkdownASTBuilder:
         self._current_line_num = line_num
 
         line_type, blockquote_indents, line_data = self._identify_line_type(line)
-
-        # Adjust blockquote contexts based on > markers in this line
-        if blockquote_indents:
-            self._adjust_blockquote_contexts(blockquote_indents, line_num)
-
-        # For non-blockquote lines, we might need to exit blockquotes
-        # (unless it's a blank line which allows lazy continuation)
-        elif self._is_in_blockquote() and line_type != 'blank':
-            # Exit all blockquotes
-            while self._is_in_blockquote():
-                self._exit_blockquote(line_num - 1)
 
         # Calculate indentation for container management (from original line)
         stripped = line.lstrip()
@@ -1443,42 +1509,8 @@ class MarkdownASTBuilder:
         # otherwise fall back to the indent calculated from the original line
         effective_indent = line_data.get('indent', indent)
 
-        # Close containers that require more indentation than we have
-        while len(self._container_stack) > 1:
-            current_context = self._container_stack[-1]
-            required_indent = current_context.indent_level
-
-            # If we have enough indentation, keep this container
-            if effective_indent >= required_indent:
-                break
-
-            # Check if lazy continuation is allowed
-            if current_context.lazy_continuation:
-                # For lazy continuation, we allow less indentation for text
-                # BUT only if there wasn't a blank line before (which breaks continuation)
-                if line_type == 'text' and self._blank_line_count == 0:
-                    # Allow lazy continuation for text without preceding blank
-                    break
-
-                if line_type == 'blank':
-                    # Blank lines don't close containers
-                    break
-
-            # Close this container
-            self._container_stack.pop()
-
-        # After a blank line, close block-level containers that are at the same or lesser indentation.
-        if (self._blank_line_count > 0 and line_type not in ('blank', 'unordered_list_item', 'ordered_list_item')):
-            # Close list containers at or above the element's indentation
-            while self._container_stack:
-                top = self._container_stack[-1]
-
-                # Break if we hit a non-list container (e.g., list_item, document)
-                if not isinstance(top.node, MarkdownASTListNode):
-                    break
-
-                # Close this list
-                self._container_stack.pop()
+        # Adjust containers based on line type, blockquotes, and indentation
+        self._adjust_containers_for_line(line_type, blockquote_indents, effective_indent, line_num)
 
         # Handle table ends when a non-table line is encountered
         if self._table_buffer.is_in_potential_table and line_type not in ('table_row', 'table_separator'):
@@ -1545,11 +1577,6 @@ class MarkdownASTBuilder:
 
         # Process other line types
         if line_type == 'heading':
-            # Headings close all containers except document and blockquotes
-            # (CommonMark allows headings inside blockquotes)
-            if not self._is_in_blockquote():
-                self._reset_container_stack()
-
             self._parse_heading(line_data['level'], line_data['text'], line_num)
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
