@@ -730,10 +730,6 @@ class MarkdownASTBuilder:
                     return cast(MarkdownASTOrderedListNode, context.node)
 
                 # Different type - we need to close it and create new
-                # Pop the wrong-type list from the container stack
-                while self._container_stack[-1] is not context:
-                    self._container_stack.pop()
-                assert self._container_stack[-1] is context, "Should have found the context in stack"
                 self._container_stack.pop()
                 break
 
@@ -845,10 +841,6 @@ class MarkdownASTBuilder:
                     return cast(MarkdownASTUnorderedListNode, context.node)
 
                 # Different type - we need to close it and create new
-                # Pop the wrong-type list from the container stack
-                while self._container_stack[-1] is not context:
-                    self._container_stack.pop()
-                assert self._container_stack[-1] is context, "Should have found the context in stack"
                 self._container_stack.pop()
                 break
 
@@ -962,31 +954,16 @@ class MarkdownASTBuilder:
             indent: The indentation level of the '>' marker
             line_num: The line number
         """
-        # Check if we're already in a blockquote at this level by searching through the stack
-        # We may have list_item or other containers on top of the blockquote
-        blockquote_index = -1
-        for i in range(len(self._container_stack) - 1, -1, -1):
-            if (self._container_stack[i].container_type == 'blockquote' and
-                    self._container_stack[i].indent_level == indent):
-                blockquote_index = i
-                break
-
-        if blockquote_index >= 0:
-            # We're already in a blockquote at this level
-            # Pop any containers that are on top of it (like list_item)
-            while len(self._container_stack) > blockquote_index + 1:
-                self._container_stack.pop()
-
-            # Already in this blockquote, continue
-            return
-
-        # Create new blockquote node
         blockquote = MarkdownASTBlockquoteNode()
+
         blockquote.line_start = line_num
         blockquote.line_end = None  # Will be set when we exit
 
         # Add to current container
         self._current_container().add_child(blockquote)
+
+        # Clear last paragraph so text in the new blockquote starts fresh
+        self._last_paragraph = None
 
         # Push blockquote onto container stack
         context = ContainerContext(
@@ -1011,6 +988,10 @@ class MarkdownASTBuilder:
         if self._container_stack and self._container_stack[-1].container_type == 'blockquote':
             blockquote = self._container_stack[-1].node
             blockquote.line_end = line_num
+
+            # Clear the last paragraph so that text after exiting the blockquote
+            # starts a new paragraph instead of continuing the previous one
+            self._last_paragraph = None
 
             self._container_stack.pop()
 
@@ -1050,12 +1031,9 @@ class MarkdownASTBuilder:
                     if self._container_stack[-1] is current_blockquotes[i]:
                         self._exit_blockquote(line_num - 1)
                         break
-                    # Pop containers above this blockquote first
-                    if self._container_stack[-1].container_type != 'blockquote':
-                        self._container_stack.pop()
 
-                    else:
-                        self._exit_blockquote(line_num - 1)
+                    # Pop non-blockquote containers above this blockquote (e.g., list_item, list)
+                    self._container_stack.pop()
 
         # Enter new blockquotes that we need
         for i in range(len(current_blockquotes), len(blockquote_indents)):
@@ -1536,13 +1514,11 @@ class MarkdownASTBuilder:
             # Close list containers at or above the element's indentation
             while self._container_stack:
                 top = self._container_stack[-1]
+                # Break if we hit a non-list container (e.g., list_item, blockquote, document)
                 if top.container_type not in ('unordered_list', 'ordered_list'):
                     break
 
-                # Close lists at the same or greater indent than the element
-                if top.indent_level < effective_indent:
-                    break
-
+                # Close this list
                 self._container_stack.pop()
 
         # Handle table ends when a non-table line is encountered

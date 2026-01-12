@@ -2487,3 +2487,266 @@ Back to level 1"""
     # Final paragraph outside all lists
     assert doc.children[1].__class__.__name__ == "MarkdownASTParagraphNode"
     assert doc.children[1].children[0].content == "Back to level 1"
+
+
+
+def test_list_type_change_with_nested_list(ast_builder):
+    """Test changing list type at parent level while nested list exists."""
+    markdown = """- Item 1
+  - Nested A
+  - Nested B
+1. Item 2
+2. Item 3"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    # Should have two lists at root level: unordered then ordered
+    assert len(doc.children) == 2
+
+    # First should be unordered list with one item containing nested list
+    first_list = doc.children[0]
+    assert first_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(first_list.children) == 1
+
+    first_item = first_list.children[0]
+    assert len(first_item.children) == 2  # Text + nested list
+
+    nested_list = first_item.children[1]
+    assert nested_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(nested_list.children) == 2
+
+    # Second should be ordered list with two items
+    second_list = doc.children[1]
+    assert second_list.__class__.__name__ == "MarkdownASTOrderedListNode"
+    assert len(second_list.children) == 2
+
+
+def test_ordered_to_unordered_list_type_change_with_nesting(ast_builder):
+    """Test changing from ordered to unordered list with nested content.
+
+    Tests the opposite direction of list type change.
+    """
+    markdown = """1. Item 1
+   - Nested A
+   - Nested B
+- Item 2
+- Item 3"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    # Should have two lists at root level: ordered then unordered
+    assert len(doc.children) == 2
+
+    # First should be ordered list
+    first_list = doc.children[0]
+    assert first_list.__class__.__name__ == "MarkdownASTOrderedListNode"
+    assert len(first_list.children) == 1
+
+    # Second should be unordered list
+    second_list = doc.children[1]
+    assert second_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(second_list.children) == 2
+
+
+def test_blockquote_with_nested_list_complex(ast_builder):
+    """Test blockquotes containing lists with re-entry to blockquote."""
+    markdown = """> Quote start
+> - List item 1
+>   - Nested item A
+>   - Nested item B
+> - List item 2
+> 
+> Back to quote paragraph"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    assert len(doc.children) == 1
+    blockquote = doc.children[0]
+    assert blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Should contain: paragraph, list, paragraph
+    assert len(blockquote.children) == 3
+
+    # First paragraph
+    assert blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert blockquote.children[0].children[0].content == "Quote start"
+
+    # List with nested items
+    list_node = blockquote.children[1]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(list_node.children) == 2
+
+    # First list item should have nested list
+    first_item = list_node.children[0]
+    assert len(first_item.children) == 2  # Text + nested list
+    nested_list = first_item.children[1]
+    assert nested_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(nested_list.children) == 2
+
+    # Back to quote paragraph
+    assert blockquote.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert blockquote.children[2].children[0].content == "Back to quote paragraph"
+
+
+def test_nested_blockquotes_with_lists(ast_builder):
+    """
+    Test nested blockquotes containing lists.
+
+    This tests the blockquote nesting adjustment logic when exiting
+    and re-entering blockquote contexts.
+    """
+    markdown = """> Level 1 quote
+> > Level 2 quote
+> > - List in level 2
+> > - Another item
+> Back to level 1"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    assert len(doc.children) == 1
+    outer_blockquote = doc.children[0]
+    assert outer_blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Should contain: paragraph, nested blockquote, paragraph
+    assert len(outer_blockquote.children) == 3
+
+    # First paragraph in outer blockquote
+    assert outer_blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert outer_blockquote.children[0].children[0].content == "Level 1 quote"
+
+    # Nested blockquote
+    inner_blockquote = outer_blockquote.children[1]
+    assert inner_blockquote.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Inner blockquote should have paragraph and list
+    assert len(inner_blockquote.children) == 2
+    assert inner_blockquote.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert inner_blockquote.children[0].children[0].content == "Level 2 quote"
+
+    list_node = inner_blockquote.children[1]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(list_node.children) == 2
+
+    # Back to level 1 paragraph
+    assert outer_blockquote.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert outer_blockquote.children[2].children[0].content == "Back to level 1"
+
+
+def test_blockquote_nesting_level_changes(ast_builder):
+    """
+    Test changing blockquote nesting levels dynamically.
+
+    This should trigger the blockquote context adjustment logic when
+    the nesting level changes.
+    """
+    markdown = """> Level 1
+> > Level 2
+> > > Level 3
+> > Back to level 2
+> Back to level 1"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    assert len(doc.children) == 1
+    level1 = doc.children[0]
+    assert level1.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Level 1 should contain: paragraph, level 2 blockquote, paragraph
+    assert len(level1.children) == 3
+    assert level1.children[0].children[0].content == "Level 1"
+
+    # Level 2 blockquote
+    level2 = level1.children[1]
+    assert level2.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(level2.children) == 3
+    assert level2.children[0].children[0].content == "Level 2"
+
+    # Level 3 blockquote
+    level3 = level2.children[1]
+    assert level3.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(level3.children) == 1
+    assert level3.children[0].children[0].content == "Level 3"
+
+    # Back to level 2
+    assert level2.children[2].children[0].content == "Back to level 2"
+
+    # Back to level 1
+    assert level1.children[2].children[0].content == "Back to level 1"
+
+
+
+def test_blockquote_exit_with_list_item_on_stack(ast_builder):
+    """
+    Test exiting a blockquote when list_item container is on stack.
+
+    This specifically tests line 1054 in markdown_ast_builder.py where we need
+    to pop non-blockquote containers (like list_item) when exiting a blockquote.
+
+    The scenario: We have a nested blockquote containing a list. When we reduce
+    the nesting level, the list_item container is still on the stack and must be
+    popped before we can exit the inner blockquote.
+    """
+    markdown = """> Outer quote
+> > Inner quote
+> > - List item
+> Back to outer"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    # Should have one blockquote
+    assert len(doc.children) == 1
+
+    outer = doc.children[0]
+    assert outer.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Outer should have: paragraph, nested blockquote, paragraph
+    assert len(outer.children) == 3
+
+    # Inner blockquote with list
+    inner = outer.children[1]
+    assert inner.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(inner.children) == 2  # paragraph and list
+
+    # Verify the list exists
+    list_node = inner.children[1]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+
+
+def test_nested_blockquote_exit_with_list(ast_builder):
+    """
+    Test exiting nested blockquote with list on stack.
+
+    This is a more complex scenario that also triggers line 1054, where we
+    exit from a nested blockquote level that contains a list.
+    """
+    markdown = """> Outer
+> > Inner with list:
+> > - Item A
+> > - Item B
+> Back to outer"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    assert len(doc.children) == 1
+    outer = doc.children[0]
+    assert outer.__class__.__name__ == "MarkdownASTBlockquoteNode"
+
+    # Outer should have: paragraph, nested blockquote, paragraph
+    assert len(outer.children) == 3
+
+    # Check nested blockquote with list
+    inner = outer.children[1]
+    assert inner.__class__.__name__ == "MarkdownASTBlockquoteNode"
+    assert len(inner.children) == 2
+
+    # Inner has paragraph and list
+    assert inner.children[0].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert inner.children[0].children[0].content == "Inner with list:"
+
+    inner_list = inner.children[1]
+    assert inner_list.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(inner_list.children) == 2
+
+    # Back to outer paragraph
+    assert outer.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
+    assert outer.children[2].children[0].content == "Back to outer"
