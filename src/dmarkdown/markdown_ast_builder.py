@@ -710,7 +710,7 @@ class MarkdownASTBuilder:
         self._current_container().add_child(paragraph)
         return paragraph
 
-    def _find_or_create_ordered_list(self, indent: int, start_number: int) -> MarkdownASTOrderedListNode:
+    def _find_or_create_ordered_list(self, indent: int, start_number: int) -> ContainerContext:
         """
         Find or create an ordered list at the given indent level with specified start number.
 
@@ -719,7 +719,7 @@ class MarkdownASTBuilder:
             start_number: The starting number
 
         Returns:
-            The created ordered list node
+            The ContainerContext for the list
         """
         # Search the container stack for an ordered list at this indent level
         for context in reversed(self._container_stack):
@@ -727,7 +727,7 @@ class MarkdownASTBuilder:
                 # Found a list at this level
                 if context.container_type == 'ordered_list':
                     # Same type, reuse it
-                    return cast(MarkdownASTOrderedListNode, context.node)
+                    return context
 
                 # Different type - we need to close it and create new
                 self._container_stack.pop()
@@ -754,7 +754,7 @@ class MarkdownASTBuilder:
         )
         self._container_stack.append(list_context)
 
-        return new_list
+        return list_context
 
     def _parse_ordered_list_item(self, indent: int, number: str, content: str, line_num: int) -> None:
         """
@@ -773,18 +773,12 @@ class MarkdownASTBuilder:
         marker_length = len(number) + 2  # +2 for the "." and space after number
 
         # Find or create the list at this indent level
-        list_node = self._find_or_create_ordered_list(indent, start_number)
-
-        # Find the list's container context to update tight/loose status
-        list_context = None
-        for context in reversed(self._container_stack):
-            if context.node is list_node:
-                list_context = context
-                break
+        list_context = self._find_or_create_ordered_list(indent, start_number)
+        list_node = cast(MarkdownASTOrderedListNode, list_context.node)
 
         # If we've seen a blank line, mark the list as loose
         # (but only if the list already has items - blank lines before first item don't count)
-        if list_context and self._blank_line_count > 0 and len(list_node.children) > 0:
+        if self._blank_line_count > 0 and len(list_node.children) > 0:
             list_context.is_tight_list = False
             list_node.tight = False
 
@@ -821,7 +815,7 @@ class MarkdownASTBuilder:
         )
         self._container_stack.append(context)
 
-    def _find_or_create_unordered_list(self, indent: int) -> MarkdownASTUnorderedListNode:
+    def _find_or_create_unordered_list(self, indent: int) -> ContainerContext:
         """
         Find or create an unordered list at the given indent level.
 
@@ -829,7 +823,7 @@ class MarkdownASTBuilder:
             indent: The indentation level
 
         Returns:
-            The created unordered list node
+            The ContainerContext for the list
         """
         # Search the container stack for an unordered list at this indent level
         for context in reversed(self._container_stack):
@@ -838,7 +832,7 @@ class MarkdownASTBuilder:
                 # Found a list at this level
                 if context.container_type == 'unordered_list':
                     # Same type, reuse it
-                    return cast(MarkdownASTUnorderedListNode, context.node)
+                    return context
 
                 # Different type - we need to close it and create new
                 self._container_stack.pop()
@@ -865,7 +859,7 @@ class MarkdownASTBuilder:
         )
         self._container_stack.append(list_context)
 
-        return new_list
+        return list_context
 
     def _parse_unordered_list_item(self, indent: int, marker: str, content: str, line_num: int) -> None:
         """
@@ -881,18 +875,12 @@ class MarkdownASTBuilder:
         marker_length = len(marker) + 1  # +1 for the space after marker
 
         # Find or create the list at this indent level
-        list_node = self._find_or_create_unordered_list(indent)
-
-        # Find the list's container context to update tight/loose status
-        list_context = None
-        for context in reversed(self._container_stack):
-            if context.node is list_node:
-                list_context = context
-                break
+        list_context = self._find_or_create_unordered_list(indent)
+        list_node = cast(MarkdownASTUnorderedListNode, list_context.node)
 
         # If we've seen a blank line, mark the list as loose
         # (but only if the list already has items - blank lines before first item don't count)
-        if list_context and self._blank_line_count > 0 and len(list_node.children) > 0:
+        if self._blank_line_count > 0 and len(list_node.children) > 0:
             list_context.is_tight_list = False
             list_node.tight = False
 
