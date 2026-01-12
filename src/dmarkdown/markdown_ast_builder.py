@@ -11,7 +11,7 @@ from syntax import ParserRegistry, ProgrammingLanguage, ProgrammingLanguageUtils
 from dmarkdown.markdown_ast_node import (
     MarkdownASTNode, MarkdownASTDocumentNode, MarkdownASTTextNode, MarkdownASTLineBreakNode,
     MarkdownASTEmphasisNode, MarkdownASTBoldNode, MarkdownASTHeadingNode,
-    MarkdownASTParagraphNode, MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,
+    MarkdownASTParagraphNode, MarkdownASTListNode, MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode,
     MarkdownASTListItemNode, MarkdownASTInlineCodeNode, MarkdownASTCodeBlockNode,
     MarkdownASTTableNode, MarkdownASTTableHeaderNode, MarkdownASTTableBodyNode,
     MarkdownASTTableRowNode, MarkdownASTTableCellNode, MarkdownASTHorizontalRuleNode,
@@ -723,7 +723,7 @@ class MarkdownASTBuilder:
         """
         # Search the container stack for an ordered list at this indent level
         for context in reversed(self._container_stack):
-            if (context.container_type in ('unordered_list', 'ordered_list') and context.indent_level == indent):
+            if isinstance(context.node, MarkdownASTListNode) and context.indent_level == indent:
                 # Found a list at this level
                 if context.container_type == 'ordered_list':
                     # Same type, reuse it
@@ -827,8 +827,7 @@ class MarkdownASTBuilder:
         """
         # Search the container stack for an unordered list at this indent level
         for context in reversed(self._container_stack):
-            if (context.container_type in ('unordered_list', 'ordered_list') and
-                context.indent_level == indent):
+            if isinstance(context.node, MarkdownASTListNode) and context.indent_level == indent:
                 # Found a list at this level
                 if context.container_type == 'unordered_list':
                     # Same type, reuse it
@@ -1324,9 +1323,11 @@ class MarkdownASTBuilder:
 
         # Find the current list item container
         list_item_context = None
-        for context in reversed(self._container_stack):
+        list_item_index = None
+        for i, context in enumerate(reversed(self._container_stack)):
             if context.container_type == 'list_item':
                 list_item_context = context
+                list_item_index = len(self._container_stack) - 1 - i
                 break
 
         if not list_item_context:
@@ -1340,28 +1341,17 @@ class MarkdownASTBuilder:
         if current_indent == 0 and self._blank_line_count > 0:
             return False
 
-        # Find the list container to update tight/loose status
-        list_node = None
-        for context in reversed(self._container_stack):
-            if context.container_type == 'unordered_list':
-                list_node = cast(MarkdownASTUnorderedListNode, context.node)
+        # The list container is the parent of the list_item in the stack
+        # (immediately before the list_item when going forward through the stack)
+        assert list_item_index is not None and list_item_index > 0, "List item must have a parent list"
+        list_context = self._container_stack[list_item_index - 1]
+        assert isinstance(list_context.node, MarkdownASTListNode), \
+            f"Parent of list_item must be a list, got {type(list_context.node).__name__}"
 
-                # If we've seen a blank line, mark the list as loose
-                if self._blank_line_count > 0:
-                    context.is_tight_list = False
-                    list_node.tight = False
-
-                break
-
-            if context.container_type == 'ordered_list':
-                list_node = cast(MarkdownASTOrderedListNode, context.node)
-
-                # If we've seen a blank line, mark the list as loose
-                if self._blank_line_count > 0:
-                    context.is_tight_list = False
-                    list_node.tight = False
-
-                break
+        # If we've seen a blank line, mark the list as loose
+        if self._blank_line_count > 0:
+            list_context.is_tight_list = False
+            list_context.node.tight = False
 
         formatted_text = text.lstrip()
         last_item = cast(MarkdownASTListItemNode, list_item_context.node)
@@ -1508,7 +1498,7 @@ class MarkdownASTBuilder:
                 top = self._container_stack[-1]
 
                 # Break if we hit a non-list container (e.g., list_item, blockquote, document)
-                if top.container_type not in ('unordered_list', 'ordered_list'):
+                if not isinstance(top.node, MarkdownASTListNode):
                     break
 
                 # Close this list

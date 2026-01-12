@@ -61,7 +61,25 @@ class MarkdownASTHeadingNode(MarkdownASTNode):
         self.anchor_id = anchor_id
 
 
-class MarkdownASTOrderedListNode(MarkdownASTNode):
+class MarkdownASTListNode(MarkdownASTNode):
+    """Base class for list nodes (ordered and unordered)."""
+    def __init__(self, indent: int = 0, content_indent: int = 0) -> None:
+        """
+        Initialize a list node.
+
+        Args:
+            indent: The indentation level of this list
+            content_indent: The indentation level for content within list items
+        """
+        super().__init__()
+        self.indent = indent
+        self.content_indent = content_indent
+
+        # Track whether this list should render tightly (without extra spacing)
+        self.tight = True
+
+
+class MarkdownASTOrderedListNode(MarkdownASTListNode):
     """Node representing an HTML ordered list (<ol>)."""
     def __init__(self, indent: int = 0, start: int = 1) -> None:
         """
@@ -69,20 +87,15 @@ class MarkdownASTOrderedListNode(MarkdownASTNode):
 
         Args:
             indent: The indentation level of this list
+            start: The starting number for the ordered list
         """
-        super().__init__()
-        self.indent = indent
-        self.start = start
-
         # Content indent is typically indent + marker (e.g., "1.") + space
         # For ordered lists, we use a default of 3 characters for the marker ("1. ")
-        self.content_indent = indent + 3
-
-        # Track whether this list should render tightly (without extra spacing)
-        self.tight = True
+        super().__init__(indent, indent + 3)
+        self.start = start
 
 
-class MarkdownASTUnorderedListNode(MarkdownASTNode):
+class MarkdownASTUnorderedListNode(MarkdownASTListNode):
     """Node representing an HTML unordered list (<ul>)."""
     def __init__(self, indent: int = 0) -> None:
         """
@@ -91,15 +104,9 @@ class MarkdownASTUnorderedListNode(MarkdownASTNode):
         Args:
             indent: The indentation level of this list
         """
-        super().__init__()
-        self.indent = indent
-
         # Content indent is typically indent + marker (e.g., "-") + space
         # For unordered lists, we use 2 characters for the marker ("- ")
-        self.content_indent = indent + 2
-
-        # Track whether this list should render tightly (without extra spacing)
-        self.tight = True
+        super().__init__(indent, indent + 2)
 
 
 class MarkdownASTListItemNode(MarkdownASTNode):
