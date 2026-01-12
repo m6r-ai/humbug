@@ -550,7 +550,95 @@ def test_nested_list_paragraph_continuation(ast_builder):
     assert nested_para.line_end == 9
 
 
-def test_tight_list_with_multi_line_items(ast_builder):
+def test_ordered_tight_list_with_multi_line_items(ast_builder):
+    """
+    Test that tight lists remain tight even with multi-line items.
+
+    A tight list should not have blank lines between list items,
+    but can have multi-line content within each item.
+    """
+    markdown = """1. First item line 1
+   continues on line 2
+2. Second item line 1
+   continues on line 2
+3. Third item"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    list_node = doc.children[0]
+    assert list_node.__class__.__name__ == "MarkdownASTOrderedListNode"
+
+    # Should be a tight list (no blank lines between items)
+    assert list_node.tight is True
+
+    # First item should have a single paragraph with both lines
+    first_item = list_node.children[0]
+    first_para = first_item.children[0]
+    assert first_para.line_start == 0
+    assert first_para.line_end == 1
+
+    # Second item should also have a single paragraph with both lines
+    second_item = list_node.children[1]
+    second_para = second_item.children[0]
+    assert second_para.line_start == 2
+    assert second_para.line_end == 3
+
+
+def test_ordered_loose_list_with_multi_line_paragraphs(ast_builder):
+    """
+    Test that loose lists with multi-line paragraphs are handled correctly.
+
+    A loose list has blank lines between items, and each item can have
+    multi-line paragraphs.
+    """
+    markdown = """1. First item
+
+   First paragraph line 1.
+   First paragraph line 2.
+   
+   Second paragraph line 1.
+   Second paragraph line 2.
+
+2. Second item
+
+   Another paragraph line 1.
+   Another paragraph line 2."""
+
+    doc = ast_builder.build_ast(markdown)
+
+    list_node = doc.children[0]
+
+    # Should be a loose list (has blank lines between items)
+    assert list_node.tight is False
+
+    # First item should have three paragraphs:
+    # 1. The item text ("First item")
+    # 2. First multi-line paragraph
+    # 3. Second multi-line paragraph
+    first_item = list_node.children[0]
+    assert len(first_item.children) == 3
+
+    # Check first multi-line paragraph
+    first_para = first_item.children[1]
+    assert first_para.line_start == 2
+    assert first_para.line_end == 3
+
+    # Check second multi-line paragraph
+    second_para = first_item.children[2]
+    assert second_para.line_start == 5
+    assert second_para.line_end == 6
+
+    # Second item should have two paragraphs
+    second_item = list_node.children[1]
+    assert len(second_item.children) == 2
+
+    # Check the multi-line paragraph
+    second_item_para = second_item.children[1]
+    assert second_item_para.line_start == 10
+    assert second_item_para.line_end == 11
+
+
+def test_unordered_tight_list_with_multi_line_items(ast_builder):
     """
     Test that tight lists remain tight even with multi-line items.
 
@@ -584,7 +672,7 @@ def test_tight_list_with_multi_line_items(ast_builder):
     assert second_para.line_end == 3
 
 
-def test_loose_list_with_multi_line_paragraphs(ast_builder):
+def test_unordered_loose_list_with_multi_line_paragraphs(ast_builder):
     """
     Test that loose lists with multi-line paragraphs are handled correctly.
 

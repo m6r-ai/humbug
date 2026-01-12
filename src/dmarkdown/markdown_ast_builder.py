@@ -973,15 +973,14 @@ class MarkdownASTBuilder:
         Args:
             line_num: The line number where the blockquote ends
         """
-        if self._container_stack and self._container_stack[-1].container_type == 'blockquote':
-            blockquote = self._container_stack[-1].node
-            blockquote.line_end = line_num
+        blockquote = self._container_stack[-1].node
+        blockquote.line_end = line_num
 
-            # Clear the last paragraph so that text after exiting the blockquote
-            # starts a new paragraph instead of continuing the previous one
-            self._last_paragraph = None
+        # Clear the last paragraph so that text after exiting the blockquote
+        # starts a new paragraph instead of continuing the previous one
+        self._last_paragraph = None
 
-            self._container_stack.pop()
+        self._container_stack.pop()
 
     def _is_in_blockquote(self) -> bool:
         """
@@ -1342,17 +1341,27 @@ class MarkdownASTBuilder:
             return False
 
         # Find the list container to update tight/loose status
-        list_context = None
+        list_node = None
         for context in reversed(self._container_stack):
-            if context.container_type in ('unordered_list', 'ordered_list'):
-                list_context = context
+            if context.container_type == 'unordered_list':
+                list_node = cast(MarkdownASTUnorderedListNode, context.node)
+
+                # If we've seen a blank line, mark the list as loose
+                if self._blank_line_count > 0:
+                    context.is_tight_list = False
+                    list_node.tight = False
+
                 break
 
-        # If we've seen a blank line, mark the list as loose
-        if list_context and self._blank_line_count > 0:
-            list_context.is_tight_list = False
-            if isinstance(list_context.node, (MarkdownASTUnorderedListNode, MarkdownASTOrderedListNode)):
-                list_context.node.tight = False
+            if context.container_type == 'ordered_list':
+                list_node = cast(MarkdownASTOrderedListNode, context.node)
+
+                # If we've seen a blank line, mark the list as loose
+                if self._blank_line_count > 0:
+                    context.is_tight_list = False
+                    list_node.tight = False
+
+                break
 
         formatted_text = text.lstrip()
         last_item = cast(MarkdownASTListItemNode, list_item_context.node)
@@ -1443,8 +1452,7 @@ class MarkdownASTBuilder:
                     # Extract the text after stripping blockquotes
                     text_content = line_data.get('raw', line)
                     self._code_block_content.append(text_content)
-                    if self._embedded_language != ProgrammingLanguage.UNKNOWN:
-                        self._parse_code_line(text_content)
+                    self._parse_code_line(text_content)
 
                     self._last_processed_line_type = 'code_block_content'
                     self._blank_line_count = 0
@@ -1482,8 +1490,7 @@ class MarkdownASTBuilder:
             text_content = line_data.get('raw', line)
 
             self._code_block_content.append(text_content)
-            if self._embedded_language != ProgrammingLanguage.UNKNOWN:
-                self._parse_code_line(text_content)
+            self._parse_code_line(text_content)
 
             self._last_processed_line_type = 'code_block_content'
             self._blank_line_count = 0
@@ -1494,14 +1501,12 @@ class MarkdownASTBuilder:
         effective_indent = line_data.get('indent', indent)
         self._adjust_containers_for_indent(effective_indent, line_type)
 
-        # After a blank line, close list containers for block-level elements that are at
-        # the same or lesser indentation as the list. This prevents block elements from
-        # being added as children of lists when they should be siblings.
-        # This applies to non-list-item block elements (text, code blocks, headings, etc.)
+        # After a blank line, close block-level containers that are at the same or lesser indentation.
         if (self._blank_line_count > 0 and line_type not in ('blank', 'unordered_list_item', 'ordered_list_item')):
             # Close list containers at or above the element's indentation
             while self._container_stack:
                 top = self._container_stack[-1]
+
                 # Break if we hit a non-list container (e.g., list_item, blockquote, document)
                 if top.container_type not in ('unordered_list', 'ordered_list'):
                     break
@@ -1509,7 +1514,6 @@ class MarkdownASTBuilder:
                 # Close this list
                 self._container_stack.pop()
 
-        # Handle table ends when a non-table line is encountered
         # Handle table ends when a non-table line is encountered
         if self._table_buffer.is_in_potential_table and line_type not in ('table_row', 'table_separator'):
             # Check if we have a complete table to create
