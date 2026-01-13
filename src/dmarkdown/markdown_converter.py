@@ -62,20 +62,6 @@ class MarkdownConverter:
         self.ast_builder.update_ast(text, self.current_text, path)
         self.current_text = text
 
-        # Extract content sections from the AST document
-        return self._extract_sections_from_ast(self.ast_builder.document())
-
-    def _extract_sections_from_ast(self, document: MarkdownASTNode) -> List[Tuple[MarkdownASTNode, ProgrammingLanguage | None]]:
-        """
-        Extract content sections from the AST document.
-
-        Args:
-            document: The AST document node
-
-        Returns:
-            List of (node, language) tuples where language is None for markdown content
-            and a ProgrammingLanguage enum for code blocks
-        """
         sections: List[tuple[MarkdownASTNode, ProgrammingLanguage | None]] = []
         current_markdown_nodes: List[MarkdownASTNode] = []
 
@@ -92,8 +78,8 @@ class MarkdownConverter:
                 current_markdown_nodes.clear()
 
         # Process all nodes in the document
+        document = self.ast_builder.document()
         for node in document.children:
-            print(f"Processing node: {node}")
             if isinstance(node, MarkdownASTCodeBlockNode):
                 # Add any accumulated markdown before this code block
                 add_markdown_section()
