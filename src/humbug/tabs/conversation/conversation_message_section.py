@@ -128,8 +128,6 @@ class ConversationMessageSection(QFrame):
         self._text_area.mouse_pressed.connect(self._on_mouse_pressed)
         self._text_area.mouse_released.connect(self._on_mouse_released)
 
-        self.set_language(language)
-
         self._mouse_left_button_pressed = False
 
         self._on_language_changed()

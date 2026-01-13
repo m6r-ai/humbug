@@ -39,13 +39,21 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
         Args:
             language: The programming language to use
         """
-        if self._language != language:
-            self._language = language
-            # Clear pre-computed tokens when language changes
-            self._precomputed_tokens = None
-            self._precomputed_states = None
-            self._use_precomputed = False
-            self.rehighlight()
+        if self._language == language:
+            return
+
+        self._language = language
+
+        # Clear pre-computed tokens when language changes
+        self._precomputed_tokens = None
+        self._precomputed_states = None
+        self._use_precomputed = False
+
+        # If our document is empty, no need to rehighlight
+        if self.document().isEmpty():
+            return
+
+        self.rehighlight()
 
     def set_precomputed_tokens(
         self,

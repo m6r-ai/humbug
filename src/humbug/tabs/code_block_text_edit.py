@@ -1,11 +1,11 @@
 """Widget for displaying code blocks with syntax highlighting."""
 
 import logging
+from typing import List
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QTextOption, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
-from typing import List
 
 from syntax import ProgrammingLanguage, Token, ParserState
 
@@ -89,7 +89,7 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
         # Set pre-computed tokens BEFORE setting text to avoid double highlighting
         if self._highlighter is not None:
             self._highlighter.set_precomputed_tokens(tokens_by_line, states_by_line)
-        
+
         self.set_text(text)
 
     def apply_style(self) -> None:
