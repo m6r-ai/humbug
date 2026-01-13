@@ -264,7 +264,7 @@ class ConversationMessageSection(QFrame):
 
         if isinstance(self._text_area, CodeBlockTextEdit):
             assert isinstance(content, MarkdownASTCodeBlockNode), "Content must be code block node"
-            self._text_area.set_text(content.content)
+            self._text_area.set_text_with_highlighting(content.content, content.tokens_by_line, content.states_by_line)
             return
 
         if self._renderer is not None:

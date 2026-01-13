@@ -13,6 +13,8 @@ New features:
 - Added association lists (alists) to AIFPL to provide very efficient key/value lookup operations.
 - Improved AIFPL performance by about 40%
 - Added blockquote support to the dmarkdown Markdown parser.
+- Added the ability for the code blocks parsed by the Markdown parser to pass this information directly to the syntax
+  highlighter to avoid parsing twice.
 
 Bug fixes:
 

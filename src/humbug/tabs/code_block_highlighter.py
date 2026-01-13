@@ -1,11 +1,11 @@
 """Editor highlighter."""
 
 import logging
-from typing import cast
+from typing import cast, List
 
 from PySide6.QtGui import QSyntaxHighlighter, QTextDocument, QTextBlockUserData
 
-from syntax import TokenType, ProgrammingLanguage, ParserState, ParserRegistry
+from syntax import TokenType, ProgrammingLanguage, ParserState, ParserRegistry, Token
 
 from humbug.style_manager import StyleManager
 
@@ -27,6 +27,9 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
         self._language = ProgrammingLanguage.TEXT
+        self._precomputed_tokens: List[List[Token]] | None = None
+        self._precomputed_states: List[ParserState | None] | None = None
+        self._use_precomputed = False
         self._logger = logging.getLogger("CodeBlockHighlighter")
 
     def set_language(self, language: ProgrammingLanguage) -> None:
@@ -38,7 +41,27 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
         """
         if self._language != language:
             self._language = language
+            # Clear pre-computed tokens when language changes
+            self._precomputed_tokens = None
+            self._precomputed_states = None
+            self._use_precomputed = False
             self.rehighlight()
+
+    def set_precomputed_tokens(
+        self,
+        tokens_by_line: List[List[Token]],
+        states_by_line: List[ParserState | None]
+    ) -> None:
+        """
+        Set pre-computed tokens to avoid re-parsing.
+
+        Args:
+            tokens_by_line: Pre-computed tokens for each line
+            states_by_line: Pre-computed parser states for each line
+        """
+        self._precomputed_tokens = tokens_by_line
+        self._precomputed_states = states_by_line
+        self._use_precomputed = True
 
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
@@ -53,6 +76,36 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
                 prev_block_data = cast(CodeBlockHighlighterBlockData, prev_block.userData())
                 if prev_block_data:
                     prev_parser_state = prev_block_data.parser_state
+
+            # Use pre-computed tokens if available
+            if self._use_precomputed and self._precomputed_tokens and self._precomputed_states:
+                block_number = current_block.blockNumber()
+
+                if block_number < len(self._precomputed_tokens):
+                    # Use pre-computed tokens for this line
+                    tokens = self._precomputed_tokens[block_number]
+                    parser_state = self._precomputed_states[block_number]
+
+                    # Apply syntax highlighting from pre-computed tokens
+                    last_token_pos = 0
+                    for token in tokens:
+                        highlight_len = len(token.value) + token.start - last_token_pos
+                        self.setFormat(last_token_pos, highlight_len, self._style_manager.get_highlight(token.type))
+                        last_token_pos += highlight_len
+
+                    # Highlight any remaining whitespace
+                    if last_token_pos < len(text):
+                        self.setFormat(
+                            last_token_pos,
+                            len(text) - last_token_pos,
+                            self._style_manager.get_highlight(TokenType.TEXT)
+                        )
+
+                    # Store parser state for next block
+                    block_data = CodeBlockHighlighterBlockData()
+                    block_data.parser_state = parser_state
+                    current_block.setUserData(block_data)
+                    return
 
             continuation_state = -1
             current_block_data = cast(CodeBlockHighlighterBlockData, current_block.userData())

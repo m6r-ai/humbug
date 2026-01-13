@@ -5,8 +5,9 @@ import logging
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QTextOption, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
+from typing import List
 
-from syntax import ProgrammingLanguage
+from syntax import ProgrammingLanguage, Token, ParserState
 
 from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
 from humbug.style_manager import StyleManager
@@ -67,6 +68,29 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
         # Update highlighter if it exists
         if self._highlighter is not None:
             self._highlighter.set_language(language)
+
+    def set_text_with_highlighting(
+        self,
+        text: str,
+        tokens_by_line: List[List[Token]],
+        states_by_line: List[ParserState | None]
+    ) -> None:
+        """
+        Set text with pre-computed syntax highlighting tokens to avoid re-parsing.
+        
+        This method sets the pre-computed tokens first, then sets the text, ensuring
+        that highlighting only runs once using the pre-computed tokens.
+
+        Args:
+            text: The text content to display
+            tokens_by_line: Pre-computed tokens for each line
+            states_by_line: Pre-computed parser states for each line
+        """
+        # Set pre-computed tokens BEFORE setting text to avoid double highlighting
+        if self._highlighter is not None:
+            self._highlighter.set_precomputed_tokens(tokens_by_line, states_by_line)
+        
+        self.set_text(text)
 
     def apply_style(self) -> None:
         """Apply style changes."""
