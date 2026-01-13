@@ -57,4 +57,5 @@ class TerminalLine:
             fg_color = self.data[base + 2] if self.data[base + 2] != 0 else None
             bg_color = self.data[base + 3] if self.data[base + 3] != 0 else None
             return (char, attributes, fg_color, bg_color)
+
         return (' ', TerminalCharacterAttributes.NONE, None, None)
