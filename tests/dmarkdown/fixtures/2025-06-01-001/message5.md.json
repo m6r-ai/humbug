@@ -74,7 +74,7 @@
                     {
                       "type": "code_block",
                       "language": "python",
-                      "content": "     # Now we have some code\n     for i in range(10):\n         print(f\"{i}\")"
+                      "content": "# Now we have some code\nfor i in range(10):\n    print(f\"{i}\")"
                     }
                   ]
                 },

@@ -2838,3 +2838,68 @@ def test_nested_blockquote_exit_with_list(ast_builder):
     # Back to outer paragraph
     assert outer.children[2].__class__.__name__ == "MarkdownASTParagraphNode"
     assert outer.children[2].children[0].content == "Back to outer"
+
+
+def test_fenced_code_block_in_loose_list(ast_builder):
+    """
+    Test parsing a fenced code block within a loose list item.
+
+    This test verifies that:
+    1. A fenced code block indented within a list item is recognized as a code block
+    2. The code block is properly associated with its list item
+    3. Content after the list is correctly parsed as a separate paragraph
+    4. The list is correctly identified as loose (has blank lines between items)
+    """
+    markdown = """# Hello
+
+Here is a doc
+
+- This is a list
+
+- It's a loose list
+
+- ```python
+  for in in range(10):
+      print("hello")
+  ```
+
+More!"""
+
+    doc = ast_builder.build_ast(markdown)
+
+    # Should have 4 top-level children: heading, paragraph, list, paragraph
+    assert len(doc.children) == 4, f"Expected 4 children, got {len(doc.children)}"
+
+    # First child: Heading
+    heading = doc.children[0]
+    assert heading.__class__.__name__ == "MarkdownASTHeadingNode"
+    assert heading.level == 1
+    assert heading.children[0].content == "Hello"
+
+    # Second child: Paragraph
+    para1 = doc.children[1]
+    assert para1.__class__.__name__ == "MarkdownASTParagraphNode"
+    assert para1.children[0].content == "Here is a doc"
+
+    # Third child: Unordered list (loose)
+    list_node = doc.children[2]
+    assert list_node.__class__.__name__ == "MarkdownASTUnorderedListNode"
+    assert len(list_node.children) == 3, f"Expected 3 list items, got {len(list_node.children)}"
+
+    # Third list item should contain a code block
+    third_item = list_node.children[2]
+    assert third_item.__class__.__name__ == "MarkdownASTListItemNode"
+    assert len(third_item.children) == 1, f"Expected 1 child (code block), got {len(third_item.children)}"
+
+    # The code block should be the only child of the third list item
+    code_block = third_item.children[0]
+    assert code_block.__class__.__name__ == "MarkdownASTCodeBlockNode", \
+        f"Expected MarkdownASTCodeBlockNode, got {code_block.__class__.__name__}"
+    assert code_block.language == ProgrammingLanguage.PYTHON
+    assert "for in in range(10):" in code_block.content
+    assert 'print("hello")' in code_block.content
+
+    # Fourth child: Paragraph with "More!"
+    para2 = doc.children[3]
+    assert para2.__class__.__name__ == "MarkdownASTParagraphNode"
+    assert para2.children[0].content == "More!"

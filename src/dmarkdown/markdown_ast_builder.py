@@ -755,19 +755,43 @@ class MarkdownASTBuilder:
         item = MarkdownASTListItemNode()
         list_node.add_child(item)
 
-        # Create a paragraph for the content
-        paragraph = MarkdownASTParagraphNode()
-        for node in self._parse_inline_formatting(content):
-            paragraph.add_child(node)
+        # Check if the content is a code block fence
+        code_block_match = self._code_block_pattern.match(content.strip())
+        if code_block_match:
+            # This list item starts with a code block - start the code block
+            language_name = code_block_match.group(1) or ""
+            self._in_code_block = True
+            self._code_block_start_container = item
+            self._code_block_language_name = language_name
+            self._embedded_language = ProgrammingLanguageUtils.from_name(language_name)
+            self._code_block_content = []
+            self._code_block_start_line = line_num
 
-        paragraph.line_start = line_num
-        paragraph.line_end = line_num
-        item.add_child(paragraph)
-        self._register_node_line(paragraph, line_num)
+            # Initialize nesting tracking
+            # The indent should be relative to the list item content
+            self._code_block_nesting_level = 1
+            self._code_block_indents = [indent + marker_length]
+            self._embedded_parser_state = None  # Will be initialized on first line
 
-        item.line_start = line_num
-        item.line_end = line_num
-        self._register_node_line(item, line_num)
+            # Set up the list item node
+            item.line_start = line_num
+            item.line_end = line_num
+            self._register_node_line(item, line_num)
+
+        else:
+            # Create a paragraph for the content
+            paragraph = MarkdownASTParagraphNode()
+            for node in self._parse_inline_formatting(content):
+                paragraph.add_child(node)
+
+            paragraph.line_start = line_num
+            paragraph.line_end = line_num
+            item.add_child(paragraph)
+            self._register_node_line(paragraph, line_num)
+
+            item.line_start = line_num
+            item.line_end = line_num
+            self._register_node_line(item, line_num)
 
         # Update tracking
         self._last_processed_line_type = 'ordered_list_item'
@@ -856,19 +880,43 @@ class MarkdownASTBuilder:
         item = MarkdownASTListItemNode()
         list_node.add_child(item)
 
-        # Create a paragraph for the content
-        paragraph = MarkdownASTParagraphNode()
-        for node in self._parse_inline_formatting(content):
-            paragraph.add_child(node)
+        # Check if the content is a code block fence
+        code_block_match = self._code_block_pattern.match(content.strip())
+        if code_block_match:
+            # This list item starts with a code block - start the code block
+            language_name = code_block_match.group(1) or ""
+            self._in_code_block = True
+            self._code_block_start_container = item
+            self._code_block_language_name = language_name
+            self._embedded_language = ProgrammingLanguageUtils.from_name(language_name)
+            self._code_block_content = []
+            self._code_block_start_line = line_num
 
-        paragraph.line_start = line_num
-        paragraph.line_end = line_num
-        item.add_child(paragraph)
-        self._register_node_line(paragraph, line_num)
+            # Initialize nesting tracking
+            # The indent should be relative to the list item content
+            self._code_block_nesting_level = 1
+            self._code_block_indents = [indent + marker_length]
+            self._embedded_parser_state = None  # Will be initialized on first line
 
-        item.line_start = line_num
-        item.line_end = line_num
-        self._register_node_line(item, line_num)
+            # Set up the list item node
+            item.line_start = line_num
+            item.line_end = line_num
+            self._register_node_line(item, line_num)
+
+        else:
+            # Create a paragraph for the content
+            paragraph = MarkdownASTParagraphNode()
+            for node in self._parse_inline_formatting(content):
+                paragraph.add_child(node)
+
+            paragraph.line_start = line_num
+            paragraph.line_end = line_num
+            item.add_child(paragraph)
+            self._register_node_line(paragraph, line_num)
+
+            item.line_start = line_num
+            item.line_end = line_num
+            self._register_node_line(item, line_num)
 
         # Update tracking
         self._last_processed_line_type = 'unordered_list_item'
@@ -1460,6 +1508,8 @@ class MarkdownASTBuilder:
                     # ``` is inside a string/comment, treat as content
                     # Extract the text after stripping blockquotes
                     text_content = line_data.get('raw', line)
+                    code_indent = self._code_block_indents[-1]
+                    text_content = text_content[code_indent:]
                     self._code_block_content.append(text_content)
                     self._parse_code_line(text_content)
 
@@ -1497,7 +1547,8 @@ class MarkdownASTBuilder:
 
             # Not a fence - accumulate as content
             text_content = line_data.get('raw', line)
-
+            code_indent = self._code_block_indents[-1]
+            text_content = text_content[code_indent:]
             self._code_block_content.append(text_content)
             self._parse_code_line(text_content)
 
