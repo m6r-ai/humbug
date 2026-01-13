@@ -73,6 +73,8 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text: str) -> None:
         """Apply highlighting to the given block of text."""
+        token: Token | None
+
         try:
             current_block = self.currentBlock()
             prev_block = current_block.previous()
