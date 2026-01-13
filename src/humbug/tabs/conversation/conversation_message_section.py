@@ -34,7 +34,7 @@ class ConversationMessageSection(QFrame):
     def __init__(
         self,
         is_input: bool,
-        language: ProgrammingLanguage | None = None,
+        syntax: ProgrammingLanguage | None = None,
         parent: QWidget | None = None
     ) -> None:
         """
@@ -42,7 +42,7 @@ class ConversationMessageSection(QFrame):
 
         Args:
             is_input: Whether this section is for user input
-            language: Optional programming language for this section
+            syntax: Optional syntax for this section
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -57,9 +57,9 @@ class ConversationMessageSection(QFrame):
         style_manager = StyleManager()
         self._style_manager = style_manager
 
-        # Create language header if needed
-        self._language = language
-        self._language_header = None
+        # Create syntax header if needed
+        self._syntax = syntax
+        self._syntax_header = None
         self._header_container = None
         self._copy_button: QToolButton | None = None
         self._save_as_button: QToolButton | None = None
@@ -75,7 +75,7 @@ class ConversationMessageSection(QFrame):
         self._text_area: MarkdownTextEdit | CodeBlockTextEdit
         self._renderer: MarkdownRenderer | None = None
 
-        if language is None:
+        if syntax is None:
             # Markdown or user input - use rich text widget
             self._text_area = MarkdownTextEdit(is_input, self)
 
@@ -92,11 +92,11 @@ class ConversationMessageSection(QFrame):
             self._header_layout.setContentsMargins(0, 0, 0, 0)
             self._header_layout.setSpacing(4)
 
-            # Add language label on the left
-            self._language_header = QLabel(self._header_container)
-            self._language_header.setIndent(0)
-            self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            self._header_layout.addWidget(self._language_header)
+            # Add syntax label on the left
+            self._syntax_header = QLabel(self._header_container)
+            self._syntax_header.setIndent(0)
+            self._syntax_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            self._header_layout.addWidget(self._syntax_header)
 
             # Add stretch to push buttons to the right
             self._header_layout.addStretch()
@@ -116,7 +116,7 @@ class ConversationMessageSection(QFrame):
 
             # Code block - use code block text widget
             self._text_area = CodeBlockTextEdit(self)
-            self._text_area.set_language(language)
+            self._text_area.set_syntax(syntax)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
@@ -139,37 +139,37 @@ class ConversationMessageSection(QFrame):
         """Get the text area widget."""
         return self._text_area
 
-    def language(self) -> ProgrammingLanguage | None:
+    def syntax(self) -> ProgrammingLanguage | None:
         """Provide the language in use by this section."""
-        return self._language
+        return self._syntax
 
-    def set_language(self, language: ProgrammingLanguage | None) -> None:
+    def set_syntax(self, syntax: ProgrammingLanguage | None) -> None:
         """Set the programming language to use for this message section"""
-        if self._language == language:
+        if self._syntax == syntax:
             return
 
-        self._language = language
+        self._syntax = syntax
 
-        if language is not None:
+        if syntax is not None:
             if isinstance(self._text_area, CodeBlockTextEdit):
-                self._text_area.set_language(language)
+                self._text_area.set_syntax(syntax)
 
-        if self._language_header:
+        if self._syntax_header:
             strings = self._language_manager.strings()
-            language_header = strings.highlighting.format(
-                language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
+            syntax_header = strings.highlighting.format(
+                syntax=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._syntax))
             )
-            self._language_header.setText(language_header)
+            self._syntax_header.setText(syntax_header)
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
         strings = self._language_manager.strings()
 
-        if self._language_header:
-            language_header = strings.highlighting.format(
-                language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
+        if self._syntax_header:
+            syntax_header = strings.highlighting.format(
+                syntax=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._syntax))
             )
-            self._language_header.setText(language_header)
+            self._syntax_header.setText(syntax_header)
 
         if self._copy_button:
             self._copy_button.setToolTip(strings.tooltip_copy_contents)
@@ -219,7 +219,7 @@ class ConversationMessageSection(QFrame):
         strings = self._language_manager.strings()
 
         # Determine the suggested file extension based on language
-        extension = ProgrammingLanguageUtils.get_file_extension(self._language)
+        extension = ProgrammingLanguageUtils.get_file_extension(self._syntax)
         default_filename = f"code{extension}" if extension else "code.txt"
 
         # Show file dialog
@@ -404,11 +404,11 @@ class ConversationMessageSection(QFrame):
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
         self._layout.setSpacing(spacing)
 
-        if self._language_header:
+        if self._syntax_header:
             font = self.font()
             base_font_size = style_manager.base_font_size()
             font.setPointSizeF(base_font_size * zoom_factor)
-            self._language_header.setFont(font)
+            self._syntax_header.setFont(font)
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
         self._text_area.apply_style()

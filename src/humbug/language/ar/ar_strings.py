@@ -78,7 +78,7 @@ def get_arabic_strings() -> LanguageStrings:
         role_tool_result="نتيجة الأداة",
 
         # Message labels
-        highlighting="تمييز: {language}",
+        highlighting="تمييز: {syntax}",
 
         # Find widget
         find_placeholder="بحث",

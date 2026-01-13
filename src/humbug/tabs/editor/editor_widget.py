@@ -89,8 +89,8 @@ class EditorWidget(QPlainTextEdit):
         self._current_match = -1
         self._last_search = ""
 
-        # Programming language and syntax highlighting
-        self._current_programming_language = ProgrammingLanguage.TEXT
+        # Syntax highlighting
+        self._syntax = ProgrammingLanguage.TEXT
         self._highlighter = CodeBlockHighlighter(self.document())
 
         # Auto-backup functionality
@@ -113,8 +113,8 @@ class EditorWidget(QPlainTextEdit):
         if self._path:
             self._load_file()
 
-        # Update programming language based on path
-        self._update_programming_language_from_path()
+        # Update syntax highlighting based on path
+        self._update_syntax_from_path()
 
         # Update auto-backup based on current mindspace settings
         self._update_auto_backup_from_settings()
@@ -186,26 +186,26 @@ class EditorWidget(QPlainTextEdit):
             cursor.movePosition(QTextCursor.MoveOperation.Start)
             self.setTextCursor(cursor)
 
-    def _update_programming_language_from_path(self) -> None:
-        """Update programming language based on current path."""
+    def _update_syntax_from_path(self) -> None:
+        """Update syntax highlighting based on current path."""
         if self._path:
-            new_language = ProgrammingLanguageUtils.from_file_extension(self._path)
+            new_syntax = ProgrammingLanguageUtils.from_file_extension(self._path)
 
         else:
-            new_language = ProgrammingLanguage.TEXT
+            new_syntax = ProgrammingLanguage.TEXT
 
-        self._update_programming_language(new_language)
+        self._update_syntax(new_syntax)
 
-    def _update_programming_language(self, new_language: ProgrammingLanguage) -> None:
+    def _update_syntax(self, new_syntax: ProgrammingLanguage) -> None:
         """
-        Update the syntax highlighting language.
+        Update the syntax highlighting.
 
         Args:
-            new_language: The new programming language to use
+            new_syntax: The new programming language to use
         """
-        if self._current_programming_language != new_language:
-            self._current_programming_language = new_language
-            self._highlighter.set_language(new_language)
+        if self._syntax != new_syntax:
+            self._syntax = new_syntax
+            self._highlighter.set_syntax(new_syntax)
             self.status_updated.emit()
 
     def _update_auto_backup_from_settings(self) -> None:
@@ -384,7 +384,7 @@ class EditorWidget(QPlainTextEdit):
         """
         self._path = path
         self._untitled_number = None
-        self._update_programming_language_from_path()
+        self._update_syntax_from_path()
 
     def is_modified(self) -> bool:
         """Check if the content has been modified."""
@@ -507,7 +507,7 @@ class EditorWidget(QPlainTextEdit):
         line_ending = "LF"  # We could detect this from file content
 
         # Get language name for display
-        file_type = ProgrammingLanguageUtils.get_display_name(self._current_programming_language)
+        file_type = ProgrammingLanguageUtils.get_display_name(self._syntax)
 
         return {
             'line': line,
@@ -529,7 +529,7 @@ class EditorWidget(QPlainTextEdit):
         """
         metadata: Dict[str, Any] = {}
 
-        metadata["language"] = self._current_programming_language.name
+        metadata["syntax"] = self._syntax.name
         metadata["cursor"] = self._get_cursor_position()
         metadata["horizontal_scroll"] = self.horizontalScrollBar().value()
         metadata["vertical_scroll"] = self.verticalScrollBar().value()
@@ -555,7 +555,7 @@ class EditorWidget(QPlainTextEdit):
         # Restore language if specified
         if "language" in metadata:
             language = ProgrammingLanguage[metadata["language"]]
-            self._update_programming_language(language)
+            self._update_syntax(language)
 
         # Restore cursor position if present
         if "cursor" in metadata:
@@ -1360,8 +1360,8 @@ class EditorWidget(QPlainTextEdit):
         """
         return {
             'line_count': self.document().blockCount(),
-            'language': ProgrammingLanguageUtils.get_display_name(self._current_programming_language),
-            'language_id': self._current_programming_language.name,
+            'language': ProgrammingLanguageUtils.get_display_name(self._syntax),
+            'language_id': self._syntax.name,
             'encoding': 'UTF-8',
             'is_modified': self._is_modified,
             'file_path': self._path,

@@ -1891,9 +1891,9 @@ class ConversationWidget(QWidget):
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
 
-            /* Labels (language headers) within message sections */
+            /* Labels (syntax headers) within message sections */
             #ConversationMessage #ConversationMessageSection QLabel {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
                 background-color: transparent;
                 margin: 0;
                 padding: 0;

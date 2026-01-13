@@ -78,7 +78,7 @@ def get_english_strings() -> LanguageStrings:
         role_tool_result="Tool result",
 
         # Message labels
-        highlighting="Highlighting: {language}",
+        highlighting="Highlighting: {syntax}",
 
         # Find widget
         find_placeholder="Find",

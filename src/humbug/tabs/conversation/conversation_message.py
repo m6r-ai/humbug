@@ -454,17 +454,17 @@ class ConversationMessage(QFrame):
             tooltip = strings.tooltip_collapse_message if self._is_expanded else strings.tooltip_expand_message
             self._expand_button.setToolTip(tooltip)
 
-    def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> ConversationMessageSection:
+    def _create_section_widget(self, syntax: ProgrammingLanguage | None = None) -> ConversationMessageSection:
         """
         Create a new section widget.
 
         Args:
-            language: Optional programming language for the section
+            syntax: Optional programming language for the section
 
         Returns:
             A new ConversationMessageSection instance
         """
-        section = ConversationMessageSection(self._is_input, language, self._sections_container)
+        section = ConversationMessageSection(self._is_input, syntax, self._sections_container)
         section.selection_changed.connect(
             lambda has_selection: self._handle_section_selection_changed(section, has_selection)
         )
@@ -473,7 +473,7 @@ class ConversationMessage(QFrame):
 
         # Determine style class
         is_user_message = self._message_source == AIMessageSource.USER
-        if language is not None:
+        if syntax is not None:
             # Code block
             style_class = "code-user" if is_user_message else "code-system"
 
@@ -547,7 +547,7 @@ class ConversationMessage(QFrame):
             self._approval_context_text_edit.set_text(context)
             self._approval_context_text_edit.setReadOnly(True)
             highlighter = CodeBlockHighlighter(self._approval_context_text_edit.document())
-            highlighter.set_language(ProgrammingLanguage.DIFF)
+            highlighter.set_syntax(ProgrammingLanguage.DIFF)
             layout2.addWidget(self._approval_context_text_edit)
             layout.addWidget(self._approval_context_widget)
 
@@ -691,10 +691,10 @@ class ConversationMessage(QFrame):
         sections_data = self._markdown_converter.extract_sections(text, None)
 
         # Create or update sections
-        for i, (node, language) in enumerate(sections_data):
+        for i, (node, syntax) in enumerate(sections_data):
             # Create new section if needed
             if i >= len(self._sections):
-                section = self._create_section_widget(language)
+                section = self._create_section_widget(syntax)
                 section.set_content(node)
                 section.apply_style()
                 self._sections.append(section)
@@ -704,7 +704,7 @@ class ConversationMessage(QFrame):
             if i == len(self._sections) - 1:
                 # Update the last section with new content
                 section = self._sections[-1]
-                section.set_language(language)
+                section.set_syntax(syntax)
                 section.set_content(node)
 
         # Remove any extra sections

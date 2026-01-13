@@ -78,7 +78,7 @@ def get_french_strings() -> LanguageStrings:
         role_tool_result="Résultat de l'outil",
 
         # Message labels
-        highlighting="Mise en évidence : {language}",
+        highlighting="Mise en évidence : {syntax}",
 
         # Find widget
         find_placeholder="Rechercher",

@@ -48,26 +48,26 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
 
         # Syntax highlighting - created lazily
         self._highlighter: CodeBlockHighlighter = CodeBlockHighlighter(self.document())
-        self._language: ProgrammingLanguage = ProgrammingLanguage.TEXT
+        self._syntax: ProgrammingLanguage = ProgrammingLanguage.TEXT
 
         # Apply initial style
         self.apply_style()
 
-    def set_language(self, language: ProgrammingLanguage) -> None:
+    def set_syntax(self, syntax: ProgrammingLanguage) -> None:
         """
-        Set the programming language for syntax highlighting.
+        Set the syntax highlighting.
 
         Args:
-            language: The programming language to use
+            syntax: The syntax to use
         """
-        if self._language == language:
+        if self._syntax == syntax:
             return
 
-        self._language = language
+        self._syntax = syntax
 
         # Update highlighter if it exists
         if self._highlighter is not None:
-            self._highlighter.set_language(language)
+            self._highlighter.set_syntax(syntax)
 
     def set_text_with_highlighting(
         self,

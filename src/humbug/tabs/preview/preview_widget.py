@@ -647,8 +647,8 @@ class PreviewWidget(QWidget):
                 padding: 0;
             }}
 
-            #PreviewFileContent #_language_header {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
+            #PreviewFileContent #_syntax_header {{
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
                 background-color: transparent;
                 margin: 0;
                 padding: 0;
@@ -768,7 +768,7 @@ class PreviewWidget(QWidget):
             }}
 
             QFrame#PreviewMarkdownContentSection QLabel {{
-                color: {style_manager.get_color_str(ColorRole.MESSAGE_LANGUAGE)};
+                color: {style_manager.get_color_str(ColorRole.MESSAGE_SYNTAX)};
                 background-color: transparent;
                 margin: 0;
                 padding: 0;

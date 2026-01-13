@@ -29,14 +29,14 @@ class PreviewMarkdownContentSection(QFrame):
 
     def __init__(
         self,
-        language: ProgrammingLanguage | None = None,
+        syntax: ProgrammingLanguage | None = None,
         parent: QWidget | None = None
     ) -> None:
         """
         Initialize a content section widget.
 
         Args:
-            language: Optional programming language for this section
+            syntax: Optional programming language for this section
             parent: Optional parent widget
         """
         super().__init__(parent)
@@ -56,16 +56,16 @@ class PreviewMarkdownContentSection(QFrame):
         self._layout.setSpacing(spacing)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
-        # Create language header if needed
-        self._language = language
-        self._language_header = None
+        # Create syntax header if needed
+        self._syntax = syntax
+        self._syntax_header = None
         self._header_container = None
 
         # Create text area - use CodeBlockTextEdit for code blocks, MarkdownTextEdit for markdown
         self._text_area: MarkdownTextEdit | CodeBlockTextEdit
         self._renderer: MarkdownRenderer | None
 
-        if language is None:
+        if syntax is None:
             # Markdown content - use rich text widget
             self._text_area = MarkdownTextEdit(False, self)
             self._text_area.link_clicked.connect(self.link_clicked)
@@ -75,17 +75,17 @@ class PreviewMarkdownContentSection(QFrame):
         else:
             self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
 
-            # Create a container for header (language label only, no buttons)
+            # Create a container for header
             self._header_container = QWidget()
             self._header_layout = QHBoxLayout(self._header_container)
             self._header_layout.setContentsMargins(0, 0, 0, 0)
             self._header_layout.setSpacing(4)
 
-            # Add language label on the left
-            self._language_header = QLabel()
-            self._language_header.setIndent(0)
-            self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
-            self._header_layout.addWidget(self._language_header)
+            # Add syntax label on the left
+            self._syntax_header = QLabel()
+            self._syntax_header.setIndent(0)
+            self._syntax_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            self._header_layout.addWidget(self._syntax_header)
 
             # Add stretch to fill remaining space
             self._header_layout.addStretch()
@@ -95,7 +95,7 @@ class PreviewMarkdownContentSection(QFrame):
 
             # Code block - use code block text widget
             self._text_area = CodeBlockTextEdit(self)
-            self._text_area.set_language(language)
+            self._text_area.set_syntax(syntax)
             self._renderer = None
 
         # Disable the standard context menu as our parent widget will handle that
@@ -114,7 +114,7 @@ class PreviewMarkdownContentSection(QFrame):
         self._text_area.viewport().setMouseTracking(True)
         self._text_area.viewport().installEventFilter(self)
 
-        self.set_language(language)
+        self.set_syntax(syntax)
 
         self._mouse_left_button_pressed = False
 
@@ -126,35 +126,35 @@ class PreviewMarkdownContentSection(QFrame):
         """Get the text area widget."""
         return self._text_area
 
-    def language(self) -> ProgrammingLanguage | None:
+    def syntax(self) -> ProgrammingLanguage | None:
         """Provide the language in use by this section."""
-        return self._language
+        return self._syntax
 
-    def set_language(self, language: ProgrammingLanguage | None) -> None:
-        """Set the programming language to use for this section"""
-        self._language = language
+    def set_syntax(self, syntax: ProgrammingLanguage | None) -> None:
+        """Set the syntax to use for this section"""
+        self._syntax = syntax
 
-        if language is not None:
+        if syntax is not None:
             # Initialize highlighter for code blocks lazily
             if isinstance(self._text_area, CodeBlockTextEdit):
-                self._text_area.set_language(language)
+                self._text_area.set_syntax(syntax)
 
         strings = self._language_manager.strings()
-        if self._language_header:
-            language_header = strings.highlighting.format(
-                language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
+        if self._syntax_header:
+            syntax_header = strings.highlighting.format(
+                syntax=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._syntax))
             )
-            self._language_header.setText(language_header)
+            self._syntax_header.setText(syntax_header)
 
     def _on_language_changed(self) -> None:
         """Update text when language changes."""
         strings = self._language_manager.strings()
 
-        if self._language_header:
-            language_header = strings.highlighting.format(
-                language=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._language))
+        if self._syntax_header:
+            syntax_header = strings.highlighting.format(
+                syntax=ProgrammingLanguageUtils.get_display_name(cast(ProgrammingLanguage, self._syntax))
             )
-            self._language_header.setText(language_header)
+            self._syntax_header.setText(syntax_header)
 
     def _on_mouse_pressed(self, event: QMouseEvent) -> None:
         """Handle mouse press from text area."""
@@ -272,8 +272,8 @@ class PreviewMarkdownContentSection(QFrame):
 
         self._text_area.apply_style()
 
-        if self._language_header:
-            self._language_header.setFont(font)
+        if self._syntax_header:
+            self._syntax_header.setFont(font)
 
         if self._renderer is not None and self._content_node is not None:
             self._renderer.apply_style()

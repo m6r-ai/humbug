@@ -116,7 +116,7 @@ class ColorRole(Enum):
     MESSAGE_USER_QUEUED = auto()        # Queued user message
     MESSAGE_SYSTEM_ERROR = auto()       # System error message
     MESSAGE_SYSTEM_SUCCESS = auto()     # System success message
-    MESSAGE_LANGUAGE = auto()           # Language heading
+    MESSAGE_SYNTAX = auto()             # Syntax heading
     MESSAGE_STREAMING = auto()          # Message streaming
     MESSAGE_TRACE = auto()              # Trace message
     MESSAGE_INFORMATION = auto()        # Information message

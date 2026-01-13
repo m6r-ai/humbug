@@ -93,6 +93,7 @@ class MarkdownConverter:
 
         # Process all nodes in the document
         for node in document.children:
+            print(f"Processing node: {node}")
             if isinstance(node, MarkdownASTCodeBlockNode):
                 # Add any accumulated markdown before this code block
                 add_markdown_section()

@@ -26,23 +26,23 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
 
         # Consistent font family fallback sequence for all code formats
         self._style_manager = StyleManager()
-        self._language = ProgrammingLanguage.TEXT
+        self._syntax = ProgrammingLanguage.TEXT
         self._precomputed_tokens: List[List[Token]] | None = None
         self._precomputed_states: List[ParserState | None] | None = None
         self._use_precomputed = False
         self._logger = logging.getLogger("CodeBlockHighlighter")
 
-    def set_language(self, language: ProgrammingLanguage) -> None:
+    def set_syntax(self, syntax: ProgrammingLanguage) -> None:
         """
-        Set the programming language for syntax highlighting.
+        Set the syntax highlighting.
 
         Args:
-            language: The programming language to use
+            syntax: The syntax to use
         """
-        if self._language == language:
+        if self._syntax == syntax:
             return
 
-        self._language = language
+        self._syntax = syntax
 
         # Clear pre-computed tokens when language changes
         self._precomputed_tokens = None
@@ -121,7 +121,7 @@ class CodeBlockHighlighter(QSyntaxHighlighter):
             current_block_data = cast(CodeBlockHighlighterBlockData, current_block.userData())
 
             # Use the appropriate language parser
-            parser = ParserRegistry.create_parser(self._language)
+            parser = ParserRegistry.create_parser(self._syntax)
             if not parser:
                 return
 

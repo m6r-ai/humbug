@@ -10,7 +10,6 @@ from PySide6.QtGui import QColor
 from dmarkdown import MarkdownConverter
 from syntax import ProgrammingLanguage
 
-from humbug.language.language_manager import LanguageManager
 from humbug.tabs.preview.preview_content_widget import PreviewContentWidget
 from humbug.tabs.preview.preview_markdown_content_section import PreviewMarkdownContentSection
 
@@ -35,9 +34,6 @@ class PreviewMarkdownContent(PreviewContentWidget):
         self._content = ""
         self._contained = contained
 
-        self._language_manager = LanguageManager()
-        self._language_manager.language_changed.connect(self._on_language_changed)
-
         # Container for content sections
         self._sections_container = QWidget(self)
         self._sections_container.setObjectName("_sections_container")
@@ -57,23 +53,19 @@ class PreviewMarkdownContent(PreviewContentWidget):
 
         # Call apply_style directly to initialize styling
         self.apply_style()
-        self._on_language_changed()
 
-    def _on_language_changed(self) -> None:
-        """Update text when language changes."""
-
-    def _create_section_widget(self, language: ProgrammingLanguage | None = None) -> PreviewMarkdownContentSection:
+    def _create_section_widget(self, syntax: ProgrammingLanguage | None = None) -> PreviewMarkdownContentSection:
         """
         Create a new section widget.
 
         Args:
-            language: Optional programming language for the section
+            syntax: Optional programming language for the section
 
         Returns:
             A new PreviewMarkdownContentSection instance
         """
-        section = PreviewMarkdownContentSection(language, self._sections_container)
-        section_type = "code" if language is not None else "text"
+        section = PreviewMarkdownContentSection(syntax, self._sections_container)
+        section_type = "code" if syntax is not None else "text"
         section.setProperty("section_type", section_type)
         section.setProperty("contained", self._contained)
 
@@ -130,8 +122,8 @@ class PreviewMarkdownContent(PreviewContentWidget):
         sections_data = self._markdown_converter.extract_sections(text, path)
 
         # Create or update sections
-        for _, (node, language) in enumerate(sections_data):
-            section = self._create_section_widget(language)
+        for _, (node, syntax) in enumerate(sections_data):
+            section = self._create_section_widget(syntax)
             section.set_content(node)
             section.apply_style()
             self._sections.append(section)

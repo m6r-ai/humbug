@@ -397,7 +397,7 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#80c080",
                 ColorMode.LIGHT: "#40a040"
             },
-            ColorRole.MESSAGE_LANGUAGE: {
+            ColorRole.MESSAGE_SYNTAX: {
                 ColorMode.DARK: "#a07850",
                 ColorMode.LIGHT: "#806040"
             },

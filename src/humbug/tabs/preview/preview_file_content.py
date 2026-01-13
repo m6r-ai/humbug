@@ -57,12 +57,11 @@ class PreviewFileContent(PreviewContentWidget):
         self._header_layout.setSpacing(4)
 
         # Add language label
-        self._language_header = QLabel()
-        self._language_header.setObjectName("_language_header")
-        self._language_header.setIndent(0)
-        self._language_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        self._header_layout.addWidget(self._language_header)
-
+        self._syntax_header = QLabel()
+        self._syntax_header.setObjectName("_syntax_header")
+        self._syntax_header.setIndent(0)
+        self._syntax_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self._header_layout.addWidget(self._syntax_header)
         # Add stretch to fill space
         self._header_layout.addStretch()
 
@@ -88,7 +87,7 @@ class PreviewFileContent(PreviewContentWidget):
         self._content_layout.addWidget(self._text_area)
 
         # Initialize variables
-        self._language: ProgrammingLanguage | None = None
+        self._syntax: ProgrammingLanguage | None = None
         self._mouse_left_button_pressed = False
 
         # Connect signals
@@ -139,12 +138,11 @@ class PreviewFileContent(PreviewContentWidget):
         """Update text when language changes."""
         strings = self._language_manager.strings()
 
-        if self._language:
-            language_header = strings.highlighting.format(
-                language=ProgrammingLanguageUtils.get_display_name(self._language)
+        if self._syntax:
+            syntax_header = strings.highlighting.format(
+                syntax=ProgrammingLanguageUtils.get_display_name(self._syntax)
             )
-            self._language_header.setText(language_header)
-
+            self._syntax_header.setText(syntax_header)
         if self._edit_button:
             self._edit_button.setToolTip(strings.tooltip_edit_file)
 
@@ -161,23 +159,22 @@ class PreviewFileContent(PreviewContentWidget):
 
         # Determine language based on file extension
         if path:
-            self._language = ProgrammingLanguageUtils.from_file_extension(path)
+            self._syntax = ProgrammingLanguageUtils.from_file_extension(path)
 
         else:
             # Default to TEXT if no path provided
-            self._language = ProgrammingLanguage.TEXT
+            self._syntax = ProgrammingLanguage.TEXT
 
-        if self._language is None:
+        if self._syntax is None:
             # Default to text if no language detected
-            self._language = ProgrammingLanguage.TEXT
-
-        # Set language and initialize highlighter
-        self._text_area.set_language(self._language)
+            self._syntax = ProgrammingLanguage.TEXT
+        # Set syntax and initialize highlighter
+        self._text_area.set_syntax(self._syntax)
 
         # Update header text
         strings = self._language_manager.strings()
-        language_name = ProgrammingLanguageUtils.get_display_name(self._language)
-        self._language_header.setText(strings.highlighting.format(language=language_name))
+        syntax = ProgrammingLanguageUtils.get_display_name(self._syntax)
+        self._syntax_header.setText(strings.highlighting.format(syntax=syntax))
 
         self._text_area.set_text(text)
 
@@ -354,8 +351,8 @@ class PreviewFileContent(PreviewContentWidget):
         # Style text area
         self._text_area.setFont(font)
 
-        # Style language header
-        self._language_header.setFont(font)
+        # Style syntax header
+        self._syntax_header.setFont(font)
 
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * zoom_factor)
