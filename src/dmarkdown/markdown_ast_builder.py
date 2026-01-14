@@ -295,16 +295,22 @@ class MarkdownASTBuilder:
 
         # Check for blank line (after stripping blockquotes)
         if not content_stripped:
-            return 'blank', blockquote_indents, {}
+            return 'blank', blockquote_indents, {
+                'container_text': remaining
+            }
 
         # Check for code block fence (after stripping blockquotes)
         code_block_match = self._code_block_pattern.match(content_stripped)
         if code_block_match:
             language_name = code_block_match.group(1) or ""
+
+            # Calculate indent relative to container
+            container_indent = len(remaining) - len(content_stripped)
             return 'code_block_fence', blockquote_indents, {
                 'language': language_name,
                 'indent': content_indent,
-                'raw': remaining
+                'container_indent': container_indent,
+                'container_text': remaining
             }
 
         # Check for heading
@@ -315,7 +321,7 @@ class MarkdownASTBuilder:
             return 'heading', blockquote_indents, {
                 'level': level,
                 'text': heading_content,
-                'raw': remaining
+                'container_text': remaining
             }
 
         # Check for table separator row
@@ -324,13 +330,13 @@ class MarkdownASTBuilder:
             if '-' in remaining and (':-' in remaining or '-:' in remaining or '--' in remaining):
                 return 'table_separator', blockquote_indents, {
                     'content': content_stripped,
-                    'raw': remaining
+                    'container_text': remaining
                 }
 
             # Regular table row
             return 'table_row', blockquote_indents, {
                 'content': content_stripped,
-                'raw': remaining
+                'container_text': remaining
             }
 
         # Check for unordered list item
@@ -343,7 +349,7 @@ class MarkdownASTBuilder:
                 'indent': current_col + list_indent,
                 'marker': marker,
                 'text': list_content,
-                'raw': remaining
+                'container_text': remaining
             }
 
         # Check for ordered list item
@@ -356,18 +362,20 @@ class MarkdownASTBuilder:
                 'indent': current_col + list_indent,
                 'number': number,
                 'text': list_content,
-                'raw': remaining
+                'container_text': remaining
             }
 
         # Check for horizontal rule
         if self._horizontal_rule_pattern.match(remaining):
-            return 'horizontal_rule', blockquote_indents, {'raw': remaining}
+            return 'horizontal_rule', blockquote_indents, {
+                'container_text': remaining
+            }
 
         # Default to regular text
         return 'text', blockquote_indents, {
             'indent': content_indent,
             'text': remaining,
-            'raw': remaining
+            'container_text': remaining
         }
 
     def _find_closing_parenthesis(self, text: str, start_pos: int) -> int:
@@ -1500,14 +1508,14 @@ class MarkdownASTBuilder:
             # We're in a code block - check if this line ends it or is content
             if line_type == 'code_block_fence':
                 # We saw a fence - need to decide if it's closing or nested
-                language_name = line_data.get('language', '')
-                code_indent = line_data.get('indent', indent)
+                language_name = line_data['language']
+                code_indent = line_data['container_indent']
 
                 # Check if embedded parser says we're in a string/comment
                 if (self._embedded_parser_state and self._embedded_parser_state.parsing_continuation):
                     # ``` is inside a string/comment, treat as content
                     # Extract the text after stripping blockquotes
-                    text_content = line_data.get('raw', line)
+                    text_content = line_data['container_text']
                     code_indent = self._code_block_indents[-1]
                     text_content = text_content[code_indent:]
                     self._code_block_content.append(text_content)
@@ -1522,7 +1530,7 @@ class MarkdownASTBuilder:
                     # Nested fence
                     self._code_block_nesting_level += 1
                     self._code_block_indents.append(code_indent)
-                    text_content = line_data.get('raw', line)
+                    text_content = line_data['container_text']
                     self._code_block_content.append(text_content)
                     self._last_processed_line_type = 'code_block_content'
                     self._blank_line_count = 0
@@ -1539,14 +1547,14 @@ class MarkdownASTBuilder:
                 # Close a nested fence
                 self._code_block_indents.pop()
                 self._code_block_nesting_level -= 1
-                text_content = line_data.get('raw', line)
+                text_content = line_data['container_text']
                 self._code_block_content.append(text_content)
                 self._last_processed_line_type = 'code_block_content'
                 self._blank_line_count = 0
                 return
 
             # Not a fence - accumulate as content
-            text_content = line_data.get('raw', line)
+            text_content = line_data['container_text']
             code_indent = self._code_block_indents[-1]
             text_content = text_content[code_indent:]
             self._code_block_content.append(text_content)
@@ -1604,7 +1612,7 @@ class MarkdownASTBuilder:
 
             # Initialize nesting tracking
             self._code_block_nesting_level = 1
-            self._code_block_indents = [line_data['indent']]
+            self._code_block_indents = [line_data['container_indent']]
             self._embedded_parser_state = None  # Will be initialized on first line
             self._last_processed_line_type = line_type
             self._blank_line_count = 0
