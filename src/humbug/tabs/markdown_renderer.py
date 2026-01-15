@@ -139,9 +139,11 @@ class MarkdownRenderer(MarkdownASTVisitor):
                 if parent_list_node.tight:
                     tight = True
 
-        # If the previous sibling is a list, we need to add a top margin
+        # If the previous sibling is a list or code block, we need to add a top margin
         previous_sibling = node.previous_sibling()
-        if previous_sibling and isinstance(previous_sibling, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode)):
+        if previous_sibling and isinstance(
+            previous_sibling, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode, MarkdownASTCodeBlockNode)
+        ):
             block_format.setTopMargin(self._default_font_height)
 
         # If there is no previous sibling, check if our parent is a list item.  If it is, we also need to add a top margin.
