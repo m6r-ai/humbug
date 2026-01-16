@@ -127,6 +127,12 @@ def get_french_strings() -> LanguageStrings:
         sort_directories_first="Dossiers en premier",
         sort_alphabetical="Alphabétique",
 
+        # User Settings dialog - external file access
+        external_file_access="Accès aux fichiers externes",
+        allow_external_file_access="Autoriser l'IA à lire des fichiers en dehors du mindspace",
+        external_file_allowlist="Chemins autorisés (motifs glob, un par ligne) :",
+        external_file_denylist="Chemins refusés (motifs glob, un par ligne) :",
+
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
         mindspace_name_tooltip="Cliquer pour ouvrir un autre espace mental",

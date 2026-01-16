@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 import json
 import os
+import sys
 from typing import Dict
 
 from ai import AIBackendSettings
@@ -22,6 +23,30 @@ class UserSettings:
     font_size: float| None = None  # None means use the default font size
     theme: ColorMode = ColorMode.DARK  # Default to dark mode
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
+    allow_external_file_access: bool = True
+    external_file_allowlist: str = ""
+    external_file_denylist: str = ""
+
+    @staticmethod
+    def get_default_allowlist() -> str:
+        """Get platform-specific default allowlist."""
+        if sys.platform == "win32":
+            return ""  # Windows doesn't have standard system header locations
+
+        if sys.platform == "darwin":
+            return "/usr/include/**\n/usr/share/doc/**\n/usr/share/man/**\n/Library/Developer/**"
+
+        # Linux and other Unix-like systems
+        return "/usr/include/**\n/usr/share/doc/**\n/usr/share/man/**"
+
+    @staticmethod
+    def get_default_denylist() -> str:
+        """Get platform-specific default denylist."""
+        if sys.platform == "win32":
+            return ""  # TODO: Add Windows-specific sensitive paths
+
+        # Unix-like systems (Linux, macOS, etc.)
+        return "~/.humbug/**\n~/.ssh/**\n~/.aws/**\n~/.gnupg/**\n~/.password-store/**"
 
     @classmethod
     def create_default(cls) -> "UserSettings":
@@ -41,7 +66,10 @@ class UserSettings:
             language=LanguageCode.EN,
             font_size=None,
             theme=ColorMode.DARK,
-            file_sort_order=UserFileSortOrder.DIRECTORIES_FIRST
+            file_sort_order=UserFileSortOrder.DIRECTORIES_FIRST,
+            allow_external_file_access=True,
+            external_file_allowlist=cls.get_default_allowlist(),
+            external_file_denylist=cls.get_default_denylist()
         )
 
     @classmethod
@@ -117,6 +145,17 @@ class UserSettings:
             except (KeyError, ValueError):
                 settings.file_sort_order = UserFileSortOrder.DIRECTORIES_FIRST
 
+            # Load external file access settings
+            settings.allow_external_file_access = data.get("allowExternalFileAccess", True)
+            settings.external_file_allowlist = data.get(
+                "externalFileAllowlist",
+                cls.get_default_allowlist()
+            )
+            settings.external_file_denylist = data.get(
+                "externalFileDenylist",
+                cls.get_default_denylist()
+            )
+
         return settings
 
     @classmethod
@@ -190,6 +229,9 @@ class UserSettings:
             "fontSize": self.font_size,
             "theme": self.theme.name,
             "fileSortOrder": self.file_sort_order.name,
+            "allowExternalFileAccess": self.allow_external_file_access,
+            "externalFileAllowlist": self.external_file_allowlist,
+            "externalFileDenylist": self.external_file_denylist
         }
 
         with open(path, 'w', encoding='utf-8') as f:

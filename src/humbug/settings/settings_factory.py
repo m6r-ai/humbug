@@ -16,6 +16,7 @@ from humbug.settings.settings_combo import SettingsCombo
 from humbug.settings.settings_spinbox import SettingsSpinBox
 from humbug.settings.settings_double_spinbox import SettingsDoubleSpinBox
 from humbug.settings.settings_text_field import SettingsTextField
+from humbug.settings.settings_text_area import SettingsTextArea
 from humbug.settings.settings_display import SettingsDisplay
 
 
@@ -87,6 +88,15 @@ class SettingsFactory:
     ) -> SettingsTextField:
         """Create a text field setting."""
         return SettingsTextField(label_text, placeholder, parent)
+
+    @staticmethod
+    def create_text_area(
+        label_text: str,
+        placeholder: str = "",
+        parent: QWidget | None = None
+    ) -> SettingsTextArea:
+        """Create a text area setting."""
+        return SettingsTextArea(label_text, placeholder, parent)
 
     @staticmethod
     def create_display(

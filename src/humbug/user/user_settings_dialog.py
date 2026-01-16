@@ -127,6 +127,31 @@ class UserSettingsDialog(QDialog):
         spacer = SettingsFactory.create_spacer(24)
         self._settings_container.add_setting(spacer)
 
+        # External file access section
+        self._external_access_section = SettingsFactory.create_header(strings.external_file_access)
+        self._settings_container.add_setting(self._external_access_section)
+
+        # Enable external file access checkbox
+        self._allow_external_access_checkbox = SettingsFactory.create_checkbox(
+            strings.allow_external_file_access
+        )
+        self._settings_container.add_setting(self._allow_external_access_checkbox)
+
+        # Allowlist text area
+        self._external_allowlist_area = SettingsFactory.create_text_area(strings.external_file_allowlist)
+        self._settings_container.add_setting(self._external_allowlist_area)
+
+        # Denylist text area
+        self._external_denylist_area = SettingsFactory.create_text_area(strings.external_file_denylist)
+        self._settings_container.add_setting(self._external_denylist_area)
+
+        # Connect checkbox to enable/disable text areas
+        self._allow_external_access_checkbox.value_changed.connect(self._handle_external_access_enabled)
+
+        # Add some spacing before AI backends
+        spacer = SettingsFactory.create_spacer(24)
+        self._settings_container.add_setting(spacer)
+
         # AI backends section
         self._backends_section = SettingsFactory.create_header(strings.ai_backend_config)
         self._settings_container.add_setting(self._backends_section)
@@ -244,6 +269,12 @@ class UserSettingsDialog(QDialog):
         cast(SettingsTextField, controls["key"]).set_enabled(enabled)
         cast(SettingsTextField, controls["url"]).set_enabled(enabled)
 
+    def _handle_external_access_enabled(self) -> None:
+        """Enable or disable external file access fields based on checkbox state."""
+        enabled = self._allow_external_access_checkbox.get_value()
+        self._external_allowlist_area.set_enabled(enabled)
+        self._external_denylist_area.set_enabled(enabled)
+
     def _on_language_changed(self) -> None:
         """Update all dialog texts with current language strings."""
         strings = self._language_manager.strings()
@@ -294,6 +325,11 @@ class UserSettingsDialog(QDialog):
 
         self._general_section.set_label(strings.general_settings)
         self._display_section.set_label(strings.display_settings)
+        self._external_access_section.set_label(strings.external_file_access)
+        self._allow_external_access_checkbox.set_label(strings.allow_external_file_access)
+        self._external_allowlist_area.set_label(strings.external_file_allowlist)
+        self._external_denylist_area.set_label(strings.external_file_denylist)
+
         self._backends_section.set_label(strings.ai_backend_config)
 
         # Update AI backend titles and fields
@@ -346,7 +382,10 @@ class UserSettingsDialog(QDialog):
             language=self._language_combo.get_value(),
             font_size=self._font_size_spin.get_value(),
             theme=self._theme_combo.get_value(),
-            file_sort_order=self._file_sort_combo.get_value()
+            file_sort_order=self._file_sort_combo.get_value(),
+            allow_external_file_access=self._allow_external_access_checkbox.get_value(),
+            external_file_allowlist=self._external_allowlist_area.get_value(),
+            external_file_denylist=self._external_denylist_area.get_value()
         )
         return settings
 
@@ -369,7 +408,10 @@ class UserSettingsDialog(QDialog):
             language=settings.language,
             font_size=settings.font_size,
             theme=settings.theme,
-            file_sort_order=settings.file_sort_order
+            file_sort_order=settings.file_sort_order,
+            allow_external_file_access=settings.allow_external_file_access,
+            external_file_allowlist=settings.external_file_allowlist,
+            external_file_denylist=settings.external_file_denylist
         )
 
         # Initialize API backend settings
@@ -397,6 +439,15 @@ class UserSettingsDialog(QDialog):
 
         # Set file sort order
         self._file_sort_combo.set_value(settings.file_sort_order)
+
+        # Set external file access settings
+        self._allow_external_access_checkbox.set_value(settings.allow_external_file_access)
+        self._external_allowlist_area.set_value(settings.external_file_allowlist)
+        self._external_denylist_area.set_value(settings.external_file_denylist)
+
+        # Update enabled state of external file access fields
+        self._external_allowlist_area.set_enabled(settings.allow_external_file_access)
+        self._external_denylist_area.set_enabled(settings.allow_external_file_access)
 
         # Reset the modified state
         self._settings_container.reset_modified_state()

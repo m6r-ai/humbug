@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import fnmatch
 import shutil
 import tempfile
 from datetime import datetime, timezone
@@ -16,6 +17,9 @@ from ai_tool.filesystem.filesystem_diff_applier import FilesystemDiffApplier
 from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
 from syntax.programming_language_utils import ProgrammingLanguageUtils
 
+# Import UserSettings for type hints
+from humbug.user.user_settings import UserSettings
+
 
 class FileSystemAITool(AITool):
     """
@@ -25,15 +29,22 @@ class FileSystemAITool(AITool):
     Provides secure file and directory operations with proper error handling and logging.
     """
 
-    def __init__(self, resolve_path: Callable[[str], Tuple[Path, str]], max_file_size_mb: int = 10):
+    def __init__(
+        self,
+        resolve_path: Callable[[str], Tuple[Path, str]],
+        get_user_settings: Callable[[], UserSettings],
+        max_file_size_mb: int = 10
+    ):
         """
         Initialize the filesystem tool.
 
         Args:
             resolve_path: Callback to resolve and validate paths, returns (absolute_path, display_path)
+            get_user_settings: Callback to get current user settings
             max_file_size_mb: Maximum file size in MB for read/write operations
         """
         self._resolve_path = resolve_path
+        self._get_user_settings = get_user_settings
         self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
         self._logger = logging.getLogger("FileSystemAITool")
 
@@ -248,31 +259,206 @@ class FileSystemAITool(AITool):
             )
         }
 
-    def _validate_and_resolve_path(self, key: str, path_str: str) -> Tuple[Path, str]:
+    async def _validate_and_resolve_path(
+        self,
+        key: str,
+        path_str: str,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback,
+        allow_external: bool = False
+    ) -> Tuple[Path, str]:
         """
         Validate path and resolve to absolute path with display path.
 
         Args:
+            key: Parameter key name (for error messages)
             path_str: String path to validate and resolve
-            operation: Operation being performed (for error context)
+            tool_call: The tool call object
+            request_authorization: Callback to request user authorization
+            allow_external: If True, allow paths outside mindspace with user approval
 
         Returns:
             Tuple of (resolved absolute Path, display path string)
 
         Raises:
             AIToolExecutionError: If path is invalid or outside boundaries
+            AIToolAuthorizationDenied: If external access is denied
         """
         if not path_str:
             raise AIToolExecutionError(f"{key}: parameter must not be empty")
 
         try:
+            # Try to resolve within mindspace first
             return self._resolve_path(path_str)
 
         except ValueError as e:
-            raise AIToolExecutionError(f"{key}: invalid path '{path_str}': {str(e)}") from e
+            # Path is outside mindspace boundaries
+            if not allow_external:
+                raise AIToolExecutionError(f"{key}: invalid path '{path_str}': {str(e)}") from e
+
+            # Try to resolve as an external path
+            try:
+                # Convert to absolute path and resolve
+                abs_path = Path(path_str).expanduser().resolve()
+
+                # Check if file/directory exists
+                if not abs_path.exists():
+                    raise AIToolExecutionError(f"{key}: path does not exist: '{path_str}'") from e
+
+                # Check external file access permissions
+                await self._check_external_file_access(
+                    abs_path,
+                    str(abs_path),
+                    path_str,
+                    tool_call,
+                    request_authorization
+                )
+
+                # Return absolute path and display path
+                return abs_path, str(abs_path)
+
+            except AIToolAuthorizationDenied:
+                # Re-raise authorization errors
+                raise
+
+            except AIToolExecutionError:
+                # Re-raise execution errors
+                raise
+
+            except Exception as ex:
+                raise AIToolExecutionError(
+                    f"{key}: failed to resolve external path '{path_str}': {str(ex)}"
+                ) from ex
 
         except Exception as e:
             raise AIToolExecutionError(f"{key}: failed to resolve path '{path_str}': {str(e)}") from e
+
+    def _match_glob_patterns(self, path_str: str, patterns: str) -> bool:
+        """
+        Check if a path matches any of the glob patterns.
+
+        Args:
+            path_str: Path to check (absolute)
+            patterns: Newline-separated glob patterns
+
+        Returns:
+            True if path matches any pattern, False otherwise
+        """
+        if not patterns:
+            return False
+
+        # Expand ~ in path for matching
+        expanded_path = os.path.expanduser(path_str)
+
+        # Split patterns by newline and filter empty lines
+        pattern_list = [p.strip() for p in patterns.split('\n') if p.strip()]
+
+        for pattern in pattern_list:
+            # Expand ~ in pattern
+            expanded_pattern = os.path.expanduser(pattern)
+
+            # If pattern ends with /**, also check if path matches the base directory
+            if expanded_pattern.endswith('/**'):
+                base_pattern = expanded_pattern[:-3]  # Remove the /**
+                if expanded_path == base_pattern or expanded_path.startswith(base_pattern + os.sep):
+                    return True
+
+            # Use fnmatch for glob pattern matching
+            if fnmatch.fnmatch(expanded_path, expanded_pattern):
+                return True
+
+            # Also try matching with Path.match() for ** patterns
+            try:
+                if Path(expanded_path).match(expanded_pattern):
+                    return True
+
+            except (ValueError, Exception):
+                # Invalid pattern, skip
+                pass
+
+        return False
+
+    async def _check_external_file_access(
+        self,
+        path: Path,
+        display_path: str,
+        original_path: str,
+        tool_call: AIToolCall,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> bool:
+        """
+        Check if external file access is allowed for a path outside the mindspace.
+
+        Args:
+            path: Absolute path to check
+            display_path: Display path for user messages
+            original_path: Original path string before resolution
+            tool_call: The tool call object
+            request_authorization: Callback to request user authorization
+
+        Returns:
+            True if access is allowed, False otherwise
+
+        Raises:
+            AIToolAuthorizationDenied: If access is denied
+        """
+        settings = self._get_user_settings()
+
+        # Check master switch
+        if not settings.allow_external_file_access:
+            raise AIToolAuthorizationDenied(
+                f"External file access is disabled. Cannot read '{display_path}' (outside mindspace)."
+            )
+
+        path_str = str(path)
+
+        # Check denylist first (takes precedence)
+        if self._match_glob_patterns(path_str, settings.external_file_denylist):
+            raise AIToolAuthorizationDenied(
+                f"Access denied: '{display_path}' matches a denied path pattern."
+            )
+
+        # Check allowlist
+        if self._match_glob_patterns(path_str, settings.external_file_allowlist):
+            # Auto-approved
+            return True
+
+        # Not in allowlist or denylist, request user approval
+        # Check if this is a symlink by comparing original and resolved paths
+        original_expanded = Path(original_path).expanduser()
+        is_symlink = original_expanded.is_symlink() or str(original_expanded.resolve()) != str(path)
+
+        if is_symlink:
+            context = (
+                f"The AI is requesting to read a file outside the mindspace:\n\n"
+                f"Requested path: {original_path}\n"
+                f"Actual path: {display_path}\n\n"
+                f"⚠️  Warning: This is a symbolic link pointing to a different location!\n\n"
+                f"This file is not in your pre-approved list. "
+                f"Review the paths carefully before approving."
+            )
+        else:
+            context = (
+                f"The AI is requesting to read a file outside the mindspace:\n\n"
+                f"Path: {display_path}\n\n"
+                f"This file is not in your pre-approved list. "
+                f"Review the path carefully before approving."
+            )
+
+        authorized = await request_authorization(
+            "filesystem",
+            tool_call.arguments,
+            context,
+            None,
+            False
+        )
+
+        if not authorized:
+            raise AIToolAuthorizationDenied(
+                f"User denied permission to read external file: {display_path}"
+            )
+
+        return True
 
     def _format_time(self, dt: datetime, format_type: str | None) -> str:
         """
@@ -334,12 +520,12 @@ class FileSystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read file contents."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, _ = self._validate_and_resolve_path("path", path_arg)
+        path, _ = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization, allow_external=True)
 
         # Validate file exists and is readable
         if not path.exists():
@@ -387,12 +573,12 @@ class FileSystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Read file contents with line numbers."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, _ = self._validate_and_resolve_path("path", path_arg)
+        path, _ = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization, allow_external=True)
 
         # Validate file exists and is readable
         if not path.exists():
@@ -490,7 +676,7 @@ class FileSystemAITool(AITool):
         """Write content to file (create or overwrite)."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
 
         content = self._get_required_str_value("content", arguments)
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
@@ -586,7 +772,7 @@ class FileSystemAITool(AITool):
         """Append content to existing file."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
 
         # File must exist for append
         if not path.exists():
@@ -639,12 +825,14 @@ class FileSystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """List directory contents."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization, allow_external=True
+        )
 
         if not path.exists():
             raise AIToolExecutionError(f"Directory does not exist: {arguments['path']}")
@@ -715,7 +903,7 @@ class FileSystemAITool(AITool):
         """Create directory (with parents if needed)."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
         create_parents = self._get_optional_bool_value("create_parents", arguments, True)
 
         if path.exists():
@@ -763,7 +951,7 @@ class FileSystemAITool(AITool):
         """Remove empty directory."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
 
         if not path.exists():
             raise AIToolExecutionError(f"Directory does not exist: {arguments['path']}")
@@ -812,7 +1000,7 @@ class FileSystemAITool(AITool):
         """Delete file."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
 
         if not path.exists():
             raise AIToolExecutionError(f"File does not exist: {arguments['path']}")
@@ -853,7 +1041,9 @@ class FileSystemAITool(AITool):
         """Copy file to destination."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        source_path, source_display_path = self._validate_and_resolve_path("path", path_arg)
+        source_path, source_display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization
+        )
 
         if not source_path.exists():
             raise AIToolExecutionError(f"Source file does not exist: {arguments['path']}")
@@ -862,7 +1052,9 @@ class FileSystemAITool(AITool):
             raise AIToolExecutionError(f"Source path is not a file: {arguments['path']}")
 
         destination_arg = self._get_required_str_value("destination", arguments)
-        destination_path, dest_display_path = self._validate_and_resolve_path("destination", destination_arg)
+        destination_path, dest_display_path = await self._validate_and_resolve_path(
+            "destination", destination_arg, tool_call, request_authorization
+        )
 
         # Check source file size
         source_size = source_path.stat().st_size
@@ -915,13 +1107,15 @@ class FileSystemAITool(AITool):
         """Move/rename file or directory."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        source_path, source_display_path = self._validate_and_resolve_path("path", path_arg)
+        source_path, source_display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
 
         if not source_path.exists():
             raise AIToolExecutionError(f"Source path does not exist: {arguments['path']}")
 
         destination_arg = self._get_required_str_value("destination", arguments)
-        destination_path, dest_display_path = self._validate_and_resolve_path("destination", destination_arg)
+        destination_path, dest_display_path = await self._validate_and_resolve_path(
+            "destination", destination_arg, tool_call, request_authorization
+        )
 
         # Build authorization context
         if source_path.is_file():
@@ -969,12 +1163,14 @@ class FileSystemAITool(AITool):
         self,
         tool_call: AIToolCall,
         _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Get detailed information about file or directory."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization, allow_external=True
+        )
 
         # Get format parameter (defaults to None, which will become 'iso' in _format_time)
         format_type = self._get_optional_str_value("format", arguments, None)
@@ -1055,7 +1251,7 @@ class FileSystemAITool(AITool):
         """Apply a unified diff to a file."""
         arguments = tool_call.arguments
         path_arg = self._get_required_str_value("path", arguments)
-        path, display_path = self._validate_and_resolve_path("path", path_arg)
+        path, display_path = await self._validate_and_resolve_path("path", path_arg, tool_call, request_authorization)
 
         # Validate file exists and is readable
         if not path.exists():

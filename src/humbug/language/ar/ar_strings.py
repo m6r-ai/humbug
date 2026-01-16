@@ -127,6 +127,12 @@ def get_arabic_strings() -> LanguageStrings:
         sort_directories_first="المجلدات أولاً",
         sort_alphabetical="أبجدي",
 
+        # User Settings dialog - external file access
+        external_file_access="الوصول إلى الملفات الخارجية",
+        allow_external_file_access="السماح للذكاء الاصطناعي بقراءة الملفات خارج المساحة الذهنية",
+        external_file_allowlist="المسارات المسموح بها (أنماط glob، واحد لكل سطر):",
+        external_file_denylist="المسارات المرفوضة (أنماط glob، واحد لكل سطر):",
+
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
         mindspace_name_tooltip="انقر لفتح مساحة ذهنية مختلفة",

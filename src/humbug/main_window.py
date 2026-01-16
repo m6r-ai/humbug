@@ -410,7 +410,11 @@ class MainWindow(QMainWindow):
             DelegateAITool(self._column_manager), "Delegate: delegates tasks to specialized AI instances"
         )
         self._ai_tool_manager.register_tool(
-            FileSystemAITool(self._resolve_mindspace_path), "FileSystem: handles file operations in the current mindspace"
+            FileSystemAITool(
+                self._resolve_mindspace_path,
+                self._user_manager.settings
+            ),
+            "FileSystem: handles file operations in the current mindspace"
         )
         self._ai_tool_manager.register_tool(
             SystemAITool(self._column_manager), "System: manages UI tab lifecycle operations (create, open, close, organize tabs)"

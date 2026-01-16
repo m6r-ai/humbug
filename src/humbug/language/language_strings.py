@@ -122,6 +122,12 @@ class LanguageStrings:
     sort_directories_first: str
     sort_alphabetical: str
 
+    # User Settings dialog - external file access
+    external_file_access: str
+    allow_external_file_access: str
+    external_file_allowlist: str
+    external_file_denylist: str
+
     # Mindspace tree
     mindspace_label_none: str
     mindspace_name_tooltip: str

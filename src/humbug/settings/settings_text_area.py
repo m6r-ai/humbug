@@ -1,0 +1,79 @@
+"""
+Text area setting for multiline string values.
+
+This module defines the SettingsTextArea class which provides a multiline text area
+setting widget.
+"""
+
+from PySide6.QtWidgets import QWidget, QPlainTextEdit
+
+from humbug.settings.settings_field import SettingsField
+
+
+class SettingsTextArea(SettingsField):
+    """
+    Text area setting for multiline string values.
+
+    Attributes:
+        _text_area (QPlainTextEdit): The text area control
+        _initial_value (str): The initial value
+    """
+
+    def __init__(
+        self,
+        label_text: str,
+        placeholder: str = "",
+        parent: QWidget | None = None
+    ) -> None:
+        """
+        Initialize a text area setting.
+
+        Args:
+            label_text: Text for the setting label
+            placeholder: Placeholder text for empty field
+            parent: Parent widget
+        """
+        super().__init__(label_text, parent)
+
+        self._text_area = QPlainTextEdit()
+        self._text_area.setPlaceholderText(placeholder)
+        self._text_area.textChanged.connect(self._on_text_changed)
+
+        self._layout.addWidget(self._text_area)
+        self._initial_value = self._text_area.toPlainText()
+        self._on_style_changed()
+
+    def _on_text_changed(self) -> None:
+        """Handle text area changes."""
+        self.value_changed.emit()
+
+    def is_modified(self) -> bool:
+        """Check if text area value has changed."""
+        return self._text_area.toPlainText() != self._initial_value
+
+    def reset_modified_state(self) -> None:
+        """Reset the initial value to current value."""
+        self._initial_value = self._text_area.toPlainText()
+
+    def get_value(self) -> str:
+        """Get the current text area value."""
+        return self._text_area.toPlainText()
+
+    def set_value(self, value: str) -> None:
+        """Set the text area value."""
+        self._text_area.setPlainText(value)
+        self._initial_value = value
+
+    def _on_style_changed(self) -> None:
+        """Update text area styling."""
+        super()._on_style_changed()
+
+        # Set minimum size based on zoom factor
+        zoom_factor = self._style_manager.zoom_factor()
+        min_height = int(100 * zoom_factor)
+        self._text_area.setMinimumHeight(min_height)
+        self._text_area.setMaximumHeight(int(150 * zoom_factor))
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Enable or disable the text area."""
+        self._text_area.setEnabled(enabled)
