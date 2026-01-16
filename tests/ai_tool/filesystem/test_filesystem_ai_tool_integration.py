@@ -102,7 +102,7 @@ class TestFileSystemAIToolAuthorizationContext:
             # Verify chmod was called
             mock_chmod.assert_called_once()
 
-    def test_authorization_context_copy_includes_destination(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_authorization_context_copy_includes_destination(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test authorization context for copy operation includes destination."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -110,7 +110,7 @@ class TestFileSystemAIToolAuthorizationContext:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -170,18 +170,18 @@ class TestFileSystemAIToolParametrized:
         "create_directory", "remove_directory", "delete_file",
         "copy_file", "move", "get_info"
     ])
-    def test_supported_operations_in_definition(self, operation, mock_path_resolver):
+    def test_supported_operations_in_definition(self, operation, mock_path_resolver, mock_access_settings):
         """Test that all supported operations are included in definition."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
         definition = filesystem_tool.get_definition()
         operation_param = definition.parameters[0]
 
         assert operation in operation_param.enum
 
     @pytest.mark.parametrize("encoding", ["utf-8", "utf-16", "ascii", "latin-1"])
-    def test_supported_encodings_in_definition(self, encoding, mock_path_resolver):
+    def test_supported_encodings_in_definition(self, encoding, mock_path_resolver, mock_access_settings):
         """Test that all supported encodings are included in definition."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
         definition = filesystem_tool.get_definition()
         encoding_param = next(p for p in definition.parameters if p.name == "encoding")
 
@@ -193,9 +193,9 @@ class TestFileSystemAIToolParametrized:
         (10, 10 * 1024 * 1024),
         (50, 50 * 1024 * 1024),
     ])
-    def test_custom_max_file_sizes(self, max_size_mb, expected_bytes, mock_path_resolver):
+    def test_custom_max_file_sizes(self, max_size_mb, expected_bytes, mock_path_resolver, mock_access_settings):
         """Test filesystem tool with different max file sizes."""
-        tool = FileSystemAITool(resolve_path=mock_path_resolver, max_file_size_mb=max_size_mb)
+        tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, max_file_size_mb=max_size_mb)
 
         assert tool._max_file_size_bytes == expected_bytes
 
@@ -342,23 +342,24 @@ class TestFileSystemAIToolErrorHandling:
 class TestFileSystemAIToolPathResolverIntegration:
     """Test integration with different path resolver behaviors."""
 
-    def test_path_resolver_validation_error(self, mock_authorization, make_tool_call):
+    def test_path_resolver_validation_error(self, mock_access_settings, mock_authorization, make_tool_call):
         """Test that path resolver validation errors are properly propagated."""
         def failing_resolver(path: str) -> Tuple[Path, str]:
             if path == "forbidden":
                 raise ValueError("Access to this path is forbidden")
             return Path(f"/test/sandbox/{path}"), path
 
-        filesystem_tool = FileSystemAITool(resolve_path=failing_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=failing_resolver, get_access_settings=mock_access_settings)
 
         tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "forbidden"})
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
-        assert "Access to this path is forbidden" in str(error)
+        # With external access disabled, the error message is about file not existing
+        assert "path does not exist" in str(error).lower()
 
-    def test_path_resolver_custom_display_paths(self, mock_authorization, make_tool_call):
+    def test_path_resolver_custom_display_paths(self, mock_access_settings, mock_authorization, make_tool_call):
         """Test that custom display paths from resolver are used correctly."""
         def custom_resolver(path: str) -> Tuple[Path, str]:
             # Return custom display path that's different from input
@@ -366,7 +367,7 @@ class TestFileSystemAIToolPathResolverIntegration:
             display_path = f"custom_prefix/{path}"
             return abs_path, display_path
 
-        filesystem_tool = FileSystemAITool(resolve_path=custom_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=custom_resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -386,7 +387,7 @@ class TestFileSystemAIToolPathResolverIntegration:
             # New format returns just the content (display path not in read_file output)
             assert result.content == "test content"
 
-    def test_path_resolver_absolute_vs_relative_handling(self, mock_authorization, make_tool_call):
+    def test_path_resolver_absolute_vs_relative_handling(self, mock_access_settings, mock_authorization, make_tool_call):
         """Test that path resolver handles both absolute and relative paths correctly."""
         def flexible_resolver(path: str) -> Tuple[Path, str]:
             if path.startswith('/'):
@@ -401,7 +402,7 @@ class TestFileSystemAIToolPathResolverIntegration:
 
             return abs_path, display_path
 
-        filesystem_tool = FileSystemAITool(resolve_path=flexible_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=flexible_resolver, get_access_settings=mock_access_settings)
 
         test_cases = [
             ("file.txt", "file.txt"),

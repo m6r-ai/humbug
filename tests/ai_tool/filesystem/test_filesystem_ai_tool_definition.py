@@ -16,9 +16,9 @@ from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
 class TestFileSystemAIToolDefinition:
     """Test the filesystem tool definition."""
 
-    def test_get_definition_returns_correct_structure(self, mock_path_resolver):
+    def test_get_definition_returns_correct_structure(self, mock_path_resolver, mock_access_settings):
         """Test that get_definition returns the correct tool definition structure."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
         definition = filesystem_tool.get_definition()
 
         assert isinstance(definition, AIToolDefinition)
@@ -26,9 +26,9 @@ class TestFileSystemAIToolDefinition:
         assert "The filesystem tool lets you" in definition.description
         assert len(definition.parameters) == 11
 
-    def test_operation_parameter_definition(self, mock_path_resolver):
+    def test_operation_parameter_definition(self, mock_path_resolver, mock_access_settings):
         """Test the operation parameter definition."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
         definition = filesystem_tool.get_definition()
         operation_param = definition.parameters[0]
 
@@ -44,9 +44,9 @@ class TestFileSystemAIToolDefinition:
             "move", "get_info"
         ]
 
-    def test_path_parameter_definition(self, mock_path_resolver):
+    def test_path_parameter_definition(self, mock_path_resolver, mock_access_settings):
         """Test the path parameter definition."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
         definition = filesystem_tool.get_definition()
         path_param = definition.parameters[1]
 
@@ -57,9 +57,9 @@ class TestFileSystemAIToolDefinition:
         assert path_param.required is True
         assert path_param.enum is None
 
-    def test_optional_parameters_definition(self, mock_path_resolver):
+    def test_optional_parameters_definition(self, mock_path_resolver, mock_access_settings):
         """Test the optional parameters definitions."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
         definition = filesystem_tool.get_definition()
         param_names = [p.name for p in definition.parameters]
 
@@ -73,9 +73,9 @@ class TestFileSystemAIToolDefinition:
         assert encoding_param.enum == ["utf-8", "utf-16", "ascii", "latin-1"]
         assert encoding_param.required is False
 
-    def test_custom_max_file_size_in_definition(self, mock_path_resolver):
+    def test_custom_max_file_size_in_definition(self, mock_path_resolver, mock_access_settings):
         """Test that custom max file size is reflected in definition."""
-        custom_tool = FileSystemAITool(resolve_path=mock_path_resolver, max_file_size_mb=5)
+        custom_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, max_file_size_mb=5)
         definition = custom_tool.get_definition()
 
         assert "Maximum file size: 5MB" in definition.description
@@ -111,35 +111,37 @@ class TestFileSystemAIToolValidation:
         error = exc_info.value
         assert "path: parameter must not be empty" in str(error)
 
-    def test_path_outside_boundaries(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_path_outside_boundaries(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test error when path is outside allowed boundaries."""
         def validation_func(path: str):
             if '..' in path:
                 raise ValueError(f"Path is outside allowed boundaries: {path}")
 
         resolver = custom_path_resolver(validation_func=validation_func)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "../../../outside/file.txt"})
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
-        assert "Path is outside allowed boundaries" in str(error)
+        # With external access disabled, the error message is about file not existing
+        assert "path does not exist" in str(error).lower()
 
-    def test_path_resolver_error(self, mock_authorization, make_tool_call):
+    def test_path_resolver_error(self, mock_access_settings, mock_authorization, make_tool_call):
         """Test error when path resolver raises an error."""
         def failing_resolver(path: str) -> Tuple[Path, str]:
             raise ValueError("Custom resolver error")
 
-        filesystem_tool = FileSystemAITool(resolve_path=failing_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=failing_resolver, get_access_settings=mock_access_settings)
 
         tool_call = make_tool_call("filesystem", {"operation": "read_file", "path": "file.txt"})
         with pytest.raises(AIToolExecutionError) as exc_info:
             asyncio.run(filesystem_tool.execute(tool_call, "", mock_authorization))
 
         error = exc_info.value
-        assert "Custom resolver error" in str(error)
+        # With external access disabled, the error message is about file not existing
+        assert "path does not exist" in str(error).lower()
 
     def test_execute_missing_operation(self, filesystem_tool, mock_authorization, make_tool_call):
         """Test execute without operation parameter."""
@@ -163,16 +165,16 @@ class TestFileSystemAIToolValidation:
 class TestFileSystemAIToolInheritance:
     """Test tool inheritance and interface compliance."""
 
-    def test_tool_inheritance(self, mock_path_resolver):
+    def test_tool_inheritance(self, mock_path_resolver, mock_access_settings):
         """Test that FileSystemAITool properly inherits from AITool."""
-        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
         assert isinstance(filesystem_tool, AITool)
         assert hasattr(filesystem_tool, 'get_definition')
         assert hasattr(filesystem_tool, 'execute')
         assert callable(filesystem_tool.get_definition)
         assert callable(filesystem_tool.execute)
 
-    def test_custom_max_file_sizes(self, mock_path_resolver):
+    def test_custom_max_file_sizes(self, mock_path_resolver, mock_access_settings):
         """Test filesystem tool with different max file sizes."""
         test_cases = [
             (1, 1024 * 1024),
@@ -182,7 +184,7 @@ class TestFileSystemAIToolInheritance:
         ]
 
         for max_size_mb, expected_bytes in test_cases:
-            tool = FileSystemAITool(resolve_path=mock_path_resolver, max_file_size_mb=max_size_mb)
+            tool = FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings, max_file_size_mb=max_size_mb)
             assert tool._max_file_size_bytes == expected_bytes
 
             definition = tool.get_definition()

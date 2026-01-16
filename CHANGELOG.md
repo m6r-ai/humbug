@@ -17,6 +17,8 @@ New features:
   highlighter to avoid parsing twice.
 - Added support for nested code blocks inside Markdown list elements.
 - Added a preview tab context menu.
+- Added new user settings to provide a global enable/disable for filesystem read access outside the current mindspace.
+  When enabled, also added allowlist and denylist configurations to control what can be accessed.
 
 Bug fixes:
 

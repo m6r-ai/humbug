@@ -10,7 +10,7 @@ import pytest
 
 from ai_tool import AIToolCall
 from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
-from humbug.user.user_settings import UserSettings
+from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
 
 
 @pytest.fixture
@@ -52,37 +52,35 @@ def mock_path_resolver():
 
 
 @pytest.fixture
-def mock_user_settings():
-    """Fixture providing mock user settings for testing."""
-    def get_settings() -> UserSettings:
-        """Return test user settings with external file access disabled by default."""
-        return UserSettings(
-            ai_backends={},
-            allow_external_file_access=False,  # Disabled by default for tests
-            external_file_allowlist="",
-            external_file_denylist=""
+def mock_access_settings():
+    """Fixture providing mock filesystem access settings for testing."""
+    def get_settings() -> FilesystemAccessSettings:
+        """Return test access settings with external file access disabled by default."""
+        return FilesystemAccessSettings(
+            allow_external_access=False,  # Disabled by default for tests
+            external_allowlist="",
+            external_denylist=""
         )
     return get_settings
 
 
 @pytest.fixture
-def mock_user_settings_with_external_access():
-    """Fixture providing mock user settings with external access enabled."""
-    def get_settings() -> UserSettings:
-        """Return test user settings with external file access enabled."""
-        return UserSettings(
-            ai_backends={},
-            allow_external_file_access=True,
-            external_file_allowlist="/usr/include/**\n/usr/share/**",
-            external_file_denylist="~/.ssh/**\n~/.aws/**"
+def mock_access_settings_with_external_access():
+    """Fixture providing mock filesystem access settings with external access enabled."""
+    def get_settings() -> FilesystemAccessSettings:
+        """Return test access settings with external file access enabled."""
+        return FilesystemAccessSettings(
+            allow_external_access=True,
+            external_allowlist="/usr/include/**\n/usr/share/**",
+            external_denylist="~/.ssh/**\n~/.aws/**"
         )
     return get_settings
 
 
 @pytest.fixture
-def filesystem_tool(mock_path_resolver, mock_user_settings):
+def filesystem_tool(mock_path_resolver, mock_access_settings):
     """Fixture providing a filesystem tool instance with mocked path resolver."""
-    return FileSystemAITool(resolve_path=mock_path_resolver, get_user_settings=mock_user_settings)
+    return FileSystemAITool(resolve_path=mock_path_resolver, get_access_settings=mock_access_settings)
 
 
 @pytest.fixture

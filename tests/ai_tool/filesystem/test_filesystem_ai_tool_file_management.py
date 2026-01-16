@@ -129,7 +129,7 @@ class TestFileSystemAIToolDeleteFile:
 class TestFileSystemAIToolCopyFile:
     """Test the copy_file operation."""
 
-    def test_copy_file_success_new_destination(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_copy_file_success_new_destination(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test successful file copying to new destination."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -137,7 +137,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -170,7 +170,7 @@ class TestFileSystemAIToolCopyFile:
             args = mock_authorization.call_args[0]
             assert args[4] is False  # destructive parameter
 
-    def test_copy_file_success_overwrite_destination(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_copy_file_success_overwrite_destination(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test successful file copying with overwrite."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -178,7 +178,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -263,7 +263,7 @@ class TestFileSystemAIToolCopyFile:
             error = exc_info.value
             assert "Source file too large: 11.0MB (max: 10.0MB)" in str(error)
 
-    def test_copy_file_authorization_denied(self, custom_path_resolver, mock_authorization_denied, make_tool_call):
+    def test_copy_file_authorization_denied(self, custom_path_resolver, mock_access_settings, mock_authorization_denied, make_tool_call):
         """Test copying file when authorization is denied."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -271,7 +271,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -299,7 +299,7 @@ class TestFileSystemAIToolCopyFile:
             error = exc_info.value
             assert "User denied permission to copy file: source.txt -> dest.txt" in str(error)
 
-    def test_copy_file_permission_error(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_copy_file_permission_error(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test copying file with permission error."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -307,7 +307,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -338,7 +338,7 @@ class TestFileSystemAIToolCopyFile:
             error = exc_info.value
             assert "Permission denied copying file" in str(error)
 
-    def test_copy_file_os_error(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_copy_file_os_error(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test copying file with OS error."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -346,7 +346,7 @@ class TestFileSystemAIToolCopyFile:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -381,7 +381,7 @@ class TestFileSystemAIToolCopyFile:
 class TestFileSystemAIToolMove:
     """Test the move operation."""
 
-    def test_move_file_success(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_move_file_success(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test successful file moving."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -389,7 +389,7 @@ class TestFileSystemAIToolMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -411,7 +411,7 @@ class TestFileSystemAIToolMove:
             args = mock_authorization.call_args[0]
             assert args[4] is True  # destructive parameter
 
-    def test_move_directory_success(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_move_directory_success(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test successful directory moving."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -419,7 +419,7 @@ class TestFileSystemAIToolMove:
             "dest_dir": ("/test/sandbox/dest_dir", "dest_dir")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.is_file') as mock_is_file, \
@@ -461,7 +461,7 @@ class TestFileSystemAIToolMove:
             error = exc_info.value
             assert "destination" in str(error).lower() and "missing" in str(error).lower()
 
-    def test_move_authorization_denied(self, custom_path_resolver, mock_authorization_denied, make_tool_call):
+    def test_move_authorization_denied(self, custom_path_resolver, mock_access_settings, mock_authorization_denied, make_tool_call):
         """Test moving when authorization is denied."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -469,7 +469,7 @@ class TestFileSystemAIToolMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists:
             mock_exists.return_value = True
@@ -481,7 +481,7 @@ class TestFileSystemAIToolMove:
             error = exc_info.value
             assert "User denied permission to move: source.txt -> dest.txt" in str(error)
 
-    def test_move_with_parent_creation(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_move_with_parent_creation(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test moving with parent directory creation."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -489,7 +489,7 @@ class TestFileSystemAIToolMove:
             "new_dir/dest.txt": ("/test/sandbox/new_dir/dest.txt", "new_dir/dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir') as mock_mkdir, \
@@ -504,7 +504,7 @@ class TestFileSystemAIToolMove:
             # Verify parent directory creation was attempted
             mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
-    def test_move_permission_error(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_move_permission_error(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test moving with permission error."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -512,7 +512,7 @@ class TestFileSystemAIToolMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir'), \
@@ -528,7 +528,7 @@ class TestFileSystemAIToolMove:
             error = exc_info.value
             assert "Permission denied moving" in str(error)
 
-    def test_move_os_error(self, custom_path_resolver, mock_authorization, make_tool_call):
+    def test_move_os_error(self, custom_path_resolver, mock_access_settings, mock_authorization, make_tool_call):
         """Test moving with OS error."""
         # Create custom resolver that handles both source and destination paths
         path_mapping = {
@@ -536,7 +536,7 @@ class TestFileSystemAIToolMove:
             "dest.txt": ("/test/sandbox/dest.txt", "dest.txt")
         }
         resolver = custom_path_resolver(path_mapping=path_mapping)
-        filesystem_tool = FileSystemAITool(resolve_path=resolver)
+        filesystem_tool = FileSystemAITool(resolve_path=resolver, get_access_settings=mock_access_settings)
 
         with patch('pathlib.Path.exists') as mock_exists, \
              patch('pathlib.Path.mkdir'), \
