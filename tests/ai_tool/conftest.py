@@ -58,8 +58,8 @@ def mock_access_settings():
         """Return test access settings with external file access disabled by default."""
         return FilesystemAccessSettings(
             allow_external_access=False,  # Disabled by default for tests
-            external_allowlist="",
-            external_denylist=""
+            external_allowlist=[],
+            external_denylist=[]
         )
     return get_settings
 
@@ -71,8 +71,8 @@ def mock_access_settings_with_external_access():
         """Return test access settings with external file access enabled."""
         return FilesystemAccessSettings(
             allow_external_access=True,
-            external_allowlist="/usr/include/**\n/usr/share/**",
-            external_denylist="~/.ssh/**\n~/.aws/**"
+            external_allowlist=["/usr/include/**", "/usr/share/**"],
+            external_denylist=["~/.ssh/**", "~/.aws/**"]
         )
     return get_settings
 

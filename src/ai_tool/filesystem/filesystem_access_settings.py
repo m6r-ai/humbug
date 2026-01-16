@@ -1,6 +1,7 @@
 """Settings for external file access control."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 import sys
 
 
@@ -11,33 +12,33 @@ class FilesystemAccessSettings:
     
     Attributes:
         allow_external_access: Master switch to enable/disable external file access
-        external_allowlist: Newline-separated glob patterns for auto-approved paths
-        external_denylist: Newline-separated glob patterns for blocked paths
+        external_allowlist: List of glob patterns for auto-approved paths
+        external_denylist: List of glob patterns for blocked paths
     """
     allow_external_access: bool = True
-    external_allowlist: str = ""
-    external_denylist: str = ""
+    external_allowlist: List[str] = field(default_factory=list)
+    external_denylist: List[str] = field(default_factory=list)
 
     @staticmethod
-    def get_default_allowlist() -> str:
+    def get_default_allowlist() -> List[str]:
         """Get platform-specific default allowlist."""
         if sys.platform == "win32":
-            return ""  # Windows doesn't have standard system header locations
+            return []  # Windows doesn't have standard system header locations
 
         if sys.platform == "darwin":
-            return "/usr/include/**\n/usr/share/doc/**\n/usr/share/man/**\n/Library/Developer/**"
+            return ["/usr/include/**", "/usr/share/doc/**", "/usr/share/man/**", "/Library/Developer/**"]
 
         # Linux and other Unix-like systems
-        return "/usr/include/**\n/usr/share/doc/**\n/usr/share/man/**"
+        return ["/usr/include/**", "/usr/share/doc/**", "/usr/share/man/**"]
 
     @staticmethod
-    def get_default_denylist() -> str:
+    def get_default_denylist() -> List[str]:
         """Get platform-specific default denylist."""
         if sys.platform == "win32":
-            return ""  # TODO: Add Windows-specific sensitive paths
+            return []  # TODO: Add Windows-specific sensitive paths
 
         # Unix-like systems (Linux, macOS, etc.)
-        return "~/.humbug/**\n~/.ssh/**\n~/.aws/**\n~/.gnupg/**\n~/.password-store/**"
+        return ["~/.humbug/**", "~/.ssh/**", "~/.aws/**", "~/.gnupg/**", "~/.password-store/**"]
 
     @classmethod
     def create_default(cls) -> "FilesystemAccessSettings":

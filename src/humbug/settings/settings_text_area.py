@@ -5,6 +5,7 @@ This module defines the SettingsTextArea class which provides a multiline text a
 setting widget.
 """
 
+from typing import List
 from PySide6.QtWidgets import QWidget, QPlainTextEdit
 
 from humbug.settings.settings_field import SettingsField
@@ -16,7 +17,7 @@ class SettingsTextArea(SettingsField):
 
     Attributes:
         _text_area (QPlainTextEdit): The text area control
-        _initial_value (str): The initial value
+        _initial_value (List[str]): The initial value as list
     """
 
     def __init__(
@@ -40,7 +41,7 @@ class SettingsTextArea(SettingsField):
         self._text_area.textChanged.connect(self._on_text_changed)
 
         self._layout.addWidget(self._text_area)
-        self._initial_value = self._text_area.toPlainText()
+        self._initial_value = []
         self._on_style_changed()
 
     def _on_text_changed(self) -> None:
@@ -49,20 +50,28 @@ class SettingsTextArea(SettingsField):
 
     def is_modified(self) -> bool:
         """Check if text area value has changed."""
-        return self._text_area.toPlainText() != self._initial_value
+        return self.get_value() != self._initial_value
 
     def reset_modified_state(self) -> None:
         """Reset the initial value to current value."""
-        self._initial_value = self._text_area.toPlainText()
+        self._initial_value = self.get_value()
 
-    def get_value(self) -> str:
-        """Get the current text area value."""
-        return self._text_area.toPlainText()
+    def get_value(self) -> List[str]:
+        """Get the current text area value as a list of strings."""
+        text = self._text_area.toPlainText()
+        # Split by newlines and filter out empty lines
+        return [line.strip() for line in text.split('\n') if line.strip()]
 
-    def set_value(self, value: str) -> None:
-        """Set the text area value."""
-        self._text_area.setPlainText(value)
-        self._initial_value = value
+    def set_value(self, value: List[str]) -> None:
+        """Set the text area value from a list of strings."""
+        if not value:
+            text = ""
+
+        else:
+            text = '\n'.join(value)
+
+        self._text_area.setPlainText(text)
+        self._initial_value = value.copy() if value else []
 
     def _on_style_changed(self) -> None:
         """Update text area styling."""

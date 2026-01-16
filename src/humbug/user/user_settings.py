@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 import json
 import os
-from typing import Dict
+from typing import Dict, List
 
 from ai import AIBackendSettings
 from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
@@ -24,8 +24,8 @@ class UserSettings:
     theme: ColorMode = ColorMode.DARK  # Default to dark mode
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
     allow_external_file_access: bool = True
-    external_file_allowlist: str = ""
-    external_file_denylist: str = ""
+    external_file_allowlist: List[str] = field(default_factory=list)
+    external_file_denylist: List[str] = field(default_factory=list)
 
     @classmethod
     def create_default(cls) -> "UserSettings":

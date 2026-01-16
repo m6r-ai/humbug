@@ -347,13 +347,13 @@ class FileSystemAITool(AITool):
         except Exception as e:
             raise AIToolExecutionError(f"{key}: failed to resolve path '{path_str}': {str(e)}") from e
 
-    def _match_glob_patterns(self, path_str: str, patterns: str) -> bool:
+    def _match_glob_patterns(self, path_str: str, patterns: List[str]) -> bool:
         """
         Check if a path matches any of the glob patterns.
 
         Args:
             path_str: Path to check (absolute)
-            patterns: Newline-separated glob patterns
+            patterns: List of glob patterns
 
         Returns:
             True if path matches any pattern, False otherwise
@@ -364,10 +364,10 @@ class FileSystemAITool(AITool):
         # Expand ~ in path for matching
         expanded_path = os.path.expanduser(path_str)
 
-        # Split patterns by newline and filter empty lines
-        pattern_list = [p.strip() for p in patterns.split('\n') if p.strip()]
+        for pattern in patterns:
+            if not pattern:  # Skip empty patterns
+                continue
 
-        for pattern in pattern_list:
             # Expand ~ in pattern
             expanded_pattern = os.path.expanduser(pattern)
 
