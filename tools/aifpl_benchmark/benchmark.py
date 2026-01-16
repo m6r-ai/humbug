@@ -20,7 +20,7 @@ import time
 from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Callable
+from typing import List, Dict, Any
 import cProfile
 import pstats
 from io import StringIO
@@ -130,19 +130,19 @@ BENCHMARKS = [
         "Simple Addition",
         "arithmetic",
         "(+ 1 2 3 4 5)",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Nested Arithmetic",
         "arithmetic",
         "(* (+ 1 2 3) (- 10 5) (/ 20 4))",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Complex Math",
         "arithmetic",
         "(sqrt (+ (* 3 3) (* 4 4)))",
-        iterations=1000
+        iterations=2000
     ),
 
     # === FUNCTION CALLS ===
@@ -150,19 +150,19 @@ BENCHMARKS = [
         "Simple Lambda Call",
         "functions",
         "((lambda (x) (* x x)) 5)",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Lambda with Multiple Args",
         "functions",
         "((lambda (x y z) (+ (* x y) z)) 3 4 5)",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Nested Lambda Calls",
         "functions",
         "((lambda (x) ((lambda (y) (+ x y)) 10)) 5)",
-        iterations=1000
+        iterations=2000
     ),
 
     # === RECURSION ===
@@ -174,7 +174,7 @@ BENCHMARKS = [
                                  1
                                  (* n (factorial (- n 1)))))))
              (factorial 10))""",
-        iterations=100
+        iterations=200
     ),
     Benchmark(
         "Fibonacci (15)",
@@ -184,7 +184,7 @@ BENCHMARKS = [
                            n
                            (+ (fib (- n 1)) (fib (- n 2)))))))
              (fib 15))""",
-        iterations=10
+        iterations=20
     ),
     Benchmark(
         "Tail Recursive Sum (100)",
@@ -194,7 +194,7 @@ BENCHMARKS = [
                                 acc
                                 (sum-tail (- n 1) (+ acc n))))))
              (sum-tail 100 0))""",
-        iterations=100
+        iterations=200
     ),
 
     # === LIST OPERATIONS ===
@@ -202,25 +202,25 @@ BENCHMARKS = [
         "List Creation (10 elements)",
         "lists",
         "(list 1 2 3 4 5 6 7 8 9 10)",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "List Append",
         "lists",
         "(append (list 1 2 3) (list 4 5 6))",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "List Reverse (20 elements)",
         "lists",
         "(reverse (list 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20))",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Cons Building (10 elements)",
         "lists",
         "(cons 1 (cons 2 (cons 3 (cons 4 (cons 5 (cons 6 (cons 7 (cons 8 (cons 9 (cons 10 ()))))))))))",
-        iterations=1000
+        iterations=2000
     ),
 
     # === HIGHER-ORDER FUNCTIONS ===
@@ -228,31 +228,31 @@ BENCHMARKS = [
         "Map (10 elements)",
         "higher-order",
         "(map (lambda (x) (* x x)) (list 1 2 3 4 5 6 7 8 9 10))",
-        iterations=500
+        iterations=1000
     ),
     Benchmark(
         "Map (100 elements)",
         "higher-order",
         "(map (lambda (x) (* x x)) (range 1 101))",
-        iterations=50
+        iterations=100
     ),
     Benchmark(
         "Filter (100 elements)",
         "higher-order",
         "(filter (lambda (x) (> x 50)) (range 1 101))",
-        iterations=50
+        iterations=100
     ),
     Benchmark(
         "Fold (100 elements)",
         "higher-order",
         "(fold + 0 (range 1 101))",
-        iterations=50
+        iterations=100
     ),
     Benchmark(
         "Map + Fold Pipeline (100 elements)",
         "higher-order",
         "(fold + 0 (map (lambda (x) (* x x)) (range 1 101)))",
-        iterations=50
+        iterations=100
     ),
 
     # === LET BINDINGS ===
@@ -260,19 +260,19 @@ BENCHMARKS = [
         "Simple Let (2 bindings)",
         "let",
         "(let ((x 5) (y 10)) (+ x y))",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Nested Let (3 levels)",
         "let",
         "(let ((a 1)) (let ((b 2)) (let ((c 3)) (+ a b c))))",
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Let with Many Bindings (10)",
         "let",
         "(let ((a 1) (b 2) (c 3) (d 4) (e 5) (f 6) (g 7) (h 8) (i 9) (j 10)) (+ a b c d e f g h i j))",
-        iterations=500
+        iterations=1000
     ),
     Benchmark(
         "Recursive Let Binding",
@@ -280,7 +280,7 @@ BENCHMARKS = [
         """(let ((factorial (lambda (n)
                              (if (<= n 1) 1 (* n (factorial (- n 1)))))))
              (factorial 5))""",
-        iterations=500
+        iterations=1000
     ),
 
     # === STRING OPERATIONS ===
@@ -288,13 +288,13 @@ BENCHMARKS = [
         "String Append",
         "strings",
         '(string-append "hello" " " "world")',
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "String Manipulation",
         "strings",
         '(string-upcase (string-append "hello" " " "world"))',
-        iterations=1000
+        iterations=2000
     ),
 
     # === ALIST OPERATIONS ===
@@ -302,25 +302,25 @@ BENCHMARKS = [
         "Alist Creation (5 pairs)",
         "alists",
         '(alist ("a" 1) ("b" 2) ("c" 3) ("d" 4) ("e" 5))',
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Alist Get",
         "alists",
         '(alist-get (alist ("name" "Alice") ("age" 30) ("city" "NYC")) "age")',
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Alist Set",
         "alists",
         '(alist-set (alist ("a" 1) ("b" 2) ("c" 3)) "d" 4)',
-        iterations=1000
+        iterations=2000
     ),
     Benchmark(
         "Alist Merge",
         "alists",
         '(alist-merge (alist ("a" 1) ("b" 2)) (alist ("c" 3) ("d" 4)))',
-        iterations=1000
+        iterations=2000
     ),
 
     # === COMPLEX REAL-WORLD SCENARIOS ===
@@ -329,7 +329,7 @@ BENCHMARKS = [
         "complex",
         """(let ((data (map (lambda (i) (alist ("id" i) ("value" (* i i)))) (range 1 51))))
              (fold + 0 (map (lambda (item) (alist-get item "value")) data)))""",
-        iterations=20
+        iterations=40
     ),
     Benchmark(
         "Nested Data Transformation",
@@ -338,7 +338,7 @@ BENCHMARKS = [
                    (filter-fn (lambda (x) (> x 10)))
                    (data (range 1 51)))
              (fold + 0 (filter filter-fn (map transform data))))""",
-        iterations=20
+        iterations=40
     ),
 ]
 
@@ -428,12 +428,12 @@ def save_results(results: List[BenchmarkResult], filename: str):
     suite = BenchmarkSuite(
         timestamp=datetime.now().isoformat(),
         python_version=sys.version,
-        aifpl_version="1.0",  # TODO: Get from package
+        aifpl_version="1.0",
         results=results
     )
 
     output_path = Path(__file__).parent / filename
-    with open(output_path, 'w') as f:
+    with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(suite.to_dict(), f, indent=2)
 
     print(f"\nResults saved to: {output_path}")
@@ -447,7 +447,7 @@ def compare_results(current: List[BenchmarkResult], baseline_file: str):
         print(f"Baseline file not found: {baseline_path}")
         return
 
-    with open(baseline_path) as f:
+    with open(baseline_path, 'r', encoding='utf-8') as f:
         baseline_data = json.load(f)
 
     baseline_results = {r['name']: r for r in baseline_data['results']}
@@ -455,7 +455,7 @@ def compare_results(current: List[BenchmarkResult], baseline_file: str):
     print("\n" + "=" * 80)
     print(f"COMPARISON WITH BASELINE: {baseline_file}")
     print("=" * 80)
-    print(f"{'Benchmark':<40} {'Current':<12} {'Baseline':<12} {'Change':<12}")
+    print(f"{'Benchmark':<40} {'Current':<12} {'Baseline':<12} {'Speedup':<12}")
     print("-" * 80)
 
     improvements = []
@@ -467,20 +467,25 @@ def compare_results(current: List[BenchmarkResult], baseline_file: str):
             current_time = result.mean_time * 1000
             baseline_time = baseline['mean_time'] * 1000
 
-            change = ((current_time - baseline_time) / baseline_time) * 100
+            # Calculate speedup factor (baseline / current)
+            speedup = baseline_time / current_time if current_time > 0 else 0
+
+            # Calculate percentage change for sorting
+            pct_change = ((baseline_time - current_time) / baseline_time) * 100
 
             name = result.name[:38] + ".." if len(result.name) > 40 else result.name
             current_str = f"{current_time:.3f}ms"
             baseline_str = f"{baseline_time:.3f}ms"
 
-            if abs(change) < 1:
+            # Show speedup if significant change
+            if abs(speedup - 1.0) < 0.01:  # Less than 1% difference
                 change_str = "~"
-            elif change < 0:
-                change_str = f"↑ {abs(change):.1f}%"
-                improvements.append((result.name, abs(change)))
-            else:
-                change_str = f"↓ {change:.1f}%"
-                regressions.append((result.name, change))
+            elif speedup > 1.0:
+                change_str = f"{speedup:.2f}x"
+                improvements.append((result.name, speedup, pct_change))
+            else:  # speedup < 1.0 means regression
+                change_str = f"{speedup:.2f}x"
+                regressions.append((result.name, speedup, pct_change))
 
             print(f"{name:<40} {current_str:<12} {baseline_str:<12} {change_str:<12}")
 
@@ -490,23 +495,23 @@ def compare_results(current: List[BenchmarkResult], baseline_file: str):
 
     if improvements:
         print(f"\nImprovements ({len(improvements)}):")
-        for name, pct in sorted(improvements, key=lambda x: x[1], reverse=True)[:5]:
-            print(f"  {name}: {pct:.1f}% faster")
+        for name, speedup, pct in sorted(improvements, key=lambda x: x[1], reverse=True)[:5]:
+            print(f"  {name}: {speedup:.2f}x faster ({pct:.1f}% time saved)")
 
     if regressions:
         print(f"\nRegressions ({len(regressions)}):")
-        for name, pct in sorted(regressions, key=lambda x: x[1], reverse=True)[:5]:
-            print(f"  {name}: {pct:.1f}% slower")
+        for name, speedup, pct in sorted(regressions, key=lambda x: x[1])[:5]:  # Sort ascending (slowest first)
+            print(f"  {name}: {speedup:.2f}x ({abs(pct):.1f}% time increase)")
 
     if improvements or regressions:
-        avg_change = statistics.mean([
-            -pct for _, pct in improvements
-        ] + [pct for _, pct in regressions])
+        # Calculate average speedup using geometric mean (more appropriate for ratios)
+        speedup_factors = [s for _, s, _ in improvements] + [s for _, s, _ in regressions]
+        avg_speedup = statistics.geometric_mean(speedup_factors) if speedup_factors else 1.0
 
-        if avg_change < 0:
-            print(f"\nOverall: {abs(avg_change):.1f}% faster on average")
+        if avg_speedup >= 1.0:
+            print(f"\nOverall: {avg_speedup:.2f}x on average")
         else:
-            print(f"\nOverall: {avg_change:.1f}% slower on average")
+            print(f"\nOverall: {avg_speedup:.2f}x on average")
 
 
 def profile_benchmarks(benchmarks: List[Benchmark]):
