@@ -77,8 +77,6 @@ class PreviewFileContent(PreviewContentWidget):
         # Create text area for source code
         self._text_area = CodeBlockTextEdit()
         self._text_area.setObjectName("_text_area")
-        self._text_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self._text_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
         # Disable the standard context menu as our parent widget will handle that
         self._text_area.setContextMenuPolicy(Qt.ContextMenuPolicy.NoContextMenu)
