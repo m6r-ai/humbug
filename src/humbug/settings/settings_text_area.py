@@ -41,7 +41,7 @@ class SettingsTextArea(SettingsField):
         self._text_area.textChanged.connect(self._on_text_changed)
 
         self._layout.addWidget(self._text_area)
-        self._initial_value = []
+        self._initial_value: List[str] = []
         self._on_style_changed()
 
     def _on_text_changed(self) -> None:
