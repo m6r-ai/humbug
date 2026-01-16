@@ -131,17 +131,12 @@ class AIFPLEvaluator:
                 suggestion="Reduce nesting depth or increase max_depth limit"
             )
 
-        # Use type tag for fast dispatch
-        tag = expr.type_tag()
-
-        # Self-evaluating values (numbers, strings, booleans, alists, functions)
-        if tag in (AIFPLValue.TYPE_NUMBER, AIFPLValue.TYPE_STRING, AIFPLValue.TYPE_BOOLEAN,
-                   AIFPLValue.TYPE_ALIST, AIFPLValue.TYPE_FUNCTION, AIFPLValue.TYPE_BUILTIN_FUNCTION):
+        # Check most common self-evaluating types first (numbers are very common)
+        if expr.is_self_evaluating():
             return expr
 
         # Symbol lookup
-        if tag == AIFPLValue.TYPE_SYMBOL:
-            assert isinstance(expr, AIFPLSymbol)
+        if isinstance(expr, AIFPLSymbol):
             try:
                 return env.lookup(expr.name)
 
@@ -158,8 +153,8 @@ class AIFPLEvaluator:
                 ) from e
 
         # List evaluation - check for special forms FIRST before any symbol evaluation
-        assert tag == AIFPLValue.TYPE_LIST, "Non-list expressions should be handled earlier"
-        assert isinstance(expr, AIFPLList)
+        if not isinstance(expr, AIFPLList):
+            raise AIFPLEvalError(f"Unexpected expression type: {type(expr)}")
 
         # Empty list evaluates to itself
         if expr.is_empty():
@@ -167,8 +162,7 @@ class AIFPLEvaluator:
 
         # Non-empty list - check first element for special forms
         first_elem = expr.first()
-        if first_elem.type_tag() == AIFPLValue.TYPE_SYMBOL:
-            assert isinstance(first_elem, AIFPLSymbol)
+        if isinstance(first_elem, AIFPLSymbol):
             # Handle special forms BEFORE attempting any symbol lookup
             if self._is_symbol_with_name(first_elem, "quote"):
                 return self._evaluate_quote_form(expr, env, depth + 1)
@@ -554,15 +548,14 @@ class AIFPLEvaluator:
                     suggestion="Check each argument for syntax errors"
                 ) from e
 
-            if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+            if isinstance(func_value, AIFPLFunction):
                 result = self._call_lambda_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
 
             else:  # AIFPLBuiltinFunction
                 result = self._call_builtin_function(cast(AIFPLBuiltinFunction, func_value), arg_values, env, depth)
 
             # Check if result is a tail call
-            if result.type_tag() == AIFPLValue.TYPE_TAIL_CALL:
-                assert isinstance(result, AIFPLTailCall)
+            if isinstance(result, AIFPLTailCall):
                 # Continue the loop with the tail call
                 current_call = AIFPLList((result.function,) + tuple(result.arguments))
                 current_env = result.environment
@@ -692,17 +685,13 @@ class AIFPLEvaluator:
         Returns:
             Either a regular result or a AIFPLTailCall object for optimization
         """
-        # Use type tag for fast dispatch
-        tag = expr.type_tag()
 
-        # Self-evaluating values (numbers, strings, booleans, alists, functions)
-        if tag in (AIFPLValue.TYPE_NUMBER, AIFPLValue.TYPE_STRING, AIFPLValue.TYPE_BOOLEAN,
-                   AIFPLValue.TYPE_ALIST, AIFPLValue.TYPE_FUNCTION, AIFPLValue.TYPE_BUILTIN_FUNCTION):
+        # Check most common self-evaluating types first (numbers are very common)
+        if expr.is_self_evaluating():
             return expr
 
-        # Symbol lookup
-        if tag == AIFPLValue.TYPE_SYMBOL:
-            assert isinstance(expr, AIFPLSymbol)
+         # Symbol lookup
+        if isinstance(expr, AIFPLSymbol):
             try:
                 return env.lookup(expr.name)
 
@@ -719,16 +708,15 @@ class AIFPLEvaluator:
                 ) from e
 
         # If this isn't a list, evaluate normally
-        assert tag == AIFPLValue.TYPE_LIST, "Non-list expressions should be handled earlier"
-        assert isinstance(expr, AIFPLList)
+        if not isinstance(expr, AIFPLList):
+            raise AIFPLEvalError(f"Unexpected expression type: {type(expr)}")
 
         # Empty list evaluates to itself
         if expr.is_empty():
             return expr
 
         first_elem = expr.first()
-        if first_elem.type_tag() == AIFPLValue.TYPE_SYMBOL:
-            assert isinstance(first_elem, AIFPLSymbol)
+        if isinstance(first_elem, AIFPLSymbol):
             # Handle special forms BEFORE attempting any symbol lookup
             if self._is_symbol_with_name(first_elem, 'quote'):
                 return self._evaluate_quote_form(expr, env, depth + 1)
@@ -749,7 +737,7 @@ class AIFPLEvaluator:
         func_value = self._evaluate_expression(first_elem, env, depth + 1)
 
         # If it's not a lambda function, evaluate normally
-        if func_value.type_tag() != AIFPLValue.TYPE_FUNCTION:
+        if not isinstance(func_value, AIFPLFunction):
             return self._evaluate_function_call(expr, env, depth + 1)
 
         # Check for recursion (simple or mutual)
@@ -841,16 +829,16 @@ class AIFPLEvaluator:
         """
         # Evaluate the function expression
         func_value = self._evaluate_expression(func_expr, env, depth)
-        if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+        if isinstance(func_value, AIFPLFunction):
             result = self._call_lambda_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
-            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, (
+            assert not isinstance(result, AIFPLTailCall), (
                 "Tail calls should not propagate out of higher-order function calls"
             )
             return result
 
-        if func_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
+        if isinstance(func_value, AIFPLBuiltinFunction):
             result = self._call_builtin_function(cast(AIFPLBuiltinFunction, func_value), arg_values, env, depth)
-            assert result.type_tag() != AIFPLValue.TYPE_TAIL_CALL, (
+            assert not isinstance(result, AIFPLTailCall), (
                 "Tail calls should not propagate out of higher-order function calls"
             )
             return result
@@ -945,7 +933,7 @@ class AIFPLEvaluator:
         func_value = self._evaluate_expression(func_expr, env, depth + 1)
 
         # Fast path for lambda functions with single parameter
-        if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+        if isinstance(func_value, AIFPLFunction):
             func_lambda = cast(AIFPLFunction, func_value)
             if len(func_lambda.parameters) == 1:
                 # Optimized path: skip full function call machinery
@@ -975,10 +963,10 @@ class AIFPLEvaluator:
         for i, item in enumerate(list_value.elements):
             try:
                 # Use the already-evaluated function
-                if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+                if isinstance(func_value, AIFPLFunction):
                     item_result = self._call_lambda_function(cast(AIFPLFunction, func_value), [item], env, depth + 1)
 
-                elif func_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
+                elif isinstance(func_value, AIFPLBuiltinFunction):
                     item_result = self._call_builtin_function(cast(AIFPLBuiltinFunction, func_value), [item], env, depth + 1)
 
                 else:
@@ -1027,7 +1015,7 @@ class AIFPLEvaluator:
         pred_value = self._evaluate_expression(pred_expr, env, depth + 1)
 
         # Fast path for lambda predicates with single parameter
-        if pred_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+        if isinstance(pred_value, AIFPLFunction):
             pred_lambda = cast(AIFPLFunction, pred_value)
             if len(pred_lambda.parameters) == 1:
                 # Optimized path: skip full function call machinery
@@ -1041,7 +1029,7 @@ class AIFPLEvaluator:
                         # Evaluate body directly
                         pred_result = self._evaluate_expression(pred_lambda.body, item_env, depth + 1)
 
-                        if pred_result.type_tag() != AIFPLValue.TYPE_BOOLEAN:
+                        if not isinstance(pred_result, AIFPLBoolean):
                             raise AIFPLEvalError(
                                 message=f"Filter predicate must return boolean at element {i+1}",
                                 received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
@@ -1050,7 +1038,7 @@ class AIFPLEvaluator:
                                 suggestion="Predicate function should use comparison operators"
                             )
 
-                        if cast(AIFPLBoolean, pred_result).value:
+                        if pred_result.value:
                             result_elements.append(item)
 
                     except AIFPLEvalError as e:
@@ -1068,10 +1056,10 @@ class AIFPLEvaluator:
         for i, item in enumerate(list_value.elements):
             try:
                 # Use the already-evaluated predicate
-                if pred_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+                if isinstance(pred_value, AIFPLFunction):
                     pred_result = self._call_lambda_function(cast(AIFPLFunction, pred_value), [item], env, depth + 1)
 
-                elif pred_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
+                elif isinstance(pred_value, AIFPLBuiltinFunction):
                     pred_result = self._call_builtin_function(cast(AIFPLBuiltinFunction, pred_value), [item], env, depth + 1)
 
                 else:
@@ -1081,7 +1069,7 @@ class AIFPLEvaluator:
                         expected="Function (lambda or builtin)"
                     )
 
-                if pred_result.type_tag() != AIFPLValue.TYPE_BOOLEAN:
+                if not isinstance(pred_result, AIFPLBoolean):
                     raise AIFPLEvalError(
                         message=f"Filter predicate must return boolean at element {i+1}",
                         received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
@@ -1134,7 +1122,7 @@ class AIFPLEvaluator:
         func_value = self._evaluate_expression(func_expr, env, depth + 1)
 
         # Fast path for lambda functions with two parameters
-        if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+        if isinstance(func_value, AIFPLFunction):
             func_lambda = cast(AIFPLFunction, func_value)
             if len(func_lambda.parameters) == 2:
                 # Optimized path: skip full function call machinery
@@ -1162,10 +1150,10 @@ class AIFPLEvaluator:
         for i, item in enumerate(list_value.elements):
             try:
                 # Use the already-evaluated function
-                if func_value.type_tag() == AIFPLValue.TYPE_FUNCTION:
+                if isinstance(func_value, AIFPLFunction):
                     accumulator = self._call_lambda_function(cast(AIFPLFunction, func_value), [accumulator, item], env, depth + 1)
 
-                elif func_value.type_tag() == AIFPLValue.TYPE_BUILTIN_FUNCTION:
+                elif isinstance(func_value, AIFPLBuiltinFunction):
                     accumulator = self._call_builtin_function(
                         cast(AIFPLBuiltinFunction, func_value), [accumulator, item], env, depth + 1
                     )

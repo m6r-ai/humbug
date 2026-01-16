@@ -14,21 +14,9 @@ class AIFPLValue(ABC):
     All AIFPL values are immutable.
     """
 
-    # Type tags for fast dispatch (avoiding isinstance checks)
-    TYPE_NUMBER = 1
-    TYPE_STRING = 2
-    TYPE_BOOLEAN = 3
-    TYPE_SYMBOL = 4
-    TYPE_LIST = 5
-    TYPE_ALIST = 6
-    TYPE_FUNCTION = 7
-    TYPE_BUILTIN_FUNCTION = 8
-    TYPE_RECURSIVE_PLACEHOLDER = 9
-    TYPE_TAIL_CALL = 10
-
     @abstractmethod
-    def type_tag(self) -> int:
-        """Return integer type tag for fast dispatch."""
+    def is_self_evaluating(self) -> bool:
+        """Return True if this value evaluates to itself (doesn't need evaluation)."""
 
     @abstractmethod
     def to_python(self) -> Any:
@@ -44,8 +32,8 @@ class AIFPLNumber(AIFPLValue):
     """Represents numeric values: integers, floats, complex numbers."""
     value: Union[int, float, complex]
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_NUMBER
+    def is_self_evaluating(self) -> bool:
+        return True
 
     def to_python(self) -> Union[int, float, complex]:
         return self.value
@@ -77,8 +65,8 @@ class AIFPLString(AIFPLValue):
     """Represents string values."""
     value: str
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_STRING
+    def is_self_evaluating(self) -> bool:
+        return True
 
     def to_python(self) -> str:
         return self.value
@@ -92,8 +80,8 @@ class AIFPLBoolean(AIFPLValue):
     """Represents boolean values."""
     value: bool
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_BOOLEAN
+    def is_self_evaluating(self) -> bool:
+        return True
 
     def to_python(self) -> bool:
         return self.value
@@ -108,8 +96,8 @@ class AIFPLSymbol(AIFPLValue):
     name: str
     position: int = 0
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_SYMBOL
+    def is_self_evaluating(self) -> bool:
+        return False
 
     def to_python(self) -> str:
         """Symbols convert to their name string."""
@@ -130,8 +118,8 @@ class AIFPLList(AIFPLValue):
     """Represents lists of AIFPL values."""
     elements: Tuple[AIFPLValue, ...] = ()
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_LIST
+    def is_self_evaluating(self) -> bool:
+        return False
 
     def to_python(self) -> List[Any]:
         """Convert to Python list with Python values."""
@@ -231,8 +219,8 @@ class AIFPLAlist(AIFPLValue):
             lookup[hashable_key] = (key, value)
         object.__setattr__(self, '_lookup', lookup)
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_ALIST
+    def is_self_evaluating(self) -> bool:
+        return True
 
     def to_python(self) -> dict:
         """Convert to Python dict."""
@@ -383,8 +371,8 @@ class AIFPLFunction(AIFPLValue):
     closure_environment: Any  # AIFPLEnvironment, avoiding circular import (this circularity is intentional!)
     name: str | None = None
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_FUNCTION
+    def is_self_evaluating(self) -> bool:
+        return True
 
     def to_python(self) -> 'AIFPLFunction':
         """Functions return themselves as Python values."""
@@ -410,8 +398,8 @@ class AIFPLBuiltinFunction(AIFPLValue):
         self.name = name
         self.native_impl = native_impl
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_BUILTIN_FUNCTION
+    def is_self_evaluating(self) -> bool:
+        return True
 
     def to_python(self) -> str:
         return self.name
@@ -438,8 +426,8 @@ class AIFPLRecursivePlaceholder(AIFPLValue):
 
         return self._resolved_value
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_RECURSIVE_PLACEHOLDER
+    def is_self_evaluating(self) -> bool:
+        return False
 
     def to_python(self) -> Any:
         return self.get_resolved_value().to_python()
@@ -461,12 +449,12 @@ class AIFPLTailCall(AIFPLValue):
     arguments: List[AIFPLValue]
     environment: Any  # AIFPLEnvironment, avoiding circular import
 
-    def type_tag(self) -> int:
-        return AIFPLValue.TYPE_TAIL_CALL
-
     def to_python(self) -> Any:
         """Tail calls should never be converted to Python values."""
         raise AIFPLEvalError("Internal error: AIFPLTailCall should never be converted to Python value")
 
     def type_name(self) -> str:
         return "tail-call"
+
+    def is_self_evaluating(self) -> bool:
+        return False
