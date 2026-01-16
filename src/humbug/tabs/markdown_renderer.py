@@ -14,6 +14,8 @@ from PySide6.QtGui import (
     QTextTableFormat, QTextFrameFormat, QTextLength, QImage, QTextImageFormat
 )
 
+from syntax import TokenType
+
 from dmarkdown import (
     MarkdownASTVisitor, MarkdownASTDocumentNode, MarkdownASTParagraphNode, MarkdownASTHeadingNode,
     MarkdownASTTextNode, MarkdownASTBoldNode, MarkdownASTEmphasisNode, MarkdownASTInlineCodeNode,
@@ -604,7 +606,6 @@ class MarkdownRenderer(MarkdownASTVisitor):
         code_format = QTextCharFormat(orig_char_format)
         code_format.setFontFamilies(self._style_manager.monospace_font_families())
         code_format.setFontFixedPitch(True)
-        self._cursor.setCharFormat(code_format)
 
         # Split content by lines and add each in its own block
         lines = node.content.split('\n')
@@ -613,7 +614,39 @@ class MarkdownRenderer(MarkdownASTVisitor):
             if i > 0:
                 self._cursor.insertBlock(block_format)
 
-            self._cursor.insertText(line)
+            # Apply syntax highlighting if we have pre-computed tokens
+            if i < len(node.tokens_by_line) and node.tokens_by_line[i]:
+                tokens = node.tokens_by_line[i]
+                last_token_pos = 0
+
+                for token in tokens:
+                    # Create a format for this token with syntax highlighting
+                    token_format = QTextCharFormat(code_format)
+                    token_format.setForeground(self._style_manager.get_highlight(token.type).foreground())
+
+                    # Insert any whitespace before this token
+                    if token.start > last_token_pos:
+                        whitespace_format = QTextCharFormat(code_format)
+                        whitespace_format.setForeground(self._style_manager.get_highlight(TokenType.TEXT).foreground())
+                        self._cursor.setCharFormat(whitespace_format)
+                        self._cursor.insertText(line[last_token_pos:token.start])
+
+                    # Insert the token with its highlighting
+                    self._cursor.setCharFormat(token_format)
+                    self._cursor.insertText(token.value)
+                    last_token_pos = token.start + len(token.value)
+
+                # Insert any trailing whitespace
+                if last_token_pos < len(line):
+                    whitespace_format = QTextCharFormat(code_format)
+                    whitespace_format.setForeground(self._style_manager.get_highlight(TokenType.TEXT).foreground())
+                    self._cursor.setCharFormat(whitespace_format)
+                    self._cursor.insertText(line[last_token_pos:])
+
+            else:
+                # No tokens available, insert plain text
+                self._cursor.setCharFormat(code_format)
+                self._cursor.insertText(line)
 
         self._cursor.setCharFormat(orig_char_format)
 
