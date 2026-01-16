@@ -6,7 +6,7 @@ from typing import cast
 from PySide6.QtWidgets import QScrollArea, QWidget
 from PySide6.QtCore import Qt, Signal, QObject, QMimeData
 from PySide6.QtGui import (
-    QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
+    QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush
 )
 
 from humbug.min_height_text_edit import MinHeightTextEdit
@@ -113,25 +113,6 @@ class MarkdownTextEdit(MinHeightTextEdit):
         """Propagate mouse release events to parent."""
         super().mouseReleaseEvent(e)
         self.mouse_released.emit(e)
-
-    def wheelEvent(self, e: QWheelEvent) -> None:
-        """Handle wheel events for horizontal scrolling."""
-        # If this is a code block, handle horizontal scrolling for compatible mice
-        if self._has_code_block and e.angleDelta().x() != 0:
-            # Get the horizontal scrollbar
-            hbar = self.horizontalScrollBar()
-            if hbar:
-                # Use the horizontal component directly
-                delta = e.angleDelta().x()
-                hbar.setValue(hbar.value() - delta)
-
-                # We've only handled the horizontal component - we need to let our parent
-                # handle the vertical component.
-                e.ignore()
-                return
-
-        # For all other cases, propagate the event up
-        e.ignore()
 
     def _indent_single_line_soft_tabs(self, cursor: QTextCursor, tab_size: int) -> None:
         """Indent a single line using soft tabs (spaces).

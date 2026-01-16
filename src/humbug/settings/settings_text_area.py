@@ -6,8 +6,9 @@ setting widget.
 """
 
 from typing import List
-from PySide6.QtWidgets import QWidget, QPlainTextEdit
+from PySide6.QtWidgets import QWidget
 
+from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
 from humbug.settings.settings_field import SettingsField
 
 
@@ -36,9 +37,10 @@ class SettingsTextArea(SettingsField):
         """
         super().__init__(label_text, parent)
 
-        self._text_area = QPlainTextEdit()
+        self._text_area = MinHeightPlainTextEdit()
         self._text_area.setPlaceholderText(placeholder)
         self._text_area.textChanged.connect(self._on_text_changed)
+        self._text_area.setObjectName("SettingsTextArea")
 
         self._layout.addWidget(self._text_area)
         self._initial_value: List[str] = []
@@ -72,16 +74,6 @@ class SettingsTextArea(SettingsField):
 
         self._text_area.setPlainText(text)
         self._initial_value = value.copy() if value else []
-
-    def _on_style_changed(self) -> None:
-        """Update text area styling."""
-        super()._on_style_changed()
-
-        # Set minimum size based on zoom factor
-        zoom_factor = self._style_manager.zoom_factor()
-        min_height = int(100 * zoom_factor)
-        self._text_area.setMinimumHeight(min_height)
-        self._text_area.setMaximumHeight(int(150 * zoom_factor))
 
     def set_enabled(self, enabled: bool) -> None:
         """Enable or disable the text area."""

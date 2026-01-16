@@ -1349,6 +1349,18 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
 
+            /* Text areas */
+            #SettingsTextArea {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                border: none;
+                border-radius: 4px;
+                padding: 4px;
+            }}
+            #SettingsTextArea:disabled {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+
             /* Checkboxes */
             QCheckBox {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};

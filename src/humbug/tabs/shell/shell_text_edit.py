@@ -5,7 +5,7 @@ import logging
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import (
-    QKeyEvent, QTextOption, QMouseEvent, QPalette, QBrush, QWheelEvent
+    QKeyEvent, QTextOption, QMouseEvent, QPalette, QBrush
 )
 
 from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
@@ -108,25 +108,6 @@ class ShellTextEdit(MinHeightPlainTextEdit):
         """Propagate mouse release events to parent."""
         super().mouseReleaseEvent(e)
         self.mouse_released.emit(e)
-
-    def wheelEvent(self, e: QWheelEvent) -> None:
-        """Handle wheel events for horizontal scrolling."""
-        # Handle horizontal scrolling for compatible mice
-        if e.angleDelta().x() != 0:
-            # Get the horizontal scrollbar
-            hbar = self.horizontalScrollBar()
-            if hbar:
-                # Use the horizontal component directly
-                delta = e.angleDelta().x()
-                hbar.setValue(hbar.value() - delta)
-
-                # We've only handled the horizontal component - we need to let our parent
-                # handle the vertical component.
-                e.ignore()
-                return
-
-        # For all other cases, propagate the event up
-        e.ignore()
 
     def enable_highlighter(self) -> None:
         """Enable syntax highlighting for system commands."""

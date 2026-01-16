@@ -2,7 +2,7 @@
 
 import logging
 from PySide6.QtCore import Qt, QSize
-from PySide6.QtGui import QResizeEvent, QTextOption, QTextCursor
+from PySide6.QtGui import QResizeEvent, QTextOption, QTextCursor, QWheelEvent
 from PySide6.QtWidgets import (
     QFrame, QPlainTextEdit, QSizePolicy, QWidget
 )
@@ -58,6 +58,25 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
     def scroll_changed(self, _min: int, _max: int) -> None:
         """Handle scrollbar range changes."""
         self.updateGeometry()
+
+    def wheelEvent(self, e: QWheelEvent) -> None:
+        """Handle wheel events for horizontal scrolling."""
+        # Handle horizontal scrolling for compatible mice
+        if e.angleDelta().x() != 0:
+            # Get the horizontal scrollbar
+            hbar = self.horizontalScrollBar()
+            if hbar:
+                # Use the horizontal component directly
+                delta = e.angleDelta().x()
+                hbar.setValue(hbar.value() - delta)
+
+                # We've only handled the horizontal component - we need to let our parent
+                # handle the vertical component.
+                e.ignore()
+                return
+
+        # For all other cases, propagate the event up
+        e.ignore()
 
     def set_text(self, text: str) -> None:
         """Update text content incrementally based on differences."""
@@ -136,6 +155,9 @@ class MinHeightPlainTextEdit(QPlainTextEdit):
         if self.horizontalScrollBar().isVisible():
             # Additional space for scrollbar with gap
             height += 14
+
+        # Adjust for margins
+        height += self.contentsMargins().top() + self.contentsMargins().bottom()
 
         return int(height)
 
