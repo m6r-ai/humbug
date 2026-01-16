@@ -22,6 +22,7 @@ from ai_tool import AIToolManager
 from ai_tool.aifpl.aifpl_ai_tool import AIFPLAITool
 from ai_tool.clock.clock_ai_tool import ClockAITool
 from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
+from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
@@ -412,7 +413,7 @@ class MainWindow(QMainWindow):
         self._ai_tool_manager.register_tool(
             FileSystemAITool(
                 self._resolve_mindspace_path,
-                self._user_manager.settings
+                self._get_filesystem_access_settings
             ),
             "FileSystem: handles file operations in the current mindspace"
         )
@@ -1147,6 +1148,15 @@ class MainWindow(QMainWindow):
             raise ValueError(f"Path is outside mindspace boundaries: {path}")
 
         return resolved_path, relative_path
+
+    def _get_filesystem_access_settings(self) -> FilesystemAccessSettings:
+        """Get filesystem access settings from user settings."""
+        user_settings = self._user_manager.settings()
+        return FilesystemAccessSettings(
+            allow_external_access=user_settings.allow_external_file_access,
+            external_allowlist=user_settings.external_file_allowlist,
+            external_denylist=user_settings.external_file_denylist
+        )
 
     def _new_metaphor_conversation(self) -> None:
         """Create new conversation from Metaphor file."""

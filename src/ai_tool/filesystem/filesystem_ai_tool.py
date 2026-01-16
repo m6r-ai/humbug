@@ -8,17 +8,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Callable, Tuple, cast
 
+from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
+from syntax.programming_language_utils import ProgrammingLanguageUtils
+
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback, AIToolOperationDefinition,
     AIToolResult, AIToolCall
 )
+from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
 from ai_tool.filesystem.filesystem_diff_applier import FilesystemDiffApplier
-from diff import DiffParseError, DiffMatchError, DiffValidationError, DiffApplicationError
-from syntax.programming_language_utils import ProgrammingLanguageUtils
-
-# Import UserSettings for type hints
-from humbug.user.user_settings import UserSettings
 
 
 class FileSystemAITool(AITool):
@@ -32,7 +31,7 @@ class FileSystemAITool(AITool):
     def __init__(
         self,
         resolve_path: Callable[[str], Tuple[Path, str]],
-        get_user_settings: Callable[[], UserSettings],
+        get_access_settings: Callable[[], FilesystemAccessSettings],
         max_file_size_mb: int = 10
     ):
         """
@@ -40,11 +39,11 @@ class FileSystemAITool(AITool):
 
         Args:
             resolve_path: Callback to resolve and validate paths, returns (absolute_path, display_path)
-            get_user_settings: Callback to get current user settings
+            get_access_settings: Callback to get current filesystem access settings
             max_file_size_mb: Maximum file size in MB for read/write operations
         """
         self._resolve_path = resolve_path
-        self._get_user_settings = get_user_settings
+        self._get_access_settings = get_access_settings
         self._max_file_size_bytes = max_file_size_mb * 1024 * 1024
         self._logger = logging.getLogger("FileSystemAITool")
 
@@ -58,10 +57,25 @@ class FileSystemAITool(AITool):
         operations = self.get_operation_definitions()
         operation_names: List[str] = list(operations.keys())
 
+        # Get current external access status
+        settings = self._get_access_settings()
+        external_access_status = "ENABLED" if settings.allow_external_access else "DISABLED"
+
         # Build description from operations
         base_description = (
-            f"The filesystem tool lets you (the AI) perform various file and directory operations within the current mindspace. "
-            f"All write operations require user authorization before proceeding. "
+            f"The filesystem tool lets you (the AI) perform various file and directory operations. "
+            f"Write operations are restricted to the current mindspace and require user authorization. "
+            f"Read operations (read_file, read_file_lines, list_directory, get_info) can access files outside the mindspace when "
+            f"external file access is enabled (currently: {external_access_status}). "
+        )
+
+        if settings.allow_external_access:
+            base_description += "External reads are subject to allowlist/denylist rules and user approval. "
+
+        else:
+            base_description += "Enable in user settings to access system files. "
+
+        base_description += (
             f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
         )
 
@@ -402,10 +416,10 @@ class FileSystemAITool(AITool):
         Raises:
             AIToolAuthorizationDenied: If access is denied
         """
-        settings = self._get_user_settings()
+        settings = self._get_access_settings()
 
         # Check master switch
-        if not settings.allow_external_file_access:
+        if not settings.allow_external_access:
             raise AIToolAuthorizationDenied(
                 f"External file access is disabled. Cannot read '{display_path}' (outside mindspace)."
             )
@@ -413,13 +427,13 @@ class FileSystemAITool(AITool):
         path_str = str(path)
 
         # Check denylist first (takes precedence)
-        if self._match_glob_patterns(path_str, settings.external_file_denylist):
+        if self._match_glob_patterns(path_str, settings.external_denylist):
             raise AIToolAuthorizationDenied(
                 f"Access denied: '{display_path}' matches a denied path pattern."
             )
 
         # Check allowlist
-        if self._match_glob_patterns(path_str, settings.external_file_allowlist):
+        if self._match_glob_patterns(path_str, settings.external_allowlist):
             # Auto-approved
             return True
 
