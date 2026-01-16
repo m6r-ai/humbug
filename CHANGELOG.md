@@ -31,6 +31,7 @@ Bug fixes:
 - Fixed AIFPL so '+' can be used for positive numbers.
 - Fixed a syntax highlighting problem with detecting element tokens in the C and C++ syntax highlighters.
 - Resolve problems with complex nesting of block-level elements in Markdown.
+- Added protection against corrupted user and mindspace settings files.
 
 Internal structure changes:
 
