@@ -77,7 +77,7 @@ class CodeBlockTextEdit(MinHeightPlainTextEdit):
     ) -> None:
         """
         Set text with pre-computed syntax highlighting tokens to avoid re-parsing.
-        
+
         This method sets the pre-computed tokens first, then sets the text, ensuring
         that highlighting only runs once using the pre-computed tokens.
 
