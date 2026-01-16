@@ -21,6 +21,7 @@ modules:
     internal_dependencies:
       - aifpl
       - diff
+      - syntax
     external_dependencies:
       - "standard_library"
 
