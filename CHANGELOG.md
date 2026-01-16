@@ -16,6 +16,7 @@ New features:
 - Added the ability for the code blocks parsed by the Markdown parser to pass this information directly to the syntax
   highlighter to avoid parsing twice.
 - Added support for nested code blocks inside Markdown list elements.
+- Added a preview tab context menu.
 
 Bug fixes:
 

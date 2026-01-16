@@ -6,7 +6,7 @@ import re
 from typing import Dict, List, Any, Set, Tuple
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QTimer
 from PySide6.QtGui import QCursor, QResizeEvent
@@ -122,6 +122,10 @@ class PreviewWidget(QWidget):
         self._smooth_scroll_distance: int = 0
         self._smooth_scroll_duration: int = 500  # ms
         self._smooth_scroll_time: int = 0
+
+        # Setup context menu
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -841,6 +845,24 @@ class PreviewWidget(QWidget):
 
         shared_stylesheet = "\n".join(stylesheet_parts)
         self.setStyleSheet(shared_stylesheet)
+
+    def _show_context_menu(self, pos: QPoint) -> None:
+        """
+        Create and show the context menu at the given position.
+
+        Args:
+            pos: Local coordinates for menu position
+        """
+        menu = QMenu(self)
+        strings = self._language_manager.strings()
+
+        # Copy action
+        copy_action = menu.addAction(strings.copy)
+        copy_action.setEnabled(self.has_selection())
+        copy_action.triggered.connect(self.copy)
+
+        # Show menu at click position
+        menu.exec_(self.mapToGlobal(pos))
 
     def can_copy(self) -> bool:
         """Check if copy is available."""

@@ -133,7 +133,7 @@ class ShellWidget(QWidget):
 
         # Setup context menu
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.customContextMenuRequested.connect(self._show_shell_context_menu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -848,7 +848,7 @@ class ShellWidget(QWidget):
         shared_stylesheet = "\n".join(stylesheet_parts)
         self.setStyleSheet(shared_stylesheet)
 
-    def _show_shell_context_menu(self, pos: QPoint) -> None:
+    def _show_context_menu(self, pos: QPoint) -> None:
         """
         Create and show the context menu at the given position.
 
