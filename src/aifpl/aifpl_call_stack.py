@@ -16,28 +16,25 @@ class AIFPLCallStack:
         """Represents a single function call frame."""
         function_name: str
         arguments: Dict[str, AIFPLValue]
-        expression: str
-        position: int
+        expression: AIFPLValue
 
     def __init__(self) -> None:
         """Initialize empty call stack."""
         self.frames: List[AIFPLCallStack.CallFrame] = []
 
-    def push(self, function_name: str, arguments: Dict[str, AIFPLValue], expression: str = "", position: int = 0) -> None:
+    def push(self, function_name: str, arguments: Dict[str, AIFPLValue], expression: AIFPLValue) -> None:
         """
         Push a new call frame onto the stack.
 
         Args:
             function_name: Name of the function being called
             arguments: Dictionary of parameter names to values
-            expression: String representation of the expression
-            position: Position in source code
+            expression: AST node of the expression
         """
         frame = AIFPLCallStack.CallFrame(
             function_name=function_name,
             arguments=arguments,
-            expression=expression,
-            position=position
+            expression=expression
         )
         self.frames.append(frame)
 
@@ -79,7 +76,9 @@ class AIFPLCallStack:
             else:
                 lines.append(f"{indent}{frame.function_name}()")
 
-            lines.append(f"{indent}  -> {frame.expression}")
+            # Convert expression to string only when formatting (during error)
+            expr_str = str(frame.expression) if frame.expression and hasattr(frame.expression, '__str__') else "<body>"
+            lines.append(f"{indent}  -> {expr_str}")
 
         return "\n".join(lines)
 

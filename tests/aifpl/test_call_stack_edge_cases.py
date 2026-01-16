@@ -413,8 +413,7 @@ class TestCallStackFormatting:
             call_stack.push(
                 function_name=f"func{i}",
                 arguments={"x": AIFPLNumber(i)},
-                expression=f"(func{i} {i})",
-                position=0
+                expression=f"(func{i} {i})"
             )
 
         result = call_stack.format_stack_trace(max_frames=10)
@@ -439,8 +438,7 @@ class TestCallStackFormatting:
             call_stack.push(
                 function_name=f"func{i}",
                 arguments={"x": AIFPLNumber(i)},
-                expression=f"(func{i} {i})",
-                position=0
+                expression=f"(func{i} {i})"
             )
 
         result = call_stack.format_stack_trace(max_frames=10)
@@ -463,8 +461,7 @@ class TestCallStackFormatting:
             call_stack.push(
                 function_name=f"func{i}",
                 arguments={"x": AIFPLNumber(i)},
-                expression=f"(func{i} {i})",
-                position=0
+                expression=f"(func{i} {i})"
             )
 
         result = call_stack.format_stack_trace(max_frames=10)
@@ -482,8 +479,7 @@ class TestCallStackFormatting:
         call_stack.push(
             function_name="single_func",
             arguments={"x": AIFPLNumber(42), "y": AIFPLString("test")},
-            expression='(single_func 42 "test")',
-            position=0
+            expression='(single_func 42 "test")'
         )
 
         result = call_stack.format_stack_trace()
@@ -504,8 +500,7 @@ class TestCallStackFormatting:
             call_stack.push(
                 function_name=f"func{i}",
                 arguments={},
-                expression=f"(func{i})",
-                position=0
+                expression=f"(func{i})"
             )
 
         result = call_stack.format_stack_trace(max_frames=10)
@@ -528,8 +523,7 @@ class TestCallStackFormatting:
             call_stack.push(
                 function_name=f"func{i}",
                 arguments={"x": AIFPLNumber(i)},
-                expression=f"(func{i} {i})",
-                position=0
+                expression=f"(func{i} {i})"
             )
 
         result = call_stack.format_stack_trace(max_frames=3)
@@ -552,20 +546,17 @@ class TestCallStackFormatting:
         call_stack.push(
             function_name="outer",
             arguments={"x": AIFPLNumber(1)},
-            expression="(outer 1)",
-            position=0
+            expression="(outer 1)"
         )
         call_stack.push(
             function_name="middle",
             arguments={"y": AIFPLNumber(2)},
-            expression="(middle 2)",
-            position=0
+            expression="(middle 2)"
         )
         call_stack.push(
             function_name="inner",
             arguments={"z": AIFPLNumber(3)},
-            expression="(inner 3)",
-            position=0
+            expression="(inner 3)"
         )
 
         result = call_stack.format_stack_trace()
@@ -591,8 +582,7 @@ class TestCallStackFormatting:
                 "text": AIFPLString("hello"),
                 "flag": AIFPLBoolean(True)
             },
-            expression='(multi_type_func 42 "hello" #t)',
-            position=0
+            expression='(multi_type_func 42 "hello" #t)'
         )
 
         result = call_stack.format_stack_trace()
@@ -609,8 +599,7 @@ class TestCallStackFormatting:
         call_stack.push(
             function_name="no_args_func",
             arguments={},
-            expression="(no_args_func)",
-            position=0
+            expression="(no_args_func)"
         )
 
         result = call_stack.format_stack_trace()
@@ -629,8 +618,7 @@ class TestCallStackFormatting:
             call_stack.push(
                 function_name=f"func{i}",
                 arguments={},
-                expression=f"(func{i})",
-                position=0
+                expression=f"(func{i})"
             )
 
         result = call_stack.format_stack_trace(max_frames=10)
@@ -652,8 +640,7 @@ class TestCallStackFormatting:
             call_stack.push(
                 function_name=f"func{i}",
                 arguments={},
-                expression=f"(func{i})",
-                position=0
+                expression=f"(func{i})"
             )
 
         result = call_stack.format_stack_trace(max_frames=5)

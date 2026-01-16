@@ -43,7 +43,8 @@ class AIFPLEvaluator:
         self.message_builder = ErrorMessageBuilder()
 
         # Add call chain tracking for mutual recursion detection
-        self.call_chain: List[AIFPLFunction] = []
+        self.call_chain_list: List[AIFPLFunction] = []
+        self.call_chain_set: set = set()  # For O(1) membership check
 
         # Create function modules
         self.math_functions = AIFPLMathFunctions(floating_point_tolerance)
@@ -621,11 +622,12 @@ class AIFPLEvaluator:
         self.call_stack.push(
             function_name=func.name or "<lambda>",
             arguments=param_bindings,
-            expression=str(func.body) if hasattr(func.body, '__str__') else "<body>"
+            expression=func.body
         )
 
         # Track function in call chain for mutual recursion detection
-        self.call_chain.append(func)
+        self.call_chain_list.append(func)
+        self.call_chain_set.add(id(func))
 
         try:
             # Enable tail call optimization with mutual recursion support
@@ -633,7 +635,8 @@ class AIFPLEvaluator:
 
         finally:
             # Remove function from call chain and pop call stack
-            self.call_chain.pop()
+            self.call_chain_list.pop()
+            self.call_chain_set.discard(id(func))
             self.call_stack.pop()
 
     def _call_builtin_function(
@@ -748,7 +751,7 @@ class AIFPLEvaluator:
             return self._evaluate_function_call(expr, env, depth + 1)
 
         # Check for recursion (simple or mutual)
-        if func_value not in self.call_chain:
+        if id(func_value) not in self.call_chain_set:
             return self._evaluate_function_call(expr, env, depth + 1)
 
         # This is a recursive call (simple or mutual)!
