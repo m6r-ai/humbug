@@ -104,7 +104,7 @@ class AIFPLEvaluator:
         Raises:
             AIFPLEvalError: If evaluation fails
         """
-        env = AIFPLEnvironment(name="global")
+        env = AIFPLEnvironment()  # Global environment, no function reference
 
         # Add constants and built-in functions to global environment (batch for efficiency)
         global_bindings = {**self.CONSTANTS, **self._builtin_functions}
@@ -386,7 +386,7 @@ class AIFPLEvaluator:
         binding_groups = analyzer.analyze_let_bindings(bindings)
 
         # Evaluate groups in order
-        current_env = AIFPLEnvironment(bindings={}, parent=env, name="let")
+        current_env = AIFPLEnvironment(bindings={}, parent=env)  # Let environment, no function reference
         for group in binding_groups:
             if group.is_recursive:
                 current_env = self._evaluate_recursive_binding_group(group, current_env, depth)
@@ -615,8 +615,10 @@ class AIFPLEvaluator:
 
         # Create new environment for function execution with all bindings at once
         func_env = AIFPLEnvironment(
-            bindings={}, parent=func.closure_environment, name=f"{func.name}-call"
-        ).define_many(param_bindings)
+            bindings=param_bindings,
+            parent=func.closure_environment,
+            function=func
+        )
 
         # Add call frame to stack for error reporting
         self.call_stack.push(

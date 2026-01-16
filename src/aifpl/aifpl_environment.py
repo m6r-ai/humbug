@@ -1,10 +1,10 @@
 """Environment management for AIFPL variable and function scoping."""
 
-from typing import Dict, List
+from typing import Dict, List, Any
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_value import AIFPLValue, AIFPLRecursivePlaceholder
+from aifpl.aifpl_value import AIFPLValue, AIFPLRecursivePlaceholder, AIFPLFunction
 
 
 @dataclass(frozen=True)
@@ -17,7 +17,7 @@ class AIFPLEnvironment:
     """
     bindings: Dict[str, AIFPLValue] = field(default_factory=dict)
     parent: 'AIFPLEnvironment | None' = None
-    name: str = "anonymous"
+    function: Any = None  # Optional AIFPLFunction reference for debugging
 
     def define(self, name: str, value: AIFPLValue) -> 'AIFPLEnvironment':
         """
@@ -31,7 +31,7 @@ class AIFPLEnvironment:
             New environment with the binding added
         """
         new_bindings = {**self.bindings, name: value}
-        return AIFPLEnvironment(new_bindings, self.parent, self.name)
+        return AIFPLEnvironment(new_bindings, self.parent, self.function)
 
     def define_many(self, new_bindings: Dict[str, AIFPLValue]) -> 'AIFPLEnvironment':
         """
@@ -50,7 +50,7 @@ class AIFPLEnvironment:
             return self
 
         merged_bindings = {**self.bindings, **new_bindings}
-        return AIFPLEnvironment(merged_bindings, self.parent, self.name)
+        return AIFPLEnvironment(merged_bindings, self.parent, self.function)
 
     def lookup(self, name: str) -> AIFPLValue:
         """
@@ -94,5 +94,11 @@ class AIFPLEnvironment:
     def __repr__(self) -> str:
         """String representation for debugging."""
         local_bindings = list(self.bindings.keys())
-        parent_info = f" (parent: {self.parent.name})" if self.parent else ""
-        return f"AIFPLEnvironment({self.name}: {local_bindings}{parent_info})"
+
+        # Get name from function reference if available
+        name = self.function.name if self.function and hasattr(self.function, 'name') else "anonymous"
+
+        # Get parent name from parent's function reference
+        parent_name = self.parent.function.name if self.parent and self.parent.function and hasattr(self.parent.function, 'name') else "anonymous"
+        parent_info = f" (parent: {parent_name})" if self.parent else ""
+        return f"AIFPLEnvironment({name}: {local_bindings}{parent_info})"

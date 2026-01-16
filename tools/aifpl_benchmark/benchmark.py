@@ -480,9 +480,11 @@ def compare_results(current: List[BenchmarkResult], baseline_file: str):
             # Show speedup if significant change
             if abs(speedup - 1.0) < 0.01:  # Less than 1% difference
                 change_str = "~"
+
             elif speedup > 1.0:
                 change_str = f"{speedup:.2f}x"
                 improvements.append((result.name, speedup, pct_change))
+
             else:  # speedup < 1.0 means regression
                 change_str = f"{speedup:.2f}x"
                 regressions.append((result.name, speedup, pct_change))
@@ -510,6 +512,7 @@ def compare_results(current: List[BenchmarkResult], baseline_file: str):
 
         if avg_speedup >= 1.0:
             print(f"\nOverall: {avg_speedup:.2f}x on average")
+
         else:
             print(f"\nOverall: {avg_speedup:.2f}x on average")
 
