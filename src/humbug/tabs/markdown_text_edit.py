@@ -4,7 +4,7 @@ import logging
 from typing import cast
 
 from PySide6.QtWidgets import QScrollArea, QWidget
-from PySide6.QtCore import Qt, Signal, QObject
+from PySide6.QtCore import Qt, Signal, QObject, QMimeData
 from PySide6.QtGui import (
     QTextOption, QTextCursor, QMouseEvent, QKeyEvent, QPalette, QBrush, QWheelEvent
 )
@@ -83,6 +83,17 @@ class MarkdownTextEdit(MinHeightTextEdit):
 
         if self._highlighter:
             self._highlighter.rehighlight()
+
+    def insertFromMimeData(self, source: QMimeData) -> None:
+        """
+        Insert plain text only from clipboard, ignoring formatting.
+
+        Args:
+            source: The mime data from the clipboard or drag-and-drop operation
+        """
+        if source.hasText():
+            cursor = self.textCursor()
+            cursor.insertText(source.text())
 
     def mousePressEvent(self, e: QMouseEvent) -> None:
         """Propagate mouse press events to parent."""
