@@ -335,7 +335,18 @@ class MindspaceView(QWidget):
         self._update_button_styling()
 
         branch_icon_size = round(12 * zoom_factor)
-        expand_icon = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
+
+        # Deal with a few layout direction specifics
+        if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
+            expand_icon = "arrow-right"
+            tree_left_padding = 0
+            tree_right_padding = 8
+
+        else:
+            expand_icon = "arrow-left"
+            tree_left_padding = 8
+            tree_right_padding = 0
+
         background_color = self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND)
 
         # Style the mindspace view
@@ -426,7 +437,7 @@ class MindspaceView(QWidget):
             QTreeView {{
                 background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
                 border: none;
-                padding: 0 0 0 8px;
+                padding: 0 {tree_left_padding}px 0 {tree_right_padding}px;
             }}
             QTreeView::item {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
