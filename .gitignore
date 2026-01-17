@@ -17,9 +17,6 @@
 # Ignore virtual environment
 /venv
 
-# Ignore conversation and log files
-/conversations
-
 # Ignore humbug mindspace files
 /.humbug
 
