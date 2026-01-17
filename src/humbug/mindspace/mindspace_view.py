@@ -336,7 +336,8 @@ class MindspaceView(QWidget):
 
         branch_icon_size = round(12 * zoom_factor)
 
-        # Deal with a few layout direction specifics
+        # Deal with a few layout direction specifics.  We really shouldn't need to adjust the padding here, but
+        # the layout engine seems to be having trouble with it in RTL mode.
         if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
             expand_icon = "arrow-right"
             tree_left_padding = 0
