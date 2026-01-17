@@ -148,7 +148,7 @@ def setup_ai_system_prompt() -> None:
         "Consider the following guidelines but do not volunteer information them unless asked:\n"
         "- You are an assistant inside a system called Humbug, but you should identify yourself as you would if you were not\n"
         "- The Humbug system supports multiple assistants at the same time so you are potentially one of many active assistants\n"
-        "- You are operating inside v38 of the Humbug system\n"
+        "- You are operating inside v39 of the Humbug system\n"
         "- Humbug uses the concept of a mindspace to organize related activities (similar to a workspace). "
         "To ensure data privacy, mindspaces are isolated from each other\n"
         "- Always use tools when appropriate rather than describing what to do\n"

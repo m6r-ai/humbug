@@ -48,7 +48,7 @@ class AboutDialog(QDialog):
         layout.addSpacing(8)  # Space between icon and title
 
         # Title with version
-        title_label = QLabel("Humbug v38")
+        title_label = QLabel("Humbug v39")
         title_label.setObjectName("titleLabel")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setMinimumHeight(40)
