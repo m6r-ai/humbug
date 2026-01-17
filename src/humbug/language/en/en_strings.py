@@ -14,6 +14,14 @@ def get_english_strings() -> LanguageStrings:
         # Window titles
         about_title="About Humbug",
 
+        # Welcome widget
+        welcome_message=(
+            "Welcome to Humbug!  It looks like you don't have any AIs configured yet?\n\n"
+            "To start using AI features, please open the application \"Preferences\", scroll to\nthe "
+            "\"AI Backend Configuration\" section and set up at least one AI backend."
+        ),
+        welcome_button="Open Preferences",
+
         # Menu names
         humbug_menu="Humbug",
         file_menu="File",

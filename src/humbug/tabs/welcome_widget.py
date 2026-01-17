@@ -6,6 +6,7 @@ from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
+from humbug.language.language_manager import LanguageManager
 from humbug.user.user_settings import UserSettings
 
 
@@ -26,6 +27,10 @@ class WelcomeWidget(QFrame):
         layout = QVBoxLayout()
         self.setLayout(layout)
 
+        # Get language manager and connect to changes
+        self._language_manager = LanguageManager()
+        self._language_manager.language_changed.connect(self._on_language_changed)
+
         # Add application icon
         self._icon_label = QLabel()
         self._icon_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
@@ -43,7 +48,7 @@ class WelcomeWidget(QFrame):
         self._message_label.setWordWrap(True)
         self._message_label.setVisible(False)
 
-        self._settings_button = QPushButton("Open Preferences")
+        self._settings_button = QPushButton()
         self._settings_button.setVisible(False)
         self._settings_button.clicked.connect(self._on_settings_button_clicked)
 
@@ -68,6 +73,7 @@ class WelcomeWidget(QFrame):
         self._style_manager = StyleManager()
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
+        self._on_language_changed()
 
     def set_user_settings(self, settings: UserSettings) -> None:
         """
@@ -94,24 +100,32 @@ class WelcomeWidget(QFrame):
                 # Local backends (ollama, vllm) can work with defaults
                 if backend_id in ("ollama", "vllm"):
                     return True
+
                 # Other backends need credentials
                 if backend.api_key or backend.url:
                     return True
+
         return False
 
     def _update_message(self) -> None:
         """Update the message and button visibility based on AI configuration status."""
+        strings = self._language_manager.strings()
+
         if not self._has_ai_configured:
-            self._message_label.setText(
-                "Welcome to Humbug!  It looks like you don't have any AIs configured yet?\n\n"
-                "To start using AI features, please open the application \"Preferences\", scroll to\n"
-                "the \"AI Backend Configuration\" section and set up at least one AI backend."
-            )
-            self._message_label.setVisible(True)
-            self._settings_button.setVisible(True)
-        else:
-            self._message_label.setVisible(False)
-            self._settings_button.setVisible(False)
+            self._message_label.setText(strings.welcome_message)
+            self._settings_button.setText(strings.welcome_button)
+
+        visible = not self._has_ai_configured
+        self._message_label.setVisible(visible)
+        self._settings_button.setVisible(visible)
+
+    def _on_language_changed(self) -> None:
+        """Update text when language changes."""
+        # Update button text
+        strings = self._language_manager.strings()
+        self._settings_button.setText(strings.welcome_button)
+        # Update message text
+        self._update_message()
 
     def _on_settings_button_clicked(self) -> None:
         """Handle settings button click."""

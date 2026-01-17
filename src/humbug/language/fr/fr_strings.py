@@ -14,6 +14,14 @@ def get_french_strings() -> LanguageStrings:
         # Window titles
         about_title="À propos de Humbug",
 
+        # Welcome widget
+        welcome_message=(
+            "Bienvenue dans Humbug ! Il semble que vous n'ayez pas encore configuré d'IA ?\n\n"
+            "Pour commencer à utiliser les fonctionnalités IA, veuillez ouvrir les « Préférences » de l'application,\n"
+            "faites défiler jusqu'à la section « Configuration des backends IA » et configurez au moins un backend IA."
+        ),
+        welcome_button="Ouvrir les Préférences",
+
         # Menu names
         humbug_menu="Humbug",
         file_menu="Fichier",

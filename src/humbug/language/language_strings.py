@@ -9,6 +9,10 @@ class LanguageStrings:
     # Window titles
     about_title: str
 
+    # Welcome widget
+    welcome_message: str
+    welcome_button: str
+
     # Menu names
     humbug_menu: str
     file_menu: str
