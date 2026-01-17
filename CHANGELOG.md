@@ -19,6 +19,8 @@ New features:
 - Added a preview tab context menu.
 - Added new user settings to provide a global enable/disable for filesystem read access outside the current mindspace.
   When enabled, also added allowlist and denylist configurations to control what can be accessed.
+- If you load Humbug and have no AI API keys set up then the welcome page will let you know and guide you to the user
+  "Preferences" dialog.
 
 Bug fixes:
 

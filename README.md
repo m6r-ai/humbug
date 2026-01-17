@@ -147,4 +147,6 @@ Humbug is open source and the project welcomes contributions. If you're interest
 
 5. Initial configuration:
 
+   If you load Humbug and don't have any AIs already configured, it will guide you how to use any AI API keys you have.
+
    See [Getting Started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) for a step-by-step guide to getting Humbug up and running.

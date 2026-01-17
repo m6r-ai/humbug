@@ -33,6 +33,7 @@ from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.tabs.welcome_widget import WelcomeWidget
+from humbug.user.user_settings import UserSettings
 
 
 class ColumnManager(QWidget):
@@ -44,6 +45,7 @@ class ColumnManager(QWidget):
     fork_from_index_requested = Signal(int)
     open_preview_link_requested = Signal(str)
     edit_file_requested = Signal(str)
+    user_settings_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab manager."""
@@ -70,6 +72,7 @@ class ColumnManager(QWidget):
         # Create welcome widget
         self._welcome_widget = WelcomeWidget()
         self._welcome_widget.path_dropped.connect(self._on_welcome_widget_path_dropped)
+        self._welcome_widget.user_settings_requested.connect(self.user_settings_requested.emit)
         self._stack.addWidget(self._welcome_widget)
 
         # Create widget to hold columns
@@ -1841,6 +1844,15 @@ class ColumnManager(QWidget):
             tab_bar = column.tabBar()
             if isinstance(tab_bar, TabBar):
                 tab_bar.update_tab_size()
+
+    def update_welcome_widget(self, user_settings: UserSettings) -> None:
+        """
+        Update the welcome widget with current user settings.
+
+        Args:
+            user_settings: Current user settings
+        """
+        self._welcome_widget.set_user_settings(user_settings)
 
     def _update_column_splitter(self) -> None:
         """Trigger repaint of column splitter handles."""

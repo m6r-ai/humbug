@@ -345,6 +345,7 @@ class MainWindow(QMainWindow):
         self._column_manager.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
         self._column_manager.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
+        self._column_manager.user_settings_requested.connect(self._show_user_settings_dialog)
         self._splitter.addWidget(self._column_manager)
 
         # Set initial mindspace view width
@@ -386,6 +387,9 @@ class MainWindow(QMainWindow):
         # Set theme from user settings
         self._style_manager.set_color_mode(user_settings.theme)
         self._update_theme_menu()
+
+        # Update welcome widget with initial user settings
+        self._column_manager.update_welcome_widget(user_settings)
 
         self._mindspace_manager = MindspaceManager()
 
@@ -1325,6 +1329,9 @@ class MainWindow(QMainWindow):
                 if new_theme != self._style_manager.color_mode():
                     self._style_manager.set_color_mode(new_theme)
                     self._update_theme_menu()
+
+                # Update welcome widget with new settings
+                self._column_manager.update_welcome_widget(new_settings)
 
                 self._logger.info("User settings saved successfully")
 
