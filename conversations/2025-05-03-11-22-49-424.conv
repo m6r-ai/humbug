@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "timestamp": "2025-05-03T11:22:49.424484",
+    "version": "0.1"
+  },
+  "conversation": [
+    {
+      "id": "95f6a519-47b5-4430-8802-ba021b635678",
+      "timestamp": "2025-05-03T11:22:49.619769",
+      "type": "user_message",
+      "content": "The following preamble describes some elements of a language called Metaphor.  Please pay\nextremely close attention to the details as they will affect the way you interpret\neverything that follows after \"BEGIN DESCRIPTION IN METAPHOR:\"\n\nMetaphor is a structured natural language prompt creation language.  It is designed to\nlet a user convey their requirements to a large language model AI.\n\nMetaphor has the structure of a document tree with branches and leaves being prefixed\nby new sections containing the keywords \"Role:\", \"Context:\" or \"Action:\".  Each of\nthese indicates the start of a new block of information.  Blocks are introduced using\nMarkdown-style headings (using hash symbols).  The number of hashes gives an indication\nof the nesting depth and the parent/child relationship.\n\nBlock keywords have an optional name that will immediately follow them on the same line.\nIf this is missing then the block name is not defined.\n\nAfter a block heading there may be one or more lines of text that will describe the purpose\nof that block.  A block may also include one or more optional child blocks inside them and\nthat further clarify their parent block.\n\nWithin the text of a block, you may be presented with code or document fragments inside a\nblock delimited by 3 backticks.  Please pay close attention to the indentation level of the\nopening 3 backticks.  The identation of such code or document fragments is relative to this,\nnot relative to the block in which the code or document fragment occurs.\n\nIf \"Role:\" block exists then this contains details about the role you should fulfil.  This\nmay also describe specific skills you have, knowledge you should apply, and the\napproach you take to apply these.\n\n\"Context:\" blocks provide context necessary to understand what you will be asked to do.\n\n\"Action:\" blocks describes the task, or tasks, you should do.\n\nIf you are asked to offer any opinions on the Metaphor prompt then always provide the full\nset of parent headings leading up to any block you want to talk about.  This will allow\nthe user to understand which part of the Metaphor prompt is being discussed.\n\nWhen you process the actions please carefully ensure you do all of them accurately and\ncomplete all the elements requested.  Unless otherwise instructed, do not include any\nplaceholders in your responses.\n\nBEGIN DESCRIPTION IN METAPHOR:\n\n# Role:\n\nYou are a helpful assistant\n\n# Context:\n\nI am testing some software\n\n# Action:\n\nPlease give me a 10x2 table with numbers in English in one column\nand numbers in Arabic and their pronunciations in the other.",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "215e5a54-e5dc-48ab-a699-36590718f5be",
+      "timestamp": "2025-05-03T11:22:51.197644",
+      "type": "ai_response",
+      "content": "| Number (English) | Number (Arabic) | Pronunciation        |\n|------------------|-----------------|---------------------|\n| One              | \u0661               | Wahid (\u0648\u0627\u062d\u0650\u062f)       |\n| Two              | \u0662               | Ithnayn (\u0627\u0650\u062b\u0646\u064e\u064a\u0646)    |\n| Three            | \u0663               | Thalatha (\u062b\u064e\u0644\u0627\u062b\u0629)    |\n| Four             | \u0664               | Arba'a (\u0623\u064e\u0631\u0628\u064e\u0639\u0629)     |\n| Five             | \u0665               | Khamsa (\u062e\u064e\u0645\u0633\u0629)      |\n| Six              | \u0666               | Sitta (\u0633\u0650\u062a\u0651\u0629)       |\n| Seven            | \u0667               | Sab'a (\u0633\u064e\u0628\u0639\u0629)       |\n| Eight            | \u0668               | Thamaniya (\u062b\u064e\u0645\u0627\u0646\u0650\u064a\u0629)|\n| Nine             | \u0669               | Tis'a (\u062a\u0650\u0633\u0639\u0629)       |\n| Ten              | \u0661\u0660              | Ashara (\u0639\u064e\u0634\u0631\u0629)      |",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 546,
+        "completion_tokens": 211,
+        "total_tokens": 757
+      },
+      "error": null,
+      "model": "gpt-4.1-mini",
+      "temperature": 0.7
+    }
+  ]
+}

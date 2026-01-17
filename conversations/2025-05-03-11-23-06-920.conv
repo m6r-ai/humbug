@@ -1,0 +1,164 @@
+{
+  "metadata": {
+    "timestamp": "2025-05-03T11:23:06.920698",
+    "version": "0.1"
+  },
+  "conversation": [
+    {
+      "id": "cb809b09-aff8-4fed-acec-c77445f5913b",
+      "timestamp": "2025-05-03T11:23:07.118239",
+      "type": "user_message",
+      "content": "The following preamble describes some elements of a language called Metaphor.  Please pay\nextremely close attention to the details as they will affect the way you interpret\neverything that follows after \"BEGIN DESCRIPTION IN METAPHOR:\"\n\nMetaphor is a structured natural language prompt creation language.  It is designed to\nlet a user convey their requirements to a large language model AI.\n\nMetaphor has the structure of a document tree with branches and leaves being prefixed\nby new sections containing the keywords \"Role:\", \"Context:\" or \"Action:\".  Each of\nthese indicates the start of a new block of information.  Blocks are introduced using\nMarkdown-style headings (using hash symbols).  The number of hashes gives an indication\nof the nesting depth and the parent/child relationship.\n\nBlock keywords have an optional name that will immediately follow them on the same line.\nIf this is missing then the block name is not defined.\n\nAfter a block heading there may be one or more lines of text that will describe the purpose\nof that block.  A block may also include one or more optional child blocks inside them and\nthat further clarify their parent block.\n\nWithin the text of a block, you may be presented with code or document fragments inside a\nblock delimited by 3 backticks.  Please pay close attention to the indentation level of the\nopening 3 backticks.  The identation of such code or document fragments is relative to this,\nnot relative to the block in which the code or document fragment occurs.\n\nIf \"Role:\" block exists then this contains details about the role you should fulfil.  This\nmay also describe specific skills you have, knowledge you should apply, and the\napproach you take to apply these.\n\n\"Context:\" blocks provide context necessary to understand what you will be asked to do.\n\n\"Action:\" blocks describes the task, or tasks, you should do.\n\nIf you are asked to offer any opinions on the Metaphor prompt then always provide the full\nset of parent headings leading up to any block you want to talk about.  This will allow\nthe user to understand which part of the Metaphor prompt is being discussed.\n\nWhen you process the actions please carefully ensure you do all of them accurately and\ncomplete all the elements requested.  Unless otherwise instructed, do not include any\nplaceholders in your responses.\n\nBEGIN DESCRIPTION IN METAPHOR:\n\n# Role:\n\nYou are a helpful assistant\n\n# Context:\n\nI am testing some software\n\n# Action:\n\nPlease give me a 10x2 table with numbers in English in one column\nand numbers in Arabic and their pronunciations in the other.",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "a87906a2-40b7-4ef6-9209-b5612e219026",
+      "timestamp": "2025-05-03T11:23:08.150322",
+      "type": "ai_response",
+      "content": "| Number (English) | Number (Arabic) and Pronunciation    |\n|------------------|-------------------------------------|\n| One              | \u0661 (wahid)                          |\n| Two              | \u0662 (ithnayn)                        |\n| Three            | \u0663 (thalatha)                       |\n| Four             | \u0664 (arba'a)                        |\n| Five             | \u0665 (khamsa)                        |\n| Six              | \u0666 (sitta)                         |\n| Seven            | \u0667 (sab'a)                         |\n| Eight            | \u0668 (thamaniya)                     |\n| Nine             | \u0669 (tis'a)                         |\n| Ten              | \u0661\u0660 (ashara)                       |",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 546,
+        "completion_tokens": 147,
+        "total_tokens": 693
+      },
+      "error": null,
+      "model": "gpt-4.1-mini",
+      "temperature": 0.7
+    },
+    {
+      "id": "a447e14d-cc13-40e7-a8ba-29c4eb4ae34e",
+      "timestamp": "2025-05-06T10:55:02.444690",
+      "type": "user_message",
+      "content": "please give me 5 more numbers",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "741a1ad1-83de-4c29-ba9d-cc0ef22bdb7d",
+      "timestamp": "2025-05-06T10:55:04.101329",
+      "type": "ai_response",
+      "content": "| Number (English) | Number (Arabic) and Pronunciation    |\n|-----------------:|-------------------------------------|\n| Eleven           | \u0661\u0661 (ahada 'ashar)                   |\n| Twelve           | \u0661\u0662 (ithna 'ashar)                   |\n| Thirteen         | \u0661\u0663 (thalatha 'ashar)                |\n| Fourteen         | \u0661\u0664 (arba'a 'ashar)                  |\n| Fifteen          | \u0661\u0665 (khamsa 'ashar)                  |",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 707,
+        "completion_tokens": 108,
+        "total_tokens": 815
+      },
+      "error": null,
+      "model": "gpt-4.1-mini",
+      "temperature": 0.7
+    },
+    {
+      "id": "f090b1c2-fb73-4f8a-bb10-a26bade76a01",
+      "timestamp": "2025-05-06T15:51:49.825871",
+      "type": "user_message",
+      "content": "please add another 10",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "ebead0db-2e8b-4dfd-9cd2-e61bc192660f",
+      "timestamp": "2025-05-06T15:51:51.902960",
+      "type": "ai_response",
+      "content": "| Number (English) | Number (Arabic) and Pronunciation    |\n|-----------------:|-------------------------------------|\n| Sixteen          | \u0661\u0666 (sitta 'ashar)                   |\n| Seventeen        | \u0661\u0667 (sab'a 'ashar)                   |\n| Eighteen         | \u0661\u0668 (thamaniya 'ashar)               |\n| Nineteen         | \u0661\u0669 (tis'a 'ashar)                   |\n| Twenty           | \u0662\u0660 (ishrun)                        |\n| Twenty-one       | \u0662\u0661 (wahid wa ishrun)               |\n| Twenty-two       | \u0662\u0662 (ithnayn wa ishrun)             |\n| Twenty-three     | \u0662\u0663 (thalatha wa ishrun)            |\n| Twenty-four      | \u0662\u0664 (arba'a wa ishrun)              |\n| Twenty-five      | \u0662\u0665 (khamsa wa ishrun)              |",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 828,
+        "completion_tokens": 200,
+        "total_tokens": 1028
+      },
+      "error": null,
+      "model": "gpt-4.1-mini",
+      "temperature": 0.7
+    },
+    {
+      "id": "a9ad0156-b2a8-42f6-b0d6-fef0aad0e712",
+      "timestamp": "2025-05-11T14:45:23.631608",
+      "type": "user_message",
+      "content": "please add another 15",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "84e1be25-0191-4e67-a001-d8d8c55125b2",
+      "timestamp": "2025-05-11T14:45:25.408947",
+      "type": "ai_response",
+      "content": "| Number (English) | Number (Arabic) and Pronunciation    |\n|-----------------:|-------------------------------------|\n| Twenty-six       | \u0662\u0666 (sitta wa ishrun)                |\n| Twenty-seven     | \u0662\u0667 (sab'a wa ishrun)                |\n| Twenty-eight     | \u0662\u0668 (thamaniya wa ishrun)            |\n| Twenty-nine      | \u0662\u0669 (tis'a wa ishrun)                |\n| Thirty           | \u0663\u0660 (thalathun)                      |\n| Thirty-one       | \u0663\u0661 (wahid wa thalathun)             |\n| Thirty-two       | \u0663\u0662 (ithnayn wa thalathun)           |\n| Thirty-three     | \u0663\u0663 (thalatha wa thalathun)          |\n| Thirty-four      | \u0663\u0664 (arba'a wa thalathun)            |\n| Thirty-five      | \u0663\u0665 (khamsa wa thalathun)            |\n| Thirty-six       | \u0663\u0666 (sitta wa thalathun)             |\n| Thirty-seven     | \u0663\u0667 (sab'a wa thalathun)             |\n| Thirty-eight     | \u0663\u0668 (thamaniya wa thalathun)         |\n| Thirty-nine      | \u0663\u0669 (tis'a wa thalathun)             |\n| Forty            | \u0664\u0660 (arba'un)                        |",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 1194,
+        "completion_tokens": 397,
+        "total_tokens": 1591
+      },
+      "error": null,
+      "model": "claude-3-5-haiku-20241022",
+      "temperature": 0.7
+    },
+    {
+      "id": "14692b48-ea3e-4cf7-b10a-116e68cbed1a",
+      "timestamp": "2025-05-11T19:00:43.893469",
+      "type": "user_message",
+      "content": "please give me 5 words separated by a horizontal rule",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "2dda3b4b-3ba8-4d6a-870a-bdcb7353f682",
+      "timestamp": "2025-05-11T19:00:45.674838",
+      "type": "ai_response",
+      "content": "Serendipity\n\n---\n\nEphemeral\n\n---\n\nMellifluous\n\n---\n\nQuintessential\n\n---\n\nIneffable",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 1606,
+        "completion_tokens": 36,
+        "total_tokens": 1642
+      },
+      "error": null,
+      "model": "claude-3-5-haiku-20241022",
+      "temperature": 0.7
+    },
+    {
+      "id": "e25fe92f-dcf5-4723-bff2-edb97a35b1b3",
+      "timestamp": "2025-05-12T10:52:35.710344",
+      "type": "user_message",
+      "content": "please give me another 3",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "c0fdc61a-b1e6-4fb2-ad71-b7e7346e0adc",
+      "timestamp": "2025-05-12T10:52:36.564356",
+      "type": "ai_response",
+      "content": "Ethereal\n\n---\n\nLuminescent\n\n---\n\nChrysalis",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 1651,
+        "completion_tokens": 18,
+        "total_tokens": 1669
+      },
+      "error": null,
+      "model": "claude-3-5-haiku-20241022",
+      "temperature": 0.7
+    }
+  ]
+}

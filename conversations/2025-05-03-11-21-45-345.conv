@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "timestamp": "2025-05-03T11:21:45.345668",
+    "version": "0.1"
+  },
+  "conversation": [
+    {
+      "id": "2d8fc268-4d37-4ce6-a178-a86e3d045899",
+      "timestamp": "2025-05-03T11:21:45.511374",
+      "type": "user_message",
+      "content": "The following preamble describes some elements of a language called Metaphor.  Please pay\nextremely close attention to the details as they will affect the way you interpret\neverything that follows after \"BEGIN DESCRIPTION IN METAPHOR:\"\n\nMetaphor is a structured natural language prompt creation language.  It is designed to\nlet a user convey their requirements to a large language model AI.\n\nMetaphor has the structure of a document tree with branches and leaves being prefixed\nby new sections containing the keywords \"Role:\", \"Context:\" or \"Action:\".  Each of\nthese indicates the start of a new block of information.  Blocks are introduced using\nMarkdown-style headings (using hash symbols).  The number of hashes gives an indication\nof the nesting depth and the parent/child relationship.\n\nBlock keywords have an optional name that will immediately follow them on the same line.\nIf this is missing then the block name is not defined.\n\nAfter a block heading there may be one or more lines of text that will describe the purpose\nof that block.  A block may also include one or more optional child blocks inside them and\nthat further clarify their parent block.\n\nWithin the text of a block, you may be presented with code or document fragments inside a\nblock delimited by 3 backticks.  Please pay close attention to the indentation level of the\nopening 3 backticks.  The identation of such code or document fragments is relative to this,\nnot relative to the block in which the code or document fragment occurs.\n\nIf \"Role:\" block exists then this contains details about the role you should fulfil.  This\nmay also describe specific skills you have, knowledge you should apply, and the\napproach you take to apply these.\n\n\"Context:\" blocks provide context necessary to understand what you will be asked to do.\n\n\"Action:\" blocks describes the task, or tasks, you should do.\n\nIf you are asked to offer any opinions on the Metaphor prompt then always provide the full\nset of parent headings leading up to any block you want to talk about.  This will allow\nthe user to understand which part of the Metaphor prompt is being discussed.\n\nWhen you process the actions please carefully ensure you do all of them accurately and\ncomplete all the elements requested.  Unless otherwise instructed, do not include any\nplaceholders in your responses.\n\nBEGIN DESCRIPTION IN METAPHOR:\n\n# Role:\n\nYou are a helpful assistant\n\n# Context:\n\nI am testing some software\n\n# Action:\n\nPlease give me a 5x2 table with numbers in English in one column\nand numbers in Arabic in the other.",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "562a018e-da52-4a6d-b931-5e24fe9b63d0",
+      "timestamp": "2025-05-03T11:21:46.911745",
+      "type": "ai_response",
+      "content": "Here is the requested 5x2 table with numbers in English in one column and numbers in Arabic in the other:\n\n| English Number | Arabic Number |\n|----------------|---------------|\n| One            | \u0661             |\n| Two            | \u0662             |\n| Three          | \u0663             |\n| Four           | \u0664             |\n| Five           | \u0665             |",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 542,
+        "completion_tokens": 77,
+        "total_tokens": 619
+      },
+      "error": null,
+      "model": "gpt-4o-mini",
+      "temperature": 0.7
+    }
+  ]
+}

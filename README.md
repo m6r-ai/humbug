@@ -85,6 +85,13 @@ Think of it as an operating system for human-AI collaboration.
   While it has a lot of tools for software developers, it has been designed to support a much wider set of needs.
   With its extensibility it's also easy to think about adding new tools for AIs, humans, or both.
 
+## How has it been built?
+
+Humbug has been developed by bootstrapping.
+Very early in its development it used a series of Metaphor prompts and involved a lot of copying and pasting in and out of web-based chat windows, but since v0.1 it has been used to help enhance itself.
+
+The `conversations` directory in the Humbug git repository includes a lot of discussions with AIs about improvements to itself.
+
 ## Learn more
 
 - **What's new:** [Latest updates](./CHANGELOG.md)

@@ -1,0 +1,819 @@
+{
+  "metadata": {
+    "version": "0.1"
+  },
+  "conversation": [
+    {
+      "id": "8568af4e-c7c2-4b44-9b84-ff903f456588",
+      "timestamp": "2025-06-30T07:15:05.327682",
+      "type": "user_message",
+      "content": "what time is it?",
+      "completed": true
+    },
+    {
+      "id": "61f22968-dfe5-481d-baff-ee81dab732ea",
+      "timestamp": "2025-06-30T07:15:08.035812",
+      "type": "ai_response",
+      "content": "",
+      "completed": true,
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_01AieuxKoUToAP6RX2KUUFwr",
+          "name": "get_current_time",
+          "arguments": {
+            "format": "human"
+          }
+        }
+      ]
+    },
+    {
+      "id": "3b23bc6f-f102-40b9-ba85-c75e8393b9d5",
+      "timestamp": "2025-06-30T07:15:08.043015",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01AieuxKoUToAP6RX2KUUFwr\",\n        \"name\": \"get_current_time\",\n        \"arguments\": {\n            \"format\": \"human\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_01AieuxKoUToAP6RX2KUUFwr",
+          "name": "get_current_time",
+          "arguments": {
+            "format": "human"
+          }
+        }
+      ]
+    },
+    {
+      "id": "3e71fcac-80fa-4615-9eb5-7c918de7620e",
+      "timestamp": "2025-06-30T07:15:08.054404",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01AieuxKoUToAP6RX2KUUFwr\",\n        \"name\": \"get_current_time\",\n        \"content\": \"2025-06-30 07:15:08 UTC\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01AieuxKoUToAP6RX2KUUFwr",
+          "name": "get_current_time",
+          "content": "2025-06-30 07:15:08 UTC",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "16237f72-0cf7-420e-9e62-191b116dc831",
+      "timestamp": "2025-06-30T07:15:08.062450",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01AieuxKoUToAP6RX2KUUFwr",
+          "name": "get_current_time",
+          "content": "2025-06-30 07:15:08 UTC",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "79d3daf1-f4e3-4817-ab3f-e9bc34d57343",
+      "timestamp": "2025-06-30T07:15:09.505452",
+      "type": "ai_response",
+      "content": "The current time is **7:15:08 AM UTC on June 30, 2025**.",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 687,
+        "completion_tokens": 25,
+        "total_tokens": 712
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7
+    },
+    {
+      "id": "fb674a68-4671-4abc-a5f7-878b3f60ff6b",
+      "timestamp": "2025-06-30T07:15:26.599747",
+      "type": "user_message",
+      "content": "what is sin(pi/4)",
+      "completed": true
+    },
+    {
+      "id": "dacc0693-c6f7-427d-873a-61032cc149cc",
+      "timestamp": "2025-06-30T07:15:28.722596",
+      "type": "ai_response",
+      "content": "",
+      "completed": true,
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_01U72487nhd8pcH3zfnywKKF",
+          "name": "calculate",
+          "arguments": {
+            "expression": "sin(pi/4)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2e71814c-818c-4be6-b1c3-df02de6d65d0",
+      "timestamp": "2025-06-30T07:15:28.728453",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01U72487nhd8pcH3zfnywKKF\",\n        \"name\": \"calculate\",\n        \"arguments\": {\n            \"expression\": \"sin(pi/4)\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_01U72487nhd8pcH3zfnywKKF",
+          "name": "calculate",
+          "arguments": {
+            "expression": "sin(pi/4)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "3ffea768-8419-40f0-93c3-c0684376080a",
+      "timestamp": "2025-06-30T07:15:28.743285",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01U72487nhd8pcH3zfnywKKF\",\n        \"name\": \"calculate\",\n        \"content\": \"0.7071067811865475\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01U72487nhd8pcH3zfnywKKF",
+          "name": "calculate",
+          "content": "0.7071067811865475",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "e374a7f1-67b9-4700-a560-49049a508bec",
+      "timestamp": "2025-06-30T07:15:28.753472",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01U72487nhd8pcH3zfnywKKF",
+          "name": "calculate",
+          "content": "0.7071067811865475",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "30268b77-c553-496c-8482-0cf175b11404",
+      "timestamp": "2025-06-30T07:15:30.232797",
+      "type": "ai_response",
+      "content": "sin(\u03c0/4) = **0.7071067811865475**\n\nThis is equal to \u221a2/2 \u2248 0.707, which is the exact value for the sine of 45 degrees (\u03c0/4 radians).",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 800,
+        "completion_tokens": 60,
+        "total_tokens": 860
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7
+    },
+    {
+      "id": "e4710fb6-cc9c-42a6-8e3f-d68d2a234e0b",
+      "timestamp": "2025-06-30T07:22:01.916445",
+      "type": "user_message",
+      "content": "what will the unixtime be 24 hours from now?",
+      "completed": true
+    },
+    {
+      "id": "9e52c6cc-18ac-4e81-a982-4bdbf3dfbd16",
+      "timestamp": "2025-06-30T07:22:03.580002",
+      "type": "ai_response",
+      "content": "I'll first get the current time as a Unix timestamp, then add 24 hours (86400 seconds) to it.",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 877,
+        "completion_tokens": 83,
+        "total_tokens": 960
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_015btLSi55fHs16jJTf7GxoX",
+          "name": "get_current_time",
+          "arguments": {
+            "format": "timestamp"
+          }
+        }
+      ]
+    },
+    {
+      "id": "8e30c0a7-e822-4ffc-acec-d3a26531b5ba",
+      "timestamp": "2025-06-30T07:22:04.914544",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_015btLSi55fHs16jJTf7GxoX\",\n        \"name\": \"get_current_time\",\n        \"arguments\": {\n            \"format\": \"timestamp\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_015btLSi55fHs16jJTf7GxoX",
+          "name": "get_current_time",
+          "arguments": {
+            "format": "timestamp"
+          }
+        }
+      ]
+    },
+    {
+      "id": "a595b729-58c8-4e94-b5a9-91f0efd44613",
+      "timestamp": "2025-06-30T07:22:04.927026",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_015btLSi55fHs16jJTf7GxoX\",\n        \"name\": \"get_current_time\",\n        \"content\": \"1751264524\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_015btLSi55fHs16jJTf7GxoX",
+          "name": "get_current_time",
+          "content": "1751264524",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "a980a17a-ff35-408d-9e87-93a01dcdb5c3",
+      "timestamp": "2025-06-30T07:22:04.935595",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_015btLSi55fHs16jJTf7GxoX",
+          "name": "get_current_time",
+          "content": "1751264524",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "982c3304-14cc-4795-b1ae-3d57ef9c3cf6",
+      "timestamp": "2025-06-30T07:22:08.187090",
+      "type": "ai_response",
+      "content": "",
+      "completed": true,
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_01Lw9mWGsqdyHTwrRD7MopvH",
+          "name": "calculate",
+          "arguments": {
+            "expression": "1751264524 + 24*60*60"
+          }
+        }
+      ]
+    },
+    {
+      "id": "77b0350b-0a4b-43f0-b5c6-949a180ae200",
+      "timestamp": "2025-06-30T07:22:08.196021",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01Lw9mWGsqdyHTwrRD7MopvH\",\n        \"name\": \"calculate\",\n        \"arguments\": {\n            \"expression\": \"1751264524 + 24*60*60\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_01Lw9mWGsqdyHTwrRD7MopvH",
+          "name": "calculate",
+          "arguments": {
+            "expression": "1751264524 + 24*60*60"
+          }
+        }
+      ]
+    },
+    {
+      "id": "7db9b7db-50b1-4020-9d4e-447f77df6d8f",
+      "timestamp": "2025-06-30T07:22:08.211758",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01Lw9mWGsqdyHTwrRD7MopvH\",\n        \"name\": \"calculate\",\n        \"content\": \"1751350924\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01Lw9mWGsqdyHTwrRD7MopvH",
+          "name": "calculate",
+          "content": "1751350924",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "0903141c-f1f1-4985-adf9-7bb9c9438dd2",
+      "timestamp": "2025-06-30T07:22:08.221256",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01Lw9mWGsqdyHTwrRD7MopvH",
+          "name": "calculate",
+          "content": "1751350924",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "7baec832-5e8e-47bb-928c-d6beb4df06d2",
+      "timestamp": "2025-06-30T07:22:10.443183",
+      "type": "ai_response",
+      "content": "The Unix timestamp 24 hours from now will be **1751350924**.\n\nThis represents 24 hours (86,400 seconds) added to the current Unix timestamp of 1751264524.",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 1056,
+        "completion_tokens": 47,
+        "total_tokens": 1103
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7
+    },
+    {
+      "id": "c263125a-e995-4753-96ce-5833a21ab99c",
+      "timestamp": "2025-06-30T07:38:25.024606",
+      "type": "user_message",
+      "content": "can you read README.md",
+      "completed": true
+    },
+    {
+      "id": "7d0a8edc-9bcd-4dc5-a941-4fc98662751a",
+      "timestamp": "2025-06-30T07:38:27.649308",
+      "type": "ai_response",
+      "content": "",
+      "completed": true,
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_01XaBvSppevk6NrMsfefNDnz",
+          "name": "read_file",
+          "arguments": {
+            "file_path": "README.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "2683b8cb-77d6-47ac-b561-f4560644b6bf",
+      "timestamp": "2025-06-30T07:38:27.656827",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01XaBvSppevk6NrMsfefNDnz\",\n        \"name\": \"read_file\",\n        \"arguments\": {\n            \"file_path\": \"README.md\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_01XaBvSppevk6NrMsfefNDnz",
+          "name": "read_file",
+          "arguments": {
+            "file_path": "README.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "c2a5b592-0ebd-4631-bb3b-e5db6cb2d2eb",
+      "timestamp": "2025-06-30T07:38:27.672279",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"auth_read_file_761599307045632015\",\n        \"name\": \"read_file\",\n        \"arguments\": {\n            \"file_path\": \"README.md\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "auth_read_file_761599307045632015",
+          "name": "read_file",
+          "arguments": {
+            "file_path": "README.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "8d1b6da9-50c8-4d39-bbcf-0ffba239d83f",
+      "timestamp": "2025-06-30T07:38:31.563059",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01XaBvSppevk6NrMsfefNDnz\",\n        \"name\": \"read_file\",\n        \"content\": \"File: /Users/dave/github/m6r/humbug/README.md\\nSize: 12,125 bytes\\nEncoding: utf-8\\n\\n# Humbug v0.17\\n\\nHumbug is an extensible open-source tool designed to help you design, build and maintain software using AI.\\n\\nWhether you're a human or an AI, the most important things in software development are understanding the\\nproblem you're trying to solve and the software you've building with to solve it.  Humbug is designed to\\nhelp you with both.\\n\\nHumbug seeks to bring all your sources of information into one framework.  It integrates a dynamic wiki-like\\nview, a powerful conversation interface that supports multiple simultaneous chats with one or more AIs, integrated\\nterminal emulation, file editing, and a powerful system shell that makes it easy to create detailed structured prompts\\nthat will allow your AIs to do their best work.\\n\\nHumbug supports large language models (LLMs) from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI,\\nand you have total flexibility over which one you use at any time.  You can use 2 or more at\\nthe same time, so if you want multiple opinions then it's easy to get them.  It's your choice whether these are\\nlocal models, or cloud-hosted.\\n\\nWhile Humbug lets you use cloud-based tools, it runs locally on your computer.  Everything it does is captured\\nin local files so you always retain complete control over your projects.  It's up to you how you structure them,\\nhow you handle version management, and where you run your AI tools.\\n\\n## Metaphor - solving the AI context problem\\n\\nThe key to getting great results from AIs is to ensure they have the right context to work with.\\n\\nTo do this, Humbug uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation\\nlanguage.  Metaphor is very quick to learn (just 5 keywords) and is structured to let you be clear about what you want\\nyour AI to do for you, so it's not left guessing or hallucinating.\\n\\nBy making prompt creation a repeatable engineering process it's easy to try new ideas, and iterate towards what you\\nwant.  If you don't like something, you can make adjustments to your Metaphor scripts and try again.  If you want to\\nsee if a different AI models will give you better results you can do that too!\\n\\nRead [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) to find out more.\\n\\nWhile Metaphor is designed to help start your conversations with AI, and Humbug is the tool designed to get the most out of\\nthose conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into\\nyour software and documentation.  The built-in editor and terminal also lets you update and test anything you get back from\\nthe AI, and provides you access to any command line tools you might want to use.\\n\\n## What does that mean in practice?\\n\\nProviding an AI everything it needs lets Metaphor stretch an AI model way beyond code completions.  This approach\\nhas been used throughout Humbug's development.\\n\\nIn most versions there have been many 100+ line changes to the code across multiple files that were all generated from\\nsingle Metaphor prompts.  The biggest single AI-coded change was in v0.13, where 1600 lines of code were generated\\nby Claude Sonnet 3.7.  That change had one bug that took 5 minutes to resolve!\\n\\nWell over 80% of Humbug has been built and maintained by AI using Metaphor.\\n\\nThe ability to use AI for large refactoring and design tasks also means Humbug is a codebase that has been able to\\nevolve very fast but with very little technical debt.\\n\\nOne fun aspect of using Metaphor is you can use Humbug to become an expert on its own design.  If you use the\\nMetaphor script `humbug-expert.m6r` and run this with a model that has a very large context window (e.g. Gemini)\\nthen you can ask the AI about the design or implementation of the software!\\n\\n## Engineering over vibes!\\n\\nNaive vibe coding can be a great way to experiment and try out ideas but can be incredibly frustrating for experienced\\nengineers.  It can be an incredible way to support prototyping and brainstorming, but high quality code requires\\ncareful planning, review, and understanding.\\n\\nBy offering a solid grounding context, Metaphor and Humbug aim to provide a way to capture the learnings from\\nvibe coding into something that can be used in a more predictable way.  You can start from our reference context,\\nexplore interactively, update the context and iterate.  You can go further than normal vibe coding because you can also\\nhave conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback\\ncan be used to refine the Metaphor context.\\n\\n## What's new in v0.17\\n\\n- All models that support tool/function calling now implement tool/function calling.\\n- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking\\n  modes.\\n- Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating\\n  the conversation that was forked.\\n\\n## Humbug in action\\n\\n![Humbug in action](./docs/humbug-v0.12-1.webp)\\n\\n![Humbug in action](./docs/humbug-v0.12-2.webp)\\n\\n![Humbug in action](./docs/humbug-v0.12-3.webp)\\n\\n![Humbug in action](./docs/humbug-v0.12-4.webp)\\n\\n![Humbug in action](./docs/humbug-v0.16-1.webp)\\n\\n## Features\\n\\n### Cross-platform support\\n\\nCompatible with MacOS X, Linux, and Windows 10/11.\\n\\n### AI interaction\\n\\n- Real-time streaming of AI responses.\\n- Configurable AI model settings per conversation.\\n- Supports Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI models.\\n- Configurable temperature settings for supported models.\\n- Handles reasoning outputs for models that support them.\\n- Error handling and retry mechanisms for API requests.\\n\\n### Conversation features\\n\\n- Message history with distinct cards for user, AI reasoning, AI response, and system messages.\\n- Code blocks are broken into sections and it's easy to copy a whole section or save it as a file.\\n- Copy or save whole messages as Markdown.\\n- Full text search across all parts of a conversation.\\n- Syntax highlighting for various languages and file formats, including nested systax highlighting where code for\\n  one language appears inside a different one.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,\\n  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Solidity, Swift, and TypeScript.\\n- Change AIs within a conversation, or fork (duplicate) conversations at any point.\\n- Use Markdown-style code formatting in input messages (with syntax highlighting for code blocks).\\n- Bookmarks messages for rapid navigation.\\n\\n### Wiki views\\n\\n- Wiki views (single click in the mindspace tree, drag and drop from the mindspace tree, or use the system shell's\\n  `wiki` command) give you multiple sources of information about files and folders.\\n- Edit actions are available to make it easy to update any part of your documentation or code.\\n- Hyperlinks will take you to other docs or open your computer's default web browswer for external references.\\n- Full text search across all parts of a wiki page.\\n\\n### File editing\\n\\n- Full file editing with syntax highlighting (double click in the mindspace tree, or use the system shell's `edit`\\n  command).\\n- Auto-backup functionality for unsaved changes.\\n\\n### System shell\\n\\n- Command line interface, giving access to a variety of features within Humbug.\\n- Using the `m6rc` command withinn the shell will automatically start a conversation if the Metaphor prompt compiles\\n  successfully.\\n- Shell commands support context-aware command line completions using the tab key.\\n- For more information, open select \\\"Show System Shell\\\" from the View menu and enter the command `help`.\\n\\n### Terminal emulator\\n\\n- Support for accessing the local shells/command prompts (Unix shells, or Windows command prompt).\\n- Full text search across the terminal history.\\n\\n### Multi-tab interface\\n\\n- Tabs can be arranged into multiple columns, with columns being able to split, merge and swap.  It's a natural way to\\n  discuss what you want with an AI and also look at the code you're working with.\\n- Tabs can be easily rearranged and closed.\\n- Drag and drop between columns.\\n\\n### Mindspace management\\n\\n- Project-specific environments with their own settings and state.\\n- Mindspace settings include language, soft tabs, tab size, font size, and auto-backup options.\\n- Mindspace state persistence for restoring open tabs and cursor positions.\\n- Home directory tracking of last opened mindspace.\\n\\n### Multi-language support\\n\\n- Humbug can be configured to use different human languages.  Currently supported English, French,\\n  and Arabic.\\n\\n## Getting started\\n\\nHumbug can use an Ollama model running locally on your system but the best results currently come from one of\\nthe cloud-based AIs.  To use them you'll need to get an API key (they're available from the various AI\\nprovider websites).  Most of them require you to pay for access, but Google and Mistral both currently offer\\nfree API keys for low volume testing, so you can get started with either, or both, of them.\\n\\n## Requirements\\n\\n- Python 3.10 or higher\\n- You will need API keys for any AI models other than Ollama\\n- PySide6 (the GUI framework)\\n- qasync (allows the GUI framework to work nicely with async Python code)\\n- aiohttp (async HTTP client)\\n- certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)\\n\\n## Installation\\n\\n1. Create and activate a virtual environment:\\n\\n   Linux and MacOS:\\n\\n   ```bash\\n   python -m venv venv\\n   source venv/bin/activate\\n   ```\\n\\n    Windows:\\n\\n   ```bash\\n   python -m venv venv\\n   venv\\\\Scripts\\\\activate\\n   ```\\n\\n2. Install build tools:\\n\\n   ```bash\\n   pip install build\\n   ```\\n\\n3. Install in development mode:\\n\\n   ```bash\\n   pip install -e .\\n   ```\\n\\n## Initial configuration\\n\\nThe main configuration you require is to set up your API keys for whichever AI services you wish to use.\\nAs of v0.8 you can do this by opening the \\\"User Settings\\\" dialog on the Humbug menu.\\n\\nOllama does not need API keys as Humbug assumes it's running locally on your computer.\\n\\n## Usage\\n\\nLaunch the application:\\n\\n```bash\\npython -m humbug\\n```\\n\\n## Development\\n\\nProject structure:\\n\\n```text\\nsrc/humbug/\\n\\u2577\\n\\u251c\\u2500\\u2500 ai/            # AI backend and conversation implementations\\n\\u251c\\u2500\\u2500 ast/           # Abstract syntax tree implementation\\n\\u251c\\u2500\\u2500 gui/           # GUI components\\n\\u251c\\u2500\\u2500 language/      # I18n management and strings\\n\\u251c\\u2500\\u2500 markdown/      # Markdown parser\\n\\u251c\\u2500\\u2500 metaphor/      # Metaphor parser and compiler\\n\\u251c\\u2500\\u2500 mindspace/     # Mindspace management\\n\\u251c\\u2500\\u2500 syntax/        # Syntax highlighting and parsing\\n\\u251c\\u2500\\u2500 terminal/      # Terminal emulation\\n\\u251c\\u2500\\u2500 user/          # User settings management\\n\\u2514\\u2500\\u2500 __main__.py    # Main entry point\\n```\\n\\n## Logging\\n\\nDebug logs are written to `~/.humbug/logs/` with timestamped filenames. The application maintains the last 50 log files, rotating them when they exceed 1MB.\\nPlease note this is in your home directory, not the `.humbug` directory that you get in a mindspace.\\n\\n## Licensing\\n\\nThe software is released under an Apache 2.0 open source license.\\n\\n## Find out more on YouTube\\n\\nFind out more about Humbug and Metaphor on YouTube: [@m6rai on YouTube](https://youtube.com/@m6rai).\\n\\n## Join us on Discord\\n\\nJoin us on [Discord](https://discord.gg/GZhJ7ZtgwN) to get help or share your ideas.\\n\\n## More information\\n\\nYou can find out more about Metaphor and some of the things that have been done with it here:\\n\\n- [Getting started with Metaphor](https://github.com:/m6r-ai/getting-started-with-metaphor)\\n- [m6rclib (Metaphor compiler library)](https://github.com:/m6r-ai/m6rclib)\\n- [m6rc (Stand-alone Metaphor compiler)](https://github.com:/m6r-ai/m6rc)\\n- [commit-critic (Code review tool)](https://github.com:/m6r-ai/commit-critic)\\n- [demo-blog-editor (How we code up blog posts)](https://github.com:/m6r-ai/demo-blog-editor)\\n\\n## Commercial support\\n\\nHumbug and Metaphor are supported by M6R Ltd.  To find out more please head over to [m6r.ai](https://m6r.ai)\\n\\n## Contributing\\n\\nContributions are welcome! Please submit a pull request with your proposed changes.\\n\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01XaBvSppevk6NrMsfefNDnz",
+          "name": "read_file",
+          "content": "File: /Users/dave/github/m6r/humbug/README.md\nSize: 12,125 bytes\nEncoding: utf-8\n\n# Humbug v0.17\n\nHumbug is an extensible open-source tool designed to help you design, build and maintain software using AI.\n\nWhether you're a human or an AI, the most important things in software development are understanding the\nproblem you're trying to solve and the software you've building with to solve it.  Humbug is designed to\nhelp you with both.\n\nHumbug seeks to bring all your sources of information into one framework.  It integrates a dynamic wiki-like\nview, a powerful conversation interface that supports multiple simultaneous chats with one or more AIs, integrated\nterminal emulation, file editing, and a powerful system shell that makes it easy to create detailed structured prompts\nthat will allow your AIs to do their best work.\n\nHumbug supports large language models (LLMs) from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI,\nand you have total flexibility over which one you use at any time.  You can use 2 or more at\nthe same time, so if you want multiple opinions then it's easy to get them.  It's your choice whether these are\nlocal models, or cloud-hosted.\n\nWhile Humbug lets you use cloud-based tools, it runs locally on your computer.  Everything it does is captured\nin local files so you always retain complete control over your projects.  It's up to you how you structure them,\nhow you handle version management, and where you run your AI tools.\n\n## Metaphor - solving the AI context problem\n\nThe key to getting great results from AIs is to ensure they have the right context to work with.\n\nTo do this, Humbug uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation\nlanguage.  Metaphor is very quick to learn (just 5 keywords) and is structured to let you be clear about what you want\nyour AI to do for you, so it's not left guessing or hallucinating.\n\nBy making prompt creation a repeatable engineering process it's easy to try new ideas, and iterate towards what you\nwant.  If you don't like something, you can make adjustments to your Metaphor scripts and try again.  If you want to\nsee if a different AI models will give you better results you can do that too!\n\nRead [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) to find out more.\n\nWhile Metaphor is designed to help start your conversations with AI, and Humbug is the tool designed to get the most out of\nthose conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into\nyour software and documentation.  The built-in editor and terminal also lets you update and test anything you get back from\nthe AI, and provides you access to any command line tools you might want to use.\n\n## What does that mean in practice?\n\nProviding an AI everything it needs lets Metaphor stretch an AI model way beyond code completions.  This approach\nhas been used throughout Humbug's development.\n\nIn most versions there have been many 100+ line changes to the code across multiple files that were all generated from\nsingle Metaphor prompts.  The biggest single AI-coded change was in v0.13, where 1600 lines of code were generated\nby Claude Sonnet 3.7.  That change had one bug that took 5 minutes to resolve!\n\nWell over 80% of Humbug has been built and maintained by AI using Metaphor.\n\nThe ability to use AI for large refactoring and design tasks also means Humbug is a codebase that has been able to\nevolve very fast but with very little technical debt.\n\nOne fun aspect of using Metaphor is you can use Humbug to become an expert on its own design.  If you use the\nMetaphor script `humbug-expert.m6r` and run this with a model that has a very large context window (e.g. Gemini)\nthen you can ask the AI about the design or implementation of the software!\n\n## Engineering over vibes!\n\nNaive vibe coding can be a great way to experiment and try out ideas but can be incredibly frustrating for experienced\nengineers.  It can be an incredible way to support prototyping and brainstorming, but high quality code requires\ncareful planning, review, and understanding.\n\nBy offering a solid grounding context, Metaphor and Humbug aim to provide a way to capture the learnings from\nvibe coding into something that can be used in a more predictable way.  You can start from our reference context,\nexplore interactively, update the context and iterate.  You can go further than normal vibe coding because you can also\nhave conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback\ncan be used to refine the Metaphor context.\n\n## What's new in v0.17\n\n- All models that support tool/function calling now implement tool/function calling.\n- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking\n  modes.\n- Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating\n  the conversation that was forked.\n\n## Humbug in action\n\n![Humbug in action](./docs/humbug-v0.12-1.webp)\n\n![Humbug in action](./docs/humbug-v0.12-2.webp)\n\n![Humbug in action](./docs/humbug-v0.12-3.webp)\n\n![Humbug in action](./docs/humbug-v0.12-4.webp)\n\n![Humbug in action](./docs/humbug-v0.16-1.webp)\n\n## Features\n\n### Cross-platform support\n\nCompatible with MacOS X, Linux, and Windows 10/11.\n\n### AI interaction\n\n- Real-time streaming of AI responses.\n- Configurable AI model settings per conversation.\n- Supports Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI models.\n- Configurable temperature settings for supported models.\n- Handles reasoning outputs for models that support them.\n- Error handling and retry mechanisms for API requests.\n\n### Conversation features\n\n- Message history with distinct cards for user, AI reasoning, AI response, and system messages.\n- Code blocks are broken into sections and it's easy to copy a whole section or save it as a file.\n- Copy or save whole messages as Markdown.\n- Full text search across all parts of a conversation.\n- Syntax highlighting for various languages and file formats, including nested systax highlighting where code for\n  one language appears inside a different one.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,\n  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Solidity, Swift, and TypeScript.\n- Change AIs within a conversation, or fork (duplicate) conversations at any point.\n- Use Markdown-style code formatting in input messages (with syntax highlighting for code blocks).\n- Bookmarks messages for rapid navigation.\n\n### Wiki views\n\n- Wiki views (single click in the mindspace tree, drag and drop from the mindspace tree, or use the system shell's\n  `wiki` command) give you multiple sources of information about files and folders.\n- Edit actions are available to make it easy to update any part of your documentation or code.\n- Hyperlinks will take you to other docs or open your computer's default web browswer for external references.\n- Full text search across all parts of a wiki page.\n\n### File editing\n\n- Full file editing with syntax highlighting (double click in the mindspace tree, or use the system shell's `edit`\n  command).\n- Auto-backup functionality for unsaved changes.\n\n### System shell\n\n- Command line interface, giving access to a variety of features within Humbug.\n- Using the `m6rc` command withinn the shell will automatically start a conversation if the Metaphor prompt compiles\n  successfully.\n- Shell commands support context-aware command line completions using the tab key.\n- For more information, open select \"Show System Shell\" from the View menu and enter the command `help`.\n\n### Terminal emulator\n\n- Support for accessing the local shells/command prompts (Unix shells, or Windows command prompt).\n- Full text search across the terminal history.\n\n### Multi-tab interface\n\n- Tabs can be arranged into multiple columns, with columns being able to split, merge and swap.  It's a natural way to\n  discuss what you want with an AI and also look at the code you're working with.\n- Tabs can be easily rearranged and closed.\n- Drag and drop between columns.\n\n### Mindspace management\n\n- Project-specific environments with their own settings and state.\n- Mindspace settings include language, soft tabs, tab size, font size, and auto-backup options.\n- Mindspace state persistence for restoring open tabs and cursor positions.\n- Home directory tracking of last opened mindspace.\n\n### Multi-language support\n\n- Humbug can be configured to use different human languages.  Currently supported English, French,\n  and Arabic.\n\n## Getting started\n\nHumbug can use an Ollama model running locally on your system but the best results currently come from one of\nthe cloud-based AIs.  To use them you'll need to get an API key (they're available from the various AI\nprovider websites).  Most of them require you to pay for access, but Google and Mistral both currently offer\nfree API keys for low volume testing, so you can get started with either, or both, of them.\n\n## Requirements\n\n- Python 3.10 or higher\n- You will need API keys for any AI models other than Ollama\n- PySide6 (the GUI framework)\n- qasync (allows the GUI framework to work nicely with async Python code)\n- aiohttp (async HTTP client)\n- certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)\n\n## Installation\n\n1. Create and activate a virtual environment:\n\n   Linux and MacOS:\n\n   ```bash\n   python -m venv venv\n   source venv/bin/activate\n   ```\n\n    Windows:\n\n   ```bash\n   python -m venv venv\n   venv\\Scripts\\activate\n   ```\n\n2. Install build tools:\n\n   ```bash\n   pip install build\n   ```\n\n3. Install in development mode:\n\n   ```bash\n   pip install -e .\n   ```\n\n## Initial configuration\n\nThe main configuration you require is to set up your API keys for whichever AI services you wish to use.\nAs of v0.8 you can do this by opening the \"User Settings\" dialog on the Humbug menu.\n\nOllama does not need API keys as Humbug assumes it's running locally on your computer.\n\n## Usage\n\nLaunch the application:\n\n```bash\npython -m humbug\n```\n\n## Development\n\nProject structure:\n\n```text\nsrc/humbug/\n\u2577\n\u251c\u2500\u2500 ai/            # AI backend and conversation implementations\n\u251c\u2500\u2500 ast/           # Abstract syntax tree implementation\n\u251c\u2500\u2500 gui/           # GUI components\n\u251c\u2500\u2500 language/      # I18n management and strings\n\u251c\u2500\u2500 markdown/      # Markdown parser\n\u251c\u2500\u2500 metaphor/      # Metaphor parser and compiler\n\u251c\u2500\u2500 mindspace/     # Mindspace management\n\u251c\u2500\u2500 syntax/        # Syntax highlighting and parsing\n\u251c\u2500\u2500 terminal/      # Terminal emulation\n\u251c\u2500\u2500 user/          # User settings management\n\u2514\u2500\u2500 __main__.py    # Main entry point\n```\n\n## Logging\n\nDebug logs are written to `~/.humbug/logs/` with timestamped filenames. The application maintains the last 50 log files, rotating them when they exceed 1MB.\nPlease note this is in your home directory, not the `.humbug` directory that you get in a mindspace.\n\n## Licensing\n\nThe software is released under an Apache 2.0 open source license.\n\n## Find out more on YouTube\n\nFind out more about Humbug and Metaphor on YouTube: [@m6rai on YouTube](https://youtube.com/@m6rai).\n\n## Join us on Discord\n\nJoin us on [Discord](https://discord.gg/GZhJ7ZtgwN) to get help or share your ideas.\n\n## More information\n\nYou can find out more about Metaphor and some of the things that have been done with it here:\n\n- [Getting started with Metaphor](https://github.com:/m6r-ai/getting-started-with-metaphor)\n- [m6rclib (Metaphor compiler library)](https://github.com:/m6r-ai/m6rclib)\n- [m6rc (Stand-alone Metaphor compiler)](https://github.com:/m6r-ai/m6rc)\n- [commit-critic (Code review tool)](https://github.com:/m6r-ai/commit-critic)\n- [demo-blog-editor (How we code up blog posts)](https://github.com:/m6r-ai/demo-blog-editor)\n\n## Commercial support\n\nHumbug and Metaphor are supported by M6R Ltd.  To find out more please head over to [m6r.ai](https://m6r.ai)\n\n## Contributing\n\nContributions are welcome! Please submit a pull request with your proposed changes.\n",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "5901ed5d-88cf-4ea7-bff0-e73b2572a1b1",
+      "timestamp": "2025-06-30T07:38:31.584452",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01XaBvSppevk6NrMsfefNDnz",
+          "name": "read_file",
+          "content": "File: /Users/dave/github/m6r/humbug/README.md\nSize: 12,125 bytes\nEncoding: utf-8\n\n# Humbug v0.17\n\nHumbug is an extensible open-source tool designed to help you design, build and maintain software using AI.\n\nWhether you're a human or an AI, the most important things in software development are understanding the\nproblem you're trying to solve and the software you've building with to solve it.  Humbug is designed to\nhelp you with both.\n\nHumbug seeks to bring all your sources of information into one framework.  It integrates a dynamic wiki-like\nview, a powerful conversation interface that supports multiple simultaneous chats with one or more AIs, integrated\nterminal emulation, file editing, and a powerful system shell that makes it easy to create detailed structured prompts\nthat will allow your AIs to do their best work.\n\nHumbug supports large language models (LLMs) from Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI,\nand you have total flexibility over which one you use at any time.  You can use 2 or more at\nthe same time, so if you want multiple opinions then it's easy to get them.  It's your choice whether these are\nlocal models, or cloud-hosted.\n\nWhile Humbug lets you use cloud-based tools, it runs locally on your computer.  Everything it does is captured\nin local files so you always retain complete control over your projects.  It's up to you how you structure them,\nhow you handle version management, and where you run your AI tools.\n\n## Metaphor - solving the AI context problem\n\nThe key to getting great results from AIs is to ensure they have the right context to work with.\n\nTo do this, Humbug uses [Metaphor](https://m6r.ai/metaphor), a simple, open source, natural-language-based prompt creation\nlanguage.  Metaphor is very quick to learn (just 5 keywords) and is structured to let you be clear about what you want\nyour AI to do for you, so it's not left guessing or hallucinating.\n\nBy making prompt creation a repeatable engineering process it's easy to try new ideas, and iterate towards what you\nwant.  If you don't like something, you can make adjustments to your Metaphor scripts and try again.  If you want to\nsee if a different AI models will give you better results you can do that too!\n\nRead [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) to find out more.\n\nWhile Metaphor is designed to help start your conversations with AI, and Humbug is the tool designed to get the most out of\nthose conversations.  It lets you control and capture any aspect of those conversations and incorporate the results into\nyour software and documentation.  The built-in editor and terminal also lets you update and test anything you get back from\nthe AI, and provides you access to any command line tools you might want to use.\n\n## What does that mean in practice?\n\nProviding an AI everything it needs lets Metaphor stretch an AI model way beyond code completions.  This approach\nhas been used throughout Humbug's development.\n\nIn most versions there have been many 100+ line changes to the code across multiple files that were all generated from\nsingle Metaphor prompts.  The biggest single AI-coded change was in v0.13, where 1600 lines of code were generated\nby Claude Sonnet 3.7.  That change had one bug that took 5 minutes to resolve!\n\nWell over 80% of Humbug has been built and maintained by AI using Metaphor.\n\nThe ability to use AI for large refactoring and design tasks also means Humbug is a codebase that has been able to\nevolve very fast but with very little technical debt.\n\nOne fun aspect of using Metaphor is you can use Humbug to become an expert on its own design.  If you use the\nMetaphor script `humbug-expert.m6r` and run this with a model that has a very large context window (e.g. Gemini)\nthen you can ask the AI about the design or implementation of the software!\n\n## Engineering over vibes!\n\nNaive vibe coding can be a great way to experiment and try out ideas but can be incredibly frustrating for experienced\nengineers.  It can be an incredible way to support prototyping and brainstorming, but high quality code requires\ncareful planning, review, and understanding.\n\nBy offering a solid grounding context, Metaphor and Humbug aim to provide a way to capture the learnings from\nvibe coding into something that can be used in a more predictable way.  You can start from our reference context,\nexplore interactively, update the context and iterate.  You can go further than normal vibe coding because you can also\nhave conversations with the AI about what it doesn't understand, or what else it might need.  All that feedback\ncan be used to refine the Metaphor context.\n\n## What's new in v0.17\n\n- All models that support tool/function calling now implement tool/function calling.\n- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking\n  modes.\n- Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating\n  the conversation that was forked.\n\n## Humbug in action\n\n![Humbug in action](./docs/humbug-v0.12-1.webp)\n\n![Humbug in action](./docs/humbug-v0.12-2.webp)\n\n![Humbug in action](./docs/humbug-v0.12-3.webp)\n\n![Humbug in action](./docs/humbug-v0.12-4.webp)\n\n![Humbug in action](./docs/humbug-v0.16-1.webp)\n\n## Features\n\n### Cross-platform support\n\nCompatible with MacOS X, Linux, and Windows 10/11.\n\n### AI interaction\n\n- Real-time streaming of AI responses.\n- Configurable AI model settings per conversation.\n- Supports Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, and xAI models.\n- Configurable temperature settings for supported models.\n- Handles reasoning outputs for models that support them.\n- Error handling and retry mechanisms for API requests.\n\n### Conversation features\n\n- Message history with distinct cards for user, AI reasoning, AI response, and system messages.\n- Code blocks are broken into sections and it's easy to copy a whole section or save it as a file.\n- Copy or save whole messages as Markdown.\n- Full text search across all parts of a conversation.\n- Syntax highlighting for various languages and file formats, including nested systax highlighting where code for\n  one language appears inside a different one.  Currently supported: C, C++, C#, CSS, Go, HTML, Java,\n  JavaScript, JSON, Kotlin, Markdown, Metaphor, Move, Python, Rust, Scheme, Solidity, Swift, and TypeScript.\n- Change AIs within a conversation, or fork (duplicate) conversations at any point.\n- Use Markdown-style code formatting in input messages (with syntax highlighting for code blocks).\n- Bookmarks messages for rapid navigation.\n\n### Wiki views\n\n- Wiki views (single click in the mindspace tree, drag and drop from the mindspace tree, or use the system shell's\n  `wiki` command) give you multiple sources of information about files and folders.\n- Edit actions are available to make it easy to update any part of your documentation or code.\n- Hyperlinks will take you to other docs or open your computer's default web browswer for external references.\n- Full text search across all parts of a wiki page.\n\n### File editing\n\n- Full file editing with syntax highlighting (double click in the mindspace tree, or use the system shell's `edit`\n  command).\n- Auto-backup functionality for unsaved changes.\n\n### System shell\n\n- Command line interface, giving access to a variety of features within Humbug.\n- Using the `m6rc` command withinn the shell will automatically start a conversation if the Metaphor prompt compiles\n  successfully.\n- Shell commands support context-aware command line completions using the tab key.\n- For more information, open select \"Show System Shell\" from the View menu and enter the command `help`.\n\n### Terminal emulator\n\n- Support for accessing the local shells/command prompts (Unix shells, or Windows command prompt).\n- Full text search across the terminal history.\n\n### Multi-tab interface\n\n- Tabs can be arranged into multiple columns, with columns being able to split, merge and swap.  It's a natural way to\n  discuss what you want with an AI and also look at the code you're working with.\n- Tabs can be easily rearranged and closed.\n- Drag and drop between columns.\n\n### Mindspace management\n\n- Project-specific environments with their own settings and state.\n- Mindspace settings include language, soft tabs, tab size, font size, and auto-backup options.\n- Mindspace state persistence for restoring open tabs and cursor positions.\n- Home directory tracking of last opened mindspace.\n\n### Multi-language support\n\n- Humbug can be configured to use different human languages.  Currently supported English, French,\n  and Arabic.\n\n## Getting started\n\nHumbug can use an Ollama model running locally on your system but the best results currently come from one of\nthe cloud-based AIs.  To use them you'll need to get an API key (they're available from the various AI\nprovider websites).  Most of them require you to pay for access, but Google and Mistral both currently offer\nfree API keys for low volume testing, so you can get started with either, or both, of them.\n\n## Requirements\n\n- Python 3.10 or higher\n- You will need API keys for any AI models other than Ollama\n- PySide6 (the GUI framework)\n- qasync (allows the GUI framework to work nicely with async Python code)\n- aiohttp (async HTTP client)\n- certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)\n\n## Installation\n\n1. Create and activate a virtual environment:\n\n   Linux and MacOS:\n\n   ```bash\n   python -m venv venv\n   source venv/bin/activate\n   ```\n\n    Windows:\n\n   ```bash\n   python -m venv venv\n   venv\\Scripts\\activate\n   ```\n\n2. Install build tools:\n\n   ```bash\n   pip install build\n   ```\n\n3. Install in development mode:\n\n   ```bash\n   pip install -e .\n   ```\n\n## Initial configuration\n\nThe main configuration you require is to set up your API keys for whichever AI services you wish to use.\nAs of v0.8 you can do this by opening the \"User Settings\" dialog on the Humbug menu.\n\nOllama does not need API keys as Humbug assumes it's running locally on your computer.\n\n## Usage\n\nLaunch the application:\n\n```bash\npython -m humbug\n```\n\n## Development\n\nProject structure:\n\n```text\nsrc/humbug/\n\u2577\n\u251c\u2500\u2500 ai/            # AI backend and conversation implementations\n\u251c\u2500\u2500 ast/           # Abstract syntax tree implementation\n\u251c\u2500\u2500 gui/           # GUI components\n\u251c\u2500\u2500 language/      # I18n management and strings\n\u251c\u2500\u2500 markdown/      # Markdown parser\n\u251c\u2500\u2500 metaphor/      # Metaphor parser and compiler\n\u251c\u2500\u2500 mindspace/     # Mindspace management\n\u251c\u2500\u2500 syntax/        # Syntax highlighting and parsing\n\u251c\u2500\u2500 terminal/      # Terminal emulation\n\u251c\u2500\u2500 user/          # User settings management\n\u2514\u2500\u2500 __main__.py    # Main entry point\n```\n\n## Logging\n\nDebug logs are written to `~/.humbug/logs/` with timestamped filenames. The application maintains the last 50 log files, rotating them when they exceed 1MB.\nPlease note this is in your home directory, not the `.humbug` directory that you get in a mindspace.\n\n## Licensing\n\nThe software is released under an Apache 2.0 open source license.\n\n## Find out more on YouTube\n\nFind out more about Humbug and Metaphor on YouTube: [@m6rai on YouTube](https://youtube.com/@m6rai).\n\n## Join us on Discord\n\nJoin us on [Discord](https://discord.gg/GZhJ7ZtgwN) to get help or share your ideas.\n\n## More information\n\nYou can find out more about Metaphor and some of the things that have been done with it here:\n\n- [Getting started with Metaphor](https://github.com:/m6r-ai/getting-started-with-metaphor)\n- [m6rclib (Metaphor compiler library)](https://github.com:/m6r-ai/m6rclib)\n- [m6rc (Stand-alone Metaphor compiler)](https://github.com:/m6r-ai/m6rc)\n- [commit-critic (Code review tool)](https://github.com:/m6r-ai/commit-critic)\n- [demo-blog-editor (How we code up blog posts)](https://github.com:/m6r-ai/demo-blog-editor)\n\n## Commercial support\n\nHumbug and Metaphor are supported by M6R Ltd.  To find out more please head over to [m6r.ai](https://m6r.ai)\n\n## Contributing\n\nContributions are welcome! Please submit a pull request with your proposed changes.\n",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "eada0a2d-67a3-4273-8a8f-e78fa76b69a4",
+      "timestamp": "2025-06-30T07:38:33.454868",
+      "type": "ai_response",
+      "content": "I've successfully read the README.md file. This is the documentation for **Humbug v0.17**, which is an extensible open-source tool designed to help with software development using AI.\n\nHere are the key highlights from the README:\n\n## What is Humbug?\n- An AI-powered software development tool that integrates multiple features into one framework\n- Supports multiple AI providers (Anthropic, DeepSeek, Google, Mistral, Ollama, OpenAI, xAI)\n- Runs locally on your computer while optionally using cloud-based AI services\n- Uses **Metaphor**, a natural-language-based prompt creation language\n\n## Key Features:\n- **Cross-platform** (macOS, Linux, Windows)\n- **Multi-AI support** with real-time streaming responses\n- **Conversation management** with message history, search, and bookmarking\n- **Wiki views** for documentation\n- **File editing** with syntax highlighting\n- **System shell** with command completion\n- **Terminal emulator**\n- **Multi-tab interface** with flexible layouts\n\n## What's New in v0.17:\n- Tool/function calling support for compatible models\n- Added Gemma3 and Qwen3 model support via Ollama\n- Improved conversation forking with better naming\n\n## Installation:\nRequires Python 3.10+, and you can install it in development mode using pip after creating a virtual environment.\n\nThe tool appears to be quite comprehensive for AI-assisted software development, with over 80% of Humbug itself being built using AI and Metaphor according to the documentation.",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 4503,
+        "completion_tokens": 366,
+        "total_tokens": 4869
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7
+    },
+    {
+      "id": "1cfe0aaa-2162-4dab-8881-0f55f673dea7",
+      "timestamp": "2025-06-30T07:40:03.821991",
+      "type": "user_message",
+      "content": "can you read CHANGELOG.md and tell me the unixtime of v0.14?",
+      "completed": true
+    },
+    {
+      "id": "ec533099-28d2-4ce4-b156-2908fcdea63b",
+      "timestamp": "2025-06-30T07:40:07.079743",
+      "type": "ai_response",
+      "content": "",
+      "completed": true,
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_01TCXAiWG8FKS9yuDZAF6J65",
+          "name": "read_file",
+          "arguments": {
+            "file_path": "CHANGELOG.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "212c3246-9ece-433a-ac4e-4c0eb0584fb1",
+      "timestamp": "2025-06-30T07:40:07.087534",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01TCXAiWG8FKS9yuDZAF6J65\",\n        \"name\": \"read_file\",\n        \"arguments\": {\n            \"file_path\": \"CHANGELOG.md\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_01TCXAiWG8FKS9yuDZAF6J65",
+          "name": "read_file",
+          "arguments": {
+            "file_path": "CHANGELOG.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "5a488383-d763-4812-a49a-1998806ed293",
+      "timestamp": "2025-06-30T07:40:07.098426",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"auth_read_file_-6469940101156340545\",\n        \"name\": \"read_file\",\n        \"arguments\": {\n            \"file_path\": \"CHANGELOG.md\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "auth_read_file_-6469940101156340545",
+          "name": "read_file",
+          "arguments": {
+            "file_path": "CHANGELOG.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "f982fee4-7ddb-401b-a21d-886d03c4ad78",
+      "timestamp": "2025-06-30T07:40:09.264177",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01TCXAiWG8FKS9yuDZAF6J65\",\n        \"name\": \"read_file\",\n        \"content\": \"File: /Users/dave/github/m6r/humbug/CHANGELOG.md\\nSize: 23,179 bytes\\nEncoding: utf-8\\n\\n# Change log for Humbug\\n\\n## v0.17 (2025-06-xx)\\n\\nNew features:\\n\\n- All models that support tool/function calling now implement tool/function calling.\\n- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking\\n  modes.\\n- Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating\\n  the conversation that was forked.\\n\\nBug fixes:\\n\\n- When invoking new conversations or `m6rc` from the system shell, Humbug was not correctly setting reasoning capabilities\\n  for thinking/reasoning AI models.\\n- When recording conversation transcripts, Humbug was not recording the reasoning capabilities that were used in coming up\\n  with an answer.  This meant it was also not restoring these correctly after reloading a conversation.\\n- The conversation input box could lose focus when an AI message finished streaming.\\n- Markdown headings may now be preceeded by 0, 1, 2, or 3 spaces.\\n- File renames did not reliably update wiki tabs that were based on the old filename.\\n- Under some circumstances, the column manager could crash when removing an ephemeral tab.\\n\\n## v0.16 (2025-06-16)\\n\\nNew features:\\n\\n- When you click any non-conversation file in the mindspace tree it now opens it in the dynamic wiki view (just as drag\\n  and drop does).  Conversations open in a conversation tab.  Tabs opened by a single click are ephemeral and will have\\n  a different label colour and an italics tab label.  Ephemeral tabs will be replaced by the next new tab that is\\n  opened, unless the user interacts with the tab (e.g. adding to a conversation).  Such interactions make the tab\\n  become permanent.\\n- If you double-click a file it opens in an editor.\\n- All \\\"hidden\\\" files except for \\\".humbug\\\" are now shown in the mindspace tree.\\n- There are new icons on message boxes.\\n- The conversation input box now has a submit icon to submit new messages, and a stop icon to stop any current\\n  message that is being sent by the AI\\n- If the content of a non-active wiki tab changes, the tab label will now turn purple to notify you that things have\\n  been updated while you weren't looking.\\n- If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you\\n  that things have been updated while you weren't looking.\\n- Zooming now has finer-grained steps.\\n- JSON syntax highlighting now differentiates keys from values.\\n- The conversations folder now defaults to sorting by the conversation start date.  You can select sorting alphabetically\\n  by right clicking the changing the \\\"Sort By\\\".\\n- Wiki views will render any \\\"README.md\\\" file for folder pages that contain one, and \\\"file.ext.md\\\" for any file \\\"file.ext\\\"\\n\\nBug fixes:\\n\\n- When renaming or duplicating files, the file extension is no longer automatically selected, so the user does not\\n  accidently remove the file extension when typing a new file name.\\n- When creating a new file or folder, ensure the mindspace tree is scrolled to the new file/folder before\\n  attempting to edit the label.\\n- Changing a tab label could cause a temporary glitch in the display.\\n\\nInternal structure changes:\\n\\n- Start to add syntax parser tests.\\n\\n## v0.15 (2025-06-10)\\n\\nNew features:\\n\\n- You can now create a new file by right clicking in the mindspace tree.\\n- You can now create a new folder by right clicking in the mindspace tree.\\n- You can now delete an empty folder by right clicking in the mindspace tree.\\n- You can now duplicate a file by right clicking in the mindspace tree.\\n- You can now edit the `.conv` conversation files by right clicking in the mindspace tree.\\n- You can now move and non-protected (e.g. not \\\"conversations\\\", \\\"metaphor\\\", and \\\".humbug\\\") files or folders by\\n  dragging and dropping within the mindspace tree.\\n\\nBug fixes:\\n\\n- The `m6rc` command would search the current working directory before the mindspace when including files.  It should not\\n  take any notice of the CWD.\\n- Fixed a problem in the JSON lexer that could result in a crash.\\n\\n## v0.14 (2025-06-04)\\n\\nNew features:\\n\\n- When you select a tab, or open a new one, that has a representation in the mindspace tree view then the matching\\n  entry in the tree will be expanded, selected, and scrolled into view.\\n- Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as\\n  ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting\\n  to prevent blocks being closed too soon.\\n- Removed the Gemini 2.0 Pro model, but added Gemini 2.5 Flash preview.  Updated models to the latest versions.\\n- The markdown syntax highlighter has been extended to cover tables and inline attributes.\\n- The wiki pages now provide metadata about file and directory size, modification timestamps, and file permissions.\\n- Tabs are now tracked on an MRU basis so when the current tab is closed, the most recently active tab becomes active.\\n\\nBug fixes:\\n\\n- If an image in a markdown file did not have a paragraph line separator from the preceding line then the formatting\\n  was corrupted.\\n- Under some circumstances markdown lists and paragraphs interacted in odd ways and introduced rendering defects.\\n- If you closed a tab then the tab label that ended up under the mouse pointer would not set the hover rendering\\n  correctly.\\n- When processing Metaphor files that have code fences inside embedded code blocks we could exit the code parsing\\n  too early, corrupting the output.\\n\\nInternal structure changes:\\n\\n- Added comprehensive markdown AST tests.\\n- Updated the Metaphor AST tests to introduce the smae sort of example-based tests as markdown.\\n\\n## v0.13 (2025-05-28)\\n\\nNew features:\\n\\n- Added a new type of \\\"wiki\\\" tab and a matching \\\"wiki\\\" system shell command.  The wiki pages are dynamically generated\\n  view of all the information relevent to a file or directory, including a preview of any markdown file content, and\\n  any source code content.  This is now the default for opening files from the mindspace tree view.  Editing source code\\n  can now be done via the edit button, or by right clicking on the file in the mindspace tree.\\n- Any dialog box that has a destructive default action now has a red default button instead of blue.\\n- Added new Anthropic models: Claude Sonnet 4, Claude Opus 4.\\n- Added new Mistral small model: Devstral Small.\\n- Tab labels now have tool tips.\\n- Tab label types are now identified by icons instead of text prefixes.\\n\\nBug fixes:\\n\\n- Markdown rendering of lists that included paragraphs did not work correctly.\\n- Attempting to quit Humbug with unsaved changes in a file would result in you being asked twice if you wanted\\n  to discard.\\n- Path names with `~` prefixes are now handled correctly in the system shell.\\n- Path names with spaces in them are now handled correctly in the system shell.\\n\\nInternal structure changes:\\n\\n- The QTextEdit markdown renderer was moved to allow it to be reused more easily.\\n\\n## v0.12.2 (2025-05-13)\\n\\nBug fixes:\\n\\n- When starting the terminal from the MacOS application launcher we didn't default to the user's home directory\\n  or have a LANG environment variable.\\n\\n## v0.12.1 (2025-05-13)\\n\\nBug fixes:\\n\\n- The MacOS shell could intermittently fail to close correctly when the application was closing, leaving it\\n  hanging.\\n- Bold text in a heading could end up the wrong colour.\\n- Some spacings around horizontal rules could end up slightly too large.\\n- Headings did not use the correct font sizes.\\n\\n## v0.12 (2025-05-13)\\n\\nNew features:\\n\\n- Markdown tables are now rendered as tables, and horizontal rules as horizontal rules, when an AI is streaming\\n  its responses to the user.\\n- AI backend settings now have explicit enable/disable checkboxes and also have an optional URL as well as\\n  an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.\\n- The layout of user, mindspace, and conversation settings dialogs has been updated to make them more compact\\n  and more consistent with each other.\\n- Added initial syntax highlighting support for Solidity.\\n\\nBug fixes:\\n\\n- If you deleted a message from a conversation and then forked it, you could end up with a corrupted message\\n  history in the forked conversation (not in the original).\\n- Resolved problems with scaling of some dialog boxes when using a zoomed-in display.\\n- Updated all dialog boxes to have buttons appear in a consistent order, colour the recommended action in\\n  blue, and use consistent layout/spacing.\\n- 503 errors are now retried and have a better status message.\\n- If you changed the API key for an AI backend this would not update an open conversation tab until it was\\n  closed and re-opened.\\n\\nInternal structure changes:\\n\\n- Settings dialogs now use a series of new settings components that make it easier to handle larger amounts\\n  of configuration data, and to ensure settings are all handled in the same consistent way.\\n\\n## v0.11 (2025-05-02)\\n\\nNew features:\\n\\n- The system shell syntax highlighting now recognizes the difference between option values and positional\\n  arguments, using different colours for each.\\n- When forking conversations, the new conversation now appears in an adjacent column so the old and new\\n  conversations appear side-by-side.\\n- Added a button to the AI response messages allowing a conversation to be forked immediately after that\\n  message.\\n- Added a button to the user messages allowing all messages from that message onwards to be deleted\\n  from the conversation history.\\n- The preferred action button in all dialog boxes is now blue, matching conventions elsewhere.\\n- The `m6rc` system shell command now takes a `-j` or `--submit` flag.  Without either of these,\\n  Metaphor prompts are compiled, but not submitted, matching the behaviour of \\\"New Metaphor Conversation\\\".\\n  Pass `-j` or `--submit` to have the compiled prompt be automatically submitted.\\n\\nBug fixes:\\n\\n- The system shell now keeps messages adjacent to the command prompt (like conversations do).\\n- When changing between light and dark mode, the system shell now changes text colours correctly.\\n- When moving terminal tabs the terminal would become unresponsive due to a mistake introduced in v0.10.\\n\\n## v0.10 (2025-04-23)\\n\\nNew features:\\n\\n- There is a new type of tab, called the \\\"system shell\\\".  This is a command line interface that lets you\\n  interact with Humbug features.  Initial commands let you open conversations, files, and terminals.  You\\n  can also run the Metaphor compiler and run code reviews.\\n- The Metaphor compiler now supports command line parameters for use in \\\"Include\\\" and \\\"Embed\\\" blocks.  This\\n  means it's now possible to create template Metaphor files and fill in the blanks at runtime.  One such\\n  example is the new \\\"review.m6r\\\" file.\\n- If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the\\n  details in the system tab rather than in a dialog box.  This makes them much easier to read.\\n- A number of error messages from the Metaphor compiler have been improved to make them easier to understand.\\n- Supports xAI's Grok-3 beta models.\\n- Supports OpenAI o3, o4-mini, gpt-4.1, gpt-4.1-mini, and gpt-4.1-nano models.\\n- On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column\\n  that was active when saved is also restored as the active column.  This means you no longer have to\\n  reset the focus of tabs.\\n- AI assistant response messages now show which AI model generated the message.\\n- The \\\"system\\\" responses are now tagged as being from Humbug.\\n- If you close a conversation and there are no messages from the AI in it then the conversation\\n  transcript is now automatically deleted.  This avoid cluttering the conversations directory with\\n  empty files.\\n\\nInternal structure changes:\\n\\n- The codebase is now fully type-checkable using mypy (0 errors or warnings).\\n- Implemented a set of pylint checker rules (0 errors or warnings).\\n- Removed the use of @property.  The use of @property decorators made it hard to determine if code was\\n  making use of attributes or methods.  These are now much clearer, making it easier to ensure we don't\\n  inadvertently access attributes and risking side effects.\\n- Renamed some files and classes to better reflect how they fit into the overall design.\\n\\nBug fixes:\\n\\n- Several small bugs were resolved when implementing mypy and pylint checking.  In a few instances the\\n  type hints had been incorrect, although type hints have no impact on the execution of python code.\\n- If we had a markdown file embedded inside an AI response and that markdown file contained code inside\\n  a code fenced block then this would exit the code fenced region too soon.\\n- The TERM environment variable is now set to xterm-256color on MacOS and Linux.\\n- The system status bar messages could sometimes be overwritten by status from the wrong tab.  This is\\n  now resolved.\\n\\n## v0.9 (2025-04-01)\\n\\nNew features:\\n\\n- The current focus message is now highlighted across all conversations.  You can now step between\\n  messages in the current conversation using \\\"Alt+Up\\\" and \\\"Alt+Down\\\".\\n- You can now both copy to the clipboard, or save, whole messages in Markdown format, as well as copying or\\n  saving code blocks within messages.\\n- Block-level Markdown syntax highlighting is now supported.\\n\\nBug fixes:\\n\\n- The Metaphor compiler's parser is now more permissive about the use of blank lines to help improve\\n  the readability of inluded Metaphor.\\n- The bookmark menu items did not correctly change language when the language was changed at runtime.\\n- Resolve a rendering problem with lists that contain paragraphs.\\n- Resolve a problem where editor windows did not get focus correctly when clicked.\\n- Resolved a duplicate \\\"Humbug\\\" menu item on MacOS.\\n\\n## v0.8 (2025-03-27)\\n\\nNew features:\\n\\n- Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes\\n  over the \\\"Ctrl+,\\\" shortcut, and \\\"Conversation Settings\\\" now use \\\"Ctrl+Shift+,\\\".  Any API keys\\n  configured for earlier versions of Humbug will be carried forwards.\\n- The font size and language settings have moved from mindspace settings to user settings.\\n- The default theme can now be set in the user settings.\\n- Updated the Edit menu so the old \\\"Dark Mode\\\" option is now also replaced with \\\"Display Theme\\\" that\\n  matches the user setting.\\n- Messages from the AI are now rendered using the markdown formatting provided.  This makes them\\n  easier to read and hides the markdown annotations.\\n- Added support for Google Gemini 2.0 pro (experimental) and Gemini 2.5 pro (experimental).\\n- Folded an implementation of the Metaphor compiler directly into Humbug.  Updated this so compiled\\n  Metaphor prompts render more cleanly within the UI.\\n\\nInternal structure changes:\\n\\n- AI models are now handled by new UserManager and UserSettings classes.  This lets API keys be\\n  updated at runtime and avoids passing AI backend lists around in APIs.\\n- All elements related to AI conversations have moved to the ai directory and the network\\n  interactions are all moved to a new AIConversation class and out of the GUI.\\n- GUI elements related to the tab displays have been moved into a new gui/tab sub-directory.\\n- Non-GUI terminal functionality has been moved into a new directory at the top level of the\\n  source tree so it's easier to use outside of the GUI.\\n- Optimized the terminal emulator performance for large terminals.\\n- Load times for very large conversation histories are now about 50% faster.\\n\\nBug fixes:\\n\\n- Resolved a problem where tab close buttons did not render correctly when hovering between tabs.\\n- Column swapping did not work correctly with right-to-left layouts.\\n- When moving an actively streaming conversation between columns we used to cancel the\\n  network activity and lost the AI responses.\\n- The backspace key was generating the wrong keyboard code which made it buggy on Windows.  It\\n  should emit \\\\x7f and not \\\\x08.  Ctrl+Backspace now generates \\\\x08 instead of \\\\x7f.\\n\\n## v0.7 (2025-03-10)\\n\\nNew features:\\n\\n- Messages containing embedded source files are now broken into sub-message components and\\n  they are displayed more cleanly.  This makes it much easier to work with the embedded code.\\n- Added the ability to \\\"copy\\\" or \\\"save-as\\\" any embedded code in a conversation view.\\n- Added C# syntax highlighting.\\n- Added support for Mistral AIs: codestral-latest, mistral-large-latest, and mistral-small-latest.\\n- Remove OpenAI o1-preview but added o1, o3-mini, and gpt-4.5-preview.\\n\\nInternal structure changes:\\n\\n- Reworked AI backends to have a cleaner code structure and follow more systematic naming\\n  conventions.\\n- Reworked the conversation, editor, and terminal find functionality to place it within the\\n  matching widget classes.  This avoids creating complex logic to hide the internals of\\n  these widget classes and sets a future template.\\n- Optimized core lexing for syntax highlighting, making Python highlighting about 30% faster.\\n- Optimized message highlighting, making that an extra 20% faster too.\\n- Added a new ProgrammingLanguageUtils class to centralize all programming language lookups.\\n\\nBug fixes:\\n\\n- Added elipsis to the Python syntax highlighting engine.\\n- Go, Rust, and Swift were not correctly identified in editor tab status bars.\\n- Fixed a problem with the Scheme lexer not handling some error condititions correctly.\\n\\n## v0.6 (2025-02-27)\\n\\nNew features:\\n\\n- Added support for Claude Sonnet 3.7 (chat and extended thinking).\\n- Added support for Deepseek Chat and Deepseek Reasoner models.\\n- For AI models that expose reasoning steps, the conversation tabs now capture the\\n  reasoning in a separate message box, after the user's message and before the AI's\\n  full response.\\n- Added support for C# syntax highlighting.\\n- Small improvements to the status messages for conversations and terminals.\\n\\nInternal structure changes:\\n\\n- Reworked the ConversationSettings class to make it easier to add new models.  These are\\n  now handled via a single new dictionary entry.\\n- Separated language translations into separate files/directories.\\n- The ConversationTab class was much more complex than the equivalent EditorTab and\\n  TerminalTab classes so refactored this to break out a new ConversationWidget class.\\n\\nBug fixes:\\n\\n- Resolved some problems with failure handling in the AI networking code.\\n- Corrected the missing language translations for terminal status messages.\\n- Resolved a few problems with the Swift syntax highligher.\\n\\n## v0.5 (2025-02-24)\\n\\nNew features:\\n\\n- Added a local command line/shell tab type.  This will let you open a Unix shell\\n  on MacOS and Linux, or a command prompt on Windows.  From these you can use your standard\\n  command line tools.\\n- Added Go, Java, Rust, and Swift lexers/parsers for syntax highlighting.\\n- Columns can now be merged by dragging one on top of another.\\n- Columns can now be swapped with ones either side.\\n- Messages can be bookmarked to make it quick to jump backwards and forwards.\\n- A default AI model and temperature can now be set in the mindspace settings.\\n\\nInternal structure changes:\\n\\n- The conversation, editor, and mindspace UI functionality has been moved into separate\\n  subdirectories to make it easier to find related functionality.\\n- Lexers and parsers have been moved into separate per-language subdirectories to ease\\n  navigation of the code.\\n\\nBug fixes:\\n\\n- Resolved a problem with the conversation settings dialog.\\n\\n## v0.4 (2025-02-03)\\n\\nThis release adds the following new features:\\n\\n- Added a Scheme lexer/parser for syntax highlighting.\\n- Added a \\\"Find\\\" function to search for text in files.\\n- Added support for i18n - initial 3 languages are English, French, and Arabic.\\n- When highlighting text, the syntax highlights are now preserved.\\n- Added the ability to rename existing conversations.\\n- The mindspace name is shown above the mindspace file tree.\\n- Added a pop-up context menu on conversation tabs that provides access to conversation\\n  settings and forking for that conversation.\\n- When creating a new mindspace, the user is asked if they wish to create \\\"conversations\\\",\\n  \\\"metaphor\\\", and \\\"src\\\" folders.\\n\\nThe release fixes the following bugs:\\n\\n- The expand/collapse icons in the mindspace file tree did not scale with the zoom level.\\n- Vertical scrolling in the conversation window only worked for pure vertical scrolling, not\\n  where horizontal scrolling occurred at the same time.\\n- Editing a file no longer jumps the cursor into the middle of the input tab when it's first\\n  modified.  This also eliminates a glitch that made displays momentarily shrink and then\\n  expand back.\\n- Embedded code highlighting now avoids problems with 3 backticks in a comment or string\\n  dropping the syntax highlighting back to the AI markdown highlighter.\\n- Syntax highlighting of module/package names in Kotlin and Python are now handled so they do\\n  not appear as object fields/properties.\\n- Close buttons on the tab view used to have the wrong background and cross colour for the\\n  active tab in an inactive column.\\n- If text was highlighted using the keyboard in a conversation view then moving the mouse\\n  outside of the conversation tab would cause the tab to scroll.\\n\\n## v0.3.1 (2025-01-22)\\n\\nThis is a bug fix release:\\n\\n- The \\\"Embed:\\\" keyword was not using the correct mindspace to find files.\\n- The Kotlin syntax highlighter was not handling types correctly.\\n\\n## v0.3 (2025-01-20)\\n\\nThis release adds the following new features:\\n\\n- Drag and drop of files and conversations into the tab column view.\\n- Added new icons for the file view and made them scalable if you zoom in and out.\\n- Added the ability to delete files in the file view by right clicking and selecting \\\"Delete File\\\".\\n- Added a Kotlin lexer/parser for syntax highlighting.\\n- Added a Sui Move lexer/parser for syntax highlighting.\\n- Remember the last directory used for file operations and for opening conversations.\\n- Renamed \\\"workspace\\\" to \\\"mindspace\\\".\\n- Conversation text editing now supports soft tabs and tab/backtab.\\n- Added a JSON lexer/parser for syntax highlighting.\\n- Added default support for Ollama (Phi 4 and Llama3.2 for now) so you can work with a local LLM.\\n\\nThe release fixes the following bugs:\\n\\n- End of file was not correctly detected so block tab operations could crash.\\n- Don't indent empty lines when we do a block indent.\\n- Hard tabs were being stripped from prompts to the AI backends.\\n- Drag and drop labels could end up illegible in light mode.\\n- Closing and opening a new mindspace could result in the wrong directory tree being shown in the mindspace tree view.\\n\\n## v0.2 (2025-01-14)\\n\\nThis release adds the following new features:\\n\\n- The tabbed interface now supports up to 6 columns of tabs.  Tabs can be moved to adjacent columns via\\n  drag and drop operations, or can be used to create new columns.  Columns can be merged together.\\n\\nThe release fixes the following bugs:\\n\\n- Default AI backends are now chosen based on the AI providers configured.\\n- OpenAI backend defaults to o1-mini instead of gpt-4o-mini.\\n- Backup files were not always handled correctly.\\n- Files and directories are now sorted in ascending order.\\n\\n## v0.1 (2025-01-09)\\n\\nThis is the initial release\\n\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01TCXAiWG8FKS9yuDZAF6J65",
+          "name": "read_file",
+          "content": "File: /Users/dave/github/m6r/humbug/CHANGELOG.md\nSize: 23,179 bytes\nEncoding: utf-8\n\n# Change log for Humbug\n\n## v0.17 (2025-06-xx)\n\nNew features:\n\n- All models that support tool/function calling now implement tool/function calling.\n- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking\n  modes.\n- Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating\n  the conversation that was forked.\n\nBug fixes:\n\n- When invoking new conversations or `m6rc` from the system shell, Humbug was not correctly setting reasoning capabilities\n  for thinking/reasoning AI models.\n- When recording conversation transcripts, Humbug was not recording the reasoning capabilities that were used in coming up\n  with an answer.  This meant it was also not restoring these correctly after reloading a conversation.\n- The conversation input box could lose focus when an AI message finished streaming.\n- Markdown headings may now be preceeded by 0, 1, 2, or 3 spaces.\n- File renames did not reliably update wiki tabs that were based on the old filename.\n- Under some circumstances, the column manager could crash when removing an ephemeral tab.\n\n## v0.16 (2025-06-16)\n\nNew features:\n\n- When you click any non-conversation file in the mindspace tree it now opens it in the dynamic wiki view (just as drag\n  and drop does).  Conversations open in a conversation tab.  Tabs opened by a single click are ephemeral and will have\n  a different label colour and an italics tab label.  Ephemeral tabs will be replaced by the next new tab that is\n  opened, unless the user interacts with the tab (e.g. adding to a conversation).  Such interactions make the tab\n  become permanent.\n- If you double-click a file it opens in an editor.\n- All \"hidden\" files except for \".humbug\" are now shown in the mindspace tree.\n- There are new icons on message boxes.\n- The conversation input box now has a submit icon to submit new messages, and a stop icon to stop any current\n  message that is being sent by the AI\n- If the content of a non-active wiki tab changes, the tab label will now turn purple to notify you that things have\n  been updated while you weren't looking.\n- If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you\n  that things have been updated while you weren't looking.\n- Zooming now has finer-grained steps.\n- JSON syntax highlighting now differentiates keys from values.\n- The conversations folder now defaults to sorting by the conversation start date.  You can select sorting alphabetically\n  by right clicking the changing the \"Sort By\".\n- Wiki views will render any \"README.md\" file for folder pages that contain one, and \"file.ext.md\" for any file \"file.ext\"\n\nBug fixes:\n\n- When renaming or duplicating files, the file extension is no longer automatically selected, so the user does not\n  accidently remove the file extension when typing a new file name.\n- When creating a new file or folder, ensure the mindspace tree is scrolled to the new file/folder before\n  attempting to edit the label.\n- Changing a tab label could cause a temporary glitch in the display.\n\nInternal structure changes:\n\n- Start to add syntax parser tests.\n\n## v0.15 (2025-06-10)\n\nNew features:\n\n- You can now create a new file by right clicking in the mindspace tree.\n- You can now create a new folder by right clicking in the mindspace tree.\n- You can now delete an empty folder by right clicking in the mindspace tree.\n- You can now duplicate a file by right clicking in the mindspace tree.\n- You can now edit the `.conv` conversation files by right clicking in the mindspace tree.\n- You can now move and non-protected (e.g. not \"conversations\", \"metaphor\", and \".humbug\") files or folders by\n  dragging and dropping within the mindspace tree.\n\nBug fixes:\n\n- The `m6rc` command would search the current working directory before the mindspace when including files.  It should not\n  take any notice of the CWD.\n- Fixed a problem in the JSON lexer that could result in a crash.\n\n## v0.14 (2025-06-04)\n\nNew features:\n\n- When you select a tab, or open a new one, that has a representation in the mindspace tree view then the matching\n  entry in the tree will be expanded, selected, and scrolled into view.\n- Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as\n  ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting\n  to prevent blocks being closed too soon.\n- Removed the Gemini 2.0 Pro model, but added Gemini 2.5 Flash preview.  Updated models to the latest versions.\n- The markdown syntax highlighter has been extended to cover tables and inline attributes.\n- The wiki pages now provide metadata about file and directory size, modification timestamps, and file permissions.\n- Tabs are now tracked on an MRU basis so when the current tab is closed, the most recently active tab becomes active.\n\nBug fixes:\n\n- If an image in a markdown file did not have a paragraph line separator from the preceding line then the formatting\n  was corrupted.\n- Under some circumstances markdown lists and paragraphs interacted in odd ways and introduced rendering defects.\n- If you closed a tab then the tab label that ended up under the mouse pointer would not set the hover rendering\n  correctly.\n- When processing Metaphor files that have code fences inside embedded code blocks we could exit the code parsing\n  too early, corrupting the output.\n\nInternal structure changes:\n\n- Added comprehensive markdown AST tests.\n- Updated the Metaphor AST tests to introduce the smae sort of example-based tests as markdown.\n\n## v0.13 (2025-05-28)\n\nNew features:\n\n- Added a new type of \"wiki\" tab and a matching \"wiki\" system shell command.  The wiki pages are dynamically generated\n  view of all the information relevent to a file or directory, including a preview of any markdown file content, and\n  any source code content.  This is now the default for opening files from the mindspace tree view.  Editing source code\n  can now be done via the edit button, or by right clicking on the file in the mindspace tree.\n- Any dialog box that has a destructive default action now has a red default button instead of blue.\n- Added new Anthropic models: Claude Sonnet 4, Claude Opus 4.\n- Added new Mistral small model: Devstral Small.\n- Tab labels now have tool tips.\n- Tab label types are now identified by icons instead of text prefixes.\n\nBug fixes:\n\n- Markdown rendering of lists that included paragraphs did not work correctly.\n- Attempting to quit Humbug with unsaved changes in a file would result in you being asked twice if you wanted\n  to discard.\n- Path names with `~` prefixes are now handled correctly in the system shell.\n- Path names with spaces in them are now handled correctly in the system shell.\n\nInternal structure changes:\n\n- The QTextEdit markdown renderer was moved to allow it to be reused more easily.\n\n## v0.12.2 (2025-05-13)\n\nBug fixes:\n\n- When starting the terminal from the MacOS application launcher we didn't default to the user's home directory\n  or have a LANG environment variable.\n\n## v0.12.1 (2025-05-13)\n\nBug fixes:\n\n- The MacOS shell could intermittently fail to close correctly when the application was closing, leaving it\n  hanging.\n- Bold text in a heading could end up the wrong colour.\n- Some spacings around horizontal rules could end up slightly too large.\n- Headings did not use the correct font sizes.\n\n## v0.12 (2025-05-13)\n\nNew features:\n\n- Markdown tables are now rendered as tables, and horizontal rules as horizontal rules, when an AI is streaming\n  its responses to the user.\n- AI backend settings now have explicit enable/disable checkboxes and also have an optional URL as well as\n  an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.\n- The layout of user, mindspace, and conversation settings dialogs has been updated to make them more compact\n  and more consistent with each other.\n- Added initial syntax highlighting support for Solidity.\n\nBug fixes:\n\n- If you deleted a message from a conversation and then forked it, you could end up with a corrupted message\n  history in the forked conversation (not in the original).\n- Resolved problems with scaling of some dialog boxes when using a zoomed-in display.\n- Updated all dialog boxes to have buttons appear in a consistent order, colour the recommended action in\n  blue, and use consistent layout/spacing.\n- 503 errors are now retried and have a better status message.\n- If you changed the API key for an AI backend this would not update an open conversation tab until it was\n  closed and re-opened.\n\nInternal structure changes:\n\n- Settings dialogs now use a series of new settings components that make it easier to handle larger amounts\n  of configuration data, and to ensure settings are all handled in the same consistent way.\n\n## v0.11 (2025-05-02)\n\nNew features:\n\n- The system shell syntax highlighting now recognizes the difference between option values and positional\n  arguments, using different colours for each.\n- When forking conversations, the new conversation now appears in an adjacent column so the old and new\n  conversations appear side-by-side.\n- Added a button to the AI response messages allowing a conversation to be forked immediately after that\n  message.\n- Added a button to the user messages allowing all messages from that message onwards to be deleted\n  from the conversation history.\n- The preferred action button in all dialog boxes is now blue, matching conventions elsewhere.\n- The `m6rc` system shell command now takes a `-j` or `--submit` flag.  Without either of these,\n  Metaphor prompts are compiled, but not submitted, matching the behaviour of \"New Metaphor Conversation\".\n  Pass `-j` or `--submit` to have the compiled prompt be automatically submitted.\n\nBug fixes:\n\n- The system shell now keeps messages adjacent to the command prompt (like conversations do).\n- When changing between light and dark mode, the system shell now changes text colours correctly.\n- When moving terminal tabs the terminal would become unresponsive due to a mistake introduced in v0.10.\n\n## v0.10 (2025-04-23)\n\nNew features:\n\n- There is a new type of tab, called the \"system shell\".  This is a command line interface that lets you\n  interact with Humbug features.  Initial commands let you open conversations, files, and terminals.  You\n  can also run the Metaphor compiler and run code reviews.\n- The Metaphor compiler now supports command line parameters for use in \"Include\" and \"Embed\" blocks.  This\n  means it's now possible to create template Metaphor files and fill in the blanks at runtime.  One such\n  example is the new \"review.m6r\" file.\n- If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the\n  details in the system tab rather than in a dialog box.  This makes them much easier to read.\n- A number of error messages from the Metaphor compiler have been improved to make them easier to understand.\n- Supports xAI's Grok-3 beta models.\n- Supports OpenAI o3, o4-mini, gpt-4.1, gpt-4.1-mini, and gpt-4.1-nano models.\n- On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column\n  that was active when saved is also restored as the active column.  This means you no longer have to\n  reset the focus of tabs.\n- AI assistant response messages now show which AI model generated the message.\n- The \"system\" responses are now tagged as being from Humbug.\n- If you close a conversation and there are no messages from the AI in it then the conversation\n  transcript is now automatically deleted.  This avoid cluttering the conversations directory with\n  empty files.\n\nInternal structure changes:\n\n- The codebase is now fully type-checkable using mypy (0 errors or warnings).\n- Implemented a set of pylint checker rules (0 errors or warnings).\n- Removed the use of @property.  The use of @property decorators made it hard to determine if code was\n  making use of attributes or methods.  These are now much clearer, making it easier to ensure we don't\n  inadvertently access attributes and risking side effects.\n- Renamed some files and classes to better reflect how they fit into the overall design.\n\nBug fixes:\n\n- Several small bugs were resolved when implementing mypy and pylint checking.  In a few instances the\n  type hints had been incorrect, although type hints have no impact on the execution of python code.\n- If we had a markdown file embedded inside an AI response and that markdown file contained code inside\n  a code fenced block then this would exit the code fenced region too soon.\n- The TERM environment variable is now set to xterm-256color on MacOS and Linux.\n- The system status bar messages could sometimes be overwritten by status from the wrong tab.  This is\n  now resolved.\n\n## v0.9 (2025-04-01)\n\nNew features:\n\n- The current focus message is now highlighted across all conversations.  You can now step between\n  messages in the current conversation using \"Alt+Up\" and \"Alt+Down\".\n- You can now both copy to the clipboard, or save, whole messages in Markdown format, as well as copying or\n  saving code blocks within messages.\n- Block-level Markdown syntax highlighting is now supported.\n\nBug fixes:\n\n- The Metaphor compiler's parser is now more permissive about the use of blank lines to help improve\n  the readability of inluded Metaphor.\n- The bookmark menu items did not correctly change language when the language was changed at runtime.\n- Resolve a rendering problem with lists that contain paragraphs.\n- Resolve a problem where editor windows did not get focus correctly when clicked.\n- Resolved a duplicate \"Humbug\" menu item on MacOS.\n\n## v0.8 (2025-03-27)\n\nNew features:\n\n- Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes\n  over the \"Ctrl+,\" shortcut, and \"Conversation Settings\" now use \"Ctrl+Shift+,\".  Any API keys\n  configured for earlier versions of Humbug will be carried forwards.\n- The font size and language settings have moved from mindspace settings to user settings.\n- The default theme can now be set in the user settings.\n- Updated the Edit menu so the old \"Dark Mode\" option is now also replaced with \"Display Theme\" that\n  matches the user setting.\n- Messages from the AI are now rendered using the markdown formatting provided.  This makes them\n  easier to read and hides the markdown annotations.\n- Added support for Google Gemini 2.0 pro (experimental) and Gemini 2.5 pro (experimental).\n- Folded an implementation of the Metaphor compiler directly into Humbug.  Updated this so compiled\n  Metaphor prompts render more cleanly within the UI.\n\nInternal structure changes:\n\n- AI models are now handled by new UserManager and UserSettings classes.  This lets API keys be\n  updated at runtime and avoids passing AI backend lists around in APIs.\n- All elements related to AI conversations have moved to the ai directory and the network\n  interactions are all moved to a new AIConversation class and out of the GUI.\n- GUI elements related to the tab displays have been moved into a new gui/tab sub-directory.\n- Non-GUI terminal functionality has been moved into a new directory at the top level of the\n  source tree so it's easier to use outside of the GUI.\n- Optimized the terminal emulator performance for large terminals.\n- Load times for very large conversation histories are now about 50% faster.\n\nBug fixes:\n\n- Resolved a problem where tab close buttons did not render correctly when hovering between tabs.\n- Column swapping did not work correctly with right-to-left layouts.\n- When moving an actively streaming conversation between columns we used to cancel the\n  network activity and lost the AI responses.\n- The backspace key was generating the wrong keyboard code which made it buggy on Windows.  It\n  should emit \\x7f and not \\x08.  Ctrl+Backspace now generates \\x08 instead of \\x7f.\n\n## v0.7 (2025-03-10)\n\nNew features:\n\n- Messages containing embedded source files are now broken into sub-message components and\n  they are displayed more cleanly.  This makes it much easier to work with the embedded code.\n- Added the ability to \"copy\" or \"save-as\" any embedded code in a conversation view.\n- Added C# syntax highlighting.\n- Added support for Mistral AIs: codestral-latest, mistral-large-latest, and mistral-small-latest.\n- Remove OpenAI o1-preview but added o1, o3-mini, and gpt-4.5-preview.\n\nInternal structure changes:\n\n- Reworked AI backends to have a cleaner code structure and follow more systematic naming\n  conventions.\n- Reworked the conversation, editor, and terminal find functionality to place it within the\n  matching widget classes.  This avoids creating complex logic to hide the internals of\n  these widget classes and sets a future template.\n- Optimized core lexing for syntax highlighting, making Python highlighting about 30% faster.\n- Optimized message highlighting, making that an extra 20% faster too.\n- Added a new ProgrammingLanguageUtils class to centralize all programming language lookups.\n\nBug fixes:\n\n- Added elipsis to the Python syntax highlighting engine.\n- Go, Rust, and Swift were not correctly identified in editor tab status bars.\n- Fixed a problem with the Scheme lexer not handling some error condititions correctly.\n\n## v0.6 (2025-02-27)\n\nNew features:\n\n- Added support for Claude Sonnet 3.7 (chat and extended thinking).\n- Added support for Deepseek Chat and Deepseek Reasoner models.\n- For AI models that expose reasoning steps, the conversation tabs now capture the\n  reasoning in a separate message box, after the user's message and before the AI's\n  full response.\n- Added support for C# syntax highlighting.\n- Small improvements to the status messages for conversations and terminals.\n\nInternal structure changes:\n\n- Reworked the ConversationSettings class to make it easier to add new models.  These are\n  now handled via a single new dictionary entry.\n- Separated language translations into separate files/directories.\n- The ConversationTab class was much more complex than the equivalent EditorTab and\n  TerminalTab classes so refactored this to break out a new ConversationWidget class.\n\nBug fixes:\n\n- Resolved some problems with failure handling in the AI networking code.\n- Corrected the missing language translations for terminal status messages.\n- Resolved a few problems with the Swift syntax highligher.\n\n## v0.5 (2025-02-24)\n\nNew features:\n\n- Added a local command line/shell tab type.  This will let you open a Unix shell\n  on MacOS and Linux, or a command prompt on Windows.  From these you can use your standard\n  command line tools.\n- Added Go, Java, Rust, and Swift lexers/parsers for syntax highlighting.\n- Columns can now be merged by dragging one on top of another.\n- Columns can now be swapped with ones either side.\n- Messages can be bookmarked to make it quick to jump backwards and forwards.\n- A default AI model and temperature can now be set in the mindspace settings.\n\nInternal structure changes:\n\n- The conversation, editor, and mindspace UI functionality has been moved into separate\n  subdirectories to make it easier to find related functionality.\n- Lexers and parsers have been moved into separate per-language subdirectories to ease\n  navigation of the code.\n\nBug fixes:\n\n- Resolved a problem with the conversation settings dialog.\n\n## v0.4 (2025-02-03)\n\nThis release adds the following new features:\n\n- Added a Scheme lexer/parser for syntax highlighting.\n- Added a \"Find\" function to search for text in files.\n- Added support for i18n - initial 3 languages are English, French, and Arabic.\n- When highlighting text, the syntax highlights are now preserved.\n- Added the ability to rename existing conversations.\n- The mindspace name is shown above the mindspace file tree.\n- Added a pop-up context menu on conversation tabs that provides access to conversation\n  settings and forking for that conversation.\n- When creating a new mindspace, the user is asked if they wish to create \"conversations\",\n  \"metaphor\", and \"src\" folders.\n\nThe release fixes the following bugs:\n\n- The expand/collapse icons in the mindspace file tree did not scale with the zoom level.\n- Vertical scrolling in the conversation window only worked for pure vertical scrolling, not\n  where horizontal scrolling occurred at the same time.\n- Editing a file no longer jumps the cursor into the middle of the input tab when it's first\n  modified.  This also eliminates a glitch that made displays momentarily shrink and then\n  expand back.\n- Embedded code highlighting now avoids problems with 3 backticks in a comment or string\n  dropping the syntax highlighting back to the AI markdown highlighter.\n- Syntax highlighting of module/package names in Kotlin and Python are now handled so they do\n  not appear as object fields/properties.\n- Close buttons on the tab view used to have the wrong background and cross colour for the\n  active tab in an inactive column.\n- If text was highlighted using the keyboard in a conversation view then moving the mouse\n  outside of the conversation tab would cause the tab to scroll.\n\n## v0.3.1 (2025-01-22)\n\nThis is a bug fix release:\n\n- The \"Embed:\" keyword was not using the correct mindspace to find files.\n- The Kotlin syntax highlighter was not handling types correctly.\n\n## v0.3 (2025-01-20)\n\nThis release adds the following new features:\n\n- Drag and drop of files and conversations into the tab column view.\n- Added new icons for the file view and made them scalable if you zoom in and out.\n- Added the ability to delete files in the file view by right clicking and selecting \"Delete File\".\n- Added a Kotlin lexer/parser for syntax highlighting.\n- Added a Sui Move lexer/parser for syntax highlighting.\n- Remember the last directory used for file operations and for opening conversations.\n- Renamed \"workspace\" to \"mindspace\".\n- Conversation text editing now supports soft tabs and tab/backtab.\n- Added a JSON lexer/parser for syntax highlighting.\n- Added default support for Ollama (Phi 4 and Llama3.2 for now) so you can work with a local LLM.\n\nThe release fixes the following bugs:\n\n- End of file was not correctly detected so block tab operations could crash.\n- Don't indent empty lines when we do a block indent.\n- Hard tabs were being stripped from prompts to the AI backends.\n- Drag and drop labels could end up illegible in light mode.\n- Closing and opening a new mindspace could result in the wrong directory tree being shown in the mindspace tree view.\n\n## v0.2 (2025-01-14)\n\nThis release adds the following new features:\n\n- The tabbed interface now supports up to 6 columns of tabs.  Tabs can be moved to adjacent columns via\n  drag and drop operations, or can be used to create new columns.  Columns can be merged together.\n\nThe release fixes the following bugs:\n\n- Default AI backends are now chosen based on the AI providers configured.\n- OpenAI backend defaults to o1-mini instead of gpt-4o-mini.\n- Backup files were not always handled correctly.\n- Files and directories are now sorted in ascending order.\n\n## v0.1 (2025-01-09)\n\nThis is the initial release\n",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "4a9efaff-94b7-4e2c-a79e-eb8b24fb5092",
+      "timestamp": "2025-06-30T07:40:09.292815",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01TCXAiWG8FKS9yuDZAF6J65",
+          "name": "read_file",
+          "content": "File: /Users/dave/github/m6r/humbug/CHANGELOG.md\nSize: 23,179 bytes\nEncoding: utf-8\n\n# Change log for Humbug\n\n## v0.17 (2025-06-xx)\n\nNew features:\n\n- All models that support tool/function calling now implement tool/function calling.\n- Added support for Gemma3 and Qwen3 models through the Ollama AI backend.  Qwen3 supports both thinking and non-thinking\n  modes.\n- Forking conversations now uses the original name and a suffix of `- fork`, possibly followed by a number, indicating\n  the conversation that was forked.\n\nBug fixes:\n\n- When invoking new conversations or `m6rc` from the system shell, Humbug was not correctly setting reasoning capabilities\n  for thinking/reasoning AI models.\n- When recording conversation transcripts, Humbug was not recording the reasoning capabilities that were used in coming up\n  with an answer.  This meant it was also not restoring these correctly after reloading a conversation.\n- The conversation input box could lose focus when an AI message finished streaming.\n- Markdown headings may now be preceeded by 0, 1, 2, or 3 spaces.\n- File renames did not reliably update wiki tabs that were based on the old filename.\n- Under some circumstances, the column manager could crash when removing an ephemeral tab.\n\n## v0.16 (2025-06-16)\n\nNew features:\n\n- When you click any non-conversation file in the mindspace tree it now opens it in the dynamic wiki view (just as drag\n  and drop does).  Conversations open in a conversation tab.  Tabs opened by a single click are ephemeral and will have\n  a different label colour and an italics tab label.  Ephemeral tabs will be replaced by the next new tab that is\n  opened, unless the user interacts with the tab (e.g. adding to a conversation).  Such interactions make the tab\n  become permanent.\n- If you double-click a file it opens in an editor.\n- All \"hidden\" files except for \".humbug\" are now shown in the mindspace tree.\n- There are new icons on message boxes.\n- The conversation input box now has a submit icon to submit new messages, and a stop icon to stop any current\n  message that is being sent by the AI\n- If the content of a non-active wiki tab changes, the tab label will now turn purple to notify you that things have\n  been updated while you weren't looking.\n- If a conversation turn in any non-active conversation tab completes, the tab label will now turn purple to notify you\n  that things have been updated while you weren't looking.\n- Zooming now has finer-grained steps.\n- JSON syntax highlighting now differentiates keys from values.\n- The conversations folder now defaults to sorting by the conversation start date.  You can select sorting alphabetically\n  by right clicking the changing the \"Sort By\".\n- Wiki views will render any \"README.md\" file for folder pages that contain one, and \"file.ext.md\" for any file \"file.ext\"\n\nBug fixes:\n\n- When renaming or duplicating files, the file extension is no longer automatically selected, so the user does not\n  accidently remove the file extension when typing a new file name.\n- When creating a new file or folder, ensure the mindspace tree is scrolled to the new file/folder before\n  attempting to edit the label.\n- Changing a tab label could cause a temporary glitch in the display.\n\nInternal structure changes:\n\n- Start to add syntax parser tests.\n\n## v0.15 (2025-06-10)\n\nNew features:\n\n- You can now create a new file by right clicking in the mindspace tree.\n- You can now create a new folder by right clicking in the mindspace tree.\n- You can now delete an empty folder by right clicking in the mindspace tree.\n- You can now duplicate a file by right clicking in the mindspace tree.\n- You can now edit the `.conv` conversation files by right clicking in the mindspace tree.\n- You can now move and non-protected (e.g. not \"conversations\", \"metaphor\", and \".humbug\") files or folders by\n  dragging and dropping within the mindspace tree.\n\nBug fixes:\n\n- The `m6rc` command would search the current working directory before the mindspace when including files.  It should not\n  take any notice of the CWD.\n- Fixed a problem in the JSON lexer that could result in a crash.\n\n## v0.14 (2025-06-04)\n\nNew features:\n\n- When you select a tab, or open a new one, that has a representation in the mindspace tree view then the matching\n  entry in the tree will be expanded, selected, and scrolled into view.\n- Markdown parsing for code blocks is ambiguous because code fences inside code block could be misinterpreted as\n  ending the code block.  Humbug now uses the syntax parsers to handle code block parsing as well as highlighting\n  to prevent blocks being closed too soon.\n- Removed the Gemini 2.0 Pro model, but added Gemini 2.5 Flash preview.  Updated models to the latest versions.\n- The markdown syntax highlighter has been extended to cover tables and inline attributes.\n- The wiki pages now provide metadata about file and directory size, modification timestamps, and file permissions.\n- Tabs are now tracked on an MRU basis so when the current tab is closed, the most recently active tab becomes active.\n\nBug fixes:\n\n- If an image in a markdown file did not have a paragraph line separator from the preceding line then the formatting\n  was corrupted.\n- Under some circumstances markdown lists and paragraphs interacted in odd ways and introduced rendering defects.\n- If you closed a tab then the tab label that ended up under the mouse pointer would not set the hover rendering\n  correctly.\n- When processing Metaphor files that have code fences inside embedded code blocks we could exit the code parsing\n  too early, corrupting the output.\n\nInternal structure changes:\n\n- Added comprehensive markdown AST tests.\n- Updated the Metaphor AST tests to introduce the smae sort of example-based tests as markdown.\n\n## v0.13 (2025-05-28)\n\nNew features:\n\n- Added a new type of \"wiki\" tab and a matching \"wiki\" system shell command.  The wiki pages are dynamically generated\n  view of all the information relevent to a file or directory, including a preview of any markdown file content, and\n  any source code content.  This is now the default for opening files from the mindspace tree view.  Editing source code\n  can now be done via the edit button, or by right clicking on the file in the mindspace tree.\n- Any dialog box that has a destructive default action now has a red default button instead of blue.\n- Added new Anthropic models: Claude Sonnet 4, Claude Opus 4.\n- Added new Mistral small model: Devstral Small.\n- Tab labels now have tool tips.\n- Tab label types are now identified by icons instead of text prefixes.\n\nBug fixes:\n\n- Markdown rendering of lists that included paragraphs did not work correctly.\n- Attempting to quit Humbug with unsaved changes in a file would result in you being asked twice if you wanted\n  to discard.\n- Path names with `~` prefixes are now handled correctly in the system shell.\n- Path names with spaces in them are now handled correctly in the system shell.\n\nInternal structure changes:\n\n- The QTextEdit markdown renderer was moved to allow it to be reused more easily.\n\n## v0.12.2 (2025-05-13)\n\nBug fixes:\n\n- When starting the terminal from the MacOS application launcher we didn't default to the user's home directory\n  or have a LANG environment variable.\n\n## v0.12.1 (2025-05-13)\n\nBug fixes:\n\n- The MacOS shell could intermittently fail to close correctly when the application was closing, leaving it\n  hanging.\n- Bold text in a heading could end up the wrong colour.\n- Some spacings around horizontal rules could end up slightly too large.\n- Headings did not use the correct font sizes.\n\n## v0.12 (2025-05-13)\n\nNew features:\n\n- Markdown tables are now rendered as tables, and horizontal rules as horizontal rules, when an AI is streaming\n  its responses to the user.\n- AI backend settings now have explicit enable/disable checkboxes and also have an optional URL as well as\n  an API key, so you can point to custom URLs rather than just the standard ones offered by the AI companies.\n- The layout of user, mindspace, and conversation settings dialogs has been updated to make them more compact\n  and more consistent with each other.\n- Added initial syntax highlighting support for Solidity.\n\nBug fixes:\n\n- If you deleted a message from a conversation and then forked it, you could end up with a corrupted message\n  history in the forked conversation (not in the original).\n- Resolved problems with scaling of some dialog boxes when using a zoomed-in display.\n- Updated all dialog boxes to have buttons appear in a consistent order, colour the recommended action in\n  blue, and use consistent layout/spacing.\n- 503 errors are now retried and have a better status message.\n- If you changed the API key for an AI backend this would not update an open conversation tab until it was\n  closed and re-opened.\n\nInternal structure changes:\n\n- Settings dialogs now use a series of new settings components that make it easier to handle larger amounts\n  of configuration data, and to ensure settings are all handled in the same consistent way.\n\n## v0.11 (2025-05-02)\n\nNew features:\n\n- The system shell syntax highlighting now recognizes the difference between option values and positional\n  arguments, using different colours for each.\n- When forking conversations, the new conversation now appears in an adjacent column so the old and new\n  conversations appear side-by-side.\n- Added a button to the AI response messages allowing a conversation to be forked immediately after that\n  message.\n- Added a button to the user messages allowing all messages from that message onwards to be deleted\n  from the conversation history.\n- The preferred action button in all dialog boxes is now blue, matching conventions elsewhere.\n- The `m6rc` system shell command now takes a `-j` or `--submit` flag.  Without either of these,\n  Metaphor prompts are compiled, but not submitted, matching the behaviour of \"New Metaphor Conversation\".\n  Pass `-j` or `--submit` to have the compiled prompt be automatically submitted.\n\nBug fixes:\n\n- The system shell now keeps messages adjacent to the command prompt (like conversations do).\n- When changing between light and dark mode, the system shell now changes text colours correctly.\n- When moving terminal tabs the terminal would become unresponsive due to a mistake introduced in v0.10.\n\n## v0.10 (2025-04-23)\n\nNew features:\n\n- There is a new type of tab, called the \"system shell\".  This is a command line interface that lets you\n  interact with Humbug features.  Initial commands let you open conversations, files, and terminals.  You\n  can also run the Metaphor compiler and run code reviews.\n- The Metaphor compiler now supports command line parameters for use in \"Include\" and \"Embed\" blocks.  This\n  means it's now possible to create template Metaphor files and fill in the blanks at runtime.  One such\n  example is the new \"review.m6r\" file.\n- If you start a Metaphor conversation but there is a problem with the Metaphor file/files you now see the\n  details in the system tab rather than in a dialog box.  This makes them much easier to read.\n- A number of error messages from the Metaphor compiler have been improved to make them easier to understand.\n- Supports xAI's Grok-3 beta models.\n- Supports OpenAI o3, o4-mini, gpt-4.1, gpt-4.1-mini, and gpt-4.1-nano models.\n- On saving and restoring mindspaces, the active tab in each column is now restored.  Also the column\n  that was active when saved is also restored as the active column.  This means you no longer have to\n  reset the focus of tabs.\n- AI assistant response messages now show which AI model generated the message.\n- The \"system\" responses are now tagged as being from Humbug.\n- If you close a conversation and there are no messages from the AI in it then the conversation\n  transcript is now automatically deleted.  This avoid cluttering the conversations directory with\n  empty files.\n\nInternal structure changes:\n\n- The codebase is now fully type-checkable using mypy (0 errors or warnings).\n- Implemented a set of pylint checker rules (0 errors or warnings).\n- Removed the use of @property.  The use of @property decorators made it hard to determine if code was\n  making use of attributes or methods.  These are now much clearer, making it easier to ensure we don't\n  inadvertently access attributes and risking side effects.\n- Renamed some files and classes to better reflect how they fit into the overall design.\n\nBug fixes:\n\n- Several small bugs were resolved when implementing mypy and pylint checking.  In a few instances the\n  type hints had been incorrect, although type hints have no impact on the execution of python code.\n- If we had a markdown file embedded inside an AI response and that markdown file contained code inside\n  a code fenced block then this would exit the code fenced region too soon.\n- The TERM environment variable is now set to xterm-256color on MacOS and Linux.\n- The system status bar messages could sometimes be overwritten by status from the wrong tab.  This is\n  now resolved.\n\n## v0.9 (2025-04-01)\n\nNew features:\n\n- The current focus message is now highlighted across all conversations.  You can now step between\n  messages in the current conversation using \"Alt+Up\" and \"Alt+Down\".\n- You can now both copy to the clipboard, or save, whole messages in Markdown format, as well as copying or\n  saving code blocks within messages.\n- Block-level Markdown syntax highlighting is now supported.\n\nBug fixes:\n\n- The Metaphor compiler's parser is now more permissive about the use of blank lines to help improve\n  the readability of inluded Metaphor.\n- The bookmark menu items did not correctly change language when the language was changed at runtime.\n- Resolve a rendering problem with lists that contain paragraphs.\n- Resolve a problem where editor windows did not get focus correctly when clicked.\n- Resolved a duplicate \"Humbug\" menu item on MacOS.\n\n## v0.8 (2025-03-27)\n\nNew features:\n\n- Added a user settings dialog to make it easy to set API keys for AI services.  Note this takes\n  over the \"Ctrl+,\" shortcut, and \"Conversation Settings\" now use \"Ctrl+Shift+,\".  Any API keys\n  configured for earlier versions of Humbug will be carried forwards.\n- The font size and language settings have moved from mindspace settings to user settings.\n- The default theme can now be set in the user settings.\n- Updated the Edit menu so the old \"Dark Mode\" option is now also replaced with \"Display Theme\" that\n  matches the user setting.\n- Messages from the AI are now rendered using the markdown formatting provided.  This makes them\n  easier to read and hides the markdown annotations.\n- Added support for Google Gemini 2.0 pro (experimental) and Gemini 2.5 pro (experimental).\n- Folded an implementation of the Metaphor compiler directly into Humbug.  Updated this so compiled\n  Metaphor prompts render more cleanly within the UI.\n\nInternal structure changes:\n\n- AI models are now handled by new UserManager and UserSettings classes.  This lets API keys be\n  updated at runtime and avoids passing AI backend lists around in APIs.\n- All elements related to AI conversations have moved to the ai directory and the network\n  interactions are all moved to a new AIConversation class and out of the GUI.\n- GUI elements related to the tab displays have been moved into a new gui/tab sub-directory.\n- Non-GUI terminal functionality has been moved into a new directory at the top level of the\n  source tree so it's easier to use outside of the GUI.\n- Optimized the terminal emulator performance for large terminals.\n- Load times for very large conversation histories are now about 50% faster.\n\nBug fixes:\n\n- Resolved a problem where tab close buttons did not render correctly when hovering between tabs.\n- Column swapping did not work correctly with right-to-left layouts.\n- When moving an actively streaming conversation between columns we used to cancel the\n  network activity and lost the AI responses.\n- The backspace key was generating the wrong keyboard code which made it buggy on Windows.  It\n  should emit \\x7f and not \\x08.  Ctrl+Backspace now generates \\x08 instead of \\x7f.\n\n## v0.7 (2025-03-10)\n\nNew features:\n\n- Messages containing embedded source files are now broken into sub-message components and\n  they are displayed more cleanly.  This makes it much easier to work with the embedded code.\n- Added the ability to \"copy\" or \"save-as\" any embedded code in a conversation view.\n- Added C# syntax highlighting.\n- Added support for Mistral AIs: codestral-latest, mistral-large-latest, and mistral-small-latest.\n- Remove OpenAI o1-preview but added o1, o3-mini, and gpt-4.5-preview.\n\nInternal structure changes:\n\n- Reworked AI backends to have a cleaner code structure and follow more systematic naming\n  conventions.\n- Reworked the conversation, editor, and terminal find functionality to place it within the\n  matching widget classes.  This avoids creating complex logic to hide the internals of\n  these widget classes and sets a future template.\n- Optimized core lexing for syntax highlighting, making Python highlighting about 30% faster.\n- Optimized message highlighting, making that an extra 20% faster too.\n- Added a new ProgrammingLanguageUtils class to centralize all programming language lookups.\n\nBug fixes:\n\n- Added elipsis to the Python syntax highlighting engine.\n- Go, Rust, and Swift were not correctly identified in editor tab status bars.\n- Fixed a problem with the Scheme lexer not handling some error condititions correctly.\n\n## v0.6 (2025-02-27)\n\nNew features:\n\n- Added support for Claude Sonnet 3.7 (chat and extended thinking).\n- Added support for Deepseek Chat and Deepseek Reasoner models.\n- For AI models that expose reasoning steps, the conversation tabs now capture the\n  reasoning in a separate message box, after the user's message and before the AI's\n  full response.\n- Added support for C# syntax highlighting.\n- Small improvements to the status messages for conversations and terminals.\n\nInternal structure changes:\n\n- Reworked the ConversationSettings class to make it easier to add new models.  These are\n  now handled via a single new dictionary entry.\n- Separated language translations into separate files/directories.\n- The ConversationTab class was much more complex than the equivalent EditorTab and\n  TerminalTab classes so refactored this to break out a new ConversationWidget class.\n\nBug fixes:\n\n- Resolved some problems with failure handling in the AI networking code.\n- Corrected the missing language translations for terminal status messages.\n- Resolved a few problems with the Swift syntax highligher.\n\n## v0.5 (2025-02-24)\n\nNew features:\n\n- Added a local command line/shell tab type.  This will let you open a Unix shell\n  on MacOS and Linux, or a command prompt on Windows.  From these you can use your standard\n  command line tools.\n- Added Go, Java, Rust, and Swift lexers/parsers for syntax highlighting.\n- Columns can now be merged by dragging one on top of another.\n- Columns can now be swapped with ones either side.\n- Messages can be bookmarked to make it quick to jump backwards and forwards.\n- A default AI model and temperature can now be set in the mindspace settings.\n\nInternal structure changes:\n\n- The conversation, editor, and mindspace UI functionality has been moved into separate\n  subdirectories to make it easier to find related functionality.\n- Lexers and parsers have been moved into separate per-language subdirectories to ease\n  navigation of the code.\n\nBug fixes:\n\n- Resolved a problem with the conversation settings dialog.\n\n## v0.4 (2025-02-03)\n\nThis release adds the following new features:\n\n- Added a Scheme lexer/parser for syntax highlighting.\n- Added a \"Find\" function to search for text in files.\n- Added support for i18n - initial 3 languages are English, French, and Arabic.\n- When highlighting text, the syntax highlights are now preserved.\n- Added the ability to rename existing conversations.\n- The mindspace name is shown above the mindspace file tree.\n- Added a pop-up context menu on conversation tabs that provides access to conversation\n  settings and forking for that conversation.\n- When creating a new mindspace, the user is asked if they wish to create \"conversations\",\n  \"metaphor\", and \"src\" folders.\n\nThe release fixes the following bugs:\n\n- The expand/collapse icons in the mindspace file tree did not scale with the zoom level.\n- Vertical scrolling in the conversation window only worked for pure vertical scrolling, not\n  where horizontal scrolling occurred at the same time.\n- Editing a file no longer jumps the cursor into the middle of the input tab when it's first\n  modified.  This also eliminates a glitch that made displays momentarily shrink and then\n  expand back.\n- Embedded code highlighting now avoids problems with 3 backticks in a comment or string\n  dropping the syntax highlighting back to the AI markdown highlighter.\n- Syntax highlighting of module/package names in Kotlin and Python are now handled so they do\n  not appear as object fields/properties.\n- Close buttons on the tab view used to have the wrong background and cross colour for the\n  active tab in an inactive column.\n- If text was highlighted using the keyboard in a conversation view then moving the mouse\n  outside of the conversation tab would cause the tab to scroll.\n\n## v0.3.1 (2025-01-22)\n\nThis is a bug fix release:\n\n- The \"Embed:\" keyword was not using the correct mindspace to find files.\n- The Kotlin syntax highlighter was not handling types correctly.\n\n## v0.3 (2025-01-20)\n\nThis release adds the following new features:\n\n- Drag and drop of files and conversations into the tab column view.\n- Added new icons for the file view and made them scalable if you zoom in and out.\n- Added the ability to delete files in the file view by right clicking and selecting \"Delete File\".\n- Added a Kotlin lexer/parser for syntax highlighting.\n- Added a Sui Move lexer/parser for syntax highlighting.\n- Remember the last directory used for file operations and for opening conversations.\n- Renamed \"workspace\" to \"mindspace\".\n- Conversation text editing now supports soft tabs and tab/backtab.\n- Added a JSON lexer/parser for syntax highlighting.\n- Added default support for Ollama (Phi 4 and Llama3.2 for now) so you can work with a local LLM.\n\nThe release fixes the following bugs:\n\n- End of file was not correctly detected so block tab operations could crash.\n- Don't indent empty lines when we do a block indent.\n- Hard tabs were being stripped from prompts to the AI backends.\n- Drag and drop labels could end up illegible in light mode.\n- Closing and opening a new mindspace could result in the wrong directory tree being shown in the mindspace tree view.\n\n## v0.2 (2025-01-14)\n\nThis release adds the following new features:\n\n- The tabbed interface now supports up to 6 columns of tabs.  Tabs can be moved to adjacent columns via\n  drag and drop operations, or can be used to create new columns.  Columns can be merged together.\n\nThe release fixes the following bugs:\n\n- Default AI backends are now chosen based on the AI providers configured.\n- OpenAI backend defaults to o1-mini instead of gpt-4o-mini.\n- Backup files were not always handled correctly.\n- Files and directories are now sorted in ascending order.\n\n## v0.1 (2025-01-09)\n\nThis is the initial release\n",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "19d10c5d-17e8-4592-8c33-df51c6f2368d",
+      "timestamp": "2025-06-30T07:40:11.484426",
+      "type": "ai_response",
+      "content": "Looking through the CHANGELOG.md file, I can see the entry for v0.14:\n\n## v0.14 (2025-06-04)\n\nThe changelog entry shows the date as \"2025-06-04\", but I need to convert this to Unix timestamp. Let me calculate the Unix timestamp for June 4, 2025:",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 10697,
+        "completion_tokens": 227,
+        "total_tokens": 10924
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_01Si5Uq11f1gqJ8ufM4HqtNX",
+          "name": "calculate",
+          "arguments": {
+            "expression": "1717459200 + (365 * 24 * 60 * 60) + (31 * 24 * 60 * 60) + (30 * 24 * 60 * 60) + (31 * 24 * 60 * 60) + (30 * 24 * 60 * 60) + (4 * 24 * 60 * 60)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dc1f9963-2df7-49c6-b7fd-8e4ef20929fd",
+      "timestamp": "2025-06-30T07:40:15.492235",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01Si5Uq11f1gqJ8ufM4HqtNX\",\n        \"name\": \"calculate\",\n        \"arguments\": {\n            \"expression\": \"1717459200 + (365 * 24 * 60 * 60) + (31 * 24 * 60 * 60) + (30 * 24 * 60 * 60) + (31 * 24 * 60 * 60) + (30 * 24 * 60 * 60) + (4 * 24 * 60 * 60)\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_01Si5Uq11f1gqJ8ufM4HqtNX",
+          "name": "calculate",
+          "arguments": {
+            "expression": "1717459200 + (365 * 24 * 60 * 60) + (31 * 24 * 60 * 60) + (30 * 24 * 60 * 60) + (31 * 24 * 60 * 60) + (30 * 24 * 60 * 60) + (4 * 24 * 60 * 60)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "ec98dca5-fac5-4566-b661-6697bcfd5a9c",
+      "timestamp": "2025-06-30T07:40:15.503273",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_01Si5Uq11f1gqJ8ufM4HqtNX\",\n        \"name\": \"calculate\",\n        \"content\": \"1759881600\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01Si5Uq11f1gqJ8ufM4HqtNX",
+          "name": "calculate",
+          "content": "1759881600",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "ad4d66e1-4422-4831-8fa9-b7679e0def6f",
+      "timestamp": "2025-06-30T07:40:15.511111",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_01Si5Uq11f1gqJ8ufM4HqtNX",
+          "name": "calculate",
+          "content": "1759881600",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "394816ee-8103-4c97-b64e-9dd79c868dc2",
+      "timestamp": "2025-06-30T07:40:18.140523",
+      "type": "ai_response",
+      "content": "Actually, let me be more precise. I need to calculate the Unix timestamp for June 4, 2025. Let me use a different approach:",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 10940,
+        "completion_tokens": 158,
+        "total_tokens": 11098
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_017CL55jDRTUfuagiamkRzJ5",
+          "name": "calculate",
+          "arguments": {
+            "expression": "(2025 - 1970) * 365 * 24 * 60 * 60 + 13 * 24 * 60 * 60 + (31 + 28 + 31 + 30 + 31 + 4) * 24 * 60 * 60"
+          }
+        }
+      ]
+    },
+    {
+      "id": "7a084c63-3b40-43cf-ab39-3603e37e9f32",
+      "timestamp": "2025-06-30T07:40:20.632092",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_017CL55jDRTUfuagiamkRzJ5\",\n        \"name\": \"calculate\",\n        \"arguments\": {\n            \"expression\": \"(2025 - 1970) * 365 * 24 * 60 * 60 + 13 * 24 * 60 * 60 + (31 + 28 + 31 + 30 + 31 + 4) * 24 * 60 * 60\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_017CL55jDRTUfuagiamkRzJ5",
+          "name": "calculate",
+          "arguments": {
+            "expression": "(2025 - 1970) * 365 * 24 * 60 * 60 + 13 * 24 * 60 * 60 + (31 + 28 + 31 + 30 + 31 + 4) * 24 * 60 * 60"
+          }
+        }
+      ]
+    },
+    {
+      "id": "62b0d8e0-acf4-4813-b269-7a894a24dec1",
+      "timestamp": "2025-06-30T07:40:20.644267",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_017CL55jDRTUfuagiamkRzJ5\",\n        \"name\": \"calculate\",\n        \"content\": \"1748995200\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_017CL55jDRTUfuagiamkRzJ5",
+          "name": "calculate",
+          "content": "1748995200",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "34061a52-3e30-4d14-9815-0194df97551d",
+      "timestamp": "2025-06-30T07:40:20.652935",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_017CL55jDRTUfuagiamkRzJ5",
+          "name": "calculate",
+          "content": "1748995200",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "6519bb8c-69f5-41bb-9ec0-0177b18f4afe",
+      "timestamp": "2025-06-30T07:40:23.362666",
+      "type": "ai_response",
+      "content": "Let me recalculate this more carefully. I'll calculate the Unix timestamp for June 4, 2025 at midnight UTC:",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 11114,
+        "completion_tokens": 106,
+        "total_tokens": 11220
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_017QgPcCu82bHKWLhRsq9jc8",
+          "name": "calculate",
+          "arguments": {
+            "expression": "(2025 - 1970) * 365.25 * 24 * 60 * 60"
+          }
+        }
+      ]
+    },
+    {
+      "id": "4757a840-92bc-42ca-842c-f1496c998dd9",
+      "timestamp": "2025-06-30T07:40:25.010141",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_017QgPcCu82bHKWLhRsq9jc8\",\n        \"name\": \"calculate\",\n        \"arguments\": {\n            \"expression\": \"(2025 - 1970) * 365.25 * 24 * 60 * 60\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_017QgPcCu82bHKWLhRsq9jc8",
+          "name": "calculate",
+          "arguments": {
+            "expression": "(2025 - 1970) * 365.25 * 24 * 60 * 60"
+          }
+        }
+      ]
+    },
+    {
+      "id": "be0223d5-1e58-441e-8608-a9137c32926d",
+      "timestamp": "2025-06-30T07:40:25.026934",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_017QgPcCu82bHKWLhRsq9jc8\",\n        \"name\": \"calculate\",\n        \"content\": \"1735668000\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_017QgPcCu82bHKWLhRsq9jc8",
+          "name": "calculate",
+          "content": "1735668000",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "32e8fb14-ae14-4018-bf97-c589d64bd493",
+      "timestamp": "2025-06-30T07:40:25.037076",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_017QgPcCu82bHKWLhRsq9jc8",
+          "name": "calculate",
+          "content": "1735668000",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "29c677cb-5149-4c0d-a2cb-a1b05846780e",
+      "timestamp": "2025-06-30T07:40:31.481591",
+      "type": "ai_response",
+      "content": "",
+      "completed": true,
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7,
+      "tool_calls": [
+        {
+          "id": "toolu_018wvD4j9PPg693ArMqhfwV9",
+          "name": "calculate",
+          "arguments": {
+            "expression": "1735668000 + (31 + 28 + 31 + 30 + 31 + 4) * 24 * 60 * 60"
+          }
+        }
+      ]
+    },
+    {
+      "id": "40091064-6ca6-4626-a875-44fa49fe0783",
+      "timestamp": "2025-06-30T07:40:31.492467",
+      "type": "tool_call",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_018wvD4j9PPg693ArMqhfwV9\",\n        \"name\": \"calculate\",\n        \"arguments\": {\n            \"expression\": \"1735668000 + (31 + 28 + 31 + 30 + 31 + 4) * 24 * 60 * 60\"\n        }\n    }\n]\n```",
+      "completed": true,
+      "tool_calls": [
+        {
+          "id": "toolu_018wvD4j9PPg693ArMqhfwV9",
+          "name": "calculate",
+          "arguments": {
+            "expression": "1735668000 + (31 + 28 + 31 + 30 + 31 + 4) * 24 * 60 * 60"
+          }
+        }
+      ]
+    },
+    {
+      "id": "9d77114f-f7bc-46d5-b896-40a95e2798a1",
+      "timestamp": "2025-06-30T07:40:31.503891",
+      "type": "tool_result",
+      "content": "```json\n[\n    {\n        \"id\": \"toolu_018wvD4j9PPg693ArMqhfwV9\",\n        \"name\": \"calculate\",\n        \"content\": \"1749060000\",\n        \"error\": null\n    }\n]\n```",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_018wvD4j9PPg693ArMqhfwV9",
+          "name": "calculate",
+          "content": "1749060000",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "3634bc2e-ee27-4cd8-a757-1f9d29488b74",
+      "timestamp": "2025-06-30T07:40:31.512100",
+      "type": "user_message",
+      "content": "",
+      "completed": true,
+      "tool_results": [
+        {
+          "id": "toolu_018wvD4j9PPg693ArMqhfwV9",
+          "name": "calculate",
+          "content": "1749060000",
+          "error": null
+        }
+      ]
+    },
+    {
+      "id": "cfcf79fd-bb82-415e-9842-489c78f0c712",
+      "timestamp": "2025-06-30T07:40:35.036595",
+      "type": "ai_response",
+      "content": "Based on the CHANGELOG.md file, **Humbug v0.14** was released on **2025-06-04**.\n\nThe Unix timestamp for June 4, 2025 (midnight UTC) is approximately **1749060000**.\n\nNote: This is an approximation since the exact time of day for the release isn't specified in the changelog, only the date. The timestamp represents the start of June 4, 2025 in UTC.",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 11344,
+        "completion_tokens": 103,
+        "total_tokens": 11447
+      },
+      "model": "claude-4-sonnet-20250514",
+      "reasoning_capability": 1,
+      "temperature": 0.7
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "timestamp": "2025-05-02T19:22:01.552588",
+    "version": "0.1"
+  },
+  "conversation": [
+    {
+      "id": "8507193c-b60e-4420-974a-80523671dcc5",
+      "timestamp": "2025-05-02T19:22:31.319807",
+      "type": "user_message",
+      "content": "please give me a 10x2 table of number names in english and arabic",
+      "completed": true,
+      "usage": null,
+      "error": null,
+      "model": null,
+      "temperature": null
+    },
+    {
+      "id": "c900a496-cb6a-4796-bd6d-b573c74e9d96",
+      "timestamp": "2025-05-02T19:22:33.213623",
+      "type": "ai_response",
+      "content": "Certainly! Here's a 10x2 table with number names in English and Arabic:\n\n| English  | Arabic       |\n|----------|--------------|\n| One      | \u0648\u0627\u062d\u062f (Wahid)  |\n| Two      | \u0627\u062b\u0646\u0627\u0646 (Ithnan)|\n| Three    | \u062b\u0644\u0627\u062b\u0629 (Thalatha)|\n| Four     | \u0623\u0631\u0628\u0639\u0629 (Arba'a)|\n| Five     | \u062e\u0645\u0633\u0629 (Khamsa) |\n| Six      | \u0633\u062a\u0629 (Sitta)  |\n| Seven    | \u0633\u0628\u0639\u0629 (Sab'a) |\n| Eight    | \u062b\u0645\u0627\u0646\u064a\u0629 (Thamaniya)|\n| Nine     | \u062a\u0633\u0639\u0629 (Tis'a) |\n| Ten      | \u0639\u0634\u0631\u0629 (Ashara)|\n\nLet me know if you'd like the pronunciation or anything else!",
+      "completed": true,
+      "usage": {
+        "prompt_tokens": 24,
+        "completion_tokens": 155,
+        "total_tokens": 179
+      },
+      "error": null,
+      "model": "gpt-4.1-mini",
+      "temperature": 0.7
+    }
+  ]
+}
