@@ -9,7 +9,7 @@ import sys
 class FilesystemAccessSettings:
     """
     Settings for controlling filesystem access outside the primary boundary.
-    
+
     Attributes:
         allow_external_access: Master switch to enable/disable external file access
         external_allowlist: List of glob patterns for auto-approved paths
