@@ -370,6 +370,8 @@ class AIFPLFunction(AIFPLValue):
     body: AIFPLValue
     closure_environment: Any  # AIFPLEnvironment, avoiding circular import (this circularity is intentional!)
     name: str | None = None
+    bytecode: Any = None  # CodeObject for bytecode-compiled functions
+    captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
 
     def is_self_evaluating(self) -> bool:
         return True
