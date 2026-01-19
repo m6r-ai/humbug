@@ -706,14 +706,8 @@ class AIFPLCompiler:
         # First argument: the function to apply
         func_arg = arg_exprs[0]
         
-        # If it's a builtin symbol, pass it as a symbol constant
-        if isinstance(func_arg, AIFPLSymbol) and func_arg.name in self.builtin_indices:
-            # Pass the symbol itself as a constant
-            const_index = ctx.add_constant(func_arg)
-            ctx.emit(Opcode.LOAD_CONST, const_index)
-        else:
-            # Regular expression (lambda or variable)
-            self._compile_expression(func_arg, ctx)
+        # Compile the function argument (lambda, variable, or builtin name)
+        self._compile_expression(func_arg, ctx)
         
         # Compile remaining arguments
         for arg in arg_exprs[1:]:

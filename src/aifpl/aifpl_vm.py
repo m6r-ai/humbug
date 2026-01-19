@@ -54,10 +54,30 @@ class AIFPLVM:
         # This maps builtin names to their indices in the BUILTIN_TABLE
         from aifpl.aifpl_compiler import AIFPLCompiler
         self.builtin_symbols = set(AIFPLCompiler.BUILTIN_TABLE)
+        
+        # Create builtin function objects for first-class function support
+        self._builtin_functions = self._create_builtin_functions()
+    
+    def _create_builtin_functions(self) -> Dict[str, AIFPLBuiltinFunction]:
+        """Create AIFPLBuiltinFunction objects for all builtins.
+        
+        This allows builtins to be used as first-class values (e.g., passed to map).
+        """
+        from aifpl.aifpl_compiler import AIFPLCompiler
+        builtins = {}
+        
+        # Create a builtin function object for each builtin
+        # BUILTIN_TABLE is a list, so we enumerate to get indices
+        for builtin_index, name in enumerate(AIFPLCompiler.BUILTIN_TABLE):
+            # The native_impl is a lambda that calls _call_builtin with the right index
+            builtins[name] = AIFPLBuiltinFunction(name, lambda *args, idx=builtin_index: self._call_builtin(idx, list(args)))
+        
+        return builtins
 
     def set_globals(self, globals_dict: Dict[str, AIFPLValue]) -> None:
-        """Set global variables (constants like pi, e, j)."""
+        """Set global variables (constants like pi, e, j) and add builtin functions."""
         self.globals = globals_dict.copy()
+        self.globals.update(self._builtin_functions)
 
     # ========== Helper Methods for Error Handling ==========
 
@@ -690,6 +710,24 @@ class AIFPLVM:
         # The frame execution loop will continue from the beginning
         # with the new arguments, effectively implementing the tail call
         # without creating a new Python call stack frame
+
+    def _call_function_value(self, func: Union[AIFPLFunction, AIFPLBuiltinFunction], args: List[AIFPLValue]) -> AIFPLValue:
+        """Call a function value (either user-defined or builtin).
+        
+        This is a helper for higher-order functions like map, filter, fold, etc.
+        """
+        if isinstance(func, AIFPLFunction):
+            return self._call_bytecode_function(func, args)
+        elif isinstance(func, AIFPLBuiltinFunction):
+            # Call builtin function by looking up its index
+            from aifpl.aifpl_compiler import AIFPLCompiler
+            if func.name in AIFPLCompiler.BUILTIN_TABLE:
+                builtin_idx = AIFPLCompiler.BUILTIN_TABLE.index(func.name)
+                return self._call_builtin(builtin_idx, args)
+            else:
+                raise AIFPLEvalError(f"Unknown builtin function: {func.name}")
+        else:
+            raise AIFPLEvalError(f"Expected function, got {func.type_name()}")
 
     def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
         """Call a builtin function by index."""
@@ -2159,13 +2197,7 @@ class AIFPLVM:
             result = []
             for item in lst.elements:
                 # Call function with item
-                if isinstance(func, AIFPLFunction):
-                    item_result = self._call_bytecode_function(func, [item])
-                else:  # AIFPLBuiltinFunction
-                    # Call through evaluator
-                    if self.evaluator is None:
-                        raise AIFPLEvalError("Cannot call builtin without evaluator")
-                    item_result = func.native_impl([item], AIFPLEnvironment(), 0)
+                item_result = self._call_function_value(func, [item])
                 result.append(item_result)
 
             return AIFPLList(tuple(result))
@@ -2202,12 +2234,7 @@ class AIFPLVM:
             result = []
             for item in lst.elements:
                 # Call function with item
-                if isinstance(func, AIFPLFunction):
-                    test_result = self._call_bytecode_function(func, [item])
-                else:  # AIFPLBuiltinFunction
-                    if self.evaluator is None:
-                        raise AIFPLEvalError("Cannot call builtin without evaluator")
-                    test_result = func.native_impl([item], AIFPLEnvironment(), 0)
+                test_result = self._call_function_value(func, [item])
                 if not isinstance(test_result, AIFPLBoolean):
                     raise AIFPLEvalError(
                         message="Filter predicate must return boolean",
@@ -2249,12 +2276,7 @@ class AIFPLVM:
             accumulator = init
             for item in lst.elements:
                 # Call function with accumulator and item
-                if isinstance(func, AIFPLFunction):
-                    accumulator = self._call_bytecode_function(func, [accumulator, item])
-                else:  # AIFPLBuiltinFunction
-                    if self.evaluator is None:
-                        raise AIFPLEvalError("Cannot call builtin without evaluator")
-                    accumulator = func.native_impl([accumulator, item], AIFPLEnvironment(), 0)
+                accumulator = self._call_function_value(func, [accumulator, item])
 
             return accumulator
 
@@ -2289,12 +2311,7 @@ class AIFPLVM:
 
             for item in lst.elements:
                 # Call function with item
-                if isinstance(func, AIFPLFunction):
-                    test_result = self._call_bytecode_function(func, [item])
-                else:  # AIFPLBuiltinFunction
-                    if self.evaluator is None:
-                        raise AIFPLEvalError("Cannot call builtin without evaluator")
-                    test_result = func.native_impl([item], AIFPLEnvironment(), 0)
+                test_result = self._call_function_value(func, [item])
                 if not isinstance(test_result, AIFPLBoolean):
                     raise AIFPLEvalError(
                         message="Find predicate must return boolean",
@@ -2339,12 +2356,7 @@ class AIFPLVM:
 
             for item in lst.elements:
                 # Call function with item
-                if isinstance(func, AIFPLFunction):
-                    test_result = self._call_bytecode_function(func, [item])
-                else:  # AIFPLBuiltinFunction
-                    if self.evaluator is None:
-                        raise AIFPLEvalError("Cannot call builtin without evaluator")
-                    test_result = func.native_impl([item], AIFPLEnvironment(), 0)
+                test_result = self._call_function_value(func, [item])
                 if not isinstance(test_result, AIFPLBoolean):
                     raise AIFPLEvalError(
                         message="Any? predicate must return boolean",
@@ -2389,12 +2401,7 @@ class AIFPLVM:
 
             for item in lst.elements:
                 # Call function with item
-                if isinstance(func, AIFPLFunction):
-                    test_result = self._call_bytecode_function(func, [item])
-                else:  # AIFPLBuiltinFunction
-                    if self.evaluator is None:
-                        raise AIFPLEvalError("Cannot call builtin without evaluator")
-                    test_result = func.native_impl([item], AIFPLEnvironment(), 0)
+                test_result = self._call_function_value(func, [item])
                 if not isinstance(test_result, AIFPLBoolean):
                     raise AIFPLEvalError(
                         message="All? predicate must return boolean",
