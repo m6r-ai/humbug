@@ -34,6 +34,7 @@ class Opcode(IntEnum):
     CALL_FUNCTION = auto()   # Call function: CALL_FUNCTION arity
     CALL_BUILTIN = auto()    # Call builtin: CALL_BUILTIN builtin_index arity
     PATCH_CLOSURE_SELF = auto()  # Patch closure to reference itself: PATCH_CLOSURE_SELF depth index
+    PATCH_CLOSURE_SIBLING = auto()  # Patch closure to add sibling reference: PATCH_CLOSURE_SIBLING closure_idx sibling_idx name_idx
     RETURN = auto()          # Return from function
 
     # Lists

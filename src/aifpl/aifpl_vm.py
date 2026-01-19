@@ -249,6 +249,7 @@ class AIFPLVM:
                     # Variable not initialized yet - could be recursive reference
                     # This is OK, it will be initialized before it's used
                     raise AIFPLEvalError(f"Uninitialized local variable at depth {depth}, index {index}")
+                
                 self.stack.append(value)
 
             elif opcode == Opcode.STORE_LOCAL:
@@ -451,6 +452,42 @@ class AIFPLVM:
 
                 # Store the patched closure back
                 target_frame.locals[var_index] = patched_closure
+
+            elif opcode == Opcode.PATCH_CLOSURE_SIBLING:
+                # Patch a closure to add a sibling reference (for mutual recursion)
+                # arg1 = closure_var_index (which closure to patch)  
+                # arg2 = const_index (contains [sibling_var_index, name_index])
+                closure_var_index = arg1
+                const_index = arg2
+                
+                # Load patch info from constants
+                patch_info = code.constants[const_index]
+                if not isinstance(patch_info, AIFPLList) or len(patch_info.elements) != 2:
+                    raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: invalid patch info")
+                
+                sibling_var_index = int(patch_info.elements[0].value)
+                name_index = int(patch_info.elements[1].value)
+                sibling_name = code.names[name_index]
+                
+                # Get current frame
+                target_frame = self.frames[-1]
+                
+                # Load the closure to patch
+                if closure_var_index >= len(target_frame.locals):
+                    raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: closure index {closure_var_index} out of range")
+                
+                closure = target_frame.locals[closure_var_index]
+                if not isinstance(closure, AIFPLFunction):
+                    raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: closure at index {closure_var_index} is not a function")
+                
+                # Load the sibling from locals
+                if sibling_var_index >= len(target_frame.locals):
+                    raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: sibling index {sibling_var_index} out of range")
+                
+                sibling = target_frame.locals[sibling_var_index]
+                
+                # Add sibling to closure's environment
+                closure.closure_environment.bindings[sibling_name] = sibling
 
             elif opcode == Opcode.POP:
                 self.stack.pop()

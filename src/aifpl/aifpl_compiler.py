@@ -44,6 +44,8 @@ class CompilationContext:
     code_objects: List[CodeObject] = field(default_factory=list)
     instructions: List[Instruction] = field(default_factory=list)
     max_locals: int = 0  # Track maximum locals needed
+    parent_ctx: Optional['CompilationContext'] = None  # Parent context for nested lambdas
+    sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -366,6 +368,9 @@ class AIFPLCompiler:
         ctx.update_max_locals()
 
         # Second pass: Compile values and store them
+        # Track which bindings are lambdas that reference siblings (for mutual recursion)
+        mutual_recursion_patches = []  # List of (closure_var_index, sibling_name, sibling_var_index)
+        
         for i, (name, value_expr) in enumerate(binding_pairs):
             # Get the index for this variable
             # Use resolve_variable to get the correct flat index
@@ -384,9 +389,18 @@ class AIFPLCompiler:
                 is_recursive = self._references_variable(value_expr, name)
 
             # Compile the value expression
+            # Check which siblings this lambda references (for mutual recursion)
+            sibling_refs = []
+            let_binding_names = [n for n, _ in binding_pairs]
+            if is_self_ref_lambda and len(binding_pairs) > 1:
+                for other_name in let_binding_names:
+                    if other_name != name and self._references_variable(value_expr, other_name):
+                        sibling_refs.append(other_name)
+            
             # Pass the binding name if it's a lambda (for self-reference detection)
             if is_self_ref_lambda:
-                self._compile_lambda(value_expr, ctx, binding_name=name)
+                # Pass all binding names from this let block for mutual recursion support
+                self._compile_lambda(value_expr, ctx, binding_name=name, let_bindings=let_binding_names)
             else:
                 self._compile_expression(value_expr, ctx)
 
@@ -399,6 +413,26 @@ class AIFPLCompiler:
                 # The VM will need to use depth=0 since we just stored there
                 name_index = ctx.add_name(name)
                 ctx.emit(Opcode.PATCH_CLOSURE_SELF, name_index, var_index)
+
+            # Track sibling references for later patching
+            if sibling_refs:
+                for sibling_name in sibling_refs:
+                    # Find the sibling's variable index
+                    _, _, sibling_var_index = ctx.resolve_variable(sibling_name)
+                    mutual_recursion_patches.append((var_index, sibling_name, sibling_var_index))
+        
+        # Third pass: Patch all mutual recursion references
+        # Now all lambdas have been stored, so we can safely reference them
+        for closure_var_index, sibling_name, sibling_var_index in mutual_recursion_patches:
+            name_index = ctx.add_name(sibling_name)
+            # We need to pass 3 pieces of info but only have 2 args
+            # Solution: Store (sibling_var_index, name_index) as a tuple in constants
+            # and pass closure_var_index and const_index
+            from aifpl.aifpl_value import AIFPLNumber
+            patch_info = AIFPLList((AIFPLNumber(sibling_var_index), AIFPLNumber(name_index)))
+            const_index = ctx.add_constant(patch_info)
+            # arg1=closure_var_index, arg2=const_index (contains sibling_var_index and name_index)
+            ctx.emit(Opcode.PATCH_CLOSURE_SIBLING, closure_var_index, const_index)
 
         # Compile body
         self._compile_expression(body, ctx)
@@ -416,7 +450,7 @@ class AIFPLCompiler:
             return False
 
     def _compile_lambda(self, expr: AIFPLList, ctx: CompilationContext,
-                       binding_name: str = None) -> None:
+                       binding_name: str = None, let_bindings: List[str] = None) -> None:
         """Compile lambda expression: (lambda (params...) body)"""
         if len(expr.elements) != 3:
             raise AIFPLEvalError("lambda requires parameters and body")
@@ -443,9 +477,16 @@ class AIFPLCompiler:
         for free_var in free_vars:
             var_type, depth, index = ctx.resolve_variable(free_var)
             if var_type == 'local':
-                # Check if this variable is a self-reference (the binding we're currently compiling)
-                if free_var != binding_name:
-                    # Not a self-reference - capture it
+                # Check if this is a self-reference
+                if free_var == binding_name:
+                    # Self-reference - don't capture, will be patched later
+                    pass
+                elif let_bindings and free_var in let_bindings:
+                    # Sibling binding - don't capture, will be patched later with PATCH_CLOSURE_SIBLING
+                    # The lambda will reference it via LOAD_GLOBAL from closure_env
+                    pass
+                else:
+                    # Variable from an outer scope - capture it
                     ctx.emit(Opcode.LOAD_LOCAL, depth, index)
                     captured_vars.append(free_var)
                 # else: self-reference, skip capturing
@@ -461,12 +502,23 @@ class AIFPLCompiler:
         for param_name in param_names:
             lambda_ctx.current_scope().add_binding(param_name)
         
-        # Add captured free variables to lambda scope (they come after parameters in locals)
-        # Self-references are NOT added here - they'll be looked up in closure_env
+        # Add captured free variables to lambda scope
         for free_var in captured_vars:
             lambda_ctx.current_scope().add_binding(free_var)
+        
+        # For sibling bindings that weren't captured, we need to track them differently
+        # They should be resolved from parent frame at runtime
+        sibling_bindings = []
+        if let_bindings:
+            for free_var in free_vars:
+                if free_var != binding_name and free_var in let_bindings:
+                    sibling_bindings.append(free_var)
+        
+        # Store parent context in lambda context for variable resolution
+        lambda_ctx.parent_ctx = ctx
+        lambda_ctx.sibling_bindings = sibling_bindings
 
-        # Update max locals for the lambda
+        # Update max locals for the lambda (only its own locals, not parent's)
         lambda_ctx.update_max_locals()
 
         # Compile lambda body - free vars will be resolved as locals
@@ -533,7 +585,22 @@ class AIFPLCompiler:
                     return
                 elif first.name == 'let':
                     # Let bindings create new bound variables
-                    # We'd need to track these, but for now skip
+                    # Extract binding names and recurse with updated bound_vars
+                    if len(expr.elements) >= 3:
+                        bindings_list = expr.elements[1]
+                        body = expr.elements[2]
+                        
+                        # Collect let binding names
+                        new_bound = bound_vars.copy()
+                        if isinstance(bindings_list, AIFPLList):
+                            for binding in bindings_list.elements:
+                                if isinstance(binding, AIFPLList) and len(binding.elements) >= 2:
+                                    name_expr = binding.elements[0]
+                                    if isinstance(name_expr, AIFPLSymbol):
+                                        new_bound.add(name_expr.name)
+                        
+                        # Recurse into let body with new bound variables
+                        self._collect_free_vars(body, new_bound, parent_ctx, free, seen)
                     return
 
             # Recursively check all elements
