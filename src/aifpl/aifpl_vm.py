@@ -291,6 +291,13 @@ class AIFPLVM:
                 if not condition.value:
                     frame.ip = arg1
 
+            elif opcode == Opcode.POP_JUMP_IF_TRUE:
+                condition = self.stack.pop()
+                if not isinstance(condition, AIFPLBoolean):
+                    raise AIFPLEvalError("Jump condition must be boolean")
+                if condition.value:
+                    frame.ip = arg1
+
             elif opcode == Opcode.MAKE_CLOSURE:
                 # Get code object for closure
                 closure_code = code.code_objects[arg1]
@@ -487,6 +494,11 @@ class AIFPLVM:
                 elements = [self.stack.pop() for _ in range(n)]
                 elements.reverse()
                 self.stack.append(AIFPLList(tuple(elements)))
+
+            elif opcode == Opcode.DUP:
+                if not self.stack:
+                    raise AIFPLEvalError("DUP on empty stack")
+                self.stack.append(self.stack[-1])
 
             else:
                 raise AIFPLEvalError(f"Unimplemented opcode: {opcode.name}")
@@ -1269,6 +1281,115 @@ class AIFPLVM:
                             continue
                 result.append(elem)
             return AIFPLList(tuple(result))
+
+        elif builtin_name == 'list-ref':
+            if len(args) != 2:
+                raise AIFPLEvalError(
+                    message="List-ref takes exactly 2 arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="2 arguments: list and index",
+                    example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
+                    suggestion="Provide a list and an index"
+                )
+            lst = args[0]
+            index_val = args[1]
+            
+            if not isinstance(lst, AIFPLList):
+                raise AIFPLEvalError(
+                    message="List-ref first argument must be a list",
+                    received=f"First argument: {self._format_result(lst)} ({lst.type_name()})",
+                    expected="List",
+                    example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
+                    suggestion="Use list-ref only with lists"
+                )
+            
+            if not isinstance(index_val, AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="List-ref second argument must be a number",
+                    received=f"Second argument: {self._format_result(index_val)} ({index_val.type_name()})",
+                    expected="Number (integer index)",
+                    example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
+                    suggestion="Provide a numeric index"
+                )
+            
+            index = int(index_val.value)
+            if index < 0 or index >= len(lst.elements):
+                raise AIFPLEvalError(
+                    message=f"List index out of range",
+                    received=f"Index: {index}, List length: {len(lst.elements)}",
+                    expected=f"Index in range 0 to {len(lst.elements) - 1}",
+                    example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
+                    suggestion=f"Use an index between 0 and {len(lst.elements) - 1}"
+                )
+            
+            return lst.elements[index]
+
+        # Type predicates
+        elif builtin_name == 'number?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Number? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(number? 42) → #t",
+                    suggestion="Provide a single value to test"
+                )
+            return AIFPLBoolean(isinstance(args[0], AIFPLNumber))
+
+        elif builtin_name == 'string?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="String? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(string? \"hello\") → #t",
+                    suggestion="Provide a single value to test"
+                )
+            return AIFPLBoolean(isinstance(args[0], AIFPLString))
+
+        elif builtin_name == 'boolean?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Boolean? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(boolean? #t) → #t",
+                    suggestion="Provide a single value to test"
+                )
+            return AIFPLBoolean(isinstance(args[0], AIFPLBoolean))
+
+        elif builtin_name == 'list?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="List? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(list? (list 1 2 3)) → #t",
+                    suggestion="Provide a single value to test"
+                )
+            return AIFPLBoolean(isinstance(args[0], AIFPLList))
+
+        elif builtin_name == 'alist?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Alist? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(alist? my-alist) → #t",
+                    suggestion="Provide a single value to test"
+                )
+            return AIFPLBoolean(isinstance(args[0], AIFPLAlist))
+
+        elif builtin_name == 'function?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Function? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(function? (lambda (x) x)) → #t",
+                    suggestion="Provide a single value to test"
+                )
+            return AIFPLBoolean(isinstance(args[0], (AIFPLFunction, AIFPLBuiltinFunction)))
 
         # Math functions
         elif builtin_name == 'sqrt':

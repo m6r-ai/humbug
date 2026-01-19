@@ -153,7 +153,8 @@ class AIFPLCompiler:
         '=', '!=', '<', '>', '<=', '>=',
         'and', 'or', 'not',
         'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
-        'member?', 'null?', 'position', 'take', 'drop', 'remove',
+        'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
+        'number?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
         'map', 'filter', 'fold', 'range',
         'string-append', 'string-length', 'string-upcase', 'string-downcase',
         'string-trim', 'string-replace', 'string-split', 'string-join',
@@ -264,6 +265,9 @@ class AIFPLCompiler:
                 return
             elif first.name == 'lambda':
                 self._compile_lambda(expr, ctx)
+                return
+            elif first.name == 'match':
+                self._compile_match(expr, ctx)
                 return
             elif first.name == 'quote':
                 # Quote: return the quoted value as a constant
@@ -678,3 +682,311 @@ class AIFPLCompiler:
 
             # Emit call
             ctx.emit(Opcode.CALL_FUNCTION, len(arg_exprs))
+
+    def _compile_match(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+        """Compile match expression: (match value (pattern1 result1) ...)"""
+        if len(expr.elements) < 3:
+            raise AIFPLEvalError(
+                message="Match expression has wrong number of arguments",
+                received=f"Got {len(expr.elements) - 1} arguments",
+                expected="At least 2 arguments: (match value (pattern1 result1) ...)",
+                example="(match x ((42) \"found\") (_ \"default\"))"
+            )
+
+        value_expr = expr.elements[1]
+        clauses = expr.elements[2:]
+
+        # Validate all clauses upfront
+        for i, clause in enumerate(clauses):
+            if not isinstance(clause, AIFPLList) or len(clause.elements) != 2:
+                raise AIFPLEvalError(
+                    message=f"Match clause {i+1} must be a list with 2 elements",
+                    received=f"Clause {i+1}: {clause}",
+                    expected="(pattern result)",
+                    example="(match x ((42) \"found\") (_ \"default\"))"
+                )
+
+        # Compile value and store in temporary local
+        self._compile_expression(value_expr, ctx)
+        
+        # Allocate a temporary local for the match value
+        match_temp_index = len(ctx.current_scope().bindings)
+        ctx.current_scope().add_binding(f"<match-temp-{match_temp_index}>")
+        ctx.update_max_locals()
+        
+        ctx.emit(Opcode.STORE_VAR, 0, match_temp_index)
+
+        # Compile each clause
+        end_label = None  # Will be patched at the end
+        jump_to_end_indices = []  # Track all jumps to end
+
+        for i, clause in enumerate(clauses):
+            pattern = clause.elements[0]
+            result_expr = clause.elements[1]
+            
+            # Compile pattern test
+            # Returns True if pattern matches, False otherwise
+            # May bind variables as side effect
+            next_pattern_label = ctx.current_instruction_index()
+            
+            self._compile_pattern(pattern, match_temp_index, ctx)
+            
+            # If pattern didn't match, jump to next pattern
+            if i < len(clauses) - 1:
+                # Not the last pattern, jump to next on failure
+                next_pattern_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+            else:
+                # Last pattern - if it fails, we need to error
+                # For now, assume last pattern always matches (should be _ wildcard)
+                # TODO: Add runtime check for no-match case
+                next_pattern_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)  # Will patch to error
+            
+            # Pattern matched! Compile result expression
+            self._compile_expression(result_expr, ctx)
+            
+            # Jump to end
+            jump_idx = ctx.emit(Opcode.JUMP, 0)
+            jump_to_end_indices.append(jump_idx)
+            
+            # Patch the jump to next pattern (if not last)
+            if i < len(clauses) - 1:
+                next_pattern_start = ctx.current_instruction_index()
+                ctx.patch_jump(next_pattern_jump, next_pattern_start)
+            else:
+                # Last pattern failed - need to generate error
+                # For now, just patch to same location (will fall through)
+                error_location = ctx.current_instruction_index()
+                ctx.patch_jump(next_pattern_jump, error_location)
+                # TODO: Emit error for no match
+        
+        # Patch all jumps to end
+        end_location = ctx.current_instruction_index()
+        for jump_idx in jump_to_end_indices:
+            ctx.patch_jump(jump_idx, end_location)
+
+    def _compile_pattern(self, pattern: AIFPLValue, match_value_index: int, 
+                        ctx: CompilationContext) -> None:
+        """
+        Compile a pattern test.
+        
+        Leaves a boolean on the stack:
+        - True if pattern matches (and binds any variables)
+        - False if pattern doesn't match
+        
+        Args:
+            pattern: Pattern to match
+            match_value_index: Index of local variable holding value to match
+            ctx: Compilation context
+        """
+        # Literal patterns: numbers, strings, booleans
+        if isinstance(pattern, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
+            # Load value and compare
+            ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+            const_index = ctx.add_constant(pattern)
+            ctx.emit(Opcode.LOAD_CONST, const_index)
+            builtin_index = self.builtin_indices['=']
+            ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+            return
+
+        # Variable pattern: binds the value
+        if isinstance(pattern, AIFPLSymbol):
+            if pattern.name == '_':
+                # Wildcard - always matches, no binding
+                ctx.emit(Opcode.LOAD_TRUE)
+                return
+            else:
+                # Bind variable
+                var_index = ctx.current_scope().add_binding(pattern.name)
+                ctx.update_max_locals()
+                ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+                ctx.emit(Opcode.STORE_VAR, 0, var_index)
+                ctx.emit(Opcode.LOAD_TRUE)
+                return
+
+        # List patterns
+        if isinstance(pattern, AIFPLList):
+            self._compile_list_pattern(pattern, match_value_index, ctx)
+            return
+
+        raise AIFPLEvalError(f"Unknown pattern type: {type(pattern).__name__}")
+
+    def _compile_list_pattern(self, pattern: AIFPLList, match_value_index: int,
+                             ctx: CompilationContext) -> None:
+        """Compile a list pattern."""
+        
+        # Empty list pattern
+        if pattern.is_empty():
+            # Check if value is empty list
+            ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+            builtin_index = self.builtin_indices['null?']
+            ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
+            return
+
+        # Type pattern: (type? var)
+        if (len(pattern.elements) == 2 and 
+            isinstance(pattern.elements[0], AIFPLSymbol) and
+            pattern.elements[0].name.endswith('?')):
+            
+            type_pred = pattern.elements[0].name
+            var_pattern = pattern.elements[1]
+            
+            # Check if it's a valid type predicate
+            valid_types = {'number?', 'integer?', 'float?', 'complex?', 
+                          'string?', 'boolean?', 'list?', 'alist?', 'function?'}
+            
+            if type_pred in valid_types:
+                # Load value and call type predicate
+                ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+                
+                # Type predicates need special handling - they're not all builtins
+                if type_pred in self.builtin_indices:
+                    builtin_index = self.builtin_indices[type_pred]
+                    ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
+                else:
+                    # Use LOAD_NAME for type predicates not in builtin table
+                    name_index = ctx.add_name(type_pred)
+                    ctx.emit(Opcode.LOAD_NAME, name_index)
+                    ctx.emit(Opcode.CALL_FUNCTION, 1)
+                
+                # If type matches, bind the variable
+                fail_label = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+                
+                # Type matched - bind variable
+                if isinstance(var_pattern, AIFPLSymbol) and var_pattern.name != '_':
+                    var_index = ctx.current_scope().add_binding(var_pattern.name)
+                    ctx.update_max_locals()
+                    ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+                    ctx.emit(Opcode.STORE_VAR, 0, var_index)
+                
+                ctx.emit(Opcode.LOAD_TRUE)
+                success_jump = ctx.emit(Opcode.JUMP, 0)
+                
+                # Type didn't match
+                fail_location = ctx.current_instruction_index()
+                ctx.patch_jump(fail_label, fail_location)
+                ctx.emit(Opcode.LOAD_FALSE)
+                
+                # Patch success jump
+                success_location = ctx.current_instruction_index()
+                ctx.patch_jump(success_jump, success_location)
+                return
+
+        # Check for cons pattern (head . tail)
+        dot_position = None
+        for i, elem in enumerate(pattern.elements):
+            if isinstance(elem, AIFPLSymbol) and elem.name == '.':
+                dot_position = i
+                break
+
+        if dot_position is not None:
+            self._compile_cons_pattern(pattern, match_value_index, dot_position, ctx)
+            return
+
+        # Fixed-length list pattern: (p1 p2 p3)
+        self._compile_fixed_list_pattern(pattern, match_value_index, ctx)
+
+    def _compile_fixed_list_pattern(self, pattern: AIFPLList, match_value_index: int,
+                                    ctx: CompilationContext) -> None:
+        """Compile a fixed-length list pattern like (a b c)."""
+        
+        # Check if value is a list
+        ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+        builtin_index = self.builtin_indices['list?']
+        ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
+        fail_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+        
+        # Check length
+        ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+        builtin_index = self.builtin_indices['length']
+        ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
+        ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(len(pattern.elements))))
+        builtin_index = self.builtin_indices['=']
+        ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+        length_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+        
+        # Match each element
+        # We need to extract each element and match it against the sub-pattern
+        # For now, only support simple variable bindings in list elements
+        for i, elem_pattern in enumerate(pattern.elements):
+            if isinstance(elem_pattern, AIFPLSymbol) and elem_pattern.name != '_':
+                # Bind variable to list element
+                var_index = ctx.current_scope().add_binding(elem_pattern.name)
+                ctx.update_max_locals()
+                
+                # Load list and get element
+                ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
+                builtin_index = self.builtin_indices.get('list-ref')
+                if builtin_index is None:
+                    raise AIFPLEvalError("list-ref not in builtin table")
+                ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+                ctx.emit(Opcode.STORE_VAR, 0, var_index)
+        
+        # Success
+        ctx.emit(Opcode.LOAD_TRUE)
+        success_jump = ctx.emit(Opcode.JUMP, 0)
+        
+        # Failure paths
+        fail_location = ctx.current_instruction_index()
+        ctx.patch_jump(fail_jump, fail_location)
+        ctx.patch_jump(length_fail_jump, fail_location)
+        ctx.emit(Opcode.LOAD_FALSE)
+        
+        success_location = ctx.current_instruction_index()
+        ctx.patch_jump(success_jump, success_location)
+
+    def _compile_cons_pattern(self, pattern: AIFPLList, match_value_index: int,
+                             dot_position: int, ctx: CompilationContext) -> None:
+        """Compile a cons pattern like (head . tail) or (a b . rest)."""
+        
+        # Check if value is a non-empty list
+        ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+        builtin_index = self.builtin_indices['list?']
+        ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
+        fail_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+        
+        # Check not empty
+        ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+        builtin_index = self.builtin_indices['null?']
+        ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
+        empty_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_TRUE, 0)  # Jump to fail if empty
+        
+        # Extract head elements (before dot)
+        for i in range(dot_position):
+            elem_pattern = pattern.elements[i]
+            if isinstance(elem_pattern, AIFPLSymbol) and elem_pattern.name != '_':
+                var_index = ctx.current_scope().add_binding(elem_pattern.name)
+                ctx.update_max_locals()
+                
+                # Extract nth element: (list-ref list i)
+                ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
+                builtin_index = self.builtin_indices['list-ref']
+                ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+                ctx.emit(Opcode.STORE_VAR, 0, var_index)
+        
+        # Extract tail (after dot)
+        tail_pattern = pattern.elements[dot_position + 1]
+        if isinstance(tail_pattern, AIFPLSymbol) and tail_pattern.name != '_':
+            var_index = ctx.current_scope().add_binding(tail_pattern.name)
+            ctx.update_max_locals()
+            
+            # Get tail: (drop n list)
+            ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(dot_position)))
+            ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+            builtin_index = self.builtin_indices['drop']
+            ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+            ctx.emit(Opcode.STORE_VAR, 0, var_index)
+        
+        # Success
+        ctx.emit(Opcode.LOAD_TRUE)
+        success_jump = ctx.emit(Opcode.JUMP, 0)
+        
+        # Patch failure jumps
+        fail_location = ctx.current_instruction_index()
+        ctx.patch_jump(fail_jump, fail_location)
+        ctx.patch_jump(empty_fail_jump, fail_location)
+        ctx.emit(Opcode.LOAD_FALSE)
+        
+        success_location = ctx.current_instruction_index()
+        ctx.patch_jump(success_jump, success_location)

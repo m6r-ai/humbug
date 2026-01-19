@@ -27,6 +27,7 @@ class Opcode(IntEnum):
     # Control flow
     JUMP = auto()            # Unconditional jump: JUMP offset
     POP_JUMP_IF_FALSE = auto()  # Pop and jump if false
+    POP_JUMP_IF_TRUE = auto()   # Pop and jump if true
 
     # Functions
     MAKE_CLOSURE = auto()    # Create closure: MAKE_CLOSURE code_index capture_count
@@ -38,6 +39,9 @@ class Opcode(IntEnum):
 
     # Lists
     MAKE_LIST = auto()       # Make list from n stack items: MAKE_LIST n
+
+    # Stack manipulation
+    DUP = auto()             # Duplicate top of stack
 
 
 @dataclass
