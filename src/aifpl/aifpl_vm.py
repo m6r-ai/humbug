@@ -341,22 +341,31 @@ class AIFPLVM:
                 # Pop function
                 func = self.stack.pop()
 
-                if not isinstance(func, AIFPLFunction):
-                    raise AIFPLEvalError(f"Cannot call non-function: {type(func).__name__}")
-
-                # Check if function has bytecode
-                if hasattr(func, 'bytecode') and func.bytecode is not None:
-                    # Call bytecode function
-                    result = self._call_bytecode_function(func, args)
-                    self.stack.append(result)
-                else:
-                    # Fall back to interpreter for AST-based functions
+                # Handle builtin functions
+                if isinstance(func, AIFPLBuiltinFunction):
+                    # Call builtin through its native implementation
                     if self.evaluator is None:
-                        raise AIFPLEvalError("Cannot call AST function without evaluator")
-                    result = self.evaluator._call_lambda_function(
-                        func, args, AIFPLEnvironment(), 0
-                    )
+                        raise AIFPLEvalError("Cannot call builtin without evaluator")
+                    result = func.native_impl(args, AIFPLEnvironment(), 0)
                     self.stack.append(result)
+                elif isinstance(func, AIFPLFunction):
+                    # Handle lambda functions
+                    # Check if function has bytecode
+                    if hasattr(func, 'bytecode') and func.bytecode is not None:
+                        # Call bytecode function
+                        result = self._call_bytecode_function(func, args)
+                        self.stack.append(result)
+                    else:
+                        # Fall back to interpreter for AST-based functions
+                        if self.evaluator is None:
+                            raise AIFPLEvalError("Cannot call AST function without evaluator")
+                        result = self.evaluator._call_lambda_function(
+                            func, args, AIFPLEnvironment(), 0
+                        )
+                        self.stack.append(result)
+                else:
+                    # Not a function at all
+                    raise AIFPLEvalError(f"Cannot call non-function: {type(func).__name__}")
 
             elif opcode == Opcode.CALL_BUILTIN:
                 builtin_index = arg1
@@ -719,6 +728,165 @@ class AIFPLVM:
                 if not (args[i].value >= args[i+1].value):
                     return AIFPLBoolean(False)
             return AIFPLBoolean(True)
+
+        elif builtin_name == '!=':
+            if len(args) < 2:
+                raise AIFPLEvalError(
+                    message="Not-equal comparison requires at least 2 arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="At least 2 values",
+                    example="(!= 1 2) → #t",
+                    suggestion="Provide at least two values to compare"
+                )
+            # Check if any pair is not equal
+            first = args[0]
+            for arg in args[1:]:
+                # Simple equality check
+                if type(first) != type(arg):
+                    return AIFPLBoolean(True)  # Different types are not equal
+                if isinstance(first, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
+                    if first.value != arg.value:
+                        return AIFPLBoolean(True)  # Found inequality
+            return AIFPLBoolean(False)  # All equal
+
+        elif builtin_name == '//':
+            if len(args) < 2:
+                raise AIFPLEvalError(
+                    message="Floor division requires at least 2 arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="At least 2 numbers",
+                    example="(// 7 2) → 3",
+                    suggestion="Provide dividend and at least one divisor"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Floor division requires numbers",
+                    received=f"Argument 1: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number (integer, float, or complex)",
+                    example="(// 7 2) → 3",
+                    suggestion="All arguments to // must be numbers"
+                )
+
+            result = args[0].value
+            for i, arg in enumerate(args[1:], start=2):
+                if not isinstance(arg, AIFPLNumber):
+                    raise AIFPLEvalError(
+                        message="Floor division requires numbers",
+                        received=f"Argument {i}: {self._format_result(arg)} ({arg.type_name()})",
+                        expected="Number (integer, float, or complex)",
+                        example="(// 7 2) → 3",
+                        suggestion="All arguments to // must be numbers"
+                    )
+                if arg.value == 0:
+                    raise AIFPLEvalError(
+                        message=f"Division by zero at argument {i}",
+                        received=f"Attempting to divide {self._format_result(args[0])} by 0",
+                        expected="Non-zero divisor",
+                        example="(// 10 2) → 5",
+                        suggestion="Ensure divisor is not zero"
+                    )
+                result //= arg.value
+            return AIFPLNumber(result)
+
+        elif builtin_name == '%':
+            if len(args) != 2:
+                raise AIFPLEvalError(
+                    message="Modulo requires exactly 2 arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="2 numbers: dividend and divisor",
+                    example="(% 7 3) → 1",
+                    suggestion="Provide dividend and divisor"
+                )
+            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Modulo requires numbers",
+                    received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
+                    expected="Two numbers",
+                    example="(% 7 3) → 1",
+                    suggestion="Both arguments to % must be numbers"
+                )
+            if args[1].value == 0:
+                raise AIFPLEvalError(
+                    message="Modulo by zero",
+                    received=f"Attempting to compute {self._format_result(args[0])} % 0",
+                    expected="Non-zero divisor",
+                    example="(% 7 3) → 1",
+                    suggestion="Ensure divisor is not zero"
+                )
+            return AIFPLNumber(args[0].value % args[1].value)
+
+        elif builtin_name == '**':
+            if len(args) != 2:
+                raise AIFPLEvalError(
+                    message="Exponentiation requires exactly 2 arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="2 numbers: base and exponent",
+                    example="(** 2 3) → 8",
+                    suggestion="Provide base and exponent"
+                )
+            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Exponentiation requires numbers",
+                    received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
+                    expected="Two numbers",
+                    example="(** 2 3) → 8",
+                    suggestion="Both arguments to ** must be numbers"
+                )
+            return AIFPLNumber(args[0].value ** args[1].value)
+
+        # Boolean logic operations
+        elif builtin_name == 'and':
+            # Short-circuit evaluation: return first false or last value
+            if len(args) == 0:
+                return AIFPLBoolean(True)  # Empty and is true
+            for arg in args:
+                if not isinstance(arg, AIFPLBoolean):
+                    raise AIFPLEvalError(
+                        message="Boolean 'and' requires boolean arguments",
+                        received=f"Argument: {self._format_result(arg)} ({arg.type_name()})",
+                        expected="Boolean (#t or #f)",
+                        example="(and #t #f) → #f",
+                        suggestion="Use comparison operators to create boolean values"
+                    )
+                if not arg.value:
+                    return AIFPLBoolean(False)  # Short-circuit on first false
+            return AIFPLBoolean(True)  # All true
+
+        elif builtin_name == 'or':
+            # Short-circuit evaluation: return first true or last value
+            if len(args) == 0:
+                return AIFPLBoolean(False)  # Empty or is false
+            for arg in args:
+                if not isinstance(arg, AIFPLBoolean):
+                    raise AIFPLEvalError(
+                        message="Boolean 'or' requires boolean arguments",
+                        received=f"Argument: {self._format_result(arg)} ({arg.type_name()})",
+                        expected="Boolean (#t or #f)",
+                        example="(or #t #f) → #t",
+                        suggestion="Use comparison operators to create boolean values"
+                    )
+                if arg.value:
+                    return AIFPLBoolean(True)  # Short-circuit on first true
+            return AIFPLBoolean(False)  # All false
+
+        elif builtin_name == 'not':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Boolean 'not' requires exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 boolean value",
+                    example="(not #t) → #f",
+                    suggestion="Provide a single boolean value"
+                )
+            if not isinstance(args[0], AIFPLBoolean):
+                raise AIFPLEvalError(
+                    message="Boolean 'not' requires a boolean argument",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Boolean (#t or #f)",
+                    example="(not #t) → #f",
+                    suggestion="Use comparison operators to create boolean values"
+                )
+            return AIFPLBoolean(not args[0].value)
 
         # List operations
         elif builtin_name == 'list':
