@@ -183,10 +183,10 @@ class TestConditionals:
 
     def test_not_requires_exactly_one_argument(self, aifpl):
         """Test that NOT requires exactly one argument."""
-        with pytest.raises(AIFPLEvalError, match="takes exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="requires exactly 1 argument"):
             aifpl.evaluate('(not)')
 
-        with pytest.raises(AIFPLEvalError, match="takes exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="requires exactly 1 argument"):
             aifpl.evaluate('(not #t #f)')
 
     @pytest.mark.parametrize("expression,expected", [

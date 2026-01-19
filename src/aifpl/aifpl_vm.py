@@ -821,7 +821,7 @@ class AIFPLVM:
         elif builtin_name == '=':
             if len(args) < 2:
                 raise AIFPLEvalError(
-                    message="Equality comparison requires at least 2 arguments",
+                    message=f"Function '=' requires at least 2 arguments, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="At least 2 values",
                     example="(= 1 1 1) → #t",
@@ -836,7 +836,7 @@ class AIFPLVM:
         elif builtin_name == '<':
             if len(args) < 2:
                 raise AIFPLEvalError(
-                    message="Less-than comparison requires at least 2 arguments",
+                    message=f"Function '<' requires at least 2 arguments, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="At least 2 numbers",
                     example="(< 1 2 3) → #t",
@@ -862,7 +862,7 @@ class AIFPLVM:
         elif builtin_name == '>':
             if len(args) < 2:
                 raise AIFPLEvalError(
-                    message="Greater-than comparison requires at least 2 arguments",
+                    message=f"Function '>' requires at least 2 arguments, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="At least 2 numbers",
                     example="(> 3 2 1) → #t",
@@ -888,7 +888,7 @@ class AIFPLVM:
         elif builtin_name == '<=':
             if len(args) < 2:
                 raise AIFPLEvalError(
-                    message="Less-than-or-equal comparison requires at least 2 arguments",
+                    message=f"Function '<=' requires at least 2 arguments, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="At least 2 numbers",
                     example="(<= 1 1 2) → #t",
@@ -897,7 +897,7 @@ class AIFPLVM:
             for i in range(len(args) - 1):
                 if not isinstance(args[i], AIFPLNumber) or not isinstance(args[i+1], AIFPLNumber):
                     raise AIFPLEvalError(
-                        message="Less-than-or-equal comparison requires numbers",
+                        message="Function '<=' requires numeric arguments",
                         received=f"Arguments: {self._format_result(args[i])}, {self._format_result(args[i+1])}",
                         expected="Numbers only",
                         example="(<= 1 1 2) → #t",
@@ -916,7 +916,7 @@ class AIFPLVM:
         elif builtin_name == '>=':
             if len(args) < 2:
                 raise AIFPLEvalError(
-                    message="Greater-than-or-equal comparison requires at least 2 arguments",
+                    message=f"Function '>=' requires at least 2 arguments, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="At least 2 numbers",
                     example="(>= 3 2 2) → #t",
@@ -925,7 +925,7 @@ class AIFPLVM:
             for i in range(len(args) - 1):
                 if not isinstance(args[i], AIFPLNumber) or not isinstance(args[i+1], AIFPLNumber):
                     raise AIFPLEvalError(
-                        message="Greater-than-or-equal comparison requires numbers",
+                        message="Function '>=' requires numeric arguments",
                         received=f"Arguments: {self._format_result(args[i])}, {self._format_result(args[i+1])}",
                         expected="Numbers only",
                         example="(>= 3 2 2) → #t",
@@ -944,7 +944,7 @@ class AIFPLVM:
         elif builtin_name == '!=':
             if len(args) < 2:
                 raise AIFPLEvalError(
-                    message="Not-equal comparison requires at least 2 arguments",
+                    message=f"Function '!=' requires at least 2 arguments, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="At least 2 values",
                     example="(!= 1 2) → #t",
@@ -964,7 +964,7 @@ class AIFPLVM:
         elif builtin_name == '//':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Floor division takes exactly 2 arguments",
+                    message=f"Floor division requires exactly 2 arguments, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="2 numbers: dividend and divisor",
                     example="(// 7 2) → 3",
@@ -987,7 +987,7 @@ class AIFPLVM:
         elif builtin_name == '%':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Modulo requires exactly 2 arguments",
+                    message=f"Modulo requires exactly 2 arguments, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="2 numbers: dividend and divisor",
                     example="(% 7 3) → 1",
@@ -1009,10 +1009,10 @@ class AIFPLVM:
 
         elif builtin_name == '**':
             if len(args) != 2:
-                raise AIFPLEvalError(f"Function '**' takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"Function '**' requires exactly 2 arguments, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
                 raise AIFPLEvalError(
-                    message="Power requires numbers",
+                    message="Function '**' requires numeric arguments",
                     received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
                     expected="Two numbers",
                     example="(** 2 3) → 8",
@@ -1046,7 +1046,7 @@ class AIFPLVM:
         elif builtin_name == 'not':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Boolean 'not' requires exactly 1 argument",
+                    message=f"Function 'not' requires exactly 1 argument, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="1 boolean value",
                     example="(not #t) → #f",
@@ -1061,7 +1061,7 @@ class AIFPLVM:
         # Bitwise operations
         elif builtin_name == 'bit-or':
             if len(args) < 2:
-                raise AIFPLEvalError(f"bit-or requires at least 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'bit-or' requires at least 2 arguments, got {len(args)}")
             int_args = [self._ensure_integer(arg, "bit-or") for arg in args]
             result = int_args[0]
             for arg in int_args[1:]:
@@ -1070,7 +1070,7 @@ class AIFPLVM:
 
         elif builtin_name == 'bit-and':
             if len(args) < 2:
-                raise AIFPLEvalError(f"bit-and requires at least 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'bit-and' requires at least 2 arguments, got {len(args)}")
             int_args = [self._ensure_integer(arg, "bit-and") for arg in args]
             result = int_args[0]
             for arg in int_args[1:]:
@@ -1079,7 +1079,7 @@ class AIFPLVM:
 
         elif builtin_name == 'bit-xor':
             if len(args) < 2:
-                raise AIFPLEvalError(f"bit-xor requires at least 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'bit-xor' requires at least 2 arguments, got {len(args)}")
             int_args = [self._ensure_integer(arg, "bit-xor") for arg in args]
             result = int_args[0]
             for arg in int_args[1:]:
@@ -1088,20 +1088,20 @@ class AIFPLVM:
 
         elif builtin_name == 'bit-not':
             if len(args) != 1:
-                raise AIFPLEvalError(f"bit-not takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'bit-not' requires exactly 1 argument, got {len(args)}")
             int_val = self._ensure_integer(args[0], "bit-not")
             return AIFPLNumber(~int_val)
 
         elif builtin_name == 'bit-shift-left':
             if len(args) != 2:
-                raise AIFPLEvalError(f"bit-shift-left takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'bit-shift-left' requires exactly 2 arguments, got {len(args)}")
             value = self._ensure_integer(args[0], "bit-shift-left")
             shift = self._ensure_integer(args[1], "bit-shift-left")
             return AIFPLNumber(value << shift)
 
         elif builtin_name == 'bit-shift-right':
             if len(args) != 2:
-                raise AIFPLEvalError(f"bit-shift-right takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'bit-shift-right' requires exactly 2 arguments, got {len(args)}")
             value = self._ensure_integer(args[0], "bit-shift-right")
             shift = self._ensure_integer(args[1], "bit-shift-right")
             return AIFPLNumber(value >> shift)
@@ -1113,7 +1113,7 @@ class AIFPLVM:
         elif builtin_name == 'cons':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Cons requires exactly 2 arguments",
+                    message="Function 'cons' requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 arguments: element and list",
                     example="(cons 1 (list 2 3)) → (1 2 3)",
@@ -1123,7 +1123,7 @@ class AIFPLVM:
             tail = args[1]
             if not isinstance(tail, AIFPLList):
                 raise AIFPLEvalError(
-                    message="Cons second argument must be a list",
+                    message="Function 'cons' second argument must be a list",
                     received=f"Second argument: {self._format_result(tail)} ({tail.type_name()})",
                     expected="List",
                     example="(cons 1 (list 2 3)) → (1 2 3)",
@@ -1143,7 +1143,7 @@ class AIFPLVM:
 
         elif builtin_name == 'reverse':
             if len(args) != 1:
-                raise AIFPLEvalError(f"reverse takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"reverse requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLList):
                 raise AIFPLEvalError(
                     message="Reverse requires a list",
@@ -1156,7 +1156,7 @@ class AIFPLVM:
 
         elif builtin_name == 'first':
             if len(args) != 1:
-                raise AIFPLEvalError(f"first takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"first requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLList):
                 raise AIFPLEvalError(
                     message="First requires a list",
@@ -1177,7 +1177,7 @@ class AIFPLVM:
 
         elif builtin_name == 'rest':
             if len(args) != 1:
-                raise AIFPLEvalError(f"rest takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"rest requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLList):
                 raise AIFPLEvalError(
                     message="Rest requires a list",
@@ -1198,7 +1198,7 @@ class AIFPLVM:
 
         elif builtin_name == 'last':
             if len(args) != 1:
-                raise AIFPLEvalError(f"last takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"last requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLList):
                 raise AIFPLEvalError(
                     message="Last requires a list",
@@ -1219,7 +1219,7 @@ class AIFPLVM:
 
         elif builtin_name == 'length':
             if len(args) != 1:
-                raise AIFPLEvalError(f"length takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"length requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLList):
                 raise AIFPLEvalError(
                     message="Length requires a list",
@@ -1233,7 +1233,7 @@ class AIFPLVM:
         elif builtin_name == 'null?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Null? takes exactly 1 argument",
+                    message="Null? requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(null? ()) → #t",
@@ -1245,7 +1245,7 @@ class AIFPLVM:
         elif builtin_name == 'member?':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Member? takes exactly 2 arguments",
+                    message="Member? requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 arguments: item and list",
                     example="(member? 2 (list 1 2 3)) → #t",
@@ -1270,7 +1270,7 @@ class AIFPLVM:
 
         elif builtin_name == 'position':
             if len(args) != 2:
-                raise AIFPLEvalError(f"position takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"position requires exactly 2 arguments, got {len(args)}")
             item = args[0]
             lst = args[1]
             if not isinstance(lst, AIFPLList):
@@ -1289,7 +1289,7 @@ class AIFPLVM:
 
         elif builtin_name == 'take':
             if len(args) != 2:
-                raise AIFPLEvalError(f"take takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"take requires exactly 2 arguments, got {len(args)}")
             n = self._ensure_integer(args[0], "take")
             list_val = self._ensure_list(args[1], "take")
             
@@ -1300,7 +1300,7 @@ class AIFPLVM:
 
         elif builtin_name == 'drop':
             if len(args) != 2:
-                raise AIFPLEvalError(f"drop takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"drop requires exactly 2 arguments, got {len(args)}")
             n = self._ensure_integer(args[0], "drop")
             list_val = self._ensure_list(args[1], "drop")
             
@@ -1311,7 +1311,7 @@ class AIFPLVM:
 
         elif builtin_name == 'remove':
             if len(args) != 2:
-                raise AIFPLEvalError(f"remove takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"remove requires exactly 2 arguments, got {len(args)}")
             item = args[0]
             lst = args[1]
             if not isinstance(lst, AIFPLList):
@@ -1334,7 +1334,7 @@ class AIFPLVM:
         elif builtin_name == 'list-ref':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="List-ref takes exactly 2 arguments",
+                    message="List-ref requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 arguments: list and index",
                     example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
@@ -1365,7 +1365,7 @@ class AIFPLVM:
         elif builtin_name == 'number?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Number? takes exactly 1 argument",
+                    message="Function 'number?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(number? 42) → #t",
@@ -1376,7 +1376,7 @@ class AIFPLVM:
         elif builtin_name == 'integer?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Integer? takes exactly 1 argument",
+                    message="Function 'integer?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(integer? 42) → #t",
@@ -1387,7 +1387,7 @@ class AIFPLVM:
         elif builtin_name == 'float?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Float? takes exactly 1 argument",
+                    message="Function 'float?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(float? 3.14) → #t",
@@ -1398,7 +1398,7 @@ class AIFPLVM:
         elif builtin_name == 'complex?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Complex? takes exactly 1 argument",
+                    message="Function 'complex?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(complex? (complex 1 2)) → #t",
@@ -1419,7 +1419,7 @@ class AIFPLVM:
         elif builtin_name == 'string?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="String? takes exactly 1 argument",
+                    message="Function 'string?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(string? \"hello\") → #t",
@@ -1430,7 +1430,7 @@ class AIFPLVM:
         elif builtin_name == 'boolean?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Boolean? takes exactly 1 argument",
+                    message="Function 'boolean?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(boolean? #t) → #t",
@@ -1441,7 +1441,7 @@ class AIFPLVM:
         elif builtin_name == 'list?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="List? takes exactly 1 argument",
+                    message="Function 'list?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(list? (list 1 2 3)) → #t",
@@ -1452,7 +1452,7 @@ class AIFPLVM:
         elif builtin_name == 'alist?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Alist? takes exactly 1 argument",
+                    message="Function 'alist?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(alist? my-alist) → #t",
@@ -1463,7 +1463,7 @@ class AIFPLVM:
         elif builtin_name == 'function?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Function? takes exactly 1 argument",
+                    message="Function 'function?' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example="(function? (lambda (x) x)) → #t",
@@ -1474,9 +1474,9 @@ class AIFPLVM:
         # Math functions
         elif builtin_name == 'sqrt':
             if len(args) != 1:
-                raise AIFPLEvalError(f"sqrt takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'sqrt' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"sqrt requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'sqrt' requires a numeric argument, got {args[0].type_name()}")
             val = args[0].value
             # Use cmath.sqrt for negative numbers or complex numbers
             if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
@@ -1486,15 +1486,15 @@ class AIFPLVM:
 
         elif builtin_name == 'abs':
             if len(args) != 1:
-                raise AIFPLEvalError(f"abs takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'abs' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"abs requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'abs' requires a numeric argument, got {args[0].type_name()}")
             return AIFPLNumber(abs(args[0].value))
 
         elif builtin_name == 'min':
             if len(args) < 1:
                 raise AIFPLEvalError(
-                    message="Min requires at least 1 argument",
+                    message=f"Function 'min' requires at least 1 argument, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="At least 1 number",
                     example="(min 1 5 3) → 1",
@@ -1504,7 +1504,7 @@ class AIFPLVM:
             for i, arg in enumerate(args):
                 if not isinstance(arg, AIFPLNumber):
                     raise AIFPLEvalError(
-                        message="Min requires numbers",
+                        message="Function 'min' requires numeric arguments",
                         received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
                         expected="Number",
                         example="(min 1 5 3) → 1",
@@ -1523,7 +1523,7 @@ class AIFPLVM:
         elif builtin_name == 'max':
             if len(args) < 1:
                 raise AIFPLEvalError(
-                    message="Max requires at least 1 argument",
+                    message=f"Function 'max' requires at least 1 argument, got {len(args)}",
                     received=f"Got {len(args)} arguments",
                     expected="At least 1 number",
                     example="(max 1 5 3) → 5",
@@ -1533,7 +1533,7 @@ class AIFPLVM:
             for i, arg in enumerate(args):
                 if not isinstance(arg, AIFPLNumber):
                     raise AIFPLEvalError(
-                        message="Max requires numbers",
+                        message="Function 'max' requires numeric arguments",
                         received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
                         expected="Number",
                         example="(max 1 5 3) → 5",
@@ -1551,10 +1551,10 @@ class AIFPLVM:
 
         elif builtin_name == 'pow':
             if len(args) != 2:
-                raise AIFPLEvalError(f"pow takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'pow' requires exactly 2 arguments, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
                 raise AIFPLEvalError(
-                    message="Pow requires numbers",
+                    message="Function 'pow' requires numbers",
                     received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
                     expected="Two numbers",
                     example="(pow 2 3) → 8",
@@ -1565,9 +1565,9 @@ class AIFPLVM:
         # Trigonometric functions
         elif builtin_name == 'sin':
             if len(args) != 1:
-                raise AIFPLEvalError(f"sin takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'sin' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"sin requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'sin' requires a number, got {args[0].type_name()}")
             val = args[0].value
             if isinstance(val, complex):
                 return AIFPLNumber(cmath.sin(val))
@@ -1575,9 +1575,9 @@ class AIFPLVM:
 
         elif builtin_name == 'cos':
             if len(args) != 1:
-                raise AIFPLEvalError(f"cos takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'cos' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"cos requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'cos' requires a number, got {args[0].type_name()}")
             val = args[0].value
             if isinstance(val, complex):
                 return AIFPLNumber(cmath.cos(val))
@@ -1585,9 +1585,9 @@ class AIFPLVM:
 
         elif builtin_name == 'tan':
             if len(args) != 1:
-                raise AIFPLEvalError(f"tan takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'tan' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"tan requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'tan' requires a number, got {args[0].type_name()}")
             val = args[0].value
             if isinstance(val, complex):
                 return AIFPLNumber(cmath.tan(val))
@@ -1596,9 +1596,9 @@ class AIFPLVM:
         # Logarithmic and exponential functions
         elif builtin_name == 'log':
             if len(args) != 1:
-                raise AIFPLEvalError(f"log takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'log' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"log requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'log' requires a number, got {args[0].type_name()}")
             val = args[0].value
             # Use cmath for negative numbers or complex numbers
             if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
@@ -1607,9 +1607,9 @@ class AIFPLVM:
 
         elif builtin_name == 'log10':
             if len(args) != 1:
-                raise AIFPLEvalError(f"log10 takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'log10' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"log10 requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'log10' requires a number, got {args[0].type_name()}")
             val = args[0].value
             # Use cmath for negative numbers or complex numbers
             if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
@@ -1618,9 +1618,9 @@ class AIFPLVM:
 
         elif builtin_name == 'exp':
             if len(args) != 1:
-                raise AIFPLEvalError(f"exp takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'exp' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"exp requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'exp' requires a number, got {args[0].type_name()}")
             val = args[0].value
             if isinstance(val, complex):
                 return AIFPLNumber(cmath.exp(val))
@@ -1629,9 +1629,9 @@ class AIFPLVM:
         # Rounding functions
         elif builtin_name == 'round':
             if len(args) != 1:
-                raise AIFPLEvalError(f"round takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'round' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"round requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'round' requires a number, got {args[0].type_name()}")
             val = args[0].value
             # Check if it's complex (can't round complex numbers)
             if isinstance(val, complex):
@@ -1645,9 +1645,9 @@ class AIFPLVM:
 
         elif builtin_name == 'floor':
             if len(args) != 1:
-                raise AIFPLEvalError(f"floor takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'floor' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"floor requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'floor' requires a number, got {args[0].type_name()}")
             val = args[0].value
             # Check if it's complex (can't floor complex numbers)
             if isinstance(val, complex):
@@ -1661,9 +1661,9 @@ class AIFPLVM:
 
         elif builtin_name == 'ceil':
             if len(args) != 1:
-                raise AIFPLEvalError(f"ceil takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'ceil' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"ceil requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'ceil' requires a number, got {args[0].type_name()}")
             val = args[0].value
             # Check if it's complex (can't ceil complex numbers)
             if isinstance(val, complex):
@@ -1679,7 +1679,7 @@ class AIFPLVM:
         elif builtin_name == 'bin':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Bin takes exactly 1 argument",
+                    message="Function 'bin' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 integer",
                     example='(bin 255) → "0b11111111"',
@@ -1687,7 +1687,7 @@ class AIFPLVM:
                 )
             if not isinstance(args[0], AIFPLNumber):
                 raise AIFPLEvalError(
-                    message="Bin requires a number",
+                    message="Function 'bin' requires a numeric argument",
                     received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
                     expected="Integer",
                     example='(bin 255) → "0b11111111"',
@@ -1696,7 +1696,7 @@ class AIFPLVM:
             val = args[0].value
             if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
                 raise AIFPLEvalError(
-                    message="Bin requires an integer",
+                    message="Function 'bin' requires an integer argument",
                     received=f"Value: {val}",
                     expected="Integer",
                     example='(bin 255) → "0b11111111"',
@@ -1707,7 +1707,7 @@ class AIFPLVM:
         elif builtin_name == 'hex':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Hex takes exactly 1 argument",
+                    message="Function 'hex' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 integer",
                     example='(hex 255) → "0xff"',
@@ -1715,7 +1715,7 @@ class AIFPLVM:
                 )
             if not isinstance(args[0], AIFPLNumber):
                 raise AIFPLEvalError(
-                    message="Hex requires a number",
+                    message="Function 'hex' requires a numeric argument",
                     received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
                     expected="Integer",
                     example='(hex 255) → "0xff"',
@@ -1724,7 +1724,7 @@ class AIFPLVM:
             val = args[0].value
             if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
                 raise AIFPLEvalError(
-                    message="Hex requires an integer",
+                    message="Function 'hex' requires an integer",
                     received=f"Value: {val}",
                     expected="Integer",
                     example='(hex 255) → "0xff"',
@@ -1735,7 +1735,7 @@ class AIFPLVM:
         elif builtin_name == 'oct':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Oct takes exactly 1 argument",
+                    message="Function 'oct' requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 integer",
                     example='(oct 64) → "0o100"',
@@ -1743,7 +1743,7 @@ class AIFPLVM:
                 )
             if not isinstance(args[0], AIFPLNumber):
                 raise AIFPLEvalError(
-                    message="Oct requires a number",
+                    message="Function 'oct' requires a numeric argument",
                     received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
                     expected="Integer",
                     example='(oct 64) → "0o100"',
@@ -1752,7 +1752,7 @@ class AIFPLVM:
             val = args[0].value
             if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
                 raise AIFPLEvalError(
-                    message="Oct requires an integer",
+                    message="Function 'oct' requires an integer",
                     received=f"Value: {val}",
                     expected="Integer",
                     example='(oct 64) → "0o100"',
@@ -1763,9 +1763,9 @@ class AIFPLVM:
         # Complex number functions
         elif builtin_name == 'real':
             if len(args) != 1:
-                raise AIFPLEvalError(f"real takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'real' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"real requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'real' requires a number, got {args[0].type_name()}")
             val = args[0].value
             if isinstance(val, complex):
                 result = val.real
@@ -1778,9 +1778,9 @@ class AIFPLVM:
 
         elif builtin_name == 'imag':
             if len(args) != 1:
-                raise AIFPLEvalError(f"imag takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'imag' requires exactly 1 argument, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"imag requires a number, got {args[0].type_name()}")
+                raise AIFPLEvalError(f"Function 'imag' requires a number, got {args[0].type_name()}")
             val = args[0].value
             if isinstance(val, complex):
                 result = val.imag
@@ -1793,14 +1793,14 @@ class AIFPLVM:
 
         elif builtin_name == 'complex':
             if len(args) != 2:
-                raise AIFPLEvalError(f"complex takes exactly 2 arguments, got {len(args)}")
+                raise AIFPLEvalError(f"Function 'complex' requires exactly 2 arguments, got {len(args)}")
             if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
                 if not isinstance(args[0], AIFPLNumber):
                     bad_arg = 0
                 else:
                     bad_arg = 1
                 raise AIFPLEvalError(
-                    message="Complex requires numbers",
+                    message="Function 'complex' requires numeric arguments",
                     received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
                     expected="Number",
                     example="(complex 3 4) → (3+4j)",
@@ -1811,11 +1811,11 @@ class AIFPLVM:
             # Reject complex arguments
             if isinstance(real_part, complex):
                 raise AIFPLEvalError(
-                    message="complex arguments must be real numbers"
+                    message="Function 'complex' arguments must be real numbers"
                 )
             if isinstance(imag_part, complex):
                 raise AIFPLEvalError(
-                    message="complex arguments must be real numbers"
+                    message="Function 'complex' arguments must be real numbers"
                 )
             return AIFPLNumber(complex(real_part, imag_part))
 
@@ -1823,7 +1823,7 @@ class AIFPLVM:
         elif builtin_name == 'range':
             if len(args) < 2 or len(args) > 3:
                 raise AIFPLEvalError(
-                    message="Range requires 2 or 3 arguments",
+                    message="Function 'range' requires 2 or 3 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 or 3 numbers: start, end, [step]",
                     example="(range 1 5) → (1 2 3 4) or (range 0 10 2) → (0 2 4 6 8)",
@@ -2204,7 +2204,7 @@ class AIFPLVM:
         elif builtin_name == 'string-length':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="String-length takes exactly 1 argument",
+                    message="String-length requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 string",
                     example='(string-length "hello") → 5',
@@ -2223,7 +2223,7 @@ class AIFPLVM:
         elif builtin_name == 'string-upcase':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="String-upcase takes exactly 1 argument",
+                    message="String-upcase requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 string",
                     example='(string-upcase "hello") → "HELLO"',
@@ -2242,7 +2242,7 @@ class AIFPLVM:
         elif builtin_name == 'string-downcase':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="String-downcase takes exactly 1 argument",
+                    message="String-downcase requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 string",
                     example='(string-downcase "HELLO") → "hello"',
@@ -2261,7 +2261,7 @@ class AIFPLVM:
         elif builtin_name == 'string-trim':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="String-trim takes exactly 1 argument",
+                    message="String-trim requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 string",
                     example='(string-trim "  hello  ") → "hello"',
@@ -2280,7 +2280,7 @@ class AIFPLVM:
         elif builtin_name == 'string-replace':
             if len(args) != 3:
                 raise AIFPLEvalError(
-                    message="String-replace takes exactly 3 arguments",
+                    message="String-replace requires exactly 3 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="3 strings: string, old, new",
                     example='(string-replace "banana" "a" "o") → "bonono"',
@@ -2303,7 +2303,7 @@ class AIFPLVM:
         elif builtin_name == 'string-split':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="String-split takes exactly 2 arguments",
+                    message="String-split requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 strings: string and delimiter",
                     example='(string-split "a,b,c" ",") → ("a" "b" "c")',
@@ -2334,7 +2334,7 @@ class AIFPLVM:
         elif builtin_name == 'string-join':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="String-join takes exactly 2 arguments",
+                    message="String-join requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 arguments: list and delimiter",
                     example='(string-join (list "hello" "world") " ") → "hello world"',
@@ -2375,7 +2375,7 @@ class AIFPLVM:
         elif builtin_name == 'string-contains?':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="String-contains? takes exactly 2 arguments",
+                    message="String-contains? requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 strings: string and substring",
                     example='(string-contains? "hello" "ell") → #t',
@@ -2398,7 +2398,7 @@ class AIFPLVM:
         elif builtin_name == 'string-prefix?':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="String-prefix? takes exactly 2 arguments",
+                    message="String-prefix? requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 strings: string and prefix",
                     example='(string-prefix? "hello" "he") → #t',
@@ -2421,7 +2421,7 @@ class AIFPLVM:
         elif builtin_name == 'string-suffix?':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="String-suffix? takes exactly 2 arguments",
+                    message="String-suffix? requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 strings: string and suffix",
                     example='(string-suffix? "hello" "lo") → #t',
@@ -2444,7 +2444,7 @@ class AIFPLVM:
         elif builtin_name == 'string-ref':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="String-ref takes exactly 2 arguments",
+                    message="String-ref requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 arguments: string and index",
                     example='(string-ref "hello" 1) → "e"',
@@ -2480,7 +2480,7 @@ class AIFPLVM:
         elif builtin_name == 'substring':
             if len(args) != 3:
                 raise AIFPLEvalError(
-                    message="Substring takes exactly 3 arguments",
+                    message="Substring requires exactly 3 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="3 arguments: string, start, end",
                     example='(substring "hello" 1 4) → "ell"',
@@ -2558,7 +2558,7 @@ class AIFPLVM:
         elif builtin_name == 'string->number':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="String->number takes exactly 1 argument",
+                    message="String->number requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 string",
                     example='(string->number "42") → 42',
@@ -2594,7 +2594,7 @@ class AIFPLVM:
         elif builtin_name == 'number->string':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Number->string takes exactly 1 argument",
+                    message="Number->string requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 number",
                     example='(number->string 42) → "42"',
@@ -2626,14 +2626,14 @@ class AIFPLVM:
 
         elif builtin_name == 'string->list':
             if len(args) != 1:
-                raise AIFPLEvalError(f"string->list takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"string->list requires exactly 1 argument, got {len(args)}")
             string_arg = self._ensure_string(args[0], "string->list")
             elements = tuple(AIFPLString(char) for char in string_arg.value)
             return AIFPLList(elements)
 
         elif builtin_name == 'list->string':
             if len(args) != 1:
-                raise AIFPLEvalError(f"list->string takes exactly 1 argument, got {len(args)}")
+                raise AIFPLEvalError(f"list->string requires exactly 1 argument, got {len(args)}")
             list_arg = self._ensure_list(args[0], "list->string")
             
             # Validate that all elements are strings
@@ -2711,7 +2711,7 @@ class AIFPLVM:
         elif builtin_name == 'alist-set':
             if len(args) != 3:
                 raise AIFPLEvalError(
-                    message="Alist-set takes exactly 3 arguments",
+                    message="Alist-set requires exactly 3 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="3 arguments: alist, key, value",
                     example='(alist-set my-alist "name" "Bob")',
@@ -2735,7 +2735,7 @@ class AIFPLVM:
         elif builtin_name == 'alist-remove':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Alist-remove takes exactly 2 arguments",
+                    message="Alist-remove requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 arguments: alist and key",
                     example='(alist-remove my-alist "name")',
@@ -2758,7 +2758,7 @@ class AIFPLVM:
         elif builtin_name == 'alist-has?':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Alist-has? takes exactly 2 arguments",
+                    message="Alist-has? requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 arguments: alist and key",
                     example='(alist-has? my-alist "name")',
@@ -2781,7 +2781,7 @@ class AIFPLVM:
         elif builtin_name == 'alist-keys':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Alist-keys takes exactly 1 argument",
+                    message="Alist-keys requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 alist",
                     example='(alist-keys my-alist)',
@@ -2803,7 +2803,7 @@ class AIFPLVM:
         elif builtin_name == 'alist-values':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Alist-values takes exactly 1 argument",
+                    message="Alist-values requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 alist",
                     example='(alist-values my-alist)',
@@ -2825,7 +2825,7 @@ class AIFPLVM:
         elif builtin_name == 'alist-merge':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Alist-merge takes exactly 2 arguments",
+                    message="Alist-merge requires exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 alists",
                     example='(alist-merge alist1 alist2)',
@@ -2852,7 +2852,7 @@ class AIFPLVM:
         elif builtin_name == 'alist?':
             if len(args) != 1:
                 raise AIFPLEvalError(
-                    message="Alist? takes exactly 1 argument",
+                    message="Alist? requires exactly 1 argument",
                     received=f"Got {len(args)} arguments",
                     expected="1 value",
                     example='(alist? my-alist) → #t',

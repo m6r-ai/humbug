@@ -134,7 +134,7 @@ class AIFPLMathFunctions:
     def _builtin_slash_slash(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement // (floor division) operation."""
         if len(args) != 2:
-            raise AIFPLEvalError(f"Floor division takes exactly 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Floor division requires exactly 2 arguments, got {len(args)}")
 
         left_val = self._ensure_real_number(args[0], "//")
         right_val = self._ensure_real_number(args[1], "//")
@@ -147,7 +147,7 @@ class AIFPLMathFunctions:
     def _builtin_percent(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement % (modulo) operation."""
         if len(args) != 2:
-            raise AIFPLEvalError(f"Modulo takes exactly 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Modulo requires exactly 2 arguments, got {len(args)}")
 
         left_val = self._ensure_real_number(args[0], "%")
         right_val = self._ensure_real_number(args[1], "%")
@@ -160,7 +160,7 @@ class AIFPLMathFunctions:
     def _builtin_star_star(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement ** (exponentiation) operation."""
         if len(args) != 2:
-            raise AIFPLEvalError(f"Function '**' takes exactly 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function '**' requires exactly 2 arguments, got {len(args)}")
 
         base = self._ensure_number(args[0], "**")
         exponent = self._ensure_number(args[1], "**")
@@ -296,7 +296,7 @@ class AIFPLMathFunctions:
     def _builtin_not(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement not operation."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"not takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'not' requires exactly 1 argument, got {len(args)}")
 
         bool_val = self._ensure_boolean(args[0], "not")
         return AIFPLBoolean(not bool_val.value)
@@ -305,7 +305,7 @@ class AIFPLMathFunctions:
     def _builtin_bit_or(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement bit-or operation."""
         if len(args) < 2:
-            raise AIFPLEvalError(f"bit-or requires at least 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'bit-or' requires at least 2 arguments, got {len(args)}")
 
         int_args = [self._ensure_integer(arg, "bit-or") for arg in args]
         result = int_args[0]
@@ -317,7 +317,7 @@ class AIFPLMathFunctions:
     def _builtin_bit_and(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement bit-and operation."""
         if len(args) < 2:
-            raise AIFPLEvalError(f"bit-and requires at least 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'bit-and' requires at least 2 arguments, got {len(args)}")
 
         int_args = [self._ensure_integer(arg, "bit-and") for arg in args]
         result = int_args[0]
@@ -329,7 +329,7 @@ class AIFPLMathFunctions:
     def _builtin_bit_xor(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement bit-xor operation."""
         if len(args) < 2:
-            raise AIFPLEvalError(f"bit-xor requires at least 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'bit-xor' requires at least 2 arguments, got {len(args)}")
 
         int_args = [self._ensure_integer(arg, "bit-xor") for arg in args]
         result = int_args[0]
@@ -341,7 +341,7 @@ class AIFPLMathFunctions:
     def _builtin_bit_not(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement bit-not operation."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"bit-not takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'bit-not' requires exactly 1 argument, got {len(args)}")
 
         int_val = self._ensure_integer(args[0], "bit-not")
         return AIFPLNumber(~int_val)
@@ -349,7 +349,7 @@ class AIFPLMathFunctions:
     def _builtin_bit_shift_left(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement bit-shift-left operation."""
         if len(args) != 2:
-            raise AIFPLEvalError(f"bit-shift-left takes exactly 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'bit-shift-left' requires exactly 2 arguments, got {len(args)}")
 
         value = self._ensure_integer(args[0], "bit-shift-left")
         shift = self._ensure_integer(args[1], "bit-shift-left")
@@ -358,7 +358,7 @@ class AIFPLMathFunctions:
     def _builtin_bit_shift_right(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement bit-shift-right operation."""
         if len(args) != 2:
-            raise AIFPLEvalError(f"bit-shift-right takes exactly 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'bit-shift-right' requires exactly 2 arguments, got {len(args)}")
 
         value = self._ensure_integer(args[0], "bit-shift-right")
         shift = self._ensure_integer(args[1], "bit-shift-right")
@@ -368,7 +368,7 @@ class AIFPLMathFunctions:
     def _builtin_sin(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement sin function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"sin takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'sin' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "sin")
         val = num_val.value
@@ -381,7 +381,7 @@ class AIFPLMathFunctions:
     def _builtin_cos(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement cos function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"cos takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'cos' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "cos")
         val = num_val.value
@@ -394,7 +394,7 @@ class AIFPLMathFunctions:
     def _builtin_tan(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement tan function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"tan takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'tan' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "tan")
         val = num_val.value
@@ -407,7 +407,7 @@ class AIFPLMathFunctions:
     def _builtin_log(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement log (natural logarithm) function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"log takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'log' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "log")
         val = num_val.value
@@ -420,7 +420,7 @@ class AIFPLMathFunctions:
     def _builtin_log10(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement log10 function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"log10 takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'log10' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "log10")
         val = num_val.value
@@ -433,7 +433,7 @@ class AIFPLMathFunctions:
     def _builtin_exp(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement exp function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"exp takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'exp' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "exp")
         val = num_val.value
@@ -446,7 +446,7 @@ class AIFPLMathFunctions:
     def _builtin_sqrt(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement sqrt function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"sqrt takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'sqrt' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "sqrt")
         val = num_val.value
@@ -459,7 +459,7 @@ class AIFPLMathFunctions:
     def _builtin_abs(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement abs function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"abs takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'abs' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "abs")
         return AIFPLNumber(abs(num_val.value))
@@ -467,7 +467,7 @@ class AIFPLMathFunctions:
     def _builtin_round(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement round function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"round takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'round' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "round")
 
@@ -486,7 +486,7 @@ class AIFPLMathFunctions:
     def _builtin_floor(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement floor function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"floor takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'floor' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "floor")
 
@@ -505,7 +505,7 @@ class AIFPLMathFunctions:
     def _builtin_ceil(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement ceil function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"ceil takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'ceil' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "ceil")
 
@@ -524,7 +524,7 @@ class AIFPLMathFunctions:
     def _builtin_min(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement min function."""
         if not args:
-            raise AIFPLEvalError("min requires at least 1 argument, got 0")
+            raise AIFPLEvalError("Function 'min' requires at least 1 argument, got 0")
 
         # Use type narrowing to handle only real numbers for min/max
         real_values = []
@@ -537,7 +537,7 @@ class AIFPLMathFunctions:
     def _builtin_max(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement max function."""
         if not args:
-            raise AIFPLEvalError("max requires at least 1 argument, got 0")
+            raise AIFPLEvalError("Function 'max' requires at least 1 argument, got 0")
 
         # Use type narrowing to handle only real numbers for min/max
         real_values = []
@@ -550,7 +550,7 @@ class AIFPLMathFunctions:
     def _builtin_pow(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement pow function."""
         if len(args) != 2:
-            raise AIFPLEvalError(f"pow takes exactly 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'pow' requires exactly 2 arguments, got {len(args)}")
 
         base = self._ensure_number(args[0], "pow")
         exponent = self._ensure_number(args[1], "pow")
@@ -560,7 +560,7 @@ class AIFPLMathFunctions:
     def _builtin_bin(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement bin function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"bin takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'bin' requires exactly 1 argument, got {len(args)}")
 
         int_val = self._ensure_integer(args[0], "bin")
         return AIFPLString(bin(int_val))
@@ -568,7 +568,7 @@ class AIFPLMathFunctions:
     def _builtin_hex(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement hex function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"hex takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'hex' requires exactly 1 argument, got {len(args)}")
 
         int_val = self._ensure_integer(args[0], "hex")
         return AIFPLString(hex(int_val))
@@ -576,7 +576,7 @@ class AIFPLMathFunctions:
     def _builtin_oct(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement oct function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"oct takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'oct' requires exactly 1 argument, got {len(args)}")
 
         int_val = self._ensure_integer(args[0], "oct")
         return AIFPLString(oct(int_val))
@@ -585,7 +585,7 @@ class AIFPLMathFunctions:
     def _builtin_real(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement real function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"real takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'real' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "real")
         val = num_val.value
@@ -604,7 +604,7 @@ class AIFPLMathFunctions:
     def _builtin_imag(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement imag function."""
         if len(args) != 1:
-            raise AIFPLEvalError(f"imag takes exactly 1 argument, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'imag' requires exactly 1 argument, got {len(args)}")
 
         num_val = self._ensure_number(args[0], "imag")
         val = num_val.value
@@ -623,13 +623,13 @@ class AIFPLMathFunctions:
     def _builtin_complex(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement complex function."""
         if len(args) != 2:
-            raise AIFPLEvalError(f"complex takes exactly 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function 'complex' requires exactly 2 arguments, got {len(args)}")
 
         real_val = self._ensure_number(args[0], "complex")
         imag_val = self._ensure_number(args[1], "complex")
 
         if not isinstance(real_val.value, (int, float)) or not isinstance(imag_val.value, (int, float)):
-            raise AIFPLEvalError("complex arguments must be real numbers")
+            raise AIFPLEvalError("Function 'complex' arguments must be real numbers")
 
         real_part, imag_part = real_val.value, imag_val.value
         return AIFPLNumber(complex(real_part, imag_part))

@@ -205,7 +205,7 @@ class AIFPLEvaluator:
                 received=f"Got {quote_list.length() - 1} arguments: {self.format_result(quote_list)}",
                 expected="Exactly 1 argument",
                 example="(quote expr) or 'expr",
-                suggestion="Quote takes exactly one expression to quote"
+                suggestion="Quote requires exactly one expression to quote"
             )
 
         # Return the quoted expression without evaluation

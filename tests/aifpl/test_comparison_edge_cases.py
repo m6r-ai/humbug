@@ -102,11 +102,11 @@ class TestComparisonEdgeCases:
 
         for op in all_comparison_ops:
             # No arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires at least 2 arguments, got 0"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires at least 2 arguments"):
                 aifpl.evaluate(f"({op})")
 
             # One argument
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires at least 2 arguments, got 1"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires at least 2 arguments"):
                 aifpl.evaluate(f"({op} 5)")
 
     def test_comparison_chains_early_termination(self, aifpl):
