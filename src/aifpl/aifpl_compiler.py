@@ -158,6 +158,7 @@ class AIFPLCompiler:
         '+', '-', '*', '/', '//', '%', '**',
         '=', '!=', '<', '>', '<=', '>=',
         'and', 'or', 'not',
+        'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
         'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
         'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
         'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',

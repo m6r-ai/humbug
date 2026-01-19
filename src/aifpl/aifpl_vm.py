@@ -149,6 +149,18 @@ class AIFPLVM:
         
         # For other types (functions, etc.), use identity comparison
         return val1 is val2
+
+    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
+        """Ensure value is an integer, raise error if not."""
+        if not isinstance(value, AIFPLNumber) or not value.is_integer():
+            raise AIFPLEvalError(
+                f"Function '{function_name}' requires integer arguments, got {value.type_name()}"
+            )
+        
+        # Type narrowing: we know value.value is int here
+        assert isinstance(value.value, int), "is_integer() should guarantee int type"
+        return value.value
+
     def _get_function_name(self, func: AIFPLValue) -> str:
         """
         Get function name for error messages.
@@ -968,6 +980,54 @@ class AIFPLVM:
                     f"Function 'not' requires boolean arguments, got {args[0].type_name()}"
                 )
             return AIFPLBoolean(not args[0].value)
+
+        # Bitwise operations
+        elif builtin_name == 'bit-or':
+            if len(args) < 2:
+                raise AIFPLEvalError(f"bit-or requires at least 2 arguments, got {len(args)}")
+            int_args = [self._ensure_integer(arg, "bit-or") for arg in args]
+            result = int_args[0]
+            for arg in int_args[1:]:
+                result |= arg
+            return AIFPLNumber(result)
+
+        elif builtin_name == 'bit-and':
+            if len(args) < 2:
+                raise AIFPLEvalError(f"bit-and requires at least 2 arguments, got {len(args)}")
+            int_args = [self._ensure_integer(arg, "bit-and") for arg in args]
+            result = int_args[0]
+            for arg in int_args[1:]:
+                result &= arg
+            return AIFPLNumber(result)
+
+        elif builtin_name == 'bit-xor':
+            if len(args) < 2:
+                raise AIFPLEvalError(f"bit-xor requires at least 2 arguments, got {len(args)}")
+            int_args = [self._ensure_integer(arg, "bit-xor") for arg in args]
+            result = int_args[0]
+            for arg in int_args[1:]:
+                result ^= arg
+            return AIFPLNumber(result)
+
+        elif builtin_name == 'bit-not':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"bit-not takes exactly 1 argument, got {len(args)}")
+            int_val = self._ensure_integer(args[0], "bit-not")
+            return AIFPLNumber(~int_val)
+
+        elif builtin_name == 'bit-shift-left':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"bit-shift-left takes exactly 2 arguments, got {len(args)}")
+            value = self._ensure_integer(args[0], "bit-shift-left")
+            shift = self._ensure_integer(args[1], "bit-shift-left")
+            return AIFPLNumber(value << shift)
+
+        elif builtin_name == 'bit-shift-right':
+            if len(args) != 2:
+                raise AIFPLEvalError(f"bit-shift-right takes exactly 2 arguments, got {len(args)}")
+            value = self._ensure_integer(args[0], "bit-shift-right")
+            shift = self._ensure_integer(args[1], "bit-shift-right")
+            return AIFPLNumber(value >> shift)
 
         # List operations
         elif builtin_name == 'list':

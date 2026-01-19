@@ -79,7 +79,8 @@ class AIFPL:
                 self.vm = AIFPLVM(evaluator)
             
             # Set up globals (builtins and constants)
-            globals_dict = {**evaluator.CONSTANTS, **evaluator._builtin_functions}
+            # Only pass constants (pi, e, j, etc) - NOT builtin functions (no fallback!)
+            globals_dict = evaluator.CONSTANTS
             self.vm.set_globals(globals_dict)
             
             # Execute
@@ -132,7 +133,8 @@ class AIFPL:
                 self.vm = AIFPLVM(evaluator)
             
             # Set up globals (builtins and constants)
-            globals_dict = {**evaluator.CONSTANTS, **evaluator._builtin_functions}
+            # Only pass constants (pi, e, j, etc) - NOT builtin functions (no fallback!)
+            globals_dict = evaluator.CONSTANTS
             self.vm.set_globals(globals_dict)
             
             # Execute
