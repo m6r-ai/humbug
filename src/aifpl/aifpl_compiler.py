@@ -93,15 +93,26 @@ class CompilationContext:
     def resolve_variable(self, name: str) -> Tuple[str, int, int]:
         """Resolve variable to (type, depth, index).
 
+        For variables in let bindings, we use flat indexing within the same frame.
+        All lets in the same function/module use depth=0 with different flat indices.
+        
         Returns:
             ('local', depth, index) for local variables
             ('global', 0, name_index) for global variables
         """
         # Search from innermost to outermost scope
+        flat_index_offset = 0
         for depth, scope in enumerate(reversed(self.scopes)):
             index = scope.get_binding(name)
             if index is not None:
-                return ('local', depth, index)
+                # Calculate flat index: sum of all previous scope sizes + index within scope
+                # All scopes in the same function use depth=0 (same frame)
+                for i in range(len(self.scopes) - depth - 1):
+                    flat_index_offset += len(self.scopes[i].bindings)
+                
+                flat_index = flat_index_offset + index
+                # Always use depth=0 for let variables (they're all in the same frame)
+                return ('local', 0, flat_index)
 
         # Not found in local scopes, must be global
         name_index = self.add_name(name)
@@ -337,15 +348,6 @@ class AIFPLCompiler:
         # Enter new scope for tracking variables
         ctx.push_scope()
 
-        # Count how many bindings we have
-        num_bindings = len(bindings_list.elements)
-        
-        # Create a new frame for this let (if we're in a nested let)
-        # The first scope (index 0) is the module scope, so we only need frames for nested scopes
-        if len(ctx.scopes) > 1:
-            # Emit MAKE_FRAME to create a new frame for this let's bindings
-            ctx.emit(Opcode.MAKE_FRAME, num_bindings)
-
         # First pass: Add all binding names to scope (for recursive references)
         binding_pairs = []
         for binding in bindings_list.elements:
@@ -366,8 +368,9 @@ class AIFPLCompiler:
         # Second pass: Compile values and store them
         for i, (name, value_expr) in enumerate(binding_pairs):
             # Get the index for this variable
-            var_index = ctx.current_scope().get_binding(name)
-
+            # Use resolve_variable to get the correct flat index
+            var_type, depth, var_index = ctx.resolve_variable(name)
+            
             # Check if this is a self-referential lambda
             is_self_ref_lambda = (isinstance(value_expr, AIFPLList) and 
                                  not value_expr.is_empty() and
@@ -381,10 +384,14 @@ class AIFPLCompiler:
                 is_recursive = self._references_variable(value_expr, name)
 
             # Compile the value expression
-            self._compile_expression(value_expr, ctx)
+            # Pass the binding name if it's a lambda (for self-reference detection)
+            if is_self_ref_lambda:
+                self._compile_lambda(value_expr, ctx, binding_name=name)
+            else:
+                self._compile_expression(value_expr, ctx)
 
             # Store in local variable
-            ctx.emit(Opcode.STORE_LOCAL, 0, var_index)
+            ctx.emit(Opcode.STORE_LOCAL, depth, var_index)
 
             # For recursive closures, patch them to reference themselves
             if is_recursive:
@@ -396,10 +403,6 @@ class AIFPLCompiler:
         # Compile body
         self._compile_expression(body, ctx)
 
-        # Pop the frame if we created one
-        if len(ctx.scopes) > 1:
-            ctx.emit(Opcode.POP_FRAME)
-        
         # Exit scope (for variable tracking)
         ctx.pop_scope()
 
@@ -412,7 +415,8 @@ class AIFPLCompiler:
         else:
             return False
 
-    def _compile_lambda(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_lambda(self, expr: AIFPLList, ctx: CompilationContext,
+                       binding_name: str = None) -> None:
         """Compile lambda expression: (lambda (params...) body)"""
         if len(expr.elements) != 3:
             raise AIFPLEvalError("lambda requires parameters and body")
@@ -429,24 +433,43 @@ class AIFPLCompiler:
                 raise AIFPLEvalError("lambda parameter must be a symbol")
             param_names.append(param.name)
 
-        # Create new compilation context for lambda body  
+        # Find free variables (variables used in body but not parameters)
+        bound_vars = set(param_names)
+        free_vars = self._find_free_variables(body, bound_vars, ctx)
+        
+        # Emit instructions to load free variables onto stack (for capture).
+        # Only capture variables from outer scopes, not self-references in current scope.
+        captured_vars = []
+        for free_var in free_vars:
+            var_type, depth, index = ctx.resolve_variable(free_var)
+            if var_type == 'local':
+                # Check if this variable is a self-reference (the binding we're currently compiling)
+                if free_var != binding_name:
+                    # Not a self-reference - capture it
+                    ctx.emit(Opcode.LOAD_LOCAL, depth, index)
+                    captured_vars.append(free_var)
+                # else: self-reference, skip capturing
+                # else: in current scope - it's a self-reference
+                # Don't capture, lambda will look it up via LOAD_GLOBAL -> closure_env
+            # else: global variable - don't capture or track as free
+        
+        # Create new compilation context for lambda body
         lambda_ctx = CompilationContext()
         lambda_ctx.push_scope()
 
         # Add parameters to lambda scope
         for param_name in param_names:
             lambda_ctx.current_scope().add_binding(param_name)
-
-        # For free variables (variables not in parameters), they'll be looked up as globals
-        # This works because:
-        # 1. Builtins are in globals
-        # 2. For recursive functions, we patch the closure after creation
-        # 3. For captured variables from enclosing scopes, they'll be in the closure environment
+        
+        # Add captured free variables to lambda scope (they come after parameters in locals)
+        # Self-references are NOT added here - they'll be looked up in closure_env
+        for free_var in captured_vars:
+            lambda_ctx.current_scope().add_binding(free_var)
 
         # Update max locals for the lambda
         lambda_ctx.update_max_locals()
 
-        # Now compile lambda body - free vars will be resolved as locals
+        # Compile lambda body - free vars will be resolved as locals
         self._compile_expression(body, lambda_ctx)
         lambda_ctx.emit(Opcode.RETURN)
 
@@ -456,17 +479,17 @@ class AIFPLCompiler:
             constants=lambda_ctx.constants,
             names=lambda_ctx.names,
             code_objects=lambda_ctx.code_objects,
-            free_vars=[],  # No free variables - we use PATCH_CLOSURE_SELF for recursion
+            free_vars=captured_vars,  # List of captured variable names
             param_count=len(param_names),
-            local_count=len(lambda_ctx.current_scope().bindings),
+            local_count=lambda_ctx.max_locals,
             name="<lambda>"
         )
 
         # Add to parent's code objects
         code_index = ctx.add_code_object(lambda_code)
 
-        # Emit MAKE_CLOSURE instruction with 0 captures (we don't capture, we use parent frame)
-        ctx.emit(Opcode.MAKE_CLOSURE, code_index, 0)
+        # Emit MAKE_CLOSURE instruction with capture count
+        ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(captured_vars))
 
     def _find_free_variables(self, expr: AIFPLValue, bound_vars: Set[str], 
                             parent_ctx: CompilationContext) -> List[str]:

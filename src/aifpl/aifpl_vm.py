@@ -1622,6 +1622,11 @@ class AIFPLVM:
                 )
             string = args[0].value
             delimiter = args[1].value
+            
+            # Handle empty delimiter - split into individual characters
+            if delimiter == "":
+                return AIFPLList(tuple(AIFPLString(char) for char in string))
+            
             parts = string.split(delimiter)
             return AIFPLList(tuple(AIFPLString(part) for part in parts))
 
@@ -1803,6 +1808,50 @@ class AIFPLVM:
             string = args[0].value
             start = int(args[1].value)
             end = int(args[2].value)
+            
+            # Validate indices (match interpreter behavior)
+            string_len = len(string)
+            if start < 0:
+                raise AIFPLEvalError(
+                    message="substring start index cannot be negative",
+                    received=f"Start index: {start}",
+                    expected="Non-negative integer",
+                    example='(substring "hello" 1 4) → "ell"',
+                    suggestion="Use a non-negative start index"
+                )
+            if end < 0:
+                raise AIFPLEvalError(
+                    message="substring end index cannot be negative",
+                    received=f"End index: {end}",
+                    expected="Non-negative integer",
+                    example='(substring "hello" 1 4) → "ell"',
+                    suggestion="Use a non-negative end index"
+                )
+            if start > string_len:
+                raise AIFPLEvalError(
+                    message="substring start index out of range",
+                    received=f"Start index: {start}, string length: {string_len}",
+                    expected=f"Index between 0 and {string_len}",
+                    example='(substring "hello" 1 4) → "ell"',
+                    suggestion="Use an index within the string bounds"
+                )
+            if end > string_len:
+                raise AIFPLEvalError(
+                    message="substring end index out of range",
+                    received=f"End index: {end}, string length: {string_len}",
+                    expected=f"Index between 0 and {string_len}",
+                    example='(substring "hello" 1 4) → "ell"',
+                    suggestion="Use an index within the string bounds"
+                )
+            if start > end:
+                raise AIFPLEvalError(
+                    message=f"start index ({start}) cannot be greater than end index ({end})",
+                    received=f"Start: {start}, End: {end}",
+                    expected="Start index ≤ end index",
+                    example='(substring "hello" 1 4) → "ell"',
+                    suggestion="Ensure start index is not greater than end index"
+                )
+            
             return AIFPLString(string[start:end])
 
         elif builtin_name == 'string->number':
@@ -1824,12 +1873,22 @@ class AIFPLVM:
                 )
             try:
                 # Try to parse as integer first
-                if '.' not in args[0].value and 'e' not in args[0].value.lower():
+                if '.' not in args[0].value and 'e' not in args[0].value.lower() and 'j' not in args[0].value.lower():
                     return AIFPLNumber(int(args[0].value))
+                
+                # Try complex number
+                if 'j' in args[0].value.lower():
+                    return AIFPLNumber(complex(args[0].value))
+                
+                # Otherwise float
                 else:
                     return AIFPLNumber(float(args[0].value))
-            except ValueError:
-                return AIFPLBoolean(False)  # Return #f on parse failure
+            except ValueError as e:
+                raise AIFPLEvalError(
+                    message=f"Cannot convert string to number: '{args[0].value}'",
+                    suggestion="Provide a valid number string",
+                    example='(string->number "42") → 42'
+                )
 
         elif builtin_name == 'number->string':
             if len(args) != 1:
