@@ -1184,12 +1184,10 @@ class AIFPLVM:
                     suggestion="Use member? with a list as the second argument"
                 )
 
-            # Simple equality check
+            # Deep equality check
             for elem in lst.elements:
-                if type(item) == type(elem):
-                    if isinstance(item, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
-                        if item.value == elem.value:
-                            return AIFPLBoolean(True)
+                if self._values_equal(item, elem):
+                    return AIFPLBoolean(True)
             return AIFPLBoolean(False)
 
         elif builtin_name == 'position':
@@ -1213,10 +1211,8 @@ class AIFPLVM:
                 )
 
             for i, elem in enumerate(lst.elements):
-                if type(item) == type(elem):
-                    if isinstance(item, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
-                        if item.value == elem.value:
-                            return AIFPLNumber(i)
+                if self._values_equal(item, elem):
+                    return AIFPLNumber(i)
             return AIFPLBoolean(False)
 
         elif builtin_name == 'take':
@@ -1298,10 +1294,8 @@ class AIFPLVM:
             result = []
             for elem in lst.elements:
                 # Skip matching elements
-                if type(item) == type(elem):
-                    if isinstance(item, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
-                        if item.value == elem.value:
-                            continue
+                if self._values_equal(item, elem):
+                    continue
                 result.append(elem)
             return AIFPLList(tuple(result))
 
@@ -1741,6 +1735,156 @@ class AIFPLVM:
                     accumulator = func.native_impl([accumulator, item], AIFPLEnvironment(), 0)
 
             return accumulator
+
+        elif builtin_name == 'find':
+            if len(args) != 2:
+                raise AIFPLEvalError(
+                    message="Find function has wrong number of arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="Exactly 2 arguments: (find predicate list)",
+                    example="(find (lambda (x) (> x 5)) (list 1 3 7 2))",
+                    suggestion="Find takes a predicate function and a list"
+                )
+            func = args[0]
+            lst = args[1]
+
+            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
+                raise AIFPLEvalError(
+                    message="Find first argument must be a function",
+                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
+                    expected="Function (lambda or builtin)",
+                    example="(find (lambda (x) (> x 5)) (list 1 3 7 2))",
+                    suggestion="Provide a predicate function as the first argument"
+                )
+            if not isinstance(lst, AIFPLList):
+                raise AIFPLEvalError(
+                    message="Find second argument must be a list",
+                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
+                    expected="List of values",
+                    example="(find (lambda (x) (> x 5)) (list 1 3 7 2))",
+                    suggestion="Use (list ...) to create a list"
+                )
+
+            for item in lst.elements:
+                # Call function with item
+                if isinstance(func, AIFPLFunction):
+                    test_result = self._call_bytecode_function(func, [item])
+                else:  # AIFPLBuiltinFunction
+                    if self.evaluator is None:
+                        raise AIFPLEvalError("Cannot call builtin without evaluator")
+                    test_result = func.native_impl([item], AIFPLEnvironment(), 0)
+                if not isinstance(test_result, AIFPLBoolean):
+                    raise AIFPLEvalError(
+                        message="Find predicate must return boolean",
+                        received=f"Predicate returned: {self._format_result(test_result)} ({test_result.type_name()})",
+                        expected="Boolean value (#t or #f)",
+                        example="(find (lambda (x) (> x 5)) (list 1 3 7 2))",
+                        suggestion="Predicate function should use comparison operators"
+                    )
+                if test_result.value:
+                    return item
+
+            return AIFPLBoolean(False)
+
+        elif builtin_name == 'any?':
+            if len(args) != 2:
+                raise AIFPLEvalError(
+                    message="Any? function has wrong number of arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="Exactly 2 arguments: (any? predicate list)",
+                    example="(any? (lambda (x) (> x 5)) (list 1 3 7))",
+                    suggestion="Any? takes a predicate function and a list"
+                )
+            func = args[0]
+            lst = args[1]
+
+            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
+                raise AIFPLEvalError(
+                    message="Any? first argument must be a function",
+                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
+                    expected="Function (lambda or builtin)",
+                    example="(any? (lambda (x) (> x 5)) (list 1 3 7))",
+                    suggestion="Provide a predicate function as the first argument"
+                )
+            if not isinstance(lst, AIFPLList):
+                raise AIFPLEvalError(
+                    message="Any? second argument must be a list",
+                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
+                    expected="List of values",
+                    example="(any? (lambda (x) (> x 5)) (list 1 3 7))",
+                    suggestion="Use (list ...) to create a list"
+                )
+
+            for item in lst.elements:
+                # Call function with item
+                if isinstance(func, AIFPLFunction):
+                    test_result = self._call_bytecode_function(func, [item])
+                else:  # AIFPLBuiltinFunction
+                    if self.evaluator is None:
+                        raise AIFPLEvalError("Cannot call builtin without evaluator")
+                    test_result = func.native_impl([item], AIFPLEnvironment(), 0)
+                if not isinstance(test_result, AIFPLBoolean):
+                    raise AIFPLEvalError(
+                        message="Any? predicate must return boolean",
+                        received=f"Predicate returned: {self._format_result(test_result)} ({test_result.type_name()})",
+                        expected="Boolean value (#t or #f)",
+                        example="(any? (lambda (x) (> x 5)) (list 1 3 7))",
+                        suggestion="Predicate function should use comparison operators"
+                    )
+                if test_result.value:
+                    return AIFPLBoolean(True)
+
+            return AIFPLBoolean(False)
+
+        elif builtin_name == 'all?':
+            if len(args) != 2:
+                raise AIFPLEvalError(
+                    message="All? function has wrong number of arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="Exactly 2 arguments: (all? predicate list)",
+                    example="(all? (lambda (x) (> x 0)) (list 1 3 7))",
+                    suggestion="All? takes a predicate function and a list"
+                )
+            func = args[0]
+            lst = args[1]
+
+            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
+                raise AIFPLEvalError(
+                    message="All? first argument must be a function",
+                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
+                    expected="Function (lambda or builtin)",
+                    example="(all? (lambda (x) (> x 0)) (list 1 3 7))",
+                    suggestion="Provide a predicate function as the first argument"
+                )
+            if not isinstance(lst, AIFPLList):
+                raise AIFPLEvalError(
+                    message="All? second argument must be a list",
+                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
+                    expected="List of values",
+                    example="(all? (lambda (x) (> x 0)) (list 1 3 7))",
+                    suggestion="Use (list ...) to create a list"
+                )
+
+            for item in lst.elements:
+                # Call function with item
+                if isinstance(func, AIFPLFunction):
+                    test_result = self._call_bytecode_function(func, [item])
+                else:  # AIFPLBuiltinFunction
+                    if self.evaluator is None:
+                        raise AIFPLEvalError("Cannot call builtin without evaluator")
+                    test_result = func.native_impl([item], AIFPLEnvironment(), 0)
+                if not isinstance(test_result, AIFPLBoolean):
+                    raise AIFPLEvalError(
+                        message="All? predicate must return boolean",
+                        received=f"Predicate returned: {self._format_result(test_result)} ({test_result.type_name()})",
+                        expected="Boolean value (#t or #f)",
+                        example="(all? (lambda (x) (> x 0)) (list 1 3 7))",
+                        suggestion="Predicate function should use comparison operators"
+                    )
+                if not test_result.value:
+                    return AIFPLBoolean(False)
+
+            return AIFPLBoolean(True)
 
         # String operations
         elif builtin_name == 'string-append':

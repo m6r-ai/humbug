@@ -20,11 +20,17 @@ class CompilationScope:
     Maps variable names to their index within the scope.
     """
     bindings: Dict[str, int] = field(default_factory=dict)
+    next_index: int = 0  # Track next available index
 
     def add_binding(self, name: str) -> int:
-        """Add a binding and return its index."""
-        index = len(self.bindings)
+        """Add a binding and return its index.
+        
+        Note: If a binding with the same name already exists, it will be
+        overwritten with a new index. This is intentional to support shadowing.
+        """
+        index = self.next_index
         self.bindings[name] = index
+        self.next_index += 1
         return index
 
     def get_binding(self, name: str) -> Optional[int]:
@@ -60,7 +66,7 @@ class CompilationContext:
 
     def update_max_locals(self) -> None:
         """Update max locals based on current scope depth."""
-        total_locals = sum(len(scope.bindings) for scope in self.scopes)
+        total_locals = sum(scope.next_index for scope in self.scopes)
         self.max_locals = max(self.max_locals, total_locals)
 
     def current_scope(self) -> CompilationScope:
@@ -155,7 +161,7 @@ class AIFPLCompiler:
         'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
         'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
         'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
-        'map', 'filter', 'fold', 'range',
+        'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?',
         'string-append', 'string-length', 'string-upcase', 'string-downcase',
         'string-trim', 'string-replace', 'string-split', 'string-join',
         'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
@@ -721,8 +727,7 @@ class AIFPLCompiler:
         self._compile_expression(value_expr, ctx)
         
         # Allocate a temporary local for the match value
-        match_temp_index = len(ctx.current_scope().bindings)
-        ctx.current_scope().add_binding(f"<match-temp-{match_temp_index}>")
+        match_temp_index = ctx.current_scope().add_binding(f"<match-temp>")
         ctx.update_max_locals()
         
         ctx.emit(Opcode.STORE_VAR, 0, match_temp_index)
@@ -920,8 +925,7 @@ class AIFPLCompiler:
         fail_jumps = []
         for i, elem_pattern in enumerate(pattern.elements):
             # Extract element into a temporary
-            elem_temp_index = len(ctx.current_scope().bindings)
-            ctx.current_scope().add_binding(f"<elem-temp-{i}>")
+            elem_temp_index = ctx.current_scope().add_binding(f"<elem-temp-{i}>")
             ctx.update_max_locals()
             
             ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
@@ -976,8 +980,7 @@ class AIFPLCompiler:
             elem_pattern = pattern.elements[i]
             
             # Extract element into temporary
-            elem_temp_index = len(ctx.current_scope().bindings)
-            ctx.current_scope().add_binding(f"<cons-elem-temp-{i}>")
+            elem_temp_index = ctx.current_scope().add_binding(f"<cons-elem-temp-{i}>")
             ctx.update_max_locals()
             
             ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
@@ -995,8 +998,7 @@ class AIFPLCompiler:
         tail_pattern = pattern.elements[dot_position + 1]
         
         # Extract tail into temporary
-        tail_temp_index = len(ctx.current_scope().bindings)
-        ctx.current_scope().add_binding(f"<cons-tail-temp>")
+        tail_temp_index = ctx.current_scope().add_binding(f"<cons-tail-temp>")
         ctx.update_max_locals()
         
         ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(dot_position)))
