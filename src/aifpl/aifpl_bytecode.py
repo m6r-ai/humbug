@@ -43,10 +43,6 @@ class Opcode(IntEnum):
     # Stack manipulation
     POP = auto()             # Discard top of stack
 
-    # Frames
-    MAKE_FRAME = auto()      # Create new local frame: MAKE_FRAME size
-    POP_FRAME = auto()       # Pop local frame
-
 
 @dataclass
 class Instruction:

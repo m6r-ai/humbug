@@ -498,26 +498,6 @@ class AIFPLVM:
                 elements.reverse()
                 self.stack.append(AIFPLList(tuple(elements)))
 
-            elif opcode == Opcode.MAKE_FRAME:
-                # Create a new frame for let bindings
-                # arg1 is the number of local slots
-                # Create a dummy code object for the frame
-                dummy_code = CodeObject(
-                    instructions=[],
-                    constants=[],
-                    names=[],
-                    code_objects=[],
-                    local_count=arg1,
-                    name="<let>"
-                )
-                new_frame = Frame(dummy_code)
-                self.frames.append(new_frame)
-
-            elif opcode == Opcode.POP_FRAME:
-                # Pop the let's frame
-                if len(self.frames) > 1:  # Don't pop the main frame
-                    self.frames.pop()
-
             else:
                 raise AIFPLEvalError(f"Unimplemented opcode: {opcode.name}")
 
