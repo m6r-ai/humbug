@@ -334,8 +334,17 @@ class AIFPLCompiler:
         if not isinstance(bindings_list, AIFPLList):
             raise AIFPLEvalError("let bindings must be a list")
 
-        # Enter new scope
+        # Enter new scope for tracking variables
         ctx.push_scope()
+
+        # Count how many bindings we have
+        num_bindings = len(bindings_list.elements)
+        
+        # Create a new frame for this let (if we're in a nested let)
+        # The first scope (index 0) is the module scope, so we only need frames for nested scopes
+        if len(ctx.scopes) > 1:
+            # Emit MAKE_FRAME to create a new frame for this let's bindings
+            ctx.emit(Opcode.MAKE_FRAME, num_bindings)
 
         # First pass: Add all binding names to scope (for recursive references)
         binding_pairs = []
@@ -379,14 +388,19 @@ class AIFPLCompiler:
 
             # For recursive closures, patch them to reference themselves
             if is_recursive:
-                # arg1 = name index (in names pool), arg2 = local var index
+                # PATCH_CLOSURE_SELF: arg1 = name index, arg2 = var index (within current scope)
+                # The VM will need to use depth=0 since we just stored there
                 name_index = ctx.add_name(name)
                 ctx.emit(Opcode.PATCH_CLOSURE_SELF, name_index, var_index)
 
         # Compile body
         self._compile_expression(body, ctx)
 
-        # Exit scope
+        # Pop the frame if we created one
+        if len(ctx.scopes) > 1:
+            ctx.emit(Opcode.POP_FRAME)
+        
+        # Exit scope (for variable tracking)
         ctx.pop_scope()
 
     def _references_variable(self, expr: AIFPLValue, var_name: str) -> bool:

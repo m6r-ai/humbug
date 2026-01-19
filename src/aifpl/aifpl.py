@@ -5,6 +5,8 @@ from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_value import AIFPLFunction
+from aifpl.aifpl_compiler import AIFPLCompiler
+from aifpl.aifpl_vm import AIFPLVM
 
 
 class AIFPL:
@@ -21,16 +23,23 @@ class AIFPL:
     Designed specifically to help LLMs understand and self-correct errors.
     """
 
-    def __init__(self, max_depth: int = 1000, floating_point_tolerance: float = 1e-10):
+    def __init__(self, max_depth: int = 1000, floating_point_tolerance: float = 1e-10, use_bytecode: bool = False):
         """
         Initialize enhanced AIFPL calculator.
 
         Args:
             max_depth: Maximum recursion depth for expression evaluation
             floating_point_tolerance: Tolerance for floating point comparisons and simplifications
+            use_bytecode: If True, use bytecode compiler and VM instead of tree-walking interpreter
         """
         self.max_depth = max_depth
         self.floating_point_tolerance = floating_point_tolerance
+        self.use_bytecode = use_bytecode
+        
+        # Initialize bytecode components if needed
+        if use_bytecode:
+            self.compiler = AIFPLCompiler()
+            self.vm = None  # Will be created with evaluator reference
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
         """
@@ -61,7 +70,23 @@ class AIFPL:
         # Set expression context for error reporting
         evaluator.set_expression_context(expression)
 
-        result = evaluator.evaluate(parsed_expr)
+        if self.use_bytecode:
+            # Compile and execute with VM
+            code = self.compiler.compile(parsed_expr)
+            
+            # Create VM with evaluator reference
+            if self.vm is None:
+                self.vm = AIFPLVM(evaluator)
+            
+            # Set up globals (builtins and constants)
+            globals_dict = {**evaluator.CONSTANTS, **evaluator._builtin_functions}
+            self.vm.set_globals(globals_dict)
+            
+            # Execute
+            result = self.vm.execute(code)
+        else:
+            # Use tree-walking interpreter
+            result = evaluator.evaluate(parsed_expr)
 
         # Simplify the result
         simplified = evaluator.simplify_result(result)
@@ -98,7 +123,23 @@ class AIFPL:
         # Set expression context for error reporting
         evaluator.set_expression_context(expression)
 
-        result = evaluator.evaluate(parsed_expr)
+        if self.use_bytecode:
+            # Compile and execute with VM
+            code = self.compiler.compile(parsed_expr)
+            
+            # Create VM with evaluator reference
+            if self.vm is None:
+                self.vm = AIFPLVM(evaluator)
+            
+            # Set up globals (builtins and constants)
+            globals_dict = {**evaluator.CONSTANTS, **evaluator._builtin_functions}
+            self.vm.set_globals(globals_dict)
+            
+            # Execute
+            result = self.vm.execute(code)
+        else:
+            # Use tree-walking interpreter
+            result = evaluator.evaluate(parsed_expr)
 
         # Simplify and format the result
         simplified = evaluator.simplify_result(result)

@@ -13,6 +13,12 @@ def aifpl():
 
 
 @pytest.fixture
+def aifpl_bytecode():
+    """Create a fresh AIFPL instance with bytecode enabled for each test."""
+    return AIFPL(use_bytecode=True)
+
+
+@pytest.fixture
 def aifpl_custom():
     """Factory for AIFPL instances with custom configuration."""
     def _create_aifpl(max_depth: int = 100, floating_point_tolerance: float = 1e-10) -> AIFPL:

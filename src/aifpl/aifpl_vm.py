@@ -387,8 +387,14 @@ class AIFPLVM:
                 var_index = arg2
                 var_name = code.names[name_index]
 
-                # Load the closure from locals
-                closure = frame.locals[var_index]
+                # Load the closure from the current frame (depth 0)
+                # Since STORE_LOCAL stores at depth 0, we load from depth 0
+                target_frame = self.frames[-1]  # Current frame (depth 0)
+                
+                if var_index >= len(target_frame.locals):
+                    raise AIFPLEvalError(f"PATCH_CLOSURE_SELF: variable index {var_index} out of range")
+                
+                closure = target_frame.locals[var_index]
 
                 if not isinstance(closure, AIFPLFunction):
                     raise AIFPLEvalError("PATCH_CLOSURE_SELF requires a function")
@@ -411,7 +417,7 @@ class AIFPLVM:
                 new_env.bindings[var_name] = patched_closure
 
                 # Store the patched closure back
-                frame.locals[var_index] = patched_closure
+                target_frame.locals[var_index] = patched_closure
 
             elif opcode == Opcode.POP:
                 self.stack.pop()
