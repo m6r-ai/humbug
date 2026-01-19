@@ -2,7 +2,7 @@
 
 import math
 import cmath
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Union
 from dataclasses import dataclass
 
 from aifpl.aifpl_value import (
@@ -48,11 +48,17 @@ class AIFPLVM:
         self.stack: List[AIFPLValue] = []
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
+        self.builtins: Dict[str, AIFPLBuiltinFunction] = {}
         self.message_builder = ErrorMessageBuilder()
 
     def set_globals(self, globals_dict: Dict[str, AIFPLValue]) -> None:
-        """Set global variables (builtins, constants, etc.)."""
+        """Set global variables (constants like pi, e, j)."""
         self.globals = globals_dict.copy()
+
+    def set_builtins(self, builtins_dict: Dict[str, AIFPLBuiltinFunction]) -> None:
+        """Set builtin functions for use in higher-order functions.
+        These are NOT used for fallback variable lookup."""
+        self.builtins = builtins_dict.copy()
 
     # ========== Helper Methods for Error Handling ==========
 
@@ -174,6 +180,35 @@ class AIFPLVM:
             )
         
         return value.value
+
+    def _ensure_string(self, value: AIFPLValue, function_name: str) -> AIFPLString:
+        """Ensure value is a string, raise error if not."""
+        if not isinstance(value, AIFPLString):
+            raise AIFPLEvalError(
+                f"Function '{function_name}' requires string arguments, got {value.type_name()}"
+            )
+        return value
+
+    def _ensure_list(self, value: AIFPLValue, function_name: str) -> AIFPLList:
+        """Ensure value is a list, raise error if not."""
+        if not isinstance(value, AIFPLList):
+            raise AIFPLEvalError(
+                f"Function '{function_name}' requires list arguments, got {value.type_name()}"
+            )
+        return value
+
+    def _resolve_function(self, value: AIFPLValue, context: str) -> Union[AIFPLFunction, AIFPLBuiltinFunction]:
+        """Resolve a value to a function, handling builtin symbols."""
+        # If it's already a function, return it
+        if isinstance(value, (AIFPLFunction, AIFPLBuiltinFunction)):
+            return value
+        
+        # If it's a symbol, try to resolve it as a builtin
+        if isinstance(value, AIFPLSymbol) and value.name in self.builtins:
+            return self.builtins[value.name]
+        
+        # Otherwise, it's not a valid function
+        raise AIFPLEvalError(f"{context} first argument must be a function, got {value.type_name()}")
 
     def _get_function_name(self, func: AIFPLValue) -> str:
         """
@@ -2232,15 +2267,10 @@ class AIFPLVM:
             func = args[0]
             init = args[1]
             lst = args[2]
-
-            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
-                raise AIFPLEvalError(
-                    message="Fold first argument must be a function",
-                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
-                    expected="Function (lambda or builtin)",
-                    example="(fold + 0 (list 1 2 3 4))",
-                    suggestion="Provide a function as the first argument"
-                )
+            
+            # Resolve function (handles builtin symbols like '+')
+            func = self._resolve_function(func, "Fold")
+            
             if not isinstance(lst, AIFPLList):
                 raise AIFPLEvalError(
                     message="Fold third argument must be a list",
@@ -2842,6 +2872,36 @@ class AIFPLVM:
                 return AIFPLString(str(int(value)))
             else:
                 return AIFPLString(str(value))
+
+        elif builtin_name == 'string=?':
+            if len(args) < 2:
+                raise AIFPLEvalError(f"string=? requires at least 2 arguments, got {len(args)}")
+            string_args = [self._ensure_string(arg, "string=?") for arg in args]
+            first_val = string_args[0].value
+            return AIFPLBoolean(all(arg.value == first_val for arg in string_args[1:]))
+
+        elif builtin_name == 'string->list':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"string->list takes exactly 1 argument, got {len(args)}")
+            string_arg = self._ensure_string(args[0], "string->list")
+            elements = tuple(AIFPLString(char) for char in string_arg.value)
+            return AIFPLList(elements)
+
+        elif builtin_name == 'list->string':
+            if len(args) != 1:
+                raise AIFPLEvalError(f"list->string takes exactly 1 argument, got {len(args)}")
+            list_arg = self._ensure_list(args[0], "list->string")
+            
+            # Validate that all elements are strings
+            for i, elem in enumerate(list_arg.elements):
+                if not isinstance(elem, AIFPLString):
+                    raise AIFPLEvalError(
+                        f"list->string requires all list elements to be strings, element {i+1} is {elem.type_name()}"
+                    )
+            
+            # Join the strings
+            result = ''.join(elem.value for elem in list_arg.elements)
+            return AIFPLString(result)
 
         # Alist operations
         elif builtin_name == 'alist':

@@ -166,7 +166,7 @@ class AIFPLCompiler:
         'string-append', 'string-length', 'string-upcase', 'string-downcase',
         'string-trim', 'string-replace', 'string-split', 'string-join',
         'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
-        'substring', 'string->number', 'number->string',
+        'substring', 'string->number', 'number->string', 'string=?', 'string->list', 'list->string',
         'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
         'alist-keys', 'alist-values', 'alist-merge', 'alist?',
         'sqrt', 'abs', 'min', 'max', 'pow',
@@ -309,9 +309,7 @@ class AIFPLCompiler:
                 ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
                 return
             elif first.name in ['map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']:
-                # These are special forms - treat as regular calls for now
-                # The VM handles them
-                self._compile_function_call(expr, ctx)
+                self._compile_higher_order_function(expr, ctx)
                 return
 
         # Regular function call
@@ -692,6 +690,38 @@ class AIFPLCompiler:
 
             # Emit call
             ctx.emit(Opcode.CALL_FUNCTION, len(arg_exprs))
+
+    def _compile_higher_order_function(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+        """Compile higher-order functions (map, filter, fold, etc).
+        
+        The first argument is the function to apply. If it's a builtin symbol,
+        we pass it as a symbol constant so the VM can resolve it.
+        """
+        func_name = expr.first().name
+        arg_exprs = list(expr.elements[1:])
+        
+        if not arg_exprs:
+            raise AIFPLEvalError(f"{func_name} requires at least one argument")
+        
+        # First argument: the function to apply
+        func_arg = arg_exprs[0]
+        
+        # If it's a builtin symbol, pass it as a symbol constant
+        if isinstance(func_arg, AIFPLSymbol) and func_arg.name in self.builtin_indices:
+            # Pass the symbol itself as a constant
+            const_index = ctx.add_constant(func_arg)
+            ctx.emit(Opcode.LOAD_CONST, const_index)
+        else:
+            # Regular expression (lambda or variable)
+            self._compile_expression(func_arg, ctx)
+        
+        # Compile remaining arguments
+        for arg in arg_exprs[1:]:
+            self._compile_expression(arg, ctx)
+        
+        # Call the higher-order function
+        builtin_index = self.builtin_indices[func_name]
+        ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
 
     def _compile_match(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile match expression: (match value (pattern1 result1) ...)"""
