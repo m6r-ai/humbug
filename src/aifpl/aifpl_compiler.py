@@ -706,6 +706,17 @@ class AIFPLCompiler:
                     example="(match x ((42) \"found\") (_ \"default\"))"
                 )
 
+        # Validate pattern syntax for all clauses
+        for i, clause in enumerate(clauses):
+            pattern = clause.elements[0]
+            try:
+                self._validate_pattern_syntax(pattern)
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(
+                    message=f"Invalid pattern in clause {i+1}",
+                    context=str(e)
+                ) from e
+
         # Compile value and store in temporary local
         self._compile_expression(value_expr, ctx)
         
@@ -906,21 +917,27 @@ class AIFPLCompiler:
         
         # Match each element
         # We need to extract each element and match it against the sub-pattern
-        # For now, only support simple variable bindings in list elements
+        fail_jumps = []
         for i, elem_pattern in enumerate(pattern.elements):
-            if isinstance(elem_pattern, AIFPLSymbol) and elem_pattern.name != '_':
-                # Bind variable to list element
-                var_index = ctx.current_scope().add_binding(elem_pattern.name)
-                ctx.update_max_locals()
-                
-                # Load list and get element
-                ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
-                builtin_index = self.builtin_indices.get('list-ref')
-                if builtin_index is None:
-                    raise AIFPLEvalError("list-ref not in builtin table")
-                ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
-                ctx.emit(Opcode.STORE_VAR, 0, var_index)
+            # Extract element into a temporary
+            elem_temp_index = len(ctx.current_scope().bindings)
+            ctx.current_scope().add_binding(f"<elem-temp-{i}>")
+            ctx.update_max_locals()
+            
+            ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+            ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
+            builtin_index = self.builtin_indices.get('list-ref')
+            if builtin_index is None:
+                raise AIFPLEvalError("list-ref not in builtin table")
+            ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+            ctx.emit(Opcode.STORE_VAR, 0, elem_temp_index)
+            
+            # Recursively match the element pattern
+            self._compile_pattern(elem_pattern, elem_temp_index, ctx)
+            
+            # If element pattern fails, whole list pattern fails
+            elem_fail = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+            fail_jumps.append(elem_fail)
         
         # Success
         ctx.emit(Opcode.LOAD_TRUE)
@@ -930,6 +947,8 @@ class AIFPLCompiler:
         fail_location = ctx.current_instruction_index()
         ctx.patch_jump(fail_jump, fail_location)
         ctx.patch_jump(length_fail_jump, fail_location)
+        for fj in fail_jumps:
+            ctx.patch_jump(fj, fail_location)
         ctx.emit(Opcode.LOAD_FALSE)
         
         success_location = ctx.current_instruction_index()
@@ -952,31 +971,44 @@ class AIFPLCompiler:
         empty_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_TRUE, 0)  # Jump to fail if empty
         
         # Extract head elements (before dot)
+        fail_jumps = []
         for i in range(dot_position):
             elem_pattern = pattern.elements[i]
-            if isinstance(elem_pattern, AIFPLSymbol) and elem_pattern.name != '_':
-                var_index = ctx.current_scope().add_binding(elem_pattern.name)
-                ctx.update_max_locals()
-                
-                # Extract nth element: (list-ref list i)
-                ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
-                builtin_index = self.builtin_indices['list-ref']
-                ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
-                ctx.emit(Opcode.STORE_VAR, 0, var_index)
+            
+            # Extract element into temporary
+            elem_temp_index = len(ctx.current_scope().bindings)
+            ctx.current_scope().add_binding(f"<cons-elem-temp-{i}>")
+            ctx.update_max_locals()
+            
+            ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+            ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
+            builtin_index = self.builtin_indices['list-ref']
+            ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+            ctx.emit(Opcode.STORE_VAR, 0, elem_temp_index)
+            
+            # Recursively match the element pattern
+            self._compile_pattern(elem_pattern, elem_temp_index, ctx)
+            elem_fail = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+            fail_jumps.append(elem_fail)
         
         # Extract tail (after dot)
         tail_pattern = pattern.elements[dot_position + 1]
-        if isinstance(tail_pattern, AIFPLSymbol) and tail_pattern.name != '_':
-            var_index = ctx.current_scope().add_binding(tail_pattern.name)
-            ctx.update_max_locals()
-            
-            # Get tail: (drop n list)
-            ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(dot_position)))
-            ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
-            builtin_index = self.builtin_indices['drop']
-            ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
-            ctx.emit(Opcode.STORE_VAR, 0, var_index)
+        
+        # Extract tail into temporary
+        tail_temp_index = len(ctx.current_scope().bindings)
+        ctx.current_scope().add_binding(f"<cons-tail-temp>")
+        ctx.update_max_locals()
+        
+        ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(dot_position)))
+        ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+        builtin_index = self.builtin_indices['drop']
+        ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+        ctx.emit(Opcode.STORE_VAR, 0, tail_temp_index)
+        
+        # Recursively match the tail pattern
+        self._compile_pattern(tail_pattern, tail_temp_index, ctx)
+        tail_fail = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+        fail_jumps.append(tail_fail)
         
         # Success
         ctx.emit(Opcode.LOAD_TRUE)
@@ -986,7 +1018,153 @@ class AIFPLCompiler:
         fail_location = ctx.current_instruction_index()
         ctx.patch_jump(fail_jump, fail_location)
         ctx.patch_jump(empty_fail_jump, fail_location)
+        for fj in fail_jumps:
+            ctx.patch_jump(fj, fail_location)
         ctx.emit(Opcode.LOAD_FALSE)
         
         success_location = ctx.current_instruction_index()
         ctx.patch_jump(success_jump, success_location)
+
+    def _validate_pattern_syntax(self, pattern: AIFPLValue) -> None:
+        """Validate pattern syntax before compilation."""
+        # Literals are always valid
+        if isinstance(pattern, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
+            return
+
+        # Variable patterns (symbols)
+        if isinstance(pattern, AIFPLSymbol):
+            return
+
+        if isinstance(pattern, AIFPLList):
+            self._validate_list_pattern_syntax(pattern)
+            return
+
+        raise AIFPLEvalError(f"Invalid pattern type: {type(pattern).__name__}")
+
+    def _validate_list_pattern_syntax(self, pattern: AIFPLList) -> None:
+        """Validate list pattern syntax."""
+        # Empty list is valid
+        if pattern.is_empty():
+            return
+
+        # Check for type patterns: (type? var)
+        if (len(pattern.elements) == 2 and
+            isinstance(pattern.elements[0], AIFPLSymbol) and
+            pattern.elements[0].name.endswith('?')):
+            
+            type_pred = pattern.elements[0].name
+            var_pattern = pattern.elements[1]
+            
+            # Validate type predicate is known
+            valid_predicates = {
+                'number?', 'integer?', 'float?', 'complex?',
+                'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
+            }
+            
+            if type_pred not in valid_predicates:
+                raise AIFPLEvalError(
+                    message="Invalid type pattern",
+                    received=f"Type pattern: ({type_pred} ...)",
+                    expected="Valid type predicate like number?, string?, list?, etc.",
+                    example="(number? n) or (string? s)",
+                    suggestion="Use a valid type predicate ending with ?"
+                )
+
+            # Variable in type pattern must be a symbol
+            if not isinstance(var_pattern, AIFPLSymbol):
+                raise AIFPLEvalError(
+                    message="Pattern variable must be a symbol",
+                    received=f"Variable in type pattern: {var_pattern} ({var_pattern.type_name()})",
+                    expected="Symbol (variable name)",
+                    example="(number? x) not (number? 42)",
+                    suggestion="Use unquoted variable names in type patterns"
+                )
+
+            return
+
+        # Check for malformed type patterns (wrong number of arguments)
+        first_elem = pattern.elements[0]
+        if isinstance(first_elem, AIFPLSymbol):
+            valid_predicates = {
+                'number?', 'integer?', 'float?', 'complex?',
+                'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
+            }
+            
+            if first_elem.name in valid_predicates:
+                type_pred = first_elem.name
+
+                # Missing variable: (number?)
+                if len(pattern.elements) == 1:
+                    raise AIFPLEvalError(
+                        message="Invalid type pattern",
+                        received=f"Type pattern: ({type_pred}) - missing variable",
+                        expected="Type pattern with variable: (type? var)",
+                        example="(number? x) not (number?)",
+                        suggestion="Add a variable name after the type predicate"
+                    )
+
+                # Too many variables: (number? x y)
+                if len(pattern.elements) > 2:
+                    raise AIFPLEvalError(
+                        message="Invalid type pattern",
+                        received=f"Type pattern: {pattern} - too many variables",
+                        expected="Type pattern with one variable: (type? var)",
+                        example="(number? x) not (number? x y)",
+                        suggestion="Use only one variable in type patterns"
+                    )
+
+        # Comprehensive dot pattern validation
+        dot_positions = []
+        for i, element in enumerate(pattern.elements):
+            if isinstance(element, AIFPLSymbol) and element.name == ".":
+                dot_positions.append(i)
+
+        if len(dot_positions) > 1:
+            raise AIFPLEvalError(
+                message="Invalid cons pattern",
+                received=f"Pattern: {pattern} - multiple dots",
+                expected="At most one dot in cons pattern",
+                example="(head . tail) or (a b . rest) not (a . b . c)",
+                suggestion="Use only one dot to separate head from tail"
+            )
+
+        if len(dot_positions) == 1:
+            dot_pos = dot_positions[0]
+
+            # Dot at beginning: (. a b)
+            if dot_pos == 0:
+                raise AIFPLEvalError(
+                    message="Invalid cons pattern",
+                    received=f"Pattern: {pattern} - dot at beginning",
+                    expected="Elements before dot in cons pattern",
+                    example="(head . tail) or (a b . rest) not (. a b)",
+                    suggestion="Put at least one element before the dot"
+                )
+
+            # Dot at end: (a b .)
+            if dot_pos == len(pattern.elements) - 1:
+                raise AIFPLEvalError(
+                    message="Invalid cons pattern",
+                    received=f"Pattern: {pattern} - dot at end",
+                    expected="Pattern like (head . tail) or (a b . rest)",
+                    example="(head . tail) or (first second . rest)",
+                    suggestion="Put a tail pattern after the dot"
+                )
+
+            # Multiple elements after dot: (a . b c)
+            if dot_pos != len(pattern.elements) - 2:
+                raise AIFPLEvalError(
+                    message="Invalid cons pattern",
+                    received=f"Pattern: {pattern} - multiple elements after dot",
+                    expected="Pattern like (head . tail) or (a b . rest)",
+                    example="(head . tail) or (first second . rest)",
+                    suggestion="Use only one tail variable after the dot"
+                )
+
+        # Recursively validate all elements (except dots which are structural)
+        for element in pattern.elements:
+            # Skip dot symbols - they're structural, not patterns
+            if isinstance(element, AIFPLSymbol) and element.name == ".":
+                continue
+
+            self._validate_pattern_syntax(element)
