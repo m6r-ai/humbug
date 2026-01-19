@@ -291,13 +291,6 @@ class AIFPLVM:
                 if not condition.value:
                     frame.ip = arg1
 
-            elif opcode == Opcode.POP_JUMP_IF_TRUE:
-                condition = self.stack.pop()
-                if not isinstance(condition, AIFPLBoolean):
-                    raise AIFPLEvalError("Jump condition must be boolean")
-                if condition.value:
-                    frame.ip = arg1
-
             elif opcode == Opcode.MAKE_CLOSURE:
                 # Get code object for closure
                 closure_code = code.code_objects[arg1]
@@ -488,9 +481,6 @@ class AIFPLVM:
                 
                 # Add sibling to closure's environment
                 closure.closure_environment.bindings[sibling_name] = sibling
-
-            elif opcode == Opcode.POP:
-                self.stack.pop()
 
             elif opcode == Opcode.MAKE_LIST:
                 n = arg1
