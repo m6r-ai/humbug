@@ -160,7 +160,7 @@ class AIFPLMathFunctions:
     def _builtin_star_star(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Implement ** (exponentiation) operation."""
         if len(args) != 2:
-            raise AIFPLEvalError(f"Power takes exactly 2 arguments, got {len(args)}")
+            raise AIFPLEvalError(f"Function '**' takes exactly 2 arguments, got {len(args)}")
 
         base = self._ensure_number(args[0], "**")
         exponent = self._ensure_number(args[1], "**")

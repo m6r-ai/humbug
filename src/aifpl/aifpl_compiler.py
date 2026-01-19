@@ -352,29 +352,74 @@ class AIFPLCompiler:
                     current_binding_name: str = None) -> None:
         """Compile let expression: (let ((var val) ...) body)"""
         if len(expr.elements) < 3:
-            raise AIFPLEvalError("let requires bindings and body")
+            raise AIFPLEvalError(
+                message="Let expression structure is incorrect",
+                received=f"Got {len(expr.elements)} elements",
+                expected="Exactly 3 elements: (let ((bindings...)) body)",
+                example="(let ((x 5) (y 10)) (+ x y))",
+                suggestion="Let needs binding list and body: (let ((var1 val1) (var2 val2) ...) body)"
+            )
 
         _, bindings_list, body = expr.elements[0], expr.elements[1], expr.elements[2]
 
         if not isinstance(bindings_list, AIFPLList):
-            raise AIFPLEvalError("let bindings must be a list")
+            raise AIFPLEvalError(
+                message="Let binding list must be a list",
+                received=f"Binding list: {bindings_list.type_name()}",
+                expected="List of bindings: ((var1 val1) (var2 val2) ...)",
+                example="(let ((x 5) (y (* x 2))) (+ x y))",
+                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
+            )
 
         # Enter new scope for tracking variables
         ctx.push_scope()
 
         # First pass: Add all binding names to scope (for recursive references)
         binding_pairs = []
-        for binding in bindings_list.elements:
-            if not isinstance(binding, AIFPLList) or len(binding.elements) != 2:
-                raise AIFPLEvalError("Each let binding must be (name value)")
+        for i, binding in enumerate(bindings_list.elements):
+            if not isinstance(binding, AIFPLList):
+                raise AIFPLEvalError(
+                    message=f"Let binding {i+1} must be a list",
+                    received=f"Binding {i+1}: {binding.type_name()}",
+                    expected="List with variable and value: (var val)",
+                    example='Correct: (x 5)\\nIncorrect: x or "x"',
+                    suggestion="Wrap each binding in parentheses: (variable value)"
+                )
+            
+            if len(binding.elements) != 2:
+                raise AIFPLEvalError(
+                    message=f"Let binding {i+1} has wrong number of elements",
+                    received=f"Binding {i+1}: has {len(binding.elements)} elements",
+                    expected="Each binding needs exactly 2 elements: (variable value)",
+                    example='Correct: (x 5)\\nIncorrect: (x) or (x 5 6)',
+                    suggestion="Each binding: (variable-name value-expression)"
+                )
 
             name_expr, value_expr = binding.elements
             if not isinstance(name_expr, AIFPLSymbol):
-                raise AIFPLEvalError("Binding name must be a symbol")
+                raise AIFPLEvalError(
+                    message=f"Let binding {i+1} variable must be a symbol",
+                    received=f"Variable: {name_expr.type_name()}",
+                    expected="Unquoted symbol (variable name)",
+                    example='Correct: (x 5)\\nIncorrect: ("x" 5) or (1 5)',
+                    suggestion='Use unquoted variable names: x, not "x"'
+                )
 
             binding_pairs.append((name_expr.name, value_expr))
             # Add binding to scope NOW so recursive lambdas can reference it
             ctx.current_scope().add_binding(name_expr.name)
+        
+        # Check for duplicate binding names
+        var_names = [name for name, _ in binding_pairs]
+        if len(var_names) != len(set(var_names)):
+            duplicates = [name for name in var_names if var_names.count(name) > 1]
+            raise AIFPLEvalError(
+                message="Let binding variables must be unique",
+                received=f"Duplicate variables: {duplicates}",
+                expected="All variable names should be different",
+                example='Correct: (let ((x 1) (y 2)) ...)\\nIncorrect: (let ((x 1) (x 2)) ...)',
+                suggestion="Use different names for each variable"
+            )
 
         # Update max locals after adding all bindings
         ctx.update_max_locals()
@@ -465,19 +510,48 @@ class AIFPLCompiler:
                        binding_name: str = None, let_bindings: List[str] = None) -> None:
         """Compile lambda expression: (lambda (params...) body)"""
         if len(expr.elements) != 3:
-            raise AIFPLEvalError("lambda requires parameters and body")
+            raise AIFPLEvalError(
+                message="Lambda expression structure is incorrect",
+                received=f"Got {len(expr.elements)} elements",
+                expected="Exactly 3 elements: (lambda (params...) body)",
+                example="(lambda (x y) (+ x y))",
+                suggestion="Lambda needs parameter list and body: (lambda (param1 param2 ...) body-expression)"
+            )
 
         _, params_list, body = expr.elements
 
         if not isinstance(params_list, AIFPLList):
-            raise AIFPLEvalError("lambda parameters must be a list")
+            raise AIFPLEvalError(
+                message="Lambda parameters must be a list",
+                received=f"Parameter list: {params_list.type_name()}",
+                expected="List of symbols: (param1 param2 ...)",
+                example="(lambda (x y z) (+ x y z))",
+                suggestion="Parameters should be unquoted variable names"
+            )
 
         # Extract parameter names
         param_names = []
-        for param in params_list.elements:
+        for i, param in enumerate(params_list.elements):
             if not isinstance(param, AIFPLSymbol):
-                raise AIFPLEvalError("lambda parameter must be a symbol")
+                raise AIFPLEvalError(
+                    message=f"Lambda parameter {i+1} must be a symbol",
+                    received=f"Parameter {i+1}: {param.type_name()}",
+                    expected="Unquoted symbol (variable name)",
+                    example='Correct: (lambda (x y) (+ x y))\\nIncorrect: (lambda ("x" 1) ...)',
+                    suggestion='Use unquoted names: x, not "x" or 1'
+                )
             param_names.append(param.name)
+        
+        # Check for duplicate parameters
+        if len(param_names) != len(set(param_names)):
+            duplicates = [p for p in param_names if param_names.count(p) > 1]
+            raise AIFPLEvalError(
+                message="Lambda parameters must be unique",
+                received=f"Duplicate parameters: {duplicates}",
+                expected="All parameter names should be different",
+                example='Correct: (lambda (x y z) ...)\\nIncorrect: (lambda (x y x) ...)',
+                suggestion="Use different names for each parameter"
+            )
 
         # Find free variables (variables used in body but not parameters)
         bound_vars = set(param_names)
