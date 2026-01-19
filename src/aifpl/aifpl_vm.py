@@ -226,7 +226,7 @@ class AIFPLVM:
             elif opcode == Opcode.LOAD_EMPTY_LIST:
                 self.stack.append(AIFPLList(()))
 
-            elif opcode == Opcode.LOAD_LOCAL:
+            elif opcode == Opcode.LOAD_VAR:
                 depth = arg1
                 index = arg2
 
@@ -252,7 +252,7 @@ class AIFPLVM:
                 
                 self.stack.append(value)
 
-            elif opcode == Opcode.STORE_LOCAL:
+            elif opcode == Opcode.STORE_VAR:
                 depth = arg1
                 index = arg2
                 value = self.stack.pop()
@@ -260,7 +260,7 @@ class AIFPLVM:
                 target_frame = self.frames[-(depth + 1)]
                 target_frame.locals[index] = value
 
-            elif opcode == Opcode.LOAD_GLOBAL:
+            elif opcode == Opcode.LOAD_NAME:
                 name = code.names[arg1]
 
                 # First check closure environment (for recursive closures)

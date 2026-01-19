@@ -242,9 +242,9 @@ class AIFPLCompiler:
         var_type, depth, index = ctx.resolve_variable(name)
 
         if var_type == 'local':
-            ctx.emit(Opcode.LOAD_LOCAL, depth, index)
+            ctx.emit(Opcode.LOAD_VAR, depth, index)
         else:  # global
-            ctx.emit(Opcode.LOAD_GLOBAL, index)
+            ctx.emit(Opcode.LOAD_NAME, index)
 
     def _compile_list(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile a list expression (function call or special form)."""
@@ -405,7 +405,7 @@ class AIFPLCompiler:
                 self._compile_expression(value_expr, ctx)
 
             # Store in local variable
-            ctx.emit(Opcode.STORE_LOCAL, depth, var_index)
+            ctx.emit(Opcode.STORE_VAR, depth, var_index)
 
             # For recursive closures, patch them to reference themselves
             if is_recursive:
@@ -483,15 +483,15 @@ class AIFPLCompiler:
                     pass
                 elif let_bindings and free_var in let_bindings:
                     # Sibling binding - don't capture, will be patched later with PATCH_CLOSURE_SIBLING
-                    # The lambda will reference it via LOAD_GLOBAL from closure_env
+                    # The lambda will reference it via LOAD_NAME from closure_env
                     pass
                 else:
                     # Variable from an outer scope - capture it
-                    ctx.emit(Opcode.LOAD_LOCAL, depth, index)
+                    ctx.emit(Opcode.LOAD_VAR, depth, index)
                     captured_vars.append(free_var)
                 # else: self-reference, skip capturing
                 # else: in current scope - it's a self-reference
-                # Don't capture, lambda will look it up via LOAD_GLOBAL -> closure_env
+                # Don't capture, lambda will look it up via LOAD_NAME -> closure_env
             # else: global variable - don't capture or track as free
         
         # Create new compilation context for lambda body

@@ -20,9 +20,9 @@ class Opcode(IntEnum):
     LOAD_EMPTY_LIST = auto() # Push empty list
 
     # Variables (lexically addressed)
-    LOAD_LOCAL = auto()      # Load local variable: LOAD_LOCAL depth index
-    STORE_LOCAL = auto()     # Store local variable: STORE_LOCAL depth index
-    LOAD_GLOBAL = auto()     # Load global variable: LOAD_GLOBAL name_index
+    LOAD_VAR = auto()        # Load variable by position: LOAD_VAR depth index
+    STORE_VAR = auto()       # Store variable by position: STORE_VAR depth index
+    LOAD_NAME = auto()       # Load by name lookup: LOAD_NAME name_index
 
     # Control flow
     JUMP = auto()            # Unconditional jump: JUMP offset
