@@ -28,6 +28,7 @@ class Opcode(IntEnum):
     JUMP = auto()            # Unconditional jump: JUMP offset
     POP_JUMP_IF_FALSE = auto()  # Pop and jump if false
     POP_JUMP_IF_TRUE = auto()   # Pop and jump if true
+    RAISE_ERROR = auto()     # Raise error with message from constant pool: RAISE_ERROR const_index
 
     # Functions
     MAKE_CLOSURE = auto()    # Create closure: MAKE_CLOSURE code_index capture_count

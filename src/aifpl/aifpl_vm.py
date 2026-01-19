@@ -314,16 +314,23 @@ class AIFPLVM:
             elif opcode == Opcode.POP_JUMP_IF_FALSE:
                 condition = self.stack.pop()
                 if not isinstance(condition, AIFPLBoolean):
-                    raise AIFPLEvalError("Jump condition must be boolean")
+                    raise AIFPLEvalError("If condition must be boolean")
                 if not condition.value:
                     frame.ip = arg1
 
             elif opcode == Opcode.POP_JUMP_IF_TRUE:
                 condition = self.stack.pop()
                 if not isinstance(condition, AIFPLBoolean):
-                    raise AIFPLEvalError("Jump condition must be boolean")
+                    raise AIFPLEvalError("If condition must be boolean")
                 if condition.value:
                     frame.ip = arg1
+
+            elif opcode == Opcode.RAISE_ERROR:
+                # Raise an error with the message from the constant pool
+                error_msg = code.constants[arg1]
+                if not isinstance(error_msg, AIFPLString):
+                    raise AIFPLEvalError("RAISE_ERROR requires a string constant")
+                raise AIFPLEvalError(error_msg.value)
 
             elif opcode == Opcode.MAKE_CLOSURE:
                 # Get code object for closure
@@ -632,11 +639,7 @@ class AIFPLVM:
             for i, arg in enumerate(args):
                 if not isinstance(arg, AIFPLNumber):
                     raise AIFPLEvalError(
-                        message="Arithmetic operation '+' requires numbers",
-                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Number (integer, float, or complex)",
-                        example="(+ 1 2 3) → 6",
-                        suggestion="All arguments to + must be numbers"
+                        f"Function '+' requires numeric arguments, got {arg.type_name()}"
                     )
                 total += arg.value
             return AIFPLNumber(total)
@@ -651,11 +654,7 @@ class AIFPLVM:
                 )
             if not isinstance(args[0], AIFPLNumber):
                 raise AIFPLEvalError(
-                    message="Arithmetic operation '-' requires numbers",
-                    received=f"Argument 1: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Number (integer, float, or complex)",
-                    example="(- 10 3) → 7",
-                    suggestion="All arguments to - must be numbers"
+                    f"Function '-' requires numeric arguments, got {args[0].type_name()}"
                 )
 
             if len(args) == 1:
@@ -665,11 +664,7 @@ class AIFPLVM:
             for i, arg in enumerate(args[1:], start=2):
                 if not isinstance(arg, AIFPLNumber):
                     raise AIFPLEvalError(
-                        message="Arithmetic operation '-' requires numbers",
-                        received=f"Argument {i}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Number (integer, float, or complex)",
-                        example="(- 10 3) → 7",
-                        suggestion="All arguments to - must be numbers"
+                        f"Function '-' requires numeric arguments, got {arg.type_name()}"
                     )
                 result -= arg.value
             return AIFPLNumber(result)
@@ -682,11 +677,7 @@ class AIFPLVM:
             for i, arg in enumerate(args):
                 if not isinstance(arg, AIFPLNumber):
                     raise AIFPLEvalError(
-                        message="Arithmetic operation '*' requires numbers",
-                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Number (integer, float, or complex)",
-                        example="(* 2 3 4) → 24",
-                        suggestion="All arguments to * must be numbers"
+                        f"Function '*' requires numeric arguments, got {arg.type_name()}"
                     )
                 result *= arg.value
             return AIFPLNumber(result)
@@ -702,22 +693,14 @@ class AIFPLVM:
                 )
             if not isinstance(args[0], AIFPLNumber):
                 raise AIFPLEvalError(
-                    message="Division requires numbers",
-                    received=f"Argument 1: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Number (integer, float, or complex)",
-                    example="(/ 12 3) → 4",
-                    suggestion="All arguments to / must be numbers"
+                    f"Function '/' requires numeric arguments, got {args[0].type_name()}"
                 )
 
             result = args[0].value
             for i, arg in enumerate(args[1:], start=2):
                 if not isinstance(arg, AIFPLNumber):
                     raise AIFPLEvalError(
-                        message="Division requires numbers",
-                        received=f"Argument {i}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Number (integer, float, or complex)",
-                        example="(/ 12 3) → 4",
-                        suggestion="All arguments to / must be numbers"
+                        f"Function '/' requires numeric arguments, got {arg.type_name()}"
                     )
                 if arg.value == 0:
                     raise AIFPLEvalError(
@@ -757,13 +740,11 @@ class AIFPLVM:
                 )
             for i in range(len(args) - 1):
                 if not isinstance(args[i], AIFPLNumber) or not isinstance(args[i+1], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Less-than comparison requires numbers",
-                        received=f"Arguments: {self._format_result(args[i])}, {self._format_result(args[i+1])}",
-                        expected="Numbers only",
-                        example="(< 1 2 3) → #t",
-                        suggestion="Use < only with numeric values"
-                    )
+                    # Determine which argument is wrong
+                    if not isinstance(args[i], AIFPLNumber):
+                        raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+1} is {args[i].type_name()}")
+                    else:
+                        raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+2} is {args[i+1].type_name()}")
                 if not (args[i].value < args[i+1].value):
                     return AIFPLBoolean(False)
             return AIFPLBoolean(True)
@@ -779,13 +760,11 @@ class AIFPLVM:
                 )
             for i in range(len(args) - 1):
                 if not isinstance(args[i], AIFPLNumber) or not isinstance(args[i+1], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Greater-than comparison requires numbers",
-                        received=f"Arguments: {self._format_result(args[i])}, {self._format_result(args[i+1])}",
-                        expected="Numbers only",
-                        example="(> 3 2 1) → #t",
-                        suggestion="Use > only with numeric values"
-                    )
+                    # Determine which argument is wrong
+                    if not isinstance(args[i], AIFPLNumber):
+                        raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+1} is {args[i].type_name()}")
+                    else:
+                        raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+2} is {args[i+1].type_name()}")
                 if not (args[i].value > args[i+1].value):
                     return AIFPLBoolean(False)
             return AIFPLBoolean(True)
@@ -944,15 +923,9 @@ class AIFPLVM:
             # Short-circuit evaluation: return first false or last value
             if len(args) == 0:
                 return AIFPLBoolean(True)  # Empty and is true
-            for arg in args:
+            for i, arg in enumerate(args, 1):
                 if not isinstance(arg, AIFPLBoolean):
-                    raise AIFPLEvalError(
-                        message="Boolean 'and' requires boolean arguments",
-                        received=f"Argument: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Boolean (#t or #f)",
-                        example="(and #t #f) → #f",
-                        suggestion="Use comparison operators to create boolean values"
-                    )
+                    raise AIFPLEvalError(f"And operator argument {i} must be boolean")
                 if not arg.value:
                     return AIFPLBoolean(False)  # Short-circuit on first false
             return AIFPLBoolean(True)  # All true
@@ -961,15 +934,9 @@ class AIFPLVM:
             # Short-circuit evaluation: return first true or last value
             if len(args) == 0:
                 return AIFPLBoolean(False)  # Empty or is false
-            for arg in args:
+            for i, arg in enumerate(args, 1):
                 if not isinstance(arg, AIFPLBoolean):
-                    raise AIFPLEvalError(
-                        message="Boolean 'or' requires boolean arguments",
-                        received=f"Argument: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Boolean (#t or #f)",
-                        example="(or #t #f) → #t",
-                        suggestion="Use comparison operators to create boolean values"
-                    )
+                    raise AIFPLEvalError(f"Or operator argument {i} must be boolean")
                 if arg.value:
                     return AIFPLBoolean(True)  # Short-circuit on first true
             return AIFPLBoolean(False)  # All false
@@ -985,11 +952,7 @@ class AIFPLVM:
                 )
             if not isinstance(args[0], AIFPLBoolean):
                 raise AIFPLEvalError(
-                    message="Boolean 'not' requires a boolean argument",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Boolean (#t or #f)",
-                    example="(not #t) → #f",
-                    suggestion="Use comparison operators to create boolean values"
+                    f"Function 'not' requires boolean arguments, got {args[0].type_name()}"
                 )
             return AIFPLBoolean(not args[0].value)
 

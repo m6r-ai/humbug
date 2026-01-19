@@ -726,11 +726,19 @@ class AIFPLCompiler:
         # Compile value and store in temporary local
         self._compile_expression(value_expr, ctx)
         
+        # Save the current bindings state - pattern variables should not be visible after match
+        saved_bindings = ctx.current_scope().bindings.copy()
+        saved_next_index = ctx.current_scope().next_index
+        
         # Allocate a temporary local for the match value
         match_temp_index = ctx.current_scope().add_binding(f"<match-temp>")
         ctx.update_max_locals()
         
         ctx.emit(Opcode.STORE_VAR, 0, match_temp_index)
+
+        # Now save state again, including match-temp
+        saved_bindings_with_temp = ctx.current_scope().bindings.copy()
+        saved_next_index_with_temp = ctx.current_scope().next_index
 
         # Compile each clause
         end_label = None  # Will be patched at the end
@@ -764,6 +772,10 @@ class AIFPLCompiler:
             jump_idx = ctx.emit(Opcode.JUMP, 0)
             jump_to_end_indices.append(jump_idx)
             
+            # Reset bindings for next pattern - each pattern gets a fresh scope
+            ctx.current_scope().bindings = saved_bindings_with_temp.copy()
+            ctx.current_scope().next_index = saved_next_index_with_temp
+            
             # Patch the jump to next pattern (if not last)
             if i < len(clauses) - 1:
                 next_pattern_start = ctx.current_instruction_index()
@@ -773,12 +785,18 @@ class AIFPLCompiler:
                 # For now, just patch to same location (will fall through)
                 error_location = ctx.current_instruction_index()
                 ctx.patch_jump(next_pattern_jump, error_location)
-                # TODO: Emit error for no match
+                # Emit error for no match
+                error_msg = ctx.add_constant(AIFPLString("No patterns matched in match expression"))
+                ctx.emit(Opcode.RAISE_ERROR, error_msg)
         
         # Patch all jumps to end
         end_location = ctx.current_instruction_index()
         for jump_idx in jump_to_end_indices:
             ctx.patch_jump(jump_idx, end_location)
+
+        # Restore bindings to remove pattern variables from scope
+        ctx.current_scope().bindings = saved_bindings
+        ctx.current_scope().next_index = saved_next_index
 
     def _compile_pattern(self, pattern: AIFPLValue, match_value_index: int, 
                         ctx: CompilationContext) -> None:
