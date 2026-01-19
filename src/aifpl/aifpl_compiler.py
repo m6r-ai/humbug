@@ -169,6 +169,9 @@ class AIFPLCompiler:
         'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
         'alist-keys', 'alist-values', 'alist-merge', 'alist?',
         'sqrt', 'abs', 'min', 'max', 'pow',
+        'sin', 'cos', 'tan', 'log', 'log10', 'exp',
+        'round', 'floor', 'ceil',
+        'bin', 'hex', 'oct', 'real', 'imag', 'complex',
     ]
 
     def __init__(self):

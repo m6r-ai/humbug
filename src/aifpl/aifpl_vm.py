@@ -1,6 +1,7 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
 import math
+import cmath
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 
@@ -745,6 +746,12 @@ class AIFPLVM:
                         raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+1} is {args[i].type_name()}")
                     else:
                         raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+2} is {args[i+1].type_name()}")
+                # Check for complex numbers
+                if isinstance(args[i].value, complex) or isinstance(args[i+1].value, complex):
+                    raise AIFPLEvalError(
+                        message="Function '<' does not support complex numbers",
+                        suggestion="Use only real numbers with comparison operators"
+                    )
                 if not (args[i].value < args[i+1].value):
                     return AIFPLBoolean(False)
             return AIFPLBoolean(True)
@@ -765,6 +772,12 @@ class AIFPLVM:
                         raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+1} is {args[i].type_name()}")
                     else:
                         raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+2} is {args[i+1].type_name()}")
+                # Check for complex numbers
+                if isinstance(args[i].value, complex) or isinstance(args[i+1].value, complex):
+                    raise AIFPLEvalError(
+                        message="Function '>' does not support complex numbers",
+                        suggestion="Use only real numbers with comparison operators"
+                    )
                 if not (args[i].value > args[i+1].value):
                     return AIFPLBoolean(False)
             return AIFPLBoolean(True)
@@ -787,6 +800,12 @@ class AIFPLVM:
                         example="(<= 1 1 2) → #t",
                         suggestion="Use <= only with numeric values"
                     )
+                # Check for complex numbers
+                if isinstance(args[i].value, complex) or isinstance(args[i+1].value, complex):
+                    raise AIFPLEvalError(
+                        message="Function '<=' does not support complex numbers",
+                        suggestion="Use only real numbers with comparison operators"
+                    )
                 if not (args[i].value <= args[i+1].value):
                     return AIFPLBoolean(False)
             return AIFPLBoolean(True)
@@ -808,6 +827,12 @@ class AIFPLVM:
                         expected="Numbers only",
                         example="(>= 3 2 2) → #t",
                         suggestion="Use >= only with numeric values"
+                    )
+                # Check for complex numbers
+                if isinstance(args[i].value, complex) or isinstance(args[i+1].value, complex):
+                    raise AIFPLEvalError(
+                        message="Function '>=' does not support complex numbers",
+                        suggestion="Use only real numbers with comparison operators"
                     )
                 if not (args[i].value >= args[i+1].value):
                     return AIFPLBoolean(False)
@@ -834,43 +859,31 @@ class AIFPLVM:
             return AIFPLBoolean(False)  # All equal
 
         elif builtin_name == '//':
-            if len(args) < 2:
+            if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Floor division requires at least 2 arguments",
+                    message="Floor division takes exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
-                    expected="At least 2 numbers",
+                    expected="2 numbers: dividend and divisor",
                     example="(// 7 2) → 3",
-                    suggestion="Provide dividend and at least one divisor"
+                    suggestion="Provide dividend and divisor"
                 )
-            if not isinstance(args[0], AIFPLNumber):
+            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
                 raise AIFPLEvalError(
                     message="Floor division requires numbers",
-                    received=f"Argument 1: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Number (integer, float, or complex)",
+                    received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
+                    expected="Two numbers",
                     example="(// 7 2) → 3",
                     suggestion="All arguments to // must be numbers"
                 )
-
-            result = args[0].value
-            for i, arg in enumerate(args[1:], start=2):
-                if not isinstance(arg, AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Floor division requires numbers",
-                        received=f"Argument {i}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Number (integer, float, or complex)",
-                        example="(// 7 2) → 3",
-                        suggestion="All arguments to // must be numbers"
-                    )
-                if arg.value == 0:
-                    raise AIFPLEvalError(
-                        message=f"Division by zero at argument {i}",
-                        received=f"Attempting to divide {self._format_result(args[0])} by 0",
-                        expected="Non-zero divisor",
-                        example="(// 10 2) → 5",
-                        suggestion="Ensure divisor is not zero"
-                    )
-                result //= arg.value
-            return AIFPLNumber(result)
+            if args[1].value == 0:
+                raise AIFPLEvalError(
+                    message="Division by zero",
+                    received=f"Attempting to divide {self._format_result(args[0])} by 0",
+                    expected="Non-zero divisor",
+                    example="(// 10 2) → 5",
+                    suggestion="Ensure divisor is not zero"
+                )
+            return AIFPLNumber(args[0].value // args[1].value)
 
         elif builtin_name == '%':
             if len(args) != 2:
@@ -902,7 +915,7 @@ class AIFPLVM:
         elif builtin_name == '**':
             if len(args) != 2:
                 raise AIFPLEvalError(
-                    message="Exponentiation requires exactly 2 arguments",
+                    message="Power takes exactly 2 arguments",
                     received=f"Got {len(args)} arguments",
                     expected="2 numbers: base and exponent",
                     example="(** 2 3) → 8",
@@ -910,7 +923,7 @@ class AIFPLVM:
                 )
             if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
                 raise AIFPLEvalError(
-                    message="Exponentiation requires numbers",
+                    message="Power requires numbers",
                     received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
                     expected="Two numbers",
                     example="(** 2 3) → 8",
@@ -1432,7 +1445,12 @@ class AIFPLVM:
                     example="(sqrt 16) → 4.0",
                     suggestion="Use sqrt only with numbers"
                 )
-            return AIFPLNumber(math.sqrt(args[0].value))
+            val = args[0].value
+            # Use cmath.sqrt for negative numbers or complex numbers
+            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
+                return AIFPLNumber(cmath.sqrt(val))
+            # Use math.sqrt for positive real numbers
+            return AIFPLNumber(math.sqrt(val))
 
         elif builtin_name == 'abs':
             if len(args) != 1:
@@ -1472,6 +1490,13 @@ class AIFPLVM:
                         example="(min 1 5 3) → 1",
                         suggestion="All arguments to min must be numbers"
                     )
+                # Check for complex numbers
+                if isinstance(arg.value, complex):
+                    raise AIFPLEvalError(
+                        message="Function 'min' does not support complex numbers",
+                        received=f"Argument {i+1}: {self._format_result(arg)}",
+                        suggestion="Use only real numbers with min/max"
+                    )
                 values.append(arg.value)
             return AIFPLNumber(min(values))
 
@@ -1493,6 +1518,13 @@ class AIFPLVM:
                         expected="Number",
                         example="(max 1 5 3) → 5",
                         suggestion="All arguments to max must be numbers"
+                    )
+                # Check for complex numbers
+                if isinstance(arg.value, complex):
+                    raise AIFPLEvalError(
+                        message="Function 'max' does not support complex numbers",
+                        received=f"Argument {i+1}: {self._format_result(arg)}",
+                        suggestion="Use only real numbers with min/max"
                     )
                 values.append(arg.value)
             return AIFPLNumber(max(values))
@@ -1516,6 +1548,401 @@ class AIFPLVM:
                 )
             return AIFPLNumber(args[0].value ** args[1].value)
 
+        # Trigonometric functions
+        elif builtin_name == 'sin':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Sin takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(sin 0) → 0",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Sin requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(sin 0) → 0",
+                    suggestion="Use sin only with numbers"
+                )
+            val = args[0].value
+            if isinstance(val, complex):
+                return AIFPLNumber(cmath.sin(val))
+            return AIFPLNumber(math.sin(val))
+
+        elif builtin_name == 'cos':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Cos takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(cos 0) → 1",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Cos requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(cos 0) → 1",
+                    suggestion="Use cos only with numbers"
+                )
+            val = args[0].value
+            if isinstance(val, complex):
+                return AIFPLNumber(cmath.cos(val))
+            return AIFPLNumber(math.cos(val))
+
+        elif builtin_name == 'tan':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Tan takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(tan 0) → 0",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Tan requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(tan 0) → 0",
+                    suggestion="Use tan only with numbers"
+                )
+            val = args[0].value
+            if isinstance(val, complex):
+                return AIFPLNumber(cmath.tan(val))
+            return AIFPLNumber(math.tan(val))
+
+        # Logarithmic and exponential functions
+        elif builtin_name == 'log':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Log takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(log e) → 1",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Log requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(log e) → 1",
+                    suggestion="Use log only with numbers"
+                )
+            val = args[0].value
+            # Use cmath for negative numbers or complex numbers
+            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
+                return AIFPLNumber(cmath.log(val))
+            return AIFPLNumber(math.log(val))
+
+        elif builtin_name == 'log10':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Log10 takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(log10 100) → 2",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Log10 requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(log10 100) → 2",
+                    suggestion="Use log10 only with numbers"
+                )
+            val = args[0].value
+            # Use cmath for negative numbers or complex numbers
+            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
+                return AIFPLNumber(cmath.log10(val))
+            return AIFPLNumber(math.log10(val))
+
+        elif builtin_name == 'exp':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Exp takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(exp 1) → e",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Exp requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(exp 1) → e",
+                    suggestion="Use exp only with numbers"
+                )
+            val = args[0].value
+            if isinstance(val, complex):
+                return AIFPLNumber(cmath.exp(val))
+            return AIFPLNumber(math.exp(val))
+
+        # Rounding functions
+        elif builtin_name == 'round':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Round takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(round 3.7) → 4",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Round requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(round 3.7) → 4",
+                    suggestion="Use round only with numbers"
+                )
+            val = args[0].value
+            # Check if it's complex (can't round complex numbers)
+            if isinstance(val, complex):
+                # Check if imaginary part is negligible
+                if abs(val.imag) > 1e-10:
+                    raise AIFPLEvalError(
+                        message="Function 'round' does not support complex numbers"
+                    )
+                val = val.real
+            return AIFPLNumber(round(val))
+
+        elif builtin_name == 'floor':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Floor takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(floor 3.7) → 3",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Floor requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(floor 3.7) → 3",
+                    suggestion="Use floor only with numbers"
+                )
+            val = args[0].value
+            # Check if it's complex (can't floor complex numbers)
+            if isinstance(val, complex):
+                # Check if imaginary part is negligible
+                if abs(val.imag) > 1e-10:
+                    raise AIFPLEvalError(
+                        message="Function 'floor' does not support complex numbers"
+                    )
+                val = val.real
+            return AIFPLNumber(math.floor(val))
+
+        elif builtin_name == 'ceil':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Ceil takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(ceil 3.2) → 4",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Ceil requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(ceil 3.2) → 4",
+                    suggestion="Use ceil only with numbers"
+                )
+            val = args[0].value
+            # Check if it's complex (can't ceil complex numbers)
+            if isinstance(val, complex):
+                # Check if imaginary part is negligible
+                if abs(val.imag) > 1e-10:
+                    raise AIFPLEvalError(
+                        message="Function 'ceil' does not support complex numbers"
+                    )
+                val = val.real
+            return AIFPLNumber(math.ceil(val))
+
+        # Base conversion functions
+        elif builtin_name == 'bin':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Bin takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 integer",
+                    example='(bin 255) → "0b11111111"',
+                    suggestion="Provide a single integer"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Bin requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Integer",
+                    example='(bin 255) → "0b11111111"',
+                    suggestion="Use bin only with integers"
+                )
+            val = args[0].value
+            if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
+                raise AIFPLEvalError(
+                    message="Bin requires an integer",
+                    received=f"Value: {val}",
+                    expected="Integer",
+                    example='(bin 255) → "0b11111111"',
+                    suggestion="Provide an integer value"
+                )
+            return AIFPLString(bin(int(val)))
+
+        elif builtin_name == 'hex':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Hex takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 integer",
+                    example='(hex 255) → "0xff"',
+                    suggestion="Provide a single integer"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Hex requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Integer",
+                    example='(hex 255) → "0xff"',
+                    suggestion="Use hex only with integers"
+                )
+            val = args[0].value
+            if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
+                raise AIFPLEvalError(
+                    message="Hex requires an integer",
+                    received=f"Value: {val}",
+                    expected="Integer",
+                    example='(hex 255) → "0xff"',
+                    suggestion="Provide an integer value"
+                )
+            return AIFPLString(hex(int(val)))
+
+        elif builtin_name == 'oct':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Oct takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 integer",
+                    example='(oct 64) → "0o100"',
+                    suggestion="Provide a single integer"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Oct requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Integer",
+                    example='(oct 64) → "0o100"',
+                    suggestion="Use oct only with integers"
+                )
+            val = args[0].value
+            if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
+                raise AIFPLEvalError(
+                    message="Oct requires an integer",
+                    received=f"Value: {val}",
+                    expected="Integer",
+                    example='(oct 64) → "0o100"',
+                    suggestion="Provide an integer value"
+                )
+            return AIFPLString(oct(int(val)))
+
+        # Complex number functions
+        elif builtin_name == 'real':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Real takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(real (complex 3 4)) → 3",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Real requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(real (complex 3 4)) → 3",
+                    suggestion="Use real only with numbers"
+                )
+            val = args[0].value
+            if isinstance(val, complex):
+                result = val.real
+            else:
+                result = val
+            # Return as integer if it's a whole number
+            if isinstance(result, float) and result.is_integer():
+                return AIFPLNumber(int(result))
+            return AIFPLNumber(result)
+
+        elif builtin_name == 'imag':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Imag takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 number",
+                    example="(imag (complex 3 4)) → 4",
+                    suggestion="Provide a single number"
+                )
+            if not isinstance(args[0], AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Imag requires a number",
+                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
+                    expected="Number",
+                    example="(imag (complex 3 4)) → 4",
+                    suggestion="Use imag only with numbers"
+                )
+            val = args[0].value
+            if isinstance(val, complex):
+                result = val.imag
+            else:
+                result = 0
+            # Return as integer if it's a whole number
+            if isinstance(result, float) and result.is_integer():
+                return AIFPLNumber(int(result))
+            return AIFPLNumber(result)
+
+        elif builtin_name == 'complex':
+            if len(args) != 2:
+                raise AIFPLEvalError(
+                    message="Complex takes exactly 2 arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="2 numbers: real and imaginary parts",
+                    example="(complex 3 4) → (3+4j)",
+                    suggestion="Provide real and imaginary parts"
+                )
+            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
+                if not isinstance(args[0], AIFPLNumber):
+                    bad_arg = 0
+                else:
+                    bad_arg = 1
+                raise AIFPLEvalError(
+                    message="Complex requires numbers",
+                    received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
+                    expected="Number",
+                    example="(complex 3 4) → (3+4j)",
+                    suggestion="Both arguments must be numbers"
+                )
+            real_part = args[0].value
+            imag_part = args[1].value
+            # Reject complex arguments
+            if isinstance(real_part, complex):
+                raise AIFPLEvalError(
+                    message="complex arguments must be real numbers"
+                )
+            if isinstance(imag_part, complex):
+                raise AIFPLEvalError(
+                    message="complex arguments must be real numbers"
+                )
+            return AIFPLNumber(complex(real_part, imag_part))
+
         # Higher-order functions
         elif builtin_name == 'range':
             if len(args) < 2 or len(args) > 3:
@@ -1526,15 +1953,85 @@ class AIFPLVM:
                     example="(range 1 5) → (1 2 3 4) or (range 0 10 2) → (0 2 4 6 8)",
                     suggestion="Provide start, end, and optionally step"
                 )
-            if not all(isinstance(arg, AIFPLNumber) for arg in args):
-                non_numbers = [i for i, arg in enumerate(args) if not isinstance(arg, AIFPLNumber)]
-                raise AIFPLEvalError(
-                    message="Range requires numbers",
-                    received=f"Argument {non_numbers[0]+1}: {self._format_result(args[non_numbers[0]])} ({args[non_numbers[0]].type_name()})",
-                    expected="Numbers (integers)",
-                    example="(range 1 5) → (1 2 3 4)",
-                    suggestion="All arguments to range must be numbers"
-                )
+            
+            # Check each argument is a number with specific error messages
+            if len(args) == 2:
+                # 2-argument form: (range start end)
+                if not isinstance(args[0], AIFPLNumber):
+                    raise AIFPLEvalError(
+                        message="Range start must be a number",
+                        received=f"Start: {self._format_result(args[0])} ({args[0].type_name()})",
+                        expected="Number (integer or float)",
+                        example="(range 1 5)",
+                        suggestion="Use numeric values for range bounds"
+                    )
+                if not isinstance(args[1], AIFPLNumber):
+                    raise AIFPLEvalError(
+                        message="Range end must be a number",
+                        received=f"End: {self._format_result(args[1])} ({args[1].type_name()})",
+                        expected="Number (integer or float)",
+                        example="(range 1 5)",
+                        suggestion="Use numeric values for range bounds"
+                    )
+            else:
+                # 3-argument form: (range start end step)
+                if not isinstance(args[0], AIFPLNumber):
+                    raise AIFPLEvalError(
+                        message="Range start must be a number",
+                        received=f"Start: {self._format_result(args[0])} ({args[0].type_name()})",
+                        expected="Number (integer or float)",
+                        example="(range 0 10 2)",
+                        suggestion="Use numeric values for range parameters"
+                    )
+                if not isinstance(args[1], AIFPLNumber):
+                    raise AIFPLEvalError(
+                        message="Range end must be a number",
+                        received=f"End: {self._format_result(args[1])} ({args[1].type_name()})",
+                        expected="Number (integer or float)",
+                        example="(range 0 10 2)",
+                        suggestion="Use numeric values for range parameters"
+                    )
+                if not isinstance(args[2], AIFPLNumber):
+                    raise AIFPLEvalError(
+                        message="Range step must be a number",
+                        received=f"Step: {self._format_result(args[2])} ({args[2].type_name()})",
+                        expected="Number (integer or float)",
+                        example="(range 0 10 2)",
+                        suggestion="Use numeric values for range parameters"
+                    )
+
+            # Validate that all arguments are integers (or floats that are whole numbers)
+            # This matches the _ensure_integer behavior in the interpreter
+            for i, arg in enumerate(args):
+                val = arg.value
+                param_name = ["start", "end", "step"][i] if len(args) == 3 else ["start", "end"][i]
+                
+                if isinstance(val, complex):
+                    raise AIFPLEvalError(
+                        message="Function 'range' requires integer arguments",
+                        received=f"Got: {val} (complex)",
+                        expected="Integer number",
+                        suggestion="Use whole numbers without decimal points",
+                        example="(range 1 5) not (range (complex 1 2) 5)"
+                    )
+                if isinstance(val, float) and not val.is_integer():
+                    raise AIFPLEvalError(
+                        message="Function 'range' requires integer arguments",
+                        received=f"Got: {val} (float)",
+                        expected="Integer number",
+                        suggestion="Use whole numbers without decimal points",
+                        example="(range 1 5) not (range 1.5 5)"
+                    )
+                # Validate the value can be converted to int
+                try:
+                    int(val)
+                except (ValueError, OverflowError):
+                    raise AIFPLEvalError(
+                        message=f"Range {param_name} cannot be converted to integer",
+                        received=f"Value: {val}",
+                        expected="Valid integer",
+                        suggestion="Provide integer values"
+                    )
 
             start = int(args[0].value)
             end = int(args[1].value)
