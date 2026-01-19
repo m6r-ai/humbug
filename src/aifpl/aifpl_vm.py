@@ -121,6 +121,33 @@ class AIFPLVM:
         """
         return list(self.globals.keys())
 
+    def _values_equal(self, val1: AIFPLValue, val2: AIFPLValue) -> bool:
+        """
+        Check if two values are equal.
+        
+        Args:
+            val1: First value
+            val2: Second value
+            
+        Returns:
+            True if values are equal, False otherwise
+        """
+        # Different types are not equal
+        if type(val1) != type(val2):
+            return False
+        
+        # Simple types: compare values directly
+        if isinstance(val1, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
+            return val1.value == val2.value
+        
+        # Lists: compare element by element
+        if isinstance(val1, AIFPLList):
+            if len(val1.elements) != len(val2.elements):
+                return False
+            return all(self._values_equal(e1, e2) for e1, e2 in zip(val1.elements, val2.elements))
+        
+        # For other types (functions, etc.), use identity comparison
+        return val1 is val2
     def _get_function_name(self, func: AIFPLValue) -> str:
         """
         Get function name for error messages.
@@ -715,12 +742,8 @@ class AIFPLVM:
                 )
             first = args[0]
             for arg in args[1:]:
-                # Simple equality check (would need more sophisticated comparison)
-                if type(first) != type(arg):
+                if not self._values_equal(first, arg):
                     return AIFPLBoolean(False)
-                if isinstance(first, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
-                    if first.value != arg.value:
-                        return AIFPLBoolean(False)
             return AIFPLBoolean(True)
 
         elif builtin_name == '<':
@@ -1335,6 +1358,49 @@ class AIFPLVM:
                     suggestion="Provide a single value to test"
                 )
             return AIFPLBoolean(isinstance(args[0], AIFPLNumber))
+
+        elif builtin_name == 'integer?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Integer? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(integer? 42) → #t",
+                    suggestion="Provide a single value to test"
+                )
+            return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_integer())
+
+        elif builtin_name == 'float?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Float? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(float? 3.14) → #t",
+                    suggestion="Provide a single value to test"
+                )
+            return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_float())
+
+        elif builtin_name == 'complex?':
+            if len(args) != 1:
+                raise AIFPLEvalError(
+                    message="Complex? takes exactly 1 argument",
+                    received=f"Got {len(args)} arguments",
+                    expected="1 value",
+                    example="(complex? (complex 1 2)) → #t",
+                    suggestion="Provide a single value to test"
+                )
+            # Check if value is a number and is complex (has imaginary part)
+            if isinstance(args[0], AIFPLNumber):
+                value = args[0].value
+                # A complex number is one that has an imaginary component
+                # In Python, complex type always has imag attribute
+                if isinstance(value, complex):
+                    return AIFPLBoolean(True)
+                else:
+                    # int or float are not complex
+                    return AIFPLBoolean(False)
+            return AIFPLBoolean(False)
 
         elif builtin_name == 'string?':
             if len(args) != 1:
