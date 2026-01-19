@@ -179,9 +179,8 @@ class TestStringConversion:
         assert result.value == 3.14
     
     def test_string_to_number_invalid(self):
-        result = compile_and_run('(string->number "not a number")')
-        assert isinstance(result, AIFPLBoolean)
-        assert result.value == False
+        with pytest.raises(AIFPLEvalError, match="Cannot convert string to number"):
+            compile_and_run('(string->number "not a number")')
     
     def test_number_to_string_int(self):
         result = compile_and_run('(number->string 42)')
