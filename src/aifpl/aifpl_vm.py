@@ -161,6 +161,20 @@ class AIFPLVM:
         assert isinstance(value.value, int), "is_integer() should guarantee int type"
         return value.value
 
+    def _ensure_real_number(self, value: AIFPLValue, function_name: str):
+        """Ensure value is a real number (int or float), raise error if complex."""
+        if not isinstance(value, AIFPLNumber):
+            raise AIFPLEvalError(
+                f"Function '{function_name}' requires numeric arguments, got {value.type_name()}"
+            )
+        
+        if isinstance(value.value, complex):
+            raise AIFPLEvalError(
+                f"Function '{function_name}' does not support complex numbers"
+            )
+        
+        return value.value
+
     def _get_function_name(self, func: AIFPLValue) -> str:
         """
         Get function name for error messages.
@@ -879,14 +893,10 @@ class AIFPLVM:
                     example="(// 7 2) → 3",
                     suggestion="Provide dividend and divisor"
                 )
-            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Floor division requires numbers",
-                    received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
-                    expected="Two numbers",
-                    example="(// 7 2) → 3",
-                    suggestion="All arguments to // must be numbers"
-                )
+            # Ensure real numbers (reject complex)
+            left_val = self._ensure_real_number(args[0], "//")
+            right_val = self._ensure_real_number(args[1], "//")
+            
             if args[1].value == 0:
                 raise AIFPLEvalError(
                     message="Division by zero",
@@ -895,7 +905,7 @@ class AIFPLVM:
                     example="(// 10 2) → 5",
                     suggestion="Ensure divisor is not zero"
                 )
-            return AIFPLNumber(args[0].value // args[1].value)
+            return AIFPLNumber(left_val // right_val)
 
         elif builtin_name == '%':
             if len(args) != 2:
@@ -906,14 +916,10 @@ class AIFPLVM:
                     example="(% 7 3) → 1",
                     suggestion="Provide dividend and divisor"
                 )
-            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Modulo requires numbers",
-                    received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
-                    expected="Two numbers",
-                    example="(% 7 3) → 1",
-                    suggestion="Both arguments to % must be numbers"
-                )
+            # Ensure real numbers (reject complex)
+            left_val = self._ensure_real_number(args[0], "%")
+            right_val = self._ensure_real_number(args[1], "%")
+            
             if args[1].value == 0:
                 raise AIFPLEvalError(
                     message="Modulo by zero",
@@ -922,7 +928,7 @@ class AIFPLVM:
                     example="(% 7 3) → 1",
                     suggestion="Ensure divisor is not zero"
                 )
-            return AIFPLNumber(args[0].value % args[1].value)
+            return AIFPLNumber(left_val % right_val)
 
         elif builtin_name == '**':
             if len(args) != 2:
