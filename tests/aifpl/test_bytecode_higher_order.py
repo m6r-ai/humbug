@@ -20,7 +20,9 @@ def compile_and_run(expression: str) -> any:
     
     evaluator = AIFPLEvaluator()
     vm = AIFPLVM(evaluator)
-    globals_dict = {**evaluator.CONSTANTS, **evaluator._builtin_functions}
+    
+    # Set up globals (constants only - builtins are built into the VM)
+    globals_dict = evaluator.CONSTANTS
     vm.set_globals(globals_dict)
     
     result = vm.execute(code)

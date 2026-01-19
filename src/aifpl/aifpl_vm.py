@@ -48,17 +48,16 @@ class AIFPLVM:
         self.stack: List[AIFPLValue] = []
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
-        self.builtins: Dict[str, AIFPLBuiltinFunction] = {}
         self.message_builder = ErrorMessageBuilder()
+        
+        # Build internal registry of builtin symbols (for higher-order functions)
+        # This maps builtin names to their indices in the BUILTIN_TABLE
+        from aifpl.aifpl_compiler import AIFPLCompiler
+        self.builtin_symbols = set(AIFPLCompiler.BUILTIN_TABLE)
 
     def set_globals(self, globals_dict: Dict[str, AIFPLValue]) -> None:
         """Set global variables (constants like pi, e, j)."""
         self.globals = globals_dict.copy()
-
-    def set_builtins(self, builtins_dict: Dict[str, AIFPLBuiltinFunction]) -> None:
-        """Set builtin functions for use in higher-order functions.
-        These are NOT used for fallback variable lookup."""
-        self.builtins = builtins_dict.copy()
 
     # ========== Helper Methods for Error Handling ==========
 
@@ -203,9 +202,15 @@ class AIFPLVM:
         if isinstance(value, (AIFPLFunction, AIFPLBuiltinFunction)):
             return value
         
-        # If it's a symbol, try to resolve it as a builtin
-        if isinstance(value, AIFPLSymbol) and value.name in self.builtins:
-            return self.builtins[value.name]
+        # If it's a symbol referring to a builtin, create a wrapper
+        if isinstance(value, AIFPLSymbol) and value.name in self.builtin_symbols:
+            # Create a wrapper that will call the builtin via the VM
+            # We use a special AIFPLBuiltinFunction with the VM's evaluator
+            if self.evaluator is None:
+                raise AIFPLEvalError(f"Cannot resolve builtin '{value.name}' without evaluator")
+            
+            # Get the actual builtin from the evaluator
+            return self.evaluator._builtin_functions[value.name]
         
         # Otherwise, it's not a valid function
         raise AIFPLEvalError(f"{context} first argument must be a function, got {value.type_name()}")
@@ -1096,16 +1101,12 @@ class AIFPLVM:
             return AIFPLList((head,) + tail.elements)
 
         elif builtin_name == 'append':
+            if len(args) < 2:
+                raise AIFPLEvalError(f"append requires at least 2 arguments, got {len(args)}")
+            
             result_elements = []
             for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLList):
-                    raise AIFPLEvalError(
-                        message="Append requires all arguments to be lists",
-                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="List",
-                        example="(append (list 1 2) (list 3 4)) → (1 2 3 4)",
-                        suggestion="All arguments to append must be lists"
-                    )
+                arg = self._ensure_list(arg, "append")
                 result_elements.extend(arg.elements)
             return AIFPLList(tuple(result_elements))
 
@@ -1237,9 +1238,8 @@ class AIFPLVM:
                     example="(null? ()) → #t",
                     suggestion="Provide a single value to test"
                 )
-            if isinstance(args[0], AIFPLList):
-                return AIFPLBoolean(args[0].is_empty())
-            return AIFPLBoolean(False)
+            lst = self._ensure_list(args[0], "null?")
+            return AIFPLBoolean(lst.is_empty())
 
         elif builtin_name == 'member?':
             if len(args) != 2:
@@ -1301,24 +1301,13 @@ class AIFPLVM:
                     example="(take 2 (list 1 2 3)) → (1 2)",
                     suggestion="Provide a count and a list"
                 )
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Take first argument must be a number",
-                    received=f"First argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Number (integer)",
-                    example="(take 2 (list 1 2 3)) → (1 2)",
-                    suggestion="Provide a numeric count"
-                )
-            if not isinstance(args[1], AIFPLList):
-                raise AIFPLEvalError(
-                    message="Take second argument must be a list",
-                    received=f"Second argument: {self._format_result(args[1])} ({args[1].type_name()})",
-                    expected="List",
-                    example="(take 2 (list 1 2 3)) → (1 2)",
-                    suggestion="Use take with a list as the second argument"
-                )
-            n = int(args[0].value)
-            return AIFPLList(args[1].elements[:n])
+            n = self._ensure_integer(args[0], "take")
+            list_val = self._ensure_list(args[1], "take")
+            
+            if n < 0:
+                raise AIFPLEvalError(f"take count cannot be negative: {n}")
+            
+            return AIFPLList(list_val.elements[:n])
 
         elif builtin_name == 'drop':
             if len(args) != 2:
@@ -1329,24 +1318,13 @@ class AIFPLVM:
                     example="(drop 2 (list 1 2 3)) → (3)",
                     suggestion="Provide a count and a list"
                 )
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Drop first argument must be a number",
-                    received=f"First argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Number (integer)",
-                    example="(drop 2 (list 1 2 3)) → (3)",
-                    suggestion="Provide a numeric count"
-                )
-            if not isinstance(args[1], AIFPLList):
-                raise AIFPLEvalError(
-                    message="Drop second argument must be a list",
-                    received=f"Second argument: {self._format_result(args[1])} ({args[1].type_name()})",
-                    expected="List",
-                    example="(drop 2 (list 1 2 3)) → (3)",
-                    suggestion="Use drop with a list as the second argument"
-                )
-            n = int(args[0].value)
-            return AIFPLList(args[1].elements[n:])
+            n = self._ensure_integer(args[0], "drop")
+            list_val = self._ensure_list(args[1], "drop")
+            
+            if n < 0:
+                raise AIFPLEvalError(f"drop count cannot be negative: {n}")
+            
+            return AIFPLList(list_val.elements[n:])
 
         elif builtin_name == 'remove':
             if len(args) != 2:
@@ -1388,25 +1366,13 @@ class AIFPLVM:
             lst = args[0]
             index_val = args[1]
             
-            if not isinstance(lst, AIFPLList):
-                raise AIFPLEvalError(
-                    message="List-ref first argument must be a list",
-                    received=f"First argument: {self._format_result(lst)} ({lst.type_name()})",
-                    expected="List",
-                    example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
-                    suggestion="Use list-ref only with lists"
-                )
+            lst = self._ensure_list(lst, "list-ref")
+            index = self._ensure_integer(index_val, "list-ref")
             
-            if not isinstance(index_val, AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="List-ref second argument must be a number",
-                    received=f"Second argument: {self._format_result(index_val)} ({index_val.type_name()})",
-                    expected="Number (integer index)",
-                    example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
-                    suggestion="Provide a numeric index"
-                )
+            # Check for negative index
+            if index < 0:
+                raise AIFPLEvalError(f"list-ref index out of range: {index}")
             
-            index = int(index_val.value)
             if index < 0 or index >= len(lst.elements):
                 raise AIFPLEvalError(
                     message=f"List index out of range",
