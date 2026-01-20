@@ -1,8 +1,6 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
-import math
-import cmath
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional, Union
 from dataclasses import dataclass
 
 from aifpl.aifpl_value import (
@@ -214,6 +212,7 @@ class AIFPLVM:
             raise AIFPLEvalError(
                 f"Function '{function_name}' requires list arguments, got {value.type_name()}"
             )
+
         return value
 
     def _resolve_function(self, value: AIFPLValue, context: str) -> Union[AIFPLFunction, AIFPLBuiltinFunction]:
@@ -221,19 +220,26 @@ class AIFPLVM:
         # If it's already a function, return it
         if isinstance(value, (AIFPLFunction, AIFPLBuiltinFunction)):
             return value
-        
+
         # If it's a symbol referring to a builtin, create a wrapper
         if isinstance(value, AIFPLSymbol) and value.name in self.builtin_symbols:
             # Create a wrapper that will call the builtin via the VM
             # We use a special AIFPLBuiltinFunction with the VM's evaluator
             if self.evaluator is None:
                 raise AIFPLEvalError(f"Cannot resolve builtin '{value.name}' without evaluator")
-            
+
             # Get the actual builtin from the evaluator
             return self.evaluator._builtin_functions[value.name]
-        
+
         # Otherwise, it's not a valid function
-        raise AIFPLEvalError(f"{context} first argument must be a function, got {value.type_name()}")
+        # TODO: Fix me!
+        raise AIFPLEvalError(
+            message="Cannot call non-function value",
+#            received=f"Trying to call: {self.format_result(value.name)} ({value.type_name()})",
+            expected="Function (builtin or lambda)",
+            example="(+ 1 2) calls function +\n(42 1 2) tries to call number 42",
+#            suggestion=f"'{value.name}' is not a function - check spelling or define it first"
+        )
 
     def _get_function_name(self, func: AIFPLValue) -> str:
         """

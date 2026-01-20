@@ -279,6 +279,12 @@ class AIFPLCompiler:
             elif first.name == 'match':
                 self._compile_match(expr, ctx)
                 return
+            elif first.name == 'and':
+                self._compile_and(expr, ctx)
+                return
+            elif first.name == 'or':
+                self._compile_or(expr, ctx)
+                return
             elif first.name == 'quote':
                 # Quote: return the quoted value as a constant
                 if len(expr.elements) != 2:
@@ -354,6 +360,96 @@ class AIFPLCompiler:
         # Patch jump past else
         after_else = ctx.current_instruction_index()
         ctx.patch_jump(jump_past_else, after_else)
+
+    def _compile_and(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+        """Compile and expression with short-circuit evaluation.
+        
+        (and) -> #t
+        (and a) -> a (must be boolean)
+        (and a b c) -> if any is false, return #f; else return #t
+        
+        Implementation:
+        - Evaluate first argument
+        - If false, jump to end and return #f
+        - Otherwise, pop it and continue to next argument
+        - If all are true, return #t
+        """
+        args = list(expr.elements[1:])  # Skip 'and' symbol
+        
+        if len(args) == 0:
+            # (and) -> #t
+            ctx.emit(Opcode.LOAD_TRUE)
+            return
+        
+        # Multiple arguments: short-circuit evaluation
+        jump_to_false = []  # List of jumps to return #f
+        
+        for arg in args:
+            # Compile argument
+            self._compile_expression(arg, ctx)
+            
+            # If false, jump to "return false" section
+            jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+            jump_to_false.append(jump)
+        
+        # All arguments were true - return #t
+        ctx.emit(Opcode.LOAD_TRUE)
+        jump_to_end = ctx.emit(Opcode.JUMP, 0)
+        
+        # Return false section
+        false_section = ctx.current_instruction_index()
+        for jump in jump_to_false:
+            ctx.patch_jump(jump, false_section)
+        ctx.emit(Opcode.LOAD_FALSE)
+        
+        # Patch jump to end
+        end = ctx.current_instruction_index()
+        ctx.patch_jump(jump_to_end, end)
+
+    def _compile_or(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+        """Compile or expression with short-circuit evaluation.
+        
+        (or) -> #f
+        (or a) -> a (must be boolean)
+        (or a b c) -> if any is true, return #t; else return #f
+        
+        Implementation:
+        - Evaluate first argument
+        - If true, jump to end and return #t
+        - Otherwise, pop it and continue to next argument
+        - If all are false, return #f
+        """
+        args = list(expr.elements[1:])  # Skip 'or' symbol
+        
+        if len(args) == 0:
+            # (or) -> #f
+            ctx.emit(Opcode.LOAD_FALSE)
+            return
+        
+        # Multiple arguments: short-circuit evaluation
+        jump_to_true = []  # List of jumps to return #t
+        
+        for arg in args:
+            # Compile argument
+            self._compile_expression(arg, ctx)
+            
+            # If true, jump to "return true" section
+            jump = ctx.emit(Opcode.POP_JUMP_IF_TRUE, 0)
+            jump_to_true.append(jump)
+        
+        # All arguments were false - return #f
+        ctx.emit(Opcode.LOAD_FALSE)
+        jump_to_end = ctx.emit(Opcode.JUMP, 0)
+        
+        # Return true section
+        true_section = ctx.current_instruction_index()
+        for jump in jump_to_true:
+            ctx.patch_jump(jump, true_section)
+        ctx.emit(Opcode.LOAD_TRUE)
+        
+        # Patch jump to end
+        end = ctx.current_instruction_index()
+        ctx.patch_jump(jump_to_end, end)
 
     def _compile_let(self, expr: AIFPLList, ctx: CompilationContext, 
                     current_binding_name: str = None) -> None:
@@ -673,7 +769,26 @@ class AIFPLCompiler:
             # Handle special forms that bind variables
             if isinstance(first, AIFPLSymbol):
                 if first.name == 'lambda':
-                    # Don't recurse into nested lambdas - they have their own closure
+                    # Nested lambda: we need to find what free variables it uses
+                    # that come from outer scopes, so the parent lambda can capture them.
+                    # The nested lambda will then capture them from the parent.
+                    if len(expr.elements) >= 3:
+                        nested_params = expr.elements[1]
+                        nested_body = expr.elements[2]
+                        
+                        # Get parameter names from nested lambda
+                        nested_bound = bound_vars.copy()
+                        if isinstance(nested_params, AIFPLList):
+                            for param in nested_params.elements:
+                                if isinstance(param, AIFPLSymbol):
+                                    nested_bound.add(param.name)
+                        
+                        # Find free variables in nested lambda's body
+                        # These are variables the nested lambda needs, which might come
+                        # from the parent lambda or from even outer scopes
+                        self._collect_free_vars(nested_body, nested_bound, parent_ctx, free, seen)
+                    
+                    # Don't recurse into the lambda's parameters or other parts
                     return
                 elif first.name == 'let':
                     # Let bindings create new bound variables
@@ -690,6 +805,14 @@ class AIFPLCompiler:
                                     name_expr = binding.elements[0]
                                     if isinstance(name_expr, AIFPLSymbol):
                                         new_bound.add(name_expr.name)
+                        
+                        # Recurse into binding values first (to find free vars in lambda definitions)
+                        if isinstance(bindings_list, AIFPLList):
+                            for binding in bindings_list.elements:
+                                if isinstance(binding, AIFPLList) and len(binding.elements) >= 2:
+                                    value_expr = binding.elements[1]
+                                    # Use original bound_vars, not new_bound, because bindings can't reference each other yet
+                                    self._collect_free_vars(value_expr, bound_vars, parent_ctx, free, seen)
                         
                         # Recurse into let body with new bound variables
                         self._collect_free_vars(body, new_bound, parent_ctx, free, seen)
@@ -779,20 +902,20 @@ class AIFPLCompiler:
         """
         func_name = expr.first().name
         arg_exprs = list(expr.elements[1:])
-        
+
         if not arg_exprs:
             raise AIFPLEvalError(f"{func_name} requires at least one argument")
-        
+
         # First argument: the function to apply
         func_arg = arg_exprs[0]
-        
+
         # Compile the function argument (lambda, variable, or builtin name)
         self._compile_expression(func_arg, ctx)
-        
+
         # Compile remaining arguments
         for arg in arg_exprs[1:]:
             self._compile_expression(arg, ctx)
-        
+
         # Call the higher-order function
         builtin_index = self.builtin_indices[func_name]
         ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
