@@ -4,8 +4,8 @@ from typing import List, Dict, Tuple, Optional, Set
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, 
-    AIFPLSymbol, AIFPLList
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
+    AIFPLSymbol, AIFPLList, AIFPLAlist, AIFPLFunction, AIFPLBuiltinFunction
 )
 from aifpl.aifpl_bytecode import (
     CodeObject, Instruction, Opcode, make_instruction
@@ -282,7 +282,14 @@ class AIFPLCompiler:
             elif first.name == 'quote':
                 # Quote: return the quoted value as a constant
                 if len(expr.elements) != 2:
-                    raise AIFPLEvalError("quote requires exactly 1 argument")
+                    raise AIFPLEvalError(
+                        message="Quote expression has wrong number of arguments",
+                        received=f"Got {len(expr.elements) - 1} arguments: {self.format_result(expr)}",
+                        expected="Exactly 1 argument",
+                        example="(quote expr) or 'expr",
+                        suggestion="Quote requires exactly one expression to quote"
+                    )
+
                 quoted = expr.elements[1]
                 const_index = ctx.add_constant(quoted)
                 ctx.emit(Opcode.LOAD_CONST, const_index)
@@ -485,7 +492,6 @@ class AIFPLCompiler:
             # We need to pass 3 pieces of info but only have 2 args
             # Solution: Store (sibling_var_index, name_index) as a tuple in constants
             # and pass closure_var_index and const_index
-            from aifpl.aifpl_value import AIFPLNumber
             patch_info = AIFPLList((AIFPLNumber(sibling_var_index), AIFPLNumber(name_index)))
             const_index = ctx.add_constant(patch_info)
             # arg1=closure_var_index, arg2=const_index (contains sibling_var_index and name_index)
@@ -827,15 +833,15 @@ class AIFPLCompiler:
 
         # Compile value and store in temporary local
         self._compile_expression(value_expr, ctx)
-        
+
         # Save the current bindings state - pattern variables should not be visible after match
         saved_bindings = ctx.current_scope().bindings.copy()
         saved_next_index = ctx.current_scope().next_index
-        
+
         # Allocate a temporary local for the match value
-        match_temp_index = ctx.current_scope().add_binding(f"<match-temp>")
+        match_temp_index = ctx.current_scope().add_binding("<match-temp>")
         ctx.update_max_locals()
-        
+
         ctx.emit(Opcode.STORE_VAR, 0, match_temp_index)
 
         # Now save state again, including match-temp
@@ -1081,61 +1087,61 @@ class AIFPLCompiler:
     def _compile_cons_pattern(self, pattern: AIFPLList, match_value_index: int,
                              dot_position: int, ctx: CompilationContext) -> None:
         """Compile a cons pattern like (head . tail) or (a b . rest)."""
-        
+
         # Check if value is a non-empty list
         ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
         builtin_index = self.builtin_indices['list?']
         ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
         fail_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
-        
+
         # Check not empty
         ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
         builtin_index = self.builtin_indices['null?']
         ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
         empty_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_TRUE, 0)  # Jump to fail if empty
-        
+
         # Extract head elements (before dot)
         fail_jumps = []
         for i in range(dot_position):
             elem_pattern = pattern.elements[i]
-            
+
             # Extract element into temporary
             elem_temp_index = ctx.current_scope().add_binding(f"<cons-elem-temp-{i}>")
             ctx.update_max_locals()
-            
+
             ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
             ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
             builtin_index = self.builtin_indices['list-ref']
             ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
             ctx.emit(Opcode.STORE_VAR, 0, elem_temp_index)
-            
+
             # Recursively match the element pattern
             self._compile_pattern(elem_pattern, elem_temp_index, ctx)
             elem_fail = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
             fail_jumps.append(elem_fail)
-        
+
         # Extract tail (after dot)
         tail_pattern = pattern.elements[dot_position + 1]
-        
+
         # Extract tail into temporary
-        tail_temp_index = ctx.current_scope().add_binding(f"<cons-tail-temp>")
+        tail_temp_index = ctx.current_scope().add_binding("<cons-tail-temp>")
         ctx.update_max_locals()
-        
+
         ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(dot_position)))
         ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
         builtin_index = self.builtin_indices['drop']
         ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
         ctx.emit(Opcode.STORE_VAR, 0, tail_temp_index)
-        
+
         # Recursively match the tail pattern
         self._compile_pattern(tail_pattern, tail_temp_index, ctx)
         tail_fail = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
         fail_jumps.append(tail_fail)
-        
+
         # Success
         ctx.emit(Opcode.LOAD_TRUE)
         success_jump = ctx.emit(Opcode.JUMP, 0)
-        
+
         # Patch failure jumps
         fail_location = ctx.current_instruction_index()
         ctx.patch_jump(fail_jump, fail_location)
@@ -1143,7 +1149,7 @@ class AIFPLCompiler:
         for fj in fail_jumps:
             ctx.patch_jump(fj, fail_location)
         ctx.emit(Opcode.LOAD_FALSE)
-        
+
         success_location = ctx.current_instruction_index()
         ctx.patch_jump(success_jump, success_location)
 
@@ -1173,16 +1179,16 @@ class AIFPLCompiler:
         if (len(pattern.elements) == 2 and
             isinstance(pattern.elements[0], AIFPLSymbol) and
             pattern.elements[0].name.endswith('?')):
-            
+
             type_pred = pattern.elements[0].name
             var_pattern = pattern.elements[1]
-            
+
             # Validate type predicate is known
             valid_predicates = {
                 'number?', 'integer?', 'float?', 'complex?',
                 'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
             }
-            
+
             if type_pred not in valid_predicates:
                 raise AIFPLEvalError(
                     message="Invalid type pattern",
@@ -1211,7 +1217,7 @@ class AIFPLCompiler:
                 'number?', 'integer?', 'float?', 'complex?',
                 'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
             }
-            
+
             if first_elem.name in valid_predicates:
                 type_pred = first_elem.name
 
@@ -1290,3 +1296,107 @@ class AIFPLCompiler:
                 continue
 
             self._validate_pattern_syntax(element)
+
+    def format_result(self, result: AIFPLValue) -> str:
+        """
+        Format result for display, using LISP conventions for lists and booleans.
+
+        Args:
+            result: The result to format
+
+        Returns:
+            String representation of the result
+        """
+        if isinstance(result, AIFPLBoolean):
+            return "#t" if result.value else "#f"
+
+        if isinstance(result, AIFPLString):
+            escaped_content = self._escape_string_for_lisp(result.value)
+            return f'"{escaped_content}"'
+
+        if isinstance(result, AIFPLNumber):
+            if isinstance(result.value, float):
+                nice_number = self._is_close_to_nice_number(result.value)
+                if nice_number is not None:
+                    # If it's close to an integer, show as integer
+                    if nice_number == int(nice_number):
+                        return str(int(nice_number))
+
+                    return str(nice_number)
+
+            return str(result.value)
+
+        if isinstance(result, AIFPLList):
+            # Format list in LISP notation: (element1 element2 ...)
+            if result.is_empty():
+                return "()"
+
+            formatted_elements = []
+            for element in result.elements:
+                formatted_elements.append(self.format_result(element))
+
+            return f"({' '.join(formatted_elements)})"
+
+        if isinstance(result, AIFPLAlist):
+            # Format alist in LISP notation: (alist (key1 val1) (key2 val2) ...)
+            if result.is_empty():
+                return "(alist)"
+
+            formatted_pairs = []
+            for key, value in result.pairs:
+                formatted_key = self.format_result(key)
+                formatted_value = self.format_result(value)
+                formatted_pairs.append(f"({formatted_key} {formatted_value})")
+
+            pairs_str = ' '.join(formatted_pairs)
+            return f"(alist {pairs_str})"
+
+        if isinstance(result, AIFPLFunction):
+            # Format lambda functions
+            param_str = " ".join(result.parameters)
+            return f"<lambda ({param_str})>"
+
+        if isinstance(result, AIFPLBuiltinFunction):
+            # Format builtin functions
+            return f"<builtin {result.name}>"
+
+        # For other types, use standard string representation
+        return str(result)
+
+    def _escape_string_for_lisp(self, s: str) -> str:
+        """Escape a string for LISP display format."""
+        result = []
+        for char in s:
+            if char == '"':
+                result.append('\\"')
+
+            elif char == '\\':
+                result.append('\\\\')
+
+            elif char == '\n':
+                result.append('\\n')
+
+            elif char == '\t':
+                result.append('\\t')
+
+            elif char == '\r':
+                result.append('\\r')
+
+            elif ord(char) < 32:  # Other control characters
+                result.append(f'\\u{ord(char):04x}')
+
+            else:
+                result.append(char)  # Keep Unicode as-is
+
+        return ''.join(result)
+
+    def _is_close_to_nice_number(self, value: float) -> float | None:
+        """Check if a float is very close to a 'nice' number and return the nice number if so."""
+        # Check if it's close to common fractions with small denominators
+        for denominator in range(1, 11):  # Check denominators 1-10
+            for numerator in range(-50, 51):  # Check reasonable range
+                nice_value = numerator / denominator
+                if abs(value - nice_value) < self.floating_point_tolerance:
+                    return nice_value
+
+        return None

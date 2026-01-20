@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_value import AIFPLValue, AIFPLRecursivePlaceholder, AIFPLFunction
+from aifpl.aifpl_value import AIFPLValue, AIFPLRecursivePlaceholder
 
 
 @dataclass(frozen=True)
