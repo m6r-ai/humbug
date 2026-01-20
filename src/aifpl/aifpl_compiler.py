@@ -475,9 +475,6 @@ class AIFPLCompiler:
                 suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
             )
 
-        # Enter new scope for tracking variables
-        ctx.push_scope()
-
         # First pass: Add all binding names to scope (for recursive references)
         binding_pairs = []
         for i, binding in enumerate(bindings_list.elements):
@@ -586,9 +583,6 @@ class AIFPLCompiler:
 
         # Compile body
         self._compile_expression(body, ctx)
-
-        # Exit scope (for variable tracking)
-        ctx.pop_scope()
 
     def _compile_single_let_binding(
         self,
@@ -1276,7 +1270,20 @@ class AIFPLCompiler:
         builtin_index = self.builtin_indices['null?']
         ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
         empty_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_TRUE, 0)  # Jump to fail if empty
-
+        
+        # Check list has enough elements for the head patterns
+        # For pattern (a b . rest), we need at least 2 elements
+        if dot_position > 0:
+            ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+            builtin_index = self.builtin_indices['length']
+            ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
+            ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(dot_position)))
+            builtin_index = self.builtin_indices['>=']
+            ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
+            length_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+        else:
+            length_fail_jump = None
+        
         # Extract head elements (before dot)
         fail_jumps = []
         for i in range(dot_position):
@@ -1323,6 +1330,8 @@ class AIFPLCompiler:
         fail_location = ctx.current_instruction_index()
         ctx.patch_jump(fail_jump, fail_location)
         ctx.patch_jump(empty_fail_jump, fail_location)
+        if length_fail_jump is not None:
+            ctx.patch_jump(length_fail_jump, fail_location)
         for fj in fail_jumps:
             ctx.patch_jump(fj, fail_location)
         ctx.emit(Opcode.LOAD_FALSE)
