@@ -11,6 +11,7 @@ from aifpl.aifpl_bytecode import (
     CodeObject, Instruction, Opcode, make_instruction
 )
 from aifpl.aifpl_error import AIFPLEvalError
+from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 
 
 @dataclass
@@ -527,59 +528,49 @@ class AIFPLCompiler:
         # Update max locals after adding all bindings
         ctx.update_max_locals()
 
-        # Second pass: Compile values and store them
+        # Analyze dependencies to determine evaluation order
+        analyzer = AIFPLDependencyAnalyzer()
+        binding_groups = analyzer.analyze_let_bindings(binding_pairs)
+        
+        # Topologically sort the groups based on their dependencies
+        # (The SCC algorithm should return them in the right order, but let's be explicit)
+        sorted_groups = []
+        remaining_groups = list(binding_groups)
+        processed_names = set()
+        
+        while remaining_groups:
+            # Find a group with no unprocessed dependencies
+            for i, group in enumerate(remaining_groups):
+                if group.depends_on.issubset(processed_names):
+                    sorted_groups.append(group)
+                    processed_names.update(group.names)
+                    remaining_groups.pop(i)
+                    break
+            else:
+                # No group found - circular dependency (shouldn't happen)
+                raise AIFPLEvalError("Circular dependency detected in let bindings")
+        
+        binding_groups = sorted_groups
+        
+        # Second pass: Compile values and store them in dependency order
         # Track which bindings are lambdas that reference siblings (for mutual recursion)
         mutual_recursion_patches = []  # List of (closure_var_index, sibling_name, sibling_var_index)
         
-        for i, (name, value_expr) in enumerate(binding_pairs):
-            # Get the index for this variable
-            # Use resolve_variable to get the correct flat index
-            var_type, depth, var_index = ctx.resolve_variable(name)
+        # Compile each group in topological order
+        for group in binding_groups:
+            # Get all binding names in this group for mutual recursion detection
+            group_names = list(group.names)
             
-            # Check if this is a self-referential lambda
-            is_self_ref_lambda = (isinstance(value_expr, AIFPLList) and 
-                                 not value_expr.is_empty() and
-                                 isinstance(value_expr.first(), AIFPLSymbol) and
-                                 value_expr.first().name == 'lambda')
-
-            # Check if lambda references itself (recursive)
-            is_recursive = False
-            if is_self_ref_lambda:
-                # Check if the lambda body references 'name'
-                is_recursive = self._references_variable(value_expr, name)
-
-            # Compile the value expression
-            # Check which siblings this lambda references (for mutual recursion)
-            sibling_refs = []
-            let_binding_names = [n for n, _ in binding_pairs]
-            if is_self_ref_lambda and len(binding_pairs) > 1:
-                for other_name in let_binding_names:
-                    if other_name != name and self._references_variable(value_expr, other_name):
-                        sibling_refs.append(other_name)
-            
-            # Pass the binding name if it's a lambda (for self-reference detection)
-            if is_self_ref_lambda:
-                # Pass all binding names from this let block for mutual recursion support
-                self._compile_lambda(value_expr, ctx, binding_name=name, let_bindings=let_binding_names)
-            else:
-                self._compile_expression(value_expr, ctx)
-
-            # Store in local variable
-            ctx.emit(Opcode.STORE_VAR, depth, var_index)
-
-            # For recursive closures, patch them to reference themselves
-            if is_recursive:
-                # PATCH_CLOSURE_SELF: arg1 = name index, arg2 = var index (within current scope)
-                # The VM will need to use depth=0 since we just stored there
-                name_index = ctx.add_name(name)
-                ctx.emit(Opcode.PATCH_CLOSURE_SELF, name_index, var_index)
-
-            # Track sibling references for later patching
-            if sibling_refs:
-                for sibling_name in sibling_refs:
-                    # Find the sibling's variable index
-                    _, _, sibling_var_index = ctx.resolve_variable(sibling_name)
-                    mutual_recursion_patches.append((var_index, sibling_name, sibling_var_index))
+            # Compile each binding in the group
+            for name, value_expr in group.bindings:
+                # Compile this binding
+                self._compile_single_let_binding(
+                    ctx, name, value_expr,
+                    is_recursive_group=group.is_recursive,
+                    group_names=group_names,
+                    all_binding_names=[n for n, _ in binding_pairs],
+                    mutual_recursion_patches=mutual_recursion_patches
+                )
         
         # Third pass: Patch all mutual recursion references
         # Now all lambdas have been stored, so we can safely reference them
@@ -598,6 +589,67 @@ class AIFPLCompiler:
 
         # Exit scope (for variable tracking)
         ctx.pop_scope()
+
+    def _compile_single_let_binding(
+        self,
+        ctx: CompilationContext,
+        name: str,
+        value_expr: AIFPLValue,
+        is_recursive_group: bool,
+        group_names: List[str],
+        all_binding_names: List[str],
+        mutual_recursion_patches: List[Tuple[int, str, int]]
+    ) -> None:
+        """Compile a single let binding."""
+        # Get the index for this variable
+        var_type, depth, var_index = ctx.resolve_variable(name)
+        
+        # Check if this is a self-referential lambda
+        is_self_ref_lambda = (isinstance(value_expr, AIFPLList) and 
+                             not value_expr.is_empty() and
+                             isinstance(value_expr.first(), AIFPLSymbol) and
+                             value_expr.first().name == 'lambda')
+
+        # Check if lambda references itself (recursive)
+        is_recursive = False
+        if is_self_ref_lambda:
+            # Check if the lambda body references 'name'
+            is_recursive = self._references_variable(value_expr, name)
+
+        # Compile the value expression
+        # Check which siblings this lambda references (for mutual recursion)
+        sibling_refs = []
+        if is_self_ref_lambda and is_recursive_group and len(group_names) > 1:
+            # Only check siblings in the same recursive group
+            for other_name in group_names:
+                if other_name != name and self._references_variable(value_expr, other_name):
+                    sibling_refs.append(other_name)
+        
+        # Pass the binding name if it's a lambda (for self-reference detection)
+        if is_self_ref_lambda:
+            # For mutual recursion, pass sibling names in the same recursive group
+            # These are bindings that haven't been evaluated yet and need to be patched
+            sibling_bindings = group_names if is_recursive_group else None
+            self._compile_lambda(value_expr, ctx, binding_name=name, let_bindings=sibling_bindings)
+        else:
+            self._compile_expression(value_expr, ctx)
+
+        # Store in local variable
+        ctx.emit(Opcode.STORE_VAR, depth, var_index)
+
+        # For recursive closures, patch them to reference themselves
+        if is_recursive:
+            # PATCH_CLOSURE_SELF: arg1 = name index, arg2 = var index (within current scope)
+            # The VM will need to use depth=0 since we just stored there
+            name_index = ctx.add_name(name)
+            ctx.emit(Opcode.PATCH_CLOSURE_SELF, name_index, var_index)
+
+        # Track sibling references for later patching
+        if sibling_refs:
+            for sibling_name in sibling_refs:
+                # Find the sibling's variable index
+                _, _, sibling_var_index = ctx.resolve_variable(sibling_name)
+                mutual_recursion_patches.append((var_index, sibling_name, sibling_var_index))
 
     def _references_variable(self, expr: AIFPLValue, var_name: str) -> bool:
         """Check if an expression references a variable."""
@@ -670,11 +722,13 @@ class AIFPLCompiler:
                     # Self-reference - don't capture, will be patched later
                     pass
                 elif let_bindings and free_var in let_bindings:
-                    # Sibling binding - don't capture, will be patched later with PATCH_CLOSURE_SIBLING
-                    # The lambda will reference it via LOAD_NAME from closure_env
+                    # Sibling in the same recursive group - don't capture, will be patched later
+                    # This handles mutual recursion where siblings reference each other
                     pass
                 else:
                     # Variable from an outer scope - capture it
+                    # With dependency analysis, all dependencies are evaluated before
+                    # the lambda is created, so we can safely capture them
                     ctx.emit(Opcode.LOAD_VAR, depth, index)
                     captured_vars.append(free_var)
                 # else: self-reference, skip capturing
