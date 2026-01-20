@@ -4,10 +4,9 @@ import math
 from typing import List, Dict, cast
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
-from aifpl.aifpl_collections import AIFPLCollectionsFunctions
+from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
 from aifpl.aifpl_environment import AIFPLEnvironment
-from aifpl.aifpl_math import AIFPLMathFunctions
 from aifpl.aifpl_pattern_matcher import AIFPLPatternMatcher
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
@@ -46,9 +45,8 @@ class AIFPLEvaluator:
         self.call_chain_list: List[AIFPLFunction] = []
         self.call_chain_set: set = set()  # For O(1) membership check
 
-        # Create function modules
-        self.math_functions = AIFPLMathFunctions(floating_point_tolerance)
-        self.collections_functions = AIFPLCollectionsFunctions()
+        # Create builtin registry
+        self.builtin_registry = AIFPLBuiltinRegistry(floating_point_tolerance)
 
         # Create pattern matcher
         self.pattern_matcher = AIFPLPatternMatcher(self.format_result)
@@ -62,17 +60,10 @@ class AIFPLEvaluator:
 
     def _create_builtin_functions(self) -> dict[str, AIFPLBuiltinFunction]:
         """Create all built-in functions with their native implementations."""
-        builtins = {}
+        # Get all regular builtins from the registry
+        builtins = self.builtin_registry.create_builtin_function_objects()
 
-        # Add mathematical functions
-        for name, impl in self.math_functions.get_functions().items():
-            builtins[name] = AIFPLBuiltinFunction(name, impl)
-
-        # Add collections functions
-        for name, impl in self.collections_functions.get_functions().items():
-            builtins[name] = AIFPLBuiltinFunction(name, impl)
-
-        # Add higher-order functions (defined in this class)
+        # Add special forms (these require special evaluation semantics)
         builtins['and'] = AIFPLBuiltinFunction('and', self._builtin_and_special)
         builtins['or'] = AIFPLBuiltinFunction('or', self._builtin_or_special)
         builtins['map'] = AIFPLBuiltinFunction('map', self._builtin_map_special)
