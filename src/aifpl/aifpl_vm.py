@@ -734,1208 +734,59 @@ class AIFPLVM:
         else:
             raise AIFPLEvalError(f"Expected function, got {func.type_name()}")
 
+
     def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
-        """Call a builtin function by index."""
+        """Call a builtin function by index.
+        
+        This method delegates to the unified builtin registry for regular builtins,
+        and handles special forms (and, or, map, filter, fold, etc.) separately
+        because they require special evaluation semantics.
+        """
         from aifpl.aifpl_compiler import AIFPLCompiler
-
+        from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
+        
         builtin_name = AIFPLCompiler.BUILTIN_TABLE[builtin_index]
-
-        # Simple arithmetic operations
-        if builtin_name == '+':
+        
+        # Special forms that need custom handling (not in the registry)
+        # These have special evaluation semantics and can't be handled generically
+        
+        # Note: 'and' and 'or' are special forms in the evaluator but when called
+        # from bytecode, their arguments are already evaluated, so we can handle them simply
+        if builtin_name == 'and':
+            # All arguments are already evaluated by bytecode
             if not args:
-                # Empty + returns 0 (identity)
-                return AIFPLNumber(0)
-            total = 0
+                return AIFPLBoolean(True)
             for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLNumber):
-                    raise AIFPLEvalError(
-                        f"Function '+' requires numeric arguments, got {arg.type_name()}"
-                    )
-                total += arg.value
-            return AIFPLNumber(total)
-
-        elif builtin_name == '-':
-            if not args:
-                raise AIFPLEvalError(
-                    message="Subtraction requires at least 1 argument",
-                    expected="At least 1 number",
-                    example="(- 5 2) → 3 or (- 5) → -5",
-                    suggestion="Provide at least one number to subtract"
-                )
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(
-                    f"Function '-' requires numeric arguments, got {args[0].type_name()}"
-                )
-
-            if len(args) == 1:
-                return AIFPLNumber(-args[0].value)
-
-            result = args[0].value
-            for i, arg in enumerate(args[1:], start=2):
-                if not isinstance(arg, AIFPLNumber):
-                    raise AIFPLEvalError(
-                        f"Function '-' requires numeric arguments, got {arg.type_name()}"
-                    )
-                result -= arg.value
-            return AIFPLNumber(result)
-
-        elif builtin_name == '*':
-            if not args:
-                # Empty * returns 1 (identity)
-                return AIFPLNumber(1)
-            result = 1
-            for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLNumber):
-                    raise AIFPLEvalError(
-                        f"Function '*' requires numeric arguments, got {arg.type_name()}"
-                    )
-                result *= arg.value
-            return AIFPLNumber(result)
-
-        elif builtin_name == '/':
-            if len(args) < 2:
-                raise AIFPLEvalError(f"division requires at least 2 arguments, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(
-                    f"Function '/' requires numeric arguments, got {args[0].type_name()}"
-                )
-
-            result = args[0].value
-            for i, arg in enumerate(args[1:], start=2):
-                if not isinstance(arg, AIFPLNumber):
-                    raise AIFPLEvalError(
-                        f"Function '/' requires numeric arguments, got {arg.type_name()}"
-                    )
-                if arg.value == 0:
-                    raise AIFPLEvalError(
-                        message=f"Division by zero at argument {i}",
-                        received=f"Attempting to divide {self._format_result(args[0])} by 0",
-                        expected="Non-zero divisor",
-                        example="(/ 10 2) → 5",
-                        suggestion="Ensure divisor is not zero"
-                    )
-                result /= arg.value
-            return AIFPLNumber(result)
-
-        # Comparisons
-        elif builtin_name == '=':
-            if len(args) < 2:
-                raise AIFPLEvalError(
-                    message=f"Function '=' requires at least 2 arguments, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="At least 2 values",
-                    example="(= 1 1 1) → #t",
-                    suggestion="Provide at least two values to compare"
-                )
-            first = args[0]
-            for arg in args[1:]:
-                if not self._values_equal(first, arg):
-                    return AIFPLBoolean(False)
-            return AIFPLBoolean(True)
-
-        elif builtin_name == '<':
-            if len(args) < 2:
-                raise AIFPLEvalError(
-                    message=f"Function '<' requires at least 2 arguments, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="At least 2 numbers",
-                    example="(< 1 2 3) → #t",
-                    suggestion="Provide at least two numbers to compare"
-                )
-            for i in range(len(args) - 1):
-                if not isinstance(args[i], AIFPLNumber) or not isinstance(args[i+1], AIFPLNumber):
-                    # Determine which argument is wrong
-                    if not isinstance(args[i], AIFPLNumber):
-                        raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+1} is {args[i].type_name()}")
-                    else:
-                        raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+2} is {args[i+1].type_name()}")
-                # Check for complex numbers
-                if isinstance(args[i].value, complex) or isinstance(args[i+1].value, complex):
-                    raise AIFPLEvalError(
-                        message="Function '<' does not support complex numbers",
-                        suggestion="Use only real numbers with comparison operators"
-                    )
-                if not (args[i].value < args[i+1].value):
-                    return AIFPLBoolean(False)
-            return AIFPLBoolean(True)
-
-        elif builtin_name == '>':
-            if len(args) < 2:
-                raise AIFPLEvalError(
-                    message=f"Function '>' requires at least 2 arguments, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="At least 2 numbers",
-                    example="(> 3 2 1) → #t",
-                    suggestion="Provide at least two numbers to compare"
-                )
-            for i in range(len(args) - 1):
-                if not isinstance(args[i], AIFPLNumber) or not isinstance(args[i+1], AIFPLNumber):
-                    # Determine which argument is wrong
-                    if not isinstance(args[i], AIFPLNumber):
-                        raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+1} is {args[i].type_name()}")
-                    else:
-                        raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+2} is {args[i+1].type_name()}")
-                # Check for complex numbers
-                if isinstance(args[i].value, complex) or isinstance(args[i+1].value, complex):
-                    raise AIFPLEvalError(
-                        message="Function '>' does not support complex numbers",
-                        suggestion="Use only real numbers with comparison operators"
-                    )
-                if not (args[i].value > args[i+1].value):
-                    return AIFPLBoolean(False)
-            return AIFPLBoolean(True)
-
-        elif builtin_name == '<=':
-            if len(args) < 2:
-                raise AIFPLEvalError(
-                    message=f"Function '<=' requires at least 2 arguments, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="At least 2 numbers",
-                    example="(<= 1 1 2) → #t",
-                    suggestion="Provide at least two numbers to compare"
-                )
-            for i in range(len(args) - 1):
-                if not isinstance(args[i], AIFPLNumber) or not isinstance(args[i+1], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Function '<=' requires numeric arguments",
-                        received=f"Arguments: {self._format_result(args[i])}, {self._format_result(args[i+1])}",
-                        expected="Numbers only",
-                        example="(<= 1 1 2) → #t",
-                        suggestion="Use <= only with numeric values"
-                    )
-                # Check for complex numbers
-                if isinstance(args[i].value, complex) or isinstance(args[i+1].value, complex):
-                    raise AIFPLEvalError(
-                        message="Function '<=' does not support complex numbers",
-                        suggestion="Use only real numbers with comparison operators"
-                    )
-                if not (args[i].value <= args[i+1].value):
-                    return AIFPLBoolean(False)
-            return AIFPLBoolean(True)
-
-        elif builtin_name == '>=':
-            if len(args) < 2:
-                raise AIFPLEvalError(
-                    message=f"Function '>=' requires at least 2 arguments, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="At least 2 numbers",
-                    example="(>= 3 2 2) → #t",
-                    suggestion="Provide at least two numbers to compare"
-                )
-            for i in range(len(args) - 1):
-                if not isinstance(args[i], AIFPLNumber) or not isinstance(args[i+1], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Function '>=' requires numeric arguments",
-                        received=f"Arguments: {self._format_result(args[i])}, {self._format_result(args[i+1])}",
-                        expected="Numbers only",
-                        example="(>= 3 2 2) → #t",
-                        suggestion="Use >= only with numeric values"
-                    )
-                # Check for complex numbers
-                if isinstance(args[i].value, complex) or isinstance(args[i+1].value, complex):
-                    raise AIFPLEvalError(
-                        message="Function '>=' does not support complex numbers",
-                        suggestion="Use only real numbers with comparison operators"
-                    )
-                if not (args[i].value >= args[i+1].value):
-                    return AIFPLBoolean(False)
-            return AIFPLBoolean(True)
-
-        elif builtin_name == '!=':
-            if len(args) < 2:
-                raise AIFPLEvalError(
-                    message=f"Function '!=' requires at least 2 arguments, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="At least 2 values",
-                    example="(!= 1 2) → #t",
-                    suggestion="Provide at least two values to compare"
-                )
-            # Check if any pair is not equal
-            first = args[0]
-            for arg in args[1:]:
-                # Simple equality check
-                if type(first) != type(arg):
-                    return AIFPLBoolean(True)  # Different types are not equal
-                if isinstance(first, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
-                    if first.value != arg.value:
-                        return AIFPLBoolean(True)  # Found inequality
-            return AIFPLBoolean(False)  # All equal
-
-        elif builtin_name == '//':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message=f"Floor division requires exactly 2 arguments, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 numbers: dividend and divisor",
-                    example="(// 7 2) → 3",
-                    suggestion="Provide dividend and divisor"
-                )
-            # Ensure real numbers (reject complex)
-            left_val = self._ensure_real_number(args[0], "//")
-            right_val = self._ensure_real_number(args[1], "//")
-            
-            if args[1].value == 0:
-                raise AIFPLEvalError(
-                    message="Division by zero",
-                    received=f"Attempting to divide {self._format_result(args[0])} by 0",
-                    expected="Non-zero divisor",
-                    example="(// 10 2) → 5",
-                    suggestion="Ensure divisor is not zero"
-                )
-            return AIFPLNumber(left_val // right_val)
-
-        elif builtin_name == '%':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message=f"Modulo requires exactly 2 arguments, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 numbers: dividend and divisor",
-                    example="(% 7 3) → 1",
-                    suggestion="Provide dividend and divisor"
-                )
-            # Ensure real numbers (reject complex)
-            left_val = self._ensure_real_number(args[0], "%")
-            right_val = self._ensure_real_number(args[1], "%")
-            
-            if args[1].value == 0:
-                raise AIFPLEvalError(
-                    message="Modulo by zero",
-                    received=f"Attempting to compute {self._format_result(args[0])} % 0",
-                    expected="Non-zero divisor",
-                    example="(% 7 3) → 1",
-                    suggestion="Ensure divisor is not zero"
-                )
-            return AIFPLNumber(left_val % right_val)
-
-        elif builtin_name == '**':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"Function '**' requires exactly 2 arguments, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Function '**' requires numeric arguments",
-                    received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
-                    expected="Two numbers",
-                    example="(** 2 3) → 8",
-                    suggestion="Both arguments to ** must be numbers"
-                )
-            return AIFPLNumber(args[0].value ** args[1].value)
-
-        # Boolean logic operations
-        elif builtin_name == 'and':
-            # Short-circuit evaluation: return first false or last value
-            if len(args) == 0:
-                return AIFPLBoolean(True)  # Empty and is true
-            for i, arg in enumerate(args, 1):
                 if not isinstance(arg, AIFPLBoolean):
-                    raise AIFPLEvalError(f"And operator argument {i} must be boolean")
+                    raise AIFPLEvalError(
+                        message=f"And operator argument {i+1} must be boolean",
+                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
+                        expected="Boolean value (#t or #f)",
+                        example="(and (> x 0) (< x 10))",
+                        suggestion="Use comparison or boolean operators to create boolean values"
+                    )
                 if not arg.value:
-                    return AIFPLBoolean(False)  # Short-circuit on first false
-            return AIFPLBoolean(True)  # All true
-
-        elif builtin_name == 'or':
-            # Short-circuit evaluation: return first true or last value
-            if len(args) == 0:
-                return AIFPLBoolean(False)  # Empty or is false
-            for i, arg in enumerate(args, 1):
-                if not isinstance(arg, AIFPLBoolean):
-                    raise AIFPLEvalError(f"Or operator argument {i} must be boolean")
-                if arg.value:
-                    return AIFPLBoolean(True)  # Short-circuit on first true
-            return AIFPLBoolean(False)  # All false
-
-        elif builtin_name == 'not':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message=f"Function 'not' requires exactly 1 argument, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 boolean value",
-                    example="(not #t) → #f",
-                    suggestion="Provide a single boolean value"
-                )
-            if not isinstance(args[0], AIFPLBoolean):
-                raise AIFPLEvalError(
-                    f"Function 'not' requires boolean arguments, got {args[0].type_name()}"
-                )
-            return AIFPLBoolean(not args[0].value)
-
-        # Bitwise operations
-        elif builtin_name == 'bit-or':
-            if len(args) < 2:
-                raise AIFPLEvalError(f"Function 'bit-or' requires at least 2 arguments, got {len(args)}")
-            int_args = [self._ensure_integer(arg, "bit-or") for arg in args]
-            result = int_args[0]
-            for arg in int_args[1:]:
-                result |= arg
-            return AIFPLNumber(result)
-
-        elif builtin_name == 'bit-and':
-            if len(args) < 2:
-                raise AIFPLEvalError(f"Function 'bit-and' requires at least 2 arguments, got {len(args)}")
-            int_args = [self._ensure_integer(arg, "bit-and") for arg in args]
-            result = int_args[0]
-            for arg in int_args[1:]:
-                result &= arg
-            return AIFPLNumber(result)
-
-        elif builtin_name == 'bit-xor':
-            if len(args) < 2:
-                raise AIFPLEvalError(f"Function 'bit-xor' requires at least 2 arguments, got {len(args)}")
-            int_args = [self._ensure_integer(arg, "bit-xor") for arg in args]
-            result = int_args[0]
-            for arg in int_args[1:]:
-                result ^= arg
-            return AIFPLNumber(result)
-
-        elif builtin_name == 'bit-not':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'bit-not' requires exactly 1 argument, got {len(args)}")
-            int_val = self._ensure_integer(args[0], "bit-not")
-            return AIFPLNumber(~int_val)
-
-        elif builtin_name == 'bit-shift-left':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"Function 'bit-shift-left' requires exactly 2 arguments, got {len(args)}")
-            value = self._ensure_integer(args[0], "bit-shift-left")
-            shift = self._ensure_integer(args[1], "bit-shift-left")
-            return AIFPLNumber(value << shift)
-
-        elif builtin_name == 'bit-shift-right':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"Function 'bit-shift-right' requires exactly 2 arguments, got {len(args)}")
-            value = self._ensure_integer(args[0], "bit-shift-right")
-            shift = self._ensure_integer(args[1], "bit-shift-right")
-            return AIFPLNumber(value >> shift)
-
-        # List operations
-        elif builtin_name == 'list':
-            return AIFPLList(tuple(args))
-
-        elif builtin_name == 'cons':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="Function 'cons' requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 arguments: element and list",
-                    example="(cons 1 (list 2 3)) → (1 2 3)",
-                    suggestion="Provide an element and a list"
-                )
-            head = args[0]
-            tail = args[1]
-            if not isinstance(tail, AIFPLList):
-                raise AIFPLEvalError(
-                    message="Function 'cons' second argument must be a list",
-                    received=f"Second argument: {self._format_result(tail)} ({tail.type_name()})",
-                    expected="List",
-                    example="(cons 1 (list 2 3)) → (1 2 3)",
-                    suggestion="Use (list ...) to create a list for the second argument"
-                )
-            return AIFPLList((head,) + tail.elements)
-
-        elif builtin_name == 'append':
-            if len(args) < 2:
-                raise AIFPLEvalError(f"append requires at least 2 arguments, got {len(args)}")
-            
-            result_elements = []
-            for i, arg in enumerate(args):
-                arg = self._ensure_list(arg, "append")
-                result_elements.extend(arg.elements)
-            return AIFPLList(tuple(result_elements))
-
-        elif builtin_name == 'reverse':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"reverse requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLList):
-                raise AIFPLEvalError(
-                    message="Reverse requires a list",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="List",
-                    example="(reverse (list 1 2 3)) → (3 2 1)",
-                    suggestion="Use reverse only with lists"
-                )
-            return AIFPLList(tuple(reversed(args[0].elements)))
-
-        elif builtin_name == 'first':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"first requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLList):
-                raise AIFPLEvalError(
-                    message="First requires a list",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="List",
-                    example="(first (list 1 2 3)) → 1",
-                    suggestion="Use first only with lists"
-                )
-            if args[0].is_empty():
-                raise AIFPLEvalError(
-                    message="Cannot get first element of empty list",
-                    received="Empty list: ()",
-                    expected="Non-empty list",
-                    example="(first (list 1 2 3)) → 1",
-                    suggestion="Check that list is not empty before calling first, use (null? list) to test"
-                )
-            return args[0].first()
-
-        elif builtin_name == 'rest':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"rest requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLList):
-                raise AIFPLEvalError(
-                    message="Rest requires a list",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="List",
-                    example="(rest (list 1 2 3)) → (2 3)",
-                    suggestion="Use rest only with lists"
-                )
-            if args[0].is_empty():
-                raise AIFPLEvalError(
-                    message="Cannot get rest of empty list",
-                    received="Empty list: ()",
-                    expected="Non-empty list",
-                    example="(rest (list 1 2 3)) → (2 3)",
-                    suggestion="Check that list is not empty before calling rest, use (null? list) to test"
-                )
-            return AIFPLList(args[0].elements[1:])
-
-        elif builtin_name == 'last':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"last requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLList):
-                raise AIFPLEvalError(
-                    message="Last requires a list",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="List",
-                    example="(last (list 1 2 3)) → 3",
-                    suggestion="Use last only with lists"
-                )
-            if args[0].is_empty():
-                raise AIFPLEvalError(
-                    message="Cannot get last element of empty list",
-                    received="Empty list: ()",
-                    expected="Non-empty list",
-                    example="(last (list 1 2 3)) → 3",
-                    suggestion="Check that list is not empty before calling last, use (null? list) to test"
-                )
-            return args[0].elements[-1]
-
-        elif builtin_name == 'length':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"length requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLList):
-                raise AIFPLEvalError(
-                    message="Length requires a list",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="List",
-                    example="(length (list 1 2 3)) → 3",
-                    suggestion="Use length only with lists"
-                )
-            return AIFPLNumber(len(args[0].elements))
-
-        elif builtin_name == 'null?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Null? requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(null? ()) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            lst = self._ensure_list(args[0], "null?")
-            return AIFPLBoolean(lst.is_empty())
-
-        elif builtin_name == 'member?':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="Member? requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 arguments: item and list",
-                    example="(member? 2 (list 1 2 3)) → #t",
-                    suggestion="Provide an item and a list"
-                )
-            item = args[0]
-            lst = args[1]
-            if not isinstance(lst, AIFPLList):
-                raise AIFPLEvalError(
-                    message="Member? second argument must be a list",
-                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
-                    expected="List",
-                    example="(member? 2 (list 1 2 3)) → #t",
-                    suggestion="Use member? with a list as the second argument"
-                )
-
-            # Deep equality check
-            for elem in lst.elements:
-                if self._values_equal(item, elem):
-                    return AIFPLBoolean(True)
-            return AIFPLBoolean(False)
-
-        elif builtin_name == 'position':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"position requires exactly 2 arguments, got {len(args)}")
-            item = args[0]
-            lst = args[1]
-            if not isinstance(lst, AIFPLList):
-                raise AIFPLEvalError(
-                    message="Position second argument must be a list",
-                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
-                    expected="List",
-                    example="(position 2 (list 1 2 3)) → 1",
-                    suggestion="Use position with a list as the second argument"
-                )
-
-            for i, elem in enumerate(lst.elements):
-                if self._values_equal(item, elem):
-                    return AIFPLNumber(i)
-            return AIFPLBoolean(False)
-
-        elif builtin_name == 'take':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"take requires exactly 2 arguments, got {len(args)}")
-            n = self._ensure_integer(args[0], "take")
-            list_val = self._ensure_list(args[1], "take")
-            
-            if n < 0:
-                raise AIFPLEvalError(f"take count cannot be negative: {n}")
-            
-            return AIFPLList(list_val.elements[:n])
-
-        elif builtin_name == 'drop':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"drop requires exactly 2 arguments, got {len(args)}")
-            n = self._ensure_integer(args[0], "drop")
-            list_val = self._ensure_list(args[1], "drop")
-            
-            if n < 0:
-                raise AIFPLEvalError(f"drop count cannot be negative: {n}")
-            
-            return AIFPLList(list_val.elements[n:])
-
-        elif builtin_name == 'remove':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"remove requires exactly 2 arguments, got {len(args)}")
-            item = args[0]
-            lst = args[1]
-            if not isinstance(lst, AIFPLList):
-                raise AIFPLEvalError(
-                    message="Remove second argument must be a list",
-                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
-                    expected="List",
-                    example="(remove 2 (list 1 2 3)) → (1 3)",
-                    suggestion="Use remove with a list as the second argument"
-                )
-
-            result = []
-            for elem in lst.elements:
-                # Skip matching elements
-                if self._values_equal(item, elem):
-                    continue
-                result.append(elem)
-            return AIFPLList(tuple(result))
-
-        elif builtin_name == 'list-ref':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="List-ref requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 arguments: list and index",
-                    example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
-                    suggestion="Provide a list and an index"
-                )
-            lst = args[0]
-            index_val = args[1]
-            
-            lst = self._ensure_list(lst, "list-ref")
-            index = self._ensure_integer(index_val, "list-ref")
-            
-            # Check for negative index
-            if index < 0:
-                raise AIFPLEvalError(f"list-ref index out of range: {index}")
-            
-            if index < 0 or index >= len(lst.elements):
-                raise AIFPLEvalError(
-                    message=f"List index out of range",
-                    received=f"Index: {index}, List length: {len(lst.elements)}",
-                    expected=f"Index in range 0 to {len(lst.elements) - 1}",
-                    example="(list-ref (list \"a\" \"b\" \"c\") 1) → \"b\"",
-                    suggestion=f"Use an index between 0 and {len(lst.elements) - 1}"
-                )
-            
-            return lst.elements[index]
-
-        # Type predicates
-        elif builtin_name == 'number?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'number?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(number? 42) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], AIFPLNumber))
-
-        elif builtin_name == 'integer?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'integer?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(integer? 42) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_integer())
-
-        elif builtin_name == 'float?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'float?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(float? 3.14) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_float())
-
-        elif builtin_name == 'complex?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'complex?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(complex? (complex 1 2)) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            # Check if value is a number and is complex (has imaginary part)
-            if isinstance(args[0], AIFPLNumber):
-                value = args[0].value
-                # A complex number is one that has an imaginary component
-                # In Python, complex type always has imag attribute
-                if isinstance(value, complex):
-                    return AIFPLBoolean(True)
-                else:
-                    # int or float are not complex
                     return AIFPLBoolean(False)
+            return AIFPLBoolean(True)
+        
+        elif builtin_name == 'or':
+            # All arguments are already evaluated by bytecode
+            if not args:
+                return AIFPLBoolean(False)
+            for i, arg in enumerate(args):
+                if not isinstance(arg, AIFPLBoolean):
+                    raise AIFPLEvalError(
+                        message=f"Or operator argument {i+1} must be boolean",
+                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
+                        expected="Boolean value (#t or #f)",
+                        example="(or (= x 0) (> x 10))",
+                        suggestion="Use comparison or boolean operators to create boolean values"
+                    )
+                if arg.value:
+                    return AIFPLBoolean(True)
             return AIFPLBoolean(False)
-
-        elif builtin_name == 'string?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'string?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(string? \"hello\") → #t",
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], AIFPLString))
-
-        elif builtin_name == 'boolean?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'boolean?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(boolean? #t) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], AIFPLBoolean))
-
-        elif builtin_name == 'list?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'list?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(list? (list 1 2 3)) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], AIFPLList))
-
-        elif builtin_name == 'alist?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'alist?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(alist? my-alist) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], AIFPLAlist))
-
-        elif builtin_name == 'function?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'function?' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example="(function? (lambda (x) x)) → #t",
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], (AIFPLFunction, AIFPLBuiltinFunction)))
-
-        # Math functions
-        elif builtin_name == 'sqrt':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'sqrt' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'sqrt' requires a numeric argument, got {args[0].type_name()}")
-            val = args[0].value
-            # Use cmath.sqrt for negative numbers or complex numbers
-            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
-                return AIFPLNumber(cmath.sqrt(val))
-            # Use math.sqrt for positive real numbers
-            return AIFPLNumber(math.sqrt(val))
-
-        elif builtin_name == 'abs':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'abs' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'abs' requires a numeric argument, got {args[0].type_name()}")
-            return AIFPLNumber(abs(args[0].value))
-
-        elif builtin_name == 'min':
-            if len(args) < 1:
-                raise AIFPLEvalError(
-                    message=f"Function 'min' requires at least 1 argument, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="At least 1 number",
-                    example="(min 1 5 3) → 1",
-                    suggestion="Provide at least one number"
-                )
-            values = []
-            for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Function 'min' requires numeric arguments",
-                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Number",
-                        example="(min 1 5 3) → 1",
-                        suggestion="All arguments to min must be numbers"
-                    )
-                # Check for complex numbers
-                if isinstance(arg.value, complex):
-                    raise AIFPLEvalError(
-                        message="Function 'min' does not support complex numbers",
-                        received=f"Argument {i+1}: {self._format_result(arg)}",
-                        suggestion="Use only real numbers with min/max"
-                    )
-                values.append(arg.value)
-            return AIFPLNumber(min(values))
-
-        elif builtin_name == 'max':
-            if len(args) < 1:
-                raise AIFPLEvalError(
-                    message=f"Function 'max' requires at least 1 argument, got {len(args)}",
-                    received=f"Got {len(args)} arguments",
-                    expected="At least 1 number",
-                    example="(max 1 5 3) → 5",
-                    suggestion="Provide at least one number"
-                )
-            values = []
-            for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Function 'max' requires numeric arguments",
-                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="Number",
-                        example="(max 1 5 3) → 5",
-                        suggestion="All arguments to max must be numbers"
-                    )
-                # Check for complex numbers
-                if isinstance(arg.value, complex):
-                    raise AIFPLEvalError(
-                        message="Function 'max' does not support complex numbers",
-                        received=f"Argument {i+1}: {self._format_result(arg)}",
-                        suggestion="Use only real numbers with min/max"
-                    )
-                values.append(arg.value)
-            return AIFPLNumber(max(values))
-
-        elif builtin_name == 'pow':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"Function 'pow' requires exactly 2 arguments, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Function 'pow' requires numbers",
-                    received=f"Arguments: {self._format_result(args[0])}, {self._format_result(args[1])}",
-                    expected="Two numbers",
-                    example="(pow 2 3) → 8",
-                    suggestion="Both arguments to pow must be numbers"
-                )
-            return AIFPLNumber(args[0].value ** args[1].value)
-
-        # Trigonometric functions
-        elif builtin_name == 'sin':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'sin' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'sin' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            if isinstance(val, complex):
-                return AIFPLNumber(cmath.sin(val))
-            return AIFPLNumber(math.sin(val))
-
-        elif builtin_name == 'cos':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'cos' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'cos' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            if isinstance(val, complex):
-                return AIFPLNumber(cmath.cos(val))
-            return AIFPLNumber(math.cos(val))
-
-        elif builtin_name == 'tan':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'tan' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'tan' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            if isinstance(val, complex):
-                return AIFPLNumber(cmath.tan(val))
-            return AIFPLNumber(math.tan(val))
-
-        # Logarithmic and exponential functions
-        elif builtin_name == 'log':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'log' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'log' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            # Use cmath for negative numbers or complex numbers
-            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
-                return AIFPLNumber(cmath.log(val))
-            return AIFPLNumber(math.log(val))
-
-        elif builtin_name == 'log10':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'log10' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'log10' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            # Use cmath for negative numbers or complex numbers
-            if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
-                return AIFPLNumber(cmath.log10(val))
-            return AIFPLNumber(math.log10(val))
-
-        elif builtin_name == 'exp':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'exp' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'exp' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            if isinstance(val, complex):
-                return AIFPLNumber(cmath.exp(val))
-            return AIFPLNumber(math.exp(val))
-
-        # Rounding functions
-        elif builtin_name == 'round':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'round' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'round' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            # Check if it's complex (can't round complex numbers)
-            if isinstance(val, complex):
-                # Check if imaginary part is negligible
-                if abs(val.imag) > 1e-10:
-                    raise AIFPLEvalError(
-                        message="Function 'round' does not support complex numbers"
-                    )
-                val = val.real
-            return AIFPLNumber(round(val))
-
-        elif builtin_name == 'floor':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'floor' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'floor' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            # Check if it's complex (can't floor complex numbers)
-            if isinstance(val, complex):
-                # Check if imaginary part is negligible
-                if abs(val.imag) > 1e-10:
-                    raise AIFPLEvalError(
-                        message="Function 'floor' does not support complex numbers"
-                    )
-                val = val.real
-            return AIFPLNumber(math.floor(val))
-
-        elif builtin_name == 'ceil':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'ceil' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'ceil' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            # Check if it's complex (can't ceil complex numbers)
-            if isinstance(val, complex):
-                # Check if imaginary part is negligible
-                if abs(val.imag) > 1e-10:
-                    raise AIFPLEvalError(
-                        message="Function 'ceil' does not support complex numbers"
-                    )
-                val = val.real
-            return AIFPLNumber(math.ceil(val))
-
-        # Base conversion functions
-        elif builtin_name == 'bin':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'bin' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 integer",
-                    example='(bin 255) → "0b11111111"',
-                    suggestion="Provide a single integer"
-                )
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Function 'bin' requires a numeric argument",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Integer",
-                    example='(bin 255) → "0b11111111"',
-                    suggestion="Use bin only with integers"
-                )
-            val = args[0].value
-            if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
-                raise AIFPLEvalError(
-                    message="Function 'bin' requires an integer argument",
-                    received=f"Value: {val}",
-                    expected="Integer",
-                    example='(bin 255) → "0b11111111"',
-                    suggestion="Provide an integer value"
-                )
-            return AIFPLString(bin(int(val)))
-
-        elif builtin_name == 'hex':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'hex' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 integer",
-                    example='(hex 255) → "0xff"',
-                    suggestion="Provide a single integer"
-                )
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Function 'hex' requires a numeric argument",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Integer",
-                    example='(hex 255) → "0xff"',
-                    suggestion="Use hex only with integers"
-                )
-            val = args[0].value
-            if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
-                raise AIFPLEvalError(
-                    message="Function 'hex' requires an integer",
-                    received=f"Value: {val}",
-                    expected="Integer",
-                    example='(hex 255) → "0xff"',
-                    suggestion="Provide an integer value"
-                )
-            return AIFPLString(hex(int(val)))
-
-        elif builtin_name == 'oct':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Function 'oct' requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 integer",
-                    example='(oct 64) → "0o100"',
-                    suggestion="Provide a single integer"
-                )
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Function 'oct' requires a numeric argument",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Integer",
-                    example='(oct 64) → "0o100"',
-                    suggestion="Use oct only with integers"
-                )
-            val = args[0].value
-            if not isinstance(val, int) and not (isinstance(val, float) and val.is_integer()):
-                raise AIFPLEvalError(
-                    message="Function 'oct' requires an integer",
-                    received=f"Value: {val}",
-                    expected="Integer",
-                    example='(oct 64) → "0o100"',
-                    suggestion="Provide an integer value"
-                )
-            return AIFPLString(oct(int(val)))
-
-        # Complex number functions
-        elif builtin_name == 'real':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'real' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'real' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            if isinstance(val, complex):
-                result = val.real
-            else:
-                result = val
-            # Return as integer if it's a whole number
-            if isinstance(result, float) and result.is_integer():
-                return AIFPLNumber(int(result))
-            return AIFPLNumber(result)
-
-        elif builtin_name == 'imag':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"Function 'imag' requires exactly 1 argument, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(f"Function 'imag' requires a number, got {args[0].type_name()}")
-            val = args[0].value
-            if isinstance(val, complex):
-                result = val.imag
-            else:
-                result = 0
-            # Return as integer if it's a whole number
-            if isinstance(result, float) and result.is_integer():
-                return AIFPLNumber(int(result))
-            return AIFPLNumber(result)
-
-        elif builtin_name == 'complex':
-            if len(args) != 2:
-                raise AIFPLEvalError(f"Function 'complex' requires exactly 2 arguments, got {len(args)}")
-            if not isinstance(args[0], AIFPLNumber) or not isinstance(args[1], AIFPLNumber):
-                if not isinstance(args[0], AIFPLNumber):
-                    bad_arg = 0
-                else:
-                    bad_arg = 1
-                raise AIFPLEvalError(
-                    message="Function 'complex' requires numeric arguments",
-                    received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
-                    expected="Number",
-                    example="(complex 3 4) → (3+4j)",
-                    suggestion="Both arguments must be numbers"
-                )
-            real_part = args[0].value
-            imag_part = args[1].value
-            # Reject complex arguments
-            if isinstance(real_part, complex):
-                raise AIFPLEvalError(
-                    message="Function 'complex' arguments must be real numbers"
-                )
-            if isinstance(imag_part, complex):
-                raise AIFPLEvalError(
-                    message="Function 'complex' arguments must be real numbers"
-                )
-            return AIFPLNumber(complex(real_part, imag_part))
-
-        # Higher-order functions
-        elif builtin_name == 'range':
-            if len(args) < 2 or len(args) > 3:
-                raise AIFPLEvalError(
-                    message="Function 'range' requires 2 or 3 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 or 3 numbers: start, end, [step]",
-                    example="(range 1 5) → (1 2 3 4) or (range 0 10 2) → (0 2 4 6 8)",
-                    suggestion="Provide start, end, and optionally step"
-                )
-            
-            # Check each argument is a number with specific error messages
-            if len(args) == 2:
-                # 2-argument form: (range start end)
-                if not isinstance(args[0], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Range start must be a number",
-                        received=f"Start: {self._format_result(args[0])} ({args[0].type_name()})",
-                        expected="Number (integer or float)",
-                        example="(range 1 5)",
-                        suggestion="Use numeric values for range bounds"
-                    )
-                if not isinstance(args[1], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Range end must be a number",
-                        received=f"End: {self._format_result(args[1])} ({args[1].type_name()})",
-                        expected="Number (integer or float)",
-                        example="(range 1 5)",
-                        suggestion="Use numeric values for range bounds"
-                    )
-            else:
-                # 3-argument form: (range start end step)
-                if not isinstance(args[0], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Range start must be a number",
-                        received=f"Start: {self._format_result(args[0])} ({args[0].type_name()})",
-                        expected="Number (integer or float)",
-                        example="(range 0 10 2)",
-                        suggestion="Use numeric values for range parameters"
-                    )
-                if not isinstance(args[1], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Range end must be a number",
-                        received=f"End: {self._format_result(args[1])} ({args[1].type_name()})",
-                        expected="Number (integer or float)",
-                        example="(range 0 10 2)",
-                        suggestion="Use numeric values for range parameters"
-                    )
-                if not isinstance(args[2], AIFPLNumber):
-                    raise AIFPLEvalError(
-                        message="Range step must be a number",
-                        received=f"Step: {self._format_result(args[2])} ({args[2].type_name()})",
-                        expected="Number (integer or float)",
-                        example="(range 0 10 2)",
-                        suggestion="Use numeric values for range parameters"
-                    )
-
-            # Validate that all arguments are integers (or floats that are whole numbers)
-            # This matches the _ensure_integer behavior in the interpreter
-            for i, arg in enumerate(args):
-                val = arg.value
-                param_name = ["start", "end", "step"][i] if len(args) == 3 else ["start", "end"][i]
-                
-                if isinstance(val, complex):
-                    raise AIFPLEvalError(
-                        message="Function 'range' requires integer arguments",
-                        received=f"Got: {val} (complex)",
-                        expected="Integer number",
-                        suggestion="Use whole numbers without decimal points",
-                        example="(range 1 5) not (range (complex 1 2) 5)"
-                    )
-                if isinstance(val, float) and not val.is_integer():
-                    raise AIFPLEvalError(
-                        message="Function 'range' requires integer arguments",
-                        received=f"Got: {val} (float)",
-                        expected="Integer number",
-                        suggestion="Use whole numbers without decimal points",
-                        example="(range 1 5) not (range 1.5 5)"
-                    )
-                # Validate the value can be converted to int
-                try:
-                    int(val)
-                except (ValueError, OverflowError):
-                    raise AIFPLEvalError(
-                        message=f"Range {param_name} cannot be converted to integer",
-                        received=f"Value: {val}",
-                        expected="Valid integer",
-                        suggestion="Provide integer values"
-                    )
-
-            start = int(args[0].value)
-            end = int(args[1].value)
-            step = int(args[2].value) if len(args) == 3 else 1
-
-            if step == 0:
-                raise AIFPLEvalError(
-                    message="Range step cannot be zero",
-                    received="Step: 0",
-                    expected="Non-zero integer",
-                    example="(range 0 10 2) or (range 10 0 -1)",
-                    suggestion="Use positive step for ascending range, negative for descending"
-                )
-
-            result = []
-            if step > 0:
-                current = start
-                while current < end:
-                    result.append(AIFPLNumber(current))
-                    current += step
-            else:
-                current = start
-                while current > end:
-                    result.append(AIFPLNumber(current))
-                    current += step
-
-            return AIFPLList(tuple(result))
-
+        
+        # Higher-order functions that need special handling
         elif builtin_name == 'map':
             if len(args) != 2:
                 raise AIFPLEvalError(
@@ -1945,34 +796,38 @@ class AIFPLVM:
                     example="(map (lambda (x) (* x 2)) (list 1 2 3))",
                     suggestion="Map takes a function and a list"
                 )
-            func = args[0]
-            lst = args[1]
-
-            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
-                raise AIFPLEvalError(
-                    message="Map first argument must be a function",
-                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
-                    expected="Function (lambda or builtin)",
-                    example="(map (lambda (x) (* x 2)) (list 1 2 3))",
-                    suggestion="Provide a function as the first argument"
-                )
-            if not isinstance(lst, AIFPLList):
+            
+            func_value = args[0]
+            list_value = args[1]
+            
+            if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Map second argument must be a list",
-                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
+                    received=f"Second argument: {self._format_result(list_value)} ({list_value.type_name()})",
                     expected="List of values",
                     example="(map (lambda (x) (* x 2)) (list 1 2 3))",
                     suggestion="Use (list ...) to create a list"
                 )
-
-            result = []
-            for item in lst.elements:
-                # Call function with item
-                item_result = self._call_function_value(func, [item])
-                result.append(item_result)
-
-            return AIFPLList(tuple(result))
-
+            
+            # Resolve function (handles builtin symbols)
+            func = self._resolve_function(func_value, "map")
+            
+            # Apply function to each element
+            result_elements = []
+            for i, item in enumerate(list_value.elements):
+                try:
+                    item_result = self._call_function_value(func, [item])
+                    result_elements.append(item_result)
+                except AIFPLEvalError as e:
+                    raise AIFPLEvalError(
+                        message=f"Error in map function at element {i+1}",
+                        received=f"Element {i+1}: {self._format_result(item)}",
+                        context=str(e),
+                        suggestion="Check that your function works with all list elements"
+                    ) from e
+            
+            return AIFPLList(tuple(result_elements))
+        
         elif builtin_name == 'filter':
             if len(args) != 2:
                 raise AIFPLEvalError(
@@ -1982,43 +837,47 @@ class AIFPLVM:
                     example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
                     suggestion="Filter takes a predicate function and a list"
                 )
-            func = args[0]
-            lst = args[1]
-
-            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
-                raise AIFPLEvalError(
-                    message="Filter first argument must be a function",
-                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
-                    expected="Function (lambda or builtin)",
-                    example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
-                    suggestion="Provide a predicate function as the first argument"
-                )
-            if not isinstance(lst, AIFPLList):
+            
+            pred_value = args[0]
+            list_value = args[1]
+            
+            if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Filter second argument must be a list",
-                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
+                    received=f"Second argument: {self._format_result(list_value)} ({list_value.type_name()})",
                     expected="List of values",
                     example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
                     suggestion="Use (list ...) to create a list"
                 )
-
-            result = []
-            for item in lst.elements:
-                # Call function with item
-                test_result = self._call_function_value(func, [item])
-                if not isinstance(test_result, AIFPLBoolean):
+            
+            # Resolve function
+            pred = self._resolve_function(pred_value, "filter")
+            
+            # Filter elements
+            result_elements = []
+            for i, item in enumerate(list_value.elements):
+                try:
+                    pred_result = self._call_function_value(pred, [item])
+                    if not isinstance(pred_result, AIFPLBoolean):
+                        raise AIFPLEvalError(
+                            message=f"Filter predicate must return boolean at element {i+1}",
+                            received=f"Predicate returned: {self._format_result(pred_result)} ({pred_result.type_name()})",
+                            expected="Boolean value (#t or #f)",
+                            example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
+                            suggestion="Predicate function should use comparison operators"
+                        )
+                    if pred_result.value:
+                        result_elements.append(item)
+                except AIFPLEvalError as e:
                     raise AIFPLEvalError(
-                        message="Filter predicate must return boolean",
-                        received=f"Predicate returned: {self._format_result(test_result)} ({test_result.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
-                        suggestion="Predicate function should use comparison operators"
-                    )
-                if test_result.value:
-                    result.append(item)
-
-            return AIFPLList(tuple(result))
-
+                        message=f"Error in filter predicate at element {i+1}",
+                        received=f"Element {i+1}: {self._format_result(item)}",
+                        context=str(e),
+                        suggestion="Check that your predicate works with all list elements"
+                    ) from e
+            
+            return AIFPLList(tuple(result_elements))
+        
         elif builtin_name == 'fold':
             if len(args) != 3:
                 raise AIFPLEvalError(
@@ -2028,639 +887,259 @@ class AIFPLVM:
                     example="(fold + 0 (list 1 2 3 4))",
                     suggestion="Fold takes a function, initial value, and list"
                 )
-            func = args[0]
-            init = args[1]
-            lst = args[2]
             
-            # Resolve function (handles builtin symbols like '+')
-            func = self._resolve_function(func, "Fold")
+            func_value = args[0]
+            accumulator = args[1]
+            list_value = args[2]
             
-            if not isinstance(lst, AIFPLList):
+            if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Fold third argument must be a list",
-                    received=f"Third argument: {self._format_result(lst)} ({lst.type_name()})",
+                    received=f"Third argument: {self._format_result(list_value)} ({list_value.type_name()})",
                     expected="List of values",
                     example="(fold + 0 (list 1 2 3 4))",
                     suggestion="Use (list ...) to create a list"
                 )
-
-            accumulator = init
-            for item in lst.elements:
-                # Call function with accumulator and item
-                accumulator = self._call_function_value(func, [accumulator, item])
-
+            
+            # Resolve function
+            func = self._resolve_function(func_value, "fold")
+            
+            # Fold over list
+            for i, item in enumerate(list_value.elements):
+                try:
+                    accumulator = self._call_function_value(func, [accumulator, item])
+                except AIFPLEvalError as e:
+                    raise AIFPLEvalError(
+                        message=f"Error in fold function at element {i+1}",
+                        received=f"Accumulator: {self._format_result(accumulator)}, Element {i+1}: {self._format_result(item)}",
+                        context=str(e),
+                        suggestion="Check that your function works with accumulator and all list elements"
+                    ) from e
+            
             return accumulator
-
+        
+        elif builtin_name == 'range':
+            if len(args) < 2 or len(args) > 3:
+                raise AIFPLEvalError(
+                    message="Range function has wrong number of arguments",
+                    received=f"Got {len(args)} arguments",
+                    expected="2 or 3 arguments: (range start end) or (range start end step)",
+                    example="(range 1 5) or (range 0 10 2)",
+                    suggestion="Range needs start and end, optionally step"
+                )
+            
+            start_val = args[0]
+            end_val = args[1]
+            
+            if not isinstance(start_val, AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Range start must be a number",
+                    received=f"Start: {self._format_result(start_val)} ({start_val.type_name()})",
+                    expected="Number (integer or float)",
+                    example="(range 1 5)",
+                    suggestion="Use numeric values for range bounds"
+                )
+            
+            if not isinstance(end_val, AIFPLNumber):
+                raise AIFPLEvalError(
+                    message="Range end must be a number",
+                    received=f"End: {self._format_result(end_val)} ({end_val.type_name()})",
+                    expected="Number (integer or float)",
+                    example="(range 1 5)",
+                    suggestion="Use numeric values for range bounds"
+                )
+            
+            start_int = self._ensure_integer(start_val, "range")
+            end_int = self._ensure_integer(end_val, "range")
+            
+            if len(args) == 3:
+                step_val = args[2]
+                if not isinstance(step_val, AIFPLNumber):
+                    raise AIFPLEvalError(
+                        message="Range step must be a number",
+                        received=f"Step: {self._format_result(step_val)} ({step_val.type_name()})",
+                        expected="Number (integer or float)",
+                        example="(range 0 10 2)",
+                        suggestion="Use numeric values for range parameters"
+                    )
+                step_int = self._ensure_integer(step_val, "range")
+            else:
+                step_int = 1
+            
+            if step_int == 0:
+                raise AIFPLEvalError(
+                    message="Range step cannot be zero",
+                    received="Step: 0",
+                    expected="Non-zero integer",
+                    example="(range 0 10 2) or (range 10 0 -1)",
+                    suggestion="Use positive step for ascending range, negative for descending"
+                )
+            
+            # Generate range
+            range_values = list(range(start_int, end_int, step_int))
+            elements = tuple(AIFPLNumber(val) for val in range_values)
+            return AIFPLList(elements)
+        
         elif builtin_name == 'find':
             if len(args) != 2:
                 raise AIFPLEvalError(
                     message="Find function has wrong number of arguments",
                     received=f"Got {len(args)} arguments",
                     expected="Exactly 2 arguments: (find predicate list)",
-                    example="(find (lambda (x) (> x 5)) (list 1 3 7 2))",
+                    example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
                     suggestion="Find takes a predicate function and a list"
                 )
-            func = args[0]
-            lst = args[1]
-
-            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
-                raise AIFPLEvalError(
-                    message="Find first argument must be a function",
-                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
-                    expected="Function (lambda or builtin)",
-                    example="(find (lambda (x) (> x 5)) (list 1 3 7 2))",
-                    suggestion="Provide a predicate function as the first argument"
-                )
-            if not isinstance(lst, AIFPLList):
+            
+            pred_value = args[0]
+            list_value = args[1]
+            
+            if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Find second argument must be a list",
-                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
+                    received=f"Second argument: {self._format_result(list_value)} ({list_value.type_name()})",
                     expected="List of values",
-                    example="(find (lambda (x) (> x 5)) (list 1 3 7 2))",
+                    example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
                     suggestion="Use (list ...) to create a list"
                 )
-
-            for item in lst.elements:
-                # Call function with item
-                test_result = self._call_function_value(func, [item])
-                if not isinstance(test_result, AIFPLBoolean):
+            
+            # Resolve function
+            pred = self._resolve_function(pred_value, "find")
+            
+            # Find first matching element
+            for i, item in enumerate(list_value.elements):
+                try:
+                    pred_result = self._call_function_value(pred, [item])
+                    if not isinstance(pred_result, AIFPLBoolean):
+                        raise AIFPLEvalError(
+                            message=f"Find predicate must return boolean at element {i+1}",
+                            received=f"Predicate returned: {self._format_result(pred_result)} ({pred_result.type_name()})",
+                            expected="Boolean value (#t or #f)",
+                            example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
+                            suggestion="Predicate function should use comparison operators"
+                        )
+                    if pred_result.value:
+                        return item
+                except AIFPLEvalError as e:
                     raise AIFPLEvalError(
-                        message="Find predicate must return boolean",
-                        received=f"Predicate returned: {self._format_result(test_result)} ({test_result.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(find (lambda (x) (> x 5)) (list 1 3 7 2))",
-                        suggestion="Predicate function should use comparison operators"
-                    )
-                if test_result.value:
-                    return item
-
-            return AIFPLBoolean(False)
-
+                        message=f"Error in find predicate at element {i+1}",
+                        received=f"Element {i+1}: {self._format_result(item)}",
+                        context=str(e),
+                        suggestion="Check that your predicate works with all list elements"
+                    ) from e
+            
+            return AIFPLBoolean(False)  # Not found
+        
         elif builtin_name == 'any?':
             if len(args) != 2:
                 raise AIFPLEvalError(
                     message="Any? function has wrong number of arguments",
                     received=f"Got {len(args)} arguments",
                     expected="Exactly 2 arguments: (any? predicate list)",
-                    example="(any? (lambda (x) (> x 5)) (list 1 3 7))",
+                    example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
                     suggestion="Any? takes a predicate function and a list"
                 )
-            func = args[0]
-            lst = args[1]
-
-            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
-                raise AIFPLEvalError(
-                    message="Any? first argument must be a function",
-                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
-                    expected="Function (lambda or builtin)",
-                    example="(any? (lambda (x) (> x 5)) (list 1 3 7))",
-                    suggestion="Provide a predicate function as the first argument"
-                )
-            if not isinstance(lst, AIFPLList):
+            
+            pred_value = args[0]
+            list_value = args[1]
+            
+            if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Any? second argument must be a list",
-                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
+                    received=f"Second argument: {self._format_result(list_value)} ({list_value.type_name()})",
                     expected="List of values",
-                    example="(any? (lambda (x) (> x 5)) (list 1 3 7))",
+                    example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
                     suggestion="Use (list ...) to create a list"
                 )
-
-            for item in lst.elements:
-                # Call function with item
-                test_result = self._call_function_value(func, [item])
-                if not isinstance(test_result, AIFPLBoolean):
+            
+            # Resolve function
+            pred = self._resolve_function(pred_value, "any?")
+            
+            # Check if any element matches
+            for i, item in enumerate(list_value.elements):
+                try:
+                    pred_result = self._call_function_value(pred, [item])
+                    if not isinstance(pred_result, AIFPLBoolean):
+                        raise AIFPLEvalError(
+                            message=f"Any? predicate must return boolean at element {i+1}",
+                            received=f"Predicate returned: {self._format_result(pred_result)} ({pred_result.type_name()})",
+                            expected="Boolean value (#t or #f)",
+                            example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
+                            suggestion="Predicate function should use comparison operators"
+                        )
+                    if pred_result.value:
+                        return AIFPLBoolean(True)
+                except AIFPLEvalError as e:
                     raise AIFPLEvalError(
-                        message="Any? predicate must return boolean",
-                        received=f"Predicate returned: {self._format_result(test_result)} ({test_result.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(any? (lambda (x) (> x 5)) (list 1 3 7))",
-                        suggestion="Predicate function should use comparison operators"
-                    )
-                if test_result.value:
-                    return AIFPLBoolean(True)
-
+                        message=f"Error in any? predicate at element {i+1}",
+                        received=f"Element {i+1}: {self._format_result(item)}",
+                        context=str(e),
+                        suggestion="Check that your predicate works with all list elements"
+                    ) from e
+            
             return AIFPLBoolean(False)
-
+        
         elif builtin_name == 'all?':
             if len(args) != 2:
                 raise AIFPLEvalError(
                     message="All? function has wrong number of arguments",
                     received=f"Got {len(args)} arguments",
                     expected="Exactly 2 arguments: (all? predicate list)",
-                    example="(all? (lambda (x) (> x 0)) (list 1 3 7))",
+                    example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
                     suggestion="All? takes a predicate function and a list"
                 )
-            func = args[0]
-            lst = args[1]
-
-            if not isinstance(func, (AIFPLFunction, AIFPLBuiltinFunction)):
-                raise AIFPLEvalError(
-                    message="All? first argument must be a function",
-                    received=f"First argument: {self._format_result(func)} ({func.type_name()})",
-                    expected="Function (lambda or builtin)",
-                    example="(all? (lambda (x) (> x 0)) (list 1 3 7))",
-                    suggestion="Provide a predicate function as the first argument"
-                )
-            if not isinstance(lst, AIFPLList):
+            
+            pred_value = args[0]
+            list_value = args[1]
+            
+            if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="All? second argument must be a list",
-                    received=f"Second argument: {self._format_result(lst)} ({lst.type_name()})",
+                    received=f"Second argument: {self._format_result(list_value)} ({list_value.type_name()})",
                     expected="List of values",
-                    example="(all? (lambda (x) (> x 0)) (list 1 3 7))",
+                    example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
                     suggestion="Use (list ...) to create a list"
                 )
-
-            for item in lst.elements:
-                # Call function with item
-                test_result = self._call_function_value(func, [item])
-                if not isinstance(test_result, AIFPLBoolean):
+            
+            # Resolve function
+            pred = self._resolve_function(pred_value, "all?")
+            
+            # Check if all elements match
+            for i, item in enumerate(list_value.elements):
+                try:
+                    pred_result = self._call_function_value(pred, [item])
+                    if not isinstance(pred_result, AIFPLBoolean):
+                        raise AIFPLEvalError(
+                            message=f"All? predicate must return boolean at element {i+1}",
+                            received=f"Predicate returned: {self._format_result(pred_result)} ({pred_result.type_name()})",
+                            expected="Boolean value (#t or #f)",
+                            example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
+                            suggestion="Predicate function should use comparison operators"
+                        )
+                    if not pred_result.value:
+                        return AIFPLBoolean(False)
+                except AIFPLEvalError as e:
                     raise AIFPLEvalError(
-                        message="All? predicate must return boolean",
-                        received=f"Predicate returned: {self._format_result(test_result)} ({test_result.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(all? (lambda (x) (> x 0)) (list 1 3 7))",
-                        suggestion="Predicate function should use comparison operators"
-                    )
-                if not test_result.value:
-                    return AIFPLBoolean(False)
-
+                        message=f"Error in all? predicate at element {i+1}",
+                        received=f"Element {i+1}: {self._format_result(item)}",
+                        context=str(e),
+                        suggestion="Check that your predicate works with all list elements"
+                    ) from e
+            
             return AIFPLBoolean(True)
-
-        # String operations
-        elif builtin_name == 'string-append':
-            result = ""
-            for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLString):
-                    raise AIFPLEvalError(
-                        message="String-append requires strings",
-                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
-                        expected="String",
-                        example='(string-append "hello" " " "world") → "hello world"',
-                        suggestion="All arguments to string-append must be strings"
-                    )
-                result += arg.value
-            return AIFPLString(result)
-
-        elif builtin_name == 'string-length':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="String-length requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 string",
-                    example='(string-length "hello") → 5',
-                    suggestion="Provide a single string"
-                )
-            if not isinstance(args[0], AIFPLString):
-                raise AIFPLEvalError(
-                    message="String-length requires a string",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="String",
-                    example='(string-length "hello") → 5',
-                    suggestion="Use string-length only with strings"
-                )
-            return AIFPLNumber(len(args[0].value))
-
-        elif builtin_name == 'string-upcase':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="String-upcase requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 string",
-                    example='(string-upcase "hello") → "HELLO"',
-                    suggestion="Provide a single string"
-                )
-            if not isinstance(args[0], AIFPLString):
-                raise AIFPLEvalError(
-                    message="String-upcase requires a string",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="String",
-                    example='(string-upcase "hello") → "HELLO"',
-                    suggestion="Use string-upcase only with strings"
-                )
-            return AIFPLString(args[0].value.upper())
-
-        elif builtin_name == 'string-downcase':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="String-downcase requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 string",
-                    example='(string-downcase "HELLO") → "hello"',
-                    suggestion="Provide a single string"
-                )
-            if not isinstance(args[0], AIFPLString):
-                raise AIFPLEvalError(
-                    message="String-downcase requires a string",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="String",
-                    example='(string-downcase "HELLO") → "hello"',
-                    suggestion="Use string-downcase only with strings"
-                )
-            return AIFPLString(args[0].value.lower())
-
-        elif builtin_name == 'string-trim':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="String-trim requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 string",
-                    example='(string-trim "  hello  ") → "hello"',
-                    suggestion="Provide a single string"
-                )
-            if not isinstance(args[0], AIFPLString):
-                raise AIFPLEvalError(
-                    message="String-trim requires a string",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="String",
-                    example='(string-trim "  hello  ") → "hello"',
-                    suggestion="Use string-trim only with strings"
-                )
-            return AIFPLString(args[0].value.strip())
-
-        elif builtin_name == 'string-replace':
-            if len(args) != 3:
-                raise AIFPLEvalError(
-                    message="String-replace requires exactly 3 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="3 strings: string, old, new",
-                    example='(string-replace "banana" "a" "o") → "bonono"',
-                    suggestion="Provide string, substring to replace, and replacement"
-                )
-            if not all(isinstance(arg, AIFPLString) for arg in args):
-                non_strings = [i for i, arg in enumerate(args) if not isinstance(arg, AIFPLString)]
-                raise AIFPLEvalError(
-                    message="String-replace requires strings",
-                    received=f"Argument {non_strings[0]+1}: {self._format_result(args[non_strings[0]])} ({args[non_strings[0]].type_name()})",
-                    expected="String",
-                    example='(string-replace "banana" "a" "o") → "bonono"',
-                    suggestion="All arguments to string-replace must be strings"
-                )
-            string = args[0].value
-            old = args[1].value
-            new = args[2].value
-            return AIFPLString(string.replace(old, new))
-
-        elif builtin_name == 'string-split':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="String-split requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 strings: string and delimiter",
-                    example='(string-split "a,b,c" ",") → ("a" "b" "c")',
-                    suggestion="Provide a string and a delimiter"
-                )
-            if not isinstance(args[0], AIFPLString) or not isinstance(args[1], AIFPLString):
-                if not isinstance(args[0], AIFPLString):
-                    bad_arg = 0
-                else:
-                    bad_arg = 1
-                raise AIFPLEvalError(
-                    message="String-split requires strings",
-                    received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
-                    expected="String",
-                    example='(string-split "a,b,c" ",") → ("a" "b" "c")',
-                    suggestion="Both arguments to string-split must be strings"
-                )
-            string = args[0].value
-            delimiter = args[1].value
-            
-            # Handle empty delimiter - split into individual characters
-            if delimiter == "":
-                return AIFPLList(tuple(AIFPLString(char) for char in string))
-            
-            parts = string.split(delimiter)
-            return AIFPLList(tuple(AIFPLString(part) for part in parts))
-
-        elif builtin_name == 'string-join':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="String-join requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 arguments: list and delimiter",
-                    example='(string-join (list "hello" "world") " ") → "hello world"',
-                    suggestion="Provide a list of strings and a delimiter"
-                )
-            if not isinstance(args[0], AIFPLList):
-                raise AIFPLEvalError(
-                    message="String-join first argument must be a list",
-                    received=f"First argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="List of strings",
-                    example='(string-join (list "hello" "world") " ") → "hello world"',
-                    suggestion="Use a list as the first argument"
-                )
-            if not isinstance(args[1], AIFPLString):
-                raise AIFPLEvalError(
-                    message="String-join second argument must be a string",
-                    received=f"Second argument: {self._format_result(args[1])} ({args[1].type_name()})",
-                    expected="String (delimiter)",
-                    example='(string-join (list "hello" "world") " ") → "hello world"',
-                    suggestion="Use a string as the delimiter"
-                )
-
-            parts = []
-            for item in args[0].elements:
-                if not isinstance(item, AIFPLString):
-                    raise AIFPLEvalError(
-                        message="String-join list must contain strings",
-                        received=f"List element: {self._format_result(item)} ({item.type_name()})",
-                        expected="String",
-                        example='(string-join (list "hello" "world") " ") → "hello world"',
-                        suggestion="All list elements must be strings"
-                    )
-                parts.append(item.value)
-
-            delimiter = args[1].value
-            return AIFPLString(delimiter.join(parts))
-
-        elif builtin_name == 'string-contains?':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="String-contains? requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 strings: string and substring",
-                    example='(string-contains? "hello" "ell") → #t',
-                    suggestion="Provide a string and a substring to search for"
-                )
-            if not isinstance(args[0], AIFPLString) or not isinstance(args[1], AIFPLString):
-                if not isinstance(args[0], AIFPLString):
-                    bad_arg = 0
-                else:
-                    bad_arg = 1
-                raise AIFPLEvalError(
-                    message="String-contains? requires strings",
-                    received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
-                    expected="String",
-                    example='(string-contains? "hello" "ell") → #t',
-                    suggestion="Both arguments must be strings"
-                )
-            return AIFPLBoolean(args[1].value in args[0].value)
-
-        elif builtin_name == 'string-prefix?':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="String-prefix? requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 strings: string and prefix",
-                    example='(string-prefix? "hello" "he") → #t',
-                    suggestion="Provide a string and a prefix to test"
-                )
-            if not isinstance(args[0], AIFPLString) or not isinstance(args[1], AIFPLString):
-                if not isinstance(args[0], AIFPLString):
-                    bad_arg = 0
-                else:
-                    bad_arg = 1
-                raise AIFPLEvalError(
-                    message="String-prefix? requires strings",
-                    received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
-                    expected="String",
-                    example='(string-prefix? "hello" "he") → #t',
-                    suggestion="Both arguments must be strings"
-                )
-            return AIFPLBoolean(args[0].value.startswith(args[1].value))
-
-        elif builtin_name == 'string-suffix?':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="String-suffix? requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 strings: string and suffix",
-                    example='(string-suffix? "hello" "lo") → #t',
-                    suggestion="Provide a string and a suffix to test"
-                )
-            if not isinstance(args[0], AIFPLString) or not isinstance(args[1], AIFPLString):
-                if not isinstance(args[0], AIFPLString):
-                    bad_arg = 0
-                else:
-                    bad_arg = 1
-                raise AIFPLEvalError(
-                    message="String-suffix? requires strings",
-                    received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
-                    expected="String",
-                    example='(string-suffix? "hello" "lo") → #t',
-                    suggestion="Both arguments must be strings"
-                )
-            return AIFPLBoolean(args[0].value.endswith(args[1].value))
-
-        elif builtin_name == 'string-ref':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="String-ref requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 arguments: string and index",
-                    example='(string-ref "hello" 1) → "e"',
-                    suggestion="Provide a string and an index"
-                )
-            if not isinstance(args[0], AIFPLString):
-                raise AIFPLEvalError(
-                    message="String-ref first argument must be a string",
-                    received=f"Argument 1: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="String",
-                    example='(string-ref "hello" 1) → "e"',
-                    suggestion="Use string-ref only with strings"
-                )
-            if not isinstance(args[1], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="String-ref second argument must be a number",
-                    received=f"Argument 2: {self._format_result(args[1])} ({args[1].type_name()})",
-                    expected="Number (integer index)",
-                    example='(string-ref "hello" 1) → "e"',
-                    suggestion="Provide a numeric index"
-                )
-            index = int(args[1].value)
-            if index < 0 or index >= len(args[0].value):
-                raise AIFPLEvalError(
-                    message=f"String index out of range",
-                    received=f"Index: {index}, String length: {len(args[0].value)}",
-                    expected=f"Index in range 0 to {len(args[0].value) - 1}",
-                    example='(string-ref "hello" 1) → "e"',
-                    suggestion=f"Use an index between 0 and {len(args[0].value) - 1}"
-                )
-            return AIFPLString(args[0].value[index])
-
-        elif builtin_name == 'substring':
-            if len(args) != 3:
-                raise AIFPLEvalError(
-                    message="Substring requires exactly 3 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="3 arguments: string, start, end",
-                    example='(substring "hello" 1 4) → "ell"',
-                    suggestion="Provide a string, start index, and end index"
-                )
-            if not isinstance(args[0], AIFPLString):
-                raise AIFPLEvalError(
-                    message="Substring first argument must be a string",
-                    received=f"First argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="String",
-                    example='(substring "hello" 1 4) → "ell"',
-                    suggestion="Use a string as the first argument"
-                )
-            if not isinstance(args[1], AIFPLNumber) or not isinstance(args[2], AIFPLNumber):
-                if not isinstance(args[1], AIFPLNumber):
-                    bad_arg = 1
-                else:
-                    bad_arg = 2
-                raise AIFPLEvalError(
-                    message="Substring indices must be numbers",
-                    received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
-                    expected="Number (integer index)",
-                    example='(substring "hello" 1 4) → "ell"',
-                    suggestion="Use numeric indices"
-                )
-            string = args[0].value
-            start = int(args[1].value)
-            end = int(args[2].value)
-            
-            # Validate indices (match interpreter behavior)
-            string_len = len(string)
-            if start < 0:
-                raise AIFPLEvalError(
-                    message="substring start index cannot be negative",
-                    received=f"Start index: {start}",
-                    expected="Non-negative integer",
-                    example='(substring "hello" 1 4) → "ell"',
-                    suggestion="Use a non-negative start index"
-                )
-            if end < 0:
-                raise AIFPLEvalError(
-                    message="substring end index cannot be negative",
-                    received=f"End index: {end}",
-                    expected="Non-negative integer",
-                    example='(substring "hello" 1 4) → "ell"',
-                    suggestion="Use a non-negative end index"
-                )
-            if start > string_len:
-                raise AIFPLEvalError(
-                    message="substring start index out of range",
-                    received=f"Start index: {start}, string length: {string_len}",
-                    expected=f"Index between 0 and {string_len}",
-                    example='(substring "hello" 1 4) → "ell"',
-                    suggestion="Use an index within the string bounds"
-                )
-            if end > string_len:
-                raise AIFPLEvalError(
-                    message="substring end index out of range",
-                    received=f"End index: {end}, string length: {string_len}",
-                    expected=f"Index between 0 and {string_len}",
-                    example='(substring "hello" 1 4) → "ell"',
-                    suggestion="Use an index within the string bounds"
-                )
-            if start > end:
-                raise AIFPLEvalError(
-                    message=f"start index ({start}) cannot be greater than end index ({end})",
-                    received=f"Start: {start}, End: {end}",
-                    expected="Start index ≤ end index",
-                    example='(substring "hello" 1 4) → "ell"',
-                    suggestion="Ensure start index is not greater than end index"
-                )
-            
-            return AIFPLString(string[start:end])
-
-        elif builtin_name == 'string->number':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="String->number requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 string",
-                    example='(string->number "42") → 42',
-                    suggestion="Provide a single string to convert"
-                )
-            if not isinstance(args[0], AIFPLString):
-                raise AIFPLEvalError(
-                    message="String->number requires a string",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="String",
-                    example='(string->number "42") → 42',
-                    suggestion="Use string->number only with strings"
-                )
-            try:
-                # Try to parse as integer first
-                if '.' not in args[0].value and 'e' not in args[0].value.lower() and 'j' not in args[0].value.lower():
-                    return AIFPLNumber(int(args[0].value))
-                
-                # Try complex number
-                if 'j' in args[0].value.lower():
-                    return AIFPLNumber(complex(args[0].value))
-                
-                # Otherwise float
-                else:
-                    return AIFPLNumber(float(args[0].value))
-            except ValueError as e:
-                raise AIFPLEvalError(
-                    message=f"Cannot convert string to number: '{args[0].value}'",
-                    suggestion="Provide a valid number string",
-                    example='(string->number "42") → 42'
-                )
-
-        elif builtin_name == 'number->string':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Number->string requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 number",
-                    example='(number->string 42) → "42"',
-                    suggestion="Provide a single number to convert"
-                )
-            if not isinstance(args[0], AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Number->string requires a number",
-                    received=f"Argument: {self._format_result(args[0])} ({args[0].type_name()})",
-                    expected="Number",
-                    example='(number->string 42) → "42"',
-                    suggestion="Use number->string only with numbers"
-                )
-            # Format nicely - integers without decimal point
-            value = args[0].value
-            if isinstance(value, int):
-                return AIFPLString(str(value))
-            elif isinstance(value, float) and value.is_integer():
-                return AIFPLString(str(int(value)))
-            else:
-                return AIFPLString(str(value))
-
-        elif builtin_name == 'string=?':
-            if len(args) < 2:
-                raise AIFPLEvalError(f"string=? requires at least 2 arguments, got {len(args)}")
-            string_args = [self._ensure_string(arg, "string=?") for arg in args]
-            first_val = string_args[0].value
-            return AIFPLBoolean(all(arg.value == first_val for arg in string_args[1:]))
-
-        elif builtin_name == 'string->list':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"string->list requires exactly 1 argument, got {len(args)}")
-            string_arg = self._ensure_string(args[0], "string->list")
-            elements = tuple(AIFPLString(char) for char in string_arg.value)
-            return AIFPLList(elements)
-
-        elif builtin_name == 'list->string':
-            if len(args) != 1:
-                raise AIFPLEvalError(f"list->string requires exactly 1 argument, got {len(args)}")
-            list_arg = self._ensure_list(args[0], "list->string")
-            
-            # Validate that all elements are strings
-            for i, elem in enumerate(list_arg.elements):
-                if not isinstance(elem, AIFPLString):
-                    raise AIFPLEvalError(
-                        f"list->string requires all list elements to be strings, element {i+1} is {elem.type_name()}"
-                    )
-            
-            # Join the strings
-            result = ''.join(elem.value for elem in list_arg.elements)
-            return AIFPLString(result)
-
-        # Alist operations
+        
         elif builtin_name == 'alist':
-            # Special form: (alist (key1 val1) (key2 val2) ...)
-            # Each argument should be a 2-element list
+            # Alist constructor - arguments are already evaluated pairs
             pairs = []
             for i, arg in enumerate(args):
                 if not isinstance(arg, AIFPLList):
                     raise AIFPLEvalError(
                         message=f"Alist pair {i+1} must be a list",
-                        received=f"Pair {i+1}: {self._format_result(arg)} ({arg.type_name()})",
+                        received=f"Pair {i+1}: {arg.type_name()}",
                         expected="2-element list: (key value)",
                         example='(alist ("name" "Alice") ("age" 30))',
                         suggestion="Each pair should be a list with key and value"
                     )
+                
                 if len(arg.elements) != 2:
                     raise AIFPLEvalError(
                         message=f"Alist pair {i+1} must have exactly 2 elements",
@@ -2669,196 +1148,27 @@ class AIFPLVM:
                         example='(alist ("name" "Alice") ("age" 30))',
                         suggestion="Each pair needs exactly one key and one value"
                     )
-                key, value = arg.elements
+                
+                key = arg.elements[0]
+                value = arg.elements[1]
                 pairs.append((key, value))
+            
             return AIFPLAlist(tuple(pairs))
-
-        elif builtin_name == 'alist-get':
-            if len(args) < 2 or len(args) > 3:
-                raise AIFPLEvalError(
-                    message="Alist-get requires 2 or 3 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 or 3 arguments: alist, key, [default]",
-                    example='(alist-get my-alist "name") or (alist-get my-alist "name" "default")',
-                    suggestion="Provide alist, key, and optionally a default value"
-                )
-            alist = args[0]
-            key = args[1]
-            default = args[2] if len(args) == 3 else None
-
-            if not isinstance(alist, AIFPLAlist):
-                raise AIFPLEvalError(
-                    message="Alist-get first argument must be an alist",
-                    received=f"First argument: {self._format_result(alist)} ({alist.type_name()})",
-                    expected="Alist",
-                    example='(alist-get my-alist "name")',
-                    suggestion="Use alist-get only with alists"
-                )
-
-            result = alist.get(key)
-            if result is None:
-                if default is not None:
-                    return default
-                else:
-                    raise AIFPLEvalError(
-                        message="Key not found in alist",
-                        received=f"Key: {self._format_result(key)}",
-                        expected="Key that exists in the alist",
-                        suggestion="Check that the key exists, or provide a default value"
-                    )
-            return result
-
-        elif builtin_name == 'alist-set':
-            if len(args) != 3:
-                raise AIFPLEvalError(
-                    message="Alist-set requires exactly 3 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="3 arguments: alist, key, value",
-                    example='(alist-set my-alist "name" "Bob")',
-                    suggestion="Provide alist, key, and value"
-                )
-            alist = args[0]
-            key = args[1]
-            value = args[2]
-
-            if not isinstance(alist, AIFPLAlist):
-                raise AIFPLEvalError(
-                    message="Alist-set first argument must be an alist",
-                    received=f"First argument: {self._format_result(alist)} ({alist.type_name()})",
-                    expected="Alist",
-                    example='(alist-set my-alist "name" "Bob")',
-                    suggestion="Use alist-set only with alists"
-                )
-
-            return alist.set(key, value)
-
-        elif builtin_name == 'alist-remove':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="Alist-remove requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 arguments: alist and key",
-                    example='(alist-remove my-alist "name")',
-                    suggestion="Provide alist and key"
-                )
-            alist = args[0]
-            key = args[1]
-
-            if not isinstance(alist, AIFPLAlist):
-                raise AIFPLEvalError(
-                    message="Alist-remove first argument must be an alist",
-                    received=f"First argument: {self._format_result(alist)} ({alist.type_name()})",
-                    expected="Alist",
-                    example='(alist-remove my-alist "name")',
-                    suggestion="Use alist-remove only with alists"
-                )
-
-            return alist.remove(key)
-
-        elif builtin_name == 'alist-has?':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="Alist-has? requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 arguments: alist and key",
-                    example='(alist-has? my-alist "name")',
-                    suggestion="Provide alist and key"
-                )
-            alist = args[0]
-            key = args[1]
-
-            if not isinstance(alist, AIFPLAlist):
-                raise AIFPLEvalError(
-                    message="Alist-has? first argument must be an alist",
-                    received=f"First argument: {self._format_result(alist)} ({alist.type_name()})",
-                    expected="Alist",
-                    example='(alist-has? my-alist "name")',
-                    suggestion="Use alist-has? only with alists"
-                )
-
-            return AIFPLBoolean(alist.has_key(key))
-
-        elif builtin_name == 'alist-keys':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Alist-keys requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 alist",
-                    example='(alist-keys my-alist)',
-                    suggestion="Provide a single alist"
-                )
-            alist = args[0]
-
-            if not isinstance(alist, AIFPLAlist):
-                raise AIFPLEvalError(
-                    message="Alist-keys requires an alist",
-                    received=f"Argument: {self._format_result(alist)} ({alist.type_name()})",
-                    expected="Alist",
-                    example='(alist-keys my-alist)',
-                    suggestion="Use alist-keys only with alists"
-                )
-
-            return AIFPLList(alist.keys())
-
-        elif builtin_name == 'alist-values':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Alist-values requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 alist",
-                    example='(alist-values my-alist)',
-                    suggestion="Provide a single alist"
-                )
-            alist = args[0]
-
-            if not isinstance(alist, AIFPLAlist):
-                raise AIFPLEvalError(
-                    message="Alist-values requires an alist",
-                    received=f"Argument: {self._format_result(alist)} ({alist.type_name()})",
-                    expected="Alist",
-                    example='(alist-values my-alist)',
-                    suggestion="Use alist-values only with alists"
-                )
-
-            return AIFPLList(alist.values())
-
-        elif builtin_name == 'alist-merge':
-            if len(args) != 2:
-                raise AIFPLEvalError(
-                    message="Alist-merge requires exactly 2 arguments",
-                    received=f"Got {len(args)} arguments",
-                    expected="2 alists",
-                    example='(alist-merge alist1 alist2)',
-                    suggestion="Provide two alists to merge"
-                )
-            alist1 = args[0]
-            alist2 = args[1]
-
-            if not isinstance(alist1, AIFPLAlist) or not isinstance(alist2, AIFPLAlist):
-                if not isinstance(alist1, AIFPLAlist):
-                    bad_arg = 0
-                else:
-                    bad_arg = 1
-                raise AIFPLEvalError(
-                    message="Alist-merge requires two alists",
-                    received=f"Argument {bad_arg+1}: {self._format_result(args[bad_arg])} ({args[bad_arg].type_name()})",
-                    expected="Alist",
-                    example='(alist-merge alist1 alist2)',
-                    suggestion="Both arguments must be alists"
-                )
-
-            return alist1.merge(alist2)
-
-        elif builtin_name == 'alist?':
-            if len(args) != 1:
-                raise AIFPLEvalError(
-                    message="Alist? requires exactly 1 argument",
-                    received=f"Got {len(args)} arguments",
-                    expected="1 value",
-                    example='(alist? my-alist) → #t',
-                    suggestion="Provide a single value to test"
-                )
-            return AIFPLBoolean(isinstance(args[0], AIFPLAlist))
-
+        
+        # All other builtins - delegate to the registry
         else:
-            raise AIFPLEvalError(f"Builtin function not implemented: {builtin_name}")
+            # Create registry if needed (cache it for performance)
+            if not hasattr(self, '_builtin_registry'):
+                self._builtin_registry = AIFPLBuiltinRegistry()
+            
+            # Check if this builtin is in the registry
+            if self._builtin_registry.has_function(builtin_name):
+                # Call through the registry
+                env = AIFPLEnvironment()  # Empty environment for builtins
+                return self._builtin_registry.call_builtin(builtin_name, args, env, 0)
+            else:
+                # Unknown builtin
+                raise AIFPLEvalError(
+                    message=f"Unknown builtin function: {builtin_name}",
+                    suggestion="This may be an internal error - please report this issue"
+                )
