@@ -53,7 +53,6 @@ class CompilationContext:
     max_locals: int = 0  # Track maximum locals needed
     parent_ctx: Optional['CompilationContext'] = None  # Parent context for nested lambdas
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
-    function_name: Optional[str] = None  # Name of the function being compiled (for tail call detection)
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -761,15 +760,12 @@ class AIFPLCompiler:
         lambda_ctx.parent_ctx = ctx
         lambda_ctx.sibling_bindings = sibling_bindings
 
-        # Set the function name for tail call detection
-        if binding_name:
-            lambda_ctx.function_name = binding_name
-
         # Update max locals for the lambda (only its own locals, not parent's)
         lambda_ctx.update_max_locals()
 
-        # Compile lambda body in tail position (will emit RETURN or JUMP as appropriate)
-        self._compile_expression_tail(body, lambda_ctx)
+        # Compile lambda body - free vars will be resolved as locals
+        self._compile_expression(body, lambda_ctx)
+        lambda_ctx.emit(Opcode.RETURN)
 
         # Create code object for lambda
         lambda_code = CodeObject(
@@ -925,112 +921,6 @@ class AIFPLCompiler:
 
         # Emit MAKE_CLOSURE instruction
         ctx.emit(Opcode.MAKE_CLOSURE, code_index)
-
-    def _compile_expression_tail(self, expr: AIFPLValue, ctx: CompilationContext) -> None:
-        """Compile an expression in tail position.
-        
-        In tail position, we can optimize tail calls to jumps.
-        This method compiles the expression and emits RETURN (or JUMP for tail calls)."""
-        # Self-evaluating values: compile normally and return
-        if expr.is_self_evaluating():
-            self._compile_expression(expr, ctx)
-            ctx.emit(Opcode.RETURN)
-            return
-        
-        # Symbols: compile normally and return
-        if isinstance(expr, AIFPLSymbol):
-            self._compile_expression(expr, ctx)
-            ctx.emit(Opcode.RETURN)
-            return
-        
-        # Lists: check for special forms and function calls
-        if isinstance(expr, AIFPLList):
-            if expr.is_empty():
-                self._compile_expression(expr, ctx)
-                ctx.emit(Opcode.RETURN)
-                return
-            
-            first = expr.first()
-            if isinstance(first, AIFPLSymbol):
-                # Special forms that have tail positions in their branches
-                if first.name in ['if', 'let', 'match', 'lambda', 'quote', 'and', 'or']:
-                    # Special forms - compile normally and add RETURN
-                    # TODO: Could optimize if/let/match to have tail-position branches
-                    self._compile_expression(expr, ctx)
-                    ctx.emit(Opcode.RETURN)
-                    return
-            
-            # Function call in tail position - try to optimize to jump
-            self._compile_tail_call(expr, ctx)
-            return
-        
-        # Default: compile normally and return
-        self._compile_expression(expr, ctx)
-        ctx.emit(Opcode.RETURN)
-
-    def _compile_tail_call(self, expr: AIFPLList, ctx: CompilationContext) -> None:
-        """Compile a function call in tail position.
-        
-        If the call is to the current function (self-recursion), emit a jump.
-        Otherwise, emit a normal call + return."""
-        func_expr = expr.first()
-        arg_exprs = list(expr.elements[1:])
-        
-        # Check if this is a self-recursive call
-        # We can detect this if:
-        # 1. We're calling a variable (symbol)
-        # 2. That variable name matches our function name
-        # 3. The variable is bound in the parent scope (not a parameter)
-        is_self_recursive = False
-        if isinstance(func_expr, AIFPLSymbol) and ctx.function_name:
-            if func_expr.name == ctx.function_name:
-                print(f"[DEBUG] Detected self-recursive call: {func_expr.name} == {ctx.function_name}")
-                # Check that it's not shadowed by a parameter
-                # If it's in our current scope as a parameter, it's shadowed
-                var_type, depth, index = ctx.resolve_variable(func_expr.name)
-                # If it's a local at depth 0 and index < param_count, it's a parameter
-                # Otherwise, it's the function itself from the parent scope
-                # Actually, for our use case, if the name matches, we can assume it's self-recursive
-                # because parameters wouldn't typically have the same name as the function
-                is_self_recursive = True
-        else:
-            print(f"[DEBUG] Not self-recursive: func_expr={func_expr}, ctx.function_name={ctx.function_name}")
-        
-        if is_self_recursive:
-            # Emit self-recursive tail call as a jump
-            # Strategy:
-            # 1. Evaluate all arguments and store them in temporaries
-            # 2. Copy temporaries to parameter positions
-            # 3. Jump to start of function (IP 0)
-            
-            # Compile arguments
-            for arg in arg_exprs:
-                self._compile_expression(arg, ctx)
-            
-            # Store arguments in parameter positions (indices 0, 1, 2, ...)
-            # We need to pop them in reverse order and store
-            for i in range(len(arg_exprs) - 1, -1, -1):
-                ctx.emit(Opcode.STORE_VAR, 0, i)
-            
-            # Jump to start of function
-            ctx.emit(Opcode.JUMP, 0)
-        else:
-            # Not self-recursive - compile as normal call + return
-            # Check if calling a known builtin
-            if isinstance(func_expr, AIFPLSymbol) and func_expr.name in self.builtin_indices:
-                # Compile arguments
-                for arg in arg_exprs:
-                    self._compile_expression(arg, ctx)
-                
-                # Emit builtin call
-                builtin_index = self.builtin_indices[func_expr.name]
-                ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
-            else:
-                # General function call
-                self._compile_function_call(expr, ctx)
-            
-            # Emit return after the call
-            ctx.emit(Opcode.RETURN)
 
     def _compile_function_call(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile a function call."""

@@ -56,10 +56,6 @@ class AIFPLVM:
         # Create builtin function objects for first-class function support
         self._builtin_functions = self._create_builtin_functions()
     
-        # Add call chain tracking for mutual recursion detection
-        self.call_chain_list: List[AIFPLFunction] = []
-        self.call_chain_set: set = set()  # For O(1) membership check using id()
-    
     def _create_builtin_functions(self) -> Dict[str, AIFPLBuiltinFunction]:
         """Create AIFPLBuiltinFunction objects for all builtins.
         
@@ -495,26 +491,18 @@ class AIFPLVM:
                                 next_instr = current_frame.code.instructions[next_ip]
                                 is_tail_call = next_instr.opcode == Opcode.RETURN
                         
-                        # Check if it's a recursive tail call (simple or mutual)
-                        # A recursive call is when the function is already in the call chain
-                        is_recursive = (
-                            is_tail_call and
-                            id(func) in self.call_chain_set
+                        # Check if it's a self-recursive tail call
+                        is_self_recursive = (
+                            current_frame and 
+                            hasattr(func, 'bytecode') and 
+                            func.bytecode == current_frame.code
                         )
                         
-                        if is_recursive:
-                            # Tail call optimization for recursive calls (simple or mutual)
-                            # Find which frame corresponds to this function
-                            # For mutual recursion, we need to pop frames and reuse the target
-                            target_frame_index = self._find_function_in_call_chain(func)
-                            if target_frame_index is not None:
-                                # Pop frames back to target and reset it
-                                self._tail_call_to_frame(func, args, target_frame_index)
-                                # The current frame has been popped - exit immediately
-                                # Don't execute any more instructions in this frame
-                                return None
-                            # If target_frame_index is None, something went wrong
-                            # Fall through to normal call
+                        if is_tail_call and is_self_recursive:
+                            # Tail call optimization: reuse current frame
+                            # This will reset the frame and continue execution
+                            self._tail_call_bytecode_function(func, args, current_frame)
+                            # Don't append result or increment IP - the frame was reset
                         else:
                             # Normal call: create new frame
                             result = self._call_bytecode_function(func, args)
@@ -684,38 +672,16 @@ class AIFPLVM:
                 # Captured values start after parameters
                 new_frame.locals[code.param_count + i] = captured_val
 
-        # Track function in call chain for mutual recursion detection
-        self.call_chain_list.append(func)
-        self.call_chain_set.add(id(func))
-        
-        # Push frame onto stack
+        # Push frame
         self.frames.append(new_frame)
 
-        try:
-            # Execute until return
-            while self.frames and self.frames[-1] == new_frame:
-                result = self._execute_frame()
-                if result is not None:
-                    return result
+        # Execute until return
+        while self.frames and self.frames[-1] == new_frame:
+            result = self._execute_frame()
+            if result is not None:
+                return result
 
-            # If we get here, the frame is no longer on top
-            # This can happen if the frame was tail-called away
-            # In that case, we should just return None to indicate execution was transferred
-            if new_frame not in self.frames:
-                # Frame was popped by tail call - execution transferred to target frame
-                # The target frame will continue executing in its own loop
-                # Just return None to unwind this call
-                return None
-            else:
-                raise AIFPLEvalError(f"Function {func.name} did not return a value")
-        finally:
-            # Remove function from call chain
-            # Only pop if this function is still on top of the call chain
-            # (it might have been popped already by a tail call)
-            if self.call_chain_list and id(self.call_chain_list[-1]) == id(func):
-                self.call_chain_list.pop()
-                self.call_chain_set.discard(id(func))
-            # If it's not on top, it was already cleaned up by tail call optimization
+        raise AIFPLEvalError("Function did not return a value")
 
     def _tail_call_bytecode_function(self, func: AIFPLFunction, args: List[AIFPLValue], current_frame: Frame) -> None:
         """Perform a tail call by reusing the current frame.
@@ -755,89 +721,6 @@ class AIFPLVM:
         # The frame execution loop will continue from the beginning
         # with the new arguments, effectively implementing the tail call
         # without creating a new Python call stack frame
-
-    def _find_function_in_call_chain(self, func: AIFPLFunction) -> Optional[int]:
-        """Find the index in call_chain_list where this function appears.
-        
-        Returns the index (0-based) or None if not found.
-        This tells us which frame corresponds to this function.
-        """
-        # Search from the end (most recent calls) backwards
-        for i in range(len(self.call_chain_list) - 1, -1, -1):
-            if id(self.call_chain_list[i]) == id(func):
-                return i
-        return None
-    
-    def _tail_call_to_frame(self, func: AIFPLFunction, args: List[AIFPLValue], call_chain_index: int) -> None:
-        """Perform a tail call by popping frames back to the target function's frame and resetting it.
-        
-        This implements tail call optimization for mutual recursion.
-        
-        Args:
-            func: Function being called
-            args: Arguments for the call
-            call_chain_index: Index in call_chain_list where this function first appeared
-        """
-        code = func.bytecode
-        
-        # Check arity
-        if len(args) != code.param_count:
-            param_list = ", ".join(func.parameters) if func.parameters else "(no parameters)"
-            arg_list = ", ".join(self._format_result(arg) for arg in args) if args else "(no arguments)"
-            raise AIFPLEvalError(
-                message=f"Function '{func.name}' expects {code.param_count} arguments, got {len(args)}",
-                received=f"Arguments provided: {arg_list}",
-                expected=f"Parameters expected: {param_list}",
-                example=(f"({func.name} {' '.join(['arg' + str(i+1) for i in range(code.param_count)])}))"
-                    if code.param_count > 0 else f"({func.name})"),
-                suggestion=f"Provide exactly {code.param_count} argument{'s' if code.param_count != 1 else ''}"
-            )
-        
-        # The call_chain_index tells us which function call this corresponds to
-        # We need to find the corresponding frame
-        # The frames list should have the same length as call_chain_list
-        # (each function call creates one frame and one call_chain entry)
-        
-        # Calculate which frame to reuse
-        # If call_chain has [f1, f2, f3] (indices 0, 1, 2)
-        # And frames has [frame_f1, frame_f2, frame_f3]
-        # If we're calling f2 (call_chain_index=1), we want frame_f2 (frames[1])
-        
-        # But we need to account for the fact that frames[0] is the module frame
-        # So the mapping is: call_chain_index -> frames[call_chain_index + 1]
-        # Actually, let's verify: call_chain is populated in _call_bytecode_function
-        # which is called AFTER pushing a frame. So they should be aligned.
-        
-        # Target frame index in self.frames
-        # The first call_chain entry corresponds to frames[1] (frames[0] is module)
-        target_frame_index = call_chain_index + 1
-        
-        if target_frame_index >= len(self.frames):
-            raise AIFPLEvalError("Internal error: frame/call_chain mismatch in TCO")
-        
-        target_frame = self.frames[target_frame_index]
-        
-        # Reset the target frame's instruction pointer and locals
-        target_frame.ip = 0
-        
-        # Update locals with new arguments
-        for i, arg in enumerate(args):
-            target_frame.locals[i] = arg
-        
-        # Pop all frames above the target (including current frame)
-        while len(self.frames) > target_frame_index + 1:
-            popped_frame = self.frames.pop()
-            # Also pop from call chain to keep them in sync
-            if not self.call_chain_list:
-                raise AIFPLEvalError(
-                    f"Internal error in TCO: call_chain is empty but trying to pop frame. "
-                    f"Frames: {len(self.frames)}, call_chain: {len(self.call_chain_list)}"
-                )
-            popped_func = self.call_chain_list.pop()
-            self.call_chain_set.discard(id(popped_func))
-        
-        # Note: The target frame continues executing from IP=0
-        # The execute loop will continue naturally with the reset frame
 
     def _call_function_value(self, func: Union[AIFPLFunction, AIFPLBuiltinFunction], args: List[AIFPLValue]) -> AIFPLValue:
         """Call a function value (either user-defined or builtin).
