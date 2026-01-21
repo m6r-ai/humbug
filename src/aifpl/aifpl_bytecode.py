@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
-from typing import List, Any
+from typing import List
 
 from aifpl.aifpl_value import AIFPLValue
 
@@ -60,10 +60,11 @@ class Instruction:
         """Human-readable representation."""
         if self.arg1 == 0 and self.arg2 == 0:
             return f"{self.opcode.name}"
-        elif self.arg2 == 0:
+
+        if self.arg2 == 0:
             return f"{self.opcode.name} {self.arg1}"
-        else:
-            return f"{self.opcode.name} {self.arg1} {self.arg2}"
+
+        return f"{self.opcode.name} {self.arg1} {self.arg2}"
 
 
 @dataclass
@@ -87,9 +88,9 @@ class CodeObject:
 
     # Function metadata
     free_vars: List[str] = field(default_factory=list)  # Free variables to capture
-    param_count: int = 0      # Number of parameters (for functions)
-    local_count: int = 0      # Number of local variables
-    name: str = "<module>"    # Name for debugging
+    param_count: int = 0  # Number of parameters (for functions)
+    local_count: int = 0  # Number of local variables
+    name: str = "<module>"  # Name for debugging
 
     def __repr__(self) -> str:
         """Human-readable representation."""
@@ -98,7 +99,7 @@ class CodeObject:
         lines.append(f"  Locals: {self.local_count}")
         lines.append(f"  Constants: {len(self.constants)}")
         lines.append(f"  Names: {self.names}")
-        lines.append(f"  Instructions:")
+        lines.append("  Instructions:")
         for i, instr in enumerate(self.instructions):
             lines.append(f"    {i:3d}: {instr}")
         return "\n".join(lines)

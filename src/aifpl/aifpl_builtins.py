@@ -4,11 +4,12 @@ This module provides a single source of truth for all builtin function implement
 used by both the tree-walking evaluator and the bytecode VM.
 """
 
-from typing import List, Dict, Callable, Any
-from aifpl.aifpl_value import AIFPLValue, AIFPLBuiltinFunction
+from typing import List, Dict, Callable
+
+from aifpl.aifpl_collections import AIFPLCollectionsFunctions
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_math import AIFPLMathFunctions
-from aifpl.aifpl_collections import AIFPLCollectionsFunctions
+from aifpl.aifpl_value import AIFPLValue, AIFPLBuiltinFunction
 
 
 class AIFPLBuiltinRegistry:
@@ -90,6 +91,7 @@ class AIFPLBuiltinRegistry:
         builtins = {}
         for name, impl in self._registry.items():
             builtins[name] = AIFPLBuiltinFunction(name, impl)
+
         return builtins
 
     def call_builtin(self, name: str, args: List[AIFPLValue],
@@ -110,27 +112,3 @@ class AIFPLBuiltinRegistry:
         """
         func = self.get_function(name)
         return func(args, env, depth)
-
-
-# Export the standard builtin table order for the compiler
-# This must match the order in AIFPLCompiler.BUILTIN_TABLE
-BUILTIN_TABLE_ORDER = [
-    '+', '-', '*', '/', '//', '%', '**',
-    '=', '!=', '<', '>', '<=', '>=',
-    'and', 'or', 'not',
-    'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
-    'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
-    'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
-    'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
-    'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?',
-    'string-append', 'string-length', 'string-upcase', 'string-downcase',
-    'string-trim', 'string-replace', 'string-split', 'string-join',
-    'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
-    'substring', 'string->number', 'number->string', 'string=?', 'string->list', 'list->string',
-    'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
-    'alist-keys', 'alist-values', 'alist-merge', 'alist?',
-    'sqrt', 'abs', 'min', 'max', 'pow',
-    'sin', 'cos', 'tan', 'log', 'log10', 'exp',
-    'round', 'floor', 'ceil',
-    'bin', 'hex', 'oct', 'real', 'imag', 'complex',
-]

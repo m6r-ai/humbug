@@ -3,15 +3,13 @@
 from typing import List, Dict, Tuple, Optional, Set
 from dataclasses import dataclass, field
 
+from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode, make_instruction
+from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
+from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
     AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLBuiltinFunction
 )
-from aifpl.aifpl_bytecode import (
-    CodeObject, Instruction, Opcode, make_instruction
-)
-from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 
 
 @dataclass
@@ -79,6 +77,7 @@ class CompilationContext:
         # Reuse existing constants for efficiency
         try:
             return self.constants.index(value)
+
         except ValueError:
             index = len(self.constants)
             self.constants.append(value)
@@ -88,6 +87,7 @@ class CompilationContext:
         """Add name to pool and return its index."""
         try:
             return self.names.index(name)
+
         except ValueError:
             index = len(self.names)
             self.names.append(name)

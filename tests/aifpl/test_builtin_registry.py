@@ -1,7 +1,7 @@
 """Test the unified builtin registry."""
 
 import pytest
-from aifpl.aifpl_builtins import AIFPLBuiltinRegistry, BUILTIN_TABLE_ORDER
+from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_value import AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList
 from aifpl.aifpl_environment import AIFPLEnvironment
 
@@ -90,18 +90,6 @@ class TestBuiltinRegistry:
         # Verify they're callable
         from aifpl.aifpl_value import AIFPLBuiltinFunction
         assert isinstance(builtins['+'], AIFPLBuiltinFunction)
-
-    def test_builtin_table_order_matches_compiler(self):
-        """Test that BUILTIN_TABLE_ORDER is consistent."""
-        # Import the compiler's table
-        from aifpl.aifpl_compiler import AIFPLCompiler
-
-        # Check that all functions in compiler table are accounted for
-        for name in AIFPLCompiler.BUILTIN_TABLE:
-            assert name in BUILTIN_TABLE_ORDER, f"Function '{name}' missing from BUILTIN_TABLE_ORDER"
-
-        # Check that order matches
-        assert BUILTIN_TABLE_ORDER == AIFPLCompiler.BUILTIN_TABLE
 
     def test_error_on_unknown_function(self):
         """Test that calling unknown function raises error."""

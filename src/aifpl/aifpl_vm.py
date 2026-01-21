@@ -3,13 +3,15 @@
 from typing import List, Dict, Any, Optional, Union
 from dataclasses import dataclass
 
+from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
+from aifpl.aifpl_bytecode import CodeObject, Opcode
+from aifpl.aifpl_compiler import AIFPLCompiler
+from aifpl.aifpl_environment import AIFPLEnvironment
+from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
     AIFPLList, AIFPLFunction, AIFPLSymbol, AIFPLBuiltinFunction, AIFPLAList
 )
-from aifpl.aifpl_bytecode import CodeObject, Opcode
-from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
-from aifpl.aifpl_environment import AIFPLEnvironment
 
 
 @dataclass
@@ -50,7 +52,6 @@ class AIFPLVM:
 
         # Build internal registry of builtin symbols (for higher-order functions)
         # This maps builtin names to their indices in the BUILTIN_TABLE
-        from aifpl.aifpl_compiler import AIFPLCompiler
         self.builtin_symbols = set(AIFPLCompiler.BUILTIN_TABLE)
 
         # Create builtin function objects for first-class function support
@@ -61,7 +62,6 @@ class AIFPLVM:
 
         This allows builtins to be used as first-class values (e.g., passed to map).
         """
-        from aifpl.aifpl_compiler import AIFPLCompiler
         builtins = {}
 
         # Create a builtin function object for each builtin
@@ -287,8 +287,6 @@ class AIFPLVM:
             return "<module>"
 
         return self.frames[-1].code.name or "<lambda>"
-
-    # ========== Execution Methods ==========
 
     def execute(self, code: CodeObject) -> AIFPLValue:
         """Execute a code object and return the result.
@@ -731,7 +729,6 @@ class AIFPLVM:
             return self._call_bytecode_function(func, args)
         elif isinstance(func, AIFPLBuiltinFunction):
             # Call builtin function by looking up its index
-            from aifpl.aifpl_compiler import AIFPLCompiler
             if func.name in AIFPLCompiler.BUILTIN_TABLE:
                 builtin_idx = AIFPLCompiler.BUILTIN_TABLE.index(func.name)
                 return self._call_builtin(builtin_idx, args)
@@ -748,9 +745,6 @@ class AIFPLVM:
         and handles special forms (and, or, map, filter, fold, etc.) separately
         because they require special evaluation semantics.
         """
-        from aifpl.aifpl_compiler import AIFPLCompiler
-        from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
-
         builtin_name = AIFPLCompiler.BUILTIN_TABLE[builtin_index]
 
         # Special forms that need custom handling (not in the registry)
