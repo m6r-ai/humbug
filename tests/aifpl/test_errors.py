@@ -181,10 +181,11 @@ class TestErrors:
 
     def test_undefined_function_eval_error(self, aifpl):
         """Test that undefined functions cause evaluation errors."""
-        with pytest.raises(AIFPLEvalError, match="Unknown function"):
+        # Evaluator says "Unknown function", VM says "Undefined variable"
+        with pytest.raises(AIFPLEvalError, match="(Unknown function|Undefined variable)"):
             aifpl.evaluate("(unknown-op 1 2)")
 
-        with pytest.raises(AIFPLEvalError, match="Unknown function"):
+        with pytest.raises(AIFPLEvalError, match="(Unknown function|Undefined variable)"):
             aifpl.evaluate("(invalid-function)")
 
     def test_division_by_zero_eval_error(self, aifpl):

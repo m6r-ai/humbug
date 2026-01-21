@@ -343,8 +343,11 @@ class AIFPLCompiler:
         """Compile if expression: (if condition then else)"""
         if len(expr.elements) != 4:
             raise AIFPLEvalError(
-                message="if requires exactly 3 arguments",
-                received=f"Got {len(expr.elements) - 1} arguments"
+                message="If expression has wrong number of arguments",
+                received=f"Got {len(expr.elements) - 1} arguments: {self.format_result(expr)}",
+                expected="Exactly 3 arguments: (if condition then else)",
+                example="(if (> x 0) \"positive\" \"negative\")",
+                suggestion="If needs condition, then-branch, and else-branch"
             )
 
         _, condition, then_expr, else_expr = expr.elements
@@ -929,8 +932,58 @@ class AIFPLCompiler:
         func_name = first_elem.name
         arg_exprs = list(expr.elements[1:])
 
-        if not arg_exprs:
-            raise AIFPLEvalError(f"{func_name} requires at least one argument")
+        # Validate argument count for specific functions
+        if func_name == 'fold':
+            if len(arg_exprs) != 3:
+                raise AIFPLEvalError(
+                    message="Fold function has wrong number of arguments",
+                    received=f"Got {len(arg_exprs)} arguments",
+                    expected="Exactly 3 arguments: (fold function initial list)",
+                    example="(fold + 0 (list 1 2 3 4))",
+                    suggestion="Fold takes a function, initial value, and list"
+                )
+
+        elif func_name == 'range':
+            if len(arg_exprs) < 2 or len(arg_exprs) > 3:
+                raise AIFPLEvalError(
+                    message="Range function has wrong number of arguments",
+                    received=f"Got {len(arg_exprs)} arguments",
+                    expected="2 or 3 arguments: (range start end) or (range start end step)",
+                    example="(range 1 5) or (range 0 10 2)",
+                    suggestion="Range needs start and end, optionally step"
+                )
+
+        elif func_name in ['map', 'filter', 'find', 'any?', 'all?']:
+            # These all require exactly 2 arguments: (function/predicate, list)
+            if len(arg_exprs) != 2:
+                # Customize message based on function
+                if func_name == 'map':
+                    expected_msg = "Exactly 2 arguments: (map function list)"
+                    example_msg = "(map (lambda (x) (* x 2)) (list 1 2 3))"
+                    suggestion_msg = "Map takes a function and a list"
+
+                elif func_name == 'filter':
+                    expected_msg = "Exactly 2 arguments: (filter predicate list)"
+                    example_msg = "(filter (lambda (x) (> x 0)) (list -1 2 -3 4))"
+                    suggestion_msg = "Filter takes a predicate function and a list"
+
+                elif func_name == 'find':
+                    expected_msg = "Exactly 2 arguments: (find predicate list)"
+                    example_msg = "(find (lambda (x) (> x 5)) (list 1 2 6 3))"
+                    suggestion_msg = "Find takes a predicate function and a list"
+
+                elif func_name in ['any?', 'all?']:
+                    expected_msg = f"Exactly 2 arguments: ({func_name} predicate list)"
+                    example_msg = f"({func_name} (lambda (x) (> x 0)) (list 1 2 3))"
+                    suggestion_msg = f"{func_name.capitalize()} takes a predicate function and a list"
+
+                raise AIFPLEvalError(
+                    message=f"{func_name.capitalize()} function has wrong number of arguments",
+                    received=f"Got {len(arg_exprs)} arguments",
+                    expected=expected_msg,
+                    example=example_msg,
+                    suggestion=suggestion_msg
+                )
 
         # First argument: the function to apply
         func_arg = arg_exprs[0]
@@ -963,10 +1016,11 @@ class AIFPLCompiler:
         for i, clause in enumerate(clauses):
             if not isinstance(clause, AIFPLList) or len(clause.elements) != 2:
                 raise AIFPLEvalError(
-                    message=f"Match clause {i+1} must be a list with 2 elements",
-                    received=f"Clause {i+1}: {clause}",
-                    expected="(pattern result)",
-                    example="(match x ((42) \"found\") (_ \"default\"))"
+                    message=f"Match clause {i+1} has wrong number of elements",
+                    received=f"Clause {i+1}: {self.format_result(clause) if isinstance(clause, AIFPLList) else str(clause)} (has {len(clause.elements) if isinstance(clause, AIFPLList) else 'N/A'} elements)",
+                    expected="Each clause needs exactly 2 elements: (pattern result)",
+                    example="(match x ((42) \"found\") ((string? s) s))",
+                    suggestion="Each clause: (pattern result-expression)"
                 )
 
         # Validate pattern syntax for all clauses
