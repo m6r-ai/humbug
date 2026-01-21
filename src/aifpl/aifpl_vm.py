@@ -57,6 +57,8 @@ class AIFPLVM:
         # Create builtin function objects for first-class function support
         self._builtin_functions = self._create_builtin_functions()
 
+        self._builtin_registry = AIFPLBuiltinRegistry()
+
     def _create_builtin_functions(self) -> Dict[str, AIFPLBuiltinFunction]:
         """Create AIFPLBuiltinFunction objects for all builtins.
 
@@ -1155,20 +1157,14 @@ class AIFPLVM:
 
             return AIFPLAList(tuple(pairs))
 
-        # All other builtins - delegate to the registry
-        else:
-            # Create registry if needed (cache it for performance)
-            if not hasattr(self, '_builtin_registry'):
-                self._builtin_registry = AIFPLBuiltinRegistry()
+        # Check if this builtin is in the registry
+        if not self._builtin_registry.has_function(builtin_name):
+            # Unknown builtin
+            raise AIFPLEvalError(
+                message=f"Unknown builtin function: {builtin_name}",
+                suggestion="This may be an internal error - please report this issue"
+            )
 
-            # Check if this builtin is in the registry
-            if self._builtin_registry.has_function(builtin_name):
-                # Call through the registry
-                env = AIFPLEnvironment()  # Empty environment for builtins
-                return self._builtin_registry.call_builtin(builtin_name, args, env, 0)
-            else:
-                # Unknown builtin
-                raise AIFPLEvalError(
-                    message=f"Unknown builtin function: {builtin_name}",
-                    suggestion="This may be an internal error - please report this issue"
-                )
+        # Call through the registry
+        env = AIFPLEnvironment()  # Empty environment for builtins
+        return self._builtin_registry.call_builtin(builtin_name, args, env, 0)
