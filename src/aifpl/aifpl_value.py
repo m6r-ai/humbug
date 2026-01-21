@@ -367,7 +367,7 @@ class AIFPLFunction(AIFPLValue):
     and passed around as a value.
     """
     parameters: Tuple[str, ...]
-    body: AIFPLValue
+    body: AIFPLValue | None
     closure_environment: Any  # AIFPLEnvironment, avoiding circular import (this circularity is intentional!)
     name: str | None = None
     bytecode: Any = None  # CodeObject for bytecode-compiled functions

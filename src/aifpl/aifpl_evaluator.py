@@ -604,6 +604,12 @@ class AIFPLEvaluator:
             function=func
         )
 
+        # Ensure this is an AST-based function (not bytecode)
+        if func.body is None:
+            raise AIFPLEvalError(
+                "Cannot evaluate bytecode function in AST evaluator - use VM instead"
+            )
+
         # Add call frame to stack for error reporting
         self.call_stack.push(
             function_name=func.name or "<lambda>",
@@ -926,6 +932,11 @@ class AIFPLEvaluator:
         # Fast path for lambda functions with single parameter
         if isinstance(func_value, AIFPLFunction):
             func_lambda = cast(AIFPLFunction, func_value)
+
+            # Check if this is an AST-based function (not bytecode)
+            if func_lambda.body is None:
+                raise AIFPLEvalError("Cannot use bytecode functions in AST evaluator")
+
             if len(func_lambda.parameters) == 1:
                 # Optimized path: skip full function call machinery
                 result_elements = []
@@ -1008,6 +1019,11 @@ class AIFPLEvaluator:
         # Fast path for lambda predicates with single parameter
         if isinstance(pred_value, AIFPLFunction):
             pred_lambda = cast(AIFPLFunction, pred_value)
+
+            # Check if this is an AST-based function (not bytecode)
+            if pred_lambda.body is None:
+                raise AIFPLEvalError("Cannot use bytecode functions in AST evaluator")
+
             if len(pred_lambda.parameters) == 1:
                 # Optimized path: skip full function call machinery
                 result_elements = []
@@ -1115,6 +1131,11 @@ class AIFPLEvaluator:
         # Fast path for lambda functions with two parameters
         if isinstance(func_value, AIFPLFunction):
             func_lambda = cast(AIFPLFunction, func_value)
+
+            # Check if this is an AST-based function (not bytecode)
+            if func_lambda.body is None:
+                raise AIFPLEvalError("Cannot use bytecode functions in AST evaluator")
+
             if len(func_lambda.parameters) == 2:
                 # Optimized path: skip full function call machinery
                 param_acc, param_item = func_lambda.parameters

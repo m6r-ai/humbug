@@ -1,6 +1,5 @@
 """Enhanced exception classes for AIFPL (AI Functional Programming Language) with detailed context."""
 
-from typing import Optional
 import difflib
 
 
@@ -10,12 +9,12 @@ class AIFPLError(Exception):
     def __init__(
         self,
         message: str,
-        context: Optional[str] = None,
-        expected: Optional[str] = None,
-        received: Optional[str] = None,
-        suggestion: Optional[str] = None,
-        example: Optional[str] = None,
-        position: Optional[int] = None
+        context: str | None = None,
+        expected: str | None = None,
+        received: str | None = None,
+        suggestion: str | None = None,
+        example: str | None = None,
+        position: int | None = None
     ):
         """
         Initialize detailed error.

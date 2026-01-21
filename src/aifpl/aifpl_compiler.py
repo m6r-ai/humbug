@@ -1,6 +1,6 @@
 """AIFPL bytecode compiler - compiles AST to bytecode."""
 
-from typing import List, Dict, Tuple, Optional, Set
+from typing import List, Dict, Tuple, Set
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode, make_instruction
@@ -32,7 +32,7 @@ class CompilationScope:
         self.next_index += 1
         return index
 
-    def get_binding(self, name: str) -> Optional[int]:
+    def get_binding(self, name: str) -> int | None:
         """Get binding index, or None if not found."""
         return self.bindings.get(name)
 
@@ -49,7 +49,7 @@ class CompilationContext:
     code_objects: List[CodeObject] = field(default_factory=list)
     instructions: List[Instruction] = field(default_factory=list)
     max_locals: int = 0  # Track maximum locals needed
-    parent_ctx: Optional['CompilationContext'] = None  # Parent context for nested lambdas
+    parent_ctx: 'CompilationContext | None' = None  # Parent context for nested lambdas
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
 
     def push_scope(self) -> None:
@@ -465,7 +465,7 @@ class AIFPLCompiler:
         ctx.patch_jump(jump_to_end, end)
 
     def _compile_let(self, expr: AIFPLList, ctx: CompilationContext,
-                    current_binding_name: str = None) -> None:
+                    current_binding_name: str | None = None) -> None:
         """Compile let expression: (let ((var val) ...) body)"""
         if len(expr.elements) < 3:
             raise AIFPLEvalError(
@@ -545,7 +545,7 @@ class AIFPLCompiler:
         # (The SCC algorithm should return them in the right order, but let's be explicit)
         sorted_groups = []
         remaining_groups = list(binding_groups)
-        processed_names = set()
+        processed_names: Set[str] = set()
 
         while remaining_groups:
             # Find a group with no unprocessed dependencies
@@ -563,7 +563,7 @@ class AIFPLCompiler:
 
         # Second pass: Compile values and store them in dependency order
         # Track which bindings are lambdas that reference siblings (for mutual recursion)
-        mutual_recursion_patches = []  # List of (closure_var_index, sibling_name, sibling_var_index)
+        mutual_recursion_patches: List[Tuple[int, str, int]] = []  # List of (closure_var_index, sibling_name, sibling_var_index)
 
         # Compile each group in topological order
         for group in binding_groups:
@@ -611,10 +611,11 @@ class AIFPLCompiler:
         var_type, depth, var_index = ctx.resolve_variable(name)
 
         # Check if this is a self-referential lambda
+        first_elem = value_expr.first() if isinstance(value_expr, AIFPLList) and not value_expr.is_empty() else None
         is_self_ref_lambda = (isinstance(value_expr, AIFPLList) and
                              not value_expr.is_empty() and
-                             isinstance(value_expr.first(), AIFPLSymbol) and
-                             value_expr.first().name == 'lambda')
+                             isinstance(first_elem, AIFPLSymbol) and
+                             first_elem.name == 'lambda')
 
         # Check if lambda references itself (recursive)
         is_recursive = False
@@ -636,6 +637,9 @@ class AIFPLCompiler:
             # For mutual recursion, pass sibling names in the same recursive group
             # These are bindings that haven't been evaluated yet and need to be patched
             sibling_bindings = group_names if is_recursive_group else None
+            # Type narrowing: we know value_expr is AIFPLList from is_self_ref_lambda check
+            if not isinstance(value_expr, AIFPLList):
+                raise AIFPLEvalError("Expected lambda expression to be a list")
             self._compile_lambda(value_expr, ctx, binding_name=name, let_bindings=sibling_bindings)
 
         else:
@@ -669,7 +673,7 @@ class AIFPLCompiler:
         return False
 
     def _compile_lambda(self, expr: AIFPLList, ctx: CompilationContext,
-                       binding_name: str = None, let_bindings: List[str] = None) -> None:
+                       binding_name: str | None = None, let_bindings: List[str] | None = None) -> None:
         """Compile lambda expression: (lambda (params...) body)"""
         if len(expr.elements) != 3:
             raise AIFPLEvalError(
@@ -806,7 +810,7 @@ class AIFPLCompiler:
         - Not globals
         - Defined in parent scopes
         """
-        free = []
+        free: List[str] = []
         self._collect_free_vars(expr, bound_vars, parent_ctx, free, set())
         return free
 
@@ -920,7 +924,10 @@ class AIFPLCompiler:
         The first argument is the function to apply. If it's a builtin symbol,
         we pass it as a symbol constant so the VM can resolve it.
         """
-        func_name = expr.first().name
+        first_elem = expr.first()
+        if not isinstance(first_elem, AIFPLSymbol):
+            raise AIFPLEvalError("Higher-order function name must be a symbol")
+        func_name = first_elem.name
         arg_exprs = list(expr.elements[1:])
 
         if not arg_exprs:
@@ -965,6 +972,9 @@ class AIFPLCompiler:
 
         # Validate pattern syntax for all clauses
         for i, clause in enumerate(clauses):
+            if not isinstance(clause, AIFPLList):
+                raise AIFPLEvalError(f"Clause {i+1} must be a list")
+
             pattern = clause.elements[0]
             try:
                 self._validate_pattern_syntax(pattern)
@@ -996,6 +1006,9 @@ class AIFPLCompiler:
         jump_to_end_indices = []  # Track all jumps to end
 
         for i, clause in enumerate(clauses):
+            if not isinstance(clause, AIFPLList):
+                raise AIFPLEvalError(f"Clause {i+1} must be a list")
+
             pattern = clause.elements[0]
             result_expr = clause.elements[1]
 
@@ -1199,9 +1212,8 @@ class AIFPLCompiler:
 
             ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
             ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
-            builtin_index = self.builtin_indices.get('list-ref')
-            if builtin_index is None:
-                raise AIFPLEvalError("list-ref not in builtin table")
+            # Use direct access to ensure type is int
+            builtin_index = self.builtin_indices['list-ref']
             ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
             ctx.emit(Opcode.STORE_VAR, 0, elem_temp_index)
 
@@ -1554,7 +1566,8 @@ class AIFPLCompiler:
         for denominator in range(1, 11):  # Check denominators 1-10
             for numerator in range(-50, 51):  # Check reasonable range
                 nice_value = numerator / denominator
-                if abs(value - nice_value) < self.floating_point_tolerance:
+                # Use a small tolerance for floating point comparison
+                if abs(value - nice_value) < 1e-10:
                     return nice_value
 
         return None

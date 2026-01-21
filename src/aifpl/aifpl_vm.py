@@ -1,7 +1,7 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
-from typing import List, Dict, Any, Optional, Union, cast
-from dataclasses import dataclass
+from typing import List, Dict, Any, Union, cast
+from dataclasses import dataclass, field
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
@@ -22,13 +22,13 @@ class Frame:
     """
     code: CodeObject
     ip: int = 0  # Instruction pointer
-    locals: List[Optional[AIFPLValue]] = None  # Local variables
+    locals: List[AIFPLValue | None] = field(init=False)  # Local variables
     closure_env: Any = None  # Closure environment for this frame
 
 
-    def __post_init__(self):
-        if self.locals is None:
-            self.locals = [None] * self.code.local_count
+    def __post_init__(self) -> None:
+        """Initialize locals array based on code object."""
+        self.locals = [None] * self.code.local_count
 
 
 class AIFPLVM:
@@ -37,7 +37,7 @@ class AIFPLVM:
     Uses a stack-based architecture with lexically-scoped frames.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize VM.
         """
@@ -187,7 +187,7 @@ class AIFPLVM:
         assert isinstance(value.value, int), "is_integer() should guarantee int type"
         return value.value
 
-    def _ensure_real_number(self, value: AIFPLValue, function_name: str):
+    def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber:
         """Ensure value is a real number (int or float), raise error if complex."""
         if not isinstance(value, AIFPLNumber):
             raise AIFPLEvalError(
@@ -199,7 +199,7 @@ class AIFPLVM:
                 f"Function '{function_name}' does not support complex numbers"
             )
 
-        return value.value
+        return value
 
     def _ensure_string(self, value: AIFPLValue, function_name: str) -> AIFPLString:
         """Ensure value is a string, raise error if not."""
@@ -307,7 +307,7 @@ class AIFPLVM:
         # Should not reach here
         raise AIFPLEvalError("Execution ended without return value")
 
-    def _execute_frame(self) -> Optional[AIFPLValue]:
+    def _execute_frame(self) -> AIFPLValue | None:
         """Execute current frame until it returns or calls another function.
 
         Returns:
@@ -453,7 +453,7 @@ class AIFPLVM:
                 # Create environment with captured values
                 # Parent is None for now - we'll handle self-references differently
                 closure = AIFPLFunction(
-                    parameters=[f"param{i}" for i in range(closure_code.param_count)],
+                    parameters=tuple(f"param{i}" for i in range(closure_code.param_count)),
                     body=None,  # Body is in bytecode, not AST
                     closure_environment=AIFPLEnvironment(bindings=captured_dict),
                     name=closure_code.name,
@@ -500,9 +500,12 @@ class AIFPLVM:
 
                         if is_tail_call and is_self_recursive:
                             # Tail call optimization: reuse current frame
+                            # Type narrowing: current_frame is not None here due to is_self_recursive check
+                            assert current_frame is not None
                             # This will reset the frame and continue execution
                             self._tail_call_bytecode_function(func, args, current_frame)
                             # Don't append result or increment IP - the frame was reset
+
                         else:
                             # Normal call: create new frame
                             result = self._call_bytecode_function(func, args)
@@ -556,23 +559,23 @@ class AIFPLVM:
                 if var_index >= len(target_frame.locals):
                     raise AIFPLEvalError(f"PATCH_CLOSURE_SELF: variable index {var_index} out of range")
 
-                closure = target_frame.locals[var_index]
+                target_closure = target_frame.locals[var_index]
 
-                if not isinstance(closure, AIFPLFunction):
+                if not isinstance(target_closure, AIFPLFunction):
                     raise AIFPLEvalError("PATCH_CLOSURE_SELF requires a function")
 
                 # Create a new environment with a placeholder for self-reference
-                new_bindings = {**closure.closure_environment.bindings}
-                new_env = AIFPLEnvironment(bindings=new_bindings, parent=closure.closure_environment.parent)
+                new_bindings = {**target_closure.closure_environment.bindings}
+                new_env = AIFPLEnvironment(bindings=new_bindings, parent=target_closure.closure_environment.parent)
 
                 # Create patched closure
                 patched_closure = AIFPLFunction(
-                    parameters=closure.parameters,
-                    body=closure.body,
+                    parameters=target_closure.parameters,
+                    body=target_closure.body,
                     closure_environment=new_env,
-                    name=closure.name,
-                    bytecode=closure.bytecode,
-                    captured_values=closure.captured_values
+                    name=target_closure.name,
+                    bytecode=target_closure.bytecode,
+                    captured_values=target_closure.captured_values
                 )
 
                 # Now add the patched closure to its own environment (self-reference)
@@ -593,8 +596,15 @@ class AIFPLVM:
                 if not isinstance(patch_info, AIFPLList) or len(patch_info.elements) != 2:
                     raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: invalid patch info")
 
-                sibling_var_index = int(patch_info.elements[0].value)
-                name_index = int(patch_info.elements[1].value)
+                elements = patch_info.elements
+                if not isinstance(elements[0], AIFPLNumber) or not isinstance(elements[1], AIFPLNumber):
+                    raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: patch info elements must be numbers")
+
+                if not isinstance(elements[0].value, int) or not isinstance(elements[1].value, int):
+                    raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: patch info elements must be numbers")
+
+                sibling_var_index = int(elements[0].value)
+                name_index = int(elements[1].value)
                 sibling_name = code.names[name_index]
 
                 # Get current frame
@@ -604,10 +614,9 @@ class AIFPLVM:
                 if closure_var_index >= len(target_frame.locals):
                     raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: closure index {closure_var_index} out of range")
 
-                closure = target_frame.locals[closure_var_index]
-                if not isinstance(closure, AIFPLFunction):
+                target_closure = target_frame.locals[closure_var_index]
+                if not isinstance(target_closure, AIFPLFunction):
                     raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: closure at index {closure_var_index} is not a function")
-
                 # Load the sibling from locals
                 if sibling_var_index >= len(target_frame.locals):
                     raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: sibling index {sibling_var_index} out of range")
@@ -615,13 +624,13 @@ class AIFPLVM:
                 sibling = target_frame.locals[sibling_var_index]
 
                 # Add sibling to closure's environment
-                closure.closure_environment.bindings[sibling_name] = sibling
+                target_closure.closure_environment.bindings[sibling_name] = sibling
 
             elif opcode == Opcode.MAKE_LIST:
                 n = arg1
-                elements = [self.stack.pop() for _ in range(n)]
-                elements.reverse()
-                self.stack.append(AIFPLList(tuple(elements)))
+                list_elements: List[AIFPLValue] = [self.stack.pop() for _ in range(n)]
+                list_elements.reverse()  # Reverse in place since we popped in reverse order
+                self.stack.append(AIFPLList(tuple(list_elements)))
 
             elif opcode == Opcode.DUP:
                 if not self.stack:
