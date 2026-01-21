@@ -115,30 +115,20 @@ class AIFPLBuiltinRegistry:
 # Export the standard builtin table order for the compiler
 # This must match the order in AIFPLCompiler.BUILTIN_TABLE
 BUILTIN_TABLE_ORDER = [
-    # Arithmetic
     '+', '-', '*', '/', '//', '%', '**',
-    # Comparison
     '=', '!=', '<', '>', '<=', '>=',
-    # Boolean
     'and', 'or', 'not',
-    # Bitwise
     'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
-    # Lists
     'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
     'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
-    # Type predicates
     'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
-    # Higher-order
     'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?',
-    # Strings
     'string-append', 'string-length', 'string-upcase', 'string-downcase',
     'string-trim', 'string-replace', 'string-split', 'string-join',
     'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
     'substring', 'string->number', 'number->string', 'string=?', 'string->list', 'list->string',
-    # Alists
     'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
     'alist-keys', 'alist-values', 'alist-merge', 'alist?',
-    # Math
     'sqrt', 'abs', 'min', 'max', 'pow',
     'sin', 'cos', 'tan', 'log', 'log10', 'exp',
     'round', 'floor', 'ceil',

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
-    AIFPLList, AIFPLFunction, AIFPLSymbol, AIFPLBuiltinFunction, AIFPLAlist
+    AIFPLList, AIFPLFunction, AIFPLSymbol, AIFPLBuiltinFunction, AIFPLAList
 )
 from aifpl.aifpl_bytecode import CodeObject, Opcode
 from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
@@ -110,7 +110,7 @@ class AIFPLVM:
 
             return f"({' '.join(formatted_elements)})"
 
-        if isinstance(result, AIFPLAlist):
+        if isinstance(result, AIFPLAList):
             # Format alist in LISP notation
             if result.is_empty():
                 return "(alist)"
@@ -1134,12 +1134,12 @@ class AIFPLVM:
             return AIFPLBoolean(True)
 
         elif builtin_name == 'alist':
-            # Alist constructor - arguments are already evaluated pairs
+            # AList constructor - arguments are already evaluated pairs
             pairs = []
             for i, arg in enumerate(args):
                 if not isinstance(arg, AIFPLList):
                     raise AIFPLEvalError(
-                        message=f"Alist pair {i+1} must be a list",
+                        message=f"AList pair {i+1} must be a list",
                         received=f"Pair {i+1}: {arg.type_name()}",
                         expected="2-element list: (key value)",
                         example='(alist ("name" "Alice") ("age" 30))',
@@ -1148,7 +1148,7 @@ class AIFPLVM:
 
                 if len(arg.elements) != 2:
                     raise AIFPLEvalError(
-                        message=f"Alist pair {i+1} must have exactly 2 elements",
+                        message=f"AList pair {i+1} must have exactly 2 elements",
                         received=f"Pair {i+1} has {len(arg.elements)} elements",
                         expected="2 elements: (key value)",
                         example='(alist ("name" "Alice") ("age" 30))',
@@ -1159,7 +1159,7 @@ class AIFPLVM:
                 value = arg.elements[1]
                 pairs.append((key, value))
 
-            return AIFPLAlist(tuple(pairs))
+            return AIFPLAList(tuple(pairs))
 
         # All other builtins - delegate to the registry
         else:

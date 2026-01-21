@@ -200,7 +200,7 @@ class AIFPLList(AIFPLValue):
 
 
 @dataclass(frozen=True)
-class AIFPLAlist(AIFPLValue):
+class AIFPLAList(AIFPLValue):
     """
     Represents association lists (alists) - immutable key-value mappings.
 
@@ -258,7 +258,7 @@ class AIFPLAlist(AIFPLValue):
         hashable_key = self._to_hashable_key(key)
         return hashable_key in self._lookup
 
-    def set(self, key: AIFPLValue, value: AIFPLValue) -> 'AIFPLAlist':
+    def set(self, key: AIFPLValue, value: AIFPLValue) -> 'AIFPLAList':
         """Return new alist with key set (immutable update)."""
         hashable_key = self._to_hashable_key(key)
 
@@ -277,16 +277,16 @@ class AIFPLAlist(AIFPLValue):
         if not found:
             new_pairs.append((key, value))  # Append new pair
 
-        return AIFPLAlist(tuple(new_pairs))
+        return AIFPLAList(tuple(new_pairs))
 
-    def remove(self, key: AIFPLValue) -> 'AIFPLAlist':
+    def remove(self, key: AIFPLValue) -> 'AIFPLAList':
         """Return new alist without key."""
         hashable_key = self._to_hashable_key(key)
         new_pairs = tuple(
             (k, v) for k, v in self.pairs
             if self._to_hashable_key(k) != hashable_key
         )
-        return AIFPLAlist(new_pairs)
+        return AIFPLAList(new_pairs)
 
     def keys(self) -> Tuple[AIFPLValue, ...]:
         """Get all keys in insertion order."""
@@ -296,7 +296,7 @@ class AIFPLAlist(AIFPLValue):
         """Get all values in insertion order."""
         return tuple(v for _, v in self.pairs)
 
-    def merge(self, other: 'AIFPLAlist') -> 'AIFPLAlist':
+    def merge(self, other: 'AIFPLAList') -> 'AIFPLAList':
         """Merge with another alist (other's values win on conflicts)."""
         # Start with self's pairs
         result_dict = {}
@@ -325,7 +325,7 @@ class AIFPLAlist(AIFPLValue):
             if hashable_key not in seen:
                 new_pairs.append((k, v))
 
-        return AIFPLAlist(tuple(new_pairs))
+        return AIFPLAList(tuple(new_pairs))
 
     def length(self) -> int:
         """Number of key-value pairs."""
@@ -351,7 +351,7 @@ class AIFPLAlist(AIFPLValue):
             return ('sym', key.name)
 
         raise AIFPLEvalError(
-            message="Alist keys must be strings, numbers, booleans, or symbols",
+            message="AList keys must be strings, numbers, booleans, or symbols",
             received=f"Key type: {key.type_name()}",
             example='(alist ("name" "Alice") ("age" 30))',
             suggestion="Use strings for most keys"

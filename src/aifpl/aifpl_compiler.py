@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
-    AIFPLSymbol, AIFPLList, AIFPLAlist, AIFPLFunction, AIFPLBuiltinFunction
+    AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLBuiltinFunction
 )
 from aifpl.aifpl_bytecode import (
     CodeObject, Instruction, Opcode, make_instruction
@@ -1523,7 +1523,7 @@ class AIFPLCompiler:
 
             return f"({' '.join(formatted_elements)})"
 
-        if isinstance(result, AIFPLAlist):
+        if isinstance(result, AIFPLAList):
             # Format alist in LISP notation: (alist (key1 val1) (key2 val2) ...)
             if result.is_empty():
                 return "(alist)"

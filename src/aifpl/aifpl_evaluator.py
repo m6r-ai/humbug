@@ -10,7 +10,7 @@ from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_pattern_matcher import AIFPLPatternMatcher
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
-    AIFPLList, AIFPLAlist, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction, AIFPLTailCall
+    AIFPLList, AIFPLAList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction, AIFPLTailCall
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
 
@@ -1417,7 +1417,7 @@ class AIFPLEvaluator:
             # Each arg is an unevaluated pair list - don't evaluate the list itself, just check structure
             if not isinstance(arg, AIFPLList):
                 raise AIFPLEvalError(
-                    message=f"Alist pair {i+1} must be a list",
+                    message=f"AList pair {i+1} must be a list",
                     received=f"Pair {i+1}: {arg.type_name()}",
                     expected="2-element list: (key value)",
                     example='(alist ("name" "Alice") ("age" 30))',
@@ -1426,7 +1426,7 @@ class AIFPLEvaluator:
 
             if arg.length() != 2:
                 raise AIFPLEvalError(
-                    message=f"Alist pair {i+1} must have exactly 2 elements",
+                    message=f"AList pair {i+1} must have exactly 2 elements",
                     received=f"Pair {i+1} has {arg.length()} elements",
                     expected="2 elements: (key value)",
                     example='(alist ("name" "Alice") ("age" 30))',
@@ -1443,7 +1443,7 @@ class AIFPLEvaluator:
 
             pairs.append((key, value))
 
-        return AIFPLAlist(tuple(pairs))
+        return AIFPLAList(tuple(pairs))
 
     # Helper method for higher-order functions
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
@@ -1519,7 +1519,7 @@ class AIFPLEvaluator:
 
             return f"({' '.join(formatted_elements)})"
 
-        if isinstance(result, AIFPLAlist):
+        if isinstance(result, AIFPLAList):
             # Format alist in LISP notation: (alist (key1 val1) (key2 val2) ...)
             if result.is_empty():
                 return "(alist)"

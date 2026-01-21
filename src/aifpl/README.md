@@ -1390,11 +1390,11 @@ String literals use double quotes and support escape sequences:
 - `\r` → carriage return
 - `\uXXXX` → Unicode code point (4 hex digits)
 
-### Association Lists (Alists)
+### Association Lists (ALists)
 
 Association lists (alists) are immutable key-value mappings with O(1) lookup performance. They are first-class data structures optimized for structured data processing.
 
-#### Creating Alists
+#### Creating ALists
 
 ```aifpl
 ; Basic alist creation
@@ -1405,7 +1405,7 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 (alist)
 ; → (alist)
 
-; Alists with different key types
+; ALists with different key types
 (alist (1 "one") (2 "two") (3 "three"))
 (alist (#t "yes") (#f "no"))
 
@@ -1417,7 +1417,7 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 
 **Note**: `alist` is a special form that evaluates the key and value expressions within each pair, but treats the pair structure itself as data.
 
-#### Accessing Alist Values
+#### Accessing AList Values
 
 ```aifpl
 ; Get value by key
@@ -1439,7 +1439,7 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 ; → "Carol"
 ```
 
-#### Modifying Alists (Immutably)
+#### Modifying ALists (Immutably)
 
 All alist operations return new alists without modifying the original:
 
@@ -1464,7 +1464,7 @@ All alist operations return new alists without modifying the original:
 ; → (alist ("name" "Alice"))
 ```
 
-#### Alist Queries
+#### AList Queries
 
 ```aifpl
 ; Check if key exists
@@ -1490,7 +1490,7 @@ All alist operations return new alists without modifying the original:
 ; → #f
 ```
 
-#### Merging Alists
+#### Merging ALists
 
 ```aifpl
 ; Merge two alists (second wins on conflicts)
@@ -1507,7 +1507,7 @@ All alist operations return new alists without modifying the original:
 ; → (alist ("x" 1) ("y" 2) ("z" 3))
 ```
 
-#### Alists with Functional Operations
+#### ALists with Functional Operations
 
 ```aifpl
 ; Map over keys
@@ -1534,7 +1534,7 @@ All alist operations return new alists without modifying the original:
 ; → ("Alice" "Bob" "Carol")
 ```
 
-#### Pattern Matching with Alists
+#### Pattern Matching with ALists
 
 ```aifpl
 ; Match alist type
@@ -1554,9 +1554,9 @@ All alist operations return new alists without modifying the original:
 ; → ("alist" "list")
 ```
 
-#### Alist Performance
+#### AList Performance
 
-Alists in AIFPL use hash-backed storage for O(1) lookup performance:
+ALists in AIFPL use hash-backed storage for O(1) lookup performance:
 
 - `alist-get`: O(1) - constant time lookup
 - `alist-set`: O(n) - creates new alist with updated value
@@ -1564,7 +1564,7 @@ Alists in AIFPL use hash-backed storage for O(1) lookup performance:
 - `alist-keys`/`alist-values`: O(n) - iterates all pairs
 - `alist-merge`: O(n+m) - combines two alists
 
-Alists maintain insertion order and are optimized for read-heavy workloads common in data processing.
+ALists maintain insertion order and are optimized for read-heavy workloads common in data processing.
 
 ### Complex Number Operations
 The `real` and `imag` functions extract components from any numeric value:

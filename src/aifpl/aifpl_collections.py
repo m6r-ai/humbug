@@ -5,7 +5,7 @@ from typing import List, Callable
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAlist, AIFPLFunction, AIFPLBuiltinFunction
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLBuiltinFunction
 )
 
 
@@ -72,7 +72,7 @@ class AIFPLCollectionsFunctions:
             'boolean?': self._builtin_boolean_p,
             'function?': self._builtin_function_p,
 
-            # Alist functions
+            # AList functions
             'alist-get': self._builtin_alist_get,
             'alist-set': self._builtin_alist_set,
             'alist-has?': self._builtin_alist_has_p,
@@ -544,7 +544,7 @@ class AIFPLCollectionsFunctions:
         assert isinstance(value.value, int), "is_integer() should guarantee int type"
         return value.value
 
-    # Alist functions
+    # AList functions
     def _builtin_alist_get(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
         """Get value from alist: (alist-get my-alist key [default])"""
         if len(args) < 2 or len(args) > 3:
@@ -560,7 +560,7 @@ class AIFPLCollectionsFunctions:
         key = args[1]
         default = args[2] if len(args) == 3 else AIFPLBoolean(False)
 
-        if not isinstance(alist_val, AIFPLAlist):
+        if not isinstance(alist_val, AIFPLAList):
             raise AIFPLEvalError(
                 message="First argument must be an alist",
                 received=f"Got: {alist_val.type_name()}",
@@ -585,7 +585,7 @@ class AIFPLCollectionsFunctions:
 
         alist_val, key, value = args
 
-        if not isinstance(alist_val, AIFPLAlist):
+        if not isinstance(alist_val, AIFPLAList):
             raise AIFPLEvalError(
                 message="First argument must be an alist",
                 received=f"Got: {alist_val.type_name()}",
@@ -608,7 +608,7 @@ class AIFPLCollectionsFunctions:
 
         alist_val, key = args
 
-        if not isinstance(alist_val, AIFPLAlist):
+        if not isinstance(alist_val, AIFPLAList):
             raise AIFPLEvalError(
                 message="First argument must be an alist",
                 received=f"Got: {alist_val.type_name()}",
@@ -630,7 +630,7 @@ class AIFPLCollectionsFunctions:
 
         alist_val = args[0]
 
-        if not isinstance(alist_val, AIFPLAlist):
+        if not isinstance(alist_val, AIFPLAList):
             raise AIFPLEvalError(
                 message="Argument must be an alist",
                 received=f"Got: {alist_val.type_name()}",
@@ -652,7 +652,7 @@ class AIFPLCollectionsFunctions:
 
         alist_val = args[0]
 
-        if not isinstance(alist_val, AIFPLAlist):
+        if not isinstance(alist_val, AIFPLAList):
             raise AIFPLEvalError(
                 message="Argument must be an alist",
                 received=f"Got: {alist_val.type_name()}",
@@ -674,7 +674,7 @@ class AIFPLCollectionsFunctions:
 
         alist_val, key = args
 
-        if not isinstance(alist_val, AIFPLAlist):
+        if not isinstance(alist_val, AIFPLAList):
             raise AIFPLEvalError(
                 message="First argument must be an alist",
                 received=f"Got: {alist_val.type_name()}",
@@ -696,14 +696,14 @@ class AIFPLCollectionsFunctions:
 
         alist1, alist2 = args
 
-        if not isinstance(alist1, AIFPLAlist):
+        if not isinstance(alist1, AIFPLAList):
             raise AIFPLEvalError(
                 message="First argument must be an alist",
                 received=f"Got: {alist1.type_name()}",
                 expected="alist"
             )
 
-        if not isinstance(alist2, AIFPLAlist):
+        if not isinstance(alist2, AIFPLAList):
             raise AIFPLEvalError(
                 message="Second argument must be an alist",
                 received=f"Got: {alist2.type_name()}",
@@ -723,4 +723,4 @@ class AIFPLCollectionsFunctions:
                 suggestion="Provide a value to check"
             )
 
-        return AIFPLBoolean(isinstance(args[0], AIFPLAlist))
+        return AIFPLBoolean(isinstance(args[0], AIFPLAList))

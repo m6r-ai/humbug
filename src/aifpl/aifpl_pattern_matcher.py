@@ -6,7 +6,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
-    AIFPLList, AIFPLAlist, AIFPLFunction, AIFPLBuiltinFunction
+    AIFPLList, AIFPLAList, AIFPLFunction, AIFPLBuiltinFunction
 )
 
 
@@ -227,7 +227,7 @@ class AIFPLPatternMatcher:
             'string?': lambda v: isinstance(v, AIFPLString),
             'boolean?': lambda v: isinstance(v, AIFPLBoolean),
             'list?': lambda v: isinstance(v, AIFPLList),
-            'alist?': lambda v: isinstance(v, AIFPLAlist),
+            'alist?': lambda v: isinstance(v, AIFPLAList),
             'function?': lambda v: isinstance(v, (AIFPLFunction, AIFPLBuiltinFunction)),
             'symbol?': lambda v: isinstance(v, AIFPLSymbol),
         }
