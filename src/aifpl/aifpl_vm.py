@@ -218,7 +218,7 @@ class AIFPLVM:
 
         return value
 
-    def _resolve_function(self, value: AIFPLValue, context: str) -> Union[AIFPLFunction, AIFPLBuiltinFunction]:
+    def _resolve_function(self, value: AIFPLValue) -> Union[AIFPLFunction, AIFPLBuiltinFunction, None]:
         """Resolve a value to a function, handling builtin symbols."""
         # If it's already a function, return it
         if isinstance(value, (AIFPLFunction, AIFPLBuiltinFunction)):
@@ -229,13 +229,30 @@ class AIFPLVM:
             # Get the builtin function from our own registry
             return self._builtin_functions[value.name]
 
-        # Otherwise, it's not a valid function
+        # Otherwise, it's not a valid function - return None
+        # Caller will handle the error with appropriate context
+        return None
+
+    def _raise_non_function_error(self, value: AIFPLValue, context: str) -> None:
+        """Raise a detailed error for attempting to call a non-function value.
+        
+        Args:
+            value: The value that was attempted to be called
+            context: The context where the call was attempted (e.g., "map", "filter")
+        """
+        # Build suggestion based on whether this is a symbol or not
+        if isinstance(value, AIFPLSymbol):
+            suggestion = f"'{value.name}' is not a function - check spelling or define it first"
+        else:
+            suggestion = "Only functions can be called - check that you're using correct syntax"
+
         raise AIFPLEvalError(
             message="Cannot call non-function value",
-#            received=f"Trying to call: {self.format_result(value.name)} ({value.type_name()})",
+            received=f"Trying to call: {self._format_result(value)} ({value.type_name()})",
+            context=f"In {context}: first argument must be a function",
             expected="Function (builtin or lambda)",
-            example="(+ 1 2) calls function +\n(42 1 2) tries to call number 42",
-#            suggestion=f"'{value.name}' is not a function - check spelling or define it first"
+            example="(+ 1 2) calls function +\\n(42 1 2) tries to call number 42",
+            suggestion=suggestion
         )
 
     def _get_function_name(self, func: AIFPLValue) -> str:
@@ -824,7 +841,9 @@ class AIFPLVM:
                 )
 
             # Resolve function (handles builtin symbols)
-            func = self._resolve_function(func_value, "map")
+            func = self._resolve_function(func_value)
+            if func is None:
+                self._raise_non_function_error(func_value, "map")
 
             # Apply function to each element
             result_elements = []
@@ -866,7 +885,9 @@ class AIFPLVM:
                 )
 
             # Resolve function
-            pred = self._resolve_function(pred_value, "filter")
+            pred = self._resolve_function(pred_value)
+            if pred is None:
+                self._raise_non_function_error(pred_value, "filter")
 
             # Filter elements
             result_elements = []
@@ -919,7 +940,9 @@ class AIFPLVM:
                 )
 
             # Resolve function
-            func = self._resolve_function(func_value, "fold")
+            func = self._resolve_function(func_value)
+            if func is None:
+                self._raise_non_function_error(func_value, "fold")
 
             # Fold over list
             for i, item in enumerate(list_value.elements):
@@ -1022,7 +1045,9 @@ class AIFPLVM:
                 )
 
             # Resolve function
-            pred = self._resolve_function(pred_value, "find")
+            pred = self._resolve_function(pred_value)
+            if pred is None:
+                self._raise_non_function_error(pred_value, "find")
 
             # Find first matching element
             for i, item in enumerate(list_value.elements):
@@ -1073,7 +1098,9 @@ class AIFPLVM:
                 )
 
             # Resolve function
-            pred = self._resolve_function(pred_value, "any?")
+            pred = self._resolve_function(pred_value)
+            if pred is None:
+                self._raise_non_function_error(pred_value, "any?")
 
             # Check if any element matches
             for i, item in enumerate(list_value.elements):
@@ -1124,7 +1151,9 @@ class AIFPLVM:
                 )
 
             # Resolve function
-            pred = self._resolve_function(pred_value, "all?")
+            pred = self._resolve_function(pred_value)
+            if pred is None:
+                self._raise_non_function_error(pred_value, "all?")
 
             # Check if all elements match
             for i, item in enumerate(list_value.elements):
