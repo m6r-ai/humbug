@@ -366,24 +366,44 @@ class WindowsTerminal(TerminalBase):
             if not self._running:
                 return b''
 
-            raise
+    def _write_all(self, pipe_handle: int, data: bytes) -> None:
+        """
+        Write all data to pipe, handling partial writes.
+
+        Args:
+            pipe_handle: Pipe handle to write to
+            data: Data to write
+
+        Raises:
+            OSError: If write fails or returns 0
+        """
+        offset = 0
+        while offset < len(data):
+            bytes_written = DWORD(0)
+            result = windll.kernel32.WriteFile(
+                pipe_handle,
+                data[offset:],
+                len(data) - offset,
+                byref(bytes_written),
+                None
+            )
+            if not result or bytes_written.value == 0:
+                raise OSError("WriteFile failed or returned 0 bytes written")
+
+            offset += bytes_written.value
 
     async def write_data(self, data: bytes) -> None:
-        """Write data to Windows terminal."""
+        """
+        Write data to Windows terminal.
+
+        Args:
+            data: Data to write to terminal
+        """
         if self._pipe_in is not None and self._running:
-            loop = asyncio.get_event_loop()
             try:
-                bytes_written = DWORD(0)
-                await loop.run_in_executor(
-                    None,
-                    lambda: windll.kernel32.WriteFile(
-                        self._pipe_in,
-                        data,
-                        len(data),
-                        byref(bytes_written),
-                        None
-                    )
-                )
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(None, self._write_all, self._pipe_in, data)
+
             except OSError as e:
                 if e.winerror == 109:  # ERROR_BROKEN_PIPE
                     return

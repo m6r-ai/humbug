@@ -2,6 +2,12 @@
 
 ## v39 (2026-xx-xx)
 
+New features:
+
+Bug fixes:
+
+- If we wrote more then 1k as "keystrokes" to a zsh then this could corrupt the output buffer.
+
 ## v38 (2026-01-17)
 
 New features:

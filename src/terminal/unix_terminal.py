@@ -10,6 +10,7 @@ if sys.platform == 'win32':
 
 import asyncio
 import fcntl
+import errno
 import locale
 import os
 import pty
@@ -17,6 +18,7 @@ import select
 import signal
 import struct
 import termios
+import time
 import tty
 from typing import Tuple, cast
 
@@ -238,11 +240,56 @@ class UnixTerminal(TerminalBase):
 
             raise
 
+    def _write_all(self, fd: int, data: bytes) -> None:
+        """
+        Write all data to file descriptor, handling partial writes.
+
+        Args:
+            fd: File descriptor to write to
+            data: Data to write
+
+        Raises:
+            OSError: If write fails or returns 0
+        """
+        # Temporarily make FD blocking for simpler write logic
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
+
+        # Write out all data in 256-byte chunks with small delays to avoid overwhelming the terminal and
+        # getting weird corruptions where anything more than 1kbyte at once gets garbled on MacOS 26's zsh.
+        # This is definitely working around a bug elsewhere!
+        try:
+            offset = 0
+            chunk_size = 256
+            while offset < len(data):
+                # Write in chunks with small delays
+                end = min(offset + chunk_size, len(data))
+                written = os.write(fd, data[offset:end])
+                if written == 0:
+                    raise OSError("write() returned 0, connection may be closed")
+
+                offset += written
+
+                # Small delay between chunks
+                if offset < len(data):
+                    time.sleep(0.01)
+
+        finally:
+            # Restore non-blocking mode
+            fcntl.fcntl(fd, fcntl.F_SETFL, flags)
+
     async def write_data(self, data: bytes) -> None:
-        """Write data to Unix terminal."""
+        """
+        Write data to Unix terminal.
+
+        Handles partial writes by retrying until all data is written.
+        
+        Args:
+            data: Data to write to terminal
+        """
         if self._main_fd is not None and self._running:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, lambda: os.write(cast(int, self._main_fd), data))
+            await loop.run_in_executor(None, self._write_all, self._main_fd, data)
 
     def transfer_to(self, other: 'TerminalBase') -> None:
         """Transfer Unix terminal ownership."""
