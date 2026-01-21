@@ -176,7 +176,7 @@ class AIFPLCompiler:
         'bin', 'hex', 'oct', 'real', 'imag', 'complex',
     ]
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize compiler."""
         self.builtin_indices = {name: i for i, name in enumerate(self.BUILTIN_TABLE)}
 
@@ -226,8 +226,9 @@ class AIFPLCompiler:
         if isinstance(expr, AIFPLBoolean):
             if expr.value:
                 ctx.emit(Opcode.LOAD_TRUE)
-            else:
-                ctx.emit(Opcode.LOAD_FALSE)
+                return
+
+            ctx.emit(Opcode.LOAD_FALSE)
             return
 
         # Symbol (variable reference)
@@ -255,8 +256,9 @@ class AIFPLCompiler:
 
         if var_type == 'local':
             ctx.emit(Opcode.LOAD_VAR, depth, index)
-        else:  # global
-            ctx.emit(Opcode.LOAD_NAME, index)
+            return
+
+        ctx.emit(Opcode.LOAD_NAME, index)
 
     def _compile_list(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile a list expression (function call or special form)."""
