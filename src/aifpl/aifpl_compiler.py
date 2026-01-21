@@ -464,8 +464,7 @@ class AIFPLCompiler:
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
 
-    def _compile_let(self, expr: AIFPLList, ctx: CompilationContext,
-                    current_binding_name: str | None = None) -> None:
+    def _compile_let(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile let expression: (let ((var val) ...) body)"""
         if len(expr.elements) < 3:
             raise AIFPLEvalError(
@@ -574,10 +573,11 @@ class AIFPLCompiler:
             for name, value_expr in group.bindings:
                 # Compile this binding
                 self._compile_single_let_binding(
-                    ctx, name, value_expr,
+                    ctx,
+                    name,
+                    value_expr,
                     is_recursive_group=group.is_recursive,
                     group_names=group_names,
-                    all_binding_names=[n for n, _ in binding_pairs],
                     mutual_recursion_patches=mutual_recursion_patches
                 )
 
@@ -603,12 +603,11 @@ class AIFPLCompiler:
         value_expr: AIFPLValue,
         is_recursive_group: bool,
         group_names: List[str],
-        all_binding_names: List[str],
         mutual_recursion_patches: List[Tuple[int, str, int]]
     ) -> None:
         """Compile a single let binding."""
         # Get the index for this variable
-        var_type, depth, var_index = ctx.resolve_variable(name)
+        _, depth, var_index = ctx.resolve_variable(name)
 
         # Check if this is a self-referential lambda
         first_elem = value_expr.first() if isinstance(value_expr, AIFPLList) and not value_expr.is_empty() else None
@@ -1002,7 +1001,6 @@ class AIFPLCompiler:
         saved_next_index_with_temp = ctx.current_scope().next_index
 
         # Compile each clause
-        end_label = None  # Will be patched at the end
         jump_to_end_indices = []  # Track all jumps to end
 
         for i, clause in enumerate(clauses):
@@ -1015,14 +1013,13 @@ class AIFPLCompiler:
             # Compile pattern test
             # Returns True if pattern matches, False otherwise
             # May bind variables as side effect
-            next_pattern_label = ctx.current_instruction_index()
-
             self._compile_pattern(pattern, match_temp_index, ctx)
 
             # If pattern didn't match, jump to next pattern
             if i < len(clauses) - 1:
                 # Not the last pattern, jump to next on failure
                 next_pattern_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+
             else:
                 # Last pattern - if it fails, we need to error
                 # For now, assume last pattern always matches (should be _ wildcard)
@@ -1044,6 +1041,7 @@ class AIFPLCompiler:
             if i < len(clauses) - 1:
                 next_pattern_start = ctx.current_instruction_index()
                 ctx.patch_jump(next_pattern_jump, next_pattern_start)
+
             else:
                 # Last pattern failed - need to generate error
                 # For now, just patch to same location (will fall through)
@@ -1234,6 +1232,7 @@ class AIFPLCompiler:
         ctx.patch_jump(length_fail_jump, fail_location)
         for fj in fail_jumps:
             ctx.patch_jump(fj, fail_location)
+
         ctx.emit(Opcode.LOAD_FALSE)
 
         success_location = ctx.current_instruction_index()
