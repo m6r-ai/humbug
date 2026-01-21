@@ -5,7 +5,7 @@ from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
-from aifpl.aifpl_value import AIFPLNumber, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLAlist
+from aifpl.aifpl_value import AIFPLNumber, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLAList
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 
 
@@ -27,26 +27,26 @@ def compile_and_run(expression: str) -> any:
     return result
 
 
-class TestAlistCreation:
+class TestAListCreation:
     """Test alist creation."""
 
     def test_empty_alist(self):
         result = compile_and_run('(alist)')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 0
 
     def test_alist_with_pairs(self):
         result = compile_and_run('(alist ("name" "Alice") ("age" 30))')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 2
 
     def test_alist_string_keys(self):
         result = compile_and_run('(alist ("a" 1) ("b" 2) ("c" 3))')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 3
 
 
-class TestAlistAccess:
+class TestAListAccess:
     """Test alist access operations."""
 
     def test_alist_get(self):
@@ -75,40 +75,40 @@ class TestAlistAccess:
         assert result.value == False
 
 
-class TestAlistManipulation:
+class TestAListManipulation:
     """Test alist manipulation operations."""
 
     def test_alist_set_new_key(self):
         result = compile_and_run('(alist-set (alist ("a" 1)) "b" 2)')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 2
         assert result.get(AIFPLString("b")).value == 2
 
     def test_alist_set_existing_key(self):
         result = compile_and_run('(alist-set (alist ("a" 1)) "a" 99)')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 1
         assert result.get(AIFPLString("a")).value == 99
 
     def test_alist_remove(self):
         result = compile_and_run('(alist-remove (alist ("a" 1) ("b" 2)) "a")')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 1
         assert not result.has_key(AIFPLString("a"))
 
     def test_alist_merge(self):
         result = compile_and_run('(alist-merge (alist ("a" 1) ("b" 2)) (alist ("c" 3) ("d" 4)))')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 4
 
     def test_alist_merge_override(self):
         result = compile_and_run('(alist-merge (alist ("a" 1)) (alist ("a" 99)))')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 1
         assert result.get(AIFPLString("a")).value == 99
 
 
-class TestAlistKeysValues:
+class TestAListKeysValues:
     """Test alist keys and values extraction."""
 
     def test_alist_keys(self):
@@ -133,7 +133,7 @@ class TestAlistKeysValues:
         assert result.is_empty()
 
 
-class TestAlistPredicates:
+class TestAListPredicates:
     """Test alist type predicates."""
 
     def test_alist_predicate_true(self):
@@ -152,16 +152,16 @@ class TestAlistPredicates:
         assert result.value == False
 
 
-class TestAlistCombinations:
+class TestAListCombinations:
     """Test combinations of alist operations."""
 
     def test_nested_alist(self):
         result = compile_and_run('''
             (alist ("user" (alist ("name" "Alice") ("age" 30))))
         ''')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         user = result.get(AIFPLString("user"))
-        assert isinstance(user, AIFPLAlist)
+        assert isinstance(user, AIFPLAList)
 
     def test_alist_with_let(self):
         result = compile_and_run('''
@@ -197,7 +197,7 @@ class TestAlistCombinations:
               (alist-set (alist ("a" 1)) "b" 2)
               "c" 3)
         ''')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 3
 
 
@@ -210,7 +210,7 @@ class TestBenchmarkPatterns:
               ("a" 1) ("b" 2) ("c" 3) ("d" 4) ("e" 5)
               ("f" 6) ("g" 7) ("h" 8) ("i" 9) ("j" 10))
         ''')
-        assert isinstance(result, AIFPLAlist)
+        assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 10
 
     def test_alist_in_map(self):
@@ -223,7 +223,7 @@ class TestBenchmarkPatterns:
         assert len(result.elements) == 5
         # Each element should be an alist
         for elem in result.elements:
-            assert isinstance(elem, AIFPLAlist)
+            assert isinstance(elem, AIFPLAList)
 
 
 if __name__ == "__main__":

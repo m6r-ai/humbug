@@ -3,7 +3,7 @@
 import math
 import pytest
 
-from aifpl import AIFPLEvalError, AIFPLAlist, AIFPLString, AIFPLNumber, AIFPLSymbol
+from aifpl import AIFPLEvalError, AIFPLAList, AIFPLString, AIFPLNumber, AIFPLSymbol
 
 
 class TestAIFPLValueEdgeCases:
@@ -349,7 +349,7 @@ class TestAIFPLValueEdgeCases:
         # Create an alist with a symbol key manually
         sym_key = AIFPLSymbol("my-symbol")
         val = AIFPLString("value")
-        alist = AIFPLAlist(((sym_key, val),))
+        alist = AIFPLAList(((sym_key, val),))
 
         # Test to_python conversion
         py_dict = alist.to_python()
@@ -363,9 +363,9 @@ class TestAIFPLValueEdgeCases:
 
         # Test is_empty method directly
         assert not alist.is_empty()
-        assert AIFPLAlist().is_empty()
+        assert AIFPLAList().is_empty()
 
         # Test invalid key type error
         # Using a list as a key should fail
-        with pytest.raises(AIFPLEvalError, match="Alist keys must be strings, numbers, booleans, or symbols"):
-            AIFPLAlist._to_hashable_key(AIFPLAlist())
+        with pytest.raises(AIFPLEvalError, match="AList keys must be strings, numbers, booleans, or symbols"):
+            AIFPLAList._to_hashable_key(AIFPLAList())

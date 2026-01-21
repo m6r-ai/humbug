@@ -10,7 +10,7 @@ def tool():
     return AIFPL()
 
 
-class TestAlistConstruction:
+class TestAListConstruction:
     """Test alist construction."""
 
     def test_empty_alist(self, tool):
@@ -50,31 +50,31 @@ class TestAlistConstruction:
         assert keys == ["z", "a", "m"]
 
 
-class TestAlistConstructionErrors:
+class TestAListConstructionErrors:
     """Test alist construction error cases."""
 
     def test_alist_pair_not_list(self, tool):
         """Test error when pair is not a list."""
-        with pytest.raises(AIFPLEvalError, match="Alist pair 1 must be a list"):
+        with pytest.raises(AIFPLEvalError, match="AList pair 1 must be a list"):
             tool.evaluate('(alist "not-a-pair")')
 
     def test_alist_pair_wrong_length(self, tool):
         """Test error when pair doesn't have exactly 2 elements."""
-        with pytest.raises(AIFPLEvalError, match="Alist pair 1 must have exactly 2 elements"):
+        with pytest.raises(AIFPLEvalError, match="AList pair 1 must have exactly 2 elements"):
             tool.evaluate('(alist ("key"))')
 
     def test_alist_pair_too_many_elements(self, tool):
         """Test error when pair has more than 2 elements."""
-        with pytest.raises(AIFPLEvalError, match="Alist pair 1 must have exactly 2 elements"):
+        with pytest.raises(AIFPLEvalError, match="AList pair 1 must have exactly 2 elements"):
             tool.evaluate('(alist ("key" "val1" "val2"))')
 
     def test_alist_invalid_key_type(self, tool):
         """Test error with invalid key type (list)."""
-        with pytest.raises(AIFPLEvalError, match="Alist keys must be strings, numbers, booleans, or symbols"):
+        with pytest.raises(AIFPLEvalError, match="AList keys must be strings, numbers, booleans, or symbols"):
             tool.evaluate('(alist ((list 1 2) "value"))')
 
 
-class TestAlistGet:
+class TestAListGet:
     """Test alist-get operation."""
 
     def test_alist_get_existing_key(self, tool):
@@ -106,7 +106,7 @@ class TestAlistGet:
         assert result == "Bob"
 
 
-class TestAlistGetErrors:
+class TestAListGetErrors:
     """Test alist-get error cases."""
 
     def test_alist_get_wrong_arg_count_too_few(self, tool):
@@ -125,7 +125,7 @@ class TestAlistGetErrors:
             tool.evaluate('(alist-get (list 1 2 3) "key")')
 
 
-class TestAlistSet:
+class TestAListSet:
     """Test alist-set operation."""
 
     def test_alist_set_new_key(self, tool):
@@ -154,7 +154,7 @@ class TestAlistSet:
         assert keys == ["a", "b", "c"]
 
 
-class TestAlistSetErrors:
+class TestAListSetErrors:
     """Test alist-set error cases."""
 
     def test_alist_set_wrong_arg_count(self, tool):
@@ -168,7 +168,7 @@ class TestAlistSetErrors:
             tool.evaluate('(alist-set "not-alist" "key" "value")')
 
 
-class TestAlistHas:
+class TestAListHas:
     """Test alist-has? operation."""
 
     def test_alist_has_existing_key(self, tool):
@@ -187,7 +187,7 @@ class TestAlistHas:
         assert result is False
 
 
-class TestAlistHasErrors:
+class TestAListHasErrors:
     """Test alist-has? error cases."""
 
     def test_alist_has_wrong_arg_count(self, tool):
@@ -201,7 +201,7 @@ class TestAlistHasErrors:
             tool.evaluate('(alist-has? 42 "key")')
 
 
-class TestAlistKeys:
+class TestAListKeys:
     """Test alist-keys operation."""
 
     def test_alist_keys_simple(self, tool):
@@ -220,7 +220,7 @@ class TestAlistKeys:
         assert result == ["z", "a", "m"]
 
 
-class TestAlistKeysErrors:
+class TestAListKeysErrors:
     """Test alist-keys error cases."""
 
     def test_alist_keys_wrong_arg_count(self, tool):
@@ -234,7 +234,7 @@ class TestAlistKeysErrors:
             tool.evaluate('(alist-keys (list 1 2 3))')
 
 
-class TestAlistValues:
+class TestAListValues:
     """Test alist-values operation."""
 
     def test_alist_values_simple(self, tool):
@@ -253,7 +253,7 @@ class TestAlistValues:
         assert result == [1, 2, 3]
 
 
-class TestAlistValuesErrors:
+class TestAListValuesErrors:
     """Test alist-values error cases."""
 
     def test_alist_values_wrong_arg_count(self, tool):
@@ -267,7 +267,7 @@ class TestAlistValuesErrors:
             tool.evaluate('(alist-values #t)')
 
 
-class TestAlistRemove:
+class TestAListRemove:
     """Test alist-remove operation."""
 
     def test_alist_remove_existing_key(self, tool):
@@ -290,7 +290,7 @@ class TestAlistRemove:
         assert result == [True, False]
 
 
-class TestAlistRemoveErrors:
+class TestAListRemoveErrors:
     """Test alist-remove error cases."""
 
     def test_alist_remove_wrong_arg_count(self, tool):
@@ -304,7 +304,7 @@ class TestAlistRemoveErrors:
             tool.evaluate('(alist-remove (list 1 2) "key")')
 
 
-class TestAlistMerge:
+class TestAListMerge:
     """Test alist-merge operation."""
 
     def test_alist_merge_no_conflicts(self, tool):
@@ -334,7 +334,7 @@ class TestAlistMerge:
         assert keys == ["z", "a", "m", "b"]
 
 
-class TestAlistMergeErrors:
+class TestAListMergeErrors:
     """Test alist-merge error cases."""
 
     def test_alist_merge_wrong_arg_count(self, tool):
@@ -353,7 +353,7 @@ class TestAlistMergeErrors:
             tool.evaluate('(alist-merge (alist ("a" 1)) "not-alist")')
 
 
-class TestAlistPredicate:
+class TestAListPredicate:
     """Test alist? type predicate."""
 
     def test_alist_predicate_true(self, tool):
@@ -377,7 +377,7 @@ class TestAlistPredicate:
         assert result is False
 
 
-class TestAlistPredicateErrors:
+class TestAListPredicateErrors:
     """Test alist? error cases."""
 
     def test_alist_predicate_wrong_arg_count(self, tool):
@@ -386,7 +386,7 @@ class TestAlistPredicateErrors:
             tool.evaluate('(alist?)')
 
 
-class TestAlistFormatting:
+class TestAListFormatting:
     """Test alist formatting."""
 
     def test_alist_format_simple(self, tool):
@@ -405,7 +405,7 @@ class TestAlistFormatting:
         assert result == '(alist ("items" (1 2 3)))'
 
 
-class TestAlistWithFunctionalOperations:
+class TestAListWithFunctionalOperations:
     """Test alists with higher-order functions."""
 
     def test_map_over_alist_keys(self, tool):
@@ -444,7 +444,7 @@ class TestAlistWithFunctionalOperations:
         assert result == ["Alice", "Bob", "Carol"]
 
 
-class TestAlistPatternMatching:
+class TestAListPatternMatching:
     """Test alists with pattern matching."""
 
     def test_match_alist_type(self, tool):
@@ -482,7 +482,7 @@ class TestAlistPatternMatching:
         assert result == "Alice"
 
 
-class TestAlistComplexScenarios:
+class TestAListComplexScenarios:
     """Test complex scenarios with alists."""
 
     def test_nested_alists(self, tool):
@@ -530,7 +530,7 @@ class TestAlistComplexScenarios:
         assert result == {"name": "Alice", "age": 30, "city": "NYC"}
 
 
-class TestAlistEquality:
+class TestAListEquality:
     """Test alist equality comparisons."""
 
     def test_alist_equality_same_content(self, tool):
