@@ -870,52 +870,6 @@ class AIFPLCompiler:
             for elem in expr.elements:
                 self._collect_free_vars(elem, bound_vars, parent_ctx, free, seen)
 
-    def _compile_lambda_old(self, expr: AIFPLList, ctx: CompilationContext) -> None:
-        """OLD VERSION - keeping for reference, will delete"""
-        if len(expr.elements) != 3:
-            raise AIFPLEvalError("lambda requires parameters and body")
-
-        _, params_list, body = expr.elements
-
-        if not isinstance(params_list, AIFPLList):
-            raise AIFPLEvalError("lambda parameters must be a list")
-
-        # Extract parameter names
-        param_names = []
-        for param in params_list.elements:
-            if not isinstance(param, AIFPLSymbol):
-                raise AIFPLEvalError("lambda parameter must be a symbol")
-            param_names.append(param.name)
-
-        # Create new compilation context for lambda body
-        lambda_ctx = CompilationContext()
-        lambda_ctx.push_scope()
-
-        # Add parameters to lambda scope
-        for param_name in param_names:
-            lambda_ctx.current_scope().add_binding(param_name)
-
-        # Compile lambda body
-        self._compile_expression(body, lambda_ctx)
-        lambda_ctx.emit(Opcode.RETURN)
-
-        # Create code object for lambda
-        lambda_code = CodeObject(
-            instructions=lambda_ctx.instructions,
-            constants=lambda_ctx.constants,
-            names=lambda_ctx.names,
-            code_objects=lambda_ctx.code_objects,
-            param_count=len(param_names),
-            local_count=len(lambda_ctx.current_scope().bindings),
-            name="<lambda>"
-        )
-
-        # Add to parent's code objects
-        code_index = ctx.add_code_object(lambda_code)
-
-        # Emit MAKE_CLOSURE instruction
-        ctx.emit(Opcode.MAKE_CLOSURE, code_index)
-
     def _compile_function_call(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile a function call."""
         func_expr = expr.first()
