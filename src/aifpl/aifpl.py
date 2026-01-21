@@ -39,7 +39,7 @@ class AIFPL:
         # Initialize bytecode components if needed
         if use_bytecode:
             self.compiler = AIFPLCompiler()
-            self.vm = None  # Will be created with evaluator reference
+            self.vm = AIFPLVM()
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
         """
@@ -73,10 +73,6 @@ class AIFPL:
         if self.use_bytecode:
             # Compile and execute with VM
             code = self.compiler.compile(parsed_expr)
-
-            # Create VM with evaluator reference
-            if self.vm is None:
-                self.vm = AIFPLVM(evaluator)
 
             # Set up globals (builtins and constants)
             # Only pass constants (pi, e, j, true, false) for variable lookup
@@ -127,10 +123,6 @@ class AIFPL:
         if self.use_bytecode:
             # Compile and execute with VM
             code = self.compiler.compile(parsed_expr)
-
-            # Create VM with evaluator reference
-            if self.vm is None:
-                self.vm = AIFPLVM(evaluator)
 
             # Set up globals (builtins and constants)
             globals_dict = evaluator.CONSTANTS

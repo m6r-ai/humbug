@@ -18,12 +18,11 @@ def compile_and_run(expression: str) -> any:
     compiler = AIFPLCompiler()
     code = compiler.compile(ast)
 
-    evaluator = AIFPLEvaluator()
-    vm = AIFPLVM(evaluator)
-
+    vm = AIFPLVM()
+    
     # Set up globals (constants only - builtins are built into the VM)
-    globals_dict = evaluator.CONSTANTS
-    vm.set_globals(globals_dict)
+    evaluator = AIFPLEvaluator()
+    vm.set_globals(evaluator.CONSTANTS)
 
     result = vm.execute(code)
     return result

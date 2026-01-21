@@ -1,6 +1,6 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, cast
 from dataclasses import dataclass
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
@@ -37,27 +37,23 @@ class AIFPLVM:
     Uses a stack-based architecture with lexically-scoped frames.
     """
 
-    def __init__(self, evaluator=None):
+    def __init__(self):
         """
         Initialize VM.
-
-        Args:
-            evaluator: Reference to AIFPLEvaluator for builtin functions
         """
-        self.evaluator = evaluator
         self.stack: List[AIFPLValue] = []
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
         self.message_builder = ErrorMessageBuilder()
 
-        # Build internal registry of builtin symbols (for higher-order functions)
-        # This maps builtin names to their indices in the BUILTIN_TABLE
+        # Create builtin registry
+        self._builtin_registry = AIFPLBuiltinRegistry()
+
+        # Build set of builtin symbols for quick lookup
         self.builtin_symbols = set(AIFPLCompiler.BUILTIN_TABLE)
 
-        # Create builtin function objects for first-class function support
+        # Create builtin function objects for first-class function support (e.g., passed to map)
         self._builtin_functions = self._create_builtin_functions()
-
-        self._builtin_registry = AIFPLBuiltinRegistry()
 
     def _create_builtin_functions(self) -> Dict[str, AIFPLBuiltinFunction]:
         """Create AIFPLBuiltinFunction objects for all builtins.
@@ -78,8 +74,6 @@ class AIFPLVM:
         """Set global variables (constants like pi, e, j) and add builtin functions."""
         self.globals = globals_dict.copy()
         self.globals.update(self._builtin_functions)
-
-    # ========== Helper Methods for Error Handling ==========
 
     def _format_result(self, result: AIFPLValue) -> str:
         """
@@ -163,14 +157,21 @@ class AIFPLVM:
             return False
 
         # Simple types: compare values directly
-        if isinstance(val1, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
-            return val1.value == val2.value
+        if isinstance(val1, AIFPLNumber):
+            return val1.value == cast(AIFPLNumber, val2).value
+
+        if isinstance(val1, AIFPLString):
+            return val1.value == cast(AIFPLString, val2).value
+
+        if isinstance(val1, AIFPLBoolean):
+            return val1.value == cast(AIFPLBoolean, val2).value
 
         # Lists: compare element by element
         if isinstance(val1, AIFPLList):
-            if len(val1.elements) != len(val2.elements):
+            if len(val1.elements) != len(cast(AIFPLList, val2).elements):
                 return False
-            return all(self._values_equal(e1, e2) for e1, e2 in zip(val1.elements, val2.elements))
+
+            return all(self._values_equal(e1, e2) for e1, e2 in zip(val1.elements, cast(AIFPLList, val2).elements))
 
         # For other types (functions, etc.), use identity comparison
         return val1 is val2
@@ -223,18 +224,12 @@ class AIFPLVM:
         if isinstance(value, (AIFPLFunction, AIFPLBuiltinFunction)):
             return value
 
-        # If it's a symbol referring to a builtin, create a wrapper
+        # If it's a symbol referring to a builtin, return the builtin function object
         if isinstance(value, AIFPLSymbol) and value.name in self.builtin_symbols:
-            # Create a wrapper that will call the builtin via the VM
-            # We use a special AIFPLBuiltinFunction with the VM's evaluator
-            if self.evaluator is None:
-                raise AIFPLEvalError(f"Cannot resolve builtin '{value.name}' without evaluator")
-
-            # Get the actual builtin from the evaluator
-            return self.evaluator._builtin_functions[value.name]
+            # Get the builtin function from our own registry
+            return self._builtin_functions[value.name]
 
         # Otherwise, it's not a valid function
-        # TODO: Fix me!
         raise AIFPLEvalError(
             message="Cannot call non-function value",
 #            received=f"Trying to call: {self.format_result(value.name)} ({value.type_name()})",
@@ -472,8 +467,6 @@ class AIFPLVM:
                 # Handle builtin functions
                 if isinstance(func, AIFPLBuiltinFunction):
                     # Call builtin through its native implementation
-                    if self.evaluator is None:
-                        raise AIFPLEvalError("Cannot call builtin without evaluator")
                     result = func.native_impl(args, AIFPLEnvironment(), 0)
                     self.stack.append(result)
                 elif isinstance(func, AIFPLFunction):
@@ -508,13 +501,12 @@ class AIFPLVM:
                             result = self._call_bytecode_function(func, args)
                             self.stack.append(result)
                     else:
-                        # Fall back to interpreter for AST-based functions
-                        if self.evaluator is None:
-                            raise AIFPLEvalError("Cannot call AST function without evaluator")
-                        result = self.evaluator._call_lambda_function(
-                            func, args, AIFPLEnvironment(), 0
+                        # Function has no bytecode - cannot execute in VM
+                        raise AIFPLEvalError(
+                            message="Cannot execute function without bytecode",
+                            received=f"Function: {func.name or '<lambda>'}",
+                            suggestion="Compile the code using AIFPLCompiler before executing in the VM"
                         )
-                        self.stack.append(result)
                 else:
                     # Not a function at all
                     raise AIFPLEvalError(
@@ -530,10 +522,6 @@ class AIFPLVM:
                 # Pop arguments
                 args = [self.stack.pop() for _ in range(arity)]
                 args.reverse()  # Restore correct order
-
-                # Call builtin through evaluator
-                if self.evaluator is None:
-                    raise AIFPLEvalError("Cannot call builtin without evaluator")
 
                 result = self._call_builtin(builtin_index, args)
                 self.stack.append(result)
