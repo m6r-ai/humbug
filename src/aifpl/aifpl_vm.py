@@ -350,7 +350,7 @@ class AIFPLVM:
                 depth = arg1
                 index = arg2
 
-                # Load from frame at depth  
+                # Load from frame at depth
                 # depth=0 is current frame, depth=1 is parent, etc.
                 frame_index = len(self.frames) - 1 - depth
 
@@ -443,7 +443,7 @@ class AIFPLVM:
                         if i < len(captured_values):
                             captured_dict[var_name] = captured_values[i]
 
-                # Create closure with captured environment  
+                # Create closure with captured environment
                 # The closure environment will be used to look up free variables
                 # For self-referential closures, we'll also need access to the current frame
                 # We handle this by making the closure's environment have a parent
@@ -493,8 +493,8 @@ class AIFPLVM:
 
                         # Check if it's a self-recursive tail call
                         is_self_recursive = (
-                            current_frame and 
-                            hasattr(func, 'bytecode') and 
+                            current_frame and
+                            hasattr(func, 'bytecode') and
                             func.bytecode == current_frame.code
                         )
 
@@ -587,7 +587,7 @@ class AIFPLVM:
 
             elif opcode == Opcode.PATCH_CLOSURE_SIBLING:
                 # Patch a closure to add a sibling reference (for mutual recursion)
-                # arg1 = closure_var_index (which closure to patch)  
+                # arg1 = closure_var_index (which closure to patch)
                 # arg2 = const_index (contains [sibling_var_index, name_index])
                 closure_var_index = arg1
                 const_index = arg2

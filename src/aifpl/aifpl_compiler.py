@@ -452,7 +452,7 @@ class AIFPLCompiler:
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
 
-    def _compile_let(self, expr: AIFPLList, ctx: CompilationContext, 
+    def _compile_let(self, expr: AIFPLList, ctx: CompilationContext,
                     current_binding_name: str = None) -> None:
         """Compile let expression: (let ((var val) ...) body)"""
         if len(expr.elements) < 3:
@@ -599,7 +599,7 @@ class AIFPLCompiler:
         var_type, depth, var_index = ctx.resolve_variable(name)
 
         # Check if this is a self-referential lambda
-        is_self_ref_lambda = (isinstance(value_expr, AIFPLList) and 
+        is_self_ref_lambda = (isinstance(value_expr, AIFPLList) and
                              not value_expr.is_empty() and
                              isinstance(value_expr.first(), AIFPLSymbol) and
                              value_expr.first().name == 'lambda')
@@ -779,7 +779,7 @@ class AIFPLCompiler:
         # Emit MAKE_CLOSURE instruction with capture count
         ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(captured_vars))
 
-    def _find_free_variables(self, expr: AIFPLValue, bound_vars: Set[str], 
+    def _find_free_variables(self, expr: AIFPLValue, bound_vars: Set[str],
                             parent_ctx: CompilationContext) -> List[str]:
         """Find free variables in an expression.
 
@@ -794,7 +794,7 @@ class AIFPLCompiler:
         return free
 
     def _collect_free_vars(self, expr: AIFPLValue, bound_vars: Set[str],
-                          parent_ctx: CompilationContext, free: List[str], 
+                          parent_ctx: CompilationContext, free: List[str],
                           seen: Set[str]) -> None:
         """Recursively collect free variables."""
         if isinstance(expr, AIFPLSymbol):
@@ -1077,7 +1077,7 @@ class AIFPLCompiler:
         ctx.current_scope().bindings = saved_bindings
         ctx.current_scope().next_index = saved_next_index
 
-    def _compile_pattern(self, pattern: AIFPLValue, match_value_index: int, 
+    def _compile_pattern(self, pattern: AIFPLValue, match_value_index: int,
                         ctx: CompilationContext) -> None:
         """
         Compile a pattern test.
@@ -1136,7 +1136,7 @@ class AIFPLCompiler:
             return
 
         # Type pattern: (type? var)
-        if (len(pattern.elements) == 2 and 
+        if (len(pattern.elements) == 2 and
             isinstance(pattern.elements[0], AIFPLSymbol) and
             pattern.elements[0].name.endswith('?')):
 
@@ -1144,7 +1144,7 @@ class AIFPLCompiler:
             var_pattern = pattern.elements[1]
 
             # Check if it's a valid type predicate
-            valid_types = {'number?', 'integer?', 'float?', 'complex?', 
+            valid_types = {'number?', 'integer?', 'float?', 'complex?',
                           'string?', 'boolean?', 'list?', 'alist?', 'function?'}
 
             if type_pred in valid_types:

@@ -92,7 +92,7 @@ class AIFPLBuiltinRegistry:
             builtins[name] = AIFPLBuiltinFunction(name, impl)
         return builtins
 
-    def call_builtin(self, name: str, args: List[AIFPLValue], 
+    def call_builtin(self, name: str, args: List[AIFPLValue],
                     env: AIFPLEnvironment, depth: int) -> AIFPLValue:
         """Call a builtin function by name.
 

@@ -147,11 +147,11 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
   lambda-template)                    ; → (lambda (x) (* x x)) (shortcut)
 
 ; Store expressions in lists
-(let ((expressions (list (quote (+ 1 2)) 
+(let ((expressions (list (quote (+ 1 2))
                         (quote (* 3 4))
                         (quote (- 10 5)))))
   expressions)                        ; → ((+ 1 2) (* 3 4) (- 10 5))
-(let ((expressions (list '(+ 1 2) 
+(let ((expressions (list '(+ 1 2)
                         '(* 3 4)
                         '(- 10 5))))
   expressions)                        ; → ((+ 1 2) (* 3 4) (- 10 5)) (shortcuts)
@@ -232,13 +232,13 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
 ```aifpl
 ; Create expressions that create expressions
 (let ((make-adder (lambda (n)
-                    (list (quote lambda) 
-                         (quote (x)) 
+                    (list (quote lambda)
+                         (quote (x))
                          (list (quote +) (quote x) n)))))
   (make-adder 5))                     ; → (lambda (x) (+ x 5))
 (let ((make-adder (lambda (n)
-                    (list 'lambda 
-                         '(x) 
+                    (list 'lambda
+                         '(x)
                          (list '+ 'x n)))))
   (make-adder 5))                     ; → (lambda (x) (+ x 5)) (shortcuts)
 
@@ -609,7 +609,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ; Combine patterns with guards (using nested match)
 (let ((classify-number (lambda (n)
                          (match n
-                           ((number? x) 
+                           ((number? x)
                             (match #t
                               ((if (> x 0)) "positive")
                               ((if (< x 0)) "negative")
@@ -654,7 +654,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
                                  (if (= (length data) 3)
                                      (if (string? (first data))
                                          (if (number? (first (rest data)))
-                                             (string-append (first data) ": " 
+                                             (string-append (first data) ": "
                                                           (number->string (first (rest data))))
                                              "second not number")
                                          "first not string")
@@ -665,7 +665,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ; Equivalent pattern matching (much cleaner)
 (let ((process-pattern (lambda (data)
                          (match data
-                           (((string? name) (number? value) extra) 
+                           (((string? name) (number? value) extra)
                             (string-append name ": " (number->string value)))
                            (_ "invalid format")))))
   (process-pattern (list "score" 95 "points")))      ; → "score: 95"
@@ -679,7 +679,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
                         (() "empty")
                         ((x) (string-append "single: " (number->string x)))
                         ((x y) (string-append "pair: " (number->string (+ x y))))
-                        ((head . tail) 
+                        ((head . tail)
                          (string-append "list of " (number->string (+ 1 (length tail))) " items"))))))
   (list (process-list (list))
         (process-list (list 42))
@@ -713,17 +713,17 @@ Pattern matching provides a powerful way to destructure and analyze data based o
                            (let ((pair-strings (map (lambda (pair)
                                                      (match pair
                                                        ((key value)
-                                                        (string-append "\"" key "\": " 
+                                                        (string-append "\"" key "\": "
                                                                      (json-to-string value)))
                                                        (_ "invalid pair")))
                                                    pairs)))
                              (string-append "{" (string-join pair-strings ", ") "}")))
                           (("array" . items)
-                           (string-append "[" 
-                                        (string-join (map json-to-string items) ", ") 
+                           (string-append "["
+                                        (string-join (map json-to-string items) ", ")
                                         "]"))
                           (_ "invalid JSON")))))
-  (json-to-string (list "object" 
+  (json-to-string (list "object"
                        (list "name" (list "Alice"))
                        (list "age" (list 30))
                        (list "active" (list #t)))))
@@ -1273,7 +1273,7 @@ Comments extend to the end of the line and are ignored during evaluation.
 (let ((find-and-process (lambda (item lst)
                           (let ((pos (position item lst)))
                             (if pos
-                                (string-append "Found " (number->string item) 
+                                (string-append "Found " (number->string item)
                                              " at position " (number->string pos))
                                 "Not found")))))
   (list (find-and-process 3 (list 1 2 3 4))    ; → "Found 3 at position 2"
@@ -1410,7 +1410,7 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 (alist (#t "yes") (#f "no"))
 
 ; Nested alists
-(alist 
+(alist
   ("user" (alist ("name" "Bob") ("id" 123)))
   ("status" "active"))
 ```
@@ -1526,7 +1526,7 @@ All alist operations return new alists without modifying the original:
 ; → 3.5
 
 ; Process list of alists
-(let ((people (list 
+(let ((people (list
                 (alist ("name" "Alice") ("age" 30))
                 (alist ("name" "Bob") ("age" 25))
                 (alist ("name" "Carol") ("age" 35)))))
@@ -1725,13 +1725,13 @@ The evaluator recognizes special forms by examining the first element of lists, 
 ; Replace complex nested conditionals with pattern matching
 (let ((process-data (lambda (item)
                       (match item
-                        (("user" name email) 
+                        (("user" name email)
                          (string-append "User: " name " (" email ")"))
                         (("product" id price)
                          (string-append "Product #" (number->string id) ": $" (number->string price)))
                         (("order" id items total)
-                         (string-append "Order #" (number->string id) " (" 
-                                      (number->string (length items)) " items): $" 
+                         (string-append "Order #" (number->string id) " ("
+                                      (number->string (length items)) " items): $"
                                       (number->string total)))
                         (_ "unknown data type")))))
   (map process-data (list (list "user" "Alice" "alice@example.com")
@@ -1950,13 +1950,13 @@ The evaluator recognizes special forms by examining the first element of lists, 
     (list "status" "error" "failed")
     (list "status" "ok" "success"))
 
-; Advanced list manipulation 
+; Advanced list manipulation
 (let ((data (list 1 2 3 2 4 2 5))
       (target 2))
   (let ((cleaned (remove target data))
         (position-info (position target data)))
-    (list "original" data 
-          "cleaned" cleaned 
+    (list "original" data
+          "cleaned" cleaned
           "first-position" position-info)))
 ; → ("original" (1 2 3 2 4 2 5) "cleaned" (1 3 4 5) "first-position" 1)
 ```
@@ -2363,7 +2363,7 @@ pattern_matching_expr = '''
 (let ((process-items (lambda (items)
                        (map (lambda (item)
                               (match item
-                                (("person" name age) 
+                                (("person" name age)
                                  (string-append name " (" (number->string age) ")"))
                                 (("product" id price)
                                  (string-append "Product " (number->string id) ": $" (number->string price)))
@@ -2380,8 +2380,8 @@ advanced_processing = '''
                          (string-downcase (string-trim text)))))
   (let ((cleaned (map clean-normalize data))
         (filtered (remove "test" cleaned))
-        (positions (map (lambda (item) 
-                          (position item cleaned)) 
+        (positions (map (lambda (item)
+                          (position item cleaned))
                        filtered)))
     (list "cleaned" cleaned "filtered" filtered "positions" positions)))
 '''
