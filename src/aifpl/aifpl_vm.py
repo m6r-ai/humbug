@@ -758,6 +758,7 @@ class AIFPLVM:
             # All arguments are already evaluated by bytecode
             if not args:
                 return AIFPLBoolean(True)
+
             for i, arg in enumerate(args):
                 if not isinstance(arg, AIFPLBoolean):
                     raise AIFPLEvalError(
@@ -767,14 +768,17 @@ class AIFPLVM:
                         example="(and (> x 0) (< x 10))",
                         suggestion="Use comparison or boolean operators to create boolean values"
                     )
+
                 if not arg.value:
                     return AIFPLBoolean(False)
+
             return AIFPLBoolean(True)
 
-        elif builtin_name == 'or':
+        if builtin_name == 'or':
             # All arguments are already evaluated by bytecode
             if not args:
                 return AIFPLBoolean(False)
+
             for i, arg in enumerate(args):
                 if not isinstance(arg, AIFPLBoolean):
                     raise AIFPLEvalError(
@@ -784,12 +788,14 @@ class AIFPLVM:
                         example="(or (= x 0) (> x 10))",
                         suggestion="Use comparison or boolean operators to create boolean values"
                     )
+
                 if arg.value:
                     return AIFPLBoolean(True)
+
             return AIFPLBoolean(False)
 
         # Higher-order functions that need special handling
-        elif builtin_name == 'map':
+        if builtin_name == 'map':
             if len(args) != 2:
                 raise AIFPLEvalError(
                     message="Map function has wrong number of arguments",
@@ -820,6 +826,7 @@ class AIFPLVM:
                 try:
                     item_result = self._call_function_value(func, [item])
                     result_elements.append(item_result)
+
                 except AIFPLEvalError as e:
                     raise AIFPLEvalError(
                         message=f"Error in map function at element {i+1}",
@@ -830,7 +837,7 @@ class AIFPLVM:
 
             return AIFPLList(tuple(result_elements))
 
-        elif builtin_name == 'filter':
+        if builtin_name == 'filter':
             if len(args) != 2:
                 raise AIFPLEvalError(
                     message="Filter function has wrong number of arguments",
@@ -868,8 +875,10 @@ class AIFPLVM:
                             example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
                             suggestion="Predicate function should use comparison operators"
                         )
+
                     if pred_result.value:
                         result_elements.append(item)
+
                 except AIFPLEvalError as e:
                     raise AIFPLEvalError(
                         message=f"Error in filter predicate at element {i+1}",
@@ -880,7 +889,7 @@ class AIFPLVM:
 
             return AIFPLList(tuple(result_elements))
 
-        elif builtin_name == 'fold':
+        if builtin_name == 'fold':
             if len(args) != 3:
                 raise AIFPLEvalError(
                     message="Fold function has wrong number of arguments",
@@ -910,6 +919,7 @@ class AIFPLVM:
             for i, item in enumerate(list_value.elements):
                 try:
                     accumulator = self._call_function_value(func, [accumulator, item])
+
                 except AIFPLEvalError as e:
                     raise AIFPLEvalError(
                         message=f"Error in fold function at element {i+1}",
@@ -920,7 +930,7 @@ class AIFPLVM:
 
             return accumulator
 
-        elif builtin_name == 'range':
+        if builtin_name == 'range':
             if len(args) < 2 or len(args) > 3:
                 raise AIFPLEvalError(
                     message="Range function has wrong number of arguments",
@@ -965,6 +975,7 @@ class AIFPLVM:
                         suggestion="Use numeric values for range parameters"
                     )
                 step_int = self._ensure_integer(step_val, "range")
+
             else:
                 step_int = 1
 
@@ -982,7 +993,7 @@ class AIFPLVM:
             elements = tuple(AIFPLNumber(val) for val in range_values)
             return AIFPLList(elements)
 
-        elif builtin_name == 'find':
+        if builtin_name == 'find':
             if len(args) != 2:
                 raise AIFPLEvalError(
                     message="Find function has wrong number of arguments",
@@ -1019,8 +1030,10 @@ class AIFPLVM:
                             example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
                             suggestion="Predicate function should use comparison operators"
                         )
+
                     if pred_result.value:
                         return item
+
                 except AIFPLEvalError as e:
                     raise AIFPLEvalError(
                         message=f"Error in find predicate at element {i+1}",
@@ -1031,7 +1044,7 @@ class AIFPLVM:
 
             return AIFPLBoolean(False)  # Not found
 
-        elif builtin_name == 'any?':
+        if builtin_name == 'any?':
             if len(args) != 2:
                 raise AIFPLEvalError(
                     message="Any? function has wrong number of arguments",
@@ -1068,8 +1081,10 @@ class AIFPLVM:
                             example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
                             suggestion="Predicate function should use comparison operators"
                         )
+
                     if pred_result.value:
                         return AIFPLBoolean(True)
+
                 except AIFPLEvalError as e:
                     raise AIFPLEvalError(
                         message=f"Error in any? predicate at element {i+1}",
@@ -1080,7 +1095,7 @@ class AIFPLVM:
 
             return AIFPLBoolean(False)
 
-        elif builtin_name == 'all?':
+        if builtin_name == 'all?':
             if len(args) != 2:
                 raise AIFPLEvalError(
                     message="All? function has wrong number of arguments",
@@ -1117,8 +1132,10 @@ class AIFPLVM:
                             example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
                             suggestion="Predicate function should use comparison operators"
                         )
+
                     if not pred_result.value:
                         return AIFPLBoolean(False)
+
                 except AIFPLEvalError as e:
                     raise AIFPLEvalError(
                         message=f"Error in all? predicate at element {i+1}",
@@ -1129,7 +1146,7 @@ class AIFPLVM:
 
             return AIFPLBoolean(True)
 
-        elif builtin_name == 'alist':
+        if builtin_name == 'alist':
             # AList constructor - arguments are already evaluated pairs
             pairs = []
             for i, arg in enumerate(args):
