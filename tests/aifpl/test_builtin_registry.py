@@ -8,12 +8,12 @@ from aifpl.aifpl_environment import AIFPLEnvironment
 
 class TestBuiltinRegistry:
     """Test the unified builtin function registry."""
-    
+
     def test_registry_creation(self):
         """Test that registry can be created."""
         registry = AIFPLBuiltinRegistry()
         assert registry is not None
-    
+
     def test_registry_has_math_functions(self):
         """Test that math functions are registered."""
         registry = AIFPLBuiltinRegistry()
@@ -23,7 +23,7 @@ class TestBuiltinRegistry:
         assert registry.has_function('/')
         assert registry.has_function('sqrt')
         assert registry.has_function('sin')
-    
+
     def test_registry_has_collection_functions(self):
         """Test that collection functions are registered."""
         registry = AIFPLBuiltinRegistry()
@@ -32,7 +32,7 @@ class TestBuiltinRegistry:
         assert registry.has_function('rest')
         assert registry.has_function('length')
         assert registry.has_function('string-append')
-    
+
     def test_registry_excludes_special_forms(self):
         """Test that special forms are NOT in the registry."""
         registry = AIFPLBuiltinRegistry()
@@ -43,84 +43,84 @@ class TestBuiltinRegistry:
         assert not registry.has_function('filter')
         assert not registry.has_function('fold')
         assert not registry.has_function('alist')
-    
+
     def test_call_arithmetic_function(self):
         """Test calling an arithmetic function through the registry."""
         registry = AIFPLBuiltinRegistry()
         env = AIFPLEnvironment()
-        
+
         # Test addition
         args = [AIFPLNumber(1), AIFPLNumber(2), AIFPLNumber(3)]
         result = registry.call_builtin('+', args, env, 0)
         assert isinstance(result, AIFPLNumber)
         assert result.value == 6
-    
+
     def test_call_list_function(self):
         """Test calling a list function through the registry."""
         registry = AIFPLBuiltinRegistry()
         env = AIFPLEnvironment()
-        
+
         # Test list creation
         args = [AIFPLNumber(1), AIFPLNumber(2), AIFPLNumber(3)]
         result = registry.call_builtin('list', args, env, 0)
         assert isinstance(result, AIFPLList)
         assert len(result.elements) == 3
-    
+
     def test_call_string_function(self):
         """Test calling a string function through the registry."""
         registry = AIFPLBuiltinRegistry()
         env = AIFPLEnvironment()
-        
+
         # Test string-append
         args = [AIFPLString("hello"), AIFPLString(" "), AIFPLString("world")]
         result = registry.call_builtin('string-append', args, env, 0)
         assert isinstance(result, AIFPLString)
         assert result.value == "hello world"
-    
+
     def test_builtin_function_objects(self):
         """Test creating AIFPLBuiltinFunction objects."""
         registry = AIFPLBuiltinRegistry()
         builtins = registry.create_builtin_function_objects()
-        
+
         # Check that we got function objects
         assert '+' in builtins
         assert 'sqrt' in builtins
         assert 'list' in builtins
-        
+
         # Verify they're callable
         from aifpl.aifpl_value import AIFPLBuiltinFunction
         assert isinstance(builtins['+'], AIFPLBuiltinFunction)
-    
+
     def test_builtin_table_order_matches_compiler(self):
         """Test that BUILTIN_TABLE_ORDER is consistent."""
         # Import the compiler's table
         from aifpl.aifpl_compiler import AIFPLCompiler
-        
+
         # Check that all functions in compiler table are accounted for
         for name in AIFPLCompiler.BUILTIN_TABLE:
             assert name in BUILTIN_TABLE_ORDER, f"Function '{name}' missing from BUILTIN_TABLE_ORDER"
-        
+
         # Check that order matches
         assert BUILTIN_TABLE_ORDER == AIFPLCompiler.BUILTIN_TABLE
-    
+
     def test_error_on_unknown_function(self):
         """Test that calling unknown function raises error."""
         registry = AIFPLBuiltinRegistry()
         env = AIFPLEnvironment()
-        
+
         with pytest.raises(KeyError):
             registry.call_builtin('nonexistent-function', [], env, 0)
-    
+
     def test_get_all_names(self):
         """Test getting all function names."""
         registry = AIFPLBuiltinRegistry()
         names = registry.get_all_names()
-        
+
         assert '+' in names
         assert 'sqrt' in names
         assert 'list' in names
         assert 'string-append' in names
-        
+
         # Special forms should NOT be in the list
         assert 'and' not in names
         assert 'or' not in names

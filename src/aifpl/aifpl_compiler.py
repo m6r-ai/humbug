@@ -25,7 +25,7 @@ class CompilationScope:
 
     def add_binding(self, name: str) -> int:
         """Add a binding and return its index.
-        
+
         Note: If a binding with the same name already exists, it will be
         overwritten with a new index. This is intentional to support shadowing.
         """
@@ -104,7 +104,7 @@ class CompilationContext:
 
         For variables in let bindings, we use flat indexing within the same frame.
         All lets in the same function/module use depth=0 with different flat indices.
-        
+
         Returns:
             ('local', depth, index) for local variables
             ('global', 0, name_index) for global variables
@@ -118,7 +118,7 @@ class CompilationContext:
                 # All scopes in the same function use depth=0 (same frame)
                 for i in range(len(self.scopes) - depth - 1):
                     flat_index_offset += len(self.scopes[i].bindings)
-                
+
                 flat_index = flat_index_offset + index
                 # Always use depth=0 for let variables (they're all in the same frame)
                 return ('local', 0, flat_index)
@@ -364,11 +364,11 @@ class AIFPLCompiler:
 
     def _compile_and(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile and expression with short-circuit evaluation.
-        
+
         (and) -> #t
         (and a) -> a (must be boolean)
         (and a b c) -> if any is false, return #f; else return #t
-        
+
         Implementation:
         - Evaluate first argument
         - If false, jump to end and return #f
@@ -376,44 +376,44 @@ class AIFPLCompiler:
         - If all are true, return #t
         """
         args = list(expr.elements[1:])  # Skip 'and' symbol
-        
+
         if len(args) == 0:
             # (and) -> #t
             ctx.emit(Opcode.LOAD_TRUE)
             return
-        
+
         # Multiple arguments: short-circuit evaluation
         jump_to_false = []  # List of jumps to return #f
-        
+
         for arg in args:
             # Compile argument
             self._compile_expression(arg, ctx)
-            
+
             # If false, jump to "return false" section
             jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
             jump_to_false.append(jump)
-        
+
         # All arguments were true - return #t
         ctx.emit(Opcode.LOAD_TRUE)
         jump_to_end = ctx.emit(Opcode.JUMP, 0)
-        
+
         # Return false section
         false_section = ctx.current_instruction_index()
         for jump in jump_to_false:
             ctx.patch_jump(jump, false_section)
         ctx.emit(Opcode.LOAD_FALSE)
-        
+
         # Patch jump to end
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
 
     def _compile_or(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile or expression with short-circuit evaluation.
-        
+
         (or) -> #f
         (or a) -> a (must be boolean)
         (or a b c) -> if any is true, return #t; else return #f
-        
+
         Implementation:
         - Evaluate first argument
         - If true, jump to end and return #t
@@ -421,33 +421,33 @@ class AIFPLCompiler:
         - If all are false, return #f
         """
         args = list(expr.elements[1:])  # Skip 'or' symbol
-        
+
         if len(args) == 0:
             # (or) -> #f
             ctx.emit(Opcode.LOAD_FALSE)
             return
-        
+
         # Multiple arguments: short-circuit evaluation
         jump_to_true = []  # List of jumps to return #t
-        
+
         for arg in args:
             # Compile argument
             self._compile_expression(arg, ctx)
-            
+
             # If true, jump to "return true" section
             jump = ctx.emit(Opcode.POP_JUMP_IF_TRUE, 0)
             jump_to_true.append(jump)
-        
+
         # All arguments were false - return #f
         ctx.emit(Opcode.LOAD_FALSE)
         jump_to_end = ctx.emit(Opcode.JUMP, 0)
-        
+
         # Return true section
         true_section = ctx.current_instruction_index()
         for jump in jump_to_true:
             ctx.patch_jump(jump, true_section)
         ctx.emit(Opcode.LOAD_TRUE)
-        
+
         # Patch jump to end
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
@@ -486,7 +486,7 @@ class AIFPLCompiler:
                     example='Correct: (x 5)\\nIncorrect: x or "x"',
                     suggestion="Wrap each binding in parentheses: (variable value)"
                 )
-            
+
             if len(binding.elements) != 2:
                 raise AIFPLEvalError(
                     message=f"Let binding {i+1} has wrong number of elements",
@@ -509,7 +509,7 @@ class AIFPLCompiler:
             binding_pairs.append((name_expr.name, value_expr))
             # Add binding to scope NOW so recursive lambdas can reference it
             ctx.current_scope().add_binding(name_expr.name)
-        
+
         # Check for duplicate binding names
         var_names = [name for name, _ in binding_pairs]
         if len(var_names) != len(set(var_names)):
@@ -528,13 +528,13 @@ class AIFPLCompiler:
         # Analyze dependencies to determine evaluation order
         analyzer = AIFPLDependencyAnalyzer()
         binding_groups = analyzer.analyze_let_bindings(binding_pairs)
-        
+
         # Topologically sort the groups based on their dependencies
         # (The SCC algorithm should return them in the right order, but let's be explicit)
         sorted_groups = []
         remaining_groups = list(binding_groups)
         processed_names = set()
-        
+
         while remaining_groups:
             # Find a group with no unprocessed dependencies
             for i, group in enumerate(remaining_groups):
@@ -546,18 +546,18 @@ class AIFPLCompiler:
             else:
                 # No group found - circular dependency (shouldn't happen)
                 raise AIFPLEvalError("Circular dependency detected in let bindings")
-        
+
         binding_groups = sorted_groups
-        
+
         # Second pass: Compile values and store them in dependency order
         # Track which bindings are lambdas that reference siblings (for mutual recursion)
         mutual_recursion_patches = []  # List of (closure_var_index, sibling_name, sibling_var_index)
-        
+
         # Compile each group in topological order
         for group in binding_groups:
             # Get all binding names in this group for mutual recursion detection
             group_names = list(group.names)
-            
+
             # Compile each binding in the group
             for name, value_expr in group.bindings:
                 # Compile this binding
@@ -568,7 +568,7 @@ class AIFPLCompiler:
                     all_binding_names=[n for n, _ in binding_pairs],
                     mutual_recursion_patches=mutual_recursion_patches
                 )
-        
+
         # Third pass: Patch all mutual recursion references
         # Now all lambdas have been stored, so we can safely reference them
         for closure_var_index, sibling_name, sibling_var_index in mutual_recursion_patches:
@@ -597,7 +597,7 @@ class AIFPLCompiler:
         """Compile a single let binding."""
         # Get the index for this variable
         var_type, depth, var_index = ctx.resolve_variable(name)
-        
+
         # Check if this is a self-referential lambda
         is_self_ref_lambda = (isinstance(value_expr, AIFPLList) and 
                              not value_expr.is_empty() and
@@ -618,7 +618,7 @@ class AIFPLCompiler:
             for other_name in group_names:
                 if other_name != name and self._references_variable(value_expr, other_name):
                     sibling_refs.append(other_name)
-        
+
         # Pass the binding name if it's a lambda (for self-reference detection)
         if is_self_ref_lambda:
             # For mutual recursion, pass sibling names in the same recursive group
@@ -689,7 +689,7 @@ class AIFPLCompiler:
                     suggestion='Use unquoted names: x, not "x" or 1'
                 )
             param_names.append(param.name)
-        
+
         # Check for duplicate parameters
         if len(param_names) != len(set(param_names)):
             duplicates = [p for p in param_names if param_names.count(p) > 1]
@@ -704,7 +704,7 @@ class AIFPLCompiler:
         # Find free variables (variables used in body but not parameters)
         bound_vars = set(param_names)
         free_vars = self._find_free_variables(body, bound_vars, ctx)
-        
+
         # Emit instructions to load free variables onto stack (for capture).
         # Only capture variables from outer scopes, not self-references in current scope.
         captured_vars = []
@@ -729,7 +729,7 @@ class AIFPLCompiler:
                 # else: in current scope - it's a self-reference
                 # Don't capture, lambda will look it up via LOAD_NAME -> closure_env
             # else: global variable - don't capture or track as free
-        
+
         # Create new compilation context for lambda body
         lambda_ctx = CompilationContext()
         lambda_ctx.push_scope()
@@ -737,11 +737,11 @@ class AIFPLCompiler:
         # Add parameters to lambda scope
         for param_name in param_names:
             lambda_ctx.current_scope().add_binding(param_name)
-        
+
         # Add captured free variables to lambda scope
         for free_var in captured_vars:
             lambda_ctx.current_scope().add_binding(free_var)
-        
+
         # For sibling bindings that weren't captured, we need to track them differently
         # They should be resolved from parent frame at runtime
         sibling_bindings = []
@@ -749,7 +749,7 @@ class AIFPLCompiler:
             for free_var in free_vars:
                 if free_var != binding_name and free_var in let_bindings:
                     sibling_bindings.append(free_var)
-        
+
         # Store parent context in lambda context for variable resolution
         lambda_ctx.parent_ctx = ctx
         lambda_ctx.sibling_bindings = sibling_bindings
@@ -823,19 +823,19 @@ class AIFPLCompiler:
                     if len(expr.elements) >= 3:
                         nested_params = expr.elements[1]
                         nested_body = expr.elements[2]
-                        
+
                         # Get parameter names from nested lambda
                         nested_bound = bound_vars.copy()
                         if isinstance(nested_params, AIFPLList):
                             for param in nested_params.elements:
                                 if isinstance(param, AIFPLSymbol):
                                     nested_bound.add(param.name)
-                        
+
                         # Find free variables in nested lambda's body
                         # These are variables the nested lambda needs, which might come
                         # from the parent lambda or from even outer scopes
                         self._collect_free_vars(nested_body, nested_bound, parent_ctx, free, seen)
-                    
+
                     # Don't recurse into the lambda's parameters or other parts
                     return
                 elif first.name == 'let':
@@ -844,7 +844,7 @@ class AIFPLCompiler:
                     if len(expr.elements) >= 3:
                         bindings_list = expr.elements[1]
                         body = expr.elements[2]
-                        
+
                         # Collect let binding names
                         new_bound = bound_vars.copy()
                         if isinstance(bindings_list, AIFPLList):
@@ -853,7 +853,7 @@ class AIFPLCompiler:
                                     name_expr = binding.elements[0]
                                     if isinstance(name_expr, AIFPLSymbol):
                                         new_bound.add(name_expr.name)
-                        
+
                         # Recurse into binding values first (to find free vars in lambda definitions)
                         if isinstance(bindings_list, AIFPLList):
                             for binding in bindings_list.elements:
@@ -861,7 +861,7 @@ class AIFPLCompiler:
                                     value_expr = binding.elements[1]
                                     # Use original bound_vars, not new_bound, because bindings can't reference each other yet
                                     self._collect_free_vars(value_expr, bound_vars, parent_ctx, free, seen)
-                        
+
                         # Recurse into let body with new bound variables
                         self._collect_free_vars(body, new_bound, parent_ctx, free, seen)
                     return
@@ -944,7 +944,7 @@ class AIFPLCompiler:
 
     def _compile_higher_order_function(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile higher-order functions (map, filter, fold, etc).
-        
+
         The first argument is the function to apply. If it's a builtin symbol,
         we pass it as a symbol constant so the VM can resolve it.
         """
@@ -1026,14 +1026,14 @@ class AIFPLCompiler:
         for i, clause in enumerate(clauses):
             pattern = clause.elements[0]
             result_expr = clause.elements[1]
-            
+
             # Compile pattern test
             # Returns True if pattern matches, False otherwise
             # May bind variables as side effect
             next_pattern_label = ctx.current_instruction_index()
-            
+
             self._compile_pattern(pattern, match_temp_index, ctx)
-            
+
             # If pattern didn't match, jump to next pattern
             if i < len(clauses) - 1:
                 # Not the last pattern, jump to next on failure
@@ -1043,18 +1043,18 @@ class AIFPLCompiler:
                 # For now, assume last pattern always matches (should be _ wildcard)
                 # TODO: Add runtime check for no-match case
                 next_pattern_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)  # Will patch to error
-            
+
             # Pattern matched! Compile result expression
             self._compile_expression(result_expr, ctx)
-            
+
             # Jump to end
             jump_idx = ctx.emit(Opcode.JUMP, 0)
             jump_to_end_indices.append(jump_idx)
-            
+
             # Reset bindings for next pattern - each pattern gets a fresh scope
             ctx.current_scope().bindings = saved_bindings_with_temp.copy()
             ctx.current_scope().next_index = saved_next_index_with_temp
-            
+
             # Patch the jump to next pattern (if not last)
             if i < len(clauses) - 1:
                 next_pattern_start = ctx.current_instruction_index()
@@ -1067,7 +1067,7 @@ class AIFPLCompiler:
                 # Emit error for no match
                 error_msg = ctx.add_constant(AIFPLString("No patterns matched in match expression"))
                 ctx.emit(Opcode.RAISE_ERROR, error_msg)
-        
+
         # Patch all jumps to end
         end_location = ctx.current_instruction_index()
         for jump_idx in jump_to_end_indices:
@@ -1081,11 +1081,11 @@ class AIFPLCompiler:
                         ctx: CompilationContext) -> None:
         """
         Compile a pattern test.
-        
+
         Leaves a boolean on the stack:
         - True if pattern matches (and binds any variables)
         - False if pattern doesn't match
-        
+
         Args:
             pattern: Pattern to match
             match_value_index: Index of local variable holding value to match
@@ -1126,7 +1126,7 @@ class AIFPLCompiler:
     def _compile_list_pattern(self, pattern: AIFPLList, match_value_index: int,
                              ctx: CompilationContext) -> None:
         """Compile a list pattern."""
-        
+
         # Empty list pattern
         if pattern.is_empty():
             # Check if value is empty list
@@ -1139,18 +1139,18 @@ class AIFPLCompiler:
         if (len(pattern.elements) == 2 and 
             isinstance(pattern.elements[0], AIFPLSymbol) and
             pattern.elements[0].name.endswith('?')):
-            
+
             type_pred = pattern.elements[0].name
             var_pattern = pattern.elements[1]
-            
+
             # Check if it's a valid type predicate
             valid_types = {'number?', 'integer?', 'float?', 'complex?', 
                           'string?', 'boolean?', 'list?', 'alist?', 'function?'}
-            
+
             if type_pred in valid_types:
                 # Load value and call type predicate
                 ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
-                
+
                 # Type predicates need special handling - they're not all builtins
                 if type_pred in self.builtin_indices:
                     builtin_index = self.builtin_indices[type_pred]
@@ -1160,25 +1160,25 @@ class AIFPLCompiler:
                     name_index = ctx.add_name(type_pred)
                     ctx.emit(Opcode.LOAD_NAME, name_index)
                     ctx.emit(Opcode.CALL_FUNCTION, 1)
-                
+
                 # If type matches, bind the variable
                 fail_label = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
-                
+
                 # Type matched - bind variable
                 if isinstance(var_pattern, AIFPLSymbol) and var_pattern.name != '_':
                     var_index = ctx.current_scope().add_binding(var_pattern.name)
                     ctx.update_max_locals()
                     ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
                     ctx.emit(Opcode.STORE_VAR, 0, var_index)
-                
+
                 ctx.emit(Opcode.LOAD_TRUE)
                 success_jump = ctx.emit(Opcode.JUMP, 0)
-                
+
                 # Type didn't match
                 fail_location = ctx.current_instruction_index()
                 ctx.patch_jump(fail_label, fail_location)
                 ctx.emit(Opcode.LOAD_FALSE)
-                
+
                 # Patch success jump
                 success_location = ctx.current_instruction_index()
                 ctx.patch_jump(success_jump, success_location)
@@ -1201,13 +1201,13 @@ class AIFPLCompiler:
     def _compile_fixed_list_pattern(self, pattern: AIFPLList, match_value_index: int,
                                     ctx: CompilationContext) -> None:
         """Compile a fixed-length list pattern like (a b c)."""
-        
+
         # Check if value is a list
         ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
         builtin_index = self.builtin_indices['list?']
         ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
         fail_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
-        
+
         # Check length
         ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
         builtin_index = self.builtin_indices['length']
@@ -1216,7 +1216,7 @@ class AIFPLCompiler:
         builtin_index = self.builtin_indices['=']
         ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
         length_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
-        
+
         # Match each element
         # We need to extract each element and match it against the sub-pattern
         fail_jumps = []
@@ -1224,7 +1224,7 @@ class AIFPLCompiler:
             # Extract element into a temporary
             elem_temp_index = ctx.current_scope().add_binding(f"<elem-temp-{i}>")
             ctx.update_max_locals()
-            
+
             ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
             ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(AIFPLNumber(i)))
             builtin_index = self.builtin_indices.get('list-ref')
@@ -1232,18 +1232,18 @@ class AIFPLCompiler:
                 raise AIFPLEvalError("list-ref not in builtin table")
             ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 2)
             ctx.emit(Opcode.STORE_VAR, 0, elem_temp_index)
-            
+
             # Recursively match the element pattern
             self._compile_pattern(elem_pattern, elem_temp_index, ctx)
-            
+
             # If element pattern fails, whole list pattern fails
             elem_fail = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
             fail_jumps.append(elem_fail)
-        
+
         # Success
         ctx.emit(Opcode.LOAD_TRUE)
         success_jump = ctx.emit(Opcode.JUMP, 0)
-        
+
         # Failure paths
         fail_location = ctx.current_instruction_index()
         ctx.patch_jump(fail_jump, fail_location)
@@ -1251,7 +1251,7 @@ class AIFPLCompiler:
         for fj in fail_jumps:
             ctx.patch_jump(fj, fail_location)
         ctx.emit(Opcode.LOAD_FALSE)
-        
+
         success_location = ctx.current_instruction_index()
         ctx.patch_jump(success_jump, success_location)
 
@@ -1270,7 +1270,7 @@ class AIFPLCompiler:
         builtin_index = self.builtin_indices['null?']
         ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
         empty_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_TRUE, 0)  # Jump to fail if empty
-        
+
         # Check list has enough elements for the head patterns
         # For pattern (a b . rest), we need at least 2 elements
         if dot_position > 0:
@@ -1283,7 +1283,7 @@ class AIFPLCompiler:
             length_fail_jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
         else:
             length_fail_jump = None
-        
+
         # Extract head elements (before dot)
         fail_jumps = []
         for i in range(dot_position):

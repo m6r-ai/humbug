@@ -412,6 +412,10 @@ class AIFPLMathFunctions:
         num_val = self._ensure_number(args[0], "log")
         val = num_val.value
 
+        # Handle log(0) = -inf
+        if isinstance(val, (int, float)) and val == 0:
+            return AIFPLNumber(float('-inf'))
+
         if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
             return AIFPLNumber(cmath.log(val))
 
@@ -424,6 +428,10 @@ class AIFPLMathFunctions:
 
         num_val = self._ensure_number(args[0], "log10")
         val = num_val.value
+
+        # Handle log10(0) = -inf
+        if isinstance(val, (int, float)) and val == 0:
+            return AIFPLNumber(float('-inf'))
 
         if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
             return AIFPLNumber(cmath.log10(val))

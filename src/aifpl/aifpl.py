@@ -35,7 +35,7 @@ class AIFPL:
         self.max_depth = max_depth
         self.floating_point_tolerance = floating_point_tolerance
         self.use_bytecode = use_bytecode
-        
+
         # Initialize bytecode components if needed
         if use_bytecode:
             self.compiler = AIFPLCompiler()
@@ -73,16 +73,16 @@ class AIFPL:
         if self.use_bytecode:
             # Compile and execute with VM
             code = self.compiler.compile(parsed_expr)
-            
+
             # Create VM with evaluator reference
             if self.vm is None:
                 self.vm = AIFPLVM(evaluator)
-            
+
             # Set up globals (builtins and constants)
             # Only pass constants (pi, e, j, true, false) for variable lookup
             globals_dict = evaluator.CONSTANTS
             self.vm.set_globals(globals_dict)
-            
+
             # Execute
             result = self.vm.execute(code)
         else:
@@ -127,15 +127,15 @@ class AIFPL:
         if self.use_bytecode:
             # Compile and execute with VM
             code = self.compiler.compile(parsed_expr)
-            
+
             # Create VM with evaluator reference
             if self.vm is None:
                 self.vm = AIFPLVM(evaluator)
-            
+
             # Set up globals (builtins and constants)
             globals_dict = evaluator.CONSTANTS
             self.vm.set_globals(globals_dict)
-            
+
             # Execute
             result = self.vm.execute(code)
         else:

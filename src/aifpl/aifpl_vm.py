@@ -47,29 +47,29 @@ class AIFPLVM:
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
         self.message_builder = ErrorMessageBuilder()
-        
+
         # Build internal registry of builtin symbols (for higher-order functions)
         # This maps builtin names to their indices in the BUILTIN_TABLE
         from aifpl.aifpl_compiler import AIFPLCompiler
         self.builtin_symbols = set(AIFPLCompiler.BUILTIN_TABLE)
-        
+
         # Create builtin function objects for first-class function support
         self._builtin_functions = self._create_builtin_functions()
-    
+
     def _create_builtin_functions(self) -> Dict[str, AIFPLBuiltinFunction]:
         """Create AIFPLBuiltinFunction objects for all builtins.
-        
+
         This allows builtins to be used as first-class values (e.g., passed to map).
         """
         from aifpl.aifpl_compiler import AIFPLCompiler
         builtins = {}
-        
+
         # Create a builtin function object for each builtin
         # BUILTIN_TABLE is a list, so we enumerate to get indices
         for builtin_index, name in enumerate(AIFPLCompiler.BUILTIN_TABLE):
             # The native_impl is a lambda that calls _call_builtin with the right index
             builtins[name] = AIFPLBuiltinFunction(name, lambda *args, idx=builtin_index: self._call_builtin(idx, list(args)))
-        
+
         return builtins
 
     def set_globals(self, globals_dict: Dict[str, AIFPLValue]) -> None:
@@ -148,28 +148,28 @@ class AIFPLVM:
     def _values_equal(self, val1: AIFPLValue, val2: AIFPLValue) -> bool:
         """
         Check if two values are equal.
-        
+
         Args:
             val1: First value
             val2: Second value
-            
+
         Returns:
             True if values are equal, False otherwise
         """
         # Different types are not equal
         if type(val1) != type(val2):
             return False
-        
+
         # Simple types: compare values directly
         if isinstance(val1, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
             return val1.value == val2.value
-        
+
         # Lists: compare element by element
         if isinstance(val1, AIFPLList):
             if len(val1.elements) != len(val2.elements):
                 return False
             return all(self._values_equal(e1, e2) for e1, e2 in zip(val1.elements, val2.elements))
-        
+
         # For other types (functions, etc.), use identity comparison
         return val1 is val2
 
@@ -179,7 +179,7 @@ class AIFPLVM:
             raise AIFPLEvalError(
                 f"Function '{function_name}' requires integer arguments, got {value.type_name()}"
             )
-        
+
         # Type narrowing: we know value.value is int here
         assert isinstance(value.value, int), "is_integer() should guarantee int type"
         return value.value
@@ -190,12 +190,12 @@ class AIFPLVM:
             raise AIFPLEvalError(
                 f"Function '{function_name}' requires numeric arguments, got {value.type_name()}"
             )
-        
+
         if isinstance(value.value, complex):
             raise AIFPLEvalError(
                 f"Function '{function_name}' does not support complex numbers"
             )
-        
+
         return value.value
 
     def _ensure_string(self, value: AIFPLValue, function_name: str) -> AIFPLString:
@@ -369,7 +369,7 @@ class AIFPLVM:
                     # Variable not initialized yet - could be recursive reference
                     # This is OK, it will be initialized before it's used
                     raise AIFPLEvalError(f"Uninitialized local variable at depth {depth}, index {index}")
-                
+
                 self.stack.append(value)
 
             elif opcode == Opcode.STORE_VAR:
@@ -484,20 +484,20 @@ class AIFPLVM:
                         # A tail call is when the next instruction is RETURN
                         current_frame = self.frames[-1] if self.frames else None
                         is_tail_call = False
-                        
+
                         if current_frame:
                             next_ip = current_frame.ip
                             if next_ip < len(current_frame.code.instructions):
                                 next_instr = current_frame.code.instructions[next_ip]
                                 is_tail_call = next_instr.opcode == Opcode.RETURN
-                        
+
                         # Check if it's a self-recursive tail call
                         is_self_recursive = (
                             current_frame and 
                             hasattr(func, 'bytecode') and 
                             func.bytecode == current_frame.code
                         )
-                        
+
                         if is_tail_call and is_self_recursive:
                             # Tail call optimization: reuse current frame
                             # This will reset the frame and continue execution
@@ -556,10 +556,10 @@ class AIFPLVM:
                 # Load the closure from the current frame (depth 0)
                 # Since STORE_LOCAL stores at depth 0, we load from depth 0
                 target_frame = self.frames[-1]  # Current frame (depth 0)
-                
+
                 if var_index >= len(target_frame.locals):
                     raise AIFPLEvalError(f"PATCH_CLOSURE_SELF: variable index {var_index} out of range")
-                
+
                 closure = target_frame.locals[var_index]
 
                 if not isinstance(closure, AIFPLFunction):
@@ -591,33 +591,33 @@ class AIFPLVM:
                 # arg2 = const_index (contains [sibling_var_index, name_index])
                 closure_var_index = arg1
                 const_index = arg2
-                
+
                 # Load patch info from constants
                 patch_info = code.constants[const_index]
                 if not isinstance(patch_info, AIFPLList) or len(patch_info.elements) != 2:
                     raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: invalid patch info")
-                
+
                 sibling_var_index = int(patch_info.elements[0].value)
                 name_index = int(patch_info.elements[1].value)
                 sibling_name = code.names[name_index]
-                
+
                 # Get current frame
                 target_frame = self.frames[-1]
-                
+
                 # Load the closure to patch
                 if closure_var_index >= len(target_frame.locals):
                     raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: closure index {closure_var_index} out of range")
-                
+
                 closure = target_frame.locals[closure_var_index]
                 if not isinstance(closure, AIFPLFunction):
                     raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: closure at index {closure_var_index} is not a function")
-                
+
                 # Load the sibling from locals
                 if sibling_var_index >= len(target_frame.locals):
                     raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: sibling index {sibling_var_index} out of range")
-                
+
                 sibling = target_frame.locals[sibling_var_index]
-                
+
                 # Add sibling to closure's environment
                 closure.closure_environment.bindings[sibling_name] = sibling
 
@@ -685,13 +685,13 @@ class AIFPLVM:
 
     def _tail_call_bytecode_function(self, func: AIFPLFunction, args: List[AIFPLValue], current_frame: Frame) -> None:
         """Perform a tail call by reusing the current frame.
-        
+
         This implements tail call optimization (TCO) by resetting the current
         frame instead of creating a new one, preventing stack overflow for
         recursive functions.
         """
         code = func.bytecode
-        
+
         # Check arity (same as regular call)
         if len(args) != code.param_count:
             param_list = ", ".join(func.parameters) if func.parameters else "(no parameters)"
@@ -704,19 +704,19 @@ class AIFPLVM:
                     if code.param_count > 0 else f"({func.name})"),
                 suggestion=f"Provide exactly {code.param_count} argument{'s' if code.param_count != 1 else ''}"
             )
-        
+
         # Reset the instruction pointer to the beginning of the function
         current_frame.ip = 0
-        
+
         # Update locals with new arguments
         for i, arg in enumerate(args):
             current_frame.locals[i] = arg
-        
+
         # Update captured values if any
         if hasattr(func, 'captured_values') and func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 current_frame.locals[code.param_count + i] = captured_val
-        
+
         # The frame IP has been reset to 0
         # The frame execution loop will continue from the beginning
         # with the new arguments, effectively implementing the tail call
@@ -724,7 +724,7 @@ class AIFPLVM:
 
     def _call_function_value(self, func: Union[AIFPLFunction, AIFPLBuiltinFunction], args: List[AIFPLValue]) -> AIFPLValue:
         """Call a function value (either user-defined or builtin).
-        
+
         This is a helper for higher-order functions like map, filter, fold, etc.
         """
         if isinstance(func, AIFPLFunction):
@@ -743,19 +743,19 @@ class AIFPLVM:
 
     def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
         """Call a builtin function by index.
-        
+
         This method delegates to the unified builtin registry for regular builtins,
         and handles special forms (and, or, map, filter, fold, etc.) separately
         because they require special evaluation semantics.
         """
         from aifpl.aifpl_compiler import AIFPLCompiler
         from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
-        
+
         builtin_name = AIFPLCompiler.BUILTIN_TABLE[builtin_index]
-        
+
         # Special forms that need custom handling (not in the registry)
         # These have special evaluation semantics and can't be handled generically
-        
+
         # Note: 'and' and 'or' are special forms in the evaluator but when called
         # from bytecode, their arguments are already evaluated, so we can handle them simply
         if builtin_name == 'and':
@@ -774,7 +774,7 @@ class AIFPLVM:
                 if not arg.value:
                     return AIFPLBoolean(False)
             return AIFPLBoolean(True)
-        
+
         elif builtin_name == 'or':
             # All arguments are already evaluated by bytecode
             if not args:
@@ -791,7 +791,7 @@ class AIFPLVM:
                 if arg.value:
                     return AIFPLBoolean(True)
             return AIFPLBoolean(False)
-        
+
         # Higher-order functions that need special handling
         elif builtin_name == 'map':
             if len(args) != 2:
@@ -802,10 +802,10 @@ class AIFPLVM:
                     example="(map (lambda (x) (* x 2)) (list 1 2 3))",
                     suggestion="Map takes a function and a list"
                 )
-            
+
             func_value = args[0]
             list_value = args[1]
-            
+
             if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Map second argument must be a list",
@@ -814,10 +814,10 @@ class AIFPLVM:
                     example="(map (lambda (x) (* x 2)) (list 1 2 3))",
                     suggestion="Use (list ...) to create a list"
                 )
-            
+
             # Resolve function (handles builtin symbols)
             func = self._resolve_function(func_value, "map")
-            
+
             # Apply function to each element
             result_elements = []
             for i, item in enumerate(list_value.elements):
@@ -831,9 +831,9 @@ class AIFPLVM:
                         context=str(e),
                         suggestion="Check that your function works with all list elements"
                     ) from e
-            
+
             return AIFPLList(tuple(result_elements))
-        
+
         elif builtin_name == 'filter':
             if len(args) != 2:
                 raise AIFPLEvalError(
@@ -843,10 +843,10 @@ class AIFPLVM:
                     example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
                     suggestion="Filter takes a predicate function and a list"
                 )
-            
+
             pred_value = args[0]
             list_value = args[1]
-            
+
             if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Filter second argument must be a list",
@@ -855,10 +855,10 @@ class AIFPLVM:
                     example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
                     suggestion="Use (list ...) to create a list"
                 )
-            
+
             # Resolve function
             pred = self._resolve_function(pred_value, "filter")
-            
+
             # Filter elements
             result_elements = []
             for i, item in enumerate(list_value.elements):
@@ -881,9 +881,9 @@ class AIFPLVM:
                         context=str(e),
                         suggestion="Check that your predicate works with all list elements"
                     ) from e
-            
+
             return AIFPLList(tuple(result_elements))
-        
+
         elif builtin_name == 'fold':
             if len(args) != 3:
                 raise AIFPLEvalError(
@@ -893,11 +893,11 @@ class AIFPLVM:
                     example="(fold + 0 (list 1 2 3 4))",
                     suggestion="Fold takes a function, initial value, and list"
                 )
-            
+
             func_value = args[0]
             accumulator = args[1]
             list_value = args[2]
-            
+
             if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Fold third argument must be a list",
@@ -906,10 +906,10 @@ class AIFPLVM:
                     example="(fold + 0 (list 1 2 3 4))",
                     suggestion="Use (list ...) to create a list"
                 )
-            
+
             # Resolve function
             func = self._resolve_function(func_value, "fold")
-            
+
             # Fold over list
             for i, item in enumerate(list_value.elements):
                 try:
@@ -921,9 +921,9 @@ class AIFPLVM:
                         context=str(e),
                         suggestion="Check that your function works with accumulator and all list elements"
                     ) from e
-            
+
             return accumulator
-        
+
         elif builtin_name == 'range':
             if len(args) < 2 or len(args) > 3:
                 raise AIFPLEvalError(
@@ -933,10 +933,10 @@ class AIFPLVM:
                     example="(range 1 5) or (range 0 10 2)",
                     suggestion="Range needs start and end, optionally step"
                 )
-            
+
             start_val = args[0]
             end_val = args[1]
-            
+
             if not isinstance(start_val, AIFPLNumber):
                 raise AIFPLEvalError(
                     message="Range start must be a number",
@@ -945,7 +945,7 @@ class AIFPLVM:
                     example="(range 1 5)",
                     suggestion="Use numeric values for range bounds"
                 )
-            
+
             if not isinstance(end_val, AIFPLNumber):
                 raise AIFPLEvalError(
                     message="Range end must be a number",
@@ -954,10 +954,10 @@ class AIFPLVM:
                     example="(range 1 5)",
                     suggestion="Use numeric values for range bounds"
                 )
-            
+
             start_int = self._ensure_integer(start_val, "range")
             end_int = self._ensure_integer(end_val, "range")
-            
+
             if len(args) == 3:
                 step_val = args[2]
                 if not isinstance(step_val, AIFPLNumber):
@@ -971,7 +971,7 @@ class AIFPLVM:
                 step_int = self._ensure_integer(step_val, "range")
             else:
                 step_int = 1
-            
+
             if step_int == 0:
                 raise AIFPLEvalError(
                     message="Range step cannot be zero",
@@ -980,12 +980,12 @@ class AIFPLVM:
                     example="(range 0 10 2) or (range 10 0 -1)",
                     suggestion="Use positive step for ascending range, negative for descending"
                 )
-            
+
             # Generate range
             range_values = list(range(start_int, end_int, step_int))
             elements = tuple(AIFPLNumber(val) for val in range_values)
             return AIFPLList(elements)
-        
+
         elif builtin_name == 'find':
             if len(args) != 2:
                 raise AIFPLEvalError(
@@ -995,10 +995,10 @@ class AIFPLVM:
                     example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
                     suggestion="Find takes a predicate function and a list"
                 )
-            
+
             pred_value = args[0]
             list_value = args[1]
-            
+
             if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Find second argument must be a list",
@@ -1007,10 +1007,10 @@ class AIFPLVM:
                     example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
                     suggestion="Use (list ...) to create a list"
                 )
-            
+
             # Resolve function
             pred = self._resolve_function(pred_value, "find")
-            
+
             # Find first matching element
             for i, item in enumerate(list_value.elements):
                 try:
@@ -1032,9 +1032,9 @@ class AIFPLVM:
                         context=str(e),
                         suggestion="Check that your predicate works with all list elements"
                     ) from e
-            
+
             return AIFPLBoolean(False)  # Not found
-        
+
         elif builtin_name == 'any?':
             if len(args) != 2:
                 raise AIFPLEvalError(
@@ -1044,10 +1044,10 @@ class AIFPLVM:
                     example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
                     suggestion="Any? takes a predicate function and a list"
                 )
-            
+
             pred_value = args[0]
             list_value = args[1]
-            
+
             if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="Any? second argument must be a list",
@@ -1056,10 +1056,10 @@ class AIFPLVM:
                     example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
                     suggestion="Use (list ...) to create a list"
                 )
-            
+
             # Resolve function
             pred = self._resolve_function(pred_value, "any?")
-            
+
             # Check if any element matches
             for i, item in enumerate(list_value.elements):
                 try:
@@ -1081,9 +1081,9 @@ class AIFPLVM:
                         context=str(e),
                         suggestion="Check that your predicate works with all list elements"
                     ) from e
-            
+
             return AIFPLBoolean(False)
-        
+
         elif builtin_name == 'all?':
             if len(args) != 2:
                 raise AIFPLEvalError(
@@ -1093,10 +1093,10 @@ class AIFPLVM:
                     example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
                     suggestion="All? takes a predicate function and a list"
                 )
-            
+
             pred_value = args[0]
             list_value = args[1]
-            
+
             if not isinstance(list_value, AIFPLList):
                 raise AIFPLEvalError(
                     message="All? second argument must be a list",
@@ -1105,10 +1105,10 @@ class AIFPLVM:
                     example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
                     suggestion="Use (list ...) to create a list"
                 )
-            
+
             # Resolve function
             pred = self._resolve_function(pred_value, "all?")
-            
+
             # Check if all elements match
             for i, item in enumerate(list_value.elements):
                 try:
@@ -1130,9 +1130,9 @@ class AIFPLVM:
                         context=str(e),
                         suggestion="Check that your predicate works with all list elements"
                     ) from e
-            
+
             return AIFPLBoolean(True)
-        
+
         elif builtin_name == 'alist':
             # Alist constructor - arguments are already evaluated pairs
             pairs = []
@@ -1145,7 +1145,7 @@ class AIFPLVM:
                         example='(alist ("name" "Alice") ("age" 30))',
                         suggestion="Each pair should be a list with key and value"
                     )
-                
+
                 if len(arg.elements) != 2:
                     raise AIFPLEvalError(
                         message=f"Alist pair {i+1} must have exactly 2 elements",
@@ -1154,19 +1154,19 @@ class AIFPLVM:
                         example='(alist ("name" "Alice") ("age" 30))',
                         suggestion="Each pair needs exactly one key and one value"
                     )
-                
+
                 key = arg.elements[0]
                 value = arg.elements[1]
                 pairs.append((key, value))
-            
+
             return AIFPLAlist(tuple(pairs))
-        
+
         # All other builtins - delegate to the registry
         else:
             # Create registry if needed (cache it for performance)
             if not hasattr(self, '_builtin_registry'):
                 self._builtin_registry = AIFPLBuiltinRegistry()
-            
+
             # Check if this builtin is in the registry
             if self._builtin_registry.has_function(builtin_name):
                 # Call through the registry
