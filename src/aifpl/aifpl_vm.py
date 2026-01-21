@@ -250,10 +250,11 @@ class AIFPLVM:
         """
         if isinstance(func, AIFPLFunction):
             return func.name or "<lambda>"
-        elif isinstance(func, AIFPLBuiltinFunction):
+
+        if isinstance(func, AIFPLBuiltinFunction):
             return func.name
-        else:
-            return f"<{type(func).__name__}>"
+
+        return f"<{type(func).__name__}>"
 
     def _format_call_stack(self) -> str:
         """
@@ -734,16 +735,16 @@ class AIFPLVM:
         """
         if isinstance(func, AIFPLFunction):
             return self._call_bytecode_function(func, args)
-        elif isinstance(func, AIFPLBuiltinFunction):
-            # Call builtin function by looking up its index
-            if func.name in AIFPLCompiler.BUILTIN_TABLE:
-                builtin_idx = AIFPLCompiler.BUILTIN_TABLE.index(func.name)
-                return self._call_builtin(builtin_idx, args)
-            else:
-                raise AIFPLEvalError(f"Unknown builtin function: {func.name}")
-        else:
-            raise AIFPLEvalError(f"Expected function, got {func.type_name()}")
 
+        if isinstance(func, AIFPLBuiltinFunction):
+            # Call builtin function by looking up its index
+            if func.name not in AIFPLCompiler.BUILTIN_TABLE:
+                raise AIFPLEvalError(f"Unknown builtin function: {func.name}")
+
+            builtin_idx = AIFPLCompiler.BUILTIN_TABLE.index(func.name)
+            return self._call_builtin(builtin_idx, args)
+
+        raise AIFPLEvalError(f"Expected function, got {func.type_name()}")
 
     def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
         """Call a builtin function by index.
