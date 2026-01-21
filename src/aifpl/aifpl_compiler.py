@@ -972,10 +972,15 @@ class AIFPLCompiler:
                     example_msg = "(find (lambda (x) (> x 5)) (list 1 2 6 3))"
                     suggestion_msg = "Find takes a predicate function and a list"
 
-                elif func_name in ['any?', 'all?']:
-                    expected_msg = f"Exactly 2 arguments: ({func_name} predicate list)"
-                    example_msg = f"({func_name} (lambda (x) (> x 0)) (list 1 2 3))"
-                    suggestion_msg = f"{func_name.capitalize()} takes a predicate function and a list"
+                elif func_name == 'any?':
+                    expected_msg = "Exactly 2 arguments: (any? predicate list)"
+                    example_msg = "(any? (lambda (x) (> x 0)) (list 1 2 3))"
+                    suggestion_msg = "Any? takes a predicate function and a list"
+
+                else:
+                    expected_msg = "Exactly 2 arguments: (all? predicate list)"
+                    example_msg = "(all? (lambda (x) (> x 0)) (list 1 2 3))"
+                    suggestion_msg = "All? takes a predicate function and a list"
 
                 raise AIFPLEvalError(
                     message=f"{func_name.capitalize()} function has wrong number of arguments",

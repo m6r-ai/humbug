@@ -407,11 +407,16 @@ class AIFPLVM:
                     available_vars = self._get_available_globals()
                     similar = self.message_builder.suggest_similar_functions(name, available_vars, max_suggestions=3)
 
-                    suggestion_text = f"Did you mean: {', '.join(similar)}?" if similar else "Check spelling or define it in a let binding"
+                    suggestion_text = (
+                        f"Did you mean: {', '.join(similar)}?" if similar else "Check spelling or define it in a let binding"
+                    )
 
                     raise AIFPLEvalError(
                         message=f"Undefined variable: '{name}'",
-                        context=f"Available variables: {', '.join(sorted(available_vars)[:10])}{'...' if len(available_vars) > 10 else ''}",
+                        context=(
+                            f"Available variables: "
+                            f"{', '.join(sorted(available_vars)[:10])}{'...' if len(available_vars) > 10 else ''}"
+                        ),
                         suggestion=suggestion_text,
                         example=f"(let (({name} some-value)) ...)"
                     )
@@ -845,6 +850,8 @@ class AIFPLVM:
             if func is None:
                 self._raise_non_function_error(func_value, "map")
 
+            assert func is not None  # For type checker
+
             # Apply function to each element
             result_elements = []
             for i, item in enumerate(list_value.elements):
@@ -888,6 +895,8 @@ class AIFPLVM:
             pred = self._resolve_function(pred_value)
             if pred is None:
                 self._raise_non_function_error(pred_value, "filter")
+
+            assert pred is not None  # For type checker
 
             # Filter elements
             result_elements = []
@@ -943,6 +952,8 @@ class AIFPLVM:
             func = self._resolve_function(func_value)
             if func is None:
                 self._raise_non_function_error(func_value, "fold")
+
+            assert func is not None  # For type checker
 
             # Fold over list
             for i, item in enumerate(list_value.elements):
@@ -1049,6 +1060,8 @@ class AIFPLVM:
             if pred is None:
                 self._raise_non_function_error(pred_value, "find")
 
+            assert pred is not None  # For type checker
+
             # Find first matching element
             for i, item in enumerate(list_value.elements):
                 try:
@@ -1102,6 +1115,8 @@ class AIFPLVM:
             if pred is None:
                 self._raise_non_function_error(pred_value, "any?")
 
+            assert pred is not None  # For type checker
+
             # Check if any element matches
             for i, item in enumerate(list_value.elements):
                 try:
@@ -1154,6 +1169,8 @@ class AIFPLVM:
             pred = self._resolve_function(pred_value)
             if pred is None:
                 self._raise_non_function_error(pred_value, "all?")
+
+            assert pred is not None  # For type checker
 
             # Check if all elements match
             for i, item in enumerate(list_value.elements):
