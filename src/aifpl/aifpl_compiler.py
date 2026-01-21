@@ -271,22 +271,28 @@ class AIFPLCompiler:
             if first.name == 'if':
                 self._compile_if(expr, ctx)
                 return
-            elif first.name == 'let':
+
+            if first.name == 'let':
                 self._compile_let(expr, ctx)
                 return
-            elif first.name == 'lambda':
+
+            if first.name == 'lambda':
                 self._compile_lambda(expr, ctx)
                 return
-            elif first.name == 'match':
+
+            if first.name == 'match':
                 self._compile_match(expr, ctx)
                 return
-            elif first.name == 'and':
+
+            if first.name == 'and':
                 self._compile_and(expr, ctx)
                 return
-            elif first.name == 'or':
+
+            if first.name == 'or':
                 self._compile_or(expr, ctx)
                 return
-            elif first.name == 'quote':
+
+            if first.name == 'quote':
                 # Quote: return the quoted value as a constant
                 if len(expr.elements) != 2:
                     raise AIFPLEvalError(
@@ -301,7 +307,8 @@ class AIFPLCompiler:
                 const_index = ctx.add_constant(quoted)
                 ctx.emit(Opcode.LOAD_CONST, const_index)
                 return
-            elif first.name == 'alist':
+
+            if first.name == 'alist':
                 # Special handling for alist: each pair is a list that needs evaluation
                 # (alist ("key" value-expr) ...) -> create list for each pair
                 arg_exprs = list(expr.elements[1:])
@@ -322,7 +329,8 @@ class AIFPLCompiler:
                 builtin_index = self.builtin_indices['alist']
                 ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
                 return
-            elif first.name in ['map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']:
+
+            if first.name in ['map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']:
                 self._compile_higher_order_function(expr, ctx)
                 return
 
@@ -401,6 +409,7 @@ class AIFPLCompiler:
         false_section = ctx.current_instruction_index()
         for jump in jump_to_false:
             ctx.patch_jump(jump, false_section)
+
         ctx.emit(Opcode.LOAD_FALSE)
 
         # Patch jump to end
@@ -446,6 +455,7 @@ class AIFPLCompiler:
         true_section = ctx.current_instruction_index()
         for jump in jump_to_true:
             ctx.patch_jump(jump, true_section)
+
         ctx.emit(Opcode.LOAD_TRUE)
 
         # Patch jump to end
@@ -625,6 +635,7 @@ class AIFPLCompiler:
             # These are bindings that haven't been evaluated yet and need to be patched
             sibling_bindings = group_names if is_recursive_group else None
             self._compile_lambda(value_expr, ctx, binding_name=name, let_bindings=sibling_bindings)
+
         else:
             self._compile_expression(value_expr, ctx)
 
@@ -649,10 +660,11 @@ class AIFPLCompiler:
         """Check if an expression references a variable."""
         if isinstance(expr, AIFPLSymbol):
             return expr.name == var_name
-        elif isinstance(expr, AIFPLList):
+
+        if isinstance(expr, AIFPLList):
             return any(self._references_variable(elem, var_name) for elem in expr.elements)
-        else:
-            return False
+
+        return False
 
     def _compile_lambda(self, expr: AIFPLList, ctx: CompilationContext,
                        binding_name: str = None, let_bindings: List[str] = None) -> None:
@@ -715,16 +727,19 @@ class AIFPLCompiler:
                 if free_var == binding_name:
                     # Self-reference - don't capture, will be patched later
                     pass
+
                 elif let_bindings and free_var in let_bindings:
                     # Sibling in the same recursive group - don't capture, will be patched later
                     # This handles mutual recursion where siblings reference each other
                     pass
+
                 else:
                     # Variable from an outer scope - capture it
                     # With dependency analysis, all dependencies are evaluated before
                     # the lambda is created, so we can safely capture them
                     ctx.emit(Opcode.LOAD_VAR, depth, index)
                     captured_vars.append(free_var)
+
                 # else: self-reference, skip capturing
                 # else: in current scope - it's a self-reference
                 # Don't capture, lambda will look it up via LOAD_NAME -> closure_env
@@ -838,7 +853,8 @@ class AIFPLCompiler:
 
                     # Don't recurse into the lambda's parameters or other parts
                     return
-                elif first.name == 'let':
+
+                if first.name == 'let':
                     # Let bindings create new bound variables
                     # Extract binding names and recurse with updated bound_vars
                     if len(expr.elements) >= 3:

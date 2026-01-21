@@ -271,7 +271,7 @@ class AIFPLVM:
             func_name = frame.code.name or "<module>"
             lines.append(f"  Frame {depth}: {func_name}")
 
-        return "\\n".join(lines)
+        return "\n".join(lines)
 
     def _get_current_function_name(self) -> str:
         """
@@ -381,8 +381,10 @@ class AIFPLVM:
                 # First check closure environment (for recursive closures)
                 if frame.closure_env and name in frame.closure_env.bindings:
                     self.stack.append(frame.closure_env.bindings[name])
+
                 elif name in self.globals:
                     self.stack.append(self.globals[name])
+
                 else:
                     available_vars = self._get_available_globals()
                     similar = self.message_builder.suggest_similar_functions(name, available_vars, max_suggestions=3)
@@ -403,6 +405,7 @@ class AIFPLVM:
                 condition = self.stack.pop()
                 if not isinstance(condition, AIFPLBoolean):
                     raise AIFPLEvalError("If condition must be boolean")
+
                 if not condition.value:
                     frame.ip = arg1
 
@@ -410,6 +413,7 @@ class AIFPLVM:
                 condition = self.stack.pop()
                 if not isinstance(condition, AIFPLBoolean):
                     raise AIFPLEvalError("If condition must be boolean")
+
                 if condition.value:
                     frame.ip = arg1
 
@@ -418,6 +422,7 @@ class AIFPLVM:
                 error_msg = code.constants[arg1]
                 if not isinstance(error_msg, AIFPLString):
                     raise AIFPLEvalError("RAISE_ERROR requires a string constant")
+
                 raise AIFPLEvalError(error_msg.value)
 
             elif opcode == Opcode.MAKE_CLOSURE:
@@ -429,6 +434,7 @@ class AIFPLVM:
                 captured_values = []
                 for _ in range(capture_count):
                     captured_values.append(self.stack.pop())
+
                 captured_values.reverse()
 
                 # Create a dict mapping free var names to captured values
@@ -469,6 +475,7 @@ class AIFPLVM:
                     # Call builtin through its native implementation
                     result = func.native_impl(args, AIFPLEnvironment(), 0)
                     self.stack.append(result)
+
                 elif isinstance(func, AIFPLFunction):
                     # Handle lambda functions
                     # Check if function has bytecode
@@ -500,6 +507,7 @@ class AIFPLVM:
                             # Normal call: create new frame
                             result = self._call_bytecode_function(func, args)
                             self.stack.append(result)
+
                     else:
                         # Function has no bytecode - cannot execute in VM
                         raise AIFPLEvalError(
@@ -529,10 +537,10 @@ class AIFPLVM:
             elif opcode == Opcode.RETURN:
                 # Pop frame and return value
                 self.frames.pop()
-                if self.stack:
-                    return self.stack.pop()
-                else:
+                if not self.stack:
                     raise AIFPLEvalError("RETURN with empty stack")
+
+                return self.stack.pop()
 
             elif opcode == Opcode.PATCH_CLOSURE_SELF:
                 # Patch a closure to reference itself (for recursive functions)
