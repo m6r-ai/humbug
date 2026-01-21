@@ -90,7 +90,7 @@ class AIFPLAITool(AITool):
                 "- Utilities: (reverse (list 1 2 3)), (remove 2 (list 1 2 3 2 4)), (position 2 (list 1 2 3)) → 1 or #f\n"
                 "- Slicing: (take 3 (list 1 2 3 4 5)), (drop 2 (list 1 2 3 4 5))\n\n"
 
-                "Association Lists (Alists):\n"
+                "Association Lists (ALists):\n"
                 "- Immutable key-value mappings with O(1) lookup performance\n"
                 "- Construction: (alist (\"name\" \"Alice\") (\"age\" 30)) - special form that evaluates pair elements\n"
                 "- Access: (alist-get my-alist \"key\"), (alist-get my-alist \"key\" \"default\")\n"
