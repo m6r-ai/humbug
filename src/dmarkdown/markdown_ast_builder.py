@@ -1532,6 +1532,7 @@ class MarkdownASTBuilder:
                     self._code_block_indents.append(code_indent)
                     text_content = line_data['container_text']
                     self._code_block_content.append(text_content)
+                    self._parse_code_line(text_content)
                     self._last_processed_line_type = 'code_block_content'
                     self._blank_line_count = 0
                     return
@@ -1549,6 +1550,7 @@ class MarkdownASTBuilder:
                 self._code_block_nesting_level -= 1
                 text_content = line_data['container_text']
                 self._code_block_content.append(text_content)
+                self._parse_code_line(text_content)
                 self._last_processed_line_type = 'code_block_content'
                 self._blank_line_count = 0
                 return
