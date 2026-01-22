@@ -58,13 +58,33 @@ class Instruction:
 
     def __repr__(self) -> str:
         """Human-readable representation."""
-        if self.arg1 == 0 and self.arg2 == 0:
+        # Define which opcodes take 0, 1, or 2 arguments
+        # This is more reliable than checking if arguments are zero,
+        # since zero is a valid argument value (e.g., LOAD_CONST 0)
+
+        # Opcodes with no arguments
+        no_arg_opcodes = {
+            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.DUP
+        }
+
+        # Opcodes with two arguments
+        two_arg_opcodes = {
+            Opcode.LOAD_VAR, Opcode.STORE_VAR, Opcode.MAKE_CLOSURE,
+            Opcode.CALL_BUILTIN, Opcode.PATCH_CLOSURE_SELF,
+            Opcode.PATCH_CLOSURE_SIBLING
+        }
+
+        # All other opcodes take one argument
+
+        if self.opcode in no_arg_opcodes:
             return f"{self.opcode.name}"
 
-        if self.arg2 == 0:
-            return f"{self.opcode.name} {self.arg1}"
+        if self.opcode in two_arg_opcodes:
+            return f"{self.opcode.name} {self.arg1} {self.arg2}"
 
-        return f"{self.opcode.name} {self.arg1} {self.arg2}"
+        # One-argument opcodes (LOAD_CONST, LOAD_NAME, JUMP, POP_JUMP_IF_FALSE,
+        # POP_JUMP_IF_TRUE, RAISE_ERROR, CALL_FUNCTION, MAKE_LIST)
+        return f"{self.opcode.name} {self.arg1}"
 
 
 @dataclass
