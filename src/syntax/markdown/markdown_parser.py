@@ -18,6 +18,7 @@ class MarkdownParserState(ParserState):
     Attributes:
         in_fence_block: Indicates if we're currently in a code fence block
         fence_depth: Indentation of the current fence block (if we are in one)
+        nested_fence_depth: Counter for nested fence blocks within the current fence
         language: The current programming language being parsed
         embedded_parser_state: State of the embedded language parser
         in_list_item: Indicates if we're currently in a list item
@@ -29,6 +30,7 @@ class MarkdownParserState(ParserState):
     """
     in_fence_block: bool = False
     fence_depth: int = 0
+    nested_fence_depth: int = 0
     language: ProgrammingLanguage = ProgrammingLanguage.UNKNOWN
     embedded_parser_state: ParserState | None = None
     in_list_item: bool = False
@@ -367,6 +369,21 @@ class MarkdownParser(Parser):
 
         return tokens
 
+    def _create_parser_state(self, in_fence_block: bool, fence_depth: int, nested_fence_depth: int,
+                            language: ProgrammingLanguage, in_list_item: bool, list_indent_stack: List[int],
+                            block_type: TokenType | None, embedded_parser_state: ParserState | None) -> MarkdownParserState:
+        """Helper to create parser state."""
+        parser_state = MarkdownParserState()
+        parser_state.in_fence_block = in_fence_block
+        parser_state.fence_depth = fence_depth
+        parser_state.nested_fence_depth = nested_fence_depth
+        parser_state.language = language
+        parser_state.in_list_item = in_list_item
+        parser_state.list_indent_stack = list_indent_stack
+        parser_state.block_type = block_type
+        parser_state.embedded_parser_state = embedded_parser_state
+        return parser_state
+
     def parse(self, prev_parser_state: ParserState | None, input_str: str) -> MarkdownParserState:
         """
         Parse conversation content including embedded code blocks.
@@ -383,8 +400,13 @@ class MarkdownParser(Parser):
             delegating code blocks to appropriate language parsers.
             Supports nested list items by maintaining a stack of indentation levels.
         """
+        # Reset token buffer for this parse call
+        self._tokens = []
+        self._next_token = 0
+
         in_fence_block = False
         fence_depth = 0
+        nested_fence_depth = 0
         language = ProgrammingLanguage.UNKNOWN
         embedded_parser_state = None
         parsing_continuation = False
@@ -397,6 +419,7 @@ class MarkdownParser(Parser):
                 f"Expected MarkdownParserState, got {type(prev_parser_state).__name__}"
             in_fence_block = prev_parser_state.in_fence_block
             fence_depth = prev_parser_state.fence_depth
+            nested_fence_depth = prev_parser_state.nested_fence_depth
             language = prev_parser_state.language
             embedded_parser_state = prev_parser_state.embedded_parser_state
             parsing_continuation = prev_parser_state.parsing_continuation
@@ -407,6 +430,36 @@ class MarkdownParser(Parser):
         parse_embedded = language != ProgrammingLanguage.UNKNOWN
 
         if not parsing_continuation:
+            # Before delegating to embedded parser, check if this line is a fence
+            # and whether the embedded parser can handle it
+            if parse_embedded and in_fence_block:
+                # Quick check: does this line look like a fence?
+                stripped = input_str.lstrip()
+                if stripped.startswith('```'):
+                    # Check if it has a language tag
+                    rest = stripped[3:].strip()
+                    if not rest:
+                        # No language tag - check if the embedded parser is in a fence block
+                        embedded_in_fence = False
+                        if embedded_parser_state and isinstance(embedded_parser_state, MarkdownParserState):
+                            embedded_in_fence = embedded_parser_state.in_fence_block
+
+                        # If embedded parser is NOT in a fence block, this fence is for US to handle
+                        if not embedded_in_fence:
+                            # This fence closes OUR block
+                            parse_embedded = False
+                            in_fence_block = False
+                            fence_depth = 0
+                            nested_fence_depth = 0
+                            language = ProgrammingLanguage.UNKNOWN
+                            embedded_parser_state = None
+                            indent = len(input_str) - len(stripped)
+                            self._tokens.append(Token(type=TokenType.FENCE_END, value='```', start=indent))
+                            return self._create_parser_state(
+                                in_fence_block, fence_depth, nested_fence_depth,
+                                language, in_list_item, list_indent_stack, block_type, embedded_parser_state
+                            )
+
             lexer = MarkdownLexer()
             lexer.lex(None, input_str)
 
@@ -418,6 +471,22 @@ class MarkdownParser(Parser):
 
                 if token.type == TokenType.FENCE:
                     if in_fence_block:
+                        # Check if this fence has a language tag (indicating it's opening a nested block)
+                        next_token = lexer.peek_next_token()
+                        if next_token and next_token.type == TokenType.TEXT:
+                            # This fence has a language tag, so it's opening a nested block
+                            # Increment the nested fence depth counter
+                            nested_fence_depth += 1
+                            # Don't add tokens here - let the embedded parser handle it
+                            break  # Exit lexer loop and delegate to embedded parser
+
+                        # Check if this is closing a nested fence block
+                        if nested_fence_depth > 0:
+                            # This fence is closing a nested block, not the outer block
+                            nested_fence_depth -= 1
+                            # Don't add tokens here - let the embedded parser handle it
+                            break  # Exit lexer loop and delegate to embedded parser
+
                         # Only close the fence if indentation is less than or equal to opening fence
                         if token.start > fence_depth:
                             # This fence is indented more than the opening fence
@@ -430,6 +499,7 @@ class MarkdownParser(Parser):
                         self._tokens.append(token)
                         in_fence_block = False
                         fence_depth = 0
+                        nested_fence_depth = 0
                         language = ProgrammingLanguage.UNKNOWN
                         embedded_parser_state = None
                         parse_embedded = False
@@ -547,13 +617,8 @@ class MarkdownParser(Parser):
                 self._tokens = processed_tokens
 
         # Create and return parser state
-        parser_state = MarkdownParserState()
-        parser_state.in_fence_block = in_fence_block
-        parser_state.fence_depth = fence_depth
-        parser_state.language = language
-        parser_state.in_list_item = in_list_item
-        parser_state.list_indent_stack = list_indent_stack
-        parser_state.block_type = block_type
+        parser_state = self._create_parser_state(in_fence_block, fence_depth, nested_fence_depth,
+                                                 language, in_list_item, list_indent_stack, block_type, embedded_parser_state)
 
         if parse_embedded:
             new_embedded_parser_state = self._embedded_parse(parser_state.language, embedded_parser_state, input_str)
