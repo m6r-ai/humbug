@@ -41,9 +41,6 @@ class Opcode(IntEnum):
     # Lists
     MAKE_LIST = auto()       # Make list from n stack items: MAKE_LIST n
 
-    # Stack manipulation
-    DUP = auto()             # Duplicate top of stack
-
 
 @dataclass
 class Instruction:
@@ -64,7 +61,7 @@ class Instruction:
 
         # Opcodes with no arguments
         no_arg_opcodes = {
-            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.DUP
+            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN
         }
 
         # Opcodes with two arguments

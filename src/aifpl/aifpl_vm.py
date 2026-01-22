@@ -655,11 +655,6 @@ class AIFPLVM:
                 list_elements.reverse()  # Reverse in place since we popped in reverse order
                 self.stack.append(AIFPLList(tuple(list_elements)))
 
-            elif opcode == Opcode.DUP:
-                if not self.stack:
-                    raise AIFPLEvalError("DUP on empty stack")
-                self.stack.append(self.stack[-1])
-
             else:
                 raise AIFPLEvalError(f"Unimplemented opcode: {opcode.name}")
 
