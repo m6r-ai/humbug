@@ -48,6 +48,8 @@ class CompilationContext:
     scopes: List[CompilationScope] = field(default_factory=lambda: [CompilationScope()])
     constants: List[AIFPLValue] = field(default_factory=list)
     names: List[str] = field(default_factory=list)
+    constant_map: Dict[AIFPLValue, int] = field(default_factory=dict)  # Fast lookup for constants
+    name_map: Dict[str, int] = field(default_factory=dict)  # Fast lookup for names
     code_objects: List[CodeObject] = field(default_factory=list)
     instructions: List[Instruction] = field(default_factory=list)
     max_locals: int = 0  # Track maximum locals needed
@@ -78,24 +80,27 @@ class CompilationContext:
 
     def add_constant(self, value: AIFPLValue) -> int:
         """Add constant to pool and return its index."""
-        # Reuse existing constants for efficiency
-        try:
-            return self.constants.index(value)
+        # Use dict lookup for O(1) performance instead of list.index() which is O(n)
+        if value in self.constant_map:
+            return self.constant_map[value]
 
-        except ValueError:
-            index = len(self.constants)
-            self.constants.append(value)
-            return index
+        # Not found - add new constant
+        index = len(self.constants)
+        self.constants.append(value)
+        self.constant_map[value] = index
+        return index
 
     def add_name(self, name: str) -> int:
         """Add name to pool and return its index."""
-        try:
-            return self.names.index(name)
+        # Use dict lookup for O(1) performance instead of list.index() which is O(n)
+        if name in self.name_map:
+            return self.name_map[name]
 
-        except ValueError:
-            index = len(self.names)
-            self.names.append(name)
-            return index
+        # Not found - add new name
+        index = len(self.names)
+        self.names.append(name)
+        self.name_map[name] = index
+        return index
 
     def add_code_object(self, code_obj: CodeObject) -> int:
         """Add nested code object and return its index."""
