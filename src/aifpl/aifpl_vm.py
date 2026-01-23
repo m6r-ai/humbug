@@ -252,12 +252,14 @@ class AIFPLVM:
 
     def _resolve_function(self, value: AIFPLValue) -> Union[AIFPLFunction, AIFPLBuiltinFunction, None]:
         """Resolve a value to a function, handling builtin symbols."""
+        value_type = type(value)
+
         # If it's already a function, return it
-        if isinstance(value, (AIFPLFunction, AIFPLBuiltinFunction)):
+        if value_type is AIFPLFunction or value_type is AIFPLBuiltinFunction:
             return value
 
         # If it's a symbol referring to a builtin, return the builtin function object
-        if isinstance(value, AIFPLSymbol) and value.name in self.builtin_symbols:
+        if value_type is AIFPLSymbol and value.name in self.builtin_symbols:
             # Get the builtin function from our own registry
             return self._builtin_functions[value.name]
 
@@ -563,8 +565,11 @@ class AIFPLVM:
         # Get function from under the arguments
         func = self.stack[-(arity + 1)]
 
+        # Cache type check for hot path
+        func_type = type(func)
+
         # Handle builtin functions
-        if isinstance(func, AIFPLBuiltinFunction):
+        if func_type is AIFPLBuiltinFunction:
             args = [self.stack.pop() for _ in range(arity)]
             args.reverse()
             self.stack.pop()  # Pop function
@@ -572,7 +577,7 @@ class AIFPLVM:
             self.stack.append(result)
             return None
 
-        if isinstance(func, AIFPLFunction):
+        if func_type is AIFPLFunction:
             # Check for tail call optimization
             current_frame = self.frames[-1] if self.frames else None
             is_tail_call = False
@@ -755,13 +760,16 @@ class AIFPLVM:
         This is a helper for higher-order functions like map, filter, fold, etc.
         For bytecode functions, we push args onto the stack then call the function.
         """
-        if isinstance(func, AIFPLFunction):
+        func_type = type(func)
+
+        if func_type is AIFPLFunction:
             # Push arguments onto stack for function prologue to pop
             for arg in args:
                 self.stack.append(arg)
+
             return self._call_bytecode_function(func)
 
-        if isinstance(func, AIFPLBuiltinFunction):
+        if func_type is AIFPLBuiltinFunction:
             # Call builtin function by looking up its index
             if func.name not in AIFPLCompiler.BUILTIN_TABLE:
                 raise AIFPLEvalError(f"Unknown builtin function: {func.name}")

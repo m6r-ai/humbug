@@ -224,18 +224,22 @@ class AIFPLCompiler:
     def _compile_expression(self, expr: AIFPLValue, ctx: CompilationContext) -> None:
         """Compile an expression, leaving result on stack."""
 
+        # Cache the type - check once instead of multiple isinstance() calls
+        # Using type() + 'is' is faster than isinstance() for exact type matches
+        expr_type = type(expr)
+
         # Self-evaluating values
-        if isinstance(expr, AIFPLNumber):
+        if expr_type is AIFPLNumber:
             const_index = ctx.add_constant(expr)
             ctx.emit(Opcode.LOAD_CONST, const_index)
             return
 
-        if isinstance(expr, AIFPLString):
+        if expr_type is AIFPLString:
             const_index = ctx.add_constant(expr)
             ctx.emit(Opcode.LOAD_CONST, const_index)
             return
 
-        if isinstance(expr, AIFPLBoolean):
+        if expr_type is AIFPLBoolean:
             if expr.value:
                 ctx.emit(Opcode.LOAD_TRUE)
                 return
@@ -244,12 +248,12 @@ class AIFPLCompiler:
             return
 
         # Symbol (variable reference)
-        if isinstance(expr, AIFPLSymbol):
+        if expr_type is AIFPLSymbol:
             self._compile_variable_load(expr.name, ctx)
             return
 
         # List (function call or special form)
-        if isinstance(expr, AIFPLList):
+        if expr_type is AIFPLList:
             if expr.is_empty():
                 ctx.emit(Opcode.LOAD_EMPTY_LIST)
                 return
@@ -280,8 +284,11 @@ class AIFPLCompiler:
 
         first = expr.first()
 
+        # Cache type check for the first element
+        first_type = type(first)
+
         # Check for special forms
-        if isinstance(first, AIFPLSymbol):
+        if first_type is AIFPLSymbol:
             if first.name == 'if':
                 self._compile_if(expr, ctx)
                 return
@@ -328,7 +335,8 @@ class AIFPLCompiler:
                 arg_exprs = list(expr.elements[1:])
                 for pair_expr in arg_exprs:
                     # Each pair should be a list - compile its elements and make a list
-                    if not isinstance(pair_expr, AIFPLList):
+                    pair_type = type(pair_expr)
+                    if pair_type is not AIFPLList:
                         raise AIFPLEvalError("alist pairs must be lists")
                     if len(pair_expr.elements) != 2:
                         raise AIFPLEvalError("alist pairs must have exactly 2 elements")
@@ -701,10 +709,12 @@ class AIFPLCompiler:
 
     def _references_variable(self, expr: AIFPLValue, var_name: str) -> bool:
         """Check if an expression references a variable."""
-        if isinstance(expr, AIFPLSymbol):
+        expr_type = type(expr)
+
+        if expr_type is AIFPLSymbol:
             return expr.name == var_name
 
-        if isinstance(expr, AIFPLList):
+        if expr_type is AIFPLList:
             return any(self._references_variable(elem, var_name) for elem in expr.elements)
 
         return False
@@ -882,7 +892,9 @@ class AIFPLCompiler:
                           parent_ctx: CompilationContext, free: List[str],
                           seen: Set[str]) -> None:
         """Recursively collect free variables."""
-        if isinstance(expr, AIFPLSymbol):
+        expr_type = type(expr)
+
+        if expr_type is AIFPLSymbol:
             name = expr.name
             if name in seen or name in bound_vars:
                 return
@@ -893,14 +905,15 @@ class AIFPLCompiler:
                 free.append(name)
                 seen.add(name)
 
-        elif isinstance(expr, AIFPLList):
+        elif expr_type is AIFPLList:
             if expr.is_empty():
                 return
 
             first = expr.first()
+            first_type = type(first)
 
             # Handle special forms that bind variables
-            if isinstance(first, AIFPLSymbol):
+            if first_type is AIFPLSymbol:
                 if first.name == 'lambda':
                     # Nested lambda: we need to find what free variables it uses
                     # that come from outer scopes, so the parent lambda can capture them.
@@ -911,9 +924,9 @@ class AIFPLCompiler:
 
                         # Get parameter names from nested lambda
                         nested_bound = bound_vars.copy()
-                        if isinstance(nested_params, AIFPLList):
+                        if type(nested_params) is AIFPLList:
                             for param in nested_params.elements:
-                                if isinstance(param, AIFPLSymbol):
+                                if type(param) is AIFPLSymbol:
                                     nested_bound.add(param.name)
 
                         # Find free variables in nested lambda's body
@@ -961,14 +974,18 @@ class AIFPLCompiler:
         func_expr = expr.first()
         arg_exprs = list(expr.elements[1:])
 
+        # Cache type check for function expression
+        func_type = type(func_expr)
+
         # Check if calling a known builtin
-        if isinstance(func_expr, AIFPLSymbol) and func_expr.name in self.builtin_indices:
+        if func_type is AIFPLSymbol and func_expr.name in self.builtin_indices:
             # Compile arguments
             # Arguments are NOT in tail position
             old_tail = ctx.in_tail_position
             ctx.in_tail_position = False
             for arg in arg_exprs:
                 self._compile_expression(arg, ctx)
+
             ctx.in_tail_position = old_tail
 
             # Emit builtin call
@@ -983,7 +1000,7 @@ class AIFPLCompiler:
         is_tail_recursive = (
             ctx.in_tail_position and
             ctx.current_function_name is not None and
-            isinstance(func_expr, AIFPLSymbol) and
+            func_type is AIFPLSymbol and
             func_expr.name == ctx.current_function_name
         )
 
@@ -1004,11 +1021,12 @@ class AIFPLCompiler:
             return
 
         # Not tail recursive - normal function call
-        if isinstance(func_expr, AIFPLList) and func_expr.elements and isinstance(func_expr.first(), AIFPLSymbol):
-            if cast(AIFPLSymbol, func_expr.first()).name == 'lambda':
+        if func_type is AIFPLList and func_expr.elements:
+            first_elem = func_expr.first()
+            if type(first_elem) is AIFPLSymbol and first_elem.name == 'lambda':
                 # Direct lambda call: ((lambda (x y) ...) arg1 arg2)
                 # Extract parameter list
-                if len(func_expr.elements) >= 2 and isinstance(func_expr.elements[1], AIFPLList):
+                if len(func_expr.elements) >= 2 and type(func_expr.elements[1]) is AIFPLList:
                     param_list = func_expr.elements[1]
                     expected_arity = len(param_list.elements)
                     actual_arity = len(arg_exprs)
