@@ -94,15 +94,12 @@ class AIFPLBuiltinRegistry:
 
         return builtins
 
-    def call_builtin(self, name: str, args: List[AIFPLValue],
-                    env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+    def call_builtin(self, name: str, args: List[AIFPLValue]) -> AIFPLValue:
         """Call a builtin function by name.
 
         Args:
             name: Function name
             args: Already-evaluated arguments
-            env: Current environment (may be needed by some functions)
-            depth: Current recursion depth
 
         Returns:
             Function result
@@ -111,4 +108,4 @@ class AIFPLBuiltinRegistry:
             KeyError: If function name is not found
         """
         func = self.get_function(name)
-        return func(args, env, depth)
+        return func(args)

@@ -641,6 +641,9 @@ class AIFPLEvaluator:
         """
         Call a built-in function with its native implementation.
 
+        Special forms (and, or, map, filter, etc.) receive env and depth for evaluation.
+        Regular builtins only receive args.
+
         Args:
             func: Built-in function to call
             arg_values: Already-evaluated argument values
@@ -651,7 +654,11 @@ class AIFPLEvaluator:
             Function result
         """
         try:
-            return func.native_impl(arg_values, env, depth)
+            # Special forms need env and depth for evaluation, regular builtins don't
+            if self._is_special_form(func.name):
+                return func.native_impl(arg_values, env, depth)
+
+            return func.native_impl(arg_values)
 
         except AIFPLEvalError:
             # Re-raise AIFPL errors as-is

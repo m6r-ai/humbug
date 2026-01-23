@@ -1238,5 +1238,4 @@ class AIFPLVM:
             )
 
         # Call through the registry
-        env = AIFPLEnvironment()  # Empty environment for builtins
-        return self._builtin_registry.call_builtin(builtin_name, args, env, 0)
+        return self._builtin_registry.call_builtin(builtin_name, args)

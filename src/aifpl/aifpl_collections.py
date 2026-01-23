@@ -84,7 +84,7 @@ class AIFPLCollectionsFunctions:
         }
 
     # String functions
-    def _builtin_string_append(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_append(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-append function."""
         if not args:
             return AIFPLString("")
@@ -94,7 +94,7 @@ class AIFPLCollectionsFunctions:
         result = ''.join(arg.value for arg in string_args)
         return AIFPLString(result)
 
-    def _builtin_string_length(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_length(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-length function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"string-length requires exactly 1 argument, got {len(args)}")
@@ -102,7 +102,7 @@ class AIFPLCollectionsFunctions:
         string_arg = self._ensure_string(args[0], "string-length")
         return AIFPLNumber(len(string_arg.value))
 
-    def _builtin_substring(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_substring(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement substring function."""
         if len(args) != 3:
             raise AIFPLEvalError(f"substring requires exactly 3 arguments, got {len(args)}")
@@ -129,7 +129,7 @@ class AIFPLCollectionsFunctions:
 
         return AIFPLString(string_arg.value[start_idx:end_idx])
 
-    def _builtin_string_upcase(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_upcase(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-upcase function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"string-upcase requires exactly 1 argument, got {len(args)}")
@@ -137,7 +137,7 @@ class AIFPLCollectionsFunctions:
         string_arg = self._ensure_string(args[0], "string-upcase")
         return AIFPLString(string_arg.value.upper())
 
-    def _builtin_string_downcase(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_downcase(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-downcase function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"string-downcase requires exactly 1 argument, got {len(args)}")
@@ -145,7 +145,7 @@ class AIFPLCollectionsFunctions:
         string_arg = self._ensure_string(args[0], "string-downcase")
         return AIFPLString(string_arg.value.lower())
 
-    def _builtin_string_ref(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_ref(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-ref function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"string-ref requires exactly 2 arguments, got {len(args)}")
@@ -163,7 +163,7 @@ class AIFPLCollectionsFunctions:
 
         return AIFPLString(string_arg.value[index])
 
-    def _builtin_string_to_number(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_to_number(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string->number function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"string->number requires exactly 1 argument, got {len(args)}")
@@ -185,7 +185,7 @@ class AIFPLCollectionsFunctions:
         except ValueError as e:
             raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg.value}'") from e
 
-    def _builtin_number_to_string(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_number_to_string(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement number->string function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"number->string requires exactly 1 argument, got {len(args)}")
@@ -193,7 +193,7 @@ class AIFPLCollectionsFunctions:
         num_arg = self._ensure_number(args[0], "number->string")
         return AIFPLString(str(num_arg.value))
 
-    def _builtin_string_trim(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_trim(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-trim function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"string-trim requires exactly 1 argument, got {len(args)}")
@@ -201,7 +201,7 @@ class AIFPLCollectionsFunctions:
         string_arg = self._ensure_string(args[0], "string-trim")
         return AIFPLString(string_arg.value.strip())
 
-    def _builtin_string_replace(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_replace(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-replace function."""
         if len(args) != 3:
             raise AIFPLEvalError(f"string-replace requires exactly 3 arguments, got {len(args)}")
@@ -210,7 +210,7 @@ class AIFPLCollectionsFunctions:
         result = string_arg.value.replace(old_str.value, new_str.value)
         return AIFPLString(result)
 
-    def _builtin_string_contains_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_contains_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-contains? function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"string-contains? requires exactly 2 arguments, got {len(args)}")
@@ -218,7 +218,7 @@ class AIFPLCollectionsFunctions:
         string_arg, substring = [self._ensure_string(arg, "string-contains?") for arg in args]
         return AIFPLBoolean(substring.value in string_arg.value)
 
-    def _builtin_string_prefix_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_prefix_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-prefix? function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"string-prefix? requires exactly 2 arguments, got {len(args)}")
@@ -226,7 +226,7 @@ class AIFPLCollectionsFunctions:
         string_arg, prefix = [self._ensure_string(arg, "string-prefix?") for arg in args]
         return AIFPLBoolean(string_arg.value.startswith(prefix.value))
 
-    def _builtin_string_suffix_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_suffix_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-suffix? function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"string-suffix? requires exactly 2 arguments, got {len(args)}")
@@ -234,7 +234,7 @@ class AIFPLCollectionsFunctions:
         string_arg, suffix = [self._ensure_string(arg, "string-suffix?") for arg in args]
         return AIFPLBoolean(string_arg.value.endswith(suffix.value))
 
-    def _builtin_string_eq_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string=? function."""
         if len(args) < 2:
             raise AIFPLEvalError(f"string=? requires at least 2 arguments, got {len(args)}")
@@ -244,11 +244,11 @@ class AIFPLCollectionsFunctions:
         return AIFPLBoolean(all(arg.value == first_val for arg in string_args[1:]))
 
     # List functions
-    def _builtin_list(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_list(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement list constructor."""
         return AIFPLList(tuple(args))
 
-    def _builtin_cons(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_cons(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement cons function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"cons requires exactly 2 arguments, got {len(args)}")
@@ -257,7 +257,7 @@ class AIFPLCollectionsFunctions:
         list_val = self._ensure_list(list_arg, "cons")
         return list_val.cons(item)
 
-    def _builtin_append(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_append(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement append function."""
         if len(args) < 2:
             raise AIFPLEvalError(f"append requires at least 2 arguments, got {len(args)}")
@@ -272,7 +272,7 @@ class AIFPLCollectionsFunctions:
 
         return result
 
-    def _builtin_reverse(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_reverse(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement reverse function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"reverse requires exactly 1 argument, got {len(args)}")
@@ -280,7 +280,7 @@ class AIFPLCollectionsFunctions:
         list_val = self._ensure_list(args[0], "reverse")
         return list_val.reverse()
 
-    def _builtin_first(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_first(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement first function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"first requires exactly 1 argument, got {len(args)}")
@@ -292,7 +292,7 @@ class AIFPLCollectionsFunctions:
         except IndexError as e:
             raise AIFPLEvalError(str(e)) from e
 
-    def _builtin_rest(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_rest(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement rest function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"rest requires exactly 1 argument, got {len(args)}")
@@ -304,7 +304,7 @@ class AIFPLCollectionsFunctions:
         except IndexError as e:
             raise AIFPLEvalError(str(e)) from e
 
-    def _builtin_last(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_last(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement last function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"last requires exactly 1 argument, got {len(args)}")
@@ -316,7 +316,7 @@ class AIFPLCollectionsFunctions:
         except IndexError as e:
             raise AIFPLEvalError(str(e)) from e
 
-    def _builtin_list_ref(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_list_ref(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement list-ref function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"list-ref requires exactly 2 arguments, got {len(args)}")
@@ -334,7 +334,7 @@ class AIFPLCollectionsFunctions:
         except IndexError as e:
             raise AIFPLEvalError(f"list-ref index out of range: {index}") from e
 
-    def _builtin_length(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_length(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement length function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"length requires exactly 1 argument, got {len(args)}")
@@ -342,7 +342,7 @@ class AIFPLCollectionsFunctions:
         list_val = self._ensure_list(args[0], "length")
         return AIFPLNumber(list_val.length())
 
-    def _builtin_null_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_null_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement null? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"null? requires exactly 1 argument, got {len(args)}")
@@ -350,14 +350,14 @@ class AIFPLCollectionsFunctions:
         list_val = self._ensure_list(args[0], "null?")
         return AIFPLBoolean(list_val.is_empty())
 
-    def _builtin_list_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_list_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement list? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"list? requires exactly 1 argument, got {len(args)}")
 
         return AIFPLBoolean(isinstance(args[0], AIFPLList))
 
-    def _builtin_member_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_member_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement member? function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"member? requires exactly 2 arguments, got {len(args)}")
@@ -366,7 +366,7 @@ class AIFPLCollectionsFunctions:
         list_val = self._ensure_list(list_arg, "member?")
         return AIFPLBoolean(list_val.contains(item))
 
-    def _builtin_remove(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_remove(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement remove function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"remove requires exactly 2 arguments, got {len(args)}")
@@ -375,7 +375,7 @@ class AIFPLCollectionsFunctions:
         list_val = self._ensure_list(list_arg, "remove")
         return list_val.remove_all(item)
 
-    def _builtin_position(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_position(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement position function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"position requires exactly 2 arguments, got {len(args)}")
@@ -389,7 +389,7 @@ class AIFPLCollectionsFunctions:
 
         return AIFPLBoolean(False)
 
-    def _builtin_take(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_take(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement take function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"take requires exactly 2 arguments, got {len(args)}")
@@ -401,7 +401,7 @@ class AIFPLCollectionsFunctions:
 
         return list_val.take(n)
 
-    def _builtin_drop(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_drop(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement drop function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"drop requires exactly 2 arguments, got {len(args)}")
@@ -413,7 +413,7 @@ class AIFPLCollectionsFunctions:
 
         return list_val.drop(n)
 
-    def _builtin_string_to_list(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_to_list(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string->list function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"string->list requires exactly 1 argument, got {len(args)}")
@@ -422,7 +422,7 @@ class AIFPLCollectionsFunctions:
         elements = tuple(AIFPLString(char) for char in string_arg.value)
         return AIFPLList(elements)
 
-    def _builtin_list_to_string(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_list_to_string(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement list->string function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"list->string requires exactly 1 argument, got {len(args)}")
@@ -430,7 +430,7 @@ class AIFPLCollectionsFunctions:
         list_arg = self._ensure_list(args[0], "list->string")
         return AIFPLString(''.join(str(elem.to_python()) for elem in list_arg.elements))
 
-    def _builtin_string_split(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
+    def _builtin_string_split(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-split function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"string-split requires exactly 2 arguments, got {len(args)}")
@@ -439,13 +439,13 @@ class AIFPLCollectionsFunctions:
 
         # Handle empty separator case - split into individual characters
         if delimiter.value == "":
-            return self._builtin_string_to_list([string_arg], env, depth)
+            return self._builtin_string_to_list([string_arg])
 
         parts = string_arg.value.split(delimiter.value)
         elements = tuple(AIFPLString(part) for part in parts)
         return AIFPLList(elements)
 
-    def _builtin_string_join(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_join(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-join function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"string-join requires exactly 2 arguments, got {len(args)}")
@@ -464,49 +464,49 @@ class AIFPLCollectionsFunctions:
         return AIFPLString(separator.value.join(str_items))
 
     # Type predicates
-    def _builtin_number_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_number_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement number? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"number? requires exactly 1 argument, got {len(args)}")
 
         return AIFPLBoolean(isinstance(args[0], AIFPLNumber))
 
-    def _builtin_integer_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_integer_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement integer? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"integer? requires exactly 1 argument, got {len(args)}")
 
         return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_integer())
 
-    def _builtin_float_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_float_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement float? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"float? requires exactly 1 argument, got {len(args)}")
 
         return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_float())
 
-    def _builtin_complex_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_complex_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement complex? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"complex? requires exactly 1 argument, got {len(args)}")
 
         return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_complex())
 
-    def _builtin_string_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_string_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"string? requires exactly 1 argument, got {len(args)}")
 
         return AIFPLBoolean(isinstance(args[0], AIFPLString))
 
-    def _builtin_boolean_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_boolean_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement boolean? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"boolean? requires exactly 1 argument, got {len(args)}")
 
         return AIFPLBoolean(isinstance(args[0], AIFPLBoolean))
 
-    def _builtin_function_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_function_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement function? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"function? requires exactly 1 argument, got {len(args)}")
@@ -545,7 +545,7 @@ class AIFPLCollectionsFunctions:
         return value.value
 
     # AList functions
-    def _builtin_alist_get(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_alist_get(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Get value from alist: (alist-get my-alist key [default])"""
         if len(args) < 2 or len(args) > 3:
             raise AIFPLEvalError(
@@ -572,7 +572,7 @@ class AIFPLCollectionsFunctions:
         result = alist_val.get(key)
         return result if result is not None else default
 
-    def _builtin_alist_set(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_alist_set(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Set key in alist (returns new alist): (alist-set my-alist key value)"""
         if len(args) != 3:
             raise AIFPLEvalError(
@@ -595,7 +595,7 @@ class AIFPLCollectionsFunctions:
 
         return alist_val.set(key, value)
 
-    def _builtin_alist_has_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_alist_has_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Check if alist has key: (alist-has? my-alist key)"""
         if len(args) != 2:
             raise AIFPLEvalError(
@@ -617,7 +617,7 @@ class AIFPLCollectionsFunctions:
 
         return AIFPLBoolean(alist_val.has_key(key))
 
-    def _builtin_alist_keys(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_alist_keys(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Get all keys from alist: (alist-keys my-alist)"""
         if len(args) != 1:
             raise AIFPLEvalError(
@@ -639,7 +639,7 @@ class AIFPLCollectionsFunctions:
 
         return AIFPLList(alist_val.keys())
 
-    def _builtin_alist_values(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_alist_values(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Get all values from alist: (alist-values my-alist)"""
         if len(args) != 1:
             raise AIFPLEvalError(
@@ -661,7 +661,7 @@ class AIFPLCollectionsFunctions:
 
         return AIFPLList(alist_val.values())
 
-    def _builtin_alist_remove(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_alist_remove(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Remove key from alist (returns new alist): (alist-remove my-alist key)"""
         if len(args) != 2:
             raise AIFPLEvalError(
@@ -683,7 +683,7 @@ class AIFPLCollectionsFunctions:
 
         return alist_val.remove(key)
 
-    def _builtin_alist_merge(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_alist_merge(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Merge two alists (second wins on conflicts): (alist-merge alist1 alist2)"""
         if len(args) != 2:
             raise AIFPLEvalError(
@@ -712,7 +712,7 @@ class AIFPLCollectionsFunctions:
 
         return alist1.merge(alist2)
 
-    def _builtin_alist_p(self, args: List[AIFPLValue], _env: AIFPLEnvironment, _depth: int) -> AIFPLValue:
+    def _builtin_alist_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Check if value is an alist: (alist? value)"""
         if len(args) != 1:
             raise AIFPLEvalError(

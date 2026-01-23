@@ -3,7 +3,6 @@
 import pytest
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_value import AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList
-from aifpl.aifpl_environment import AIFPLEnvironment
 
 
 class TestBuiltinRegistry:
@@ -47,33 +46,30 @@ class TestBuiltinRegistry:
     def test_call_arithmetic_function(self):
         """Test calling an arithmetic function through the registry."""
         registry = AIFPLBuiltinRegistry()
-        env = AIFPLEnvironment()
 
         # Test addition
         args = [AIFPLNumber(1), AIFPLNumber(2), AIFPLNumber(3)]
-        result = registry.call_builtin('+', args, env, 0)
+        result = registry.call_builtin('+', args)
         assert isinstance(result, AIFPLNumber)
         assert result.value == 6
 
     def test_call_list_function(self):
         """Test calling a list function through the registry."""
         registry = AIFPLBuiltinRegistry()
-        env = AIFPLEnvironment()
 
         # Test list creation
         args = [AIFPLNumber(1), AIFPLNumber(2), AIFPLNumber(3)]
-        result = registry.call_builtin('list', args, env, 0)
+        result = registry.call_builtin('list', args)
         assert isinstance(result, AIFPLList)
         assert len(result.elements) == 3
 
     def test_call_string_function(self):
         """Test calling a string function through the registry."""
         registry = AIFPLBuiltinRegistry()
-        env = AIFPLEnvironment()
 
         # Test string-append
         args = [AIFPLString("hello"), AIFPLString(" "), AIFPLString("world")]
-        result = registry.call_builtin('string-append', args, env, 0)
+        result = registry.call_builtin('string-append', args)
         assert isinstance(result, AIFPLString)
         assert result.value == "hello world"
 
@@ -94,10 +90,9 @@ class TestBuiltinRegistry:
     def test_error_on_unknown_function(self):
         """Test that calling unknown function raises error."""
         registry = AIFPLBuiltinRegistry()
-        env = AIFPLEnvironment()
 
         with pytest.raises(KeyError):
-            registry.call_builtin('nonexistent-function', [], env, 0)
+            registry.call_builtin('nonexistent-function', [])
 
     def test_get_all_names(self):
         """Test getting all function names."""
