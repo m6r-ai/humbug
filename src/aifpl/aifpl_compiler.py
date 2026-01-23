@@ -1,6 +1,6 @@
 """AIFPL bytecode compiler - compiles AST to bytecode."""
 
-from typing import List, Dict, Tuple, Set
+from typing import List, Dict, Tuple, Set, cast
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode, make_instruction
@@ -14,7 +14,8 @@ from aifpl.aifpl_value import (
 
 @dataclass
 class CompilationScope:
-    """Tracks variable bindings in a lexical scope.
+    """
+    Tracks variable bindings in a lexical scope.
 
     Maps variable names to their index within the scope.
     """
@@ -39,7 +40,8 @@ class CompilationScope:
 
 @dataclass
 class CompilationContext:
-    """Compilation context tracking scopes and code generation.
+    """
+    Compilation context tracking scopes and code generation.
 
     Maintains a stack of scopes for lexical addressing.
     """
@@ -102,7 +104,8 @@ class CompilationContext:
         return index
 
     def resolve_variable(self, name: str) -> Tuple[str, int, int]:
-        """Resolve variable to (type, depth, index).
+        """
+        Resolve variable to (type, depth, index).
 
         For variables in let bindings, we use flat indexing within the same frame.
         All lets in the same function/module use depth=0 with different flat indices.
@@ -146,7 +149,8 @@ class CompilationContext:
 
 
 class AIFPLCompiler:
-    """Compiles AIFPL AST to bytecode.
+    """
+    Compiles AIFPL AST to bytecode.
 
     Uses a single-pass compiler with lexical addressing for variables.
     """
@@ -183,7 +187,8 @@ class AIFPLCompiler:
         self.builtin_indices = {name: i for i, name in enumerate(self.BUILTIN_TABLE)}
 
     def compile(self, expr: AIFPLValue, name: str = "<module>") -> CodeObject:
-        """Compile an AIFPL expression to bytecode.
+        """
+        Compile an AIFPL expression to bytecode.
 
         Args:
             expr: AST to compile
@@ -301,7 +306,7 @@ class AIFPLCompiler:
                 if len(expr.elements) != 2:
                     raise AIFPLEvalError(
                         message="Quote expression has wrong number of arguments",
-                        received=f"Got {len(expr.elements) - 1} arguments: {self.format_result(expr)}",
+                        received=f"Got {len(expr.elements) - 1} arguments: {self._format_result(expr)}",
                         expected="Exactly 1 argument",
                         example="(quote expr) or 'expr",
                         suggestion="Quote requires exactly one expression to quote"
@@ -346,7 +351,7 @@ class AIFPLCompiler:
         if len(expr.elements) != 4:
             raise AIFPLEvalError(
                 message="If expression has wrong number of arguments",
-                received=f"Got {len(expr.elements) - 1} arguments: {self.format_result(expr)}",
+                received=f"Got {len(expr.elements) - 1} arguments: {self._format_result(expr)}",
                 expected="Exactly 3 arguments: (if condition then else)",
                 example="(if (> x 0) \"positive\" \"negative\")",
                 suggestion="If needs condition, then-branch, and else-branch"
@@ -375,6 +380,7 @@ class AIFPLCompiler:
         if ctx.in_tail_position:
             # Then branch is in tail position, so emit RETURN
             ctx.emit(Opcode.RETURN)
+
         else:
             # Not in tail position, emit jump past else
             jump_past_else = ctx.emit(Opcode.JUMP, 0)  # Will patch later
@@ -393,7 +399,8 @@ class AIFPLCompiler:
             ctx.patch_jump(jump_past_else, after_else)
 
     def _compile_and(self, expr: AIFPLList, ctx: CompilationContext) -> None:
-        """Compile and expression with short-circuit evaluation.
+        """
+        Compile and expression with short-circuit evaluation.
 
         (and) -> #t
         (and a) -> a (must be boolean)
@@ -439,7 +446,8 @@ class AIFPLCompiler:
         ctx.patch_jump(jump_to_end, end)
 
     def _compile_or(self, expr: AIFPLList, ctx: CompilationContext) -> None:
-        """Compile or expression with short-circuit evaluation.
+        """
+        Compile or expression with short-circuit evaluation.
 
         (or) -> #f
         (or a) -> a (must be boolean)
@@ -574,6 +582,7 @@ class AIFPLCompiler:
                     processed_names.update(group.names)
                     remaining_groups.pop(i)
                     break
+
             else:
                 # No group found - circular dependency (shouldn't happen)
                 raise AIFPLEvalError("Circular dependency detected in let bindings")
@@ -851,7 +860,8 @@ class AIFPLCompiler:
 
     def _find_free_variables(self, expr: AIFPLValue, bound_vars: Set[str],
                             parent_ctx: CompilationContext) -> List[str]:
-        """Find free variables in an expression.
+        """
+        Find free variables in an expression.
 
         Free variables are those that are:
         - Referenced in the expression
@@ -959,70 +969,71 @@ class AIFPLCompiler:
             # Emit builtin call
             builtin_index = self.builtin_indices[func_expr.name]
             ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
+            return
 
-        else:
-            # General function call
+        # General function call
 
-            # Check for tail-recursive call
-            # If we're in tail position and calling the current function by name, use JUMP
-            is_tail_recursive = (
-                ctx.in_tail_position and
-                ctx.current_function_name is not None and
-                isinstance(func_expr, AIFPLSymbol) and
-                func_expr.name == ctx.current_function_name
-            )
+        # Check for tail-recursive call
+        # If we're in tail position and calling the current function by name, use JUMP
+        is_tail_recursive = (
+            ctx.in_tail_position and
+            ctx.current_function_name is not None and
+            isinstance(func_expr, AIFPLSymbol) and
+            func_expr.name == ctx.current_function_name
+        )
 
-            if is_tail_recursive:
-                # Tail recursion! Compile arguments and jump to start
-                # Don't compile the function expression - we're not calling, we're jumping
-                for arg in arg_exprs:
-                    # Arguments are not in tail position
-                    old_tail = ctx.in_tail_position
-                    ctx.in_tail_position = False
-                    self._compile_expression(arg, ctx)
-                    ctx.in_tail_position = old_tail
-
-                # Emit JUMP to instruction 0 (start of function, after prologue)
-                # The prologue will pop these args from the stack
-                ctx.emit(Opcode.JUMP, 0)
-                # No RETURN needed - we're jumping, not returning
-                return
-
-            # Not tail recursive - normal function call
-            # Compile function expression
-            # Check arity for direct lambda calls
-            if isinstance(func_expr, AIFPLList) and func_expr.elements and isinstance(func_expr.first(), AIFPLSymbol):
-                if func_expr.first().name == 'lambda':
-                    # Direct lambda call: ((lambda (x y) ...) arg1 arg2)
-                    # Extract parameter list
-                    if len(func_expr.elements) >= 2 and isinstance(func_expr.elements[1], AIFPLList):
-                        param_list = func_expr.elements[1]
-                        expected_arity = len(param_list.elements)
-                        actual_arity = len(arg_exprs)
-
-                        if expected_arity != actual_arity:
-                            raise AIFPLEvalError(
-                                message=f"Lambda expects {expected_arity} argument{'s' if expected_arity != 1 else ''}, got {actual_arity}",
-                                expected=f"Lambda parameters: {expected_arity}",
-                                received=f"Arguments provided: {actual_arity}",
-                                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
-                            )
-
-            self._compile_expression(func_expr, ctx)
-
-            # Compile arguments
-            # Arguments are NOT in tail position
-            old_tail = ctx.in_tail_position
-            ctx.in_tail_position = False
+        if is_tail_recursive:
+            # Tail recursion! Compile arguments and jump to start
+            # Don't compile the function expression - we're not calling, we're jumping
             for arg in arg_exprs:
+                # Arguments are not in tail position
+                old_tail = ctx.in_tail_position
+                ctx.in_tail_position = False
                 self._compile_expression(arg, ctx)
-            ctx.in_tail_position = old_tail
+                ctx.in_tail_position = old_tail
 
-            # Emit call
-            ctx.emit(Opcode.CALL_FUNCTION, len(arg_exprs))
+            # Emit JUMP to instruction 0 (start of function, after prologue)
+            # The prologue will pop these args from the stack
+            ctx.emit(Opcode.JUMP, 0)
+            # No RETURN needed - we're jumping, not returning
+            return
+
+        # Not tail recursive - normal function call
+        if isinstance(func_expr, AIFPLList) and func_expr.elements and isinstance(func_expr.first(), AIFPLSymbol):
+            if cast(AIFPLSymbol, func_expr.first()).name == 'lambda':
+                # Direct lambda call: ((lambda (x y) ...) arg1 arg2)
+                # Extract parameter list
+                if len(func_expr.elements) >= 2 and isinstance(func_expr.elements[1], AIFPLList):
+                    param_list = func_expr.elements[1]
+                    expected_arity = len(param_list.elements)
+                    actual_arity = len(arg_exprs)
+
+                    if expected_arity != actual_arity:
+                        arguments_text = f"argument{'s' if expected_arity != 1 else ''}"
+                        raise AIFPLEvalError(
+                            message=f"Lambda expects {expected_arity} {arguments_text}, got {actual_arity}",
+                            expected=f"Lambda parameters: {expected_arity}",
+                            received=f"Arguments provided: {actual_arity}",
+                            suggestion=f"Provide exactly {expected_arity} {arguments_text}"
+                        )
+
+        self._compile_expression(func_expr, ctx)
+
+        # Compile arguments
+        # Arguments are NOT in tail position
+        old_tail = ctx.in_tail_position
+        ctx.in_tail_position = False
+        for arg in arg_exprs:
+            self._compile_expression(arg, ctx)
+
+        ctx.in_tail_position = old_tail
+
+        # Emit call
+        ctx.emit(Opcode.CALL_FUNCTION, len(arg_exprs))
 
     def _compile_higher_order_function(self, expr: AIFPLList, ctx: CompilationContext) -> None:
-        """Compile higher-order functions (map, filter, fold, etc).
+        """
+        Compile higher-order functions (map, filter, fold, etc).
 
         The first argument is the function to apply. If it's a builtin symbol,
         we pass it as a symbol constant so the VM can resolve it.
@@ -1121,9 +1132,11 @@ class AIFPLCompiler:
         # Validate all clauses upfront
         for i, clause in enumerate(clauses):
             if not isinstance(clause, AIFPLList) or len(clause.elements) != 2:
+                clause_str = self._format_result(clause) if isinstance(clause, AIFPLList) else str(clause)
+                elements_str = f"{len(clause.elements)}" if isinstance(clause, AIFPLList) else "N/A"
                 raise AIFPLEvalError(
                     message=f"Match clause {i+1} has wrong number of elements",
-                    received=f"Clause {i+1}: {self.format_result(clause) if isinstance(clause, AIFPLList) else str(clause)} (has {len(clause.elements) if isinstance(clause, AIFPLList) else 'N/A'} elements)",
+                    received=f"Clause {i+1}: {clause_str} (has {elements_str} elements)",
                     expected="Each clause needs exactly 2 elements: (pattern result)",
                     example="(match x ((42) \"found\") ((string? s) s))",
                     suggestion="Each clause: (pattern result-expression)"
@@ -1250,14 +1263,14 @@ class AIFPLCompiler:
                 # Wildcard - always matches, no binding
                 ctx.emit(Opcode.LOAD_TRUE)
                 return
-            else:
-                # Bind variable
-                var_index = ctx.current_scope().add_binding(pattern.name)
-                ctx.update_max_locals()
-                ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
-                ctx.emit(Opcode.STORE_VAR, 0, var_index)
-                ctx.emit(Opcode.LOAD_TRUE)
-                return
+
+            # Bind variable
+            var_index = ctx.current_scope().add_binding(pattern.name)
+            ctx.update_max_locals()
+            ctx.emit(Opcode.LOAD_VAR, 0, match_value_index)
+            ctx.emit(Opcode.STORE_VAR, 0, var_index)
+            ctx.emit(Opcode.LOAD_TRUE)
+            return
 
         # List patterns
         if isinstance(pattern, AIFPLList):
@@ -1298,6 +1311,7 @@ class AIFPLCompiler:
                 if type_pred in self.builtin_indices:
                     builtin_index = self.builtin_indices[type_pred]
                     ctx.emit(Opcode.CALL_BUILTIN, builtin_index, 1)
+
                 else:
                     # Use LOAD_NAME for type predicates not in builtin table
                     name_index = ctx.add_name(type_pred)
@@ -1626,7 +1640,7 @@ class AIFPLCompiler:
 
             self._validate_pattern_syntax(element)
 
-    def format_result(self, result: AIFPLValue) -> str:
+    def _format_result(self, result: AIFPLValue) -> str:
         """
         Format result for display, using LISP conventions for lists and booleans.
 
@@ -1662,7 +1676,7 @@ class AIFPLCompiler:
 
             formatted_elements = []
             for element in result.elements:
-                formatted_elements.append(self.format_result(element))
+                formatted_elements.append(self._format_result(element))
 
             return f"({' '.join(formatted_elements)})"
 
@@ -1673,8 +1687,8 @@ class AIFPLCompiler:
 
             formatted_pairs = []
             for key, value in result.pairs:
-                formatted_key = self.format_result(key)
-                formatted_value = self.format_result(value)
+                formatted_key = self._format_result(key)
+                formatted_value = self._format_result(value)
                 formatted_pairs.append(f"({formatted_key} {formatted_value})")
 
             pairs_str = ' '.join(formatted_pairs)
