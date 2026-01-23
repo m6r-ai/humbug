@@ -11,12 +11,31 @@ from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean
 class ParenStackFrame:
     """Represents an unclosed opening parenthesis with context."""
     position: int
-    expression_type: str
-    context_snippet: str
+    parser: 'AIFPLParser'  # Reference to parser for lazy evaluation
+    _expression_type: str | None = None  # Cached lazily
+    _context_snippet: str | None = None  # Cached lazily
     elements_parsed: int = 0
     last_complete_position: int | None = None
     related_symbol: str | None = None  # For bindings: the variable name
     incomplete_element_start: int | None = None  # Where we started parsing an incomplete element
+
+    def get_expression_type(self) -> str:
+        """Lazily compute expression type only when needed."""
+        if self._expression_type is None:
+            self._expression_type = self.parser._detect_expression_type(self.position)
+
+        return self._expression_type
+
+    def set_expression_type(self, value: str) -> None:
+        """Allow overriding expression type for more specific error messages."""
+        self._expression_type = value
+
+    def get_context_snippet(self) -> str:
+        """Lazily compute context snippet only when needed."""
+        if self._context_snippet is None:
+            self._context_snippet = self.parser._get_context_snippet(self.position, length=30)
+
+        return self._context_snippet
 
 
 class AIFPLParser:
@@ -132,13 +151,9 @@ class AIFPLParser:
         Returns:
             The created frame (so caller can update it)
         """
-        expr_type = self._detect_expression_type(position)
-        snippet = self._get_context_snippet(position, length=30)
-
         frame = ParenStackFrame(
             position=position,
-            expression_type=expr_type,
-            context_snippet=snippet
+            parser=self  # Pass parser reference for lazy evaluation
         )
 
         self.paren_stack.append(frame)
@@ -256,13 +271,13 @@ class AIFPLParser:
         # Build stack trace showing all unclosed expressions
         stack_lines = []
         for i, frame in enumerate(self.paren_stack, 1):
-            line = f"  {i}. {frame.expression_type} at position {frame.position}"
+            line = f"  {i}. {frame.get_expression_type()} at position {frame.position}"
 
             # Add related symbol if available (e.g., binding variable name)
             if frame.related_symbol:
                 line += f" ('{frame.related_symbol}')"
 
-            line += f": {frame.context_snippet}"
+            line += f": {frame.get_context_snippet()}"
 
             # Show how many elements were parsed
             if frame.elements_parsed > 0:
@@ -417,7 +432,7 @@ class AIFPLParser:
 
         # Push frame for bindings list
         bindings_frame = self._push_paren_frame(bindings_start)
-        bindings_frame.expression_type = "let bindings list"
+        bindings_frame.set_expression_type("let bindings list")
 
         self._advance()  # consume '('
 
@@ -465,7 +480,7 @@ class AIFPLParser:
 
         # Push frame for this binding
         binding_frame = self._push_paren_frame(binding_start)
-        binding_frame.expression_type = f"let binding #{binding_index}"
+        binding_frame.set_expression_type(f"let binding #{binding_index}")
 
         self._advance()  # consume '('
 
@@ -475,7 +490,7 @@ class AIFPLParser:
         if self.current_token is not None and self.current_token.type == AIFPLTokenType.SYMBOL:
             var_name = self.current_token.value
             binding_frame.related_symbol = var_name
-            binding_frame.expression_type = f"let binding #{binding_index} ('{var_name}')"
+            binding_frame.set_expression_type(f"let binding #{binding_index} ('{var_name}')")
             self._mark_element_start()
             elements.append(self._parse_expression())
             self._update_frame_after_element()
@@ -548,7 +563,7 @@ class AIFPLParser:
         # Get details from stack
         stack_lines = []
         for i, frame in enumerate(self.paren_stack, 1):
-            line = f"  {i}. {frame.expression_type} at position {frame.position}"
+            line = f"  {i}. {frame.get_expression_type()} at position {frame.position}"
 
             if frame.elements_parsed > 0:
                 line += f" - parsed {frame.elements_parsed} element{'s' if frame.elements_parsed != 1 else ''}"
