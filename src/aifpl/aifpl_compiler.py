@@ -51,6 +51,8 @@ class CompilationContext:
     max_locals: int = 0  # Track maximum locals needed
     parent_ctx: 'CompilationContext | None' = None  # Parent context for nested lambdas
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
+    in_tail_position: bool = False  # Whether we're compiling in tail position
+    current_function_name: str | None = None  # Name of the function being compiled (for tail recursion detection)
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -353,27 +355,42 @@ class AIFPLCompiler:
         _, condition, then_expr, else_expr = expr.elements
 
         # Compile condition
+        # Condition is NOT in tail position
+        old_tail = ctx.in_tail_position
+        ctx.in_tail_position = False
         self._compile_expression(condition, ctx)
+        ctx.in_tail_position = old_tail
 
         # Jump to else if condition is false
         jump_to_else = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)  # Will patch later
 
         # Compile then branch
+        # Then branch IS in tail position if the if is
         self._compile_expression(then_expr, ctx)
 
         # Jump past else branch
-        jump_past_else = ctx.emit(Opcode.JUMP, 0)  # Will patch later
+        # If we're in tail position, emit RETURN after then branch
+        # Otherwise, emit JUMP to skip else branch
+        jump_past_else = None
+        if ctx.in_tail_position:
+            # Then branch is in tail position, so emit RETURN
+            ctx.emit(Opcode.RETURN)
+        else:
+            # Not in tail position, emit jump past else
+            jump_past_else = ctx.emit(Opcode.JUMP, 0)  # Will patch later
 
         # Patch jump to else
         else_start = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_else, else_start)
 
         # Compile else branch
+        # Else branch IS in tail position if the if is
         self._compile_expression(else_expr, ctx)
 
         # Patch jump past else
-        after_else = ctx.current_instruction_index()
-        ctx.patch_jump(jump_past_else, after_else)
+        if jump_past_else is not None:
+            after_else = ctx.current_instruction_index()
+            ctx.patch_jump(jump_past_else, after_else)
 
     def _compile_and(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile and expression with short-circuit evaluation.
@@ -645,7 +662,11 @@ class AIFPLCompiler:
             self._compile_lambda(value_expr, ctx, binding_name=name, let_bindings=sibling_bindings)
 
         else:
+            # Binding values are NOT in tail position
+            old_tail = ctx.in_tail_position
+            ctx.in_tail_position = False
             self._compile_expression(value_expr, ctx)
+            ctx.in_tail_position = old_tail
 
         # Store in local variable
         ctx.emit(Opcode.STORE_VAR, depth, var_index)
@@ -777,6 +798,10 @@ class AIFPLCompiler:
         lambda_ctx.parent_ctx = ctx
         lambda_ctx.sibling_bindings = sibling_bindings
 
+        # Set current function name for tail recursion detection
+        # Use binding_name if available (for named functions in let), otherwise None
+        lambda_ctx.current_function_name = binding_name
+
         # Update max locals for the lambda (only its own locals, not parent's)
         lambda_ctx.update_max_locals()
 
@@ -790,8 +815,21 @@ class AIFPLCompiler:
             lambda_ctx.emit(Opcode.STORE_VAR, 0, i)
 
         # Compile lambda body - free vars will be resolved as locals
+        # The body is in tail position (last expression before RETURN)
+        old_tail_position = lambda_ctx.in_tail_position
+        lambda_ctx.in_tail_position = True
         self._compile_expression(body, lambda_ctx)
-        lambda_ctx.emit(Opcode.RETURN)
+        lambda_ctx.in_tail_position = old_tail_position
+
+        # Only emit RETURN if the body didn't already emit one (or JUMP)
+        # Check if the last instruction is RETURN or JUMP
+        if lambda_ctx.instructions:
+            last_op = lambda_ctx.instructions[-1].opcode
+            if last_op not in (Opcode.RETURN, Opcode.JUMP):
+                lambda_ctx.emit(Opcode.RETURN)
+
+        else:
+            lambda_ctx.emit(Opcode.RETURN)
 
         # Create code object for lambda
         lambda_code = CodeObject(
@@ -911,8 +949,12 @@ class AIFPLCompiler:
         # Check if calling a known builtin
         if isinstance(func_expr, AIFPLSymbol) and func_expr.name in self.builtin_indices:
             # Compile arguments
+            # Arguments are NOT in tail position
+            old_tail = ctx.in_tail_position
+            ctx.in_tail_position = False
             for arg in arg_exprs:
                 self._compile_expression(arg, ctx)
+            ctx.in_tail_position = old_tail
 
             # Emit builtin call
             builtin_index = self.builtin_indices[func_expr.name]
@@ -920,8 +962,34 @@ class AIFPLCompiler:
 
         else:
             # General function call
-            # Compile function expression
 
+            # Check for tail-recursive call
+            # If we're in tail position and calling the current function by name, use JUMP
+            is_tail_recursive = (
+                ctx.in_tail_position and
+                ctx.current_function_name is not None and
+                isinstance(func_expr, AIFPLSymbol) and
+                func_expr.name == ctx.current_function_name
+            )
+
+            if is_tail_recursive:
+                # Tail recursion! Compile arguments and jump to start
+                # Don't compile the function expression - we're not calling, we're jumping
+                for arg in arg_exprs:
+                    # Arguments are not in tail position
+                    old_tail = ctx.in_tail_position
+                    ctx.in_tail_position = False
+                    self._compile_expression(arg, ctx)
+                    ctx.in_tail_position = old_tail
+
+                # Emit JUMP to instruction 0 (start of function, after prologue)
+                # The prologue will pop these args from the stack
+                ctx.emit(Opcode.JUMP, 0)
+                # No RETURN needed - we're jumping, not returning
+                return
+
+            # Not tail recursive - normal function call
+            # Compile function expression
             # Check arity for direct lambda calls
             if isinstance(func_expr, AIFPLList) and func_expr.elements and isinstance(func_expr.first(), AIFPLSymbol):
                 if func_expr.first().name == 'lambda':
@@ -943,8 +1011,12 @@ class AIFPLCompiler:
             self._compile_expression(func_expr, ctx)
 
             # Compile arguments
+            # Arguments are NOT in tail position
+            old_tail = ctx.in_tail_position
+            ctx.in_tail_position = False
             for arg in arg_exprs:
                 self._compile_expression(arg, ctx)
+            ctx.in_tail_position = old_tail
 
             # Emit call
             ctx.emit(Opcode.CALL_FUNCTION, len(arg_exprs))
