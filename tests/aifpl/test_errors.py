@@ -258,7 +258,7 @@ class TestErrors:
             aifpl.evaluate("((lambda (x y) (+ x y)) 5)")
 
         # Too many arguments
-        with pytest.raises(AIFPLEvalError, match="expects .* arguments, got .*"):
+        with pytest.raises(AIFPLEvalError, match="expects .* argument.*, got .*"):
             aifpl.evaluate("((lambda (x) x) 1 2 3)")
 
         # No parameters but arguments provided

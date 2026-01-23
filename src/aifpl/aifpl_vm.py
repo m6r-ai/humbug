@@ -90,7 +90,7 @@ class AIFPLVM:
 
         if isinstance(result, AIFPLString):
             # For error messages, show strings with quotes
-            return f'\"{result.value}\"'
+            return f'"{result.value}"'
 
         if isinstance(result, AIFPLNumber):
             return str(result.value)
@@ -235,7 +235,7 @@ class AIFPLVM:
 
     def _raise_non_function_error(self, value: AIFPLValue, context: str) -> None:
         """Raise a detailed error for attempting to call a non-function value.
-        
+
         Args:
             value: The value that was attempted to be called
             context: The context where the call was attempted (e.g., "map", "filter")
@@ -487,60 +487,67 @@ class AIFPLVM:
 
             elif opcode == Opcode.CALL_FUNCTION:
                 arity = arg1
-                # Pop arguments
-                args = [self.stack.pop() for _ in range(arity)]
-                args.reverse()  # Restore correct order
-                # Pop function
-                func = self.stack.pop()
+                # Stack layout: [... | function | arg0 | arg1 | ... | argN]
+                # We need to get the function from under the arguments
+                # Function is at position -(arity + 1) from the top
+                if len(self.stack) < arity + 1:
+                    raise AIFPLEvalError(
+                        message=f"Stack underflow in CALL_FUNCTION",
+                        received=f"Stack has {len(self.stack)} items, need {arity + 1}",
+                        suggestion="This is likely a compiler bug"
+                    )
+
+                # Get function from under the arguments (don't pop it yet)
+                func = self.stack[-(arity + 1)]
 
                 # Handle builtin functions
                 if isinstance(func, AIFPLBuiltinFunction):
+                    # Builtins need args as a list - pop them now
+                    args = [self.stack.pop() for _ in range(arity)]
+                    args.reverse()  # Restore correct order
                     # Call builtin through its native implementation
+                    # Also pop the function
+                    self.stack.pop()
                     result = func.native_impl(args, AIFPLEnvironment(), 0)
                     self.stack.append(result)
 
                 elif isinstance(func, AIFPLFunction):
-                    # Handle lambda functions
-                    # Check if function has bytecode
-                    if hasattr(func, 'bytecode') and func.bytecode is not None:
-                        # Check for tail call optimization opportunity
-                        # A tail call is when the next instruction is RETURN
-                        current_frame = self.frames[-1] if self.frames else None
-                        is_tail_call = False
+                    # Handle user-defined functions
 
-                        if current_frame:
-                            next_ip = current_frame.ip
-                            if next_ip < len(current_frame.code.instructions):
-                                next_instr = current_frame.code.instructions[next_ip]
-                                is_tail_call = next_instr.opcode == Opcode.RETURN
+                    # Check for tail call optimization opportunity
+                    # A tail call is when the next instruction is RETURN
+                    current_frame = self.frames[-1] if self.frames else None
+                    is_tail_call = False
 
-                        # Check if it's a self-recursive tail call
-                        is_self_recursive = (
-                            current_frame and
-                            hasattr(func, 'bytecode') and
-                            func.bytecode == current_frame.code
-                        )
+                    if current_frame:
+                        next_ip = current_frame.ip
+                        if next_ip < len(current_frame.code.instructions):
+                            next_instr = current_frame.code.instructions[next_ip]
+                            is_tail_call = next_instr.opcode == Opcode.RETURN
 
-                        if is_tail_call and is_self_recursive:
-                            # Tail call optimization: reuse current frame
-                            # Type narrowing: current_frame is not None here due to is_self_recursive check
-                            assert current_frame is not None
-                            # This will reset the frame and continue execution
-                            self._tail_call_bytecode_function(func, args, current_frame)
-                            # Don't append result or increment IP - the frame was reset
+                    # Check if it's a self-recursive tail call
+                    is_self_recursive = (
+                        current_frame and
+                        hasattr(func, 'bytecode') and
+                        func.bytecode == current_frame.code
+                    )
 
-                        else:
-                            # Normal call: create new frame
-                            result = self._call_bytecode_function(func, args)
-                            self.stack.append(result)
+                    # Remove function from stack (it's under the args)
+                    del self.stack[-(arity + 1)]
 
-                    else:
-                        # Function has no bytecode - cannot execute in VM
-                        raise AIFPLEvalError(
-                            message="Cannot execute function without bytecode",
-                            received=f"Function: {func.name or '<lambda>'}",
-                            suggestion="Compile the code using AIFPLCompiler before executing in the VM"
-                        )
+                    # If it's a self-recursive tail call, just jump to start
+                    # The prologue will pop the new args from the stack
+                    if is_tail_call and is_self_recursive:
+                        # Reset IP to 0 - the prologue will handle the rest
+                        assert current_frame is not None
+                        current_frame.ip = 0
+                        # Don't push result - we're continuing in the same frame
+                        continue
+
+                    # Normal call: create new frame
+                    result = self._call_bytecode_function(func)
+                    self.stack.append(result)
+
                 else:
                     # Not a function at all
                     raise AIFPLEvalError(
@@ -661,32 +668,17 @@ class AIFPLVM:
         # Frame finished without explicit return
         return None
 
-    def _call_bytecode_function(self, func: AIFPLFunction, args: List[AIFPLValue]) -> AIFPLValue:
-        """Call a bytecode function."""
+    def _call_bytecode_function(self, func: AIFPLFunction) -> AIFPLValue:
+        """Call a bytecode function.
+
+        Arguments are already on the stack. The function prologue will pop them
+        and store them in locals.
+        """
         code = func.bytecode
-
-        # Check arity
-        if len(args) != code.param_count:
-            param_list = ", ".join(func.parameters) if func.parameters else "(no parameters)"
-            arg_list = ", ".join(self._format_result(arg) for arg in args) if args else "(no arguments)"
-
-            raise AIFPLEvalError(
-                message=f"Function '{func.name}' expects {code.param_count} arguments, got {len(args)}",
-                received=f"Arguments provided: {arg_list}",
-                expected=f"Parameters expected: {param_list}",
-                example=(f"({func.name} {' '.join(['arg' + str(i+1) for i in range(code.param_count)])})"
-                    if code.param_count > 0 else f"({func.name})"),
-                suggestion=f"Provide exactly {code.param_count} argument{'s' if code.param_count != 1 else ''}"
-            )
-
 
         # Create new frame
         new_frame = Frame(code)
         new_frame.closure_env = func.closure_environment
-
-        # Store arguments in locals (parameters come first)
-        for i, arg in enumerate(args):
-            new_frame.locals[i] = arg
 
         # Store captured values in locals (after parameters)
         # The lambda compiler puts captured vars after parameters in the local space
@@ -706,52 +698,17 @@ class AIFPLVM:
 
         raise AIFPLEvalError("Function did not return a value")
 
-    def _tail_call_bytecode_function(self, func: AIFPLFunction, args: List[AIFPLValue], current_frame: Frame) -> None:
-        """Perform a tail call by reusing the current frame.
-
-        This implements tail call optimization (TCO) by resetting the current
-        frame instead of creating a new one, preventing stack overflow for
-        recursive functions.
-        """
-        code = func.bytecode
-
-        # Check arity (same as regular call)
-        if len(args) != code.param_count:
-            param_list = ", ".join(func.parameters) if func.parameters else "(no parameters)"
-            arg_list = ", ".join(self._format_result(arg) for arg in args) if args else "(no arguments)"
-            raise AIFPLEvalError(
-                message=f"Function '{func.name}' expects {code.param_count} arguments, got {len(args)}",
-                received=f"Arguments provided: {arg_list}",
-                expected=f"Parameters expected: {param_list}",
-                example=(f"({func.name} {' '.join(['arg' + str(i+1) for i in range(code.param_count)])})"
-                    if code.param_count > 0 else f"({func.name})"),
-                suggestion=f"Provide exactly {code.param_count} argument{'s' if code.param_count != 1 else ''}"
-            )
-
-        # Reset the instruction pointer to the beginning of the function
-        current_frame.ip = 0
-
-        # Update locals with new arguments
-        for i, arg in enumerate(args):
-            current_frame.locals[i] = arg
-
-        # Update captured values if any
-        if hasattr(func, 'captured_values') and func.captured_values:
-            for i, captured_val in enumerate(func.captured_values):
-                current_frame.locals[code.param_count + i] = captured_val
-
-        # The frame IP has been reset to 0
-        # The frame execution loop will continue from the beginning
-        # with the new arguments, effectively implementing the tail call
-        # without creating a new Python call stack frame
-
     def _call_function_value(self, func: Union[AIFPLFunction, AIFPLBuiltinFunction], args: List[AIFPLValue]) -> AIFPLValue:
         """Call a function value (either user-defined or builtin).
 
         This is a helper for higher-order functions like map, filter, fold, etc.
+        For bytecode functions, we push args onto the stack then call the function.
         """
         if isinstance(func, AIFPLFunction):
-            return self._call_bytecode_function(func, args)
+            # Push arguments onto stack for function prologue to pop
+            for arg in args:
+                self.stack.append(arg)
+            return self._call_bytecode_function(func)
 
         if isinstance(func, AIFPLBuiltinFunction):
             # Call builtin function by looking up its index

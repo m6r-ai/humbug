@@ -780,6 +780,15 @@ class AIFPLCompiler:
         # Update max locals for the lambda (only its own locals, not parent's)
         lambda_ctx.update_max_locals()
 
+        # Generate function prologue: pop arguments from stack into locals
+        # Arguments are on stack in order: arg0 at bottom, argN at top
+        # Stack is LIFO, so we pop in reverse: argN first, then arg(N-1), ..., arg0
+        # Store them in locals: argN -> local(N-1), ..., arg0 -> local(0)
+        # This means we emit STORE_VAR in reverse order
+        for i in range(len(param_names) - 1, -1, -1):
+            # STORE_VAR depth=0 (current frame), index=i (parameter position)
+            lambda_ctx.emit(Opcode.STORE_VAR, 0, i)
+
         # Compile lambda body - free vars will be resolved as locals
         self._compile_expression(body, lambda_ctx)
         lambda_ctx.emit(Opcode.RETURN)
@@ -908,9 +917,29 @@ class AIFPLCompiler:
             # Emit builtin call
             builtin_index = self.builtin_indices[func_expr.name]
             ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
+
         else:
             # General function call
             # Compile function expression
+
+            # Check arity for direct lambda calls
+            if isinstance(func_expr, AIFPLList) and func_expr.elements and isinstance(func_expr.first(), AIFPLSymbol):
+                if func_expr.first().name == 'lambda':
+                    # Direct lambda call: ((lambda (x y) ...) arg1 arg2)
+                    # Extract parameter list
+                    if len(func_expr.elements) >= 2 and isinstance(func_expr.elements[1], AIFPLList):
+                        param_list = func_expr.elements[1]
+                        expected_arity = len(param_list.elements)
+                        actual_arity = len(arg_exprs)
+
+                        if expected_arity != actual_arity:
+                            raise AIFPLEvalError(
+                                message=f"Lambda expects {expected_arity} argument{'s' if expected_arity != 1 else ''}, got {actual_arity}",
+                                expected=f"Lambda parameters: {expected_arity}",
+                                received=f"Arguments provided: {actual_arity}",
+                                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+                            )
+
             self._compile_expression(func_expr, ctx)
 
             # Compile arguments
