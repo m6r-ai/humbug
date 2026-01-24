@@ -17,6 +17,10 @@
 # Ignore virtual environment
 /venv
 
+# Ignore conversations in the main coversations directory, but allow them in the saved sub-directory
+/conversations
+!/conversations/saved
+
 # Ignore humbug mindspace files
 /.humbug
 
