@@ -459,7 +459,15 @@ class AIFPLAnalyzer:
             
             # Analyze the value expression
             # Binding values are not in tail position
-            analyzed_value = self._analyze_expression(value_expr, in_tail_position=False)
+            # Check if this is a lambda - if so, pass the binding name for recursion detection
+            if (isinstance(value_expr, AIFPLList) and 
+                not value_expr.is_empty() and
+                isinstance(value_expr.first(), AIFPLSymbol) and
+                value_expr.first().name == 'lambda'):
+                # Analyze lambda with binding name
+                analyzed_value = self._analyze_lambda(value_expr, in_tail_position=False, binding_name=name)
+            else:
+                analyzed_value = self._analyze_expression(value_expr, in_tail_position=False)
             
             analyzed_bindings.append((name, analyzed_value, var_index))
         
@@ -516,9 +524,180 @@ class AIFPLAnalyzer:
                        binding_name: Optional[str] = None) -> AnalyzedLambda:
         """Analyze lambda expression.
         
-        This is a placeholder - will be implemented in step 2.5.
+        Analyzes expressions like:
+        - (lambda (x) x)
+        - (lambda (x y) (+ x y))
+        - (lambda (n) (if (= n 0) 1 (* n (fact (- n 1)))))  ; recursive
+        
+        Identifies free variables for closure creation and detects recursion.
+        
+        Args:
+            expr: Lambda expression
+            in_tail_position: Whether this lambda is in tail position (not used for lambdas)
+            binding_name: Name of the binding if this lambda is in a let (for recursion detection)
+            
+        Returns:
+            AnalyzedLambda with closure analysis
         """
-        raise NotImplementedError("_analyze_lambda will be implemented in step 2.5")
+        if len(expr.elements) != 3:
+            raise AIFPLEvalError(
+                message="Lambda expression structure is incorrect",
+                received=f"Got {len(expr.elements)} elements",
+                expected="Exactly 3 elements: (lambda (params...) body)",
+                example="(lambda (x y) (+ x y))",
+                suggestion="Lambda needs parameter list and body"
+            )
+        
+        _, params_list, body_expr = expr.elements
+        
+        if not isinstance(params_list, AIFPLList):
+            raise AIFPLEvalError(
+                message="Lambda parameters must be a list",
+                received=f"Parameter list: {params_list.type_name()}",
+                expected="List of symbols: (param1 param2 ...)",
+                example="(lambda (x y z) (+ x y z))",
+                suggestion="Parameters should be unquoted variable names"
+            )
+        
+        # Extract and validate parameters
+        param_names = []
+        for i, param in enumerate(params_list.elements):
+            if not isinstance(param, AIFPLSymbol):
+                raise AIFPLEvalError(
+                    message=f"Lambda parameter {i+1} must be a symbol",
+                    received=f"Parameter {i+1}: {param.type_name()}",
+                    expected="Unquoted symbol (variable name)",
+                    example='Correct: (lambda (x y) (+ x y))',
+                    suggestion='Use unquoted names: x, not "x" or 1'
+                )
+            param_names.append(param.name)
+        
+        # Check for duplicate parameters
+        if len(param_names) != len(set(param_names)):
+            duplicates = [p for p in param_names if param_names.count(p) > 1]
+            raise AIFPLEvalError(
+                message="Lambda parameters must be unique",
+                received=f"Duplicate parameters: {duplicates}",
+                expected="All parameter names should be different",
+                example='Correct: (lambda (x y z) ...)',
+                suggestion="Use different names for each parameter"
+            )
+        
+        # Enter new scope for lambda
+        self.symbol_table.enter_scope()
+        
+        # Add parameters to scope
+        for param_name in param_names:
+            self.symbol_table.add_symbol(param_name, "parameter", defined_at=expr)
+        
+        # Save and set current function name for tail recursion detection
+        old_function_name = self.current_function_name
+        if binding_name:
+            self.current_function_name = binding_name
+        
+        # Analyze body (always in tail position within lambda)
+        analyzed_body = self._analyze_expression(body_expr, in_tail_position=True)
+        
+        # Restore function name
+        self.current_function_name = old_function_name
+        
+        # Find free variables (variables used in body but not parameters)
+        free_vars = self._find_free_variables_in_analyzed(analyzed_body, set(param_names))
+        
+        # Exit lambda scope
+        self.symbol_table.exit_scope()
+        
+        # Check for self-recursion
+        is_recursive = binding_name is not None and binding_name in free_vars
+        
+        # Identify recursive siblings (for mutual recursion)
+        # These would be other bindings in the same let that this lambda references
+        recursive_siblings = []
+        if binding_name:
+            # Look for references to other variables in the same let scope
+            # We'll identify these by checking if they're in free_vars
+            # This is a simplified approach - full mutual recursion detection
+            # would require tracking let binding groups
+            pass
+        
+        # Add to code objects list
+        code_index = len(self.code_objects)
+        
+        # Calculate instruction count
+        # Lambda creation is just MAKE_CLOSURE (1 instruction)
+        # The body instructions are in the lambda's code object, not inline
+        instr_count = 1
+        
+        result = AnalyzedLambda(
+            expr_type='lambda',
+            source_expr=expr,
+            params=param_names,
+            body=analyzed_body,
+            free_vars=list(free_vars),
+            is_recursive=is_recursive,
+            recursive_siblings=recursive_siblings,
+            code_index=code_index,
+            instruction_count=instr_count
+        )
+        
+        # Add to code objects
+        self.code_objects.append(result)
+        
+        return result
+    
+    def _find_free_variables_in_analyzed(self, analyzed: AnalyzedExpression, 
+                                        bound: Set[str]) -> Set[str]:
+        """Find free variables in an analyzed expression.
+        
+        A free variable is one that:
+        - Is referenced in the expression
+        - Is not in the bound set (parameters)
+        - Is a local variable (not global or builtin)
+        
+        Args:
+            analyzed: Analyzed expression to search
+            bound: Set of bound variable names (parameters)
+            
+        Returns:
+            Set of free variable names
+        """
+        free = set()
+        
+        if isinstance(analyzed, AnalyzedVariable):
+            if analyzed.var_type == 'local' and analyzed.name not in bound:
+                free.add(analyzed.name)
+        
+        elif isinstance(analyzed, AnalyzedIf):
+            free.update(self._find_free_variables_in_analyzed(analyzed.condition, bound))
+            free.update(self._find_free_variables_in_analyzed(analyzed.then_branch, bound))
+            free.update(self._find_free_variables_in_analyzed(analyzed.else_branch, bound))
+        
+        elif isinstance(analyzed, AnalyzedLet):
+            # Binding values can reference outer scope
+            for _, value_analyzed, _ in analyzed.bindings:
+                free.update(self._find_free_variables_in_analyzed(value_analyzed, bound))
+            
+            # Body has bindings in scope
+            new_bound = bound | {name for name, _, _ in analyzed.bindings}
+            free.update(self._find_free_variables_in_analyzed(analyzed.body, new_bound))
+        
+        elif isinstance(analyzed, AnalyzedLambda):
+            # Nested lambda parameters are bound
+            new_bound = bound | set(analyzed.params)
+            free.update(self._find_free_variables_in_analyzed(analyzed.body, new_bound))
+        
+        elif isinstance(analyzed, AnalyzedCall):
+            free.update(self._find_free_variables_in_analyzed(analyzed.func, bound))
+            for arg in analyzed.args:
+                free.update(self._find_free_variables_in_analyzed(arg, bound))
+        
+        elif isinstance(analyzed, AnalyzedMakeList):
+            for elem in analyzed.elements:
+                free.update(self._find_free_variables_in_analyzed(elem, bound))
+        
+        # Other types (literals, quote, etc.) have no free variables
+        
+        return free
     
     def _analyze_quote(self, expr: AIFPLList) -> AnalyzedQuote:
         """Analyze quote expression.

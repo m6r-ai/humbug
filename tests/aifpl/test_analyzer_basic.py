@@ -350,17 +350,10 @@ class TestAnalyzerNotImplemented:
         pass
     
     def test_lambda_not_implemented(self):
-        """Test that 'lambda' analysis is not yet implemented."""
-        analyzer = AIFPLAnalyzer()
-        
-        expr = AIFPLList((
-            AIFPLSymbol("lambda"),
-            AIFPLList((AIFPLSymbol("x"),)),
-            AIFPLSymbol("x")
-        ))
-        
-        with pytest.raises(NotImplementedError, match="_analyze_lambda"):
-            analyzer.analyze(expr)
+        """Test that 'lambda' analysis is now implemented."""
+        # This test was removed because _analyze_lambda is now implemented
+        # See test_analyzer_lambda.py for comprehensive lambda analysis tests
+        pass
     
     def test_call_not_implemented(self):
         """Test that function call analysis is now implemented."""

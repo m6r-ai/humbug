@@ -201,7 +201,6 @@ class TestLetRecursionDetection:
         
         assert len(result.recursive_bindings) == 0
     
-    @pytest.mark.skip(reason="Requires lambda analysis (Step 2.5)")
     def test_recursive_lambda_detected(self):
         """Test that recursive lambda is detected."""
         analyzer = AIFPLAnalyzer()
@@ -240,7 +239,6 @@ class TestLetRecursionDetection:
         # 'fact' should be marked as recursive
         assert "fact" in result.recursive_bindings
     
-    @pytest.mark.skip(reason="Requires lambda analysis (Step 2.5)")
     def test_multiple_bindings_some_recursive(self):
         """Test mix of recursive and non-recursive bindings."""
         analyzer = AIFPLAnalyzer()
@@ -293,7 +291,6 @@ class TestLetDependencyAnalysis:
         assert result.binding_groups is not None
         assert len(result.binding_groups) > 0
     
-    @pytest.mark.skip(reason="Requires lambda analysis (Step 2.5)")
     def test_sibling_groups_for_mutual_recursion(self):
         """Test that sibling groups are identified."""
         analyzer = AIFPLAnalyzer()
