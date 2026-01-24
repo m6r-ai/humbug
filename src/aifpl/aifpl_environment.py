@@ -99,6 +99,9 @@ class AIFPLEnvironment:
         name = self.function.name if self.function and hasattr(self.function, 'name') else "anonymous"
 
         # Get parent name from parent's function reference
-        parent_name = self.parent.function.name if self.parent and self.parent.function and hasattr(self.parent.function, 'name') else "anonymous"
+        parent_name = (
+            self.parent.function.name if self.parent and self.parent.function and
+            hasattr(self.parent.function, 'name') else "anonymous"
+        )
         parent_info = f" (parent: {parent_name})" if self.parent else ""
         return f"AIFPLEnvironment({name}: {local_bindings}{parent_info})"

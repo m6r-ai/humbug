@@ -3,7 +3,6 @@
 from typing import List, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLBuiltinFunction
 )

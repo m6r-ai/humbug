@@ -240,7 +240,7 @@ class AIFPLCompiler:
             return
 
         if expr_type is AIFPLBoolean:
-            if expr.value:
+            if cast(AIFPLBoolean, expr).value:
                 ctx.emit(Opcode.LOAD_TRUE)
                 return
 
@@ -249,16 +249,16 @@ class AIFPLCompiler:
 
         # Symbol (variable reference)
         if expr_type is AIFPLSymbol:
-            self._compile_variable_load(expr.name, ctx)
+            self._compile_variable_load(cast(AIFPLSymbol, expr).name, ctx)
             return
 
         # List (function call or special form)
         if expr_type is AIFPLList:
-            if expr.is_empty():
+            if cast(AIFPLList, expr).is_empty():
                 ctx.emit(Opcode.LOAD_EMPTY_LIST)
                 return
 
-            self._compile_list(expr, ctx)
+            self._compile_list(cast(AIFPLList, expr), ctx)
             return
 
         raise AIFPLEvalError(
@@ -289,31 +289,32 @@ class AIFPLCompiler:
 
         # Check for special forms
         if first_type is AIFPLSymbol:
-            if first.name == 'if':
+            name = cast(AIFPLSymbol, first).name
+            if name == 'if':
                 self._compile_if(expr, ctx)
                 return
 
-            if first.name == 'let':
+            if name == 'let':
                 self._compile_let(expr, ctx)
                 return
 
-            if first.name == 'lambda':
+            if name == 'lambda':
                 self._compile_lambda(expr, ctx)
                 return
 
-            if first.name == 'match':
+            if name == 'match':
                 self._compile_match(expr, ctx)
                 return
 
-            if first.name == 'and':
+            if name == 'and':
                 self._compile_and(expr, ctx)
                 return
 
-            if first.name == 'or':
+            if name == 'or':
                 self._compile_or(expr, ctx)
                 return
 
-            if first.name == 'quote':
+            if name == 'quote':
                 # Quote: return the quoted value as a constant
                 if len(expr.elements) != 2:
                     raise AIFPLEvalError(
@@ -329,7 +330,7 @@ class AIFPLCompiler:
                 ctx.emit(Opcode.LOAD_CONST, const_index)
                 return
 
-            if first.name == 'alist':
+            if name == 'alist':
                 # Special handling for alist: each pair is a list that needs evaluation
                 # (alist ("key" value-expr) ...) -> create list for each pair
                 arg_exprs = list(expr.elements[1:])
@@ -338,11 +339,11 @@ class AIFPLCompiler:
                     pair_type = type(pair_expr)
                     if pair_type is not AIFPLList:
                         raise AIFPLEvalError("alist pairs must be lists")
-                    if len(pair_expr.elements) != 2:
+                    if len(cast(AIFPLList, pair_expr).elements) != 2:
                         raise AIFPLEvalError("alist pairs must have exactly 2 elements")
 
                     # Compile each element of the pair
-                    for elem in pair_expr.elements:
+                    for elem in cast(AIFPLList, pair_expr).elements:
                         self._compile_expression(elem, ctx)
                     # Create a list from the two elements
                     ctx.emit(Opcode.MAKE_LIST, 2)
@@ -352,7 +353,7 @@ class AIFPLCompiler:
                 ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
                 return
 
-            if first.name in ['map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']:
+            if name in ['map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']:
                 self._compile_higher_order_function(expr, ctx)
                 return
 
@@ -712,10 +713,10 @@ class AIFPLCompiler:
         expr_type = type(expr)
 
         if expr_type is AIFPLSymbol:
-            return expr.name == var_name
+            return cast(AIFPLSymbol, expr).name == var_name
 
         if expr_type is AIFPLList:
-            return any(self._references_variable(elem, var_name) for elem in expr.elements)
+            return any(self._references_variable(elem, var_name) for elem in cast(AIFPLList, expr).elements)
 
         return False
 
@@ -895,7 +896,7 @@ class AIFPLCompiler:
         expr_type = type(expr)
 
         if expr_type is AIFPLSymbol:
-            name = expr.name
+            name = cast(AIFPLSymbol, expr).name
             if name in seen or name in bound_vars:
                 return
 
@@ -906,27 +907,27 @@ class AIFPLCompiler:
                 seen.add(name)
 
         elif expr_type is AIFPLList:
-            if expr.is_empty():
+            if cast(AIFPLList, expr).is_empty():
                 return
 
-            first = expr.first()
+            first = cast(AIFPLList, expr).first()
             first_type = type(first)
 
             # Handle special forms that bind variables
             if first_type is AIFPLSymbol:
-                if first.name == 'lambda':
+                if cast(AIFPLSymbol, first).name == 'lambda':
                     # Nested lambda: we need to find what free variables it uses
                     # that come from outer scopes, so the parent lambda can capture them.
                     # The nested lambda will then capture them from the parent.
-                    if len(expr.elements) >= 3:
-                        nested_params = expr.elements[1]
-                        nested_body = expr.elements[2]
+                    if len(cast(AIFPLList, expr).elements) >= 3:
+                        nested_params = cast(AIFPLList, expr).elements[1]
+                        nested_body = cast(AIFPLList, expr).elements[2]
 
                         # Get parameter names from nested lambda
                         nested_bound = bound_vars.copy()
-                        if type(nested_params) is AIFPLList:
+                        if isinstance(nested_params, AIFPLList):
                             for param in nested_params.elements:
-                                if type(param) is AIFPLSymbol:
+                                if isinstance(param, AIFPLSymbol):
                                     nested_bound.add(param.name)
 
                         # Find free variables in nested lambda's body
@@ -937,12 +938,12 @@ class AIFPLCompiler:
                     # Don't recurse into the lambda's parameters or other parts
                     return
 
-                if first.name == 'let':
+                if cast(AIFPLSymbol, first).name == 'let':
                     # Let bindings create new bound variables
                     # Extract binding names and recurse with updated bound_vars
-                    if len(expr.elements) >= 3:
-                        bindings_list = expr.elements[1]
-                        body = expr.elements[2]
+                    if len(cast(AIFPLList, expr).elements) >= 3:
+                        bindings_list = cast(AIFPLList, expr).elements[1]
+                        body = cast(AIFPLList, expr).elements[2]
 
                         # Collect let binding names
                         new_bound = bound_vars.copy()
@@ -966,7 +967,7 @@ class AIFPLCompiler:
                     return
 
             # Recursively check all elements
-            for elem in expr.elements:
+            for elem in cast(AIFPLList, expr).elements:
                 self._collect_free_vars(elem, bound_vars, parent_ctx, free, seen)
 
     def _compile_function_call(self, expr: AIFPLList, ctx: CompilationContext) -> None:
@@ -978,7 +979,7 @@ class AIFPLCompiler:
         func_type = type(func_expr)
 
         # Check if calling a known builtin
-        if func_type is AIFPLSymbol and func_expr.name in self.builtin_indices:
+        if func_type is AIFPLSymbol and cast(AIFPLSymbol, func_expr).name in self.builtin_indices:
             # Compile arguments
             # Arguments are NOT in tail position
             old_tail = ctx.in_tail_position
@@ -989,7 +990,7 @@ class AIFPLCompiler:
             ctx.in_tail_position = old_tail
 
             # Emit builtin call
-            builtin_index = self.builtin_indices[func_expr.name]
+            builtin_index = self.builtin_indices[cast(AIFPLSymbol, func_expr).name]
             ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
             return
 
@@ -1001,7 +1002,7 @@ class AIFPLCompiler:
             ctx.in_tail_position and
             ctx.current_function_name is not None and
             func_type is AIFPLSymbol and
-            func_expr.name == ctx.current_function_name
+            cast(AIFPLSymbol, func_expr).name == ctx.current_function_name
         )
 
         if is_tail_recursive:
@@ -1021,13 +1022,13 @@ class AIFPLCompiler:
             return
 
         # Not tail recursive - normal function call
-        if func_type is AIFPLList and func_expr.elements:
-            first_elem = func_expr.first()
-            if type(first_elem) is AIFPLSymbol and first_elem.name == 'lambda':
+        if func_type is AIFPLList and cast(AIFPLList, func_expr).elements:
+            first_elem = cast(AIFPLList, func_expr).first()
+            if isinstance(first_elem, AIFPLSymbol) and first_elem.name == 'lambda':
                 # Direct lambda call: ((lambda (x y) ...) arg1 arg2)
                 # Extract parameter list
-                if len(func_expr.elements) >= 2 and type(func_expr.elements[1]) is AIFPLList:
-                    param_list = func_expr.elements[1]
+                if len(cast(AIFPLList, func_expr).elements) >= 2 and isinstance(cast(AIFPLList, func_expr).elements[1], AIFPLList):
+                    param_list = cast(AIFPLList, cast(AIFPLList, func_expr).elements[1])
                     expected_arity = len(param_list.elements)
                     actual_arity = len(arg_exprs)
 

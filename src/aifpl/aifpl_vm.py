@@ -1,6 +1,6 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
-from typing import List, Dict, Any, Union, cast
+from typing import List, Dict, Any, cast
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
@@ -250,18 +250,22 @@ class AIFPLVM:
 
         return value
 
-    def _resolve_function(self, value: AIFPLValue) -> Union[AIFPLFunction, AIFPLBuiltinFunction, None]:
+    def _resolve_function(self, value: AIFPLValue) -> AIFPLFunction | AIFPLBuiltinFunction | None:
         """Resolve a value to a function, handling builtin symbols."""
         value_type = type(value)
 
+        if value_type is AIFPLBuiltinFunction:
+            return cast(AIFPLBuiltinFunction, value)
+
         # If it's already a function, return it
-        if value_type is AIFPLFunction or value_type is AIFPLBuiltinFunction:
-            return value
+        if value_type is AIFPLFunction:
+            return cast(AIFPLFunction, value)
 
         # If it's a symbol referring to a builtin, return the builtin function object
-        if value_type is AIFPLSymbol and value.name in self.builtin_symbols:
-            # Get the builtin function from our own registry
-            return self._builtin_functions[value.name]
+        if value_type is AIFPLSymbol:
+            if cast(AIFPLSymbol, value).name in self.builtin_symbols:
+                # Get the builtin function from our own registry
+                return self._builtin_functions[cast(AIFPLSymbol, value).name]
 
         # Otherwise, it's not a valid function - return None
         # Caller will handle the error with appropriate context
@@ -573,7 +577,7 @@ class AIFPLVM:
             args = [self.stack.pop() for _ in range(arity)]
             args.reverse()
             self.stack.pop()  # Pop function
-            result = func.native_impl(args, AIFPLEnvironment(), 0)
+            result = cast(AIFPLBuiltinFunction, func).native_impl(args, AIFPLEnvironment(), 0)
             self.stack.append(result)
             return None
 
@@ -591,8 +595,7 @@ class AIFPLVM:
             # Check if it's a self-recursive tail call
             is_self_recursive = (
                 current_frame and
-                hasattr(func, 'bytecode') and
-                func.bytecode == current_frame.code
+                cast(AIFPLFunction, func).bytecode == current_frame.code
             )
 
             # Remove function from stack
@@ -605,7 +608,7 @@ class AIFPLVM:
                 return None  # Continue in same frame
 
             # Normal call: create new frame
-            result = self._call_bytecode_function(func)
+            result = self._call_bytecode_function(cast(AIFPLFunction, func))
             self.stack.append(result)
             return None
 
@@ -754,7 +757,7 @@ class AIFPLVM:
 
         raise AIFPLEvalError("Function did not return a value")
 
-    def _call_function_value(self, func: Union[AIFPLFunction, AIFPLBuiltinFunction], args: List[AIFPLValue]) -> AIFPLValue:
+    def _call_function_value(self, func: AIFPLFunction | AIFPLBuiltinFunction, args: List[AIFPLValue]) -> AIFPLValue:
         """Call a function value (either user-defined or builtin).
 
         This is a helper for higher-order functions like map, filter, fold, etc.
@@ -767,7 +770,7 @@ class AIFPLVM:
             for arg in args:
                 self.stack.append(arg)
 
-            return self._call_bytecode_function(func)
+            return self._call_bytecode_function(cast(AIFPLFunction, func))
 
         if func_type is AIFPLBuiltinFunction:
             # Call builtin function by looking up its index

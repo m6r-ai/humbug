@@ -22,7 +22,7 @@ class ParenStackFrame:
     def get_expression_type(self) -> str:
         """Lazily compute expression type only when needed."""
         if self._expression_type is None:
-            self._expression_type = self.parser._detect_expression_type(self.position)
+            self._expression_type = self.parser.detect_expression_type(self.position)
 
         return self._expression_type
 
@@ -33,7 +33,7 @@ class ParenStackFrame:
     def get_context_snippet(self) -> str:
         """Lazily compute context snippet only when needed."""
         if self._context_snippet is None:
-            self._context_snippet = self.parser._get_context_snippet(self.position, length=30)
+            self._context_snippet = self.parser.get_context_snippet(self.position, length=30)
 
         return self._context_snippet
 
@@ -186,7 +186,7 @@ class AIFPLParser:
         # Clear the incomplete element start since we just completed an element
         frame.incomplete_element_start = None
 
-    def _detect_expression_type(self, position: int) -> str:
+    def detect_expression_type(self, position: int) -> str:
         """
         Detect what type of expression starts at this position.
 
@@ -233,7 +233,7 @@ class AIFPLParser:
 
         return special_forms.get(first_symbol, 'list/function call')
 
-    def _get_context_snippet(self, position: int, length: int = 30) -> str:
+    def get_context_snippet(self, position: int, length: int = 30) -> str:
         """
         Get a snippet of code starting at position for error display.
 
@@ -286,7 +286,7 @@ class AIFPLParser:
             # Check if we're in the middle of parsing an incomplete element
             if frame.incomplete_element_start is not None:
                 # This frame was parsing an element that's incomplete
-                incomplete_snippet = self._get_context_snippet(frame.incomplete_element_start, length=20)
+                incomplete_snippet = self.get_context_snippet(frame.incomplete_element_start, length=20)
                 line += f"\n     Started parsing element {frame.elements_parsed + 1} at "
                 line += f"position {frame.incomplete_element_start}: {incomplete_snippet}"
                 line += "\n     → This element is incomplete (see below)"
@@ -569,7 +569,7 @@ class AIFPLParser:
                 line += f" - parsed {frame.elements_parsed} element{'s' if frame.elements_parsed != 1 else ''}"
 
             if frame.incomplete_element_start is not None:
-                incomplete_snippet = self._get_context_snippet(frame.incomplete_element_start, length=20)
+                incomplete_snippet = self.get_context_snippet(frame.incomplete_element_start, length=20)
                 line += f"\n     Started parsing element at position {frame.incomplete_element_start}: {incomplete_snippet}"
                 line += "\n     → This element is incomplete"
             elif frame.last_complete_position:
