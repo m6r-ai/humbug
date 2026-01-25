@@ -34,46 +34,37 @@ class AIFPLDesugarer:
         Returns:
             Desugared AST (core language only)
         """
-        # Literals pass through unchanged
-        if isinstance(expr, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
+        # Lists need inspection - anything else does not
+        if not isinstance(expr, AIFPLList):
             return expr
 
-        # Symbols (variables) pass through unchanged
-        if isinstance(expr, AIFPLSymbol):
+        if expr.is_empty():
             return expr
 
-        # Lists need inspection
-        if isinstance(expr, AIFPLList):
-            if expr.is_empty():
+        first = expr.first()
+        if isinstance(first, AIFPLSymbol):
+            name = first.name
+
+            # Match expression - desugar it!
+            if name == 'match':
+                return self._desugar_match(expr)
+
+            # Core constructs - desugar children only
+            if name == 'if':
+                return self._desugar_if(expr)
+
+            if name == 'let':
+                return self._desugar_let(expr)
+
+            if name == 'lambda':
+                return self._desugar_lambda(expr)
+
+            if name == 'quote':
+                # Quote: don't desugar the quoted expression
                 return expr
 
-            first = expr.first()
-            if isinstance(first, AIFPLSymbol):
-                name = first.name
-
-                # Match expression - desugar it!
-                if name == 'match':
-                    return self._desugar_match(expr)
-
-                # Core constructs - desugar children only
-                if name == 'if':
-                    return self._desugar_if(expr)
-
-                if name == 'let':
-                    return self._desugar_let(expr)
-
-                if name == 'lambda':
-                    return self._desugar_lambda(expr)
-
-                if name == 'quote':
-                    # Quote: don't desugar the quoted expression
-                    return expr
-
-            # Regular function call - desugar all elements
-            return self._desugar_call(expr)
-
-        # Other types pass through
-        return expr
+        # Regular function call - desugar all elements
+        return self._desugar_call(expr)
 
     def _desugar_if(self, expr: AIFPLList) -> AIFPLValue:
         """Desugar if expression by desugaring its subexpressions."""
