@@ -175,7 +175,7 @@ class AIFPLCompiler:
         'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
         'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
         'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
-        'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?',
+        'range',
         'string-append', 'string-length', 'string-upcase', 'string-downcase',
         'string-trim', 'string-replace', 'string-split', 'string-join',
         'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',

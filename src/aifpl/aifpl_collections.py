@@ -833,4 +833,3 @@ class AIFPLCollectionsFunctions:
         range_values = list(range(start_int, end_int, step_int))
         elements = tuple(AIFPLNumber(val) for val in range_values)
         return AIFPLList(elements)
-

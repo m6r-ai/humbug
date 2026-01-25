@@ -1,7 +1,6 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
 from typing import List, Dict, Any, cast
-from pathlib import Path
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry

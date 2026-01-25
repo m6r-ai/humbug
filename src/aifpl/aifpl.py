@@ -1,8 +1,8 @@
 """Main AIFPL (AI Functional Programming Language) class with enhanced error messages."""
 
 from typing import Union
-from pathlib import Path
-from aifpl.aifpl_value import AIFPLFunction, AIFPLAList
+from aifpl.aifpl_value import AIFPLFunction
+from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
@@ -24,32 +24,82 @@ class AIFPL:
     Designed specifically to help LLMs understand and self-correct errors.
     """
 
-    # Class-level cache for prelude functions
-    _prelude_functions = None
-
     # AIFPL implementations of higher-order functions
     _PRELUDE_SOURCE = {
         'map': """(lambda (f lst)
                     (let ((helper (lambda (f lst acc)
                                     (if (null? lst) (reverse acc)
                                         (helper f (rest lst) (cons (f (first lst)) acc))))))
-                      (helper f lst (list))))""",
+                    (helper f lst (list))))""",
         'filter': """(lambda (pred lst)
-                       (let ((helper (lambda (pred lst acc)
-                                       (if (null? lst) (reverse acc)
-                                           (if (pred (first lst))
-                                               (helper pred (rest lst) (cons (first lst) acc))
-                                               (helper pred (rest lst) acc))))))
-                         (helper pred lst (list))))""",
+                    (let ((helper (lambda (pred lst acc)
+                                    (if (null? lst) (reverse acc)
+                                        (if (pred (first lst))
+                                            (helper pred (rest lst) (cons (first lst) acc))
+                                            (helper pred (rest lst) acc))))))
+                        (helper pred lst (list))))""",
         'fold': """(lambda (f init lst)
-                     (let ((helper (lambda (f acc lst)
-                                     (if (null? lst) acc
-                                         (helper f (f acc (first lst)) (rest lst))))))
-                       (helper f init lst)))""",
-        'find': """(lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) (first lst) (find pred (rest lst)))))""",
-        'any?': """(lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) #t (any? pred (rest lst)))))""",
-        'all?': """(lambda (pred lst) (if (null? lst) #t (if (pred (first lst)) (all? pred (rest lst)) #f)))""",
+                    (let ((helper (lambda (f acc lst)
+                                    (if (null? lst) acc
+                                        (helper f (f acc (first lst)) (rest lst))))))
+                    (helper f init lst)))""",
+        'find': """(lambda (pred lst)
+                    (let ((find (lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) (first lst) (find pred (rest lst)))))))
+                    (find pred lst)))""",
+        'any?': """(lambda (pred lst)
+                    (let ((any? (lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) #t (any? pred (rest lst)))))))
+                    (any? pred lst)))""",
+        'all?': """(lambda (pred lst)
+                    (let ((all? (lambda (pred lst) (if (null? lst) #t (if (pred (first lst)) (all? pred (rest lst)) #f)))))
+                    (all? pred lst)))""",
     }
+
+    # Class-level caches for prelude functions
+    _prelude_evaluator_cache = None  # For evaluator mode
+    _prelude_bytecode_cache = None   # For VM mode
+
+    @classmethod
+    def _load_prelude_for_evaluator(cls):
+        """Load prelude as evaluated AIFPLFunction objects (cached)."""
+        if cls._prelude_evaluator_cache is not None:
+            return cls._prelude_evaluator_cache
+
+        evaluator = AIFPLEvaluator()
+        env = AIFPLEnvironment()
+        env = env.define_many({**evaluator.CONSTANTS, **evaluator._builtin_functions})
+
+        prelude_funcs = {}
+        for name, source_code in cls._PRELUDE_SOURCE.items():
+            tokenizer = AIFPLTokenizer()
+            tokens = tokenizer.tokenize(source_code)
+            parser = AIFPLParser(tokens, source_code)
+            expr = parser.parse()
+            result = evaluator._evaluate_expression(expr, env, 0)
+            if isinstance(result, AIFPLFunction):
+                prelude_funcs[name] = result
+
+        cls._prelude_evaluator_cache = prelude_funcs
+        return prelude_funcs
+
+    @classmethod
+    def _load_prelude_for_vm(cls, compiler, vm, constants):
+        """Load prelude as bytecode AIFPLFunction objects (cached)."""
+        if cls._prelude_bytecode_cache is not None:
+            return cls._prelude_bytecode_cache
+
+        bytecode_prelude = {}
+        for name, source_code in cls._PRELUDE_SOURCE.items():
+            tokenizer = AIFPLTokenizer()
+            tokens = tokenizer.tokenize(source_code)
+            parser = AIFPLParser(tokens, source_code)
+            expr = parser.parse()
+            bytecode = compiler.compile(expr, name=f"<prelude:{name}>")
+            vm.set_globals(constants, {})
+            func = vm.execute(bytecode)
+            bytecode_prelude[name] = func
+
+        cls._prelude_bytecode_cache = bytecode_prelude
+        return bytecode_prelude
 
     def __init__(self, max_depth: int = 1000, floating_point_tolerance: float = 1e-10, use_bytecode: bool = False):
         """
@@ -68,46 +118,6 @@ class AIFPL:
         if use_bytecode:
             self.compiler = AIFPLCompiler()
             self.vm = AIFPLVM()
-
-    @classmethod
-    def _load_prelude(cls) -> dict[str, AIFPLFunction]:
-        """Load prelude functions from prelude.aifpl file (cached at class level)."""
-        # Return cached version if already loaded
-        if cls._prelude_functions is not None:
-            return cls._prelude_functions
-
-        try:
-            # Use evaluator to parse and evaluate each function (creates AIFPLFunction with AST body)
-            from aifpl.aifpl_evaluator import AIFPLEvaluator
-            evaluator = AIFPLEvaluator()
-
-            # Create environment with constants and builtins
-            from aifpl.aifpl_environment import AIFPLEnvironment
-            env = AIFPLEnvironment()
-            env = env.define_many({**evaluator.CONSTANTS, **evaluator._builtin_functions})
-
-            prelude_funcs = {}
-            for name, code in cls._PRELUDE_SOURCE.items():
-                tokenizer = AIFPLTokenizer()
-                tokens = tokenizer.tokenize(code)
-                parser = AIFPLParser(tokens, code)
-                expr = parser.parse()
-
-                # Evaluate to get the lambda function
-                result = evaluator._evaluate_expression(expr, env, 0)
-
-                if isinstance(result, AIFPLFunction):
-                    prelude_funcs[name] = result
-
-            cls._prelude_functions = prelude_funcs
-            return prelude_funcs
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            print(f"Warning: Failed to load prelude: {e}")
-            cls._prelude_functions = {}
-            return {}
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
         """
@@ -138,22 +148,15 @@ class AIFPL:
         # Set expression context for error reporting
         evaluator.set_expression_context(expression)
 
-        # Load prelude functions (cached at class level)
-        prelude_funcs = self._load_prelude()
-
         if self.use_bytecode:
-            # Compile and execute with VM
+            # Load prelude and compile main expression
+            bytecode_prelude = self._load_prelude_for_vm(self.compiler, self.vm, evaluator.CONSTANTS)
             code = self.compiler.compile(parsed_expr)
-
-            # Set up globals (builtins and constants)
-            # Only pass constants (pi, e, j, true, false) for variable lookup
-            globals_dict = evaluator.CONSTANTS
-            self.vm.set_globals(globals_dict, prelude_funcs)
-
-            # Execute
+            self.vm.set_globals(evaluator.CONSTANTS, bytecode_prelude)
             result = self.vm.execute(code)
         else:
-            # Use tree-walking interpreter
+            # Load prelude and evaluate
+            prelude_funcs = self._load_prelude_for_evaluator()
             result = evaluator.evaluate(parsed_expr, prelude_funcs)
 
         # Simplify the result
@@ -192,18 +195,15 @@ class AIFPL:
         evaluator.set_expression_context(expression)
 
         if self.use_bytecode:
-            # Compile and execute with VM
+            # Load prelude and compile main expression
+            bytecode_prelude = self._load_prelude_for_vm(self.compiler, self.vm, evaluator.CONSTANTS)
             code = self.compiler.compile(parsed_expr)
-
-            # Set up globals (builtins and constants)
-            globals_dict = evaluator.CONSTANTS
-            self.vm.set_globals(globals_dict)
-
-            # Execute
+            self.vm.set_globals(evaluator.CONSTANTS, bytecode_prelude)
             result = self.vm.execute(code)
         else:
-            # Use tree-walking interpreter
-            result = evaluator.evaluate(parsed_expr)
+            # Load prelude and evaluate
+            prelude_funcs = self._load_prelude_for_evaluator()
+            result = evaluator.evaluate(parsed_expr, prelude_funcs)
 
         # Simplify and format the result
         simplified = evaluator.simplify_result(result)

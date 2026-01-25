@@ -1,8 +1,6 @@
 """Evaluator for AIFPL Abstract Syntax Trees with detailed error messages."""
 
 import math
-import os
-from pathlib import Path
 from typing import List, Dict, cast
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
