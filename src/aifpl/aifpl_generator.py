@@ -179,39 +179,33 @@ class AIFPLGenerator:
     def _generate_if(self, analyzed: AnalyzedIf) -> None:
         """Generate code for if expression.
         
-        This is the KEY TEST of the two-pass approach!
-        Jump offsets are pre-calculated, so we emit correct values
-        from the start - NO PATCHING!
+        Uses jump patching during code generation (like 1-pass compiler).
         
         Args:
             analyzed: Analyzed if expression
         """
-        # Record starting position for calculating absolute jump targets
-        start_ip = self._current_ip()
-        
         # Generate condition
         self._generate_expression(analyzed.condition)
         
-        # Emit POP_JUMP_IF_FALSE with PRE-CALCULATED offset
-        # The offset was calculated during analysis - no patching needed!
-        else_target = start_ip + analyzed.jump_to_else_offset
-        self._emit(Opcode.POP_JUMP_IF_FALSE, else_target)
+        # Jump to else if condition is false (will patch later)
+        jump_to_else = self._emit(Opcode.POP_JUMP_IF_FALSE, 0)
         
         # Generate then branch
         self._generate_expression(analyzed.then_branch)
         
-        # Emit JUMP past else branch (if needed)
-        # Check if we need the jump by comparing offsets
-        # If jump_past_else_offset > jump_to_else_offset, we need the JUMP
-        if analyzed.jump_past_else_offset > analyzed.jump_to_else_offset:
-            end_target = start_ip + analyzed.jump_past_else_offset
-            self._emit(Opcode.JUMP, end_target)
+        # Jump past else branch (will patch later)
+        jump_past_else = self._emit(Opcode.JUMP, 0)
+        
+        # Patch jump to else
+        else_start = self._current_ip()
+        self._patch_jump(jump_to_else, else_start)
         
         # Generate else branch
         self._generate_expression(analyzed.else_branch)
         
-        # NO PATCHING! All jump targets were correct from the start!
-        # This is the key innovation of the two-pass approach.
+        # Patch jump past else
+        after_else = self._current_ip()
+        self._patch_jump(jump_past_else, after_else)
     
     def _generate_let(self, analyzed: AnalyzedLet) -> None:
         """Generate code for let expression.
@@ -390,6 +384,15 @@ class AIFPLGenerator:
         """
         return len(self.instructions)
     
+    def _patch_jump(self, instr_index: int, target: int) -> None:
+        """Patch a jump instruction to point to target.
+        
+        Args:
+            instr_index: Index of the jump instruction to patch
+            target: Target instruction index to jump to
+        """
+        self.instructions[instr_index].arg1 = target
+    
     def _calculate_max_locals(self) -> int:
         """Calculate maximum number of local variables needed.
         
@@ -424,27 +427,32 @@ class AIFPLGenerator:
             self._emit(Opcode.LOAD_TRUE)
             return
         
-        # Record starting position for calculating absolute jump targets
-        start_ip = self._current_ip()
+        # Track jumps to false section
+        jump_to_false = []
         
         # Generate each argument with its jump
-        for i, arg in enumerate(analyzed.args):
+        for arg in analyzed.args:
             # Generate argument
             self._generate_expression(arg)
             
             # Jump to false section if this arg is false
-            false_target = start_ip + analyzed.jump_to_false_offsets[i]
-            self._emit(Opcode.POP_JUMP_IF_FALSE, false_target)
+            jump = self._emit(Opcode.POP_JUMP_IF_FALSE, 0)
+            jump_to_false.append(jump)
         
         # All arguments were true - return #t
         self._emit(Opcode.LOAD_TRUE)
-        
-        # Jump to end
-        end_target = start_ip + analyzed.jump_to_end_offset
-        self._emit(Opcode.JUMP, end_target)
+        jump_to_end = self._emit(Opcode.JUMP, 0)
         
         # False section
+        false_section = self._current_ip()
+        for jump in jump_to_false:
+            self._patch_jump(jump, false_section)
+        
         self._emit(Opcode.LOAD_FALSE)
+        
+        # Patch jump to end
+        end = self._current_ip()
+        self._patch_jump(jump_to_end, end)
     
     def _generate_or(self, analyzed: AnalyzedOr) -> None:
         """Generate code for 'or' expression with short-circuit evaluation.
@@ -468,27 +476,32 @@ class AIFPLGenerator:
             self._emit(Opcode.LOAD_FALSE)
             return
         
-        # Record starting position for calculating absolute jump targets
-        start_ip = self._current_ip()
+        # Track jumps to true section
+        jump_to_true = []
         
         # Generate each argument with its jump
-        for i, arg in enumerate(analyzed.args):
+        for arg in analyzed.args:
             # Generate argument
             self._generate_expression(arg)
             
             # Jump to true section if this arg is true
-            true_target = start_ip + analyzed.jump_to_true_offsets[i]
-            self._emit(Opcode.POP_JUMP_IF_TRUE, true_target)
+            jump = self._emit(Opcode.POP_JUMP_IF_TRUE, 0)
+            jump_to_true.append(jump)
         
         # All arguments were false - return #f
         self._emit(Opcode.LOAD_FALSE)
-        
-        # Jump to end
-        end_target = start_ip + analyzed.jump_to_end_offset
-        self._emit(Opcode.JUMP, end_target)
+        jump_to_end = self._emit(Opcode.JUMP, 0)
         
         # True section
+        true_section = self._current_ip()
+        for jump in jump_to_true:
+            self._patch_jump(jump, true_section)
+        
         self._emit(Opcode.LOAD_TRUE)
+        
+        # Patch jump to end
+        end = self._current_ip()
+        self._patch_jump(jump_to_end, end)
     
     def _calculate_max_locals_from_analyzed(self, analyzed: AnalyzedExpression) -> int:
         """Recursively calculate max locals from analyzed IR.
