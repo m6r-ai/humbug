@@ -4,7 +4,7 @@ from typing import List, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLFunction
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction
 )
 
 
@@ -791,6 +791,9 @@ class AIFPLCollectionsFunctions:
 
         if isinstance(func, AIFPLFunction):
             # Call builtin directly
+            if func.native_impl is None:
+                raise AIFPLEvalError(f"Function {func.name} has no native implementation")
+
             return func.native_impl(func_args)
 
         # Not a function
@@ -903,6 +906,7 @@ class AIFPLCollectionsFunctions:
                         example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
                         suggestion="Predicate function should use comparison operators"
                     )
+
                 if pred_result.value:
                     result_elements.append(item)
 
@@ -1005,8 +1009,8 @@ class AIFPLCollectionsFunctions:
         if not end_val.is_integer():
             raise AIFPLEvalError("Range end must be an integer")
 
-        start_int = int(start_val.value)
-        end_int = int(end_val.value)
+        start_int = int(start_val.value.real) if isinstance(start_val.value, complex) else int(start_val.value)
+        end_int = int(end_val.value.real) if isinstance(end_val.value, complex) else int(end_val.value)
 
         if len(args) == 3:
             step_val = args[2]
@@ -1020,7 +1024,8 @@ class AIFPLCollectionsFunctions:
                 )
             if not step_val.is_integer():
                 raise AIFPLEvalError("Range step must be an integer")
-            step_int = int(step_val.value)
+
+            step_int = int(step_val.value.real) if isinstance(step_val.value, complex) else int(step_val.value)
 
         else:
             step_int = 1
@@ -1141,6 +1146,7 @@ class AIFPLCollectionsFunctions:
                         example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
                         suggestion="Predicate function should use comparison operators"
                     )
+
                 if pred_result.value:
                     return AIFPLBoolean(True)
 

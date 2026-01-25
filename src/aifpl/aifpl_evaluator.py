@@ -515,8 +515,11 @@ class AIFPLEvaluator:
                 )
 
             # Check if this is a special form that needs unevaluated arguments
-            if func_value.is_native and self._is_special_form(func_value.name):
+            if func_value.is_native and func_value.name and self._is_special_form(func_value.name):
                 # Special forms get unevaluated arguments
+                if func_value.native_impl is None:
+                    raise AIFPLEvalError(f"Function {func_value.name} has no native implementation")
+
                 return func_value.native_impl(arg_exprs, current_env, depth)
 
             # Regular functions get evaluated arguments
@@ -533,6 +536,7 @@ class AIFPLEvaluator:
 
             if func_value.is_native:
                 result = self._call_builtin_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
+
             else:
                 result = self._call_lambda_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
 
@@ -647,20 +651,35 @@ class AIFPLEvaluator:
         """
         try:
             # Special forms need env and depth for evaluation, regular builtins don't
-            if self._is_special_form(func.name):
+            if func.name and self._is_special_form(func.name):
+                if func.native_impl is None:
+                    raise AIFPLEvalError(f"Function {func.name} has no native implementation")
+
                 return func.native_impl(arg_values, env, depth)
 
             # Higher-order functions need special handling for lambda arguments
             if func.name in ['map', 'filter', 'fold', 'find', 'any?', 'all?']:
                 # Temporarily override the collections module's _call_function method
                 # to use our evaluator's lambda calling capability
-                old_call = self.builtin_registry.collections_functions._call_function
-                self.builtin_registry.collections_functions._call_function = lambda f, args, ctx: self._call_function_for_higher_order(f, args, env, depth)
+                collections_funcs = self.builtin_registry.collections_functions
+                old_call = collections_funcs._call_function
+
+                # Create a wrapper function that matches the expected signature
+                def call_wrapper(f: AIFPLValue, args: list[AIFPLValue], _ctx: str) -> AIFPLValue:
+                    return self._call_function_for_higher_order(f, args, env, depth)
+
+                collections_funcs._call_function = call_wrapper  # type: ignore[method-assign, assignment]
                 try:
+                    if func.native_impl is None:
+                        raise AIFPLEvalError(f"Function {func.name} has no native implementation")
+
                     return func.native_impl(arg_values)
 
                 finally:
-                    self.builtin_registry.collections_functions._call_function = old_call
+                    collections_funcs._call_function = old_call  # type: ignore[method-assign, assignment]
+
+            if func.native_impl is None:
+                raise AIFPLEvalError(f"Function {func.name} has no native implementation")
 
             return func.native_impl(arg_values)
 
@@ -690,11 +709,11 @@ class AIFPLEvaluator:
                 received=f"Got: {func.type_name()}",
                 expected="Function (lambda or builtin)"
             )
-        
+
         if func.is_native:
             return self._call_builtin_function(func, args, env, depth)
-        else:
-            return self._call_lambda_function(func, args, env, depth)
+
+        return self._call_lambda_function(func, args, env, depth)
 
     def _evaluate_expression_with_tail_detection(
         self,
@@ -718,7 +737,7 @@ class AIFPLEvaluator:
         if expr.is_self_evaluating():
             return expr
 
-         # Symbol lookup
+        # Symbol lookup
         if isinstance(expr, AIFPLSymbol):
             try:
                 return env.lookup(expr.name)
@@ -833,44 +852,6 @@ class AIFPLEvaluator:
             return self._evaluate_expression_with_tail_detection(then_expr, env, depth + 1)
 
         return self._evaluate_expression_with_tail_detection(else_expr, env, depth + 1)
-
-    def _call_function_with_evaluated_args(
-        self,
-        func_expr: AIFPLValue,
-        arg_values: List[AIFPLValue],
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """
-        Call a function with already-evaluated arguments.
-
-        This is used by higher-order functions where arguments are already AIFPLValue objects.
-
-        Args:
-            func_expr: Function expression (unevaluated)
-            arg_values: Already-evaluated argument values
-            env: Current environment
-            depth: Current recursion depth
-
-        Returns:
-            Function result
-        """
-        # Evaluate the function expression
-        func_value = self._evaluate_expression(func_expr, env, depth)
-        if isinstance(func_value, AIFPLFunction):
-            result = self._call_lambda_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
-            assert not isinstance(result, AIFPLTailCall), (
-                "Tail calls should not propagate out of higher-order function calls"
-            )
-            return result
-
-        raise AIFPLEvalError(
-            message="Cannot call non-function value in higher-order context",
-            received=f"Trying to call: {self.format_result(func_value)} ({func_value.type_name()})",
-            expected="Function (builtin or lambda)",
-            example="(map (lambda (x) (* x 2)) (list 1 2 3))",
-            suggestion="Provide a function as the first argument to higher-order functions"
-        )
 
     def _builtin_and_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
         """Handle AND with short-circuit evaluation."""

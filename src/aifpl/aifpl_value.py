@@ -379,7 +379,7 @@ class AIFPLFunction(AIFPLValue):
     native_impl: Callable | None = None  # Python function for builtins
     is_variadic: bool = False  # True if function accepts variable number of args
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate that function has either body/bytecode or native_impl, but not both."""
         has_body = self.body is not None or self.bytecode is not None
         has_native = self.native_impl is not None
@@ -393,11 +393,8 @@ class AIFPLFunction(AIFPLValue):
     def is_self_evaluating(self) -> bool:
         return True
 
-    def to_python(self) -> 'AIFPLFunction':
-        """Functions return themselves (or their name for builtins)."""
-        if self.is_native:
-            return self.name or "<native>"
-
+    def to_python(self) -> 'AIFPLFunction | str':
+        """Functions return themselves (or their name for builtins as string)."""
         return self
 
     def type_name(self) -> str:
@@ -418,8 +415,8 @@ class AIFPLFunction(AIFPLValue):
             param_str = f"{regular_params} . {rest_param}".strip(' .')
 
         if self.is_native:
-
             return f"<builtin {self.name}({param_str})>"
+
         return f"<lambda ({param_str})>"
 
 
