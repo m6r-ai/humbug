@@ -1,6 +1,7 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
 from typing import List, Dict, Any, cast
+from pathlib import Path
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
@@ -94,10 +95,12 @@ class AIFPLVM:
         """
         return self._builtin_registry.create_builtin_function_objects()
 
-    def set_globals(self, globals_dict: Dict[str, AIFPLValue]) -> None:
+    def set_globals(self, globals_dict: Dict[str, AIFPLValue], prelude_functions: dict[str, AIFPLFunction] | None = None) -> None:
         """Set global variables (constants like pi, e, j) and add builtin functions."""
         self.globals = globals_dict.copy()
         self.globals.update(self._builtin_functions)
+        if prelude_functions:
+            self.globals.update(prelude_functions)
 
     def _format_result(self, result: AIFPLValue) -> str:
         """
@@ -738,28 +741,6 @@ class AIFPLVM:
 
         raise AIFPLEvalError("Function did not return a value")
 
-    def _call_function_value(self, func: AIFPLFunction, args: List[AIFPLValue]) -> AIFPLValue:
-        """Call a function value (either user-defined or builtin).
-
-        This is a helper for higher-order functions like map, filter, fold, etc.
-        For bytecode functions, we push args onto the stack then call the function.
-        """
-        if not isinstance(func, AIFPLFunction):
-            raise AIFPLEvalError(f"Expected function, got {func.type_name()}")
-
-        if func.is_native:
-            # Call native builtin directly
-            if func.native_impl is None:
-                raise AIFPLEvalError(f"Function {func.name} has no native implementation")
-
-            return func.native_impl(args)
-
-        # Push arguments onto stack for function prologue to pop
-        for arg in args:
-            self.stack.append(arg)
-
-        return self._call_bytecode_function(func)
-
     def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
         """Call a builtin function by index.
 
@@ -813,28 +794,6 @@ class AIFPLVM:
                     return AIFPLBoolean(True)
 
             return AIFPLBoolean(False)
-
-        # Higher-order functions (map, filter, fold, range, find, any?, all?)
-        # are now in the registry, but need special handling to call lambdas
-        if builtin_name in ['map', 'filter', 'fold', 'find', 'any?', 'all?']:
-            # Temporarily override the collections module's _call_function method
-            # to use our VM's lambda calling capability
-            collections_funcs = self._builtin_registry.collections_functions
-            old_call = collections_funcs._call_function
-
-            # Create a wrapper function that matches the expected signature
-            def call_wrapper(f: AIFPLValue, args: list[AIFPLValue], _ctx: str) -> AIFPLValue:
-                if not isinstance(f, AIFPLFunction):
-                    raise AIFPLEvalError(f"Expected function, got {f.type_name()}")
-
-                return self._call_function_value(f, args)
-
-            collections_funcs._call_function = call_wrapper  # type: ignore[method-assign, assignment]
-            try:
-                return self._builtin_registry.call_builtin(builtin_name, args)
-
-            finally:
-                collections_funcs._call_function = old_call  # type: ignore[method-assign, assignment]
 
         # Check if this builtin is in the registry
         if not self._builtin_registry.has_function(builtin_name):

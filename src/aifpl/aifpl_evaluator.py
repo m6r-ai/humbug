@@ -1,6 +1,8 @@
 """Evaluator for AIFPL Abstract Syntax Trees with detailed error messages."""
 
 import math
+import os
+from pathlib import Path
 from typing import List, Dict, cast
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
@@ -74,7 +76,7 @@ class AIFPLEvaluator:
         """Check if value is a symbol with the given name."""
         return isinstance(value, AIFPLSymbol) and value.name == name
 
-    def evaluate(self, expr: AIFPLValue) -> AIFPLValue:
+    def evaluate(self, expr: AIFPLValue, prelude_functions: dict[str, AIFPLFunction] | None = None) -> AIFPLValue:
         """
         Recursively evaluate AST.
 
@@ -91,6 +93,9 @@ class AIFPLEvaluator:
 
         # Add constants and built-in functions to global environment (batch for efficiency)
         global_bindings = {**self.CONSTANTS, **self._builtin_functions}
+        if prelude_functions:
+            global_bindings.update(prelude_functions)
+
         env = env.define_many(global_bindings)
 
         # All code paths in the evaluator raise AIFPLEvalError, so the generic exception
@@ -658,26 +663,6 @@ class AIFPLEvaluator:
                 return func.native_impl(arg_values, env, depth)
 
             # Higher-order functions need special handling for lambda arguments
-            if func.name in ['map', 'filter', 'fold', 'find', 'any?', 'all?']:
-                # Temporarily override the collections module's _call_function method
-                # to use our evaluator's lambda calling capability
-                collections_funcs = self.builtin_registry.collections_functions
-                old_call = collections_funcs._call_function
-
-                # Create a wrapper function that matches the expected signature
-                def call_wrapper(f: AIFPLValue, args: list[AIFPLValue], _ctx: str) -> AIFPLValue:
-                    return self._call_function_for_higher_order(f, args, env, depth)
-
-                collections_funcs._call_function = call_wrapper  # type: ignore[method-assign, assignment]
-                try:
-                    if func.native_impl is None:
-                        raise AIFPLEvalError(f"Function {func.name} has no native implementation")
-
-                    return func.native_impl(arg_values)
-
-                finally:
-                    collections_funcs._call_function = old_call  # type: ignore[method-assign, assignment]
-
             if func.native_impl is None:
                 raise AIFPLEvalError(f"Function {func.name} has no native implementation")
 
@@ -694,26 +679,6 @@ class AIFPLEvaluator:
                 context=str(e),
                 suggestion="This is an internal error - please report this issue"
             ) from e
-
-    def _call_function_for_higher_order(
-        self,
-        func: AIFPLValue,
-        args: List[AIFPLValue],
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """Helper to call functions from higher-order functions (map, filter, etc.)."""
-        if not isinstance(func, AIFPLFunction):
-            raise AIFPLEvalError(
-                message="Cannot call non-function value",
-                received=f"Got: {func.type_name()}",
-                expected="Function (lambda or builtin)"
-            )
-
-        if func.is_native:
-            return self._call_builtin_function(func, args, env, depth)
-
-        return self._call_lambda_function(func, args, env, depth)
 
     def _evaluate_expression_with_tail_detection(
         self,
