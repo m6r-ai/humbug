@@ -11,6 +11,8 @@ from aifpl.aifpl_analysis_ir import (
     AnalyzedVariable,
     AnalyzedQuote,
     AnalyzedMakeList,
+    AnalyzedAnd,
+    AnalyzedOr,
 )
 from aifpl.aifpl_value import (
     AIFPLNumber,
@@ -362,7 +364,7 @@ class TestAnalyzerNotImplemented:
         pass
     
     def test_and_not_implemented(self):
-        """Test that 'and' analysis is not yet implemented."""
+        """Test that 'and' analysis is now implemented."""
         analyzer = AIFPLAnalyzer()
         
         expr = AIFPLList((
@@ -371,11 +373,14 @@ class TestAnalyzerNotImplemented:
             AIFPLBoolean(False)
         ))
         
-        with pytest.raises(NotImplementedError, match="_analyze_and"):
-            analyzer.analyze(expr)
+        result = analyzer.analyze(expr)
+        
+        # Should return AnalyzedAnd, not raise
+        assert isinstance(result, AnalyzedAnd)
+        assert len(result.args) == 2
     
     def test_or_not_implemented(self):
-        """Test that 'or' analysis is not yet implemented."""
+        """Test that 'or' analysis is now implemented."""
         analyzer = AIFPLAnalyzer()
         
         expr = AIFPLList((
@@ -384,8 +389,11 @@ class TestAnalyzerNotImplemented:
             AIFPLBoolean(False)
         ))
         
-        with pytest.raises(NotImplementedError, match="_analyze_or"):
-            analyzer.analyze(expr)
+        result = analyzer.analyze(expr)
+        
+        # Should return AnalyzedOr, not raise
+        assert isinstance(result, AnalyzedOr)
+        assert len(result.args) == 2
 
 
 class TestInstructionCounting:

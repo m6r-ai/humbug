@@ -253,3 +253,84 @@ class TestTwoPassCompilerMode:
         """Test that default is single-pass."""
         compiler = AIFPLCompiler()
         assert compiler.use_two_pass == False
+
+
+class TestTwoPassAndOr:
+    """Test and/or compilation with two-pass compiler."""
+    
+    def test_and_empty(self):
+        """Test (and) -> #t."""
+        compiler = AIFPLCompiler(use_two_pass=True)
+        expr = parse("(and)")
+        
+        code = compiler.compile(expr)
+        result = execute(code)
+        
+        assert isinstance(result, AIFPLBoolean)
+        assert result.value == True
+    
+    def test_and_single_true(self):
+        """Test (and #t) -> #t."""
+        compiler = AIFPLCompiler(use_two_pass=True)
+        expr = parse("(and #t)")
+        
+        code = compiler.compile(expr)
+        result = execute(code)
+        
+        assert isinstance(result, AIFPLBoolean)
+        assert result.value == True
+    
+    def test_and_single_false(self):
+        """Test (and #f) -> #f."""
+        compiler = AIFPLCompiler(use_two_pass=True)
+        expr = parse("(and #f)")
+        
+        code = compiler.compile(expr)
+        result = execute(code)
+        
+        assert isinstance(result, AIFPLBoolean)
+        assert result.value == False
+    
+    def test_and_all_true(self):
+        """Test (and #t #t #t) -> #t."""
+        compiler = AIFPLCompiler(use_two_pass=True)
+        expr = parse("(and #t #t #t)")
+        
+        code = compiler.compile(expr)
+        result = execute(code)
+        
+        assert isinstance(result, AIFPLBoolean)
+        assert result.value == True
+    
+    def test_and_with_false(self):
+        """Test (and #t #f #t) -> #f."""
+        compiler = AIFPLCompiler(use_two_pass=True)
+        expr = parse("(and #t #f #t)")
+        
+        code = compiler.compile(expr)
+        result = execute(code)
+        
+        assert isinstance(result, AIFPLBoolean)
+        assert result.value == False
+    
+    def test_or_empty(self):
+        """Test (or) -> #f."""
+        compiler = AIFPLCompiler(use_two_pass=True)
+        expr = parse("(or)")
+        
+        code = compiler.compile(expr)
+        result = execute(code)
+        
+        assert isinstance(result, AIFPLBoolean)
+        assert result.value == False
+    
+    def test_or_with_true(self):
+        """Test (or #f #t #f) -> #t."""
+        compiler = AIFPLCompiler(use_two_pass=True)
+        expr = parse("(or #f #t #f)")
+        
+        code = compiler.compile(expr)
+        result = execute(code)
+        
+        assert isinstance(result, AIFPLBoolean)
+        assert result.value == True

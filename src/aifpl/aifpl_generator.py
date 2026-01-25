@@ -21,6 +21,8 @@ from aifpl.aifpl_analysis_ir import (
     AnalyzedCall,
     AnalyzedQuote,
     AnalyzedMakeList,
+    AnalyzedAnd,
+    AnalyzedOr,
 )
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode, make_instruction
 from aifpl.aifpl_value import AIFPLValue, AIFPLBoolean
@@ -125,6 +127,12 @@ class AIFPLGenerator:
         
         elif isinstance(analyzed, AnalyzedMakeList):
             self._generate_make_list(analyzed)
+        
+        elif isinstance(analyzed, AnalyzedAnd):
+            self._generate_and(analyzed)
+        
+        elif isinstance(analyzed, AnalyzedOr):
+            self._generate_or(analyzed)
         
         else:
             raise AIFPLEvalError(
@@ -393,6 +401,94 @@ class AIFPLGenerator:
         """
         # TODO: Properly track locals during generation
         return self.max_locals
+    
+    def _generate_and(self, analyzed: AnalyzedAnd) -> None:
+        """Generate code for 'and' expression with short-circuit evaluation.
+        
+        Bytecode structure (matching 1-pass compiler):
+        - Evaluate arg1
+        - POP_JUMP_IF_FALSE <false_section>
+        - Evaluate arg2
+        - POP_JUMP_IF_FALSE <false_section>
+        - ...
+        - LOAD_TRUE
+        - JUMP <end>
+        - false_section: LOAD_FALSE
+        - end:
+        
+        Args:
+            analyzed: Analyzed and expression
+        """
+        # Handle empty case: (and) -> #t
+        if len(analyzed.args) == 0:
+            self._emit(Opcode.LOAD_TRUE)
+            return
+        
+        # Record starting position for calculating absolute jump targets
+        start_ip = self._current_ip()
+        
+        # Generate each argument with its jump
+        for i, arg in enumerate(analyzed.args):
+            # Generate argument
+            self._generate_expression(arg)
+            
+            # Jump to false section if this arg is false
+            false_target = start_ip + analyzed.jump_to_false_offsets[i]
+            self._emit(Opcode.POP_JUMP_IF_FALSE, false_target)
+        
+        # All arguments were true - return #t
+        self._emit(Opcode.LOAD_TRUE)
+        
+        # Jump to end
+        end_target = start_ip + analyzed.jump_to_end_offset
+        self._emit(Opcode.JUMP, end_target)
+        
+        # False section
+        self._emit(Opcode.LOAD_FALSE)
+    
+    def _generate_or(self, analyzed: AnalyzedOr) -> None:
+        """Generate code for 'or' expression with short-circuit evaluation.
+        
+        Bytecode structure (matching 1-pass compiler):
+        - Evaluate arg1
+        - POP_JUMP_IF_TRUE <true_section>
+        - Evaluate arg2
+        - POP_JUMP_IF_TRUE <true_section>
+        - ...
+        - LOAD_FALSE
+        - JUMP <end>
+        - true_section: LOAD_TRUE
+        - end:
+        
+        Args:
+            analyzed: Analyzed or expression
+        """
+        # Handle empty case: (or) -> #f
+        if len(analyzed.args) == 0:
+            self._emit(Opcode.LOAD_FALSE)
+            return
+        
+        # Record starting position for calculating absolute jump targets
+        start_ip = self._current_ip()
+        
+        # Generate each argument with its jump
+        for i, arg in enumerate(analyzed.args):
+            # Generate argument
+            self._generate_expression(arg)
+            
+            # Jump to true section if this arg is true
+            true_target = start_ip + analyzed.jump_to_true_offsets[i]
+            self._emit(Opcode.POP_JUMP_IF_TRUE, true_target)
+        
+        # All arguments were false - return #f
+        self._emit(Opcode.LOAD_FALSE)
+        
+        # Jump to end
+        end_target = start_ip + analyzed.jump_to_end_offset
+        self._emit(Opcode.JUMP, end_target)
+        
+        # True section
+        self._emit(Opcode.LOAD_TRUE)
     
     def _calculate_max_locals_from_analyzed(self, analyzed: AnalyzedExpression) -> int:
         """Recursively calculate max locals from analyzed IR.
