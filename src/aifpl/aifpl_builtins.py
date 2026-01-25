@@ -7,7 +7,6 @@ used by both the tree-walking evaluator and the bytecode VM.
 from typing import List, Dict, Callable
 
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_math import AIFPLMathFunctions
 from aifpl.aifpl_value import AIFPLValue, AIFPLBuiltinFunction
 

@@ -5,7 +5,6 @@ import math
 from typing import List, Union, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean
 
 
