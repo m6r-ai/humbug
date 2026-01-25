@@ -24,6 +24,14 @@ from aifpl.aifpl_analysis_ir import (
     AnalyzedAnd,
     AnalyzedOr,
     AnalyzedMatch,
+    AnalyzedMatchClause,
+    AnalyzedLiteralPattern,
+    AnalyzedVariablePattern,
+    AnalyzedWildcardPattern,
+    AnalyzedTypePattern,
+    AnalyzedEmptyListPattern,
+    AnalyzedFixedListPattern,
+    AnalyzedConsPattern,
     AnalyzedQuote,
     AnalyzedMakeList,
 )
@@ -810,9 +818,318 @@ class AIFPLAnalyzer:
     def _analyze_match(self, expr: AIFPLList, in_tail_position: bool) -> AnalyzedMatch:
         """Analyze match expression.
         
-        This is a placeholder - will be implemented later.
+        Analyzes expressions like:
+        - (match x ((42) "found") (_ "default"))
+        - (match lst ((number? n) n) ((string? s) s))
+        
+        Args:
+            expr: Match expression
+            in_tail_position: Whether this match is in tail position
+            
+        Returns:
+            AnalyzedMatch with pattern analysis and temp variable allocation
         """
-        raise NotImplementedError("_analyze_match will be implemented later")
+        if len(expr.elements) < 3:
+            raise AIFPLEvalError(
+                message="Match expression has wrong number of arguments",
+                received=f"Got {len(expr.elements) - 1} arguments",
+                expected="At least 2 arguments: (match value (pattern1 result1) ...)",
+                example="(match x ((42) \"found\") (_ \"default\"))"
+            )
+        
+        value_expr = expr.elements[1]
+        clause_exprs = expr.elements[2:]
+        
+        # Validate all clauses upfront
+        for i, clause in enumerate(clause_exprs):
+            if not isinstance(clause, AIFPLList) or len(clause.elements) != 2:
+                raise AIFPLEvalError(
+                    message=f"Match clause {i+1} has wrong number of elements",
+                    received=f"Clause {i+1}: {clause}",
+                    expected="Each clause needs exactly 2 elements: (pattern result)",
+                    example="(match x ((42) \"found\") ((string? s) s))",
+                    suggestion="Each clause: (pattern result-expression)"
+                )
+        
+        # Validate pattern syntax for all clauses
+        for i, clause in enumerate(clause_exprs):
+            pattern = clause.elements[0]
+            try:
+                self._validate_pattern_syntax(pattern)
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(
+                    message=f"Invalid pattern in clause {i+1}",
+                    context=str(e)
+                ) from e
+        
+        # Analyze the value expression
+        analyzed_value = self._analyze_expression(value_expr, in_tail_position=False)
+        
+        # Save current bindings state
+        saved_bindings_count = len(self.symbol_table.current_scope.symbols)
+        saved_next_index = self.symbol_table.current_scope.next_var_index
+        
+        # Allocate temporary for match value
+        match_temp_index = self.symbol_table.add_symbol("<match-temp>", "local", defined_at=expr).var_index
+        
+        # Analyze each clause
+        analyzed_clauses = []
+        max_locals_used = saved_next_index + 1  # At least match-temp
+        for i, clause in enumerate(clause_exprs):
+            pattern_expr = clause.elements[0]
+            result_expr = clause.elements[1]
+            
+            # Analyze pattern (will allocate temps and bind pattern variables)
+            analyzed_pattern = self._analyze_pattern(pattern_expr, match_temp_index)
+            
+            # Analyze result expression (pattern variables are in scope)
+            analyzed_result = self._analyze_expression(result_expr, in_tail_position=in_tail_position)
+            
+            # Create clause
+            analyzed_clauses.append(AnalyzedMatchClause(
+                pattern=analyzed_pattern,
+                result=analyzed_result
+            ))
+            
+            # Track max locals used
+            current_locals = self.symbol_table.current_scope.next_var_index
+            max_locals_used = max(max_locals_used, current_locals)
+            
+            # Reset bindings for next clause (keep match-temp)
+            # Remove pattern variables and their temps
+            self.symbol_table.current_scope.symbols = dict(
+                list(self.symbol_table.current_scope.symbols.items())[:saved_bindings_count + 1]
+            )
+            self.symbol_table.current_scope.next_var_index = saved_next_index + 1
+        
+        # Calculate instruction count (approximate)
+        # This is complex, so we'll use a simple estimate
+        instr_count = analyzed_value.instruction_count  # Value
+        instr_count += 1  # STORE_VAR for match temp
+        for clause in analyzed_clauses:
+            instr_count += 10  # Pattern matching (approximate)
+            instr_count += clause.result.instruction_count
+            instr_count += 2  # Jumps
+        
+        return AnalyzedMatch(
+            expr_type='match',
+            source_expr=expr,
+            value=analyzed_value,
+            match_temp_index=match_temp_index,
+            saved_bindings_count=saved_bindings_count,
+            saved_next_index=saved_next_index,
+            max_locals_used=max_locals_used,
+            clauses=analyzed_clauses,
+            instruction_count=instr_count
+        )
+    
+    def _validate_pattern_syntax(self, pattern: AIFPLValue) -> None:
+        """Validate pattern syntax before analysis.
+        
+        This is a simple validation - detailed checking happens during analysis.
+        For now, we'll accept any pattern and let analysis catch errors.
+        """
+        # TODO: Add comprehensive pattern validation
+        # For now, just check basic structure
+        pass
+    
+    def _analyze_pattern(self, pattern: AIFPLValue, match_value_index: int):
+        """Analyze a pattern recursively.
+        
+        Args:
+            pattern: Pattern to analyze
+            match_value_index: Index of temp var holding value to match
+            
+        Returns:
+            AnalyzedPattern (specific subclass based on pattern type)
+        """
+        # Literal patterns: numbers, strings, booleans
+        if isinstance(pattern, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
+            const_index = self._add_constant(pattern)
+            return AnalyzedLiteralPattern(
+                pattern_type='literal',
+                source_expr=pattern,
+                value=pattern,
+                const_index=const_index,
+                match_value_index=match_value_index,
+                instruction_count=3  # LOAD_VAR + LOAD_CONST + CALL_BUILTIN(=)
+            )
+        
+        # Variable pattern: binds the value
+        if isinstance(pattern, AIFPLSymbol):
+            if pattern.name == '_':
+                # Wildcard - always matches, no binding
+                return AnalyzedWildcardPattern(
+                    pattern_type='wildcard',
+                    source_expr=pattern,
+                    instruction_count=1  # LOAD_TRUE
+                )
+            
+            # Bind variable
+            var_index = self.symbol_table.add_symbol(pattern.name, "local", defined_at=pattern).var_index
+            return AnalyzedVariablePattern(
+                pattern_type='variable',
+                source_expr=pattern,
+                name=pattern.name,
+                var_index=var_index,
+                match_value_index=match_value_index,
+                instruction_count=3  # LOAD_VAR + STORE_VAR + LOAD_TRUE
+            )
+        
+        # List patterns
+        if isinstance(pattern, AIFPLList):
+            return self._analyze_list_pattern(pattern, match_value_index)
+        
+        raise AIFPLEvalError(f"Unknown pattern type: {type(pattern).__name__}")
+    
+    def _analyze_list_pattern(self, pattern: AIFPLList, match_value_index: int):
+        """Analyze a list pattern.
+        
+        Args:
+            pattern: List pattern to analyze
+            match_value_index: Index of temp var holding value to match
+            
+        Returns:
+            AnalyzedPattern (specific subclass based on list pattern type)
+        """
+        # Empty list pattern
+        if pattern.is_empty():
+            return AnalyzedEmptyListPattern(
+                pattern_type='empty_list',
+                source_expr=pattern,
+                match_value_index=match_value_index,
+                instruction_count=2  # LOAD_VAR + CALL_BUILTIN(null?)
+            )
+        
+        # Type pattern: (type? var)
+        if (len(pattern.elements) == 2 and
+            isinstance(pattern.elements[0], AIFPLSymbol) and
+            pattern.elements[0].name.endswith('?')):
+            
+            type_pred = pattern.elements[0].name
+            var_pattern = pattern.elements[1]
+            
+            # Check if it's a valid type predicate
+            valid_types = {'number?', 'integer?', 'float?', 'complex?',
+                          'string?', 'boolean?', 'list?', 'alist?', 'function?'}
+            
+            if type_pred in valid_types:
+                # Get variable name and allocate binding
+                var_name = var_pattern.name if isinstance(var_pattern, AIFPLSymbol) else '_'
+                var_index = -1
+                
+                if var_name != '_':
+                    var_index = self.symbol_table.add_symbol(var_name, "local", defined_at=pattern).var_index
+                
+                return AnalyzedTypePattern(
+                    pattern_type='type',
+                    source_expr=pattern,
+                    type_predicate=type_pred,
+                    var_name=var_name,
+                    var_index=var_index,
+                    match_value_index=match_value_index,
+                    instruction_count=8  # Approximate: type check + bind + jumps
+                )
+        
+        # Check for cons pattern (head . tail)
+        dot_position = None
+        for i, elem in enumerate(pattern.elements):
+            if isinstance(elem, AIFPLSymbol) and elem.name == '.':
+                dot_position = i
+                break
+        
+        if dot_position is not None:
+            return self._analyze_cons_pattern(pattern, match_value_index, dot_position)
+        
+        # Fixed-length list pattern: (p1 p2 p3)
+        return self._analyze_fixed_list_pattern(pattern, match_value_index)
+    
+    def _analyze_fixed_list_pattern(self, pattern: AIFPLList, match_value_index: int):
+        """Analyze a fixed-length list pattern like (a b c).
+        
+        Args:
+            pattern: List pattern
+            match_value_index: Index of temp var holding value to match
+            
+        Returns:
+            AnalyzedFixedListPattern
+        """
+        # Allocate temps for each element and recursively analyze sub-patterns
+        element_patterns = []
+        element_temp_indices = []
+        
+        for i, elem_pattern in enumerate(pattern.elements):
+            # Allocate temp for this element
+            elem_temp_index = self.symbol_table.add_symbol(f"<elem-temp-{i}>", "local", defined_at=pattern).var_index
+            element_temp_indices.append(elem_temp_index)
+            
+            # Recursively analyze the element pattern
+            analyzed_elem = self._analyze_pattern(elem_pattern, elem_temp_index)
+            element_patterns.append(analyzed_elem)
+        
+        # Calculate instruction count
+        instr_count = 2  # LOAD_VAR + CALL_BUILTIN(list?)
+        instr_count += 4  # Length check
+        for elem in element_patterns:
+            instr_count += 4  # Extract element
+            instr_count += elem.instruction_count  # Match element
+            instr_count += 1  # POP_JUMP_IF_FALSE
+        instr_count += 3  # Success/failure paths
+        
+        return AnalyzedFixedListPattern(
+            pattern_type='fixed_list',
+            source_expr=pattern,
+            element_patterns=element_patterns,
+            element_temp_indices=element_temp_indices,
+            match_value_index=match_value_index,
+            instruction_count=instr_count
+        )
+    
+    def _analyze_cons_pattern(self, pattern: AIFPLList, match_value_index: int, dot_position: int):
+        """Analyze a cons pattern like (head . tail) or (a b . rest).
+        
+        Args:
+            pattern: Cons pattern
+            match_value_index: Index of temp var holding value to match
+            dot_position: Position of the dot in the pattern
+            
+        Returns:
+            AnalyzedConsPattern
+        """
+        # Analyze head patterns (before dot)
+        head_patterns = []
+        head_temp_indices = []
+        
+        for i in range(dot_position):
+            elem_pattern = pattern.elements[i]
+            elem_temp_index = self.symbol_table.add_symbol(f"<cons-elem-temp-{i}>", "local", defined_at=pattern).var_index
+            head_temp_indices.append(elem_temp_index)
+            
+            analyzed_elem = self._analyze_pattern(elem_pattern, elem_temp_index)
+            head_patterns.append(analyzed_elem)
+        
+        # Analyze tail pattern (after dot)
+        tail_pattern_expr = pattern.elements[dot_position + 1]
+        tail_temp_index = self.symbol_table.add_symbol("<cons-tail-temp>", "local", defined_at=pattern).var_index
+        analyzed_tail = self._analyze_pattern(tail_pattern_expr, tail_temp_index)
+        
+        # Calculate instruction count (approximate)
+        instr_count = 10  # Type checks, length check
+        for head in head_patterns:
+            instr_count += 4 + head.instruction_count
+        instr_count += 4 + analyzed_tail.instruction_count
+        
+        return AnalyzedConsPattern(
+            pattern_type='cons',
+            source_expr=pattern,
+            head_patterns=head_patterns,
+            head_temp_indices=head_temp_indices,
+            tail_pattern=analyzed_tail,
+            tail_temp_index=tail_temp_index,
+            match_value_index=match_value_index,
+            dot_position=dot_position,
+            instruction_count=instr_count
+        )
     
     def _analyze_make_list(self, expr: AIFPLList) -> AnalyzedMakeList:
         """Analyze list construction: (list 1 2 3).

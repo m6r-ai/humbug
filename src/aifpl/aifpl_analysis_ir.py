@@ -183,9 +183,13 @@ class AnalyzedMatch(AnalyzedExpression):
     """Analyzed match expression.
     
     Pattern matching is complex, so we store analyzed patterns and
-    pre-calculated jump offsets for each clause.
+    temporary variable allocations.
     """
     value: AnalyzedExpression
+    match_temp_index: int  # Index of temp var holding match value
+    saved_bindings_count: int  # Number of bindings to restore after match
+    saved_next_index: int  # Next index to restore after match
+    max_locals_used: int  # Maximum number of locals used (for code generation)
     clauses: List['AnalyzedMatchClause']
     
     def __repr__(self) -> str:
@@ -223,6 +227,7 @@ class AnalyzedLiteralPattern(AnalyzedPattern):
     """Pattern that matches a literal value."""
     value: AIFPLValue
     const_index: int
+    match_value_index: int  # Index of temp var holding value to match
 
 
 @dataclass
@@ -230,12 +235,13 @@ class AnalyzedVariablePattern(AnalyzedPattern):
     """Pattern that binds a variable."""
     name: str
     var_index: int
+    match_value_index: int  # Index of temp var holding value to match
 
 
 @dataclass
 class AnalyzedWildcardPattern(AnalyzedPattern):
     """Pattern that matches anything (_)."""
-    pass
+    # Wildcard doesn't need match_value_index since it always matches
 
 
 @dataclass
@@ -243,22 +249,33 @@ class AnalyzedTypePattern(AnalyzedPattern):
     """Pattern that matches a type: (number? x)."""
     type_predicate: str  # 'number?', 'string?', etc.
     var_name: str
-    var_index: int
+    var_index: int  # Index where to bind the variable if type matches
+    match_value_index: int  # Index of temp var holding value to match
 
 
 @dataclass
-class AnalyzedListPattern(AnalyzedPattern):
-    """Pattern that matches a list: (a b c)."""
-    element_patterns: List[AnalyzedPattern]
-    expected_length: int
+class AnalyzedEmptyListPattern(AnalyzedPattern):
+    """Pattern that matches empty list: ()."""
+    match_value_index: int  # Index of temp var holding value to match
+
+
+@dataclass
+class AnalyzedFixedListPattern(AnalyzedPattern):
+    """Pattern that matches a fixed-length list: (a b c)."""
+    element_patterns: List['AnalyzedPattern']
+    element_temp_indices: List[int]  # Temp indices for extracted elements
+    match_value_index: int  # Index of temp var holding value to match
 
 
 @dataclass
 class AnalyzedConsPattern(AnalyzedPattern):
     """Pattern that matches head and tail: (a b . rest)."""
-    head_patterns: List[AnalyzedPattern]
-    tail_pattern: AnalyzedPattern
-    min_length: int  # Minimum list length required
+    head_patterns: List['AnalyzedPattern']
+    head_temp_indices: List[int]  # Temp indices for head elements
+    tail_pattern: 'AnalyzedPattern'
+    tail_temp_index: int  # Temp index for tail
+    match_value_index: int  # Index of temp var holding value to match
+    dot_position: int  # Position of the dot in the pattern
 
 
 @dataclass
