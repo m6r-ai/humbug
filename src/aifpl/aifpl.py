@@ -4,7 +4,6 @@ import math
 from typing import Union, Dict
 
 from aifpl.aifpl_value import AIFPLFunction, AIFPLNumber, AIFPLBoolean, AIFPLValue
-from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
@@ -76,8 +75,6 @@ class AIFPL:
             return cls._prelude_evaluator_cache
 
         evaluator = AIFPLEvaluator()
-        env = AIFPLEnvironment()
-        env = env.define_many({**cls.CONSTANTS, **evaluator._builtin_functions})
 
         prelude_funcs = {}
         for name, source_code in cls._PRELUDE_SOURCE.items():
@@ -85,7 +82,7 @@ class AIFPL:
             tokens = tokenizer.tokenize(source_code)
             parser = AIFPLParser(tokens, source_code)
             expr = parser.parse()
-            result = evaluator._evaluate_expression(expr, env, 0)
+            result = evaluator.evaluate(expr, cls.CONSTANTS, None)
             if isinstance(result, AIFPLFunction):
                 prelude_funcs[name] = result
 

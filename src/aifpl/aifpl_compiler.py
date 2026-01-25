@@ -9,7 +9,7 @@ from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
-    AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLFunction
+    AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction
 )
 
 

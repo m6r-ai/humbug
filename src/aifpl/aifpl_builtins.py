@@ -122,7 +122,7 @@ class AIFPLBuiltinRegistry:
         """
         func = self.get_function(name)
         return func(args)
-    
+
     def _is_variadic_builtin(self, name: str) -> bool:
         """Determine if a builtin function is variadic.
         
