@@ -116,7 +116,8 @@ class AnalyzedLambda(AnalyzedExpression):
     """
     params: List[str]
     body: AnalyzedExpression
-    free_vars: List[str]  # Variables to capture from outer scope
+    free_vars: List[str]  # Variable names to capture from outer scope
+    free_var_info: List[Tuple[str, int, int]]  # (name, depth, index) for each free var
     
     # Recursion information
     is_recursive: bool  # Does this lambda call itself?

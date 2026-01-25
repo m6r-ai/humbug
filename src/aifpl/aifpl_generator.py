@@ -256,13 +256,11 @@ class AIFPLGenerator:
         
         # Load free variables onto stack for capture
         # These will be captured into the closure environment
-        for free_var in analyzed.free_vars:
-            # Free variables are local variables from outer scopes
-            # We need to emit LOAD_VAR to load them
-            # But we need to know their depth and index...
-            # For now, we'll emit LOAD_NAME and let runtime resolve
-            # TODO: This needs proper implementation with scope tracking
-            pass
+        # The analyzer has resolved them to (name, depth, index) tuples
+        for name, depth, index in analyzed.free_var_info:
+            # Load the free variable from the parent scope
+            # This pushes it onto the stack for MAKE_CLOSURE to capture
+            self._emit(Opcode.LOAD_VAR, depth, index)
         
         # Create closure
         # MAKE_CLOSURE takes: code_index, capture_count
@@ -308,7 +306,8 @@ class AIFPLGenerator:
             names=body_generator.names,
             code_objects=body_generator.code_objects,
             param_count=len(analyzed.params),  # Number of parameters
-            local_count=len(analyzed.params),  # Parameters are locals
+            # Local count includes parameters + captured free variables
+            local_count=len(analyzed.params) + len(analyzed.free_var_info),
             name="<lambda>"
         )
         

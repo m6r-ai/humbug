@@ -621,6 +621,18 @@ class AIFPLAnalyzer:
         # Exit lambda scope
         self.symbol_table.exit_scope()
         
+        # Now we're back in parent scope - resolve free variables to get (depth, index)
+        free_var_info = []
+        for free_var in free_vars:
+            sym_info = self.symbol_table.resolve(free_var)
+            if sym_info and (sym_info.symbol_type == 'local' or sym_info.symbol_type == 'parameter'):
+                try:
+                    depth, index = self.symbol_table.calculate_variable_offset(free_var)
+                    free_var_info.append((free_var, depth, index))
+                except ValueError:
+                    # Can't resolve - skip (might be self-recursive)
+                    pass
+        
         # Check for self-recursion
         is_recursive = binding_name is not None and binding_name in free_vars
         
@@ -648,6 +660,7 @@ class AIFPLAnalyzer:
             params=param_names,
             body=analyzed_body,
             free_vars=list(free_vars),
+            free_var_info=free_var_info,
             is_recursive=is_recursive,
             recursive_siblings=recursive_siblings,
             code_index=code_index,

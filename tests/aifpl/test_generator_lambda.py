@@ -159,10 +159,12 @@ class TestGenerateLambdaNested:
         assert len(code.code_objects) >= 1
         
         # Outer lambda body should create inner lambda
-        # But first it stores the parameter
+        # Sequence: STORE_VAR (param x), LOAD_VAR (load x for capture), MAKE_CLOSURE (inner lambda)
         outer_lambda = code.code_objects[0]
         assert outer_lambda.instructions[0].opcode == Opcode.STORE_VAR  # Store x parameter
-        assert outer_lambda.instructions[1].opcode == Opcode.MAKE_CLOSURE  # Create inner lambda
+        assert outer_lambda.instructions[1].opcode == Opcode.LOAD_VAR  # Load x for capture
+        assert outer_lambda.instructions[2].opcode == Opcode.MAKE_CLOSURE  # Create inner lambda with x captured
+        assert outer_lambda.instructions[3].opcode == Opcode.RETURN
 
 
 class TestGenerateLambdaCodeObjects:
