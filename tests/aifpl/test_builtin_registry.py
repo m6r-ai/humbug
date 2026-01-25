@@ -84,8 +84,9 @@ class TestBuiltinRegistry:
         assert 'list' in builtins
 
         # Verify they're callable
-        from aifpl.aifpl_value import AIFPLBuiltinFunction
-        assert isinstance(builtins['+'], AIFPLBuiltinFunction)
+        from aifpl.aifpl_value import AIFPLFunction
+        assert isinstance(builtins['+'], AIFPLFunction)
+        assert builtins['+'].is_native  # Should be a native builtin
 
     def test_error_on_unknown_function(self):
         """Test that calling unknown function raises error."""

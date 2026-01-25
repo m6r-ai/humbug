@@ -9,7 +9,7 @@ from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
-    AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLBuiltinFunction
+    AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLFunction
 )
 
 
@@ -1111,7 +1111,7 @@ class AIFPLCompiler:
             param_str = " ".join(result.parameters)
             return f"<lambda ({param_str})>"
 
-        if isinstance(result, AIFPLBuiltinFunction):
+        if isinstance(result, AIFPLFunction):
             # Format builtin functions
             return f"<builtin {result.name}>"
 

@@ -361,53 +361,66 @@ class AIFPLAList(AIFPLValue):
 @dataclass(frozen=True)
 class AIFPLFunction(AIFPLValue):
     """
-    Represents a user-defined function (lambda).
+    Represents a function (both user-defined lambdas and builtins).
 
     This is a first-class value that can be stored in environments
     and passed around as a value.
+    
+    A function can be either:
+    - A user-defined lambda with bytecode or AST body
+    - A builtin with a native Python implementation
     """
     parameters: Tuple[str, ...]
-    body: AIFPLValue | None
-    closure_environment: Any  # AIFPLEnvironment, avoiding circular import (this circularity is intentional!)
+    body: AIFPLValue | None = None  # AST body for evaluator
+    closure_environment: Any = None  # AIFPLEnvironment, avoiding circular import
     name: str | None = None
     bytecode: Any = None  # CodeObject for bytecode-compiled functions
     captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
+    native_impl: Callable | None = None  # Python function for builtins
+    is_variadic: bool = False  # True if function accepts variable number of args
+
+    def __post_init__(self):
+        """Validate that function has either body/bytecode or native_impl, but not both."""
+        has_body = self.body is not None or self.bytecode is not None
+        has_native = self.native_impl is not None
+
+        if has_body and has_native:
+            raise ValueError("Function cannot have both body/bytecode and native_impl")
+
+        if not has_body and not has_native:
+            raise ValueError("Function must have either body/bytecode or native_impl")
 
     def is_self_evaluating(self) -> bool:
         return True
 
     def to_python(self) -> 'AIFPLFunction':
-        """Functions return themselves as Python values."""
+        """Functions return themselves (or their name for builtins)."""
+        if self.is_native:
+            return self.name or "<native>"
+
         return self
 
     def type_name(self) -> str:
         return "function"
 
+    @property
+    def is_native(self) -> bool:
+        """Check if this is a native (builtin) function."""
+        return self.native_impl is not None
 
-class AIFPLBuiltinFunction(AIFPLValue):
-    """
-    Represents a built-in function that is a first-class function value.
-    """
+    def describe(self) -> str:
+        """Return a human-readable description of this function."""
+        param_str = ', '.join(self.parameters)
+        if self.is_variadic and self.parameters:
+            # Last parameter is variadic (rest parameter)
+            regular_params = ', '.join(self.parameters[:-1]) if len(self.parameters) > 1 else ''
+            rest_param = self.parameters[-1]
+            param_str = f"{regular_params} . {rest_param}".strip(' .')
 
-    def __init__(self, name: str, native_impl: Callable):
-        """
-        Initialize a built-in function.
+        if self.is_native:
 
-        Args:
-            name: Function name for display and error messages
-            native_impl: Python callable that implements the function
-        """
-        self.name = name
-        self.native_impl = native_impl
-
-    def is_self_evaluating(self) -> bool:
-        return True
-
-    def to_python(self) -> str:
-        return self.name
-
-    def type_name(self) -> str:
-        return "builtin-function"
+            return f"<builtin {self.name}({param_str})>"
+        return f"<lambda ({param_str})>"
 
 
 class AIFPLRecursivePlaceholder(AIFPLValue):

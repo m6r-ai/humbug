@@ -4,7 +4,7 @@ from typing import List, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLBuiltinFunction
+    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction, AIFPLFunction
 )
 
 
@@ -520,7 +520,7 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"function? requires exactly 1 argument, got {len(args)}")
 
-        return AIFPLBoolean(isinstance(args[0], (AIFPLFunction, AIFPLBuiltinFunction)))
+        return AIFPLBoolean(isinstance(args[0], AIFPLFunction))
 
     # Helper methods for type checking and conversion
     def _ensure_string(self, value: AIFPLValue, function_name: str) -> AIFPLString:
@@ -789,7 +789,7 @@ class AIFPLCollectionsFunctions:
                 suggestion="This should be handled by evaluator-specific code"
             )
 
-        if isinstance(func, AIFPLBuiltinFunction):
+        if isinstance(func, AIFPLFunction):
             # Call builtin directly
             return func.native_impl(func_args)
 
@@ -806,7 +806,7 @@ class AIFPLCollectionsFunctions:
         """
         Apply function to each element of a list: (map function list)
 
-        Args are already evaluated, so func is an AIFPLFunction or AIFPLBuiltinFunction.
+        Args are already evaluated, so func is an AIFPLFunction or AIFPLFunction.
         """
         if len(args) != 2:
             raise AIFPLEvalError(
@@ -831,7 +831,7 @@ class AIFPLCollectionsFunctions:
             )
 
         # Validate function argument
-        if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+        if not isinstance(func_value, AIFPLFunction):
             raise AIFPLEvalError(
                 message="Map first argument must be a function",
                 received=f"First argument: {func_value.type_name()}",
@@ -882,7 +882,7 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use (list ...) to create a list"
             )
 
-        if not isinstance(pred_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+        if not isinstance(pred_value, (AIFPLFunction, AIFPLFunction)):
             raise AIFPLEvalError(
                 message="Filter first argument must be a function",
                 received=f"First argument: {pred_value.type_name()}",
@@ -944,7 +944,7 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use (list ...) to create a list"
             )
 
-        if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+        if not isinstance(func_value, (AIFPLFunction, AIFPLFunction)):
             raise AIFPLEvalError(
                 message="Fold first argument must be a function",
                 received=f"First argument: {func_value.type_name()}",
@@ -1061,7 +1061,7 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use (list ...) to create a list"
             )
 
-        if not isinstance(pred_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+        if not isinstance(pred_value, (AIFPLFunction, AIFPLFunction)):
             raise AIFPLEvalError(
                 message="Find first argument must be a function",
                 received=f"First argument: {pred_value.type_name()}",
@@ -1121,7 +1121,7 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use (list ...) to create a list"
             )
 
-        if not isinstance(pred_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+        if not isinstance(pred_value, (AIFPLFunction, AIFPLFunction)):
             raise AIFPLEvalError(
                 message="Any? first argument must be a function",
                 received=f"First argument: {pred_value.type_name()}",
@@ -1180,7 +1180,7 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use (list ...) to create a list"
             )
 
-        if not isinstance(pred_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+        if not isinstance(pred_value, (AIFPLFunction, AIFPLFunction)):
             raise AIFPLEvalError(
                 message="All? first argument must be a function",
                 received=f"First argument: {pred_value.type_name()}",

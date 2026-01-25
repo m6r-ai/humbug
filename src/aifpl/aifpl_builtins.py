@@ -8,7 +8,7 @@ from typing import List, Dict, Callable
 
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
 from aifpl.aifpl_math import AIFPLMathFunctions
-from aifpl.aifpl_value import AIFPLValue, AIFPLBuiltinFunction
+from aifpl.aifpl_value import AIFPLValue, AIFPLFunction
 
 
 class AIFPLBuiltinRegistry:
@@ -42,9 +42,6 @@ class AIFPLBuiltinRegistry:
         # Add collections functions
         self._registry.update(self.collections_functions.get_functions())
 
-        # Note: Special forms (and, or, map, filter, fold, range, find, any?, all?, alist)
-        # are NOT included here because they require special handling in the evaluator/VM
-        # (they need unevaluated arguments or special evaluation logic)
 
     def get_function(self, name: str) -> Callable:
         """Get a builtin function implementation by name.
@@ -79,17 +76,34 @@ class AIFPLBuiltinRegistry:
         """
         return list(self._registry.keys())
 
-    def create_builtin_function_objects(self) -> Dict[str, AIFPLBuiltinFunction]:
-        """Create AIFPLBuiltinFunction objects for all builtins.
+    def create_builtin_function_objects(self) -> Dict[str, AIFPLFunction]:
+        """Create AIFPLFunction objects for all builtins.
 
         This is used by the evaluator to populate the global environment.
+        
+        Builtins are represented as AIFPLFunction objects with:
+        - native_impl set to the Python implementation
+        - is_variadic=True for functions that accept any number of args
+        - parameters tuple indicating arity (or ('args',) for variadic)
 
         Returns:
-            Dictionary mapping function names to AIFPLBuiltinFunction objects
+            Dictionary mapping function names to AIFPLFunction objects
         """
         builtins = {}
         for name, impl in self._registry.items():
-            builtins[name] = AIFPLBuiltinFunction(name, impl)
+            # Determine if function is variadic and its parameters
+            # For now, we'll use introspection or a simple heuristic
+            # Most builtins are variadic (like +, *, list, etc.)
+            # We'll mark specific ones as non-variadic based on their names
+            is_variadic = self._is_variadic_builtin(name)
+            parameters = self._get_builtin_parameters(name, is_variadic)
+
+            builtins[name] = AIFPLFunction(
+                parameters=parameters,
+                native_impl=impl,
+                name=name,
+                is_variadic=is_variadic
+            )
 
         return builtins
 
@@ -108,3 +122,59 @@ class AIFPLBuiltinRegistry:
         """
         func = self.get_function(name)
         return func(args)
+    
+    def _is_variadic_builtin(self, name: str) -> bool:
+        """Determine if a builtin function is variadic.
+        
+        Returns True if the function accepts variable number of arguments.
+        """
+        # Arithmetic operations are variadic
+        if name in ['+', '-', '*', '/', '//', '%', '**', 'min', 'max']:
+            return True
+
+        # Logical operations are variadic
+        if name in ['and', 'or']:
+            return True
+
+        # List construction is variadic
+        if name in ['list', 'append']:
+            return True
+
+        # String operations that are variadic
+        if name in ['string-append', 'string-join']:
+            return True
+
+        # Bitwise operations are variadic
+        if name in ['bit-or', 'bit-and', 'bit-xor']:
+            return True
+
+        # Most other functions have fixed arity
+        return False
+
+    def _get_builtin_parameters(self, name: str, is_variadic: bool) -> tuple:
+        """Get parameter tuple for a builtin function.
+        
+        For variadic functions, returns ('args',) to indicate rest parameter.
+        For fixed-arity functions, returns appropriate parameter names.
+        """
+        if is_variadic:
+            # Variadic functions use a single rest parameter
+            return ('args',)
+
+        # Fixed arity functions - define parameters based on expected arity
+        # This is a simplified version; ideally we'd have a complete mapping
+        fixed_arity_params = {
+            # Unary functions
+            'not': ('x',),
+            'sqrt': ('x',),
+            'abs': ('x',),
+            'sin': ('x',), 'cos': ('x',), 'tan': ('x',),
+            'log': ('x',), 'log10': ('x',), 'exp': ('x',),
+            'round': ('x',), 'floor': ('x',), 'ceil': ('x',),
+            # Binary functions
+            'pow': ('base', 'exponent'),
+            # Add more as needed...
+        }
+
+        # Default to ('a', 'b') for unknown fixed-arity functions
+        return fixed_arity_params.get(name, ('a', 'b'))

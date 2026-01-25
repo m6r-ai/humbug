@@ -10,7 +10,7 @@ from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
-    AIFPLList, AIFPLFunction, AIFPLSymbol, AIFPLBuiltinFunction, AIFPLAList
+    AIFPLList, AIFPLFunction, AIFPLSymbol, AIFPLAList
 )
 
 
@@ -86,21 +86,13 @@ class AIFPLVM:
         table[Opcode.MAKE_LIST] = self._op_make_list
         return table
 
-    def _create_builtin_functions(self) -> Dict[str, AIFPLBuiltinFunction]:
+    def _create_builtin_functions(self) -> Dict[str, AIFPLFunction]:
         """
-        Create AIFPLBuiltinFunction objects for all builtins.
-
-        This allows builtins to be used as first-class values (e.g., passed to map).
+        Create AIFPLFunction objects for all builtins.
+        
+        Uses the builtin registry to get standard implementations.
         """
-        builtins = {}
-
-        # Create a builtin function object for each builtin
-        # BUILTIN_TABLE is a list, so we enumerate to get indices
-        for builtin_index, name in enumerate(AIFPLCompiler.BUILTIN_TABLE):
-            # The native_impl is a lambda that calls _call_builtin with the right index
-            builtins[name] = AIFPLBuiltinFunction(name, lambda *args, idx=builtin_index: self._call_builtin(idx, list(args)))
-
-        return builtins
+        return self._builtin_registry.create_builtin_function_objects()
 
     def set_globals(self, globals_dict: Dict[str, AIFPLValue]) -> None:
         """Set global variables (constants like pi, e, j) and add builtin functions."""
@@ -153,13 +145,12 @@ class AIFPLVM:
             return f"(alist {pairs_str})"
 
         if isinstance(result, AIFPLFunction):
-            # Format lambda functions
+            # Use the describe method which handles both native and user-defined
+            if result.is_native:
+                return f"<builtin {result.name}>"
+
             param_str = " ".join(result.parameters)
             return f"<lambda ({param_str})>"
-
-        if isinstance(result, AIFPLBuiltinFunction):
-            # Format builtin functions
-            return f"<builtin {result.name}>"
 
         # For other types, use standard string representation
         return str(result)
@@ -250,22 +241,17 @@ class AIFPLVM:
 
         return value
 
-    def _resolve_function(self, value: AIFPLValue) -> AIFPLFunction | AIFPLBuiltinFunction | None:
+    def _resolve_function(self, value: AIFPLValue) -> AIFPLFunction | None:
         """Resolve a value to a function, handling builtin symbols."""
-        value_type = type(value)
-
-        if value_type is AIFPLBuiltinFunction:
-            return cast(AIFPLBuiltinFunction, value)
-
         # If it's already a function, return it
-        if value_type is AIFPLFunction:
-            return cast(AIFPLFunction, value)
+        if isinstance(value, AIFPLFunction):
+            return value
 
         # If it's a symbol referring to a builtin, return the builtin function object
-        if value_type is AIFPLSymbol:
-            if cast(AIFPLSymbol, value).name in self.builtin_symbols:
+        if isinstance(value, AIFPLSymbol):
+            if value.name in self.builtin_symbols:
                 # Get the builtin function from our own registry
-                return self._builtin_functions[cast(AIFPLSymbol, value).name]
+                return self._builtin_functions[value.name]
 
         # Otherwise, it's not a valid function - return None
         # Caller will handle the error with appropriate context
@@ -306,9 +292,6 @@ class AIFPLVM:
         """
         if isinstance(func, AIFPLFunction):
             return func.name or "<lambda>"
-
-        if isinstance(func, AIFPLBuiltinFunction):
-            return func.name
 
         return f"<{type(func).__name__}>"
 
@@ -569,56 +552,51 @@ class AIFPLVM:
         # Get function from under the arguments
         func = self.stack[-(arity + 1)]
 
-        # Cache type check for hot path
-        func_type = type(func)
+        if not isinstance(func, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="Cannot call non-function value",
+                received=f"Attempted to call: {self._format_result(func)} ({func.type_name()})",
+                expected="Function (lambda or builtin)",
+                suggestion="Only functions can be called"
+            )
 
         # Handle builtin functions
-        if func_type is AIFPLBuiltinFunction:
+        if func.is_native:
             args = [self.stack.pop() for _ in range(arity)]
             args.reverse()
             self.stack.pop()  # Pop function
-            result = cast(AIFPLBuiltinFunction, func).native_impl(args, AIFPLEnvironment(), 0)
+            result = func.native_impl(args)
             self.stack.append(result)
             return None
+        # Check for tail call optimization
+        current_frame = self.frames[-1] if self.frames else None
+        is_tail_call = False
 
-        if func_type is AIFPLFunction:
-            # Check for tail call optimization
-            current_frame = self.frames[-1] if self.frames else None
-            is_tail_call = False
+        if current_frame:
+            next_ip = current_frame.ip
+            if next_ip < len(current_frame.code.instructions):
+                next_instr = current_frame.code.instructions[next_ip]
+                is_tail_call = next_instr.opcode == Opcode.RETURN
 
-            if current_frame:
-                next_ip = current_frame.ip
-                if next_ip < len(current_frame.code.instructions):
-                    next_instr = current_frame.code.instructions[next_ip]
-                    is_tail_call = next_instr.opcode == Opcode.RETURN
-
-            # Check if it's a self-recursive tail call
-            is_self_recursive = (
-                current_frame and
-                cast(AIFPLFunction, func).bytecode == current_frame.code
-            )
-
-            # Remove function from stack
-            del self.stack[-(arity + 1)]
-
-            # Tail call optimization
-            if is_tail_call and is_self_recursive:
-                assert current_frame is not None
-                current_frame.ip = 0
-                return None  # Continue in same frame
-
-            # Normal call: create new frame
-            result = self._call_bytecode_function(cast(AIFPLFunction, func))
-            self.stack.append(result)
-            return None
-
-        # Not a function
-        raise AIFPLEvalError(
-            message="Cannot call non-function value",
-            received=f"Attempted to call: {self._format_result(func)} ({func.type_name()})",
-            expected="Function (lambda or builtin)",
-            suggestion="Only functions can be called"
+        # Check if it's a self-recursive tail call
+        is_self_recursive = (
+            current_frame and
+            func.bytecode == current_frame.code
         )
+
+        # Remove function from stack
+        del self.stack[-(arity + 1)]
+
+        # Tail call optimization
+        if is_tail_call and is_self_recursive:
+            assert current_frame is not None
+            current_frame.ip = 0
+            return None  # Continue in same frame
+
+        # Normal call: create new frame
+        result = self._call_bytecode_function(func)
+        self.stack.append(result)
+        return None
 
     def _op_call_builtin(self, _frame: Frame, _code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
         """CALL_BUILTIN: Call builtin function by index."""
@@ -757,30 +735,24 @@ class AIFPLVM:
 
         raise AIFPLEvalError("Function did not return a value")
 
-    def _call_function_value(self, func: AIFPLFunction | AIFPLBuiltinFunction, args: List[AIFPLValue]) -> AIFPLValue:
+    def _call_function_value(self, func: AIFPLFunction, args: List[AIFPLValue]) -> AIFPLValue:
         """Call a function value (either user-defined or builtin).
 
         This is a helper for higher-order functions like map, filter, fold, etc.
         For bytecode functions, we push args onto the stack then call the function.
         """
-        func_type = type(func)
+        if not isinstance(func, AIFPLFunction):
+            raise AIFPLEvalError(f"Expected function, got {func.type_name()}")
+        
+        if func.is_native:
+            # Call native builtin directly
+            return func.native_impl(args)
 
-        if func_type is AIFPLFunction:
-            # Push arguments onto stack for function prologue to pop
-            for arg in args:
-                self.stack.append(arg)
+        # Push arguments onto stack for function prologue to pop
+        for arg in args:
+            self.stack.append(arg)
+        return self._call_bytecode_function(func)
 
-            return self._call_bytecode_function(cast(AIFPLFunction, func))
-
-        if func_type is AIFPLBuiltinFunction:
-            # Call builtin function by looking up its index
-            if func.name not in AIFPLCompiler.BUILTIN_TABLE:
-                raise AIFPLEvalError(f"Unknown builtin function: {func.name}")
-
-            builtin_idx = AIFPLCompiler.BUILTIN_TABLE.index(func.name)
-            return self._call_builtin(builtin_idx, args)
-
-        raise AIFPLEvalError(f"Expected function, got {func.type_name()}")
 
     def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
         """Call a builtin function by index.

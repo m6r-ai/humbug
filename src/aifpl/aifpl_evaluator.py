@@ -10,7 +10,7 @@ from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_pattern_matcher import AIFPLPatternMatcher
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
-    AIFPLList, AIFPLAList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLBuiltinFunction, AIFPLTailCall
+    AIFPLList, AIFPLAList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLTailCall
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
 
@@ -58,14 +58,14 @@ class AIFPLEvaluator:
         """Set the current expression for error context."""
         self.current_expression = expression
 
-    def _create_builtin_functions(self) -> dict[str, AIFPLBuiltinFunction]:
+    def _create_builtin_functions(self) -> dict[str, AIFPLFunction]:
         """Create all built-in functions with their native implementations."""
         # Get all regular builtins from the registry
         builtins = self.builtin_registry.create_builtin_function_objects()
 
         # Add special forms (these require special evaluation semantics)
-        builtins['and'] = AIFPLBuiltinFunction('and', self._builtin_and_special)
-        builtins['or'] = AIFPLBuiltinFunction('or', self._builtin_or_special)
+        builtins['and'] = AIFPLFunction(parameters=('args',), native_impl=self._builtin_and_special, name='and', is_variadic=True)
+        builtins['or'] = AIFPLFunction(parameters=('args',), native_impl=self._builtin_or_special, name='or', is_variadic=True)
 
         return builtins
 
@@ -504,7 +504,7 @@ class AIFPLEvaluator:
                 ) from e
 
             # We can only call functions!
-            if not isinstance(func_value, (AIFPLFunction, AIFPLBuiltinFunction)):
+            if not isinstance(func_value, AIFPLFunction):
                 func_name = func_expr.name if isinstance(func_expr, AIFPLSymbol) else str(func_expr)
                 raise AIFPLEvalError(
                     message="Cannot call non-function value",
@@ -515,7 +515,7 @@ class AIFPLEvaluator:
                 )
 
             # Check if this is a special form that needs unevaluated arguments
-            if isinstance(func_value, AIFPLBuiltinFunction) and self._is_special_form(func_value.name):
+            if func_value.is_native and self._is_special_form(func_value.name):
                 # Special forms get unevaluated arguments
                 return func_value.native_impl(arg_exprs, current_env, depth)
 
@@ -531,11 +531,10 @@ class AIFPLEvaluator:
                     suggestion="Check each argument for syntax errors"
                 ) from e
 
-            if isinstance(func_value, AIFPLFunction):
+            if func_value.is_native:
+                result = self._call_builtin_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
+            else:
                 result = self._call_lambda_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
-
-            else:  # AIFPLBuiltinFunction
-                result = self._call_builtin_function(cast(AIFPLBuiltinFunction, func_value), arg_values, env, depth)
 
             # Check if result is a tail call
             if isinstance(result, AIFPLTailCall):
@@ -626,7 +625,7 @@ class AIFPLEvaluator:
 
     def _call_builtin_function(
         self,
-        func: AIFPLBuiltinFunction,
+        func: AIFPLFunction,
         arg_values: List[AIFPLValue],
         env: AIFPLEnvironment,
         depth: int
@@ -685,17 +684,17 @@ class AIFPLEvaluator:
         depth: int
     ) -> AIFPLValue:
         """Helper to call functions from higher-order functions (map, filter, etc.)."""
-        if isinstance(func, AIFPLFunction):
-            return self._call_lambda_function(func, args, env, depth)
-
-        if isinstance(func, AIFPLBuiltinFunction):
+        if not isinstance(func, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="Cannot call non-function value",
+                received=f"Got: {func.type_name()}",
+                expected="Function (lambda or builtin)"
+            )
+        
+        if func.is_native:
             return self._call_builtin_function(func, args, env, depth)
-
-        raise AIFPLEvalError(
-            message="Cannot call non-function value",
-            received=f"Got: {func.type_name()}",
-            expected="Function (lambda or builtin)"
-        )
+        else:
+            return self._call_lambda_function(func, args, env, depth)
 
     def _evaluate_expression_with_tail_detection(
         self,
@@ -865,13 +864,6 @@ class AIFPLEvaluator:
             )
             return result
 
-        if isinstance(func_value, AIFPLBuiltinFunction):
-            result = self._call_builtin_function(cast(AIFPLBuiltinFunction, func_value), arg_values, env, depth)
-            assert not isinstance(result, AIFPLTailCall), (
-                "Tail calls should not propagate out of higher-order function calls"
-            )
-            return result
-
         raise AIFPLEvalError(
             message="Cannot call non-function value in higher-order context",
             received=f"Trying to call: {self.format_result(func_value)} ({func_value.type_name()})",
@@ -933,549 +925,6 @@ class AIFPLEvaluator:
 
         # All arguments were False
         return AIFPLBoolean(False)
-
-    def _builtin_map_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Apply map function with unevaluated function argument."""
-        if len(args) != 2:
-            raise AIFPLEvalError(
-                message="Map function has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="Exactly 2 arguments: (map function list)",
-                example="(map (lambda (x) (* x 2)) (list 1 2 3))",
-                suggestion="Map takes a function and a list"
-            )
-
-        func_expr, list_expr = args
-
-        # Evaluate the list
-        list_value = self._evaluate_expression(list_expr, env, depth + 1)
-        if not isinstance(list_value, AIFPLList):
-            raise AIFPLEvalError(
-                message="Map second argument must be a list",
-                received=f"Second argument: {self.format_result(list_value)} ({list_value.type_name()})",
-                expected="List of values",
-                example="(map (lambda (x) (* x 2)) (list 1 2 3))",
-                suggestion="Use (list ...) to create a list"
-            )
-
-        # Evaluate the function once
-        func_value = self._evaluate_expression(func_expr, env, depth + 1)
-
-        # Fast path for lambda functions with single parameter
-        if isinstance(func_value, AIFPLFunction):
-            func_lambda = cast(AIFPLFunction, func_value)
-
-            # Check if this is an AST-based function (not bytecode)
-            if func_lambda.body is None:
-                raise AIFPLEvalError("Cannot use bytecode functions in AST evaluator")
-
-            if len(func_lambda.parameters) == 1:
-                # Optimized path: skip full function call machinery
-                result_elements = []
-                param_name = func_lambda.parameters[0]
-
-                for i, item in enumerate(list_value.elements):
-                    try:
-                        # Create environment with single binding (fast)
-                        item_env = func_lambda.closure_environment.define(param_name, item)
-                        # Evaluate body directly
-                        item_result = self._evaluate_expression(func_lambda.body, item_env, depth + 1)
-                        result_elements.append(item_result)
-
-                    except AIFPLEvalError as e:
-                        raise AIFPLEvalError(
-                            message=f"Error in map function at element {i+1}",
-                            received=f"Element {i+1}: {self.format_result(item)}",
-                            context=str(e),
-                            suggestion="Check that your function works with all list elements"
-                        ) from e
-
-                return AIFPLList(tuple(result_elements))
-
-        # Standard path for other functions (built-ins, multi-param lambdas)
-        result_elements = []
-        for i, item in enumerate(list_value.elements):
-            try:
-                # Use the already-evaluated function
-                if isinstance(func_value, AIFPLFunction):
-                    item_result = self._call_lambda_function(cast(AIFPLFunction, func_value), [item], env, depth + 1)
-
-                elif isinstance(func_value, AIFPLBuiltinFunction):
-                    item_result = self._call_builtin_function(cast(AIFPLBuiltinFunction, func_value), [item], env, depth + 1)
-
-                else:
-                    raise AIFPLEvalError(
-                        message="Cannot call non-function value",
-                        received=f"Got: {func_value.type_name()}",
-                        expected="Function (lambda or builtin)"
-                    )
-                result_elements.append(item_result)
-
-            except AIFPLEvalError as e:
-                raise AIFPLEvalError(
-                    message=f"Error in map function at element {i+1}",
-                    received=f"Element {i+1}: {self.format_result(item)}",
-                    context=str(e),
-                    suggestion="Check that your function works with all list elements"
-                ) from e
-
-        return AIFPLList(tuple(result_elements))
-
-    def _builtin_filter_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Apply filter function with unevaluated predicate argument."""
-        if len(args) != 2:
-            raise AIFPLEvalError(
-                message="Filter function has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="Exactly 2 arguments: (filter predicate list)",
-                example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
-                suggestion="Filter takes a predicate function and a list"
-            )
-
-        pred_expr, list_expr = args
-
-        # Evaluate the list
-        list_value = self._evaluate_expression(list_expr, env, depth + 1)
-        if not isinstance(list_value, AIFPLList):
-            raise AIFPLEvalError(
-                message="Filter second argument must be a list",
-                received=f"Second argument: {self.format_result(list_value)} ({list_value.type_name()})",
-                expected="List of values",
-                example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
-                suggestion="Use (list ...) to create a list"
-            )
-
-        # Evaluate the predicate once
-        pred_value = self._evaluate_expression(pred_expr, env, depth + 1)
-
-        # Fast path for lambda predicates with single parameter
-        if isinstance(pred_value, AIFPLFunction):
-            pred_lambda = cast(AIFPLFunction, pred_value)
-
-            # Check if this is an AST-based function (not bytecode)
-            if pred_lambda.body is None:
-                raise AIFPLEvalError("Cannot use bytecode functions in AST evaluator")
-
-            if len(pred_lambda.parameters) == 1:
-                # Optimized path: skip full function call machinery
-                result_elements = []
-                param_name = pred_lambda.parameters[0]
-
-                for i, item in enumerate(list_value.elements):
-                    try:
-                        # Create environment with single binding (fast)
-                        item_env = pred_lambda.closure_environment.define(param_name, item)
-                        # Evaluate body directly
-                        pred_result = self._evaluate_expression(pred_lambda.body, item_env, depth + 1)
-
-                        if not isinstance(pred_result, AIFPLBoolean):
-                            raise AIFPLEvalError(
-                                message=f"Filter predicate must return boolean at element {i+1}",
-                                received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
-                                expected="Boolean value (#t or #f)",
-                                example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
-                                suggestion="Predicate function should use comparison operators"
-                            )
-
-                        if pred_result.value:
-                            result_elements.append(item)
-
-                    except AIFPLEvalError as e:
-                        raise AIFPLEvalError(
-                            message=f"Error in filter predicate at element {i+1}",
-                            received=f"Element {i+1}: {self.format_result(item)}",
-                            context=str(e),
-                            suggestion="Check that your predicate works with all list elements"
-                        ) from e
-
-                return AIFPLList(tuple(result_elements))
-
-        # Standard path for other functions
-        result_elements = []
-        for i, item in enumerate(list_value.elements):
-            try:
-                # Use the already-evaluated predicate
-                if isinstance(pred_value, AIFPLFunction):
-                    pred_result = self._call_lambda_function(cast(AIFPLFunction, pred_value), [item], env, depth + 1)
-
-                elif isinstance(pred_value, AIFPLBuiltinFunction):
-                    pred_result = self._call_builtin_function(cast(AIFPLBuiltinFunction, pred_value), [item], env, depth + 1)
-
-                else:
-                    raise AIFPLEvalError(
-                        message="Cannot call non-function value",
-                        received=f"Got: {pred_value.type_name()}",
-                        expected="Function (lambda or builtin)"
-                    )
-
-                if not isinstance(pred_result, AIFPLBoolean):
-                    raise AIFPLEvalError(
-                        message=f"Filter predicate must return boolean at element {i+1}",
-                        received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(filter (lambda (x) (> x 0)) (list -1 2 -3 4))",
-                        suggestion="Predicate function should use comparison operators"
-                    )
-
-                assert isinstance(pred_result, AIFPLBoolean)
-                if pred_result.value:
-                    result_elements.append(item)
-
-            except AIFPLEvalError as e:
-                raise AIFPLEvalError(
-                    message=f"Error in filter predicate at element {i+1}",
-                    received=f"Element {i+1}: {self.format_result(item)}",
-                    context=str(e),
-                    suggestion="Check that your predicate works with all list elements"
-                ) from e
-
-        return AIFPLList(tuple(result_elements))
-
-    def _builtin_fold_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Apply fold function with unevaluated function argument."""
-        if len(args) != 3:
-            raise AIFPLEvalError(
-                message="Fold function has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="Exactly 3 arguments: (fold function initial list)",
-                example="(fold + 0 (list 1 2 3 4))",
-                suggestion="Fold takes a function, initial value, and list"
-            )
-
-        func_expr, init_expr, list_expr = args
-
-        # Evaluate the initial value and list
-        accumulator = self._evaluate_expression(init_expr, env, depth + 1)
-        list_value = self._evaluate_expression(list_expr, env, depth + 1)
-
-        if not isinstance(list_value, AIFPLList):
-            raise AIFPLEvalError(
-                message="Fold third argument must be a list",
-                received=f"Third argument: {self.format_result(list_value)} ({list_value.type_name()})",
-                expected="List of values",
-                example="(fold + 0 (list 1 2 3 4))",
-                suggestion="Use (list ...) to create a list"
-            )
-
-        # Evaluate the function once
-        func_value = self._evaluate_expression(func_expr, env, depth + 1)
-
-        # Fast path for lambda functions with two parameters
-        if isinstance(func_value, AIFPLFunction):
-            func_lambda = cast(AIFPLFunction, func_value)
-
-            # Check if this is an AST-based function (not bytecode)
-            if func_lambda.body is None:
-                raise AIFPLEvalError("Cannot use bytecode functions in AST evaluator")
-
-            if len(func_lambda.parameters) == 2:
-                # Optimized path: skip full function call machinery
-                param_acc, param_item = func_lambda.parameters
-
-                for i, item in enumerate(list_value.elements):
-                    try:
-                        # Create environment with both bindings (batch for efficiency)
-                        bindings = {param_acc: accumulator, param_item: item}
-                        item_env = func_lambda.closure_environment.define_many(bindings)
-                        # Evaluate body directly
-                        accumulator = self._evaluate_expression(func_lambda.body, item_env, depth + 1)
-
-                    except AIFPLEvalError as e:
-                        raise AIFPLEvalError(
-                            message=f"Error in fold function at element {i+1}",
-                            received=f"Accumulator: {self.format_result(accumulator)}, Element {i+1}: {self.format_result(item)}",
-                        context=str(e),
-                        suggestion="Check that your function works with accumulator and all list elements"
-                    ) from e
-
-            return accumulator
-
-        # Standard path for other functions
-        for i, item in enumerate(list_value.elements):
-            try:
-                # Use the already-evaluated function
-                if isinstance(func_value, AIFPLFunction):
-                    accumulator = self._call_lambda_function(cast(AIFPLFunction, func_value), [accumulator, item], env, depth + 1)
-
-                elif isinstance(func_value, AIFPLBuiltinFunction):
-                    accumulator = self._call_builtin_function(
-                        cast(AIFPLBuiltinFunction, func_value), [accumulator, item], env, depth + 1
-                    )
-
-                else:
-                    raise AIFPLEvalError(
-                        message="Cannot call non-function value",
-                        received=f"Got: {func_value.type_name()}",
-                        expected="Function (lambda or builtin)"
-                    )
-
-            except AIFPLEvalError as e:
-                raise AIFPLEvalError(
-                    message=f"Error in fold function at element {i+1}",
-                    received=f"Accumulator: {self.format_result(accumulator)}, Element {i+1}: {self.format_result(item)}",
-                    context=str(e),
-                    suggestion="Check that your function works with accumulator and all list elements"
-                ) from e
-
-        return accumulator
-
-    def _builtin_range_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Apply range function with evaluated arguments."""
-        # Check arity BEFORE evaluating arguments
-        if len(args) < 2 or len(args) > 3:
-            raise AIFPLEvalError(
-                message="Range function has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="2 or 3 arguments: (range start end) or (range start end step)",
-                example="(range 1 5) or (range 0 10 2)",
-                suggestion="Range needs start and end, optionally step"
-            )
-
-        # Now evaluate arguments
-        evaluated_args = [self._evaluate_expression(arg, env, depth + 1) for arg in args]
-
-        if len(evaluated_args) == 2:
-            start_val, end_val = evaluated_args
-            if not isinstance(start_val, AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Range start must be a number",
-                    received=f"Start: {self.format_result(start_val)} ({start_val.type_name()})",
-                    expected="Number (integer or float)",
-                    example="(range 1 5)",
-                    suggestion="Use numeric values for range bounds"
-                )
-
-            if not isinstance(end_val, AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Range end must be a number",
-                    received=f"End: {self.format_result(end_val)} ({end_val.type_name()})",
-                    expected="Number (integer or float)",
-                    example="(range 1 5)",
-                    suggestion="Use numeric values for range bounds"
-                )
-
-            start_int = self._ensure_integer(start_val, "range")
-            end_int = self._ensure_integer(end_val, "range")
-            step_int = 1
-
-        else:
-            start_val, end_val, step_val = evaluated_args
-            if not isinstance(start_val, AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Range start must be a number",
-                    received=f"Start: {self.format_result(start_val)} ({start_val.type_name()})",
-                    expected="Number (integer or float)",
-                    example="(range 0 10 2)",
-                    suggestion="Use numeric values for range parameters"
-                )
-
-            if not isinstance(end_val, AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Range end must be a number",
-                    received=f"End: {self.format_result(end_val)} ({end_val.type_name()})",
-                    expected="Number (integer or float)",
-                    example="(range 0 10 2)",
-                    suggestion="Use numeric values for range parameters"
-                )
-
-            if not isinstance(step_val, AIFPLNumber):
-                raise AIFPLEvalError(
-                    message="Range step must be a number",
-                    received=f"Step: {self.format_result(step_val)} ({step_val.type_name()})",
-                    expected="Number (integer or float)",
-                    example="(range 0 10 2)",
-                    suggestion="Use numeric values for range parameters"
-                )
-
-            start_int = self._ensure_integer(start_val, "range")
-            end_int = self._ensure_integer(end_val, "range")
-            step_int = self._ensure_integer(step_val, "range")
-
-        if step_int == 0:
-            raise AIFPLEvalError(
-                message="Range step cannot be zero",
-                received="Step: 0",
-                expected="Non-zero integer",
-                example="(range 0 10 2) or (range 10 0 -1)",
-                suggestion="Use positive step for ascending range, negative for descending"
-            )
-
-        # Generate range
-        range_values = list(range(start_int, end_int, step_int))
-        elements = tuple(AIFPLNumber(val) for val in range_values)
-        return AIFPLList(elements)
-
-    def _builtin_find_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Apply find function with unevaluated predicate argument."""
-        if len(args) != 2:
-            raise AIFPLEvalError(
-                message="Find function has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="Exactly 2 arguments: (find predicate list)",
-                example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
-                suggestion="Find takes a predicate function and a list"
-            )
-
-        pred_expr, list_expr = args
-
-        # Evaluate the list
-        list_value = self._evaluate_expression(list_expr, env, depth + 1)
-        if not isinstance(list_value, AIFPLList):
-            raise AIFPLEvalError(
-                message="Find second argument must be a list",
-                received=f"Second argument: {self.format_result(list_value)} ({list_value.type_name()})",
-                expected="List of values",
-                example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
-                suggestion="Use (list ...) to create a list"
-            )
-
-        # Find first element matching predicate
-        for i, item in enumerate(list_value.elements):
-            try:
-                # Call predicate with already-evaluated argument
-                pred_result = self._call_function_with_evaluated_args(pred_expr, [item], env, depth + 1)
-
-                if not isinstance(pred_result, AIFPLBoolean):
-                    raise AIFPLEvalError(
-                        message=f"Find predicate must return boolean at element {i+1}",
-                        received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(find (lambda (x) (> x 5)) (list 1 2 6 3))",
-                        suggestion="Predicate function should use comparison operators"
-                    )
-
-                if pred_result.value:
-                    return item
-
-            except AIFPLEvalError as e:
-                raise AIFPLEvalError(
-                    message=f"Error in find predicate at element {i+1}",
-                    received=f"Element {i+1}: {self.format_result(item)}",
-                    context=str(e),
-                    suggestion="Check that your predicate works with all list elements"
-                ) from e
-
-        return AIFPLBoolean(False)  # Return #f if not found
-
-    def _builtin_any_p_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Apply any? function with unevaluated predicate argument."""
-        if len(args) != 2:
-            raise AIFPLEvalError(
-                message="Any? function has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="Exactly 2 arguments: (any? predicate list)",
-                example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
-                suggestion="Any? takes a predicate function and a list"
-            )
-
-        pred_expr, list_expr = args
-
-        # Evaluate the list
-        list_value = self._evaluate_expression(list_expr, env, depth + 1)
-        if not isinstance(list_value, AIFPLList):
-            raise AIFPLEvalError(
-                message="Any? second argument must be a list",
-                received=f"Second argument: {self.format_result(list_value)} ({list_value.type_name()})",
-                expected="List of values",
-                example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
-                suggestion="Use (list ...) to create a list"
-            )
-
-        # Check if any element matches predicate
-        for i, item in enumerate(list_value.elements):
-            try:
-                # Call predicate with already-evaluated argument
-                pred_result = self._call_function_with_evaluated_args(pred_expr, [item], env, depth + 1)
-
-                if not isinstance(pred_result, AIFPLBoolean):
-                    raise AIFPLEvalError(
-                        message=f"Any? predicate must return boolean at element {i+1}",
-                        received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(any? (lambda (x) (> x 5)) (list 1 2 6 3))",
-                        suggestion="Predicate function should use comparison operators"
-                    )
-
-                if pred_result.value:
-                    return AIFPLBoolean(True)
-
-            except AIFPLEvalError as e:
-                raise AIFPLEvalError(
-                    message=f"Error in any? predicate at element {i+1}",
-                    received=f"Element {i+1}: {self.format_result(item)}",
-                    context=str(e),
-                    suggestion="Check that your predicate works with all list elements"
-                ) from e
-
-        return AIFPLBoolean(False)
-
-    def _builtin_all_p_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Apply all? function with unevaluated predicate argument."""
-        if len(args) != 2:
-            raise AIFPLEvalError(
-                message="All? function has wrong number of arguments",
-                received=f"Got {len(args)} arguments",
-                expected="Exactly 2 arguments: (all? predicate list)",
-                example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
-                suggestion="All? takes a predicate function and a list"
-            )
-
-        pred_expr, list_expr = args
-
-        # Evaluate the list
-        list_value = self._evaluate_expression(list_expr, env, depth + 1)
-        if not isinstance(list_value, AIFPLList):
-            raise AIFPLEvalError(
-                message="All? second argument must be a list",
-                received=f"Second argument: {self.format_result(list_value)} ({list_value.type_name()})",
-                expected="List of values",
-                example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
-                suggestion="Use (list ...) to create a list"
-            )
-
-        # Check if all elements match predicate
-        for i, item in enumerate(list_value.elements):
-            try:
-                # Call predicate with already-evaluated argument
-                pred_result = self._call_function_with_evaluated_args(pred_expr, [item], env, depth + 1)
-
-                if not isinstance(pred_result, AIFPLBoolean):
-                    raise AIFPLEvalError(
-                        message=f"All? predicate must return boolean at element {i+1}",
-                        received=f"Predicate returned: {self.format_result(pred_result)} ({pred_result.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(all? (lambda (x) (> x 0)) (list 1 2 3))",
-                        suggestion="Predicate function should use comparison operators"
-                    )
-
-                if not pred_result.value:
-                    return AIFPLBoolean(False)
-
-            except AIFPLEvalError as e:
-                raise AIFPLEvalError(
-                    message=f"Error in all? predicate at element {i+1}",
-                    received=f"Element {i+1}: {self.format_result(item)}",
-                    context=str(e),
-                    suggestion="Check that your predicate works with all list elements"
-                ) from e
-
-        return AIFPLBoolean(True)
-
-    # Helper method for higher-order functions
-    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
-        """Ensure value is an integer, raise error if not."""
-        if not isinstance(value, AIFPLNumber) or not value.is_integer():
-            raise AIFPLEvalError(
-                message=f"Function '{function_name}' requires integer arguments",
-                received=f"Got: {self.format_result(value)} ({value.type_name()})",
-                expected="Integer number",
-                example=f"({function_name} 1 5) not ({function_name} 1.5 5)",
-                suggestion="Use whole numbers without decimal points"
-            )
-
-        # Type narrowing: we know value.value is int here
-        assert isinstance(value.value, int), "is_integer() should guarantee int type"
-        return value.value
 
     def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
         """Simplify complex results to real numbers when imaginary part is negligible."""
@@ -1550,13 +999,12 @@ class AIFPLEvaluator:
             return f"(alist {pairs_str})"
 
         if isinstance(result, AIFPLFunction):
-            # Format lambda functions
+            # Use the describe method which handles both native and user-defined
+            if result.is_native:
+                return f"<builtin {result.name}>"
+
             param_str = " ".join(result.parameters)
             return f"<lambda ({param_str})>"
-
-        if isinstance(result, AIFPLBuiltinFunction):
-            # Format builtin functions
-            return f"<builtin {result.name}>"
 
         # For other types, use standard string representation
         return str(result)
