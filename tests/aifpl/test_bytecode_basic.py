@@ -1,6 +1,7 @@
 """Basic tests for bytecode compilation and execution."""
 
 import pytest
+from aifpl.aifpl import AIFPL
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
@@ -25,7 +26,7 @@ def compile_and_run(expression: str) -> any:
 
     # Add constants to globals (builtins are already in the VM)
     evaluator = AIFPLEvaluator()
-    vm.set_globals(evaluator.CONSTANTS)
+    vm.set_globals(AIFPL.CONSTANTS)
 
     # Execute
     result = vm.execute(code)

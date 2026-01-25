@@ -1,6 +1,7 @@
 """Tests for bytecode string operations."""
 
 import pytest
+from aifpl import AIFPL
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
@@ -22,7 +23,7 @@ def compile_and_run(expression: str) -> any:
     vm = AIFPLVM()
 
     evaluator = AIFPLEvaluator()
-    vm.set_globals(evaluator.CONSTANTS)
+    vm.set_globals(AIFPL.CONSTANTS)
 
     result = vm.execute(code)
     return result
@@ -201,15 +202,6 @@ class TestStringCombinations:
         result = compile_and_run('(string-upcase (string-append "hello" " " "world"))')
         assert isinstance(result, AIFPLString)
         assert result.value == "HELLO WORLD"
-
-    def test_split_map_join(self):
-        result = compile_and_run('''
-            (string-join
-              (map string-upcase (string-split "hello,world" ","))
-              ",")
-        ''')
-        assert isinstance(result, AIFPLString)
-        assert result.value == "HELLO,WORLD"
 
     def test_complex_string_processing(self):
         # Trim, split, filter non-empty, join

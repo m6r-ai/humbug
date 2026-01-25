@@ -1,6 +1,5 @@
 """Evaluator for AIFPL Abstract Syntax Trees with detailed error messages."""
 
-import math
 from typing import List, Dict, cast
 
 from aifpl.aifpl_call_stack import AIFPLCallStack
@@ -17,15 +16,6 @@ from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindin
 
 class AIFPLEvaluator:
     """Evaluates AIFPL Abstract Syntax Trees using pure list representation with detailed error messages."""
-
-    # Mathematical constants
-    CONSTANTS = {
-        'pi': AIFPLNumber(math.pi),
-        'e': AIFPLNumber(math.e),
-        'j': AIFPLNumber(1j),
-        'true': AIFPLBoolean(True),
-        'false': AIFPLBoolean(False),
-    }
 
     def __init__(self, max_depth: int = 1000, floating_point_tolerance: float = 1e-10):
         """
@@ -74,7 +64,12 @@ class AIFPLEvaluator:
         """Check if value is a symbol with the given name."""
         return isinstance(value, AIFPLSymbol) and value.name == name
 
-    def evaluate(self, expr: AIFPLValue, prelude_functions: dict[str, AIFPLFunction] | None = None) -> AIFPLValue:
+    def evaluate(
+        self,
+        expr: AIFPLValue,
+        constants: dict[str, AIFPLValue] | None = None,
+        prelude_functions: dict[str, AIFPLFunction] | None = None
+    ) -> AIFPLValue:
         """
         Recursively evaluate AST.
 
@@ -89,8 +84,7 @@ class AIFPLEvaluator:
         """
         env = AIFPLEnvironment()  # Global environment, no function reference
 
-        # Add constants and built-in functions to global environment (batch for efficiency)
-        global_bindings = {**self.CONSTANTS, **self._builtin_functions}
+        global_bindings = {**(constants or {}), **self._builtin_functions}
         if prelude_functions:
             global_bindings.update(prelude_functions)
 

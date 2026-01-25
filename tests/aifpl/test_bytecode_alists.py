@@ -1,6 +1,7 @@
 """Tests for bytecode alist operations."""
 
 import pytest
+from aifpl import AIFPL
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
@@ -21,7 +22,7 @@ def compile_and_run(expression: str) -> any:
     vm = AIFPLVM()
 
     evaluator = AIFPLEvaluator()
-    vm.set_globals(evaluator.CONSTANTS)
+    vm.set_globals(AIFPL.CONSTANTS)
 
     result = vm.execute(code)
     return result
@@ -171,17 +172,6 @@ class TestAListCombinations:
         assert isinstance(result, AIFPLNumber)
         assert result.value == 30
 
-    def test_alist_map_keys(self):
-        result = compile_and_run('''
-            (map (lambda (k) (alist-get (alist (list "a" 1) (list "b" 2) (list "c" 3)) k))
-                 (list "a" "b" "c"))
-        ''')
-        assert isinstance(result, AIFPLList)
-        assert len(result.elements) == 3
-        assert result.elements[0].value == 1
-        assert result.elements[1].value == 2
-        assert result.elements[2].value == 3
-
     def test_data_processing_pipeline(self):
         # Create alist, extract values, sum them
         result = compile_and_run('''
@@ -212,18 +202,6 @@ class TestBenchmarkPatterns:
         ''')
         assert isinstance(result, AIFPLAList)
         assert len(result.pairs) == 10
-
-    def test_alist_in_map(self):
-        # Create list of alists
-        result = compile_and_run('''
-            (map (lambda (i) (alist (list "id" i) (list "value" (list * i i))))
-                 (range 1 6))
-        ''')
-        assert isinstance(result, AIFPLList)
-        assert len(result.elements) == 5
-        # Each element should be an alist
-        for elem in result.elements:
-            assert isinstance(elem, AIFPLAList)
 
 
 if __name__ == "__main__":

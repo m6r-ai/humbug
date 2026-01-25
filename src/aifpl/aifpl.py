@@ -1,7 +1,9 @@
 """Main AIFPL (AI Functional Programming Language) class with enhanced error messages."""
 
-from typing import Union
-from aifpl.aifpl_value import AIFPLFunction
+import math
+from typing import Union, Dict
+
+from aifpl.aifpl_value import AIFPLFunction, AIFPLNumber, AIFPLBoolean, AIFPLValue
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
@@ -54,19 +56,28 @@ class AIFPL:
                     (all? pred lst)))""",
     }
 
+    # Mathematical constants
+    CONSTANTS = {
+        'pi': AIFPLNumber(math.pi),
+        'e': AIFPLNumber(math.e),
+        'j': AIFPLNumber(1j),
+        'true': AIFPLBoolean(True),
+        'false': AIFPLBoolean(False),
+    }
+
     # Class-level caches for prelude functions
     _prelude_evaluator_cache = None  # For evaluator mode
     _prelude_bytecode_cache = None   # For VM mode
 
     @classmethod
-    def _load_prelude_for_evaluator(cls):
+    def _load_prelude_for_evaluator(cls) -> dict[str, AIFPLFunction]:
         """Load prelude as evaluated AIFPLFunction objects (cached)."""
         if cls._prelude_evaluator_cache is not None:
             return cls._prelude_evaluator_cache
 
         evaluator = AIFPLEvaluator()
         env = AIFPLEnvironment()
-        env = env.define_many({**evaluator.CONSTANTS, **evaluator._builtin_functions})
+        env = env.define_many({**cls.CONSTANTS, **evaluator._builtin_functions})
 
         prelude_funcs = {}
         for name, source_code in cls._PRELUDE_SOURCE.items():
@@ -82,12 +93,17 @@ class AIFPL:
         return prelude_funcs
 
     @classmethod
-    def _load_prelude_for_vm(cls, compiler, vm, constants):
+    def _load_prelude_for_vm(
+        cls,
+        compiler: AIFPLCompiler,
+        vm: AIFPLVM,
+        constants: Dict[str, AIFPLValue]
+    ) -> Dict[str, AIFPLFunction]:
         """Load prelude as bytecode AIFPLFunction objects (cached)."""
         if cls._prelude_bytecode_cache is not None:
             return cls._prelude_bytecode_cache
 
-        bytecode_prelude = {}
+        bytecode_prelude: dict[str, AIFPLFunction] = {}
         for name, source_code in cls._PRELUDE_SOURCE.items():
             tokenizer = AIFPLTokenizer()
             tokens = tokenizer.tokenize(source_code)
@@ -96,7 +112,8 @@ class AIFPL:
             bytecode = compiler.compile(expr, name=f"<prelude:{name}>")
             vm.set_globals(constants, {})
             func = vm.execute(bytecode)
-            bytecode_prelude[name] = func
+            if isinstance(func, AIFPLFunction):
+                bytecode_prelude[name] = func
 
         cls._prelude_bytecode_cache = bytecode_prelude
         return bytecode_prelude
@@ -140,6 +157,16 @@ class AIFPL:
         parser = AIFPLParser(tokens, expression)
         parsed_expr = parser.parse()
 
+        if self.use_bytecode:
+            # Load prelude and compile main expression
+            bytecode_prelude = self._load_prelude_for_vm(self.compiler, self.vm, self.CONSTANTS)
+            code = self.compiler.compile(parsed_expr)
+            self.vm.set_globals(self.CONSTANTS, bytecode_prelude)
+            result = self.vm.execute(code)
+
+            # VM returns AIFPLValue, convert to Python
+            return result.to_python()
+
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
@@ -148,20 +175,12 @@ class AIFPL:
         # Set expression context for error reporting
         evaluator.set_expression_context(expression)
 
-        if self.use_bytecode:
-            # Load prelude and compile main expression
-            bytecode_prelude = self._load_prelude_for_vm(self.compiler, self.vm, evaluator.CONSTANTS)
-            code = self.compiler.compile(parsed_expr)
-            self.vm.set_globals(evaluator.CONSTANTS, bytecode_prelude)
-            result = self.vm.execute(code)
-        else:
-            # Load prelude and evaluate
-            prelude_funcs = self._load_prelude_for_evaluator()
-            result = evaluator.evaluate(parsed_expr, prelude_funcs)
+        # Load prelude and evaluate
+        prelude_funcs = self._load_prelude_for_evaluator()
+        result = evaluator.evaluate(parsed_expr, self.CONSTANTS, prelude_funcs)
 
         # Simplify the result
         simplified = evaluator.simplify_result(result)
-
         # Convert to Python types for backward compatibility
         return simplified.to_python()
 
@@ -186,6 +205,16 @@ class AIFPL:
         parser = AIFPLParser(tokens, expression)
         parsed_expr = parser.parse()
 
+        if self.use_bytecode:
+            # Load prelude and compile main expression
+            bytecode_prelude = self._load_prelude_for_vm(self.compiler, self.vm, self.CONSTANTS)
+            code = self.compiler.compile(parsed_expr)
+            self.vm.set_globals(self.CONSTANTS, bytecode_prelude)
+            result = self.vm.execute(code)
+
+            # VM returns AIFPLValue, format it
+            return self.vm.format_result(result)
+
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
             floating_point_tolerance=self.floating_point_tolerance
@@ -194,16 +223,9 @@ class AIFPL:
         # Set expression context for error reporting
         evaluator.set_expression_context(expression)
 
-        if self.use_bytecode:
-            # Load prelude and compile main expression
-            bytecode_prelude = self._load_prelude_for_vm(self.compiler, self.vm, evaluator.CONSTANTS)
-            code = self.compiler.compile(parsed_expr)
-            self.vm.set_globals(evaluator.CONSTANTS, bytecode_prelude)
-            result = self.vm.execute(code)
-        else:
-            # Load prelude and evaluate
-            prelude_funcs = self._load_prelude_for_evaluator()
-            result = evaluator.evaluate(parsed_expr, prelude_funcs)
+        # Load prelude and evaluate
+        prelude_funcs = self._load_prelude_for_evaluator()
+        result = evaluator.evaluate(parsed_expr, self.CONSTANTS, prelude_funcs)
 
         # Simplify and format the result
         simplified = evaluator.simplify_result(result)

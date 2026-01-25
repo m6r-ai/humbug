@@ -1,6 +1,7 @@
 """Tests for bytecode list operations."""
 
 import pytest
+from aifpl import AIFPL
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
@@ -21,7 +22,7 @@ def compile_and_run(expression: str) -> any:
     vm = AIFPLVM()
 
     evaluator = AIFPLEvaluator()
-    vm.set_globals(evaluator.CONSTANTS)
+    vm.set_globals(AIFPL.CONSTANTS)
 
     result = vm.execute(code)
     return result

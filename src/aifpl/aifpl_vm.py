@@ -101,7 +101,7 @@ class AIFPLVM:
         if prelude_functions:
             self.globals.update(prelude_functions)
 
-    def _format_result(self, result: AIFPLValue) -> str:
+    def format_result(self, result: AIFPLValue) -> str:
         """
         Format result for display in error messages, using LISP conventions.
 
@@ -128,7 +128,7 @@ class AIFPLVM:
 
             formatted_elements = []
             for element in result.elements:
-                formatted_elements.append(self._format_result(element))
+                formatted_elements.append(self.format_result(element))
 
             return f"({' '.join(formatted_elements)})"
 
@@ -139,8 +139,8 @@ class AIFPLVM:
 
             formatted_pairs = []
             for key, value in result.pairs:
-                formatted_key = self._format_result(key)
-                formatted_value = self._format_result(value)
+                formatted_key = self.format_result(key)
+                formatted_value = self.format_result(value)
                 formatted_pairs.append(f"({formatted_key} {formatted_value})")
 
             pairs_str = ' '.join(formatted_pairs)
@@ -275,7 +275,7 @@ class AIFPLVM:
 
         raise AIFPLEvalError(
             message="Cannot call non-function value",
-            received=f"Trying to call: {self._format_result(value)} ({value.type_name()})",
+            received=f"Trying to call: {self.format_result(value)} ({value.type_name()})",
             context=f"In {context}: first argument must be a function",
             expected="Function (builtin or lambda)",
             example="(+ 1 2) calls function +\\n(42 1 2) tries to call number 42",
@@ -557,7 +557,7 @@ class AIFPLVM:
         if not isinstance(func, AIFPLFunction):
             raise AIFPLEvalError(
                 message="Cannot call non-function value",
-                received=f"Attempted to call: {self._format_result(func)} ({func.type_name()})",
+                received=f"Attempted to call: {self.format_result(func)} ({func.type_name()})",
                 expected="Function (lambda or builtin)",
                 suggestion="Only functions can be called"
             )
@@ -763,7 +763,7 @@ class AIFPLVM:
                 if not isinstance(arg, AIFPLBoolean):
                     raise AIFPLEvalError(
                         message=f"And operator argument {i+1} must be boolean",
-                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
+                        received=f"Argument {i+1}: {self.format_result(arg)} ({arg.type_name()})",
                         expected="Boolean value (#t or #f)",
                         example="(and (> x 0) (< x 10))",
                         suggestion="Use comparison or boolean operators to create boolean values"
@@ -783,7 +783,7 @@ class AIFPLVM:
                 if not isinstance(arg, AIFPLBoolean):
                     raise AIFPLEvalError(
                         message=f"Or operator argument {i+1} must be boolean",
-                        received=f"Argument {i+1}: {self._format_result(arg)} ({arg.type_name()})",
+                        received=f"Argument {i+1}: {self.format_result(arg)} ({arg.type_name()})",
                         expected="Boolean value (#t or #f)",
                         example="(or (= x 0) (> x 10))",
                         suggestion="Use comparison or boolean operators to create boolean values"
