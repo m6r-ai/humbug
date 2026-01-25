@@ -158,13 +158,9 @@ class AnalyzedCall(AnalyzedExpression):
 class AnalyzedAnd(AnalyzedExpression):
     """Analyzed 'and' expression with short-circuit evaluation.
     
-    Jump offsets for short-circuit evaluation are pre-calculated.
+    Jump offsets are calculated during code generation.
     """
     args: List[AnalyzedExpression]
-    
-    # Jump offsets for each argument (to false section)
-    jump_to_false_offsets: List[int]
-    jump_to_end_offset: int
     
     def __repr__(self) -> str:
         return f"AnalyzedAnd(args={len(self.args)})"
@@ -174,13 +170,9 @@ class AnalyzedAnd(AnalyzedExpression):
 class AnalyzedOr(AnalyzedExpression):
     """Analyzed 'or' expression with short-circuit evaluation.
     
-    Jump offsets for short-circuit evaluation are pre-calculated.
+    Jump offsets are calculated during code generation.
     """
     args: List[AnalyzedExpression]
-    
-    # Jump offsets for each argument (to true section)
-    jump_to_true_offsets: List[int]
-    jump_to_end_offset: int
     
     def __repr__(self) -> str:
         return f"AnalyzedOr(args={len(self.args)})"
@@ -204,15 +196,11 @@ class AnalyzedMatch(AnalyzedExpression):
 class AnalyzedMatchClause:
     """A single clause in a match expression.
     
-    Each clause has a pattern and a result expression, plus jump offsets
-    for success/failure paths.
+    Each clause has a pattern and a result expression.
+    Jump offsets are calculated during code generation.
     """
     pattern: 'AnalyzedPattern'
     result: AnalyzedExpression
-    
-    # Jump offsets
-    jump_to_next_offset: int  # If pattern fails, jump to next clause
-    jump_to_end_offset: int   # If pattern succeeds, jump to end after result
     
     def __repr__(self) -> str:
         return f"AnalyzedMatchClause(pattern={self.pattern})"

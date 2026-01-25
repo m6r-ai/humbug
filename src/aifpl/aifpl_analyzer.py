@@ -732,8 +732,7 @@ class AIFPLAnalyzer:
     def _analyze_and(self, expr: AIFPLList) -> AnalyzedAnd:
         """Analyze 'and' expression with short-circuit evaluation.
         
-        (and) -> #t
-        (and a) -> a (must be boolean)
+        (and) -> #t  
         (and a b c) -> if any is false, return #f; else return #t
         
         Bytecode structure:
@@ -751,58 +750,28 @@ class AIFPLAnalyzer:
             expr: And expression
             
         Returns:
-            AnalyzedAnd with pre-calculated jump offsets
+            AnalyzedAnd with analyzed arguments
         """
         args = list(expr.elements[1:])  # Skip 'and' symbol
-        
-        if len(args) == 0:
-            # (and) -> #t
-            # Just a single LOAD_TRUE instruction
-            return AnalyzedAnd(
-                expr_type='and',
-                source_expr=expr,
-                args=[],
-                jump_to_false_offsets=[],
-                jump_to_end_offset=0,
-                instruction_count=1  # LOAD_TRUE
-            )
         
         # Analyze all arguments
         analyzed_args = [self._analyze_expression(arg, False) for arg in args]
         
-        # Calculate jump offsets
-        # For each arg: arg_instructions + POP_JUMP_IF_FALSE
-        # After all args: LOAD_TRUE + JUMP + LOAD_FALSE
-        
-        # Calculate where each POP_JUMP_IF_FALSE should jump to (the false section)
-        current_offset = 0
-        jump_to_false_offsets = []
-        
-        for analyzed_arg in analyzed_args:
-            current_offset += analyzed_arg.instruction_count  # arg instructions
-            current_offset += 1  # POP_JUMP_IF_FALSE
-        
-        # After all args, we have: LOAD_TRUE (1) + JUMP (1)
-        false_section_offset = current_offset + 1 + 1
-        jump_to_false_offsets = [false_section_offset] * len(analyzed_args)
-        
-        # Total instructions: all args + their jumps + LOAD_TRUE + JUMP + LOAD_FALSE
-        total_instructions = sum(a.instruction_count + 1 for a in analyzed_args) + 3
+        # Instruction count (approximate, for reference)
+        # Each arg + POP_JUMP + final LOAD_TRUE/FALSE + JUMP
+        total_instructions = sum(a.instruction_count for a in analyzed_args) + len(analyzed_args) + 3
         
         return AnalyzedAnd(
             expr_type='and',
             source_expr=expr,
             args=analyzed_args,
-            jump_to_false_offsets=jump_to_false_offsets,
-            jump_to_end_offset=total_instructions,
             instruction_count=total_instructions
         )
     
     def _analyze_or(self, expr: AIFPLList) -> AnalyzedOr:
         """Analyze 'or' expression with short-circuit evaluation.
         
-        (or) -> #f
-        (or a) -> a (must be boolean)
+        (or) -> #f  
         (or a b c) -> if any is true, return #t; else return #f
         
         Bytecode structure:
@@ -820,50 +789,21 @@ class AIFPLAnalyzer:
             expr: Or expression
             
         Returns:
-            AnalyzedOr with pre-calculated jump offsets
+            AnalyzedOr with analyzed arguments
         """
         args = list(expr.elements[1:])  # Skip 'or' symbol
-        
-        if len(args) == 0:
-            # (or) -> #f
-            # Just a single LOAD_FALSE instruction
-            return AnalyzedOr(
-                expr_type='or',
-                source_expr=expr,
-                args=[],
-                jump_to_true_offsets=[],
-                jump_to_end_offset=0,
-                instruction_count=1  # LOAD_FALSE
-            )
         
         # Analyze all arguments
         analyzed_args = [self._analyze_expression(arg, False) for arg in args]
         
-        # Calculate jump offsets
-        # For each arg: arg_instructions + POP_JUMP_IF_TRUE
-        # After all args: LOAD_FALSE + JUMP + LOAD_TRUE
-        
-        # Calculate where each POP_JUMP_IF_TRUE should jump to (the true section)
-        current_offset = 0
-        jump_to_true_offsets = []
-        
-        for analyzed_arg in analyzed_args:
-            current_offset += analyzed_arg.instruction_count  # arg instructions
-            current_offset += 1  # POP_JUMP_IF_TRUE
-        
-        # After all args, we have: LOAD_FALSE (1) + JUMP (1)
-        true_section_offset = current_offset + 1 + 1
-        jump_to_true_offsets = [true_section_offset] * len(analyzed_args)
-        
-        # Total instructions: all args + their jumps + LOAD_FALSE + JUMP + LOAD_TRUE
-        total_instructions = sum(a.instruction_count + 1 for a in analyzed_args) + 3
+        # Instruction count (approximate, for reference)
+        # Each arg + POP_JUMP + final LOAD_TRUE/FALSE + JUMP
+        total_instructions = sum(a.instruction_count for a in analyzed_args) + len(analyzed_args) + 3
         
         return AnalyzedOr(
             expr_type='or',
             source_expr=expr,
             args=analyzed_args,
-            jump_to_true_offsets=jump_to_true_offsets,
-            jump_to_end_offset=total_instructions,
             instruction_count=total_instructions
         )
     
