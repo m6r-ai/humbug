@@ -66,13 +66,6 @@ class AIFPLEvaluator:
         # Add special forms (these require special evaluation semantics)
         builtins['and'] = AIFPLBuiltinFunction('and', self._builtin_and_special)
         builtins['or'] = AIFPLBuiltinFunction('or', self._builtin_or_special)
-        builtins['map'] = AIFPLBuiltinFunction('map', self._builtin_map_special)
-        builtins['filter'] = AIFPLBuiltinFunction('filter', self._builtin_filter_special)
-        builtins['fold'] = AIFPLBuiltinFunction('fold', self._builtin_fold_special)
-        builtins['range'] = AIFPLBuiltinFunction('range', self._builtin_range_special)
-        builtins['find'] = AIFPLBuiltinFunction('find', self._builtin_find_special)
-        builtins['any?'] = AIFPLBuiltinFunction('any?', self._builtin_any_p_special)
-        builtins['all?'] = AIFPLBuiltinFunction('all?', self._builtin_all_p_special)
 
         return builtins
 
@@ -556,7 +549,8 @@ class AIFPLEvaluator:
 
     def _is_special_form(self, function_name: str) -> bool:
         """Check if a function name is a special form that needs unevaluated arguments."""
-        return function_name in ['and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']
+        # Only and/or need special forms for short-circuit evaluation
+        return function_name in ['and', 'or']
 
     def _call_lambda_function(
         self,
@@ -640,7 +634,7 @@ class AIFPLEvaluator:
         """
         Call a built-in function with its native implementation.
 
-        Special forms (and, or, map, filter, etc.) receive env and depth for evaluation.
+        Special forms (and, or) receive env and depth for evaluation.
         Regular builtins only receive args.
 
         Args:
@@ -657,6 +651,18 @@ class AIFPLEvaluator:
             if self._is_special_form(func.name):
                 return func.native_impl(arg_values, env, depth)
 
+            # Higher-order functions need special handling for lambda arguments
+            if func.name in ['map', 'filter', 'fold', 'find', 'any?', 'all?']:
+                # Temporarily override the collections module's _call_function method
+                # to use our evaluator's lambda calling capability
+                old_call = self.builtin_registry.collections_functions._call_function
+                self.builtin_registry.collections_functions._call_function = lambda f, args, ctx: self._call_function_for_higher_order(f, args, env, depth)
+                try:
+                    return func.native_impl(arg_values)
+
+                finally:
+                    self.builtin_registry.collections_functions._call_function = old_call
+
             return func.native_impl(arg_values)
 
         except AIFPLEvalError:
@@ -670,6 +676,26 @@ class AIFPLEvaluator:
                 context=str(e),
                 suggestion="This is an internal error - please report this issue"
             ) from e
+
+    def _call_function_for_higher_order(
+        self,
+        func: AIFPLValue,
+        args: List[AIFPLValue],
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLValue:
+        """Helper to call functions from higher-order functions (map, filter, etc.)."""
+        if isinstance(func, AIFPLFunction):
+            return self._call_lambda_function(func, args, env, depth)
+
+        if isinstance(func, AIFPLBuiltinFunction):
+            return self._call_builtin_function(func, args, env, depth)
+
+        raise AIFPLEvalError(
+            message="Cannot call non-function value",
+            received=f"Got: {func.type_name()}",
+            expected="Function (lambda or builtin)"
+        )
 
     def _evaluate_expression_with_tail_detection(
         self,

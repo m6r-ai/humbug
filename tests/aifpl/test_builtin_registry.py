@@ -35,12 +35,13 @@ class TestBuiltinRegistry:
     def test_registry_excludes_special_forms(self):
         """Test that special forms are NOT in the registry."""
         registry = AIFPLBuiltinRegistry()
-        # These require special evaluation and should NOT be in the registry
+        # Only and/or require special evaluation (short-circuit)
         assert not registry.has_function('and')
         assert not registry.has_function('or')
-        assert not registry.has_function('map')
-        assert not registry.has_function('filter')
-        assert not registry.has_function('fold')
+        # Higher-order functions are now regular functions in the registry
+        assert registry.has_function('map')
+        assert registry.has_function('filter')
+        assert registry.has_function('fold')
 
     def test_call_arithmetic_function(self):
         """Test calling an arithmetic function through the registry."""
@@ -106,4 +107,8 @@ class TestBuiltinRegistry:
         # Special forms should NOT be in the list
         assert 'and' not in names
         assert 'or' not in names
-        assert 'map' not in names
+
+        # Higher-order functions are now in the registry
+        assert 'map' in names
+        assert 'filter' in names
+        assert 'fold' in names

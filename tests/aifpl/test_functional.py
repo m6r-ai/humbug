@@ -234,7 +234,7 @@ class TestFunctional:
             aifpl.evaluate('(fold + 0)')
 
         with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*Exactly 3 arguments"):
-            aifpl.evaluate('(fold + 0 (list 1 2) extra)')
+            aifpl.evaluate('(fold + 0 (list 1 2) 99)')
 
         # Third argument must be list
         with pytest.raises(AIFPLEvalError, match=r"must be.*list"):
@@ -284,7 +284,7 @@ class TestFunctional:
             aifpl.evaluate('(range 1)')
 
         with pytest.raises(AIFPLEvalError, match=r"wrong number of arguments[\s\S]*2 or 3 arguments"):
-            aifpl.evaluate('(range 1 5 2 extra)')
+            aifpl.evaluate('(range 1 5 2 99)')
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic find operations

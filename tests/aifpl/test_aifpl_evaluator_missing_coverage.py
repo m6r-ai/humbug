@@ -89,19 +89,19 @@ class TestEvaluatorMissingCoverage:
         """Test map with non-function argument."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(map 123 (list 1 2 3))")
-        assert "Cannot call non-function value" in str(exc_info.value)
+        assert "first argument must be a function" in str(exc_info.value).lower()
 
     def test_higher_order_non_function_argument_filter(self, aifpl):
         """Test filter with non-function argument."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(filter \"not-a-function\" (list 1 2 3))")
-        assert "Cannot call non-function value" in str(exc_info.value)
+        assert "first argument must be a function" in str(exc_info.value).lower()
 
     def test_higher_order_non_function_argument_fold(self, aifpl):
         """Test fold with non-function argument."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(fold #t 0 (list 1 2 3))")
-        assert "Cannot call non-function value" in str(exc_info.value)
+        assert "first argument must be a function" in str(exc_info.value).lower()
 
     # ========== Range Function Edge Cases ==========
 
@@ -141,13 +141,13 @@ class TestEvaluatorMissingCoverage:
         """Test range with float arguments (should require integers)."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(range 1.5 5)")
-        assert "requires integer arguments" in str(exc_info.value)
+        assert "integer" in str(exc_info.value).lower()
 
     def test_range_complex_arguments(self, aifpl):
         """Test range with complex number arguments."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(range (complex 1 2) 5)")
-        assert "requires integer arguments" in str(exc_info.value)
+        assert "integer" in str(exc_info.value).lower()
 
     # ========== Builtin Function Display Tests ==========
 

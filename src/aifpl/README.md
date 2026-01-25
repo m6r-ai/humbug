@@ -1411,8 +1411,8 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 
 ; Nested alists
 (alist
-  ("user" (alist (list "name" "Bob") (list "id" 123)))
-  ("status" "active"))
+  (list "user" (alist (list "name" "Bob") (list "id" 123)))
+  (list "status" "active"))
 ```
 
 **Note**: Each pair must be explicitly created using `(list key value)`. The `alist` function is a regular builtin that takes evaluated list arguments.
