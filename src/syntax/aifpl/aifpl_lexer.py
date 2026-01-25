@@ -401,6 +401,6 @@ class AIFPLLexer(Lexer):
             True if the value is a special form, False otherwise
         """
         special_forms = {
-            'and', 'if', 'let', 'lambda', 'or', 'quote'
+            'and', 'if', 'let', 'lambda', 'or', 'quote', 'match'
         }
         return value.lower() in special_forms
