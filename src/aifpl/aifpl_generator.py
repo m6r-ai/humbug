@@ -287,9 +287,12 @@ class AIFPLGenerator:
         )
         
         # Generate STORE_VAR instructions for each parameter
-        # The VM pushes arguments onto the stack before calling the lambda
-        # We need to pop them and store them in locals
-        for i, param in enumerate(analyzed.params):
+        # Arguments are on stack in order: arg0 at bottom, argN at top
+        # Stack is LIFO, so we pop in reverse: argN first, then arg(N-1), ..., arg0
+        # Store them in locals: argN -> local(N-1), ..., arg0 -> local(0)
+        # This means we emit STORE_VAR in reverse order
+        for i in range(len(analyzed.params) - 1, -1, -1):
+            # STORE_VAR depth=0 (current frame), index=i (parameter position)
             body_generator._emit(Opcode.STORE_VAR, 0, i)
         
         # Generate code for the lambda body expression
