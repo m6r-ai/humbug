@@ -26,7 +26,8 @@ class AIFPLDesugarer:
         self.temp_counter = 0  # For generating unique temp variable names
 
     def desugar(self, expr: AIFPLValue) -> AIFPLValue:
-        """Desugar an expression recursively.
+        """
+        Desugar an expression recursively.
 
         Args:
             expr: AST to desugar
@@ -165,7 +166,8 @@ class AIFPLDesugarer:
         return AIFPLList(tuple(desugared_elements))
 
     def _desugar_match(self, expr: AIFPLList) -> AIFPLValue:
-        """Transform match expression into if/let expressions.
+        """
+        Transform match expression into if/let expressions.
 
         Args:
             expr: Match expression AST
@@ -214,7 +216,8 @@ class AIFPLDesugarer:
         return result
 
     def _build_match_clauses(self, temp_var: str, clauses: List[AIFPLValue]) -> AIFPLValue:
-        """Build nested if/let structure for match clauses.
+        """
+        Build nested if/let structure for match clauses.
 
         Args:
             temp_var: Name of temp variable holding the match value
@@ -247,6 +250,7 @@ class AIFPLDesugarer:
             try:
                 test_expr, bindings = self._desugar_pattern(pattern, temp_var)
             except AIFPLEvalError as e:
+
                 # Add clause context to error message
                 clause_num = i + 1
                 raise AIFPLEvalError(
@@ -264,6 +268,7 @@ class AIFPLDesugarer:
                         desugared_result,
                         self._build_no_match_error()
                     )
+
             else:
                 # Not the last clause - chain with else
                 result = self._build_clause_with_bindings(
@@ -282,7 +287,8 @@ class AIFPLDesugarer:
         result_expr: AIFPLValue,
         else_expr: AIFPLValue
     ) -> AIFPLValue:
-        """Build if/let structure for a single clause.
+        """
+        Build if/let structure for a single clause.
 
         Args:
             test_expr: Expression that tests if pattern matches
@@ -358,6 +364,7 @@ class AIFPLDesugarer:
                 AIFPLList(tuple(binding_list)),
                 result_expr
             ))
+
         else:
             then_expr = result_expr
 
@@ -393,6 +400,7 @@ class AIFPLDesugarer:
                 AIFPLList(tuple(binding_list)),
                 result_expr
             ))
+
         else:
             then_expr = result_expr
 
@@ -405,7 +413,8 @@ class AIFPLDesugarer:
         ))
 
     def _build_no_match_error(self) -> AIFPLValue:
-        """Build an expression that raises a no-match error.
+        """
+        Build an expression that raises a no-match error.
 
         We need to match the error message from the interpreter:
         "No patterns matched in match expression"
@@ -425,7 +434,8 @@ class AIFPLDesugarer:
         pattern: AIFPLValue,
         temp_var: str
     ) -> Tuple[AIFPLValue, List[Tuple[str, AIFPLValue]]]:
-        """Desugar a pattern into (test_expr, bindings).
+        """
+        Desugar a pattern into (test_expr, bindings).
 
         Args:
             pattern: Pattern AST
@@ -454,12 +464,12 @@ class AIFPLDesugarer:
             if pattern.name == '_':
                 # Wildcard - always matches, no binding
                 return (AIFPLBoolean(True), [])
-            else:
-                # Variable binding - always matches, binds variable
-                return (
-                    AIFPLBoolean(True),
-                    [(pattern.name, AIFPLSymbol(temp_var))]
-                )
+
+            # Variable binding - always matches, binds variable
+            return (
+                AIFPLBoolean(True),
+                [(pattern.name, AIFPLSymbol(temp_var))]
+            )
 
         # List patterns
         if isinstance(pattern, AIFPLList):
@@ -475,7 +485,8 @@ class AIFPLDesugarer:
         pattern: AIFPLList,
         temp_var: str
     ) -> Tuple[AIFPLValue, List[Tuple[str, AIFPLValue]]]:
-        """Desugar a list pattern.
+        """
+        Desugar a list pattern.
 
         Args:
             pattern: List pattern AST
@@ -530,36 +541,36 @@ class AIFPLDesugarer:
                     bindings.append((var_pattern.name, AIFPLSymbol(temp_var)))
 
                 return (test_expr, bindings)
-            else:
-                # Unknown type predicate
+
+            # Unknown type predicate
+            raise AIFPLEvalError(
+                message="Invalid type pattern",
+                received=f"Type pattern: ({type_pred} {var_pattern})",
+                expected="Valid type predicate like number?, string?, list?, etc.",
+                example="(number? x) or (string? s)",
+                suggestion="Use a valid type predicate ending with ?"
+            )
+            if not isinstance(var_pattern, AIFPLSymbol):
                 raise AIFPLEvalError(
-                    message="Invalid type pattern",
-                    received=f"Type pattern: ({type_pred} {var_pattern})",
-                    expected="Valid type predicate like number?, string?, list?, etc.",
-                    example="(number? x) or (string? s)",
-                    suggestion="Use a valid type predicate ending with ?"
+                    message="Pattern variable must be a symbol",
+                    received=f"Variable in type pattern: {var_pattern}",
+                    expected="Symbol (variable name)",
+                    example="(number? x) not (number? 42)",
+                    suggestion="Use unquoted variable names in type patterns"
                 )
-                if not isinstance(var_pattern, AIFPLSymbol):
-                    raise AIFPLEvalError(
-                        message="Pattern variable must be a symbol",
-                        received=f"Variable in type pattern: {var_pattern}",
-                        expected="Symbol (variable name)",
-                        example="(number? x) not (number? 42)",
-                        suggestion="Use unquoted variable names in type patterns"
-                    )
 
-                # Test: (type? temp_var)
-                test_expr = AIFPLList((
-                    AIFPLSymbol(type_pred),
-                    AIFPLSymbol(temp_var)
-                ))
+            # Test: (type? temp_var)
+            test_expr = AIFPLList((
+                AIFPLSymbol(type_pred),
+                AIFPLSymbol(temp_var)
+            ))
 
-                # Binding: if var_pattern is a variable, bind it
-                bindings = []
-                if isinstance(var_pattern, AIFPLSymbol) and var_pattern.name != '_':
-                    bindings.append((var_pattern.name, AIFPLSymbol(temp_var)))
+            # Binding: if var_pattern is a variable, bind it
+            bindings = []
+            if isinstance(var_pattern, AIFPLSymbol) and var_pattern.name != '_':
+                bindings.append((var_pattern.name, AIFPLSymbol(temp_var)))
 
-                return (test_expr, bindings)
+            return (test_expr, bindings)
 
         # Check for malformed type patterns
         if (len(pattern.elements) >= 1 and
@@ -617,7 +628,8 @@ class AIFPLDesugarer:
         pattern: AIFPLList,
         temp_var: str
     ) -> Tuple[AIFPLValue, List[Tuple[str, AIFPLValue]]]:
-        """Desugar a fixed-length list pattern like (a b c).
+        """
+        Desugar a fixed-length list pattern like (a b c).
 
         Args:
             pattern: List pattern AST
@@ -697,7 +709,8 @@ class AIFPLDesugarer:
         element_tests: List,
         pattern_bindings: List
     ) -> None:
-        """Recursively flatten a nested pattern into the given lists.
+        """
+        Recursively flatten a nested pattern into the given lists.
 
         Args:
             pattern: Pattern to flatten
@@ -733,6 +746,7 @@ class AIFPLDesugarer:
                     element_tests,
                     pattern_bindings
                 )
+
         else:
             # Regular pattern - add test and bindings
             if not (isinstance(test, AIFPLBoolean) and test.value):
@@ -746,7 +760,8 @@ class AIFPLDesugarer:
         result_expr: AIFPLValue,
         else_expr: AIFPLValue
     ) -> AIFPLValue:
-        """Build a clause for a list pattern with proper nesting.
+        """
+        Build a clause for a list pattern with proper nesting.
 
         Args:
             length_test: Test for list? and length
@@ -812,6 +827,7 @@ class AIFPLDesugarer:
                     AIFPLList(tuple(binding_list)),
                     result_expr
                 ))
+
             else:
                 pattern_let = result_expr
 
@@ -822,6 +838,7 @@ class AIFPLDesugarer:
                 pattern_let,
                 else_expr
             ))
+
         else:
             # No element tests - just bind pattern vars
             if pattern_bindings:
@@ -831,6 +848,7 @@ class AIFPLDesugarer:
                     AIFPLList(tuple(binding_list)),
                     result_expr
                 ))
+
             else:
                 inner_if = result_expr
 
@@ -856,7 +874,8 @@ class AIFPLDesugarer:
         temp_var: str,
         dot_position: int
     ) -> Tuple[AIFPLValue, List[Tuple[str, AIFPLValue]]]:
-        """Desugar a cons pattern like (head . tail) or (a b . rest).
+        """
+        Desugar a cons pattern like (head . tail) or (a b . rest).
 
         Args:
             pattern: List pattern AST
@@ -905,6 +924,7 @@ class AIFPLDesugarer:
                 list_test,
                 length_test
             ))
+
         else:
             # (. tail) pattern - just need non-empty list
             non_empty_test = AIFPLList((
