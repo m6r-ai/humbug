@@ -19,7 +19,7 @@ def compile_and_run(expression: str) -> any:
     code = compiler.compile(ast)
 
     vm = AIFPLVM()
-    
+
     evaluator = AIFPLEvaluator()
     vm.set_globals(evaluator.CONSTANTS)
 

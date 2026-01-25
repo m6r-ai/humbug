@@ -1212,34 +1212,6 @@ class AIFPLVM:
 
             return AIFPLBoolean(True)
 
-        if builtin_name == 'alist':
-            # AList constructor - arguments are already evaluated pairs
-            pairs = []
-            for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLList):
-                    raise AIFPLEvalError(
-                        message=f"AList pair {i+1} must be a list",
-                        received=f"Pair {i+1}: {arg.type_name()}",
-                        expected="2-element list: (key value)",
-                        example='(alist ("name" "Alice") ("age" 30))',
-                        suggestion="Each pair should be a list with key and value"
-                    )
-
-                if len(arg.elements) != 2:
-                    raise AIFPLEvalError(
-                        message=f"AList pair {i+1} must have exactly 2 elements",
-                        received=f"Pair {i+1} has {len(arg.elements)} elements",
-                        expected="2 elements: (key value)",
-                        example='(alist ("name" "Alice") ("age" 30))',
-                        suggestion="Each pair needs exactly one key and one value"
-                    )
-
-                key = arg.elements[0]
-                value = arg.elements[1]
-                pairs.append((key, value))
-
-            return AIFPLAList(tuple(pairs))
-
         # Check if this builtin is in the registry
         if not self._builtin_registry.has_function(builtin_name):
             # Unknown builtin

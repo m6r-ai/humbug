@@ -72,6 +72,7 @@ class AIFPLCollectionsFunctions:
             'function?': self._builtin_function_p,
 
             # AList functions
+            'alist': self._builtin_alist,
             'alist-get': self._builtin_alist_get,
             'alist-set': self._builtin_alist_set,
             'alist-has?': self._builtin_alist_has_p,
@@ -544,6 +545,40 @@ class AIFPLCollectionsFunctions:
         return value.value
 
     # AList functions
+    def _builtin_alist(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Create alist from key-value pairs: (alist (list key1 val1) (list key2 val2) ...)
+
+        Each argument must be a 2-element list representing a key-value pair.
+        """
+        pairs = []
+
+        for i, arg in enumerate(args):
+            # Each arg must be an evaluated 2-element list
+            if not isinstance(arg, AIFPLList):
+                raise AIFPLEvalError(
+                    message=f"AList pair {i+1} must be a list",
+                    received=f"Pair {i+1}: {arg.type_name()}",
+                    expected="2-element list: (list key value)",
+                    example='(alist (list "name" "Alice") (list "age" 30))',
+                    suggestion="Each pair should be created with (list key value)"
+                )
+
+            if len(arg.elements) != 2:
+                raise AIFPLEvalError(
+                    message=f"AList pair {i+1} must have exactly 2 elements",
+                    received=f"Pair {i+1} has {len(arg.elements)} elements",
+                    expected="2 elements: (list key value)",
+                    example='(alist (list "name" "Alice") (list "age" 30))',
+                    suggestion="Each pair needs exactly one key and one value"
+                )
+
+            # Extract key and value from the evaluated list
+            key = arg.elements[0]
+            value = arg.elements[1]
+            pairs.append((key, value))
+
+        return AIFPLAList(tuple(pairs))
+
     def _builtin_alist_get(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Get value from alist: (alist-get my-alist key [default])"""
         if len(args) < 2 or len(args) > 3:

@@ -207,7 +207,7 @@ class AIFPLCompiler:
         """
         # Desugar the expression first
         expr = self.desugarer.desugar(expr)
-        
+
         ctx = CompilationContext()
 
         # Compile the expression
@@ -226,7 +226,7 @@ class AIFPLCompiler:
             local_count=ctx.max_locals,
             name=name
         )
-    
+
     def _compile_expression(self, expr: AIFPLValue, ctx: CompilationContext) -> None:
         """Compile an expression, leaving result on stack."""
 
@@ -341,33 +341,10 @@ class AIFPLCompiler:
                         received=f"Got {len(expr.elements) - 1} arguments",
                         expected="Exactly 1 argument: (error \"message\")"
                     )
-                
+
                 error_msg = expr.elements[1]
                 const_index = ctx.add_constant(error_msg)
                 ctx.emit(Opcode.RAISE_ERROR, const_index)
-                return
-
-            if name == 'alist':
-                # Special handling for alist: each pair is a list that needs evaluation
-                # (alist ("key" value-expr) ...) -> create list for each pair
-                arg_exprs = list(expr.elements[1:])
-                for pair_expr in arg_exprs:
-                    # Each pair should be a list - compile its elements and make a list
-                    pair_type = type(pair_expr)
-                    if pair_type is not AIFPLList:
-                        raise AIFPLEvalError("alist pairs must be lists")
-                    if len(cast(AIFPLList, pair_expr).elements) != 2:
-                        raise AIFPLEvalError("alist pairs must have exactly 2 elements")
-
-                    # Compile each element of the pair
-                    for elem in cast(AIFPLList, pair_expr).elements:
-                        self._compile_expression(elem, ctx)
-                    # Create a list from the two elements
-                    ctx.emit(Opcode.MAKE_LIST, 2)
-
-                # Now call alist with the evaluated pairs
-                builtin_index = self.builtin_indices['alist']
-                ctx.emit(Opcode.CALL_BUILTIN, builtin_index, len(arg_exprs))
                 return
 
             if name in ['map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']:

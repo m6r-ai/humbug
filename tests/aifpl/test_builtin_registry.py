@@ -41,7 +41,6 @@ class TestBuiltinRegistry:
         assert not registry.has_function('map')
         assert not registry.has_function('filter')
         assert not registry.has_function('fold')
-        assert not registry.has_function('alist')
 
     def test_call_arithmetic_function(self):
         """Test calling an arithmetic function through the registry."""

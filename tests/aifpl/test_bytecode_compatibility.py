@@ -156,14 +156,14 @@ class TestALists:
     """Test alist operations with both backends."""
 
     def test_alist_creation(self, aifpl_both):
-        result = aifpl_both.evaluate('(alist ("name" "Alice") ("age" 30))')
+        result = aifpl_both.evaluate('(alist (list "name" "Alice") (list "age" 30))')
         # Result is an alist, check it's dict-like
         assert isinstance(result, dict)
         assert result["name"] == "Alice"
         assert result["age"] == 30
 
     def test_alist_get(self, aifpl_both):
-        result = aifpl_both.evaluate('(alist-get (alist ("name" "Alice")) "name")')
+        result = aifpl_both.evaluate('(alist-get (alist (list "name" "Alice")) "name")')
         assert result == "Alice"
 
 

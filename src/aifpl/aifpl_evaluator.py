@@ -73,7 +73,6 @@ class AIFPLEvaluator:
         builtins['find'] = AIFPLBuiltinFunction('find', self._builtin_find_special)
         builtins['any?'] = AIFPLBuiltinFunction('any?', self._builtin_any_p_special)
         builtins['all?'] = AIFPLBuiltinFunction('all?', self._builtin_all_p_special)
-        builtins['alist'] = AIFPLBuiltinFunction('alist', self._builtin_alist_special)
 
         return builtins
 
@@ -557,7 +556,7 @@ class AIFPLEvaluator:
 
     def _is_special_form(self, function_name: str) -> bool:
         """Check if a function name is a special form that needs unevaluated arguments."""
-        return function_name in ['and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?', 'alist']
+        return function_name in ['and', 'or', 'map', 'filter', 'fold', 'range', 'find', 'any?', 'all?']
 
     def _call_lambda_function(
         self,
@@ -1435,43 +1434,6 @@ class AIFPLEvaluator:
                 ) from e
 
         return AIFPLBoolean(True)
-
-    def _builtin_alist_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLValue:
-        """Create alist from key-value pairs: (alist (key1 val1) (key2 val2) ...)
-        This is a special form that receives unevaluated arguments."""
-        pairs = []
-
-        for i, arg in enumerate(args):
-            # Each arg is an unevaluated pair list - don't evaluate the list itself, just check structure
-            if not isinstance(arg, AIFPLList):
-                raise AIFPLEvalError(
-                    message=f"AList pair {i+1} must be a list",
-                    received=f"Pair {i+1}: {arg.type_name()}",
-                    expected="2-element list: (key value)",
-                    example='(alist ("name" "Alice") ("age" 30))',
-                    suggestion="Each pair should be a list with key and value"
-                )
-
-            if arg.length() != 2:
-                raise AIFPLEvalError(
-                    message=f"AList pair {i+1} must have exactly 2 elements",
-                    received=f"Pair {i+1} has {arg.length()} elements",
-                    expected="2 elements: (key value)",
-                    example='(alist ("name" "Alice") ("age" 30))',
-                    suggestion="Each pair needs exactly one key and one value"
-                )
-
-            # Get key and value expressions (unevaluated)
-            key_expr = arg.get(0)
-            value_expr = arg.get(1)
-
-            # Evaluate key and value in the current environment
-            key = self._evaluate_expression(key_expr, env, depth + 1)
-            value = self._evaluate_expression(value_expr, env, depth + 1)
-
-            pairs.append((key, value))
-
-        return AIFPLAList(tuple(pairs))
 
     # Helper method for higher-order functions
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:

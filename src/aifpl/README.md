@@ -1126,7 +1126,7 @@ AIFPL provides comprehensive type checking functions:
 (list? (list 1 2 3))                  ; → #t
 (list? "hello")                       ; → #f
 (list? ())                            ; → #t (empty list)
-(alist? (alist ("x" 1)))              ; → #t
+(alist? (alist (list "x" 1)))         ; → #t
 (alist? (list 1 2 3))                 ; → #f
 
 ; Function type checking
@@ -1398,30 +1398,30 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 
 ```aifpl
 ; Basic alist creation
-(alist ("name" "Alice") ("age" 30) ("city" "NYC"))
-; → (alist ("name" "Alice") ("age" 30) ("city" "NYC"))
+(alist (list "name" "Alice") (list "age" 30) (list "city" "NYC"))
+; → (alist (list "name" "Alice") (list "age" 30) (list "city" "NYC"))
 
 ; Empty alist
 (alist)
 ; → (alist)
 
 ; ALists with different key types
-(alist (1 "one") (2 "two") (3 "three"))
-(alist (#t "yes") (#f "no"))
+(alist (list 1 "one") (list 2 "two") (list 3 "three"))
+(alist (list #t "yes") (list #f "no"))
 
 ; Nested alists
 (alist
-  ("user" (alist ("name" "Bob") ("id" 123)))
+  ("user" (alist (list "name" "Bob") (list "id" 123)))
   ("status" "active"))
 ```
 
-**Note**: `alist` is a special form that evaluates the key and value expressions within each pair, but treats the pair structure itself as data.
+**Note**: Each pair must be explicitly created using `(list key value)`. The `alist` function is a regular builtin that takes evaluated list arguments.
 
 #### Accessing AList Values
 
 ```aifpl
 ; Get value by key
-(let ((person (alist ("name" "Alice") ("age" 30))))
+(let ((person (alist (list "name" "Alice") (list "age" 30))))
   (alist-get person "name"))
 ; → "Alice"
 
@@ -1434,7 +1434,7 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 ; → #f
 
 ; Nested access
-(let ((data (alist ("user" (alist ("name" "Carol") ("id" 456))))))
+(let ((data (alist (list "user" (alist (list "name" "Carol") (list "id" 456))))))
   (alist-get (alist-get data "user") "name"))
 ; → "Carol"
 ```
@@ -1445,23 +1445,23 @@ All alist operations return new alists without modifying the original:
 
 ```aifpl
 ; Set a key (returns new alist)
-(let ((person (alist ("name" "Alice") ("age" 30))))
+(let ((person (alist (list "name" "Alice") (list "age" 30))))
   (alist-set person "age" 31))
-; → (alist ("name" "Alice") ("age" 31))
+; → (alist (list "name" "Alice") (list "age" 31))
 
 ; Add a new key
 (alist-set person "email" "alice@example.com")
-; → (alist ("name" "Alice") ("age" 30) ("email" "alice@example.com"))
+; → (alist (list "name" "Alice") (list "age" 30) (list "email" "alice@example.com"))
 
 ; Original is unchanged
-(let ((original (alist ("x" 1)))
+(let ((original (alist (list "x" 1)))
       (modified (alist-set original "x" 2)))
   (list (alist-get original "x") (alist-get modified "x")))
 ; → (1 2)
 
 ; Remove a key
 (alist-remove person "age")
-; → (alist ("name" "Alice"))
+; → (alist (list "name" "Alice"))
 ```
 
 #### AList Queries
@@ -1475,15 +1475,15 @@ All alist operations return new alists without modifying the original:
 ; → #f
 
 ; Get all keys
-(alist-keys (alist ("a" 1) ("b" 2) ("c" 3)))
+(alist-keys (alist (list "a" 1) (list "b" 2) (list "c" 3)))
 ; → ("a" "b" "c")
 
 ; Get all values
-(alist-values (alist ("a" 1) ("b" 2) ("c" 3)))
+(alist-values (alist (list "a" 1) (list "b" 2) (list "c" 3)))
 ; → (1 2 3)
 
 ; Type checking
-(alist? (alist ("x" 1)))
+(alist? (alist (list "x" 1)))
 ; → #t
 
 (alist? (list 1 2 3))
@@ -1494,42 +1494,42 @@ All alist operations return new alists without modifying the original:
 
 ```aifpl
 ; Merge two alists (second wins on conflicts)
-(let ((defaults (alist ("port" 8080) ("host" "localhost")))
-      (config (alist ("port" 3000) ("debug" #t))))
+(let ((defaults (alist (list "port" 8080) (list "host" "localhost")))
+      (config (alist (list "port" 3000) (list "debug" #t))))
   (alist-merge defaults config))
-; → (alist ("port" 3000) ("host" "localhost") ("debug" #t))
+; → (alist (list "port" 3000) (list "host" "localhost") (list "debug" #t))
 
 ; Merge multiple alists
-(let ((a (alist ("x" 1)))
-      (b (alist ("y" 2)))
-      (c (alist ("z" 3))))
+(let ((a (alist (list "x" 1)))
+      (b (alist (list "y" 2)))
+      (c (alist (list "z" 3))))
   (alist-merge (alist-merge a b) c))
-; → (alist ("x" 1) ("y" 2) ("z" 3))
+; → (alist (list "x" 1) (list "y" 2) (list "z" 3))
 ```
 
 #### ALists with Functional Operations
 
 ```aifpl
 ; Map over keys
-(let ((data (alist ("name" "alice") ("city" "nyc"))))
+(let ((data (alist (list "name" "alice") (list "city" "nyc"))))
   (map string-upcase (alist-keys data)))
 ; → ("NAME" "CITY")
 
 ; Filter values
-(let ((scores (alist ("alice" 85) ("bob" 92) ("carol" 78))))
+(let ((scores (alist (list "alice" 85) (list "bob" 92) (list "carol" 78))))
   (filter (lambda (score) (> score 80)) (alist-values scores)))
 ; → (85 92)
 
 ; Fold over values
-(let ((prices (alist ("apple" 1.5) ("banana" 0.8) ("orange" 1.2))))
+(let ((prices (alist (list "apple" 1.5) (list "banana" 0.8) (list "orange" 1.2))))
   (fold + 0 (alist-values prices)))
 ; → 3.5
 
 ; Process list of alists
 (let ((people (list
-                (alist ("name" "Alice") ("age" 30))
-                (alist ("name" "Bob") ("age" 25))
-                (alist ("name" "Carol") ("age" 35)))))
+                (alist (list "name" "Alice") (list "age" 30))
+                (alist (list "name" "Bob") (list "age" 25))
+                (alist (list "name" "Carol") (list "age" 35)))))
   (map (lambda (p) (alist-get p "name")) people))
 ; → ("Alice" "Bob" "Carol")
 ```
@@ -1538,7 +1538,7 @@ All alist operations return new alists without modifying the original:
 
 ```aifpl
 ; Match alist type
-(match (alist ("type" "user") ("name" "Alice"))
+(match (alist (list "type" "user") (list "name" "Alice"))
   ((alist? data) (alist-get data "name"))
   (_ "not-alist"))
 ; → "Alice"
@@ -1549,7 +1549,7 @@ All alist operations return new alists without modifying the original:
                    ((alist? a) "alist")
                    ((list? l) "list")
                    (_ "other")))))
-  (list (process (alist ("a" 1)))
+  (list (process (alist (list "a" 1)))
         (process (list 1 2 3))))
 ; → ("alist" "list")
 ```
