@@ -12,7 +12,7 @@ import statistics
 import sys
 import time
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 from dataclasses import dataclass
 
 # Add src to path
@@ -55,7 +55,7 @@ class BenchmarkCase:
 # Comprehensive benchmark suite
 BENCHMARKS = [
     # === ARITHMETIC ===
-    BenchmarkCase("Simple Addition", "Arithmetic", 
+    BenchmarkCase("Simple Addition", "Arithmetic",
                   "(+ 1 2 3 4 5)", 5000),
     BenchmarkCase("Nested Arithmetic", "Arithmetic",
                   "(* (+ 1 2 3) (- 10 5) (/ 20 4))", 5000),
@@ -202,19 +202,19 @@ BENCHMARKS = [
 
     # === ALIST OPERATIONS ===
     BenchmarkCase("Alist Creation (5)", "Alists",
-                  '(alist ("a" 1) ("b" 2) ("c" 3) ("d" 4) ("e" 5))', 3000),
+                  '(alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5))', 3000),
     BenchmarkCase("Alist Creation (10)", "Alists",
-                  '(alist ("a" 1) ("b" 2) ("c" 3) ("d" 4) ("e" 5) ("f" 6) ("g" 7) ("h" 8) ("i" 9) ("j" 10))', 2000),
+                  '(alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5) (list "f" 6) (list "g" 7) (list "h" 8) (list "i" 9) (list "j" 10))', 2000),
     BenchmarkCase("Alist Get", "Alists",
-                  '(alist-get (alist ("name" "Alice") ("age" 30) ("city" "NYC")) "age")', 3000),
+                  '(alist-get (alist (list "name" "Alice") (list "age" 30) (list "city" "NYC")) "age")', 3000),
     BenchmarkCase("Alist Set", "Alists",
-                  '(alist-set (alist ("name" "Alice") ("age" 30)) "age" 31)', 2000),
+                  '(alist-set (alist (list "name" "Alice") (list "age" 30)) "age" 31)', 2000),
     BenchmarkCase("Alist Has", "Alists",
-                  '(alist-has? (alist ("name" "Alice") ("age" 30)) "name")', 3000),
+                  '(alist-has? (alist (list "name" "Alice") (list "age" 30)) "name")', 3000),
     BenchmarkCase("Alist Keys", "Alists",
-                  '(alist-keys (alist ("a" 1) ("b" 2) ("c" 3) ("d" 4) ("e" 5)))', 2000),
+                  '(alist-keys (alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5)))', 2000),
     BenchmarkCase("Alist Merge", "Alists",
-                  '(alist-merge (alist ("a" 1) ("b" 2)) (alist ("c" 3) ("d" 4)))', 2000),
+                  '(alist-merge (alist (list "a" 1) (list "b" 2)) (alist (list "c" 3) (list "d" 4)))', 2000),
 
     # === PATTERN MATCHING ===
     BenchmarkCase("Pattern Match Literal", "Pattern Matching",
@@ -264,9 +264,9 @@ BENCHMARKS = [
                        (fold + 0 (map (lambda (x) (* x x)) (filter (lambda (x) (> x 10)) data))))""", 200),
     BenchmarkCase("Nested Data Structure", "Realistic",
                   """(let ((users (list 
-                                  (alist ("name" "Alice") ("age" 30))
-                                  (alist ("name" "Bob") ("age" 25))
-                                  (alist ("name" "Charlie") ("age" 35)))))
+                                  (alist (list "name" "Alice") (list "age" 30))
+                                  (alist (list "name" "Bob") (list "age" 25))
+                                  (alist (list "name" "Charlie") (list "age" 35)))))
                        (map (lambda (user) (alist-get user "age")) users))""", 500),
     BenchmarkCase("Recursive List Processing", "Realistic",
                   """(let ((sum-list (lambda (lst)
@@ -311,7 +311,6 @@ def benchmark_interpreter(expression: str, iterations: int) -> Tuple[float, floa
 def benchmark_bytecode(expression: str, iterations: int) -> Tuple[float, float]:
     """Benchmark using bytecode compiler/VM (execution only)."""
     tokenizer = AIFPLTokenizer()
-    evaluator = AIFPLEvaluator()
     compiler = AIFPLCompiler()
 
     # Parse and compile once
@@ -319,10 +318,14 @@ def benchmark_bytecode(expression: str, iterations: int) -> Tuple[float, float]:
     ast = AIFPLParser(tokens, expression).parse()
     code = compiler.compile(ast)
 
-    # Setup VM
+    # Setup VM with constants and prelude functions
     vm = AIFPLVM()
-    globals_dict = {**evaluator.CONSTANTS, **evaluator._builtin_functions}
-    vm.set_globals(globals_dict)
+    
+    # Load prelude functions (same as AIFPL class does)
+    bytecode_prelude = AIFPL._load_prelude_for_vm(compiler, vm, AIFPL.CONSTANTS)
+    
+    # Set globals with constants and prelude
+    vm.set_globals(AIFPL.CONSTANTS, bytecode_prelude)
 
     # Warmup
     for _ in range(min(10, iterations // 10)):

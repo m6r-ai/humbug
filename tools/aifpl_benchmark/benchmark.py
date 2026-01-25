@@ -301,25 +301,25 @@ BENCHMARKS = [
     Benchmark(
         "Alist Creation (5 pairs)",
         "alists",
-        '(alist ("a" 1) ("b" 2) ("c" 3) ("d" 4) ("e" 5))',
+        '(alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5))',
         iterations=2000
     ),
     Benchmark(
         "Alist Get",
         "alists",
-        '(alist-get (alist ("name" "Alice") ("age" 30) ("city" "NYC")) "age")',
+        '(alist-get (alist (list "name" "Alice") (list "age" 30) (list "city" "NYC")) "age")',
         iterations=2000
     ),
     Benchmark(
         "Alist Set",
         "alists",
-        '(alist-set (alist ("a" 1) ("b" 2) ("c" 3)) "d" 4)',
+        '(alist-set (alist (list "a" 1) (list "b" 2) (list "c" 3)) "d" 4)',
         iterations=2000
     ),
     Benchmark(
         "Alist Merge",
         "alists",
-        '(alist-merge (alist ("a" 1) ("b" 2)) (alist ("c" 3) ("d" 4)))',
+        '(alist-merge (alist (list "a" 1) (list "b" 2)) (alist (list "c" 3) (list "d" 4)))',
         iterations=2000
     ),
 
@@ -327,7 +327,7 @@ BENCHMARKS = [
     Benchmark(
         "Data Processing Pipeline",
         "complex",
-        """(let ((data (map (lambda (i) (alist ("id" i) ("value" (* i i)))) (range 1 51))))
+        """(let ((data (map (lambda (i) (alist (list "id" i) (list "value" (* i i)))) (range 1 51))))
              (fold + 0 (map (lambda (item) (alist-get item "value")) data)))""",
         iterations=40
     ),
