@@ -119,11 +119,21 @@ class AIFPLDesugarer:
 
         # Desugar each binding value
         desugared_bindings = []
-        for binding in bindings_list.elements:
-            if not isinstance(binding, AIFPLList) or len(binding.elements) != 2:
+        for i, binding in enumerate(bindings_list.elements):
+            # Check if binding is a list
+            if not isinstance(binding, AIFPLList):
                 raise AIFPLEvalError(
-                    message="Let binding must be a list of 2 elements",
+                    message=f"Let binding {i+1} must be a list",
                     received=f"Binding: {binding}"
+                )
+            
+            # Check if binding has exactly 2 elements
+            if len(binding.elements) != 2:
+                raise AIFPLEvalError(
+                    message=f"Let binding {i+1} has wrong number of elements",
+                    received=f"Binding: {binding}",
+                    expected="Exactly 2 elements: (variable value)",
+                    example="(x 5) not (x) or (x 1 2)"
                 )
 
             var_name, value_expr = binding.elements
@@ -591,13 +601,21 @@ class AIFPLDesugarer:
                     )
 
         # Check for cons pattern: (head . tail) or (a b . rest)
-        dot_position = None
+        dot_positions = []
         for i, elem in enumerate(pattern.elements):
             if isinstance(elem, AIFPLSymbol) and elem.name == '.':
-                dot_position = i
-                break
-
-        if dot_position is not None:
+                dot_positions.append(i)
+        
+        # Validate: at most one dot
+        if len(dot_positions) > 1:
+            raise AIFPLEvalError(
+                message="Invalid cons pattern",
+                received=f"Pattern: {pattern} - multiple dots"
+            )
+        
+        # If we have a dot, use cons pattern
+        if dot_positions:
+            dot_position = dot_positions[0]
             return self._desugar_cons_pattern(pattern, temp_var, dot_position)
 
         # Fixed-length list pattern: (p1 p2 p3)
