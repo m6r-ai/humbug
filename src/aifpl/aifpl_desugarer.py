@@ -118,7 +118,7 @@ class AIFPLDesugarer:
                     message=f"Let binding {i+1} must be a list",
                     received=f"Binding: {binding}"
                 )
-            
+
             # Check if binding has exactly 2 elements
             if len(binding.elements) != 2:
                 raise AIFPLEvalError(
@@ -308,8 +308,7 @@ class AIFPLDesugarer:
         we need to wrap the entire if in a let for those temp bindings.
         """
         # Check if this is a list pattern (special marker)
-        if (bindings and len(bindings) == 1 and 
-            bindings[0][0].startswith('__LIST_PATTERN_')):
+        if (bindings and len(bindings) == 1 and bindings[0][0].startswith('__LIST_PATTERN_')):
             # This is a list pattern - use special building logic
             element_info = bindings[0][1]
             return self._build_list_pattern_clause(
@@ -320,8 +319,7 @@ class AIFPLDesugarer:
             )
 
         # Check if this is a cons pattern (special marker)
-        if (bindings and len(bindings) == 1 and 
-            bindings[0][0].startswith('__CONS_PATTERN_')):
+        if (bindings and len(bindings) == 1 and bindings[0][0].startswith('__CONS_PATTERN_')):
             # This is a cons pattern - use same building logic as list pattern
             element_info = bindings[0][1]
             return self._build_list_pattern_clause(
@@ -393,27 +391,6 @@ class AIFPLDesugarer:
             ))
 
         return if_expr
-        if bindings:
-            binding_list = []
-            for var_name, value_expr in bindings:
-                binding_list.append(AIFPLList((AIFPLSymbol(var_name), value_expr)))
-
-            then_expr = AIFPLList((
-                AIFPLSymbol('let'),
-                AIFPLList(tuple(binding_list)),
-                result_expr
-            ))
-
-        else:
-            then_expr = result_expr
-
-        # Build if expression
-        return AIFPLList((
-            AIFPLSymbol('if'),
-            test_expr,
-            then_expr,
-            else_expr
-        ))
 
     def _build_no_match_error(self) -> AIFPLValue:
         """
@@ -553,28 +530,6 @@ class AIFPLDesugarer:
                 example="(number? x) or (string? s)",
                 suggestion="Use a valid type predicate ending with ?"
             )
-            if not isinstance(var_pattern, AIFPLSymbol):
-                raise AIFPLEvalError(
-                    message="Pattern variable must be a symbol",
-                    received=f"Variable in type pattern: {var_pattern}",
-                    expected="Symbol (variable name)",
-                    example="(number? x) not (number? 42)",
-                    suggestion="Use unquoted variable names in type patterns"
-                )
-
-            # Test: (type? temp_var)
-            test_expr = AIFPLList((
-                AIFPLSymbol(type_pred),
-                AIFPLSymbol(temp_var)
-            ))
-
-            # Binding: if var_pattern is a variable, bind it
-            bindings = []
-            if isinstance(var_pattern, AIFPLSymbol) and var_pattern.name != '_':
-                bindings.append((var_pattern.name, AIFPLSymbol(temp_var)))
-
-            return (test_expr, bindings)
-
         # Check for malformed type patterns
         if (len(pattern.elements) >= 1 and
             isinstance(pattern.elements[0], AIFPLSymbol) and
@@ -596,28 +551,28 @@ class AIFPLDesugarer:
                         example="(number? x) not (number?)",
                         suggestion="Add a variable name after the type predicate"
                     )
-                else:  # len > 2
-                    raise AIFPLEvalError(
-                        message="Invalid type pattern",
-                        received=f"Type pattern: {pattern} - too many variables",
-                        expected="Type pattern with one variable: (type? var)",
-                        example="(number? x) not (number? x y)",
-                        suggestion="Use only one variable in type patterns"
-                    )
+
+                raise AIFPLEvalError(
+                    message="Invalid type pattern",
+                    received=f"Type pattern: {pattern} - too many variables",
+                    expected="Type pattern with one variable: (type? var)",
+                    example="(number? x) not (number? x y)",
+                    suggestion="Use only one variable in type patterns"
+                )
 
         # Check for cons pattern: (head . tail) or (a b . rest)
         dot_positions = []
         for i, elem in enumerate(pattern.elements):
             if isinstance(elem, AIFPLSymbol) and elem.name == '.':
                 dot_positions.append(i)
-        
+
         # Validate: at most one dot
         if len(dot_positions) > 1:
             raise AIFPLEvalError(
                 message="Invalid cons pattern",
                 received=f"Pattern: {pattern} - multiple dots"
             )
-        
+
         # If we have a dot, use cons pattern
         if dot_positions:
             dot_position = dot_positions[0]
@@ -797,9 +752,9 @@ class AIFPLDesugarer:
             elem_test, elem_bindings = self._desugar_pattern(elem_pattern, elem_temp)
 
             # Check if element pattern is itself a list/cons pattern (special marker)
-            if (elem_bindings and len(elem_bindings) == 1 and 
-                (elem_bindings[0][0].startswith('__LIST_PATTERN_') or 
-                 elem_bindings[0][0].startswith('__CONS_PATTERN_'))):
+            if (elem_bindings and len(elem_bindings) == 1 and
+                    (elem_bindings[0][0].startswith('__LIST_PATTERN_') or
+                     elem_bindings[0][0].startswith('__CONS_PATTERN_'))):
                 # Nested list/cons pattern - use helper to recursively flatten it
                 self._flatten_nested_pattern(
                     elem_pattern,
@@ -821,7 +776,9 @@ class AIFPLDesugarer:
         # Build the inner structure (after element extraction)
         if element_tests:
             # We have element tests - need nested if
-            elem_test_combined = AIFPLList((AIFPLSymbol('and'),) + tuple(element_tests)) if len(element_tests) > 1 else element_tests[0]
+            elem_test_combined = (
+                AIFPLList((AIFPLSymbol('and'),) + tuple(element_tests)) if len(element_tests) > 1 else element_tests[0]
+            )
 
             # Build pattern bindings let
             if pattern_bindings:
