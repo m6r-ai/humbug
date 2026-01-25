@@ -235,6 +235,17 @@ class AIFPLGenerator:
             # Store in local variable
             self._emit(Opcode.STORE_VAR, 0, var_index)
         
+        # Emit PATCH opcodes for recursive closures
+        # TODO: Future optimization - eliminate PATCH opcodes by having VM
+        # support self-referential closures directly
+        for name, value_analyzed, var_index in analyzed.bindings:
+            if isinstance(value_analyzed, AnalyzedLambda) and value_analyzed.is_recursive:
+                # PATCH_CLOSURE_SELF: makes closure reference itself
+                name_index = self.names.index(name) if name in self.names else len(self.names)
+                if name_index == len(self.names):
+                    self.names.append(name)
+                self._emit(Opcode.PATCH_CLOSURE_SELF, name_index, var_index)
+        
         # Generate code for body
         self._generate_expression(analyzed.body)
     
@@ -264,7 +275,8 @@ class AIFPLGenerator:
         
         # Create closure
         # MAKE_CLOSURE takes: code_index, capture_count
-        self._emit(Opcode.MAKE_CLOSURE, code_index, len(analyzed.free_vars))
+        # Use free_var_info length (which excludes self-recursive references)
+        self._emit(Opcode.MAKE_CLOSURE, code_index, len(analyzed.free_var_info))
     
     def _generate_lambda_code_object(self, analyzed: AnalyzedLambda) -> CodeObject:
         """Generate a CodeObject for a lambda body.
@@ -308,7 +320,10 @@ class AIFPLGenerator:
             param_count=len(analyzed.params),  # Number of parameters
             # Local count includes parameters + captured free variables
             local_count=len(analyzed.params) + len(analyzed.free_var_info),
-            name="<lambda>"
+            name="<lambda>",
+            # Free vars list - includes names of all free variables (even if not captured yet)
+            # This is needed for PATCH_CLOSURE_SELF to work
+            free_vars=analyzed.free_vars  # Use original list, includes self-recursive refs
         )
         
         return code

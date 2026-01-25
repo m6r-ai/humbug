@@ -186,7 +186,14 @@ class AIFPLAnalyzer:
         if sym_info:
             # Found in symbol table
             if sym_info.symbol_type == 'local' or sym_info.symbol_type == 'parameter':
-                # Local variable - calculate offset
+                # Check if this is a self-recursive reference
+                # Use LOAD_NAME (which checks closure_env) instead of LOAD_VAR
+                # This works with PATCH_CLOSURE_SELF which adds the closure to its own env
+                if name == self.current_function_name:
+                    name_index = self._add_name(name)
+                    return self._make_name_variable(symbol, name, name_index)
+                
+                # Normal local variable - calculate offset
                 try:
                     depth, index = self.symbol_table.calculate_variable_offset(name)
                     return AnalyzedVariable(
@@ -222,6 +229,18 @@ class AIFPLAnalyzer:
             source_expr=symbol,
             name=name,
             var_type='global',
+            depth=0,
+            index=name_index,
+            instruction_count=1  # LOAD_NAME
+        )
+    
+    def _make_name_variable(self, symbol: AIFPLSymbol, name: str, name_index: int) -> AnalyzedVariable:
+        """Helper to create a name-lookup variable."""
+        return AnalyzedVariable(
+            expr_type='variable',
+            source_expr=symbol,
+            name=name,
+            var_type='global',  # Use 'global' to generate LOAD_NAME
             depth=0,
             index=name_index,
             instruction_count=1  # LOAD_NAME
@@ -624,6 +643,10 @@ class AIFPLAnalyzer:
         # Now we're back in parent scope - resolve free variables to get (depth, index)
         free_var_info = []
         for free_var in free_vars:
+            # Skip self-recursive reference - will be patched after creation
+            if free_var == binding_name:
+                continue
+            
             sym_info = self.symbol_table.resolve(free_var)
             if sym_info and (sym_info.symbol_type == 'local' or sym_info.symbol_type == 'parameter'):
                 try:
