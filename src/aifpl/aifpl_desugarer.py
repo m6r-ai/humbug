@@ -12,7 +12,7 @@ into a core AST containing only:
 This simplifies the compiler and enables better optimization.
 """
 
-from typing import List, Tuple, Set
+from typing import List, Tuple, Any, cast
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLNumber, AIFPLString, AIFPLBoolean
 )
@@ -22,7 +22,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 class AIFPLDesugarer:
     """Transforms complex AIFPL constructs into core language."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.temp_counter = 0  # For generating unique temp variable names
 
     def desugar(self, expr: AIFPLValue) -> AIFPLValue:
@@ -183,7 +183,7 @@ class AIFPLDesugarer:
             )
 
         value_expr = expr.elements[1]
-        clauses = expr.elements[2:]
+        clauses = list(expr.elements[2:])
 
         # Validate all clauses
         for i, clause in enumerate(clauses):
@@ -233,12 +233,12 @@ class AIFPLDesugarer:
             )
 
         # Process clauses in reverse order to build nested structure
-        result = None
+        result: AIFPLValue | None = None
 
         for i in range(len(clauses) - 1, -1, -1):
             clause = clauses[i]
             if not isinstance(clause, AIFPLList):
-                raise AIFPLEvalError(f"Clause must be a list")
+                raise AIFPLEvalError("Clause must be a list")
 
             pattern = clause.elements[0]
             result_expr = clause.elements[1]
@@ -271,6 +271,8 @@ class AIFPLDesugarer:
 
             else:
                 # Not the last clause - chain with else
+                # result is guaranteed to be set here because we process in reverse
+                assert result is not None
                 result = self._build_clause_with_bindings(
                     test_expr,
                     bindings,
@@ -278,12 +280,13 @@ class AIFPLDesugarer:
                     result
                 )
 
+        assert result is not None
         return result
 
     def _build_clause_with_bindings(
         self,
         test_expr: AIFPLValue,
-        bindings: List[Tuple[str, AIFPLValue]],  # All bindings (temp + pattern vars)
+        bindings: List[Tuple[str, Any]],  # All bindings (temp + pattern vars or special markers)
         result_expr: AIFPLValue,
         else_expr: AIFPLValue
     ) -> AIFPLValue:
@@ -332,9 +335,9 @@ class AIFPLDesugarer:
         # 1. Element extraction bindings (list-ref) - must go inside then branch
         # 2. Other temp bindings - can go outside
         # 3. Pattern bindings - go inside then branch
-        element_extraction_bindings = []
-        temp_bindings = []
-        pattern_bindings = []
+        element_extraction_bindings: List[Tuple[str, AIFPLValue]] = []
+        temp_bindings: List[Tuple[str, Any]] = []
+        pattern_bindings: List[Tuple[str, AIFPLValue]] = []
 
         for var_name, value_expr in bindings:
             if var_name.startswith('#:match-tmp-'):
@@ -359,7 +362,7 @@ class AIFPLDesugarer:
             # Then add pattern bindings
             binding_list.extend([AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings])
 
-            then_expr = AIFPLList((
+            then_expr: AIFPLValue = AIFPLList((
                 AIFPLSymbol('let'),
                 AIFPLList(tuple(binding_list)),
                 result_expr
@@ -536,7 +539,7 @@ class AIFPLDesugarer:
                 ))
 
                 # Binding: if var_pattern is a variable, bind it
-                bindings = []
+                bindings: List[Tuple[str, AIFPLValue]] = []
                 if isinstance(var_pattern, AIFPLSymbol) and var_pattern.name != '_':
                     bindings.append((var_pattern.name, AIFPLSymbol(temp_var)))
 
@@ -627,7 +630,7 @@ class AIFPLDesugarer:
         self,
         pattern: AIFPLList,
         temp_var: str
-    ) -> Tuple[AIFPLValue, List[Tuple[str, AIFPLValue]]]:
+    ) -> Tuple[AIFPLValue, List[Tuple[str, Any]]]:
         """
         Desugar a fixed-length list pattern like (a b c).
 
@@ -680,7 +683,7 @@ class AIFPLDesugarer:
         # a different building strategy.
 
         # Collect element pattern info
-        element_info = []  # List of (pattern, temp_var, extraction_expr)
+        element_info: List[Tuple[AIFPLValue, str, AIFPLValue]] = []  # List of (pattern, temp_var, extraction_expr)
 
         for i, elem_pattern in enumerate(pattern.elements):
             # Generate temp var for this element
@@ -705,9 +708,9 @@ class AIFPLDesugarer:
         self,
         pattern: AIFPLValue,
         temp_var: str,
-        extraction_bindings: List,
-        element_tests: List,
-        pattern_bindings: List
+        extraction_bindings: List[Tuple[str, AIFPLValue]],
+        element_tests: List[AIFPLValue],
+        pattern_bindings: List[Tuple[str, AIFPLValue]]
     ) -> None:
         """
         Recursively flatten a nested pattern into the given lists.
@@ -727,7 +730,8 @@ class AIFPLDesugarer:
             (bindings[0][0].startswith('__LIST_PATTERN_') or
              bindings[0][0].startswith('__CONS_PATTERN_'))):
             # This is a nested list/cons pattern - flatten it
-            nested_element_info = bindings[0][1]
+            # Cast to the expected type for element_info
+            nested_element_info = cast(List[Tuple[AIFPLValue, str, AIFPLValue]], bindings[0][1])
 
             # Add the length/type test
             if not (isinstance(test, AIFPLBoolean) and test.value):
@@ -781,9 +785,9 @@ class AIFPLDesugarer:
         #          else)
 
         # Extract elements
-        extraction_bindings = []
-        element_tests = []
-        pattern_bindings = []
+        extraction_bindings: List[Tuple[str, AIFPLValue]] = []
+        element_tests: List[AIFPLValue] = []
+        pattern_bindings: List[Tuple[str, AIFPLValue]] = []
 
         for elem_pattern, elem_temp, elem_value in element_info:
             # Add extraction binding
@@ -822,7 +826,7 @@ class AIFPLDesugarer:
             # Build pattern bindings let
             if pattern_bindings:
                 binding_list = [AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings]
-                pattern_let = AIFPLList((
+                pattern_let: AIFPLValue = AIFPLList((
                     AIFPLSymbol('let'),
                     AIFPLList(tuple(binding_list)),
                     result_expr
@@ -832,7 +836,7 @@ class AIFPLDesugarer:
                 pattern_let = result_expr
 
             # Build element test if
-            inner_if = AIFPLList((
+            inner_if: AIFPLValue = AIFPLList((
                 AIFPLSymbol('if'),
                 elem_test_combined,
                 pattern_let,
@@ -873,7 +877,7 @@ class AIFPLDesugarer:
         pattern: AIFPLList,
         temp_var: str,
         dot_position: int
-    ) -> Tuple[AIFPLValue, List[Tuple[str, AIFPLValue]]]:
+    ) -> Tuple[AIFPLValue, List[Tuple[str, Any]]]:
         """
         Desugar a cons pattern like (head . tail) or (a b . rest).
 
@@ -941,7 +945,7 @@ class AIFPLDesugarer:
             ))
 
         # Collect head element info
-        head_elements = []
+        head_elements: List[Tuple[AIFPLValue, str, AIFPLValue]] = []
 
         for i in range(dot_position):
             elem_pattern = pattern.elements[i]

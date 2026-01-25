@@ -1,0 +1,264 @@
+==============================================================================================================
+COMPREHENSIVE AIFPL PERFORMANCE BENCHMARK
+==================================================================================================================================
+
+Running 92 benchmarks...
+
+[1/92] Running: Simple Addition... ✓ Full: 0.90x, Exec: 17.96x
+[2/92] Running: Nested Arithmetic... ✓ Full: 0.91x, Exec: 11.47x
+[3/92] Running: Deep Nesting... ✓ Full: 0.91x, Exec: 9.24x
+[4/92] Running: Many Operations... ✓ Full: 0.86x, Exec: 12.43x
+[5/92] Running: Simple Comparison... ✓ Full: 0.93x, Exec: 22.76x
+[6/92] Running: Chained Comparisons... ✓ Full: 0.88x, Exec: 10.52x
+[7/92] Running: List Equality... ✓ Full: 0.89x, Exec: 14.48x
+[8/92] Running: Deep List Equality... ✓ Full: 0.93x, Exec: 11.51x
+[9/92] Running: AND Operations... ✓ Full: 0.87x, Exec: 13.72x
+[10/92] Running: OR Operations... ✓ Full: 0.88x, Exec: 14.14x
+[11/92] Running: NOT Operations... ✓ Full: 0.96x, Exec: 16.83x
+[12/92] Running: Complex Boolean... ✓ Full: 0.88x, Exec: 12.41x
+[13/92] Running: Simple If... ✓ Full: 0.91x, Exec: 20.99x
+[14/92] Running: Nested If... ✓ Full: 0.89x, Exec: 15.67x
+[15/92] Running: If Chain... ✓ Full: 0.88x, Exec: 23.92x
+[16/92] Running: Simple Lambda... ✓ Full: 0.80x, Exec: 11.23x
+[17/92] Running: Lambda Multiple Args... ✓ Full: 0.79x, Exec: 9.64x
+[18/92] Running: Nested Lambda... ✓ Full: 0.76x, Exec: 8.35x
+[19/92] Running: Lambda Returning Lambda... ✓ Full: 0.75x, Exec: 8.19x
+[20/92] Running: Simple Closure... ✓ Full: 0.79x, Exec: 12.21x
+[21/92] Running: Multiple Captures... ✓ Full: 0.77x, Exec: 11.50x
+[22/92] Running: Nested Closures... ✓ Full: 0.81x, Exec: 14.58x
+[23/92] Running: Closure Factory... ✓ Full: 0.76x, Exec: 10.28x
+[24/92] Running: Simple Let... ✓ Full: 0.87x, Exec: 24.55x
+[25/92] Running: Let Many Bindings... ✓ Full: 0.84x, Exec: 16.45x
+[26/92] Running: Nested Let... ✓ Full: 0.88x, Exec: 26.54x
+[27/92] Running: Let with Computation... ✓ Full: 0.88x, Exec: 14.98x
+[28/92] Running: Factorial (5)... ✓ Full: 0.92x, Exec: 4.92x
+[29/92] Running: Factorial (10)... ✓ Full: 1.09x, Exec: 3.56x
+[30/92] Running: Fibonacci (10)... ✓ Full: 1.82x, Exec: 2.13x
+[31/92] Running: Tail Recursive Sum (50)... ✓ Full: 1.66x, Exec: 2.52x
+[32/92] Running: Tail Recursive Sum (100)... ✓ Full: 1.85x, Exec: 2.35x
+[33/92] Running: List Creation (5)... ✓ Full: 0.91x, Exec: 23.53x
+[34/92] Running: List Creation (10)... ✓ Full: 0.89x, Exec: 19.50x
+[35/92] Running: List Creation (20)... ✓ Full: 0.85x, Exec: 16.18x
+[36/92] Running: List Append... ✓ Full: 0.93x, Exec: 15.70x
+[37/92] Running: List Reverse (10)... ✓ Full: 0.89x, Exec: 15.87x
+[38/92] Running: List Reverse (20)... ✓ Full: 0.86x, Exec: 14.38x
+[39/92] Running: List First/Rest... ✓ Full: 0.93x, Exec: 15.73x
+[40/92] Running: List Member... ✓ Full: 0.89x, Exec: 15.34x
+[41/92] Running: List Take/Drop... ✓ Full: 0.88x, Exec: 13.67x
+[42/92] Running: List Position... ✓ Full: 0.89x, Exec: 14.24x
+[43/92] Running: Map (10)... ✓ Full: 0.88x, Exec: 3.67x
+[44/92] Running: Map (50)... ✓ Full: 1.06x, Exec: 1.70x
+[45/92] Running: Map (100)... ✓ Full: 1.13x, Exec: 1.49x
+[46/92] Running: Filter (50)... ✓ Full: 1.06x, Exec: 1.68x
+[47/92] Running: Filter (100)... ✓ Full: 1.16x, Exec: 1.51x
+[48/92] Running: Fold (50)... ✓ Full: 0.88x, Exec: 1.84x
+[49/92] Running: Fold (100)... ✓ Full: 0.89x, Exec: 1.39x
+[50/92] Running: Map+Filter Pipeline... ✓ Full: 1.09x, Exec: 1.55x
+[51/92] Running: Map+Fold Pipeline... ✓ Full: 0.98x, Exec: 1.54x
+[52/92] Running: Find... ✓ Full: 1.62x, Exec: 2.49x
+[53/92] Running: Any?... ✓ Full: 1.81x, Exec: 2.40x
+[54/92] Running: All?... ✓ Full: 1.84x, Exec: 2.39x
+[55/92] Running: String Append... ✓ Full: 0.93x, Exec: 20.72x
+[56/92] Running: String Append Many... ✓ Full: 0.88x, Exec: 13.39x
+[57/92] Running: String Upcase... ✓ Full: 0.95x, Exec: 28.89x
+[58/92] Running: String Downcase... ✓ Full: 0.95x, Exec: 29.10x
+[59/92] Running: String Manipulation... ✓ Full: 0.94x, Exec: 17.33x
+[60/92] Running: String Contains... ✓ Full: 0.94x, Exec: 25.16x
+[61/92] Running: String Replace... ✓ Full: 0.93x, Exec: 22.86x
+[62/92] Running: Substring... ✓ Full: 0.93x, Exec: 21.57x
+[63/92] Running: Alist Creation (5)... ✓ Full: 0.85x, Exec: 10.12x
+[64/92] Running: Alist Creation (10)... ✓ Full: 0.81x, Exec: 8.03x
+[65/92] Running: Alist Get... ✓ Full: 0.88x, Exec: 11.12x
+[66/92] Running: Alist Set... ✓ Full: 0.89x, Exec: 11.48x
+[67/92] Running: Alist Has... ✓ Full: 0.86x, Exec: 12.52x
+[68/92] Running: Alist Keys... ✓ Full: 0.85x, Exec: 9.51x
+[69/92] Running: Alist Merge... ✓ Full: 0.87x, Exec: 8.25x
+[70/92] Running: Pattern Match Literal... ✓ Full: 0.83x, Exec: 18.55x
+[71/92] Running: Pattern Match Variable... ✓ Full: 0.84x, Exec: 15.96x
+[72/92] Running: Pattern Match Type... ✓ Full: 0.81x, Exec: 13.73x
+[73/92] Running: Pattern Match List... ✓ Full: 0.66x, Exec: 4.72x
+[74/92] Running: Pattern Match Nested... ✓ Full: 0.62x, Exec: 3.21x
+[75/92] Running: Pattern Match Cons... ✓ Full: 0.69x, Exec: 5.16x
+[76/92] Running: Pattern Match Multiple... ✓ Full: 0.74x, Exec: 7.70x
+[77/92] Running: Sqrt... ✓ Full: 0.95x, Exec: 26.56x
+[78/92] Running: Sqrt Negative... ✓ Full: 0.96x, Exec: 26.55x
+[79/92] Running: Abs... ✓ Full: 0.95x, Exec: 28.15x
+[80/92] Running: Min/Max... ✓ Full: 0.89x, Exec: 11.46x
+[81/92] Running: Pow... ✓ Full: 0.94x, Exec: 24.81x
+[82/92] Running: Trigonometry... ✓ Full: 0.94x, Exec: 13.14x
+[83/92] Running: Logarithms... ✓ Full: 0.92x, Exec: 14.40x
+[84/92] Running: Complex Numbers... ✓ Full: 0.93x, Exec: 11.76x
+[85/92] Running: Rounding... ✓ Full: 0.93x, Exec: 13.53x
+[86/92] Running: Type Checks... ✓ Full: 0.89x, Exec: 11.69x
+[87/92] Running: Integer/Float/Complex... ✓ Full: 0.90x, Exec: 12.55x
+[88/92] Running: Data Processing... ✓ Full: 0.90x, Exec: 2.28x
+[89/92] Running: Nested Data Structure... ✓ Full: 0.83x, Exec: 7.89x
+[90/92] Running: Recursive List Processing... ✓ Full: 1.13x, Exec: 3.93x
+[91/92] Running: Pattern Match Pipeline... ✓ Full: 0.89x, Exec: 4.25x
+[92/92] Running: Closure-based Counter... ✓ Full: 0.82x, Exec: 8.17x
+
+==================================================================================================================================
+RESULTS
+==================================================================================================================================
+
+Benchmark                           Category           Interp       BC (Full)    BC (Exec)    Speed (F)  Speed (E) 
+----------------------------------------------------------------------------------------------------------------------------------
+Simple Addition                     Arithmetic         45.80        50.87        2.55         0.90x      17.96x 🚀  
+Nested Arithmetic                   Arithmetic         66.44        72.74        5.79         0.91x      11.47x 🚀  
+Deep Nesting                        Arithmetic         84.20        92.91        9.11         0.91x      9.24x ✨   
+Many Operations                     Arithmetic         80.31        93.93        6.46         0.86x      12.43x 🚀  
+Simple Comparison                   Comparisons        45.21        48.38        1.99         0.93x      22.76x 🚀  
+Chained Comparisons                 Comparisons        78.04        89.04        7.42         0.88x      10.52x 🚀  
+List Equality                       Comparisons        71.25        79.78        4.92         0.89x      14.48x 🚀  
+Deep List Equality                  Comparisons        88.21        95.29        7.66         0.93x      11.51x 🚀  
+AND Operations                      Boolean            47.03        53.97        3.43         0.87x      13.72x 🚀  
+OR Operations                       Boolean            46.70        53.17        3.30         0.88x      14.14x 🚀  
+NOT Operations                      Boolean            52.39        54.83        3.11         0.96x      16.83x 🚀  
+Complex Boolean                     Boolean            66.98        75.82        5.40         0.88x      12.41x 🚀  
+Simple If                           Conditionals       52.90        58.00        2.52         0.91x      20.99x 🚀  
+Nested If                           Conditionals       67.87        75.88        4.33         0.89x      15.67x 🚀  
+If Chain                            Conditionals       65.18        74.17        2.73         0.88x      23.92x 🚀  
+Simple Lambda                       Lambda             58.92        73.33        5.25         0.80x      11.23x 🚀  
+Lambda Multiple Args                Lambda             72.91        92.61        7.56         0.79x      9.64x ✨   
+Nested Lambda                       Lambda             75.99        100.00       9.10         0.76x      8.35x ✨   
+Lambda Returning Lambda             Lambda             74.38        99.49        9.09         0.75x      8.19x ✨   
+Simple Closure                      Closures           77.04        97.45        6.31         0.79x      12.21x 🚀  
+Multiple Captures                   Closures           99.12        128.11       8.62         0.77x      11.50x 🚀  
+Nested Closures                     Closures           98.84        121.36       6.78         0.81x      14.58x 🚀  
+Closure Factory                     Closures           98.03        129.77       9.54         0.76x      10.28x 🚀  
+Simple Let                          Let Bindings       71.54        82.16        2.91         0.87x      24.55x 🚀  
+Let Many Bindings                   Let Bindings       146.26       173.54       8.89         0.84x      16.45x 🚀  
+Nested Let                          Let Bindings       97.39        110.71       3.67         0.88x      26.54x 🚀  
+Let with Computation                Let Bindings       107.62       122.38       7.18         0.88x      14.98x 🚀  
+Factorial (5)                       Recursion          159.50       173.95       32.40        0.92x      4.92x ✓   
+Factorial (10)                      Recursion          223.85       205.77       62.82        1.09x      3.56x ✓   
+Fibonacci (10)                      Recursion          2067.23      1136.85      969.44       1.82x      2.13x ✓   
+Tail Recursive Sum (50)             Recursion          701.44       422.79       278.70       1.66x      2.52x ✓   
+Tail Recursive Sum (100)            Recursion          1274.46      687.98       541.46       1.85x      2.35x ✓   
+List Creation (5)                   Lists              51.00        55.83        2.17         0.91x      23.53x 🚀  
+List Creation (10)                  Lists              60.44        68.03        3.10         0.89x      19.50x 🚀  
+List Creation (20)                  Lists              79.82        93.47        4.93         0.85x      16.18x 🚀  
+List Append                         Lists              63.87        68.46        4.07         0.93x      15.70x 🚀  
+List Reverse (10)                   Lists              64.33        72.29        4.05         0.89x      15.87x 🚀  
+List Reverse (20)                   Lists              84.62        98.67        5.88         0.86x      14.38x 🚀  
+List First/Rest                     Lists              59.63        64.41        3.79         0.93x      15.73x 🚀  
+List Member                         Lists              66.86        74.94        4.36         0.89x      15.34x 🚀  
+List Take/Drop                      Lists              74.05        83.75        5.42         0.88x      13.67x 🚀  
+List Position                       Lists              67.00        75.65        4.71         0.89x      14.24x 🚀  
+Map (10)                            Higher-Order       111.81       127.24       30.44        0.88x      3.67x ✓   
+Map (50)                            Higher-Order       229.54       215.81       134.73       1.06x      1.70x     
+Map (100)                           Higher-Order       392.24       346.44       264.04       1.13x      1.49x     
+Filter (50)                         Higher-Order       230.45       217.09       137.00       1.06x      1.68x     
+Filter (100)                        Higher-Order       407.59       350.81       269.37       1.16x      1.51x     
+Fold (50)                           Higher-Order       95.97        108.54       52.10        0.88x      1.84x     
+Fold (100)                          Higher-Order       139.92       157.12       100.44       0.89x      1.39x     
+Map+Filter Pipeline                 Higher-Order       397.42       364.23       256.49       1.09x      1.55x     
+Map+Fold Pipeline                   Higher-Order       272.87       277.03       176.62       0.98x      1.54x     
+Find                                Higher-Order       366.46       226.07       147.42       1.62x      2.49x ✓   
+Any?                                Higher-Order       591.02       325.76       246.55       1.81x      2.40x ✓   
+All?                                Higher-Order       638.96       347.56       267.35       1.84x      2.39x ✓   
+String Append                       Strings            45.30        48.86        2.19         0.93x      20.72x 🚀  
+String Append Many                  Strings            53.79        61.45        4.02         0.88x      13.39x 🚀  
+String Upcase                       Strings            42.43        44.70        1.47         0.95x      28.89x 🚀  
+String Downcase                     Strings            42.50        44.71        1.46         0.95x      29.10x 🚀  
+String Manipulation                 Strings            51.61        54.63        2.98         0.94x      17.33x 🚀  
+String Contains                     Strings            44.25        47.04        1.76         0.94x      25.16x 🚀  
+String Replace                      Strings            46.02        49.48        2.01         0.93x      22.86x 🚀  
+Substring                           Strings            46.16        49.47        2.14         0.93x      21.57x 🚀  
+Alist Creation (5)                  Alists             65.77        76.96        6.50         0.85x      10.12x 🚀  
+Alist Creation (10)                 Alists             91.33        112.74       11.38        0.81x      8.03x ✨   
+Alist Get                           Alists             62.75        71.58        5.64         0.88x      11.12x 🚀  
+Alist Set                           Alists             61.48        68.93        5.36         0.89x      11.48x 🚀  
+Alist Has                           Alists             57.62        66.72        4.60         0.86x      12.52x 🚀  
+Alist Keys                          Alists             73.41        86.73        7.72         0.85x      9.51x ✨   
+Alist Merge                         Alists             75.30        86.72        9.12         0.87x      8.25x ✨   
+Pattern Match Literal               Pattern Matching   53.91        65.30        2.91         0.83x      18.55x 🚀  
+Pattern Match Variable              Pattern Matching   56.00        66.31        3.51         0.84x      15.96x 🚀  
+Pattern Match Type                  Pattern Matching   68.03        83.76        4.95         0.81x      13.73x 🚀  
+Pattern Match List                  Pattern Matching   68.13        103.23       14.43        0.66x      4.72x ✓   
+Pattern Match Nested                Pattern Matching   104.33       168.25       32.48        0.62x      3.21x ✓   
+Pattern Match Cons                  Pattern Matching   72.07        105.12       13.97        0.69x      5.16x ✨   
+Pattern Match Multiple              Pattern Matching   73.59        99.61        9.56         0.74x      7.70x ✨   
+Sqrt                                Math               41.81        43.88        1.57         0.95x      26.56x 🚀  
+Sqrt Negative                       Math               42.33        43.94        1.59         0.96x      26.55x 🚀  
+Abs                                 Math               41.97        44.04        1.49         0.95x      28.15x 🚀  
+Min/Max                             Math               70.34        79.10        6.14         0.89x      11.46x 🚀  
+Pow                                 Math               43.75        46.50        1.76         0.94x      24.81x 🚀  
+Trigonometry                        Math               62.02        66.29        4.72         0.94x      13.14x 🚀  
+Logarithms                          Math               55.58        60.09        3.86         0.92x      14.40x 🚀  
+Complex Numbers                     Math               71.79        77.30        6.11         0.93x      11.76x 🚀  
+Rounding                            Math               64.13        68.68        4.74         0.93x      13.53x 🚀  
+Type Checks                         Type Predicates    77.14        86.54        6.60         0.89x      11.69x 🚀  
+Integer/Float/Complex               Type Predicates    71.78        79.95        5.72         0.90x      12.55x 🚀  
+Data Processing                     Realistic          219.07       244.41       96.22        0.90x      2.28x ✓   
+Nested Data Structure               Realistic          158.06       191.53       20.04        0.83x      7.89x ✨   
+Recursive List Processing           Realistic          277.72       244.94       70.69        1.13x      3.93x ✓   
+Pattern Match Pipeline              Realistic          174.99       196.23       41.18        0.89x      4.25x ✓   
+Closure-based Counter               Realistic          149.42       181.74       18.29        0.82x      8.17x ✨   
+
+==================================================================================================================================
+SUMMARY BY CATEGORY
+==================================================================================================================================
+Category           Count    Type     Avg          Median       Min          Max         
+----------------------------------------------------------------------------------------------------------------------------------
+Alists             7        Full     0.86        x 0.86        x 0.81        x 0.89        x
+                            Exec     10.15       x 10.12       x 8.03        x 12.52       x
+Arithmetic         4        Full     0.89        x 0.90        x 0.86        x 0.91        x
+                            Exec     12.77       x 11.95       x 9.24        x 17.96       x
+Boolean            4        Full     0.90        x 0.88        x 0.87        x 0.96        x
+                            Exec     14.27       x 13.93       x 12.41       x 16.83       x
+Closures           4        Full     0.78        x 0.78        x 0.76        x 0.81        x
+                            Exec     12.14       x 11.85       x 10.28       x 14.58       x
+Comparisons        4        Full     0.91        x 0.91        x 0.88        x 0.93        x
+                            Exec     14.82       x 12.99       x 10.52       x 22.76       x
+Conditionals       3        Full     0.90        x 0.89        x 0.88        x 0.91        x
+                            Exec     20.19       x 20.99       x 15.67       x 23.92       x
+Higher-Order       12       Full     1.20        x 1.08        x 0.88        x 1.84        x
+                            Exec     1.97        x 1.69        x 1.39        x 3.67        x
+Lambda             4        Full     0.77        x 0.77        x 0.75        x 0.80        x
+                            Exec     9.35        x 8.99        x 8.19        x 11.23       x
+Let Bindings       4        Full     0.87        x 0.88        x 0.84        x 0.88        x
+                            Exec     20.63       x 20.50       x 14.98       x 26.54       x
+Lists              10       Full     0.89        x 0.89        x 0.85        x 0.93        x
+                            Exec     16.41       x 15.71       x 13.67       x 23.53       x
+Math               9        Full     0.94        x 0.94        x 0.89        x 0.96        x
+                            Exec     18.93       x 14.40       x 11.46       x 28.15       x
+Pattern Matching   7        Full     0.74        x 0.74        x 0.62        x 0.84        x
+                            Exec     9.86        x 7.70        x 3.21        x 18.55       x
+Realistic          5        Full     0.91        x 0.89        x 0.82        x 1.13        x
+                            Exec     5.30        x 4.25        x 2.28        x 8.17        x
+Recursion          5        Full     1.47        x 1.66        x 0.92        x 1.85        x
+                            Exec     3.10        x 2.52        x 2.13        x 4.92        x
+Strings            8        Full     0.93        x 0.94        x 0.88        x 0.95        x
+                            Exec     22.38       x 22.22       x 13.39       x 29.10       x
+Type Predicates    2        Full     0.89        x 0.89        x 0.89        x 0.90        x
+                            Exec     12.12       x 12.12       x 11.69       x 12.55       x
+
+==================================================================================================================================
+OVERALL SUMMARY
+==================================================================================================================================
+Total benchmarks:     92
+
+Full Pipeline (parse + compile + execute):
+  Average speedup:    0.95x
+  Median speedup:     0.89x
+  Min speedup:        0.62x
+  Max speedup:        1.85x
+  Std deviation:      0.24x
+
+Execution Only (bytecode VM):
+  Average speedup:    12.39x
+  Median speedup:     12.31x
+  Min speedup:        1.39x
+  Max speedup:        29.10x
+  Std deviation:      7.58x
+
+Execution Only Distribution:
+  Spectacular (>10x):  59 (64.1%)
+  Great (5-10x):       11 (12.0%)
+  Good (2-5x):         14 (15.2%)
+  Moderate (1.2-2x):    8 (8.7%)
+  Similar (0.9-1.2x):   0 (0.0%)
+  Slower (<0.9x):       0 (0.0%)
+
+==================================================================================================================================
