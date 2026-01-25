@@ -249,8 +249,8 @@ class AIFPLDesugarer:
             # Desugar the pattern into (test_expr, bindings)
             try:
                 test_expr, bindings = self._desugar_pattern(pattern, temp_var)
-            except AIFPLEvalError as e:
 
+            except AIFPLEvalError as e:
                 # Add clause context to error message
                 clause_num = i + 1
                 raise AIFPLEvalError(
@@ -357,6 +357,7 @@ class AIFPLDesugarer:
             binding_list = []
             # Add element extractions first
             binding_list.extend([AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in element_extraction_bindings])
+
             # Then add pattern bindings
             binding_list.extend([AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings])
 
