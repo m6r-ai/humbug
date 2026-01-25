@@ -187,9 +187,14 @@ class AIFPLCompiler:
         'bin', 'hex', 'oct', 'real', 'imag', 'complex',
     ]
 
-    def __init__(self) -> None:
-        """Initialize compiler."""
+    def __init__(self, use_two_pass: bool = False) -> None:
+        """Initialize compiler.
+        
+        Args:
+            use_two_pass: If True, use two-pass compiler (analyzer + generator)
+        """
         self.builtin_indices = {name: i for i, name in enumerate(self.BUILTIN_TABLE)}
+        self.use_two_pass = use_two_pass
 
     def compile(self, expr: AIFPLValue, name: str = "<module>") -> CodeObject:
         """
@@ -202,6 +207,13 @@ class AIFPLCompiler:
         Returns:
             Compiled code object
         """
+        if self.use_two_pass:
+            return self._compile_two_pass(expr, name)
+        else:
+            return self._compile_single_pass(expr, name)
+    
+    def _compile_single_pass(self, expr: AIFPLValue, name: str) -> CodeObject:
+        """Single-pass compilation (original implementation)."""
         ctx = CompilationContext()
 
         # Compile the expression
@@ -220,6 +232,27 @@ class AIFPLCompiler:
             local_count=ctx.max_locals,
             name=name
         )
+    
+    def _compile_two_pass(self, expr: AIFPLValue, name: str) -> CodeObject:
+        """Two-pass compilation (analyzer + generator)."""
+        from aifpl.aifpl_analyzer import AIFPLAnalyzer
+        from aifpl.aifpl_generator import AIFPLGenerator
+        
+        # Pass 1: Analysis
+        analyzer = AIFPLAnalyzer()
+        analyzed = analyzer.analyze(expr, name)
+        
+        # Pass 2: Generation
+        generator = AIFPLGenerator(
+            analyzed=analyzed,
+            constants=analyzer.constants,
+            names=analyzer.names,
+            code_objects=analyzer.code_objects
+        )
+        
+        code = generator.generate(name)
+        
+        return code
 
     def _compile_expression(self, expr: AIFPLValue, ctx: CompilationContext) -> None:
         """Compile an expression, leaving result on stack."""

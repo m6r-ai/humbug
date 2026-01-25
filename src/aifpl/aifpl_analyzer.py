@@ -94,7 +94,11 @@ class AIFPLAnalyzer:
         Returns:
             Analyzed IR
         """
-        # Module-level code is not in tail position
+        # Enter a new scope for module-level code
+        # This ensures module locals start at index 0, not after builtins/globals
+        self.symbol_table.enter_scope()
+        
+        # Module-level code is not in tail position  
         return self._analyze_expression(expr, in_tail_position=False)
     
     def _analyze_expression(self, expr: AIFPLValue, in_tail_position: bool) -> AnalyzedExpression:
@@ -435,8 +439,10 @@ class AIFPLAnalyzer:
         analyzer = AIFPLDependencyAnalyzer()
         binding_groups = analyzer.analyze_let_bindings(binding_pairs)
         
-        # Enter new scope for let bindings
-        self.symbol_table.enter_scope()
+        # DON'T enter new scope for let bindings!
+        # Let bindings add locals to the current frame, they don't create new frames
+        # Only lambdas create new frames
+        # self.symbol_table.enter_scope()
         
         # Add all binding names to symbol table first (for recursive references)
         for name, _ in binding_pairs:
@@ -479,8 +485,8 @@ class AIFPLAnalyzer:
         # Analyze body (inherits tail position)
         analyzed_body = self._analyze_expression(body_expr, in_tail_position=in_tail_position)
         
-        # Exit scope
-        self.symbol_table.exit_scope()
+        # DON'T exit scope since we didn't enter one
+        # self.symbol_table.exit_scope()
         
         # Calculate instruction count
         # Each binding: value instructions + STORE_VAR
@@ -826,7 +832,12 @@ class AIFPLAnalyzer:
         
         # Calculate instruction count
         # Function + arguments + CALL instruction
-        instr_count = analyzed_func.instruction_count
+        # For builtins, we don't load the function, we just call it directly
+        if is_builtin:
+            instr_count = 0  # Don't count loading the builtin
+        else:
+            instr_count = analyzed_func.instruction_count
+        
         for arg in analyzed_args:
             instr_count += arg.instruction_count
         instr_count += 1  # CALL_FUNCTION or CALL_BUILTIN

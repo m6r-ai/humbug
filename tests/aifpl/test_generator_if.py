@@ -232,16 +232,15 @@ class TestGenerateIfWithExpressions:
         generator = AIFPLGenerator(analyzed, analyzer.constants, analyzer.names, [])
         code = generator.generate()
         
-        # Condition should be: LOAD_NAME(>), LOAD_NAME(x), LOAD_CONST(0), CALL_BUILTIN
+        # Condition should be: LOAD_NAME(x), LOAD_CONST(0), CALL_BUILTIN (> is builtin, not loaded)
         # Then: POP_JUMP_IF_FALSE
-        assert code.instructions[0].opcode == Opcode.LOAD_NAME  # >
-        assert code.instructions[1].opcode == Opcode.LOAD_NAME  # x
-        assert code.instructions[2].opcode == Opcode.LOAD_CONST  # 0
-        assert code.instructions[3].opcode == Opcode.CALL_BUILTIN
-        assert code.instructions[4].opcode == Opcode.POP_JUMP_IF_FALSE
+        assert code.instructions[0].opcode == Opcode.LOAD_NAME  # x
+        assert code.instructions[1].opcode == Opcode.LOAD_CONST  # 0
+        assert code.instructions[2].opcode == Opcode.CALL_BUILTIN
+        assert code.instructions[3].opcode == Opcode.POP_JUMP_IF_FALSE
         
         # Jump target should be correct
-        assert code.instructions[4].arg1 > 4
+        assert code.instructions[3].arg1 > 3
     
     def test_generate_if_with_call_branches(self):
         """Test generating if with function calls in branches."""
@@ -266,8 +265,8 @@ class TestGenerateIfWithExpressions:
         # Jump offsets should account for call instructions
         pop_jump = code.instructions[1]
         assert pop_jump.opcode == Opcode.POP_JUMP_IF_FALSE
-        # Should jump past: LOAD_NAME(+), LOAD_CONST(1), LOAD_CONST(2), CALL_BUILTIN, JUMP
-        assert pop_jump.arg1 == 7
+        # Should jump past: LOAD_CONST(1), LOAD_CONST(2), CALL_BUILTIN, JUMP
+        assert pop_jump.arg1 == 6
 
 
 class TestGenerateIfInstructionCounts:

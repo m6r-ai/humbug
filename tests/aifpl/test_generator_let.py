@@ -79,13 +79,12 @@ class TestGenerateLetBasic:
         # 1: STORE_VAR 0 0     (store to x)
         # 2: LOAD_CONST 1      (10)
         # 3: STORE_VAR 0 1     (store to y)
-        # 4: LOAD_NAME 0       (+)
-        # 5: LOAD_VAR 0 0      (x)
-        # 6: LOAD_VAR 0 1      (y)
-        # 7: CALL_BUILTIN ...
-        # 8: RETURN
+        # 4: LOAD_VAR 0 0      (x)
+        # 5: LOAD_VAR 0 1      (y)
+        # 6: CALL_BUILTIN ...
+        # 7: RETURN
         
-        assert len(code.instructions) == 9
+        assert len(code.instructions) == 8
         assert code.instructions[0].opcode == Opcode.LOAD_CONST
         assert code.instructions[1].opcode == Opcode.STORE_VAR
         assert code.instructions[1].arg2 == 0  # x at index 0
@@ -117,18 +116,17 @@ class TestGenerateLetWithExpressions:
         generator = AIFPLGenerator(analyzed, analyzer.constants, analyzer.names, [])
         code = generator.generate()
         
-        # Binding value: LOAD_NAME(+), LOAD_CONST(1), LOAD_CONST(2), CALL_BUILTIN
+        # Binding value: LOAD_CONST(1), LOAD_CONST(2), CALL_BUILTIN
         # Store: STORE_VAR
         # Body: LOAD_VAR
         # End: RETURN
         
-        assert code.instructions[0].opcode == Opcode.LOAD_NAME  # +
-        assert code.instructions[1].opcode == Opcode.LOAD_CONST  # 1
-        assert code.instructions[2].opcode == Opcode.LOAD_CONST  # 2
-        assert code.instructions[3].opcode == Opcode.CALL_BUILTIN
-        assert code.instructions[4].opcode == Opcode.STORE_VAR
-        assert code.instructions[5].opcode == Opcode.LOAD_VAR
-        assert code.instructions[6].opcode == Opcode.RETURN
+        assert code.instructions[0].opcode == Opcode.LOAD_CONST  # 1
+        assert code.instructions[1].opcode == Opcode.LOAD_CONST  # 2
+        assert code.instructions[2].opcode == Opcode.CALL_BUILTIN
+        assert code.instructions[3].opcode == Opcode.STORE_VAR
+        assert code.instructions[4].opcode == Opcode.LOAD_VAR
+        assert code.instructions[5].opcode == Opcode.RETURN
     
     def test_generate_let_with_if_value(self):
         """Test let binding with if expression as value."""

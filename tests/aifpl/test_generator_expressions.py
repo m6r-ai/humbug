@@ -124,14 +124,14 @@ class TestGenerateCalls:
         generator = AIFPLGenerator(analyzed, analyzer.constants, analyzer.names, [])
         code = generator.generate()
         
-        # Should have: LOAD_NAME(+), LOAD_CONST(1), LOAD_CONST(2), CALL_BUILTIN, RETURN
-        assert len(code.instructions) == 5
-        assert code.instructions[0].opcode == Opcode.LOAD_NAME  # +
-        assert code.instructions[1].opcode == Opcode.LOAD_CONST  # 1
-        assert code.instructions[2].opcode == Opcode.LOAD_CONST  # 2
-        assert code.instructions[3].opcode == Opcode.CALL_BUILTIN
-        assert code.instructions[3].arg2 == 2  # 2 arguments
-        assert code.instructions[4].opcode == Opcode.RETURN
+        # Should have: LOAD_CONST(1), LOAD_CONST(2), CALL_BUILTIN, RETURN
+        # Note: Builtins are NOT loaded, we call them directly
+        assert len(code.instructions) == 4
+        assert code.instructions[0].opcode == Opcode.LOAD_CONST  # 1
+        assert code.instructions[1].opcode == Opcode.LOAD_CONST  # 2
+        assert code.instructions[2].opcode == Opcode.CALL_BUILTIN
+        assert code.instructions[2].arg2 == 2  # 2 arguments
+        assert code.instructions[3].opcode == Opcode.RETURN
     
     def test_generate_builtin_call_no_args(self):
         """Test generating code for builtin with no arguments."""
@@ -169,8 +169,8 @@ class TestGenerateCalls:
         generator = AIFPLGenerator(analyzed, analyzer.constants, analyzer.names, [])
         code = generator.generate()
         
-        # Outer: LOAD_NAME(+), LOAD_CONST(1), Inner: LOAD_NAME(+), LOAD_CONST(2), LOAD_CONST(3), CALL_BUILTIN, CALL_BUILTIN, RETURN
-        assert len(code.instructions) == 8
+        # Outer args: LOAD_CONST(1), Inner: LOAD_CONST(2), LOAD_CONST(3), CALL_BUILTIN, CALL_BUILTIN, RETURN
+        assert len(code.instructions) == 6
         assert code.instructions[-1].opcode == Opcode.RETURN
 
 
@@ -299,11 +299,11 @@ class TestGenerateMakeList:
         generator = AIFPLGenerator(analyzed, analyzer.constants, analyzer.names, [])
         code = generator.generate()
         
-        # First call: LOAD_NAME(+), LOAD_CONST(1), LOAD_CONST(2), CALL_BUILTIN
-        # Second call: LOAD_NAME(+), LOAD_CONST(3), LOAD_CONST(4), CALL_BUILTIN
+        # First call: LOAD_CONST(1), LOAD_CONST(2), CALL_BUILTIN
+        # Second call: LOAD_CONST(3), LOAD_CONST(4), CALL_BUILTIN
         # List: MAKE_LIST(2)
         # End: RETURN
-        assert len(code.instructions) == 10
+        assert len(code.instructions) == 8
         assert code.instructions[-2].opcode == Opcode.MAKE_LIST
         assert code.instructions[-2].arg1 == 2
         assert code.instructions[-1].opcode == Opcode.RETURN
@@ -339,11 +339,11 @@ class TestInstructionCounts:
         
         analyzed = analyzer.analyze(expr)
         
-        # Analyzer predicted: func(1) + arg1(1) + arg2(1) + call(1) = 4
-        assert analyzed.instruction_count == 4
+        # Analyzer predicted: arg1(1) + arg2(1) + call(1) = 3 (builtin not loaded)
+        assert analyzed.instruction_count == 3
         
         generator = AIFPLGenerator(analyzed, analyzer.constants, analyzer.names, [])
         code = generator.generate()
         
-        # Generator should emit 4 instructions (plus RETURN)
-        assert len(code.instructions) == 5  # 4 + RETURN
+        # Generator should emit 3 instructions (plus RETURN)
+        assert len(code.instructions) == 4  # 3 + RETURN

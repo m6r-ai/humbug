@@ -88,7 +88,7 @@ class AIFPLGenerator:
             names=self.names,
             code_objects=self.code_objects,
             param_count=0,  # Module level has no parameters
-            local_count=self._calculate_max_locals(),
+            local_count=self._calculate_max_locals_from_analyzed(self.analyzed),
             name=name
         )
     
@@ -234,8 +234,69 @@ class AIFPLGenerator:
         Args:
             analyzed: Analyzed lambda expression
         """
-        # TODO: Implement lambda generation
-        raise NotImplementedError("_generate_lambda not yet implemented")
+        # Generate nested code object for the lambda body
+        lambda_code = self._generate_lambda_code_object(analyzed)
+        
+        # Add to code objects list
+        code_index = len(self.code_objects)
+        self.code_objects.append(lambda_code)
+        
+        # Load free variables onto stack for capture
+        # These will be captured into the closure environment
+        for free_var in analyzed.free_vars:
+            # Free variables are local variables from outer scopes
+            # We need to emit LOAD_VAR to load them
+            # But we need to know their depth and index...
+            # For now, we'll emit LOAD_NAME and let runtime resolve
+            # TODO: This needs proper implementation with scope tracking
+            pass
+        
+        # Create closure
+        # MAKE_CLOSURE takes: code_index, capture_count
+        self._emit(Opcode.MAKE_CLOSURE, code_index, len(analyzed.free_vars))
+    
+    def _generate_lambda_code_object(self, analyzed: AnalyzedLambda) -> CodeObject:
+        """Generate a CodeObject for a lambda body.
+        
+        Args:
+            analyzed: Analyzed lambda expression
+            
+        Returns:
+            CodeObject for the lambda
+        """
+        # Create a new generator for the lambda body
+        # The lambda body has its own instruction stream
+        body_generator = AIFPLGenerator(
+            analyzed=analyzed.body,
+            constants=self.constants,  # Share constant pool
+            names=self.names,  # Share name pool
+            code_objects=self.code_objects  # Share code objects pool
+        )
+        
+        # Generate STORE_VAR instructions for each parameter
+        # The VM pushes arguments onto the stack before calling the lambda
+        # We need to pop them and store them in locals
+        for i, param in enumerate(analyzed.params):
+            body_generator._emit(Opcode.STORE_VAR, 0, i)
+        
+        # Generate code for the lambda body expression
+        body_generator._generate_expression(analyzed.body)
+        
+        # Add RETURN
+        body_generator._emit(Opcode.RETURN)
+        
+        # Build the code object
+        code = CodeObject(
+            instructions=body_generator.instructions,
+            constants=body_generator.constants,
+            names=body_generator.names,
+            code_objects=body_generator.code_objects,
+            param_count=len(analyzed.params),  # Number of parameters
+            local_count=len(analyzed.params),  # Parameters are locals
+            name="<lambda>"
+        )
+        
+        return code
     
     def _generate_call(self, analyzed: AnalyzedCall) -> None:
         """Generate code for function call.
@@ -248,16 +309,19 @@ class AIFPLGenerator:
         Args:
             analyzed: Analyzed call expression
         """
-        # Generate code for function expression
-        self._generate_expression(analyzed.func)
+        # Generate call instruction
+        if analyzed.is_builtin:
+            # Direct builtin call - don't load the function, just generate args and call
+            pass  # Skip loading function for builtins
+        else:
+            # Regular or tail call - load the function first
+            self._generate_expression(analyzed.func)
         
         # Generate code for arguments
         for arg in analyzed.args:
             self._generate_expression(arg)
         
-        # Generate call instruction
         if analyzed.is_builtin:
-            # Direct builtin call
             self._emit(Opcode.CALL_BUILTIN, analyzed.builtin_index, len(analyzed.args))
         elif analyzed.is_tail_call:
             # Tail call optimization - reuse current frame
@@ -329,3 +393,32 @@ class AIFPLGenerator:
         """
         # TODO: Properly track locals during generation
         return self.max_locals
+    
+    def _calculate_max_locals_from_analyzed(self, analyzed: AnalyzedExpression) -> int:
+        """Recursively calculate max locals from analyzed IR.
+        
+        Args:
+            analyzed: Analyzed expression
+            
+        Returns:
+            Maximum number of locals needed
+        """
+        if isinstance(analyzed, AnalyzedLet):
+            # Let introduces new locals
+            num_bindings = len(analyzed.bindings)
+            # Also check body for nested lets
+            body_max = self._calculate_max_locals_from_analyzed(analyzed.body)
+            return num_bindings + body_max
+        
+        elif isinstance(analyzed, AnalyzedIf):
+            # Check both branches
+            then_max = self._calculate_max_locals_from_analyzed(analyzed.then_branch)
+            else_max = self._calculate_max_locals_from_analyzed(analyzed.else_branch)
+            return max(then_max, else_max)
+        
+        elif isinstance(analyzed, AnalyzedCall):
+            # Check arguments
+            return max((self._calculate_max_locals_from_analyzed(arg) for arg in analyzed.args), default=0)
+        
+        # For other types, return 0
+        return 0
