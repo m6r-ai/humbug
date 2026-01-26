@@ -122,6 +122,10 @@ class AIFPLMathFunctions:
             'real': self._builtin_real,
             'imag': self._builtin_imag,
             'complex': self._builtin_complex,
+
+            # Type conversion functions
+            'integer': self._builtin_integer,
+            'float': self._builtin_float,
         }
 
     # Arithmetic operations
@@ -687,6 +691,51 @@ class AIFPLMathFunctions:
             raise AIFPLEvalError("Function 'complex' arguments must be real numbers")
 
         return AIFPLComplex(complex(real_part, imag_part))
+
+    # Type conversion functions
+    def _builtin_integer(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement integer conversion function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"Function 'integer' requires exactly 1 argument, got {len(args)}")
+
+        if not self._is_numeric_type(args[0]):
+            raise AIFPLEvalError(f"Function 'integer' requires numeric arguments, got {args[0].type_name()}")
+
+        val = self._extract_numeric_value(args[0])
+
+        # Handle complex numbers
+        if isinstance(val, complex):
+            if abs(val.imag) >= self.floating_point_tolerance:
+                raise AIFPLEvalError("Function 'integer' cannot convert complex number with non-zero imaginary part")
+
+            val = val.real
+
+        # Handle float - truncate toward zero
+        if isinstance(val, float):
+            return AIFPLInteger(int(val))
+
+        # Already an integer
+        return AIFPLInteger(val)
+
+    def _builtin_float(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement float conversion function."""
+        if len(args) != 1:
+            raise AIFPLEvalError(f"Function 'float' requires exactly 1 argument, got {len(args)}")
+
+        if not self._is_numeric_type(args[0]):
+            raise AIFPLEvalError(f"Function 'float' requires numeric arguments, got {args[0].type_name()}")
+
+        val = self._extract_numeric_value(args[0])
+
+        # Handle complex numbers
+        if isinstance(val, complex):
+            if abs(val.imag) >= self.floating_point_tolerance:
+                raise AIFPLEvalError("Function 'float' cannot convert complex number with non-zero imaginary part")
+
+            val = val.real
+
+        # Convert to float
+        return AIFPLFloat(float(val))
 
     # Helper methods for type checking and conversion
     def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLInteger | AIFPLFloat | AIFPLComplex:
