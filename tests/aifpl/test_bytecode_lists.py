@@ -6,7 +6,7 @@ from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
-from aifpl.aifpl_value import AIFPLNumber, AIFPLBoolean, AIFPLList
+from aifpl.aifpl_value import AIFPLNumber, AIFPLBoolean, AIFPLList, AIFPLInteger, AIFPLFloat, AIFPLComplex
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 
 
@@ -52,7 +52,7 @@ class TestListAccess:
 
     def test_first(self):
         result = compile_and_run("(first (list 1 2 3))")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 1
 
     def test_rest(self):
@@ -63,12 +63,12 @@ class TestListAccess:
 
     def test_last(self):
         result = compile_and_run("(last (list 1 2 3))")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 3
 
     def test_length(self):
         result = compile_and_run("(length (list 1 2 3 4 5))")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 5
 
 
@@ -134,7 +134,7 @@ class TestListPredicates:
 
     def test_position_found(self):
         result = compile_and_run("(position 3 (list 1 2 3 4))")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 2
 
     def test_position_not_found(self):
@@ -148,32 +148,32 @@ class TestMathFunctions:
 
     def test_sqrt(self):
         result = compile_and_run("(sqrt 16)")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 4.0
 
     def test_abs_positive(self):
         result = compile_and_run("(abs 5)")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 5
 
     def test_abs_negative(self):
         result = compile_and_run("(abs -5)")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 5
 
     def test_min(self):
         result = compile_and_run("(min 3 1 4 1 5)")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 1
 
     def test_max(self):
         result = compile_and_run("(max 3 1 4 1 5)")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 5
 
     def test_pow(self):
         result = compile_and_run("(pow 2 3)")
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 8
 
 

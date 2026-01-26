@@ -225,7 +225,7 @@ class AIFPLPatternMatcher:
             'number?': lambda v: isinstance(v, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)),
             'integer?': lambda v: (
                 isinstance(v, AIFPLInteger) or
-                (isinstance(v, AIFPLNumber) and v.is_integer())
+                isinstance(v, AIFPLInteger) or (isinstance(v, AIFPLNumber) and v.is_integer())
             ),
             'float?': lambda v: (
                 isinstance(v, AIFPLFloat) or

@@ -834,7 +834,23 @@ class AIFPLEvaluator:
 
     def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
         """Simplify complex results to real numbers when imaginary part is negligible."""
-        if isinstance(result, AIFPLNumber) and isinstance(result.value, complex):
+        # Phase 2: Handle new AIFPLComplex type
+        if isinstance(result, AIFPLComplex):
+            # If imaginary part is effectively zero, return just the real part
+            if abs(result.value.imag) < self.floating_point_tolerance:
+                real_part = result.value.real
+                # Convert to int if it's a whole number
+                if isinstance(real_part, float) and real_part.is_integer():
+                    return AIFPLInteger(int(real_part))
+
+                return AIFPLFloat(real_part)
+
+        # Handle new AIFPLFloat type - convert to int if whole number
+        if isinstance(result, AIFPLFloat) and result.value.is_integer():
+            return AIFPLInteger(int(result.value))
+
+        # Old AIFPLNumber type (for backward compatibility during migration)
+        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, complex):
             # If imaginary part is effectively zero, return just the real part
             if abs(result.value.imag) < self.floating_point_tolerance:
                 real_part = result.value.real
@@ -845,7 +861,7 @@ class AIFPLEvaluator:
                 return AIFPLNumber(real_part)
 
         # For real numbers, convert float to int if it's a whole number
-        if isinstance(result, AIFPLNumber) and isinstance(result.value, float) and result.value.is_integer():
+        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, float) and result.value.is_integer():
             return AIFPLNumber(int(result.value))
 
         return result
@@ -885,7 +901,7 @@ class AIFPLEvaluator:
         if isinstance(result, AIFPLComplex):
             return str(result.value)
 
-        if isinstance(result, AIFPLNumber):
+        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             # Old unified number type - format based on value type
             if isinstance(result.value, int):
                 return str(result.value)

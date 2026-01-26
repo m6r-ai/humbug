@@ -176,17 +176,16 @@ class AIFPLCollectionsFunctions:
 
         try:
             # Try to parse as integer first
-            # Phase 1: Always return AIFPLNumber for compatibility
-            # Phase 2: Will return AIFPLInteger, AIFPLFloat, or AIFPLComplex
+            # Phase 2: Return typed numbers
             if '.' not in string_arg.value and 'e' not in string_arg.value.lower() and 'j' not in string_arg.value.lower():
-                return AIFPLNumber(int(string_arg.value))
+                return AIFPLInteger(int(string_arg.value))
 
             # Try complex number
             if 'j' in string_arg.value.lower():
-                return AIFPLNumber(complex(string_arg.value))
+                return AIFPLComplex(complex(string_arg.value))
 
             # Otherwise float
-            return AIFPLNumber(float(string_arg.value))
+            return AIFPLFloat(float(string_arg.value))
 
         except ValueError as e:
             raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg.value}'") from e
@@ -484,7 +483,7 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"integer? requires exactly 1 argument, got {len(args)}")
 
-        # Phase 1: Accept both old AIFPLNumber and new AIFPLInteger
+        # Phase 2: Accept both old AIFPLNumber and new AIFPLInteger
         arg = args[0]
         if isinstance(arg, AIFPLInteger):
             return AIFPLBoolean(True)
@@ -497,7 +496,7 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"float? requires exactly 1 argument, got {len(args)}")
 
-        # Phase 1: Accept both old AIFPLNumber and new AIFPLFloat
+        # Phase 2: Accept both old AIFPLNumber and new AIFPLFloat
         arg = args[0]
         if isinstance(arg, AIFPLFloat):
             return AIFPLBoolean(True)
@@ -510,7 +509,7 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"complex? requires exactly 1 argument, got {len(args)}")
 
-        # Phase 1: Accept both old AIFPLNumber and new AIFPLComplex
+        # Phase 2: Accept both old AIFPLNumber and new AIFPLComplex
         arg = args[0]
         if isinstance(arg, AIFPLComplex):
             return AIFPLBoolean(True)
@@ -568,7 +567,7 @@ class AIFPLCollectionsFunctions:
         if isinstance(value, AIFPLInteger):
             return value.value
 
-        if isinstance(value, AIFPLNumber) and value.is_integer():
+        if isinstance(value, AIFPLInteger) or (isinstance(value, AIFPLNumber) and value.is_integer()):
             # Type narrowing: we know value.value is int here
             assert isinstance(value.value, int), "is_integer() should guarantee int type"
             return value.value
@@ -577,7 +576,7 @@ class AIFPLCollectionsFunctions:
         if isinstance(value, (AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
 
-        if isinstance(value, AIFPLNumber):
+        if isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             # It's an AIFPLNumber but not an integer (float or complex)
             raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
 
@@ -815,7 +814,7 @@ class AIFPLCollectionsFunctions:
         start_val = args[0]
         end_val = args[1]
 
-        if not isinstance(start_val, AIFPLNumber):
+        if not isinstance(start_val, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(
                 message="Range start must be a number",
                 received=f"Start: {start_val.type_name()}",
@@ -824,7 +823,7 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use numeric values for range bounds"
             )
 
-        if not isinstance(end_val, AIFPLNumber):
+        if not isinstance(end_val, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(
                 message="Range end must be a number",
                 received=f"End: {end_val.type_name()}",
@@ -833,10 +832,10 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use numeric values for range bounds"
             )
 
-        if not start_val.is_integer():
+        if not (isinstance(start_val, AIFPLInteger) or (isinstance(start_val, AIFPLNumber) and start_val.is_integer())):
             raise AIFPLEvalError("Range start must be an integer")
 
-        if not end_val.is_integer():
+        if not (isinstance(end_val, AIFPLInteger) or (isinstance(end_val, AIFPLNumber) and end_val.is_integer())):
             raise AIFPLEvalError("Range end must be an integer")
 
         start_int = int(start_val.value.real) if isinstance(start_val.value, complex) else int(start_val.value)
@@ -844,7 +843,7 @@ class AIFPLCollectionsFunctions:
 
         if len(args) == 3:
             step_val = args[2]
-            if not isinstance(step_val, AIFPLNumber):
+            if not isinstance(step_val, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
                 raise AIFPLEvalError(
                     message="Range step must be a number",
                     received=f"Step: {step_val.type_name()}",
@@ -852,7 +851,7 @@ class AIFPLCollectionsFunctions:
                     example="(range 0 10 2)",
                     suggestion="Use numeric values for range parameters"
                 )
-            if not step_val.is_integer():
+            if not (isinstance(step_val, AIFPLInteger) or (isinstance(step_val, AIFPLNumber) and step_val.is_integer())):
                 raise AIFPLEvalError("Range step must be an integer")
 
             step_int = int(step_val.value.real) if isinstance(step_val.value, complex) else int(step_val.value)

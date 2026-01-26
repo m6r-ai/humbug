@@ -2,7 +2,7 @@
 
 import pytest
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
-from aifpl.aifpl_value import AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList
+from aifpl.aifpl_value import AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLList
 
 
 class TestBuiltinRegistry:
@@ -46,7 +46,8 @@ class TestBuiltinRegistry:
         # Test addition
         args = [AIFPLNumber(1), AIFPLNumber(2), AIFPLNumber(3)]
         result = registry.call_builtin('+', args)
-        assert isinstance(result, AIFPLNumber)
+        # Phase 2: Now returns typed numbers
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 6
 
     def test_call_list_function(self):

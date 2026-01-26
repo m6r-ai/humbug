@@ -59,8 +59,8 @@ class AIFPLParser:
         self.expression = expression
         self.message_builder = ErrorMessageBuilder()
 
-        # Phase 1 migration flag: use new typed number system
-        self.use_typed_numbers = False  # Default to old behavior for now
+        # Phase 2: Enable typed numbers by default
+        self.use_typed_numbers = True
 
         # Paren stack for tracking unclosed expressions
         self.paren_stack: List[ParenStackFrame] = []

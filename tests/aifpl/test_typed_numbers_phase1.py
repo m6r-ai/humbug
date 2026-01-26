@@ -49,7 +49,7 @@ class TestParserWithTypedNumbers:
         parser = AIFPLParser(tokens, "42")
         result = parser.parse()
         
-        assert isinstance(result, AIFPLNumber)
+        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 42
     
     def test_parser_creates_integer_with_flag(self):

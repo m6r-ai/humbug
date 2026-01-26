@@ -22,20 +22,26 @@ class AIFPLMathFunctions:
         if isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             return value.value
 
-        if isinstance(value, AIFPLNumber):
+        if isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             return value.value
 
         raise AIFPLEvalError(f"Expected number, got {value.type_name()}")
 
     def _wrap_numeric_result(self, result: Union[int, float, complex]) -> AIFPLValue:
-        """
-        Wrap Python numeric value in appropriate AIFPL type.
+        """Wrap Python numeric value in appropriate AIFPL type based on its type."""
+        # Phase 2: Return typed numbers based on result type
+        if isinstance(result, int):
+            return AIFPLInteger(result)
 
-        Phase 1: Always returns old AIFPLNumber type for now.
-        In Phase 2, this will return typed numbers based on result type.
-        """
-        # For Phase 1, always return AIFPLNumber to maintain compatibility
-        return AIFPLNumber(result)
+        elif isinstance(result, float):
+            return AIFPLFloat(result)
+
+        elif isinstance(result, complex):
+            return AIFPLComplex(result)
+
+        else:
+            # Fallback (shouldn't happen)
+            return AIFPLNumber(result)
 
     def _promote_numeric_types(self, values: List[Union[int, float, complex]]) -> type:
         """
@@ -68,7 +74,7 @@ class AIFPLMathFunctions:
         if isinstance(value, AIFPLInteger):
             return True
 
-        if isinstance(value, AIFPLNumber):
+        if isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
 
             return value.is_integer()
         return False
@@ -273,23 +279,22 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function '<' requires at least 2 arguments, got {len(args)}")
 
-        # Ensure all arguments are numeric and real (not complex)
+        # Phase 2: Extract values and ensure they're numeric and real (not complex)
+        values = []
         for i, arg in enumerate(args):
-            if not isinstance(arg, AIFPLNumber):
+            if not self._is_numeric_type(arg):
                 raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+1} is {arg.type_name()}")
 
-            if isinstance(arg.value, complex):
+            val = self._extract_numeric_value(arg)
+            if isinstance(val, complex):
                 raise AIFPLEvalError("Function '<' does not support complex numbers")
+
+            values.append(val)
 
         # Check comparison chain
         for i in range(len(args) - 1):
-            left_arg, right_arg = args[i], args[i + 1]
-            assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
-            left_val = left_arg.value
-            right_val = right_arg.value
-            assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
-
-            if not left_val < right_val:
+            # Use extracted values
+            if not values[i] < values[i + 1]:
                 return AIFPLBoolean(False)
 
         return AIFPLBoolean(True)
@@ -299,23 +304,21 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function '>' requires at least 2 arguments, got {len(args)}")
 
-        # Ensure all arguments are numeric and real (not complex)
+        # Phase 2: Extract values and ensure they're numeric and real (not complex)
+        values = []
         for i, arg in enumerate(args):
-            if not isinstance(arg, AIFPLNumber):
+            if not self._is_numeric_type(arg):
                 raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+1} is {arg.type_name()}")
 
-            if isinstance(arg.value, complex):
+            val = self._extract_numeric_value(arg)
+            if isinstance(val, complex):
                 raise AIFPLEvalError("Function '>' does not support complex numbers")
+
+            values.append(val)
 
         # Check comparison chain
         for i in range(len(args) - 1):
-            left_arg, right_arg = args[i], args[i + 1]
-            assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
-            left_val = left_arg.value
-            right_val = right_arg.value
-            assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
-
-            if not left_val > right_val:
+            if not values[i] > values[i + 1]:
                 return AIFPLBoolean(False)
 
         return AIFPLBoolean(True)
@@ -325,23 +328,21 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function '<=' requires at least 2 arguments, got {len(args)}")
 
-        # Ensure all arguments are numeric and real (not complex)
+        # Phase 2: Extract values and ensure they're numeric and real (not complex)
+        values = []
         for i, arg in enumerate(args):
-            if not isinstance(arg, AIFPLNumber):
+            if not self._is_numeric_type(arg):
                 raise AIFPLEvalError(f"Function '<=' requires numeric arguments, argument {i+1} is {arg.type_name()}")
 
-            if isinstance(arg.value, complex):
+            val = self._extract_numeric_value(arg)
+            if isinstance(val, complex):
                 raise AIFPLEvalError("Function '<=' does not support complex numbers")
+
+            values.append(val)
 
         # Check comparison chain
         for i in range(len(args) - 1):
-            left_arg, right_arg = args[i], args[i + 1]
-            assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
-            left_val = left_arg.value
-            right_val = right_arg.value
-            assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
-
-            if not left_val <= right_val:
+            if not values[i] <= values[i + 1]:
                 return AIFPLBoolean(False)
 
         return AIFPLBoolean(True)
@@ -351,23 +352,21 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function '>=' requires at least 2 arguments, got {len(args)}")
 
-        # Ensure all arguments are numeric and real (not complex)
+        # Phase 2: Extract values and ensure they're numeric and real (not complex)
+        values = []
         for i, arg in enumerate(args):
-            if not isinstance(arg, AIFPLNumber):
+            if not self._is_numeric_type(arg):
                 raise AIFPLEvalError(f"Function '>=' requires numeric arguments, argument {i+1} is {arg.type_name()}")
 
-            if isinstance(arg.value, complex):
+            val = self._extract_numeric_value(arg)
+            if isinstance(val, complex):
                 raise AIFPLEvalError("Function '>=' does not support complex numbers")
+
+            values.append(val)
 
         # Check comparison chain
         for i in range(len(args) - 1):
-            left_arg, right_arg = args[i], args[i + 1]
-            assert isinstance(left_arg, AIFPLNumber) and isinstance(right_arg, AIFPLNumber)
-            left_val = left_arg.value
-            right_val = right_arg.value
-            assert not isinstance(left_val, complex) and not isinstance(right_val, complex)
-
-            if not left_val >= right_val:
+            if not values[i] >= values[i + 1]:
                 return AIFPLBoolean(False)
 
         return AIFPLBoolean(True)
@@ -743,7 +742,7 @@ class AIFPLMathFunctions:
         if isinstance(value, AIFPLInteger):
             return value.value
 
-        if isinstance(value, AIFPLNumber) and value.is_integer():
+        if isinstance(value, AIFPLInteger) or (isinstance(value, AIFPLNumber) and value.is_integer()):
             # Type narrowing: we know value.value is int here
             assert isinstance(value.value, int), "is_integer() should guarantee int type"
             return value.value
@@ -752,7 +751,7 @@ class AIFPLMathFunctions:
         if isinstance(value, (AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
 
-        if isinstance(value, AIFPLNumber):
+        if isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             # It's an AIFPLNumber but not an integer (float or complex)
             raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
 
@@ -769,7 +768,7 @@ class AIFPLMathFunctions:
         if isinstance(value, (AIFPLInteger, AIFPLFloat)):
             return value.value
 
-        if not isinstance(value, AIFPLNumber):
+        if not isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
 
         if isinstance(value.value, complex):

@@ -1099,7 +1099,7 @@ class AIFPLCompiler:
         if isinstance(result, AIFPLComplex):
             return str(result.value)
 
-        if isinstance(result, AIFPLNumber):
+        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             # Old unified number type - format based on value type
             if isinstance(result.value, int):
                 return str(result.value)

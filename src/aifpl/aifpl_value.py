@@ -59,6 +59,17 @@ class AIFPLNumber(AIFPLValue):
         """Check if this number is complex."""
         return isinstance(self.value, complex)
 
+    def __eq__(self, other: Any) -> bool:
+        """Compare numeric values, allowing cross-type comparison with new typed numbers."""
+        if isinstance(other, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+            return self.value == other.value
+
+        return False
+
+    def __hash__(self) -> int:
+        """Hash based on value for use in sets/dicts."""
+        return hash(self.value)
+
 
 @dataclass(frozen=True)
 class AIFPLInteger(AIFPLValue):
@@ -73,6 +84,17 @@ class AIFPLInteger(AIFPLValue):
 
     def type_name(self) -> str:
         return "integer"
+
+    def __eq__(self, other: Any) -> bool:
+        """Compare numeric values, allowing cross-type comparison."""
+        if isinstance(other, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+            return self.value == other.value
+
+        return False
+
+    def __hash__(self) -> int:
+        """Hash based on value for use in sets/dicts."""
+        return hash(self.value)
 
 
 @dataclass(frozen=True)
@@ -89,6 +111,17 @@ class AIFPLFloat(AIFPLValue):
     def type_name(self) -> str:
         return "float"
 
+    def __eq__(self, other: Any) -> bool:
+        """Compare numeric values, allowing cross-type comparison."""
+        if isinstance(other, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+            return self.value == other.value
+
+        return False
+
+    def __hash__(self) -> int:
+        """Hash based on value for use in sets/dicts."""
+        return hash(self.value)
+
 
 @dataclass(frozen=True)
 class AIFPLComplex(AIFPLValue):
@@ -103,6 +136,16 @@ class AIFPLComplex(AIFPLValue):
 
     def type_name(self) -> str:
         return "complex"
+
+    def __eq__(self, other: Any) -> bool:
+        """Compare numeric values, allowing cross-type comparison."""
+        if isinstance(other, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+            return self.value == other.value
+        return False
+
+    def __hash__(self) -> int:
+        """Hash based on value for use in sets/dicts."""
+        return hash(self.value)
 
 
 @dataclass(frozen=True)
@@ -386,7 +429,11 @@ class AIFPLAList(AIFPLValue):
         if isinstance(key, AIFPLString):
             return ('str', key.value)
 
+        # Phase 2: Handle both old and new number types
         if isinstance(key, AIFPLNumber):
+            return ('num', key.value)
+
+        if isinstance(key, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             return ('num', key.value)
 
         if isinstance(key, AIFPLBoolean):
@@ -410,7 +457,7 @@ class AIFPLFunction(AIFPLValue):
 
     This is a first-class value that can be stored in environments
     and passed around as a value.
-    
+
     A function can be either:
     - A user-defined lambda with bytecode or AST body
     - A builtin with a native Python implementation
