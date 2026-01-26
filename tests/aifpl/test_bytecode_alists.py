@@ -6,7 +6,7 @@ from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
-from aifpl.aifpl_value import AIFPLNumber, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLAList, AIFPLInteger, AIFPLFloat, AIFPLComplex
+from aifpl.aifpl_value import AIFPLBoolean, AIFPLString, AIFPLList, AIFPLAList, AIFPLInteger, AIFPLFloat, AIFPLComplex
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 
 
@@ -53,12 +53,12 @@ class TestAListAccess:
 
     def test_alist_get_number(self):
         result = compile_and_run('(alist-get (alist (list "age" 30)) "age")')
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 30
 
     def test_alist_get_with_default(self):
         result = compile_and_run('(alist-get (alist (list "a" 1)) "b" 99)')
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 99
 
     def test_alist_has_true(self):
@@ -165,7 +165,7 @@ class TestAListCombinations:
             (let ((data (alist (list "x" 10) (list "y" 20))))
               (+ (alist-get data "x") (alist-get data "y")))
         ''')
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 30
 
     def test_data_processing_pipeline(self):
@@ -174,7 +174,7 @@ class TestAListCombinations:
             (let ((data (alist (list "id" 1) (list "value" 100))))
               (alist-get data "value"))
         ''')
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 100
 
     def test_alist_update_chain(self):

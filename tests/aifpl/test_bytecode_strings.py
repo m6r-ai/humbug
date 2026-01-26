@@ -6,7 +6,7 @@ from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
-from aifpl.aifpl_value import AIFPLNumber, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLInteger, AIFPLFloat, AIFPLComplex
+from aifpl.aifpl_value import AIFPLBoolean, AIFPLString, AIFPLList, AIFPLInteger, AIFPLFloat, AIFPLComplex
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 
@@ -45,12 +45,12 @@ class TestStringBasics:
 
     def test_string_length(self):
         result = compile_and_run('(string-length "hello")')
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 5
 
     def test_string_length_empty(self):
         result = compile_and_run('(string-length "")')
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 0
 
 
@@ -168,12 +168,12 @@ class TestStringConversion:
 
     def test_string_to_number_int(self):
         result = compile_and_run('(string->number "42")')
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 42
 
     def test_string_to_number_float(self):
         result = compile_and_run('(string->number "3.14")')
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 3.14
 
     def test_string_to_number_invalid(self):

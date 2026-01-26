@@ -10,7 +10,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
 from aifpl.aifpl_math import AIFPLMathFunctions
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLFunction, AIFPLNumber,
+    AIFPLValue, AIFPLFunction,
     AIFPLInteger, AIFPLFloat, AIFPLComplex
 )
 
@@ -19,9 +19,9 @@ from aifpl.aifpl_value import (
 
 def extract_numeric_value(value: AIFPLValue) -> int | float | complex:
     """
-    Extract numeric value from either old AIFPLNumber or new typed number types.
+    Extract numeric value from typed number types.
 
-    This helper function allows builtins to work with both the old AIFPLNumber type
+    This helper function allows builtins to work with typed numbers
     and the new AIFPLInteger/AIFPLFloat/AIFPLComplex types during the migration.
 
     Args:
@@ -33,9 +33,6 @@ def extract_numeric_value(value: AIFPLValue) -> int | float | complex:
     Raises:
         AIFPLEvalError: If value is not a numeric type
     """
-    if isinstance(value, AIFPLNumber):
-        return value.value
-
     if isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
         return value.value
 
@@ -49,9 +46,9 @@ def is_numeric_type(value: AIFPLValue) -> bool:
     """
     Check if value is any numeric type (old or new).
 
-    Returns True for AIFPLNumber, AIFPLInteger, AIFPLFloat, or AIFPLComplex.
+    Returns True for AIFPLInteger, AIFPLFloat, or AIFPLComplex.
     """
-    return isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+    return isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
 
 class AIFPLBuiltinRegistry:
     """

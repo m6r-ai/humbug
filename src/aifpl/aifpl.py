@@ -3,7 +3,7 @@
 import math
 from typing import Union, Dict
 
-from aifpl.aifpl_value import AIFPLFunction, AIFPLNumber, AIFPLBoolean
+from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLComplex, AIFPLBoolean
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
@@ -57,9 +57,9 @@ class AIFPL:
 
     # Mathematical constants
     CONSTANTS = {
-        'pi': AIFPLNumber(math.pi),
-        'e': AIFPLNumber(math.e),
-        'j': AIFPLNumber(1j),
+        'pi': AIFPLFloat(math.pi),
+        'e': AIFPLFloat(math.e),
+        'j': AIFPLComplex(1j),
         'true': AIFPLBoolean(True),
         'false': AIFPLBoolean(False),
     }

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from aifpl.aifpl_error import AIFPLParseError, ErrorMessageBuilder
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex,
+    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
     AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
 )
 
@@ -51,7 +51,7 @@ class AIFPLParser:
         Args:
             tokens: List of tokens to parse
             expression: Original expression string for error context
-            use_typed_numbers: If True, create AIFPLInteger/Float/Complex instead of AIFPLNumber
+            use_typed_numbers: If True, create AIFPLInteger/Float/Complex (deprecated, always True now)
         """
         self.tokens = tokens
         self.pos = 0
@@ -133,7 +133,8 @@ class AIFPLParser:
 
                 return AIFPLComplex(token.value)
 
-            return AIFPLNumber(token.value)
+            # This should never happen with use_typed_numbers=True
+            raise ValueError(f"Unexpected number token type: {type(token.value)}")
 
         if token.type == AIFPLTokenType.STRING:
             self._advance()

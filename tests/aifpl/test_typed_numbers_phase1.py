@@ -5,7 +5,7 @@ work correctly when enabled via the parser flag.
 """
 
 import pytest
-from aifpl import AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLNumber
+from aifpl import AIFPLInteger, AIFPLFloat, AIFPLComplex
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_builtins import extract_numeric_value, is_numeric_type
@@ -43,13 +43,13 @@ class TestParserWithTypedNumbers:
     """Test parser with use_typed_numbers flag."""
     
     def test_parser_creates_old_types_by_default(self):
-        """By default, parser should create AIFPLNumber."""
+        """Parser should create typed numbers."""
         tokenizer = AIFPLTokenizer()
         tokens = tokenizer.tokenize("42")
         parser = AIFPLParser(tokens, "42")
         result = parser.parse()
         
-        assert isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 42
     
     def test_parser_creates_integer_with_flag(self):
@@ -61,7 +61,6 @@ class TestParserWithTypedNumbers:
         result = parser.parse()
         
         assert isinstance(result, AIFPLInteger)
-        assert not isinstance(result, AIFPLNumber)
         assert result.value == 42
     
     def test_parser_creates_float_with_flag(self):
@@ -73,7 +72,6 @@ class TestParserWithTypedNumbers:
         result = parser.parse()
         
         assert isinstance(result, AIFPLFloat)
-        assert not isinstance(result, AIFPLNumber)
         assert result.value == 3.14
     
     def test_parser_creates_complex_with_flag(self):
@@ -93,8 +91,8 @@ class TestNumericHelpers:
     """Test helper functions for numeric type compatibility."""
     
     def test_extract_numeric_value_from_old_type(self):
-        """extract_numeric_value should work with AIFPLNumber."""
-        val = AIFPLNumber(42)
+        """extract_numeric_value should work with typed numbers."""
+        val = AIFPLInteger(42)
         assert extract_numeric_value(val) == 42
     
     def test_extract_numeric_value_from_integer(self):
@@ -113,8 +111,8 @@ class TestNumericHelpers:
         assert extract_numeric_value(val) == 3+4j
     
     def test_is_numeric_type_old(self):
-        """is_numeric_type should recognize AIFPLNumber."""
-        val = AIFPLNumber(42)
+        """is_numeric_type should recognize typed numbers."""
+        val = AIFPLInteger(42)
         assert is_numeric_type(val)
     
     def test_is_numeric_type_integer(self):
@@ -141,10 +139,10 @@ class TestNumericHelpers:
 
 
 class TestTypePredicatesWithNewTypes:
-    """Test that type predicates work with both old and new number types."""
+    """Test that type predicates work with typed numbers."""
     
     def test_number_predicate_with_old_type(self):
-        """number? should recognize AIFPLNumber."""
+        """number? should recognize typed numbers."""
         from aifpl import AIFPL
         aifpl = AIFPL()
         assert aifpl.evaluate("(number? 42)") == True
@@ -153,7 +151,7 @@ class TestTypePredicatesWithNewTypes:
         assert aifpl.evaluate('(number? "hello")') == False
     
     def test_integer_predicate_with_old_type(self):
-        """integer? should work with AIFPLNumber."""
+        """integer? should work with typed numbers."""
         from aifpl import AIFPL
         aifpl = AIFPL()
         assert aifpl.evaluate("(integer? 42)") == True
@@ -161,7 +159,7 @@ class TestTypePredicatesWithNewTypes:
         assert aifpl.evaluate("(integer? (+ 1 (* 2 j)))") == False
     
     def test_float_predicate_with_old_type(self):
-        """float? should work with AIFPLNumber."""
+        """float? should work with typed numbers."""
         from aifpl import AIFPL
         aifpl = AIFPL()
         assert aifpl.evaluate("(float? 3.14)") == True
@@ -169,7 +167,7 @@ class TestTypePredicatesWithNewTypes:
         assert aifpl.evaluate("(float? (+ 1 (* 2 j)))") == False
     
     def test_complex_predicate_with_old_type(self):
-        """complex? should work with AIFPLNumber."""
+        """complex? should work with typed numbers."""
         from aifpl import AIFPL
         aifpl = AIFPL()
         assert aifpl.evaluate("(complex? (+ 1 (* 2 j)))") == True

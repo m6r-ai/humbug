@@ -3,7 +3,7 @@
 import math
 import pytest
 
-from aifpl import AIFPLEvalError, AIFPLAList, AIFPLString, AIFPLNumber, AIFPLSymbol
+from aifpl import AIFPLEvalError, AIFPLAList, AIFPLString, AIFPLSymbol
 
 
 class TestAIFPLValueEdgeCases:

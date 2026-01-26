@@ -8,7 +8,7 @@ from aifpl.aifpl_error import AIFPLError, AIFPLTokenError, AIFPLParseError, AIFP
 
 # Value types
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex,
+    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
     AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLAList,
     AIFPLRecursivePlaceholder, AIFPLFunction
 )
@@ -29,7 +29,7 @@ __all__ = [
     "AIFPLError", "AIFPLTokenError", "AIFPLParseError", "AIFPLEvalError", "ErrorMessageBuilder",
 
     # Value types
-    "AIFPLValue", "AIFPLNumber", "AIFPLInteger", "AIFPLFloat", "AIFPLComplex",
+    "AIFPLValue", "AIFPLInteger", "AIFPLFloat", "AIFPLComplex",
     "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList", "AIFPLAList",
     "AIFPLRecursivePlaceholder", "AIFPLFunction",
 

@@ -9,7 +9,7 @@ from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex,
+    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
     AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction, AIFPLAList
 )
 
@@ -435,7 +435,7 @@ class AIFPLVM:
             raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: invalid patch info")
 
         elements = patch_info.elements
-        if not isinstance(elements[0], (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)) or not isinstance(elements[1], (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if not isinstance(elements[0], (AIFPLInteger, AIFPLFloat, AIFPLComplex)) or not isinstance(elements[1], (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: patch info elements must be numbers")
 
         if not isinstance(elements[0].value, int) or not isinstance(elements[1].value, int):
@@ -518,19 +518,19 @@ class AIFPLVM:
 
     def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
         """Simplify complex results to real numbers when imaginary part is negligible."""
-        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, complex):
+        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, complex):
             # If imaginary part is effectively zero, return just the real part
             if abs(result.value.imag) < self.floating_point_tolerance:
                 real_part = result.value.real
                 # Convert to int if it's a whole number
                 if isinstance(real_part, float) and real_part.is_integer():
-                    return AIFPLNumber(int(real_part))
+                    return AIFPLInteger(int(real_part))
 
-                return AIFPLNumber(real_part)
+                return AIFPLFloat(real_part)
 
         # For real numbers, convert float to int if it's a whole number
-        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, float) and result.value.is_integer():
-            return AIFPLNumber(int(result.value))
+        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, float) and result.value.is_integer():
+            return AIFPLInteger(int(result.value))
 
         return result
 
@@ -551,7 +551,7 @@ class AIFPLVM:
             escaped_content = self._escape_string_for_lisp(result.value)
             return f'"{escaped_content}"'
 
-        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             if isinstance(result.value, float):
                 nice_number = self._is_close_to_nice_number(result.value)
                 if nice_number is not None:

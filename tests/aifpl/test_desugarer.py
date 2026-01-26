@@ -10,7 +10,7 @@ from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLNumber, AIFPLString, AIFPLBoolean
+    AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLInteger, AIFPLString, AIFPLBoolean
 )
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -31,7 +31,7 @@ class TestDesugarerBasic:
         desugarer = AIFPLDesugarer()
 
         # Numbers
-        num = AIFPLNumber(42)
+        num = AIFPLInteger(42)
         assert desugarer.desugar(num) == num
 
         # Strings

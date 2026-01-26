@@ -14,7 +14,7 @@ This simplifies the compiler and enables better optimization.
 
 from typing import List, Tuple, Any, cast
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean
+    AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean
 )
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -432,7 +432,7 @@ class AIFPLDesugarer:
         """
         # Literal patterns: numbers, strings, booleans
         # Phase 1: Accept both old and new numeric types as literals
-        if isinstance(pattern, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
+        if isinstance(pattern, (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
             # Test: (= temp_var literal)
             test_expr = AIFPLList((
                 AIFPLSymbol('='),
@@ -616,7 +616,7 @@ class AIFPLDesugarer:
                 AIFPLSymbol('length'),
                 AIFPLSymbol(temp_var)
             )),
-            AIFPLNumber(num_elements)
+            AIFPLInteger(num_elements)
         ))
 
         # Combine with and
@@ -650,7 +650,7 @@ class AIFPLDesugarer:
             elem_value = AIFPLList((
                 AIFPLSymbol('list-ref'),
                 AIFPLSymbol(temp_var),
-                AIFPLNumber(i)
+                AIFPLInteger(i)
             ))
 
             element_info.append((elem_pattern, elem_temp, elem_value))
@@ -880,7 +880,7 @@ class AIFPLDesugarer:
                     AIFPLSymbol('length'),
                     AIFPLSymbol(temp_var)
                 )),
-                AIFPLNumber(dot_position)
+                AIFPLInteger(dot_position)
             ))
             combined_test = AIFPLList((
                 AIFPLSymbol('and'),
@@ -914,7 +914,7 @@ class AIFPLDesugarer:
             elem_value = AIFPLList((
                 AIFPLSymbol('list-ref'),
                 AIFPLSymbol(temp_var),
-                AIFPLNumber(i)
+                AIFPLInteger(i)
             ))
 
             head_elements.append((elem_pattern, elem_temp, elem_value))
@@ -926,7 +926,7 @@ class AIFPLDesugarer:
         # Extract tail: (drop dot_position temp_var)
         tail_value = AIFPLList((
             AIFPLSymbol('drop'),
-            AIFPLNumber(dot_position),
+            AIFPLInteger(dot_position),
             AIFPLSymbol(temp_var)
         ))
 

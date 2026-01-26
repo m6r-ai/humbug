@@ -8,7 +8,7 @@ from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex,
+    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
     AIFPLString, AIFPLBoolean,
     AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction
 )
@@ -236,7 +236,7 @@ class AIFPLCompiler:
         expr_type = type(expr)
 
         # Self-evaluating values
-        if expr_type is AIFPLNumber:
+        if expr_type in (AIFPLInteger, AIFPLFloat, AIFPLComplex):
             const_index = ctx.add_constant(expr)
             ctx.emit(Opcode.LOAD_CONST, const_index)
             return
@@ -636,7 +636,7 @@ class AIFPLCompiler:
             # We need to pass 3 pieces of info but only have 2 args
             # Solution: Store (sibling_var_index, name_index) as a tuple in constants
             # and pass closure_var_index and const_index
-            patch_info = AIFPLList((AIFPLNumber(sibling_var_index), AIFPLNumber(name_index)))
+            patch_info = AIFPLList((AIFPLInteger(sibling_var_index), AIFPLInteger(name_index)))
             const_index = ctx.add_constant(patch_info)
             # arg1=closure_var_index, arg2=const_index (contains sibling_var_index and name_index)
             ctx.emit(Opcode.PATCH_CLOSURE_SIBLING, closure_var_index, const_index)
@@ -1081,7 +1081,6 @@ class AIFPLCompiler:
             escaped_content = self._escape_string_for_lisp(result.value)
             return f'"{escaped_content}"'
 
-        # Phase 1: Handle both old AIFPLNumber and new typed numbers
         if isinstance(result, AIFPLInteger):
             return str(result.value)
 
@@ -1099,7 +1098,7 @@ class AIFPLCompiler:
         if isinstance(result, AIFPLComplex):
             return str(result.value)
 
-        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             # Old unified number type - format based on value type
             if isinstance(result.value, int):
                 return str(result.value)

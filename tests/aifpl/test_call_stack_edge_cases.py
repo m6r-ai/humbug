@@ -4,7 +4,7 @@ import pytest
 
 from aifpl import AIFPLEvalError
 from aifpl.aifpl_call_stack import AIFPLCallStack
-from aifpl.aifpl_value import AIFPLNumber, AIFPLString, AIFPLBoolean
+from aifpl.aifpl_value import AIFPLInteger, AIFPLString, AIFPLBoolean
 
 
 class TestAIFPLCallStackEdgeCases:
@@ -412,7 +412,7 @@ class TestCallStackFormatting:
         for i in range(5):
             call_stack.push(
                 function_name=f"func{i}",
-                arguments={"x": AIFPLNumber(i)},
+                arguments={"x": AIFPLInteger(i)},
                 expression=f"(func{i} {i})"
             )
 
@@ -437,7 +437,7 @@ class TestCallStackFormatting:
         for i in range(15):
             call_stack.push(
                 function_name=f"func{i}",
-                arguments={"x": AIFPLNumber(i)},
+                arguments={"x": AIFPLInteger(i)},
                 expression=f"(func{i} {i})"
             )
 
@@ -460,7 +460,7 @@ class TestCallStackFormatting:
         for i in range(10):
             call_stack.push(
                 function_name=f"func{i}",
-                arguments={"x": AIFPLNumber(i)},
+                arguments={"x": AIFPLInteger(i)},
                 expression=f"(func{i} {i})"
             )
 
@@ -478,7 +478,7 @@ class TestCallStackFormatting:
 
         call_stack.push(
             function_name="single_func",
-            arguments={"x": AIFPLNumber(42), "y": AIFPLString("test")},
+            arguments={"x": AIFPLInteger(42), "y": AIFPLString("test")},
             expression='(single_func 42 "test")'
         )
 
@@ -522,7 +522,7 @@ class TestCallStackFormatting:
         for i in range(10):
             call_stack.push(
                 function_name=f"func{i}",
-                arguments={"x": AIFPLNumber(i)},
+                arguments={"x": AIFPLInteger(i)},
                 expression=f"(func{i} {i})"
             )
 
@@ -545,17 +545,17 @@ class TestCallStackFormatting:
         # Add 3 frames to show nesting
         call_stack.push(
             function_name="outer",
-            arguments={"x": AIFPLNumber(1)},
+            arguments={"x": AIFPLInteger(1)},
             expression="(outer 1)"
         )
         call_stack.push(
             function_name="middle",
-            arguments={"y": AIFPLNumber(2)},
+            arguments={"y": AIFPLInteger(2)},
             expression="(middle 2)"
         )
         call_stack.push(
             function_name="inner",
-            arguments={"z": AIFPLNumber(3)},
+            arguments={"z": AIFPLInteger(3)},
             expression="(inner 3)"
         )
 
@@ -578,7 +578,7 @@ class TestCallStackFormatting:
         call_stack.push(
             function_name="multi_type_func",
             arguments={
-                "num": AIFPLNumber(42),
+                "num": AIFPLInteger(42),
                 "text": AIFPLString("hello"),
                 "flag": AIFPLBoolean(True)
             },

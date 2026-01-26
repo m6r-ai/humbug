@@ -5,7 +5,7 @@ from typing import Callable
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLSymbol,
+    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLSymbol,
     AIFPLList, AIFPLAList, AIFPLFunction
 )
 
@@ -131,7 +131,7 @@ class AIFPLPatternMatcher:
             new_env_with_bindings if match succeeds, None if no match
         """
         # Phase 1: Accept both old and new numeric types as literal patterns
-        if isinstance(pattern, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
+        if isinstance(pattern, (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
             if pattern.to_python() == value.to_python():
                 return env
 
@@ -221,19 +221,18 @@ class AIFPLPatternMatcher:
             True if value matches the predicate
         """
         type_checks = {
-            # Phase 1: Accept both old AIFPLNumber and new typed numbers
-            'number?': lambda v: isinstance(v, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)),
+            'number?': lambda v: isinstance(v, (AIFPLInteger, AIFPLFloat, AIFPLComplex)),
             'integer?': lambda v: (
                 isinstance(v, AIFPLInteger) or
-                isinstance(v, AIFPLInteger) or (isinstance(v, AIFPLNumber) and v.is_integer())
+                isinstance(v, AIFPLInteger)
             ),
             'float?': lambda v: (
                 isinstance(v, AIFPLFloat) or
-                (isinstance(v, AIFPLNumber) and v.is_float())
+                isinstance(v, AIFPLFloat)
             ),
             'complex?': lambda v: (
                 isinstance(v, AIFPLComplex) or
-                (isinstance(v, AIFPLNumber) and v.is_complex())
+                isinstance(v, AIFPLComplex)
             ),
             'string?': lambda v: isinstance(v, AIFPLString),
             'boolean?': lambda v: isinstance(v, AIFPLBoolean),
@@ -322,7 +321,7 @@ class AIFPLPatternMatcher:
         """
         # Literals are always valid
         # Phase 1: Accept both old and new numeric types as literals
-        if isinstance(pattern, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
+        if isinstance(pattern, (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
             return
 
         # Variable patterns (symbols)

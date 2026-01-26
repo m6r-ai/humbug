@@ -4,7 +4,7 @@ from typing import List, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex,
+    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
     AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction
 )
 
@@ -104,7 +104,7 @@ class AIFPLCollectionsFunctions:
             raise AIFPLEvalError(f"string-length requires exactly 1 argument, got {len(args)}")
 
         string_arg = self._ensure_string(args[0], "string-length")
-        return AIFPLNumber(len(string_arg.value))
+        return AIFPLInteger(len(string_arg.value))
 
     def _builtin_substring(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement substring function."""
@@ -346,7 +346,7 @@ class AIFPLCollectionsFunctions:
             raise AIFPLEvalError(f"length requires exactly 1 argument, got {len(args)}")
 
         list_val = self._ensure_list(args[0], "length")
-        return AIFPLNumber(list_val.length())
+        return AIFPLInteger(list_val.length())
 
     def _builtin_null_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement null? function."""
@@ -391,7 +391,7 @@ class AIFPLCollectionsFunctions:
 
         pos = list_val.position(item)
         if pos is not None:
-            return AIFPLNumber(pos)
+            return AIFPLInteger(pos)
 
         return AIFPLBoolean(False)
 
@@ -475,20 +475,16 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"number? requires exactly 1 argument, got {len(args)}")
 
-        # Phase 1: Accept both old AIFPLNumber and new typed numbers
-        return AIFPLBoolean(isinstance(args[0], (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)))
+        return AIFPLBoolean(isinstance(args[0], (AIFPLInteger, AIFPLFloat, AIFPLComplex)))
 
     def _builtin_integer_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement integer? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"integer? requires exactly 1 argument, got {len(args)}")
 
-        # Phase 2: Accept both old AIFPLNumber and new AIFPLInteger
         arg = args[0]
         if isinstance(arg, AIFPLInteger):
             return AIFPLBoolean(True)
-        if isinstance(arg, AIFPLNumber):
-            return AIFPLBoolean(arg.is_integer())
         return AIFPLBoolean(False)
 
     def _builtin_float_p(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -496,12 +492,9 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"float? requires exactly 1 argument, got {len(args)}")
 
-        # Phase 2: Accept both old AIFPLNumber and new AIFPLFloat
         arg = args[0]
         if isinstance(arg, AIFPLFloat):
             return AIFPLBoolean(True)
-        if isinstance(arg, AIFPLNumber):
-            return AIFPLBoolean(arg.is_float())
         return AIFPLBoolean(False)
 
     def _builtin_complex_p(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -509,12 +502,9 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"complex? requires exactly 1 argument, got {len(args)}")
 
-        # Phase 2: Accept both old AIFPLNumber and new AIFPLComplex
         arg = args[0]
         if isinstance(arg, AIFPLComplex):
             return AIFPLBoolean(True)
-        if isinstance(arg, AIFPLNumber):
-            return AIFPLBoolean(arg.is_complex())
         return AIFPLBoolean(False)
 
     def _builtin_string_p(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -553,31 +543,20 @@ class AIFPLCollectionsFunctions:
 
         return value
 
-    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber | AIFPLInteger | AIFPLFloat | AIFPLComplex:
+    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLInteger | AIFPLFloat | AIFPLComplex:
         """Ensure value is a number (old or new type), raise error if not."""
-        # Phase 1: Accept both old AIFPLNumber and new typed numbers
-        if not isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if not isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
 
         return value
 
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
-        """Ensure value is an integer (old or new type), raise error if not, return Python int."""
-        # Phase 1: Accept both old AIFPLNumber with integer value and new AIFPLInteger
+        """Ensure value is an integer, raise error if not, return Python int."""
         if isinstance(value, AIFPLInteger):
-            return value.value
-
-        if isinstance(value, AIFPLInteger) or (isinstance(value, AIFPLNumber) and value.is_integer()):
-            # Type narrowing: we know value.value is int here
-            assert isinstance(value.value, int), "is_integer() should guarantee int type"
             return value.value
 
         # Not an integer type
         if isinstance(value, (AIFPLFloat, AIFPLComplex)):
-            raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
-
-        if isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            # It's an AIFPLNumber but not an integer (float or complex)
             raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
 
         # Not a numeric type at all
@@ -814,7 +793,7 @@ class AIFPLCollectionsFunctions:
         start_val = args[0]
         end_val = args[1]
 
-        if not isinstance(start_val, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if not isinstance(start_val, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(
                 message="Range start must be a number",
                 received=f"Start: {start_val.type_name()}",
@@ -823,7 +802,7 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use numeric values for range bounds"
             )
 
-        if not isinstance(end_val, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if not isinstance(end_val, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(
                 message="Range end must be a number",
                 received=f"End: {end_val.type_name()}",
@@ -832,10 +811,10 @@ class AIFPLCollectionsFunctions:
                 suggestion="Use numeric values for range bounds"
             )
 
-        if not (isinstance(start_val, AIFPLInteger) or (isinstance(start_val, AIFPLNumber) and start_val.is_integer())):
+        if not isinstance(start_val, AIFPLInteger):
             raise AIFPLEvalError("Range start must be an integer")
 
-        if not (isinstance(end_val, AIFPLInteger) or (isinstance(end_val, AIFPLNumber) and end_val.is_integer())):
+        if not isinstance(end_val, AIFPLInteger):
             raise AIFPLEvalError("Range end must be an integer")
 
         start_int = int(start_val.value.real) if isinstance(start_val.value, complex) else int(start_val.value)
@@ -843,7 +822,7 @@ class AIFPLCollectionsFunctions:
 
         if len(args) == 3:
             step_val = args[2]
-            if not isinstance(step_val, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+            if not isinstance(step_val, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
                 raise AIFPLEvalError(
                     message="Range step must be a number",
                     received=f"Step: {step_val.type_name()}",
@@ -851,7 +830,7 @@ class AIFPLCollectionsFunctions:
                     example="(range 0 10 2)",
                     suggestion="Use numeric values for range parameters"
                 )
-            if not (isinstance(step_val, AIFPLInteger) or (isinstance(step_val, AIFPLNumber) and step_val.is_integer())):
+            if not isinstance(step_val, AIFPLInteger):
                 raise AIFPLEvalError("Range step must be an integer")
 
             step_int = int(step_val.value.real) if isinstance(step_val.value, complex) else int(step_val.value)
@@ -869,5 +848,5 @@ class AIFPLCollectionsFunctions:
             )
 
         range_values = list(range(start_int, end_int, step_int))
-        elements = tuple(AIFPLNumber(val) for val in range_values)
+        elements = tuple(AIFPLInteger(val) for val in range_values)
         return AIFPLList(elements)

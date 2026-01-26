@@ -28,52 +28,8 @@ class AIFPLValue(ABC):
 
 
 @dataclass(frozen=True)
-class AIFPLNumber(AIFPLValue):
-    """Represents numeric values: integers, floats, complex numbers."""
-    value: Union[int, float, complex]
-
-    def is_self_evaluating(self) -> bool:
-        return True
-
-    def to_python(self) -> Union[int, float, complex]:
-        return self.value
-
-    def type_name(self) -> str:
-        if isinstance(self.value, int):
-            return "integer"
-
-        if isinstance(self.value, float):
-            return "float"
-
-        return "complex"
-
-    def is_integer(self) -> bool:
-        """Check if this number is an integer."""
-        return isinstance(self.value, int)
-
-    def is_float(self) -> bool:
-        """Check if this number is a float."""
-        return isinstance(self.value, float)
-
-    def is_complex(self) -> bool:
-        """Check if this number is complex."""
-        return isinstance(self.value, complex)
-
-    def __eq__(self, other: Any) -> bool:
-        """Compare numeric values, allowing cross-type comparison with new typed numbers."""
-        if isinstance(other, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            return self.value == other.value
-
-        return False
-
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
-
-
-@dataclass(frozen=True)
 class AIFPLInteger(AIFPLValue):
-    """Represents integer values (new typed number system)."""
+    """Represents integer values."""
     value: int
 
     def is_self_evaluating(self) -> bool:
@@ -87,7 +43,7 @@ class AIFPLInteger(AIFPLValue):
 
     def __eq__(self, other: Any) -> bool:
         """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if isinstance(other, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             return self.value == other.value
 
         return False
@@ -99,7 +55,7 @@ class AIFPLInteger(AIFPLValue):
 
 @dataclass(frozen=True)
 class AIFPLFloat(AIFPLValue):
-    """Represents floating-point values (new typed number system)."""
+    """Represents floating-point values."""
     value: float
 
     def is_self_evaluating(self) -> bool:
@@ -113,7 +69,7 @@ class AIFPLFloat(AIFPLValue):
 
     def __eq__(self, other: Any) -> bool:
         """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if isinstance(other, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             return self.value == other.value
 
         return False
@@ -125,7 +81,7 @@ class AIFPLFloat(AIFPLValue):
 
 @dataclass(frozen=True)
 class AIFPLComplex(AIFPLValue):
-    """Represents complex number values (new typed number system)."""
+    """Represents complex number values."""
     value: complex
 
     def is_self_evaluating(self) -> bool:
@@ -139,7 +95,7 @@ class AIFPLComplex(AIFPLValue):
 
     def __eq__(self, other: Any) -> bool:
         """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if isinstance(other, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             return self.value == other.value
         return False
 
@@ -428,10 +384,6 @@ class AIFPLAList(AIFPLValue):
         """Convert AIFPL key to hashable Python value."""
         if isinstance(key, AIFPLString):
             return ('str', key.value)
-
-        # Phase 2: Handle both old and new number types
-        if isinstance(key, AIFPLNumber):
-            return ('num', key.value)
 
         if isinstance(key, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             return ('num', key.value)

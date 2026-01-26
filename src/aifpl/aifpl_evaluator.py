@@ -8,7 +8,7 @@ from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_pattern_matcher import AIFPLPatternMatcher
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLSymbol,
+    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLSymbol,
     AIFPLList, AIFPLAList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLTailCall
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
@@ -849,20 +849,19 @@ class AIFPLEvaluator:
         if isinstance(result, AIFPLFloat) and result.value.is_integer():
             return AIFPLInteger(int(result.value))
 
-        # Old AIFPLNumber type (for backward compatibility during migration)
-        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, complex):
+        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, complex):
             # If imaginary part is effectively zero, return just the real part
             if abs(result.value.imag) < self.floating_point_tolerance:
                 real_part = result.value.real
                 # Convert to int if it's a whole number
                 if isinstance(real_part, float) and real_part.is_integer():
-                    return AIFPLNumber(int(real_part))
+                    return AIFPLInteger(int(real_part))
 
-                return AIFPLNumber(real_part)
+                return AIFPLFloat(real_part)
 
         # For real numbers, convert float to int if it's a whole number
-        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, float) and result.value.is_integer():
-            return AIFPLNumber(int(result.value))
+        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, float) and result.value.is_integer():
+            return AIFPLInteger(int(result.value))
 
         return result
 
@@ -883,7 +882,6 @@ class AIFPLEvaluator:
             escaped_content = self._escape_string_for_lisp(result.value)
             return f'"{escaped_content}"'
 
-        # Phase 1: Handle both old AIFPLNumber and new typed numbers
         if isinstance(result, AIFPLInteger):
             return str(result.value)
 
@@ -901,7 +899,7 @@ class AIFPLEvaluator:
         if isinstance(result, AIFPLComplex):
             return str(result.value)
 
-        if isinstance(result, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             # Old unified number type - format based on value type
             if isinstance(result.value, int):
                 return str(result.value)
