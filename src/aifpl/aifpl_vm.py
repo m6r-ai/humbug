@@ -26,7 +26,6 @@ class Frame:
     locals: List[AIFPLValue | None] = field(init=False)  # Local variables
     closure_env: Any = None  # Closure environment for this frame
 
-
     def __post_init__(self) -> None:
         """Initialize locals array based on code object."""
         self.locals = [None] * self.code.local_count
@@ -39,11 +38,12 @@ class AIFPLVM:
     Uses a stack-based architecture with lexically-scoped frames.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, floating_point_tolerance: float = 1e-10) -> None:
         self.stack: List[AIFPLValue] = []
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
         self.message_builder = ErrorMessageBuilder()
+        self.floating_point_tolerance = floating_point_tolerance
 
         # Create builtin registry
         self._builtin_registry = AIFPLBuiltinRegistry()
@@ -100,62 +100,6 @@ class AIFPLVM:
         self.globals.update(self._builtin_functions)
         if prelude_functions:
             self.globals.update(prelude_functions)
-
-    def format_result(self, result: AIFPLValue) -> str:
-        """
-        Format result for display in error messages, using LISP conventions.
-
-        Args:
-            result: The result to format
-
-        Returns:
-            String representation of the result
-        """
-        if isinstance(result, AIFPLBoolean):
-            return "#t" if result.value else "#f"
-
-        if isinstance(result, AIFPLString):
-            # For error messages, show strings with quotes
-            return f'"{result.value}"'
-
-        if isinstance(result, AIFPLNumber):
-            return str(result.value)
-
-        if isinstance(result, AIFPLList):
-            # Format list in LISP notation: (element1 element2 ...)
-            if result.is_empty():
-                return "()"
-
-            formatted_elements = []
-            for element in result.elements:
-                formatted_elements.append(self.format_result(element))
-
-            return f"({' '.join(formatted_elements)})"
-
-        if isinstance(result, AIFPLAList):
-            # Format alist in LISP notation
-            if result.is_empty():
-                return "(alist)"
-
-            formatted_pairs = []
-            for key, value in result.pairs:
-                formatted_key = self.format_result(key)
-                formatted_value = self.format_result(value)
-                formatted_pairs.append(f"({formatted_key} {formatted_value})")
-
-            pairs_str = ' '.join(formatted_pairs)
-            return f"(alist {pairs_str})"
-
-        if isinstance(result, AIFPLFunction):
-            # Use the describe method which handles both native and user-defined
-            if result.is_native:
-                return f"<builtin {result.name}>"
-
-            param_str = " ".join(result.parameters)
-            return f"<lambda ({param_str})>"
-
-        # For other types, use standard string representation
-        return str(result)
 
     def _get_available_globals(self) -> List[str]:
         """
@@ -807,3 +751,124 @@ class AIFPLVM:
 
         # Call through the registry
         return self._builtin_registry.call_builtin(builtin_name, args)
+
+    def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
+        """Simplify complex results to real numbers when imaginary part is negligible."""
+        if isinstance(result, AIFPLNumber) and isinstance(result.value, complex):
+            # If imaginary part is effectively zero, return just the real part
+            if abs(result.value.imag) < self.floating_point_tolerance:
+                real_part = result.value.real
+                # Convert to int if it's a whole number
+                if isinstance(real_part, float) and real_part.is_integer():
+                    return AIFPLNumber(int(real_part))
+
+                return AIFPLNumber(real_part)
+
+        # For real numbers, convert float to int if it's a whole number
+        if isinstance(result, AIFPLNumber) and isinstance(result.value, float) and result.value.is_integer():
+            return AIFPLNumber(int(result.value))
+
+        return result
+
+    def format_result(self, result: AIFPLValue) -> str:
+        """
+        Format result for display in error messages, using LISP conventions.
+
+        Args:
+            result: The result to format
+
+        Returns:
+            String representation of the result
+        """
+        if isinstance(result, AIFPLBoolean):
+            return "#t" if result.value else "#f"
+
+        if isinstance(result, AIFPLString):
+            escaped_content = self._escape_string_for_lisp(result.value)
+            return f'"{escaped_content}"'
+
+        if isinstance(result, AIFPLNumber):
+            if isinstance(result.value, float):
+                nice_number = self._is_close_to_nice_number(result.value)
+                if nice_number is not None:
+                    # If it's close to an integer, show as integer
+                    if nice_number == int(nice_number):
+                        return str(int(nice_number))
+
+                    return str(nice_number)
+
+            return str(result.value)
+
+        if isinstance(result, AIFPLList):
+            # Format list in LISP notation: (element1 element2 ...)
+            if result.is_empty():
+                return "()"
+
+            formatted_elements = []
+            for element in result.elements:
+                formatted_elements.append(self.format_result(element))
+
+            return f"({' '.join(formatted_elements)})"
+
+        if isinstance(result, AIFPLAList):
+            # Format alist in LISP notation
+            if result.is_empty():
+                return "(alist)"
+
+            formatted_pairs = []
+            for key, value in result.pairs:
+                formatted_key = self.format_result(key)
+                formatted_value = self.format_result(value)
+                formatted_pairs.append(f"({formatted_key} {formatted_value})")
+
+            pairs_str = ' '.join(formatted_pairs)
+            return f"(alist {pairs_str})"
+
+        if isinstance(result, AIFPLFunction):
+            # Use the describe method which handles both native and user-defined
+            if result.is_native:
+                return f"<builtin {result.name}>"
+
+            param_str = " ".join(result.parameters)
+            return f"<lambda ({param_str})>"
+
+        # For other types, use standard string representation
+        return str(result)
+
+    def _escape_string_for_lisp(self, s: str) -> str:
+        """Escape a string for LISP display format."""
+        result = []
+        for char in s:
+            if char == '"':
+                result.append('\\"')
+
+            elif char == '\\':
+                result.append('\\\\')
+
+            elif char == '\n':
+                result.append('\\n')
+
+            elif char == '\t':
+                result.append('\\t')
+
+            elif char == '\r':
+                result.append('\\r')
+
+            elif ord(char) < 32:  # Other control characters
+                result.append(f'\\u{ord(char):04x}')
+
+            else:
+                result.append(char)  # Keep Unicode as-is
+
+        return ''.join(result)
+
+    def _is_close_to_nice_number(self, value: float) -> float | None:
+        """Check if a float is very close to a 'nice' number and return the nice number if so."""
+        # Check if it's close to common fractions with small denominators
+        for denominator in range(1, 11):  # Check denominators 1-10
+            for numerator in range(-50, 51):  # Check reasonable range
+                nice_value = numerator / denominator
+                if abs(value - nice_value) < self.floating_point_tolerance:
+                    return nice_value
+
+        return None

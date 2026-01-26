@@ -162,7 +162,8 @@ class AIFPL:
             result = self.vm.execute(code)
 
             # VM returns AIFPLValue, convert to Python
-            return result.to_python()
+            simplified = self.vm.simplify_result(result)
+            return simplified.to_python()
 
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
@@ -178,6 +179,7 @@ class AIFPL:
 
         # Simplify the result
         simplified = evaluator.simplify_result(result)
+
         # Convert to Python types for backward compatibility
         return simplified.to_python()
 
@@ -210,7 +212,8 @@ class AIFPL:
             result = self.vm.execute(code)
 
             # VM returns AIFPLValue, format it
-            return self.vm.format_result(result)
+            simplified = self.vm.simplify_result(result)
+            return self.vm.format_result(simplified)
 
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
