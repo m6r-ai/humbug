@@ -322,7 +322,7 @@ def benchmark_bytecode(expression: str, iterations: int) -> Tuple[float, float]:
     vm = AIFPLVM()
     
     # Load prelude functions (same as AIFPL class does)
-    bytecode_prelude = AIFPL._load_prelude_for_vm(compiler, vm, AIFPL.CONSTANTS)
+    bytecode_prelude = AIFPL._load_prelude_for_vm(compiler, vm)
     
     # Warmup
     for _ in range(min(10, iterations // 10)):
@@ -332,7 +332,7 @@ def benchmark_bytecode(expression: str, iterations: int) -> Tuple[float, float]:
     times = []
     for _ in range(iterations):
         start = time.perf_counter()
-        vm.execute(code)
+        vm.execute(code, AIFPL.CONSTANTS, bytecode_prelude)
         elapsed = time.perf_counter() - start
         times.append(elapsed)
 
