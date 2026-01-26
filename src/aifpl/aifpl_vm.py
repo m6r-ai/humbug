@@ -519,6 +519,15 @@ class AIFPLVM:
             self.stack.append(result)
             return None
 
+        # Check arity for bytecode functions
+        expected_arity = func.bytecode.param_count
+        if arity != expected_arity:
+            func_name = func.name or "<lambda>"
+            raise AIFPLEvalError(
+                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
+                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+            )
+
         # Check for tail call optimization
         current_frame = self.frames[-1] if self.frames else None
         is_tail_call = False
