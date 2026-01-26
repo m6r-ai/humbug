@@ -595,19 +595,10 @@ class AIFPLEvaluator:
         )
 
         # Ensure this is an AST-based function (not bytecode)
-        if func.body is None:
-            raise AIFPLEvalError(
-                "Cannot evaluate bytecode function in AST evaluator - use VM instead"
-            )
+        assert func.body is not None, "Function body is missing for AST-based function"
 
         # Add call frame to stack for error reporting
-        self.call_stack.push(
-            function_name=func.name or "<lambda>",
-            arguments=param_bindings,
-            expression=func.body
-        )
-
-        # Track function in call chain for mutual recursion detection
+        self.call_stack.push(function_name=func.name or "<lambda>", arguments=param_bindings, expression=func.body)
         self.call_chain_list.append(func)
         self.call_chain_set.add(id(func))
 
