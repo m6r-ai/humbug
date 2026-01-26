@@ -98,16 +98,6 @@ Create, call, and manage functions and closures.
 | `PATCH_CLOSURE_SIBLING` | closure_idx, const_index | Patch closure for mutual recursion | `PATCH_CLOSURE_SIBLING 0 1` → add sibling reference |
 | `RETURN` | - | Return from function | `RETURN` → pop frame, return top of stack |
 
-### Lists (1 opcode)
-
-Construct lists from stack values.
-
-| Opcode | Args | Description | Example |
-|--------|------|-------------|---------|
-| `MAKE_LIST` | element_count | Make list from N stack items | `MAKE_LIST 3` → pop 3 items, create list |
-
-### Stack Manipulation (1 opcode)
-
 ## VM Execution Model
 
 ### Stack Machine

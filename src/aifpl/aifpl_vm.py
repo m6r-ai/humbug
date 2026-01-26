@@ -83,7 +83,6 @@ class AIFPLVM:
         table[Opcode.RETURN] = self._op_return
         table[Opcode.PATCH_CLOSURE_SELF] = self._op_patch_closure_self
         table[Opcode.PATCH_CLOSURE_SIBLING] = self._op_patch_closure_sibling
-        table[Opcode.MAKE_LIST] = self._op_make_list
         return table
 
     def _create_builtin_functions(self) -> Dict[str, AIFPLFunction]:
@@ -472,13 +471,6 @@ class AIFPLVM:
 
         # Add sibling to closure's environment
         target_closure.closure_environment.bindings[sibling_name] = sibling
-
-    def _op_make_list(self, _frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
-        """MAKE_LIST: Create list from N stack items."""
-        n = arg1
-        list_elements: List[AIFPLValue] = [self.stack.pop() for _ in range(n)]
-        list_elements.reverse()
-        self.stack.append(AIFPLList(tuple(list_elements)))
 
     def _call_bytecode_function(self, func: AIFPLFunction) -> AIFPLValue:
         """

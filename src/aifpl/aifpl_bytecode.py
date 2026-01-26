@@ -38,9 +38,6 @@ class Opcode(IntEnum):
     PATCH_CLOSURE_SIBLING = auto()  # Patch closure to add sibling reference: PATCH_CLOSURE_SIBLING closure_idx sibling_idx name_idx
     RETURN = auto()          # Return from function
 
-    # Lists
-    MAKE_LIST = auto()       # Make list from n stack items: MAKE_LIST n
-
 
 @dataclass
 class Instruction:
@@ -80,7 +77,7 @@ class Instruction:
             return f"{self.opcode.name} {self.arg1} {self.arg2}"
 
         # One-argument opcodes (LOAD_CONST, LOAD_NAME, JUMP, POP_JUMP_IF_FALSE,
-        # POP_JUMP_IF_TRUE, RAISE_ERROR, CALL_FUNCTION, MAKE_LIST)
+        # POP_JUMP_IF_TRUE, RAISE_ERROR, CALL_FUNCTION)
         return f"{self.opcode.name} {self.arg1}"
 
 
