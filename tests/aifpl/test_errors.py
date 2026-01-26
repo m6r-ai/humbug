@@ -366,17 +366,17 @@ class TestErrors:
     def test_higher_order_function_errors(self, aifpl):
         """Test that higher-order function errors are detected."""
         # Map/filter/fold predicates must return appropriate types
-        with pytest.raises(AIFPLEvalError, match="must return boolean"):
+        with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
             aifpl.evaluate('(filter (lambda (x) x) (list 1 2 3))')
 
-        with pytest.raises(AIFPLEvalError, match="must return boolean"):
+        with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
             aifpl.evaluate('(any? (lambda (x) "hello") (list 1 2 3))')
 
         # Higher-order functions require list arguments
-        with pytest.raises(AIFPLEvalError, match="must be a list"):
+        with pytest.raises(AIFPLEvalError, match="requires list argument"):
             aifpl.evaluate('(map (lambda (x) x) 42)')
 
-        with pytest.raises(AIFPLEvalError, match="must be a list"):
+        with pytest.raises(AIFPLEvalError, match="requires list argument"):
             aifpl.evaluate('(filter (lambda (x) #t) "hello")')
 
     def test_recursion_depth_limit_error(self, aifpl_custom):

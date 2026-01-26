@@ -532,10 +532,10 @@ class AIFPLEvaluator:
                 ) from e
 
             if func_value.is_native:
-                result = self._call_builtin_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
+                result = self._call_builtin_function(func_value, arg_values, env, depth)
 
             else:
-                result = self._call_lambda_function(cast(AIFPLFunction, func_value), arg_values, env, depth)
+                result = self._call_lambda_function(func_value, arg_values, env, depth)
 
             # Check if result is a tail call
             if isinstance(result, AIFPLTailCall):

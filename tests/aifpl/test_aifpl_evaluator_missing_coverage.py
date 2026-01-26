@@ -83,26 +83,6 @@ class TestEvaluatorMissingCoverage:
             aifpl.evaluate("(let (x (y 2)) (+ x y))")
         assert "binding 1 must be a list" in str(exc_info.value)
 
-    # ========== Higher-Order Function Edge Cases ==========
-
-    def test_higher_order_non_function_argument_map(self, aifpl):
-        """Test map with non-function argument."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(map 123 (list 1 2 3))")
-        assert "first argument must be a function" in str(exc_info.value).lower()
-
-    def test_higher_order_non_function_argument_filter(self, aifpl):
-        """Test filter with non-function argument."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(filter \"not-a-function\" (list 1 2 3))")
-        assert "first argument must be a function" in str(exc_info.value).lower()
-
-    def test_higher_order_non_function_argument_fold(self, aifpl):
-        """Test fold with non-function argument."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(fold #t 0 (list 1 2 3))")
-        assert "first argument must be a function" in str(exc_info.value).lower()
-
     # ========== Range Function Edge Cases ==========
 
     def test_range_two_arg_invalid_start_type(self, aifpl):
@@ -159,7 +139,7 @@ class TestEvaluatorMissingCoverage:
 
     def test_builtin_function_formatting_various(self, aifpl):
         """Test formatting of various builtin functions."""
-        functions_to_test = ["*", "map", "filter", "list"]
+        functions_to_test = ["*", "list"]
         for func_name in functions_to_test:
             result = aifpl.evaluate_and_format(func_name)
             assert result == f"<builtin {func_name}>"

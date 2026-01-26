@@ -519,6 +519,7 @@ class AIFPLVM:
         captured_values = []
         for _ in range(capture_count):
             captured_values.append(self.stack.pop())
+
         captured_values.reverse()
 
         # Create a dict mapping free var names to captured values
@@ -573,6 +574,7 @@ class AIFPLVM:
             result = func.native_impl(args)
             self.stack.append(result)
             return None
+
         # Check for tail call optimization
         current_frame = self.frames[-1] if self.frames else None
         is_tail_call = False
@@ -711,7 +713,8 @@ class AIFPLVM:
         return None
 
     def _call_bytecode_function(self, func: AIFPLFunction) -> AIFPLValue:
-        """Call a bytecode function.
+        """
+        Call a bytecode function.
 
         Arguments are already on the stack. The function prologue will pop them
         and store them in locals.
@@ -724,7 +727,7 @@ class AIFPLVM:
 
         # Store captured values in locals (after parameters)
         # The lambda compiler puts captured vars after parameters in the local space
-        if hasattr(func, 'captured_values') and func.captured_values:
+        if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 # Captured values start after parameters
                 new_frame.locals[code.param_count + i] = captured_val

@@ -1107,13 +1107,12 @@ class AIFPLCompiler:
             return f"(alist {pairs_str})"
 
         if isinstance(result, AIFPLFunction):
-            # Format lambda functions
+            # Use the describe method which handles both native and user-defined
+            if result.is_native:
+                return f"<builtin {result.name}>"
+
             param_str = " ".join(result.parameters)
             return f"<lambda ({param_str})>"
-
-        if isinstance(result, AIFPLFunction):
-            # Format builtin functions
-            return f"<builtin {result.name}>"
 
         # For other types, use standard string representation
         return str(result)
