@@ -176,6 +176,8 @@ class AIFPLCollectionsFunctions:
 
         try:
             # Try to parse as integer first
+            # Phase 1: Always return AIFPLNumber for compatibility
+            # Phase 2: Will return AIFPLInteger, AIFPLFloat, or AIFPLComplex
             if '.' not in string_arg.value and 'e' not in string_arg.value.lower() and 'j' not in string_arg.value.lower():
                 return AIFPLNumber(int(string_arg.value))
 
@@ -194,6 +196,7 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"number->string requires exactly 1 argument, got {len(args)}")
 
+        # Phase 1: Works with both old and new number types via _ensure_number
         num_arg = self._ensure_number(args[0], "number->string")
         return AIFPLString(str(num_arg.value))
 

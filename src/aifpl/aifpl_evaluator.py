@@ -8,7 +8,7 @@ from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_pattern_matcher import AIFPLPatternMatcher
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol,
+    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLSymbol,
     AIFPLList, AIFPLAList, AIFPLRecursivePlaceholder, AIFPLFunction, AIFPLTailCall
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
@@ -867,7 +867,33 @@ class AIFPLEvaluator:
             escaped_content = self._escape_string_for_lisp(result.value)
             return f'"{escaped_content}"'
 
+        # Phase 1: Handle both old AIFPLNumber and new typed numbers
+        if isinstance(result, AIFPLInteger):
+            return str(result.value)
+
+        if isinstance(result, AIFPLFloat):
+            nice_number = self._is_close_to_nice_number(result.value)
+            if nice_number is not None:
+                # If it's close to an integer, show as integer
+                if nice_number == int(nice_number):
+                    return str(int(nice_number))
+
+                return str(nice_number)
+
+            return str(result.value)
+
+        if isinstance(result, AIFPLComplex):
+            return str(result.value)
+
         if isinstance(result, AIFPLNumber):
+            # Old unified number type - format based on value type
+            if isinstance(result.value, int):
+                return str(result.value)
+
+            if isinstance(result.value, complex):
+                return str(result.value)
+
+            # Float
             if isinstance(result.value, float):
                 nice_number = self._is_close_to_nice_number(result.value)
                 if nice_number is not None:
