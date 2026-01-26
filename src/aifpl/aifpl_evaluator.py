@@ -512,8 +512,8 @@ class AIFPLEvaluator:
                 )
 
             # Check if this is a special form that needs unevaluated arguments
-            if func_value.is_native and func_value.name and self._is_special_form(func_value.name):
-                # Special forms get unevaluated arguments
+            if func_value.is_native and func_value.name and func_value.name in ['and', 'or']:
+                # Special forms get unevaluated arguments and evaluate themselves
                 if func_value.native_impl is None:
                     raise AIFPLEvalError(f"Function {func_value.name} has no native implementation")
 
@@ -548,11 +548,6 @@ class AIFPLEvaluator:
 
             # Regular result, return it
             return result
-
-    def _is_special_form(self, function_name: str) -> bool:
-        """Check if a function name is a special form that needs unevaluated arguments."""
-        # Only and/or need special forms for short-circuit evaluation
-        return function_name in ['and', 'or']
 
     def _call_lambda_function(
         self,
