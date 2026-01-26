@@ -100,13 +100,6 @@ class AIFPLVM:
 
         return builtins
 
-    def set_globals(self, globals_dict: Dict[str, AIFPLValue], prelude_functions: dict[str, AIFPLFunction] | None = None) -> None:
-        """Set global variables (constants like pi, e, j) and add builtin functions."""
-        self.globals = globals_dict.copy()
-        self.globals.update(self._builtin_functions)
-        if prelude_functions:
-            self.globals.update(prelude_functions)
-
     def _get_available_globals(self) -> List[str]:
         """
         Get list of available global variable names.
@@ -116,16 +109,28 @@ class AIFPLVM:
         """
         return list(self.globals.keys())
 
-    def execute(self, code: CodeObject) -> AIFPLValue:
+    def execute(
+        self,
+        code: CodeObject,
+        constants: Dict[str, AIFPLValue],
+        prelude_functions: Dict[str, AIFPLFunction] | None = None
+    ) -> AIFPLValue:
         """
         Execute a code object and return the result.
 
         Args:
             code: Compiled code object to execute
+            constants: Dictionary of constant values (e.g., pi, e, j)
+            prelude_functions: Optional dictionary of prelude functions
 
         Returns:
             Result value
         """
+        self.globals = constants.copy()
+        self.globals.update(self._builtin_functions)
+        if prelude_functions:
+            self.globals.update(prelude_functions)
+
         # Reset state
         self.stack = []
         self.frames = [Frame(code)]

@@ -67,8 +67,8 @@ class AIFPLEvaluator:
     def evaluate(
         self,
         expr: AIFPLValue,
-        constants: dict[str, AIFPLValue] | None = None,
-        prelude_functions: dict[str, AIFPLFunction] | None = None
+        constants: Dict[str, AIFPLValue] | None = None,
+        prelude_functions: Dict[str, AIFPLFunction] | None = None
     ) -> AIFPLValue:
         """
         Recursively evaluate AST.

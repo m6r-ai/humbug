@@ -106,8 +106,7 @@ class AIFPL:
             parser = AIFPLParser(tokens, source_code)
             expr = parser.parse()
             bytecode = compiler.compile(expr, name=f"<prelude:{name}>")
-            vm.set_globals(cls.CONSTANTS, {})
-            func = vm.execute(bytecode)
+            func = vm.execute(bytecode, cls.CONSTANTS, {})
             if isinstance(func, AIFPLFunction):
                 bytecode_prelude[name] = func
 
@@ -155,8 +154,7 @@ class AIFPL:
             # Load prelude and compile main expression
             bytecode_prelude = self._load_prelude_for_vm(compiler, vm)
             code = compiler.compile(parsed_expr)
-            vm.set_globals(self.CONSTANTS, bytecode_prelude)
-            result = vm.execute(code)
+            result = vm.execute(code, self.CONSTANTS, bytecode_prelude)
 
             # VM returns AIFPLValue, convert to Python
             simplified = vm.simplify_result(result)
@@ -208,8 +206,7 @@ class AIFPL:
             # Load prelude and compile main expression
             bytecode_prelude = self._load_prelude_for_vm(compiler, vm)
             code = compiler.compile(parsed_expr)
-            vm.set_globals(self.CONSTANTS, bytecode_prelude)
-            result = vm.execute(code)
+            result = vm.execute(code, self.CONSTANTS, bytecode_prelude)
 
             # VM returns AIFPLValue, format it
             simplified = vm.simplify_result(result)

@@ -23,13 +23,7 @@ def compile_and_run(expression: str) -> any:
 
     # Setup VM with globals
     vm = AIFPLVM()
-
-    # Add constants to globals (builtins are already in the VM)
-    evaluator = AIFPLEvaluator()
-    vm.set_globals(AIFPL.CONSTANTS)
-
-    # Execute
-    result = vm.execute(code)
+    result = vm.execute(code, AIFPL.CONSTANTS)
     return result
 
 
