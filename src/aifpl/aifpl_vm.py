@@ -143,9 +143,6 @@ class AIFPLVM:
         """
         Execute current frame using jump table dispatch.
 
-        This is the hot path - optimized for speed using a dispatch table
-        instead of if/elif chains for 2-3x better performance.
-
         Returns:
             Result value if frame returns, None if continuing execution
         """
@@ -183,22 +180,18 @@ class AIFPLVM:
     def _op_load_const(self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
         """LOAD_CONST: Push constant from pool onto stack."""
         self.stack.append(code.constants[arg1])
-        return None
 
     def _op_load_true(self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int) -> AIFPLValue | None:
         """LOAD_TRUE: Push boolean true onto stack."""
         self.stack.append(AIFPLBoolean(True))
-        return None
 
     def _op_load_false(self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int) -> AIFPLValue | None:
         """LOAD_FALSE: Push boolean false onto stack."""
         self.stack.append(AIFPLBoolean(False))
-        return None
 
     def _op_load_empty_list(self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int) -> AIFPLValue | None:
         """LOAD_EMPTY_LIST: Push empty list onto stack."""
         self.stack.append(AIFPLList(()))
-        return None
 
     def _op_load_var(self, _frame: Frame, _code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
         """LOAD_VAR: Load variable from frame at depth/index."""
@@ -221,7 +214,6 @@ class AIFPLVM:
             raise AIFPLEvalError(f"Uninitialized local variable at depth {depth}, index {index}")
 
         self.stack.append(value)
-        return None
 
     def _op_store_var(self, _frame: Frame, _code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
         """STORE_VAR: Store top of stack to variable at depth/index."""
@@ -230,7 +222,6 @@ class AIFPLVM:
         value = self.stack.pop()
         target_frame = self.frames[-(depth + 1)]
         target_frame.locals[index] = value
-        return None
 
     def _op_load_name(self, frame: Frame, code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
         """LOAD_NAME: Load global variable by name."""
@@ -239,11 +230,11 @@ class AIFPLVM:
         # First check closure environment (for recursive closures)
         if frame.closure_env and name in frame.closure_env.bindings:
             self.stack.append(frame.closure_env.bindings[name])
-            return None
+            return
 
         if name in self.globals:
             self.stack.append(self.globals[name])
-            return None
+            return
 
         # Not found - generate helpful error
         available_vars = self._get_available_globals()
@@ -267,7 +258,6 @@ class AIFPLVM:
     def _op_jump(self, frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
         """JUMP: Unconditional jump to instruction."""
         frame.ip = arg1
-        return None
 
     def _op_pop_jump_if_false(self, frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
         """POP_JUMP_IF_FALSE: Pop stack, jump if false."""
@@ -278,8 +268,6 @@ class AIFPLVM:
         if not condition.value:
             frame.ip = arg1
 
-        return None
-
     def _op_pop_jump_if_true(self, frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
         """POP_JUMP_IF_TRUE: Pop stack, jump if true."""
         condition = self.stack.pop()
@@ -288,8 +276,6 @@ class AIFPLVM:
 
         if condition.value:
             frame.ip = arg1
-
-        return None
 
     def _op_raise_error(self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
         """RAISE_ERROR: Raise error with message from constant pool."""
@@ -328,7 +314,6 @@ class AIFPLVM:
             captured_values=tuple(captured_values)
         )
         self.stack.append(closure)
-        return None
 
     def _op_call_function(self, _frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
         """CALL_FUNCTION: Call function with arguments from stack."""
@@ -362,7 +347,7 @@ class AIFPLVM:
 
             result = func.native_impl(args)
             self.stack.append(result)
-            return None
+            return
 
         # Check arity for bytecode functions
         expected_arity = func.bytecode.param_count
@@ -396,12 +381,11 @@ class AIFPLVM:
         if is_tail_call and is_self_recursive:
             assert current_frame is not None
             current_frame.ip = 0
-            return None  # Continue in same frame
+            return  # Continue in same frame
 
         # Normal call: create new frame
         result = self._call_bytecode_function(func)
         self.stack.append(result)
-        return None
 
     def _op_call_builtin(self, _frame: Frame, _code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
         """CALL_BUILTIN: Call builtin function by index."""
@@ -414,7 +398,6 @@ class AIFPLVM:
 
         result = self._call_builtin(builtin_index, args)
         self.stack.append(result)
-        return None
 
     def _op_return(self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int) -> AIFPLValue | None:
         """RETURN: Pop frame and return value from stack."""
@@ -459,7 +442,6 @@ class AIFPLVM:
 
         # Store patched closure back
         target_frame.locals[var_index] = patched_closure
-        return None
 
     def _op_patch_closure_sibling(self, _frame: Frame, code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
         """PATCH_CLOSURE_SIBLING: Patch closure to add sibling reference (for mutual recursion)."""
@@ -500,7 +482,6 @@ class AIFPLVM:
 
         # Add sibling to closure's environment
         target_closure.closure_environment.bindings[sibling_name] = sibling
-        return None
 
     def _op_make_list(self, _frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
         """MAKE_LIST: Create list from N stack items."""
@@ -508,7 +489,6 @@ class AIFPLVM:
         list_elements: List[AIFPLValue] = [self.stack.pop() for _ in range(n)]
         list_elements.reverse()
         self.stack.append(AIFPLList(tuple(list_elements)))
-        return None
 
     def _call_bytecode_function(self, func: AIFPLFunction) -> AIFPLValue:
         """

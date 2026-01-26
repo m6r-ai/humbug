@@ -3,7 +3,7 @@
 import math
 from typing import Union, Dict
 
-from aifpl.aifpl_value import AIFPLFunction, AIFPLNumber, AIFPLBoolean, AIFPLValue
+from aifpl.aifpl_value import AIFPLFunction, AIFPLNumber, AIFPLBoolean
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
@@ -93,8 +93,7 @@ class AIFPL:
     def _load_prelude_for_vm(
         cls,
         compiler: AIFPLCompiler,
-        vm: AIFPLVM,
-        constants: Dict[str, AIFPLValue]
+        vm: AIFPLVM
     ) -> Dict[str, AIFPLFunction]:
         """Load prelude as bytecode AIFPLFunction objects (cached)."""
         if cls._prelude_bytecode_cache is not None:
@@ -107,7 +106,7 @@ class AIFPL:
             parser = AIFPLParser(tokens, source_code)
             expr = parser.parse()
             bytecode = compiler.compile(expr, name=f"<prelude:{name}>")
-            vm.set_globals(constants, {})
+            vm.set_globals(cls.CONSTANTS, {})
             func = vm.execute(bytecode)
             if isinstance(func, AIFPLFunction):
                 bytecode_prelude[name] = func
@@ -127,11 +126,6 @@ class AIFPL:
         self.max_depth = max_depth
         self.floating_point_tolerance = floating_point_tolerance
         self.use_bytecode = use_bytecode
-
-        # Initialize bytecode components if needed
-        if use_bytecode:
-            self.compiler = AIFPLCompiler()
-            self.vm = AIFPLVM()
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
         """
@@ -155,14 +149,17 @@ class AIFPL:
         parsed_expr = parser.parse()
 
         if self.use_bytecode:
+            compiler = AIFPLCompiler()
+            vm = AIFPLVM()
+
             # Load prelude and compile main expression
-            bytecode_prelude = self._load_prelude_for_vm(self.compiler, self.vm, self.CONSTANTS)
-            code = self.compiler.compile(parsed_expr)
-            self.vm.set_globals(self.CONSTANTS, bytecode_prelude)
-            result = self.vm.execute(code)
+            bytecode_prelude = self._load_prelude_for_vm(compiler, vm)
+            code = compiler.compile(parsed_expr)
+            vm.set_globals(self.CONSTANTS, bytecode_prelude)
+            result = vm.execute(code)
 
             # VM returns AIFPLValue, convert to Python
-            simplified = self.vm.simplify_result(result)
+            simplified = vm.simplify_result(result)
             return simplified.to_python()
 
         evaluator = AIFPLEvaluator(
@@ -205,15 +202,18 @@ class AIFPL:
         parsed_expr = parser.parse()
 
         if self.use_bytecode:
+            compiler = AIFPLCompiler()
+            vm = AIFPLVM()
+
             # Load prelude and compile main expression
-            bytecode_prelude = self._load_prelude_for_vm(self.compiler, self.vm, self.CONSTANTS)
-            code = self.compiler.compile(parsed_expr)
-            self.vm.set_globals(self.CONSTANTS, bytecode_prelude)
-            result = self.vm.execute(code)
+            bytecode_prelude = self._load_prelude_for_vm(compiler, vm)
+            code = compiler.compile(parsed_expr)
+            vm.set_globals(self.CONSTANTS, bytecode_prelude)
+            result = vm.execute(code)
 
             # VM returns AIFPLValue, format it
-            simplified = self.vm.simplify_result(result)
-            return self.vm.format_result(simplified)
+            simplified = vm.simplify_result(result)
+            return vm.format_result(simplified)
 
         evaluator = AIFPLEvaluator(
             max_depth=self.max_depth,
