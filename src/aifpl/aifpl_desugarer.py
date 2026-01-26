@@ -14,7 +14,7 @@ This simplifies the compiler and enables better optimization.
 
 from typing import List, Tuple, Any, cast
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLNumber, AIFPLString, AIFPLBoolean
+    AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean
 )
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -431,7 +431,8 @@ class AIFPLDesugarer:
             Returns: ((number? #:match-tmp-1), [("n", #:match-tmp-1)])
         """
         # Literal patterns: numbers, strings, booleans
-        if isinstance(pattern, (AIFPLNumber, AIFPLString, AIFPLBoolean)):
+        # Phase 1: Accept both old and new numeric types as literals
+        if isinstance(pattern, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
             # Test: (= temp_var literal)
             test_expr = AIFPLList((
                 AIFPLSymbol('='),

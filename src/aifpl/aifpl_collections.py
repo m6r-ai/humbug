@@ -4,7 +4,8 @@ from typing import List, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction
+    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex,
+    AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList, AIFPLFunction
 )
 
 
@@ -472,28 +473,47 @@ class AIFPLCollectionsFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"number? requires exactly 1 argument, got {len(args)}")
 
-        return AIFPLBoolean(isinstance(args[0], AIFPLNumber))
+        # Phase 1: Accept both old AIFPLNumber and new typed numbers
+        return AIFPLBoolean(isinstance(args[0], (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)))
 
     def _builtin_integer_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement integer? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"integer? requires exactly 1 argument, got {len(args)}")
 
-        return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_integer())
+        # Phase 1: Accept both old AIFPLNumber and new AIFPLInteger
+        arg = args[0]
+        if isinstance(arg, AIFPLInteger):
+            return AIFPLBoolean(True)
+        if isinstance(arg, AIFPLNumber):
+            return AIFPLBoolean(arg.is_integer())
+        return AIFPLBoolean(False)
 
     def _builtin_float_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement float? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"float? requires exactly 1 argument, got {len(args)}")
 
-        return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_float())
+        # Phase 1: Accept both old AIFPLNumber and new AIFPLFloat
+        arg = args[0]
+        if isinstance(arg, AIFPLFloat):
+            return AIFPLBoolean(True)
+        if isinstance(arg, AIFPLNumber):
+            return AIFPLBoolean(arg.is_float())
+        return AIFPLBoolean(False)
 
     def _builtin_complex_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement complex? function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"complex? requires exactly 1 argument, got {len(args)}")
 
-        return AIFPLBoolean(isinstance(args[0], AIFPLNumber) and args[0].is_complex())
+        # Phase 1: Accept both old AIFPLNumber and new AIFPLComplex
+        arg = args[0]
+        if isinstance(arg, AIFPLComplex):
+            return AIFPLBoolean(True)
+        if isinstance(arg, AIFPLNumber):
+            return AIFPLBoolean(arg.is_complex())
+        return AIFPLBoolean(False)
 
     def _builtin_string_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string? function."""
@@ -531,25 +551,41 @@ class AIFPLCollectionsFunctions:
 
         return value
 
-    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber:
-        """Ensure value is a number, raise error if not."""
-        if not isinstance(value, AIFPLNumber):
+    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber | AIFPLInteger | AIFPLFloat | AIFPLComplex:
+        """Ensure value is a number (old or new type), raise error if not."""
+        # Phase 1: Accept both old AIFPLNumber and new typed numbers
+        if not isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
 
         return value
 
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
-        """Ensure value is an integer, raise error if not."""
-        if not isinstance(value, AIFPLNumber) or not value.is_integer():
+        """Ensure value is an integer (old or new type), raise error if not, return Python int."""
+        # Phase 1: Accept both old AIFPLNumber with integer value and new AIFPLInteger
+        if isinstance(value, AIFPLInteger):
+            return value.value
+
+        if isinstance(value, AIFPLNumber) and value.is_integer():
+            # Type narrowing: we know value.value is int here
+            assert isinstance(value.value, int), "is_integer() should guarantee int type"
+            return value.value
+
+        # Not an integer type
+        if isinstance(value, (AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
 
-        # Type narrowing: we know value.value is int here
-        assert isinstance(value.value, int), "is_integer() should guarantee int type"
-        return value.value
+        if isinstance(value, AIFPLNumber):
+            # It's an AIFPLNumber but not an integer (float or complex)
+            raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
+
+        # Not a numeric type at all
+        raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
+
 
     # AList functions
     def _builtin_alist(self, args: List[AIFPLValue]) -> AIFPLValue:
-        """Create alist from key-value pairs: (alist (list key1 val1) (list key2 val2) ...)
+        """
+        Create alist from key-value pairs: (alist (list key1 val1) (list key2 val2) ...)
 
         Each argument must be a 2-element list representing a key-value pair.
         """

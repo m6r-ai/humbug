@@ -4,7 +4,10 @@ from typing import List
 from dataclasses import dataclass
 from aifpl.aifpl_error import AIFPLParseError, ErrorMessageBuilder
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
-from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
+from aifpl.aifpl_value import (
+    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex,
+    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
+)
 
 
 @dataclass
@@ -48,12 +51,16 @@ class AIFPLParser:
         Args:
             tokens: List of tokens to parse
             expression: Original expression string for error context
+            use_typed_numbers: If True, create AIFPLInteger/Float/Complex instead of AIFPLNumber
         """
         self.tokens = tokens
         self.pos = 0
         self.current_token: AIFPLToken | None = tokens[0] if tokens else None
         self.expression = expression
         self.message_builder = ErrorMessageBuilder()
+
+        # Phase 1 migration flag: use new typed number system
+        self.use_typed_numbers = False  # Default to old behavior for now
 
         # Paren stack for tracking unclosed expressions
         self.paren_stack: List[ParenStackFrame] = []
@@ -116,6 +123,16 @@ class AIFPLParser:
 
         if token.type == AIFPLTokenType.NUMBER:
             self._advance()
+            # Phase 1 migration: conditionally create typed numbers
+            if self.use_typed_numbers:
+                if isinstance(token.value, int):
+                    return AIFPLInteger(token.value)
+
+                elif isinstance(token.value, float):
+                    return AIFPLFloat(token.value)
+
+                return AIFPLComplex(token.value)
+
             return AIFPLNumber(token.value)
 
         if token.type == AIFPLTokenType.STRING:

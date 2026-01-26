@@ -6,20 +6,64 @@ used by both the tree-walking evaluator and the bytecode VM.
 
 from typing import List, Dict, Callable
 
+from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
 from aifpl.aifpl_math import AIFPLMathFunctions
-from aifpl.aifpl_value import AIFPLValue, AIFPLFunction
+from aifpl.aifpl_value import (
+    AIFPLValue, AIFPLFunction, AIFPLNumber,
+    AIFPLInteger, AIFPLFloat, AIFPLComplex
+)
 
+
+# Helper functions for numeric type compatibility during Phase 1 migration
+
+def extract_numeric_value(value: AIFPLValue) -> int | float | complex:
+    """
+    Extract numeric value from either old AIFPLNumber or new typed number types.
+
+    This helper function allows builtins to work with both the old AIFPLNumber type
+    and the new AIFPLInteger/AIFPLFloat/AIFPLComplex types during the migration.
+
+    Args:
+        value: An AIFPL value that should be numeric
+
+    Returns:
+        The underlying Python numeric value (int, float, or complex)
+
+    Raises:
+        AIFPLEvalError: If value is not a numeric type
+    """
+    if isinstance(value, AIFPLNumber):
+        return value.value
+
+    if isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        return value.value
+
+    raise AIFPLEvalError(
+        message=f"Expected number, got {value.type_name()}",
+        suggestion="Use a numeric value (integer, float, or complex)"
+    )
+
+
+def is_numeric_type(value: AIFPLValue) -> bool:
+    """
+    Check if value is any numeric type (old or new).
+
+    Returns True for AIFPLNumber, AIFPLInteger, AIFPLFloat, or AIFPLComplex.
+    """
+    return isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
 
 class AIFPLBuiltinRegistry:
-    """Central registry for all builtin functions.
+    """
+    Central registry for all builtin functions.
 
     This class aggregates builtin implementations from various modules and provides
     a unified interface for both the evaluator and VM to access them.
     """
 
     def __init__(self, floating_point_tolerance: float = 1e-10):
-        """Initialize the builtin registry.
+        """
+        Initialize the builtin registry.
 
         Args:
             floating_point_tolerance: Tolerance for floating point operations
@@ -44,7 +88,8 @@ class AIFPLBuiltinRegistry:
 
 
     def get_function(self, name: str) -> Callable:
-        """Get a builtin function implementation by name.
+        """
+        Get a builtin function implementation by name.
 
         Args:
             name: Function name
@@ -58,7 +103,8 @@ class AIFPLBuiltinRegistry:
         return self._registry[name]
 
     def has_function(self, name: str) -> bool:
-        """Check if a builtin function exists.
+        """
+        Check if a builtin function exists.
 
         Args:
             name: Function name
@@ -69,7 +115,8 @@ class AIFPLBuiltinRegistry:
         return name in self._registry
 
     def get_all_names(self) -> List[str]:
-        """Get list of all builtin function names.
+        """
+        Get list of all builtin function names.
 
         Returns:
             List of function names
@@ -77,10 +124,11 @@ class AIFPLBuiltinRegistry:
         return list(self._registry.keys())
 
     def create_builtin_function_objects(self) -> Dict[str, AIFPLFunction]:
-        """Create AIFPLFunction objects for all builtins.
+        """
+        Create AIFPLFunction objects for all builtins.
 
         This is used by the evaluator to populate the global environment.
-        
+
         Builtins are represented as AIFPLFunction objects with:
         - native_impl set to the Python implementation
         - is_variadic=True for functions that accept any number of args
@@ -124,8 +172,9 @@ class AIFPLBuiltinRegistry:
         return func(args)
 
     def _is_variadic_builtin(self, name: str) -> bool:
-        """Determine if a builtin function is variadic.
-        
+        """
+        Determine if a builtin function is variadic.
+
         Returns True if the function accepts variable number of arguments.
         """
         # Arithmetic operations are variadic
@@ -152,8 +201,9 @@ class AIFPLBuiltinRegistry:
         return False
 
     def _get_builtin_parameters(self, name: str, is_variadic: bool) -> tuple:
-        """Get parameter tuple for a builtin function.
-        
+        """
+        Get parameter tuple for a builtin function.
+
         For variadic functions, returns ('args',) to indicate rest parameter.
         For fixed-arity functions, returns appropriate parameter names.
         """

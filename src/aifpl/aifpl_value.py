@@ -61,6 +61,51 @@ class AIFPLNumber(AIFPLValue):
 
 
 @dataclass(frozen=True)
+class AIFPLInteger(AIFPLValue):
+    """Represents integer values (new typed number system)."""
+    value: int
+
+    def is_self_evaluating(self) -> bool:
+        return True
+
+    def to_python(self) -> int:
+        return self.value
+
+    def type_name(self) -> str:
+        return "integer"
+
+
+@dataclass(frozen=True)
+class AIFPLFloat(AIFPLValue):
+    """Represents floating-point values (new typed number system)."""
+    value: float
+
+    def is_self_evaluating(self) -> bool:
+        return True
+
+    def to_python(self) -> float:
+        return self.value
+
+    def type_name(self) -> str:
+        return "float"
+
+
+@dataclass(frozen=True)
+class AIFPLComplex(AIFPLValue):
+    """Represents complex number values (new typed number system)."""
+    value: complex
+
+    def is_self_evaluating(self) -> bool:
+        return True
+
+    def to_python(self) -> complex:
+        return self.value
+
+    def type_name(self) -> str:
+        return "complex"
+
+
+@dataclass(frozen=True)
 class AIFPLString(AIFPLValue):
     """Represents string values."""
     value: str

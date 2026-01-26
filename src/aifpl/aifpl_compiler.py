@@ -8,7 +8,8 @@ from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
+    AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex,
+    AIFPLString, AIFPLBoolean,
     AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction
 )
 
@@ -236,6 +237,21 @@ class AIFPLCompiler:
 
         # Self-evaluating values
         if expr_type is AIFPLNumber:
+            const_index = ctx.add_constant(expr)
+            ctx.emit(Opcode.LOAD_CONST, const_index)
+            return
+
+        if expr_type is AIFPLInteger:
+            const_index = ctx.add_constant(expr)
+            ctx.emit(Opcode.LOAD_CONST, const_index)
+            return
+
+        if expr_type is AIFPLFloat:
+            const_index = ctx.add_constant(expr)
+            ctx.emit(Opcode.LOAD_CONST, const_index)
+            return
+
+        if expr_type is AIFPLComplex:
             const_index = ctx.add_constant(expr)
             ctx.emit(Opcode.LOAD_CONST, const_index)
             return

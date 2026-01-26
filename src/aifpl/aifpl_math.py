@@ -5,7 +5,7 @@ import math
 from typing import List, Union, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean
+from aifpl.aifpl_value import AIFPLValue, AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean
 
 
 class AIFPLMathFunctions:
@@ -14,6 +14,64 @@ class AIFPLMathFunctions:
     def __init__(self, floating_point_tolerance: float = 1e-10):
         """Initialize with floating point tolerance."""
         self.floating_point_tolerance = floating_point_tolerance
+
+    # Phase 1: Helper methods for working with both old and new number types
+
+    def _extract_numeric_value(self, value: AIFPLValue) -> Union[int, float, complex]:
+        """Extract Python numeric value from either old or new number types."""
+        if isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+            return value.value
+
+        if isinstance(value, AIFPLNumber):
+            return value.value
+
+        raise AIFPLEvalError(f"Expected number, got {value.type_name()}")
+
+    def _wrap_numeric_result(self, result: Union[int, float, complex]) -> AIFPLValue:
+        """
+        Wrap Python numeric value in appropriate AIFPL type.
+
+        Phase 1: Always returns old AIFPLNumber type for now.
+        In Phase 2, this will return typed numbers based on result type.
+        """
+        # For Phase 1, always return AIFPLNumber to maintain compatibility
+        return AIFPLNumber(result)
+
+    def _promote_numeric_types(self, values: List[Union[int, float, complex]]) -> type:
+        """
+        Determine the result type based on type promotion rules.
+
+        Rules:
+        - int + int -> int
+        - int + float -> float
+        - int + complex -> complex
+        - float + complex -> complex
+
+        Returns the Python type (int, float, or complex) for the result.
+        """
+        has_complex = any(isinstance(v, complex) for v in values)
+        if has_complex:
+            return complex
+
+        has_float = any(isinstance(v, float) for v in values)
+        if has_float:
+            return float
+
+        return int
+
+    def _is_numeric_type(self, value: AIFPLValue) -> bool:
+        """Check if value is any numeric type (old or new)."""
+        return isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex))
+
+    def _is_integer_type(self, value: AIFPLValue) -> bool:
+        """Check if value is an integer type."""
+        if isinstance(value, AIFPLInteger):
+            return True
+
+        if isinstance(value, AIFPLNumber):
+
+            return value.is_integer()
+        return False
 
     def get_functions(self) -> dict[str, Callable]:
         """Return dictionary of mathematical function implementations."""
@@ -77,58 +135,80 @@ class AIFPLMathFunctions:
     def _builtin_plus(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement + operation."""
         if not args:
-            return AIFPLNumber(0)
+            return self._wrap_numeric_result(0)
 
-        # Ensure all args are numbers
-        num_args = [self._ensure_number(arg, "+") for arg in args]
-        result = sum(arg.value for arg in num_args)
-        return AIFPLNumber(result)
+        # Phase 1: Extract values from both old and new types
+        values = []
+        for arg in args:
+            if not self._is_numeric_type(arg):
+                raise AIFPLEvalError(f"Function '+' requires numeric arguments, got {arg.type_name()}")
+
+            values.append(self._extract_numeric_value(arg))
+
+        return self._wrap_numeric_result(sum(values))
 
     def _builtin_minus(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement - operation."""
         if len(args) == 0:
             raise AIFPLEvalError("Function '-' requires at least 1 argument, got 0")
 
-        num_args = [self._ensure_number(arg, "-") for arg in args]
+        # Phase 1: Extract values from both old and new types
+        values = []
+        for arg in args:
+            if not self._is_numeric_type(arg):
+                raise AIFPLEvalError(f"Function '-' requires numeric arguments, got {arg.type_name()}")
+
+            values.append(self._extract_numeric_value(arg))
 
         if len(args) == 1:
-            return AIFPLNumber(-num_args[0].value)
+            return self._wrap_numeric_result(-values[0])
 
-        result = num_args[0].value
-        for arg in num_args[1:]:
-            result -= arg.value
+        result = values[0]
+        for val in values[1:]:
+            result -= val
 
-        return AIFPLNumber(result)
+        return self._wrap_numeric_result(result)
 
     def _builtin_star(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement * operation."""
         if not args:
-            return AIFPLNumber(1)
+            return self._wrap_numeric_result(1)
 
-        num_args = [self._ensure_number(arg, "*") for arg in args]
-        result = num_args[0].value
-        for arg in num_args[1:]:
-            result *= arg.value
+        # Phase 1: Extract values from both old and new types
+        values = []
+        for arg in args:
+            if not self._is_numeric_type(arg):
+                raise AIFPLEvalError(f"Function '*' requires numeric arguments, got {arg.type_name()}")
+            values.append(self._extract_numeric_value(arg))
 
-        return AIFPLNumber(result)
+        result = values[0]
+        for val in values[1:]:
+            result *= val
+        return self._wrap_numeric_result(result)
 
     def _builtin_slash(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement / operation."""
         if len(args) < 2:
             raise AIFPLEvalError("Function '/' requires at least 2 arguments, got " + str(len(args)))
 
-        num_args = [self._ensure_number(arg, "/") for arg in args]
+        # Phase 1: Extract values from both old and new types
+        values = []
+        for arg in args:
+            if not self._is_numeric_type(arg):
+                raise AIFPLEvalError(f"Function '/' requires numeric arguments, got {arg.type_name()}")
+
+            values.append(self._extract_numeric_value(arg))
 
         # Check for division by zero
-        for i, arg in enumerate(num_args[1:], 1):
-            if arg.value == 0:
+        for i, val in enumerate(values[1:], 1):
+            if val == 0:
                 raise AIFPLEvalError(f"Division by zero at argument {i+1}")
 
-        result = num_args[0].value
-        for arg in num_args[1:]:
-            result /= arg.value
+        result = values[0]
+        for val in values[1:]:
+            result /= val
 
-        return AIFPLNumber(result)
+        return self._wrap_numeric_result(result)
 
     def _builtin_slash_slash(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement // (floor division) operation."""
@@ -642,9 +722,10 @@ class AIFPLMathFunctions:
         return AIFPLNumber(complex(real_part, imag_part))
 
     # Helper methods for type checking and conversion
-    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber:
-        """Ensure value is a number, raise error if not."""
-        if not isinstance(value, AIFPLNumber):
+    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber | AIFPLInteger | AIFPLFloat | AIFPLComplex:
+        """Ensure value is a number (old or new type), raise error if not."""
+        # Phase 1: Accept both old AIFPLNumber and new typed numbers
+        if not isinstance(value, (AIFPLNumber, AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
 
         return value
@@ -657,16 +738,37 @@ class AIFPLMathFunctions:
         return value
 
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
-        """Ensure value is an integer, raise error if not."""
-        if not isinstance(value, AIFPLNumber) or not value.is_integer():
+        """Ensure value is an integer (old or new type), raise error if not, return Python int."""
+        # Phase 1: Accept both old AIFPLNumber with integer value and new AIFPLInteger
+        if isinstance(value, AIFPLInteger):
+            return value.value
+
+        if isinstance(value, AIFPLNumber) and value.is_integer():
+            # Type narrowing: we know value.value is int here
+            assert isinstance(value.value, int), "is_integer() should guarantee int type"
+            return value.value
+
+        # Not an integer type
+        if isinstance(value, (AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
 
-        # Type narrowing: we know value.value is int here
-        assert isinstance(value.value, int), "is_integer() should guarantee int type"
-        return value.value
+        if isinstance(value, AIFPLNumber):
+            # It's an AIFPLNumber but not an integer (float or complex)
+            raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
+
+        # Not a numeric type at all
+        raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
+
 
     def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> Union[int, float]:
         """Ensure value is a real number (int or float), raise error if complex."""
+        # Phase 1: Accept both old and new types, but reject complex
+        if isinstance(value, AIFPLComplex):
+            raise AIFPLEvalError(f"Function '{function_name}' does not support complex numbers")
+
+        if isinstance(value, (AIFPLInteger, AIFPLFloat)):
+            return value.value
+
         if not isinstance(value, AIFPLNumber):
             raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
 
