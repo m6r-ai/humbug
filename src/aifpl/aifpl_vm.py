@@ -92,13 +92,7 @@ class AIFPLVM:
         
         Uses the builtin registry to get standard implementations.
         """
-        builtins = self._builtin_registry.create_builtin_function_objects()
-
-        # Add special forms (these require special evaluation semantics)
-        builtins['and'] = AIFPLFunction(parameters=('args',), native_impl=self._builtin_and_special, name='and', is_variadic=True)
-        builtins['or'] = AIFPLFunction(parameters=('args',), native_impl=self._builtin_or_special, name='or', is_variadic=True)
-
-        return builtins
+        return self._builtin_registry.create_builtin_function_objects()
 
     def execute(
         self,
@@ -537,48 +531,6 @@ class AIFPLVM:
 
         # Call through the registry
         return self._builtin_registry.call_builtin(builtin_name, args)
-
-    def _builtin_and_special(self, args: List[AIFPLValue]) -> AIFPLBoolean:
-        """Handle AND with short-circuit evaluation."""
-        # Empty AND returns True (identity)
-        if not args:
-            return AIFPLBoolean(True)
-
-        for i, arg in enumerate(args):
-            if not isinstance(arg, AIFPLBoolean):
-                raise AIFPLEvalError(
-                    message=f"And operator argument {i+1} must be boolean",
-                    received=f"Argument {i+1}: {self.format_result(arg)} ({arg.type_name()})",
-                    expected="Boolean value (#t or #f)",
-                    example="(and (> x 0) (< x 10))",
-                    suggestion="Use comparison or boolean operators to create boolean values"
-                )
-
-            if not arg.value:
-                return AIFPLBoolean(False)
-
-        return AIFPLBoolean(True)
-
-    def _builtin_or_special(self, args: List[AIFPLValue]) -> AIFPLBoolean:
-        """Handle OR with short-circuit evaluation."""
-        # Empty OR returns False (identity)
-        if not args:
-            return AIFPLBoolean(False)
-
-        for i, arg in enumerate(args):
-            if not isinstance(arg, AIFPLBoolean):
-                raise AIFPLEvalError(
-                    message=f"Or operator argument {i+1} must be boolean",
-                    received=f"Argument {i+1}: {self.format_result(arg)} ({arg.type_name()})",
-                    expected="Boolean value (#t or #f)",
-                    example="(or (= x 0) (> x 10))",
-                    suggestion="Use comparison or boolean operators to create boolean values"
-                )
-
-            if arg.value:
-                return AIFPLBoolean(True)
-
-        return AIFPLBoolean(False)
 
     def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
         """Simplify complex results to real numbers when imaginary part is negligible."""
