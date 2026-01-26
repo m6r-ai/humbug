@@ -111,7 +111,7 @@ class TestAIFPLAIToolExecution:
             ("(+ 1 2 3)", "6"),
             ("(- 10 3)", "7"),
             ("(* 2 3 4)", "24"),
-            ("(/ 12 3)", "4.0"),
+            ("(/ 12 3)", "4"),
             ("(// 7 3)", "2"),
             ("(% 7 3)", "1"),
             ("(** 2 3)", "8"),
@@ -125,7 +125,7 @@ class TestAIFPLAIToolExecution:
     def test_execute_mathematical_functions(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with mathematical functions."""
         test_cases = [
-            ("(sqrt 16)", "4.0"),
+            ("(sqrt 16)", "4"),
             ("(abs -5)", "5"),
             ("(min 1 5 3)", "1"),
             ("(max 1 5 3)", "5"),
@@ -589,7 +589,7 @@ class TestAIFPLAIToolParametrized:
         ("(/ 8 2)", "4.0"),
 
         # Function calls
-        ("(sqrt 9)", "3.0"),
+        ("(sqrt 9)", "3"),
         ("(abs -7)", "7"),
         ("(max 1 5 3)", "5"),
 

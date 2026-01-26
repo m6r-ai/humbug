@@ -170,7 +170,7 @@ class TestAIFPLValueEdgeCases:
 
         # Complex numbers with zero parts
         result = aifpl.evaluate_and_format("(complex 5 0)")
-        assert result == "5"  # Should format as real
+        assert result == "5.0"  # Should format as real
 
         result = aifpl.evaluate_and_format("(complex 0 3)")
         assert result == "3j"  # Should format as pure imaginary

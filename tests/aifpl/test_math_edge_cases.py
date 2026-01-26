@@ -633,22 +633,22 @@ class TestAIFPLMathEdgeCases:
         assert isinstance(result, float)
 
         result = aifpl.evaluate("(* 2 3.0)")
-        assert result == 6
-        assert isinstance(result, int)
+        assert result == 6.0
+        assert isinstance(result, float)
 
         # Float to complex coercion
         result = aifpl.evaluate("(+ 2.5 j)")
-        assert result == 2.5+1j
+        assert result == 2.5+1.0j
         assert isinstance(result, complex)
 
         # Integer to complex coercion
         result = aifpl.evaluate("(+ 1 j)")
-        assert result == 1+1j
+        assert result == 1.0+1.0j
         assert isinstance(result, complex)
 
         # Mixed operations
         result = aifpl.evaluate("(+ 1 2.5 j)")
-        assert result == 3.5+1j
+        assert result == 3.5+1.0j
         assert isinstance(result, complex)
 
     def test_infinity_and_nan_edge_cases(self, aifpl):

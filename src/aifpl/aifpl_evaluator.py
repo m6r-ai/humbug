@@ -833,35 +833,27 @@ class AIFPLEvaluator:
         return AIFPLBoolean(False)
 
     def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
-        """Simplify complex results to real numbers when imaginary part is negligible."""
-        # Phase 2: Handle new AIFPLComplex type
+        """
+        Simplify complex results to real numbers when imaginary part is negligible.
+
+        Note: This method does NOT convert floats to integers, preserving type information.
+        E.g., 5.0 stays as AIFPLFloat(5.0), not converted to AIFPLInteger(5).
+        """
+        # Handle AIFPLComplex type - extract real part if imaginary is negligible
         if isinstance(result, AIFPLComplex):
             # If imaginary part is effectively zero, return just the real part
             if abs(result.value.imag) < self.floating_point_tolerance:
                 real_part = result.value.real
-                # Convert to int if it's a whole number
-                if isinstance(real_part, float) and real_part.is_integer():
-                    return AIFPLInteger(int(real_part))
-
+                # Preserve type: return as float (complex real parts are floats)
                 return AIFPLFloat(real_part)
 
-        # Handle new AIFPLFloat type - convert to int if whole number
-        if isinstance(result, AIFPLFloat) and result.value.is_integer():
-            return AIFPLInteger(int(result.value))
-
+        # Legacy handling for old unified number type (should be rare now)
         if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, complex):
             # If imaginary part is effectively zero, return just the real part
             if abs(result.value.imag) < self.floating_point_tolerance:
                 real_part = result.value.real
-                # Convert to int if it's a whole number
-                if isinstance(real_part, float) and real_part.is_integer():
-                    return AIFPLInteger(int(real_part))
-
+                # Preserve type: return as float
                 return AIFPLFloat(real_part)
-
-        # For real numbers, convert float to int if it's a whole number
-        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, float) and result.value.is_integer():
-            return AIFPLInteger(int(result.value))
 
         return result
 
@@ -882,41 +874,7 @@ class AIFPLEvaluator:
             escaped_content = self._escape_string_for_lisp(result.value)
             return f'"{escaped_content}"'
 
-        if isinstance(result, AIFPLInteger):
-            return str(result.value)
-
-        if isinstance(result, AIFPLFloat):
-            nice_number = self._is_close_to_nice_number(result.value)
-            if nice_number is not None:
-                # If it's close to an integer, show as integer
-                if nice_number == int(nice_number):
-                    return str(int(nice_number))
-
-                return str(nice_number)
-
-            return str(result.value)
-
-        if isinstance(result, AIFPLComplex):
-            return str(result.value)
-
         if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            # Old unified number type - format based on value type
-            if isinstance(result.value, int):
-                return str(result.value)
-
-            if isinstance(result.value, complex):
-                return str(result.value)
-
-            # Float
-            if isinstance(result.value, float):
-                nice_number = self._is_close_to_nice_number(result.value)
-                if nice_number is not None:
-                    # If it's close to an integer, show as integer
-                    if nice_number == int(nice_number):
-                        return str(int(nice_number))
-
-                    return str(nice_number)
-
             return str(result.value)
 
         if isinstance(result, AIFPLList):
@@ -939,7 +897,7 @@ class AIFPLEvaluator:
             for key, value in result.pairs:
                 formatted_key = self.format_result(key)
                 formatted_value = self.format_result(value)
-                formatted_pairs.append(f"({formatted_key} {formatted_value})")
+                formatted_pairs.append(f"(list {formatted_key} {formatted_value})")
 
             pairs_str = ' '.join(formatted_pairs)
             return f"(alist {pairs_str})"

@@ -25,7 +25,7 @@ class TestArithmetic:
         # Type promotion int -> float
         ("(+ 1 2.5)", "3.5"),
         ("(+ 1.5 2)", "3.5"),
-        ("(+ 1.1 2.2)", "3.3"),
+        ("(+ 1.1 2.2)", "3.3000000000000003"),  # Floating point precision
 
         # Type promotion int/float -> complex
         ("(+ 1 j)", "(1+1j)"),
@@ -80,12 +80,12 @@ class TestArithmetic:
         ("(* 7)", "7"),
 
         # Type promotion
-        ("(* 2 3.5)", "7"),
-        ("(* 2.5 4)", "10"),
+        ("(* 2 3.5)", "7.0"),  # int * float = float
+        ("(* 2.5 4)", "10.0"),  # float * int = float
 
         # Complex multiplication
         ("(* 2 j)", "2j"),
-        ("(* j j)", "-1"),
+        ("(* j j)", "-1.0"),  # j*j = -1, simplifies to float when imag part is 0
         ("(* (complex 2 3) (complex 1 4))", "(-10+11j)"),
 
         # Zero multiplication
@@ -103,17 +103,17 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic division
-        ("(/ 6 2)", "3"),
-        ("(/ 8 4)", "2"),
+        ("(/ 6 2)", "3.0"),  # Division always returns float
+        ("(/ 8 4)", "2.0"),  # Division always returns float
         ("(/ 7 2)", "3.5"),  # Integer division becomes float
 
         # Multiple arguments (left associative)
-        ("(/ 24 2 3)", "4"),  # ((24 / 2) / 3)
-        ("(/ 100 5 2)", "10"),  # ((100 / 5) / 2)
+        ("(/ 24 2 3)", "4.0"),  # ((24 / 2) / 3) - division always returns float
+        ("(/ 100 5 2)", "10.0"),  # ((100 / 5) / 2) - division always returns float
 
         # Type promotion
         ("(/ 5.0 2)", "2.5"),
-        ("(/ 10 2.5)", "4"),
+        ("(/ 10 2.5)", "4.0"),  # Division always returns float
 
         # Complex division
         ("(/ (complex 4 2) (complex 1 1))", "(3-1j)"),
@@ -143,8 +143,8 @@ class TestArithmetic:
         ("(// -7 -2)", "3"),
 
         # Float inputs
-        ("(// 7.5 2)", "3"),
-        ("(// 7 2.0)", "3"),
+        ("(// 7.5 2)", "3.0"),  # Floor division with float returns float
+        ("(// 7 2.0)", "3.0"),  # Floor division with float returns float
     ])
     def test_floor_division(self, aifpl, expression, expected):
         """Test floor division operation."""
@@ -168,7 +168,7 @@ class TestArithmetic:
 
         # Float inputs
         ("(% 7.5 3)", "1.5"),
-        ("(% 7 3.0)", "1"),
+        ("(% 7 3.0)", "1.0"),  # Modulo with float returns float
     ])
     def test_modulo(self, aifpl, expression, expected):
         """Test modulo operation."""
@@ -191,11 +191,11 @@ class TestArithmetic:
         ("(** 4 -2)", "0.0625"),
 
         # Float exponents
-        ("(** 4 0.5)", "2"),  # Square root
+        ("(** 4 0.5)", "2.0"),  # Square root - returns float
         ("(** 8 0.3333333333333333)", "2"),  # Cube root (approximately)
 
         # Complex exponentiation
-        ("(** j 2)", "-1"),
+        ("(** j 2)", "-1.0"),  # j^2 = -1, simplifies to float when imag part is 0
         ("(** (complex 1 1) 2)", "2j"),
     ])
     def test_exponentiation(self, aifpl, expression, expected):
@@ -265,13 +265,13 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Square root
-        ("(sqrt 4)", "2"),
-        ("(sqrt 9)", "3"),
-        ("(sqrt 16)", "4"),
+        ("(sqrt 4)", "2.0"),  # sqrt returns float
+        ("(sqrt 9)", "3.0"),  # sqrt returns float
+        ("(sqrt 16)", "4.0"),  # sqrt returns float
         ("(sqrt 2)", str(math.sqrt(2))),
 
         # Square root of zero
-        ("(sqrt 0)", "0"),
+        ("(sqrt 0)", "0.0"),  # sqrt returns float
     ])
     def test_sqrt_function(self, aifpl, expression, expected):
         """Test square root function."""
@@ -298,8 +298,8 @@ class TestArithmetic:
         ("(abs -3.14)", "3.14"),
 
         # Complex absolute value (magnitude)
-        ("(abs (complex 3 4))", "5"),  # |3+4i| = 5
-        ("(abs j)", "1"),  # |i| = 1
+        ("(abs (complex 3 4))", "5.0"),  # |3+4i| = 5, abs of complex returns float
+        ("(abs j)", "1.0"),  # |i| = 1, abs of complex returns float
     ])
     def test_abs_function(self, aifpl, expression, expected):
         """Test absolute value function."""
@@ -460,7 +460,7 @@ class TestArithmetic:
         # Complex number construction
         ("(complex 3 4)", "(3+4j)"),
         ("(complex 0 1)", "1j"),
-        ("(complex 5 0)", "5"),
+        ("(complex 5 0)", "5.0"),  # Complex with 0 imaginary simplifies to float
         ("(complex -2 -3)", "(-2-3j)"),
 
         # Real part extraction
@@ -497,10 +497,10 @@ class TestArithmetic:
         ("0O777", "511"),  # Uppercase
 
         # Scientific notation
-        ("1e2", "100"),
-        ("1.5e2", "150"),
+        ("1e2", "100.0"),  # Scientific notation produces float
+        ("1.5e2", "150.0"),  # Scientific notation produces float
         ("1E-2", "0.01"),
-        ("2.5E+1", "25"),
+        ("2.5E+1", "25.0"),  # Scientific notation produces float
     ])
     def test_number_format_literals(self, aifpl, number_format, expected):
         """Test various number format literals."""

@@ -27,26 +27,21 @@ class TestFormatting:
     @pytest.mark.parametrize("expression,expected_format", [
         # Float formatting
         ("3.14", "3.14"),
-        ("0.0", "0"),  # Should simplify to integer when possible
-        ("1.0", "1"),  # Should simplify to integer when possible
+        ("0.0", "0.0"),  # Preserves float type
+        ("1.0", "1.0"),  # Preserves float type
         ("-2.5", "-2.5"),
-        ("1.5e2", "150"),  # Scientific notation should be expanded
+        ("1.5e2", "150.0"),  # Scientific notation produces float
         ("1e-3", "0.001"),
     ])
     def test_float_formatting(self, aifpl, expression, expected_format):
         """Test float formatting in LISP output."""
-        result = aifpl.evaluate_and_format(expression)
-        if expected_format in ["0", "1", "150"]:
-            # These should be simplified to integers
-            assert result == expected_format
-        else:
-            assert result == expected_format
+        assert aifpl.evaluate_and_format(expression) == expected_format
 
     @pytest.mark.parametrize("expression,expected_format", [
         # Complex number formatting
         ("(complex 1 2)", "(1+2j)"),
         ("(complex 0 1)", "1j"),
-        ("(complex 3 0)", "3"),
+        ("(complex 3 0)", "3.0"),  # Simplifies to float when imaginary is 0
         ("(complex -1 -2)", "(-1-2j)"),
         ("j", "1j"),
         ("(* 2 j)", "2j"),
@@ -63,7 +58,7 @@ class TestFormatting:
 
         # Very small imaginary part should be simplified
         result = aifpl_default.evaluate_and_format("(+ 5 (* 1e-15 j))")
-        assert result == "5"  # Should be simplified to real
+        assert result == "5.0"  # Should be simplified to float (real part of complex)
 
         # Larger imaginary part should be preserved
         result = aifpl_default.evaluate_and_format("(+ 5 (* 1e-5 j))")
@@ -189,11 +184,11 @@ class TestFormatting:
 
         # Float results
         helpers.assert_evaluates_to(aifpl, '(/ 7 2)', '3.5')
-        helpers.assert_evaluates_to(aifpl, '(+ 1.5 2.5)', '4')  # Should simplify to integer
+        helpers.assert_evaluates_to(aifpl, '(+ 1.5 2.5)', '4.0')  # Preserves float type
 
         # Complex results
         helpers.assert_evaluates_to(aifpl, '(+ 1 j)', '(1+1j)')
-        helpers.assert_evaluates_to(aifpl, '(* j j)', '-1')
+        helpers.assert_evaluates_to(aifpl, '(* j j)', '-1.0')  # Simplifies to float when imag is 0
 
     def test_string_operation_result_formatting(self, aifpl, helpers):
         """Test that string operations produce properly formatted results."""

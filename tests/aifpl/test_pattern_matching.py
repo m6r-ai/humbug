@@ -569,7 +569,7 @@ class TestPatternMatching:
           (list (get-value (safe-divide 10 2))
                 (get-value (safe-divide 10 0))))
         '''
-        helpers.assert_evaluates_to(aifpl, option_example, '(5 "no value")')
+        helpers.assert_evaluates_to(aifpl, option_example, '(5.0 "no value")')
 
     def test_command_pattern_matching(self, aifpl, helpers):
         """Test pattern matching for command-like structures."""

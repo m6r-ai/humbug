@@ -595,7 +595,7 @@ class TestFunctional:
                 (value 4))
             (compute value)))
         '''
-        helpers.assert_evaluates_to(aifpl, complex_interaction, '40')  # 5*4 + 10*(4/2) = 20 + 20
+        helpers.assert_evaluates_to(aifpl, complex_interaction, '40.0')  # 5*4 + 10*(4/2) = 20 + 20
 
         # Nested let with lambda closures
         nested_complex = '''

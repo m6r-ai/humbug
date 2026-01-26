@@ -367,7 +367,7 @@ class TestConditionals:
         helpers.assert_evaluates_to(
             aifpl,
             '(if (> 10 0) (/ 20 10) "undefined")',
-            '2'
+            '2.0'
         )
 
         helpers.assert_evaluates_to(

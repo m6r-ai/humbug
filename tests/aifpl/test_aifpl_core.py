@@ -87,7 +87,7 @@ class TestAIFPLCore:
         helpers.assert_evaluates_to(aifpl, "(+ 1 2)", "3")
         helpers.assert_evaluates_to(aifpl, "(- 5 3)", "2")
         helpers.assert_evaluates_to(aifpl, "(* 2 3)", "6")
-        helpers.assert_evaluates_to(aifpl, "(/ 8 2)", "4")
+        helpers.assert_evaluates_to(aifpl, "(/ 8 2)", "4.0")
 
     def test_nested_expressions_integration(self, aifpl, helpers):
         """Test nested expressions through full pipeline."""

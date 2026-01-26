@@ -335,7 +335,7 @@ class TestStrings:
         ('(string->number "0")', '0'),
 
         # Scientific notation
-        ('(string->number "1e2")', '100'),
+        ('(string->number "1e2")', '100.0'),
         ('(string->number "1.5e-2")', '0.015'),
 
         # Complex numbers
