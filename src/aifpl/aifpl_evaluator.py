@@ -532,10 +532,12 @@ class AIFPLEvaluator:
                 ) from e
 
             if func_value.is_native:
-                result = self._call_builtin_function(func_value, arg_values, env, depth)
+                if func_value.native_impl is None:
+                    raise AIFPLEvalError(f"Function {func_value.name} has no native implementation")
 
-            else:
-                result = self._call_lambda_function(func_value, arg_values, env, depth)
+                return func_value.native_impl(arg_values)
+
+            result = self._call_lambda_function(func_value, arg_values, env, depth)
 
             # Check if result is a tail call
             if isinstance(result, AIFPLTailCall):
@@ -623,54 +625,6 @@ class AIFPLEvaluator:
             self.call_chain_list.pop()
             self.call_chain_set.discard(id(func))
             self.call_stack.pop()
-
-    def _call_builtin_function(
-        self,
-        func: AIFPLFunction,
-        arg_values: List[AIFPLValue],
-        env: AIFPLEnvironment,
-        depth: int
-    ) -> AIFPLValue:
-        """
-        Call a built-in function with its native implementation.
-
-        Special forms (and, or) receive env and depth for evaluation.
-        Regular builtins only receive args.
-
-        Args:
-            func: Built-in function to call
-            arg_values: Already-evaluated argument values
-            env: Current environment
-            depth: Current recursion depth
-
-        Returns:
-            Function result
-        """
-        try:
-            # Special forms need env and depth for evaluation, regular builtins don't
-            if func.name and self._is_special_form(func.name):
-                if func.native_impl is None:
-                    raise AIFPLEvalError(f"Function {func.name} has no native implementation")
-
-                return func.native_impl(arg_values, env, depth)
-
-            # Higher-order functions need special handling for lambda arguments
-            if func.native_impl is None:
-                raise AIFPLEvalError(f"Function {func.name} has no native implementation")
-
-            return func.native_impl(arg_values)
-
-        except AIFPLEvalError:
-            # Re-raise AIFPL errors as-is
-            raise
-
-        except Exception as e:
-            # Wrap other exceptions with context
-            raise AIFPLEvalError(
-                message=f"Error in built-in function '{func.name}'",
-                context=str(e),
-                suggestion="This is an internal error - please report this issue"
-            ) from e
 
     def _evaluate_expression_with_tail_detection(
         self,

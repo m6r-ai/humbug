@@ -100,15 +100,6 @@ class AIFPLVM:
 
         return builtins
 
-    def _get_available_globals(self) -> List[str]:
-        """
-        Get list of available global variable names.
-
-        Returns:
-            List of global variable names
-        """
-        return list(self.globals.keys())
-
     def execute(
         self,
         code: CodeObject,
@@ -242,7 +233,7 @@ class AIFPLVM:
             return
 
         # Not found - generate helpful error
-        available_vars = self._get_available_globals()
+        available_vars = list(self.globals.keys())
         similar = self.message_builder.suggest_similar_functions(name, available_vars, max_suggestions=3)
 
         suggestion_text = (
