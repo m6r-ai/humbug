@@ -52,7 +52,7 @@ class AIFPLVM:
         self.builtin_symbols = set(AIFPLCompiler.BUILTIN_TABLE)
 
         # Create builtin function objects for first-class function support (e.g., passed to map)
-        self._builtin_functions = self._create_builtin_functions()
+        self._builtin_functions = self._builtin_registry.create_builtin_function_objects()
 
         # Build dispatch table for fast opcode execution
         # This is a critical optimization: jump table dispatch is 2-3x faster than if/elif chains
@@ -84,14 +84,6 @@ class AIFPLVM:
         table[Opcode.PATCH_CLOSURE_SELF] = self._op_patch_closure_self
         table[Opcode.PATCH_CLOSURE_SIBLING] = self._op_patch_closure_sibling
         return table
-
-    def _create_builtin_functions(self) -> Dict[str, AIFPLFunction]:
-        """
-        Create AIFPLFunction objects for all builtins.
-        
-        Uses the builtin registry to get standard implementations.
-        """
-        return self._builtin_registry.create_builtin_function_objects()
 
     def execute(
         self,

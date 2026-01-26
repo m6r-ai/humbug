@@ -42,24 +42,12 @@ class AIFPLEvaluator:
         self.pattern_matcher = AIFPLPatternMatcher(self.format_result)
 
         # Create built-in functions with their native implementations
-        self._builtin_functions = self._create_builtin_functions()
+        self._builtin_functions = self.builtin_registry.create_builtin_function_objects()
 
     def set_expression_context(self, expression: str) -> None:
         """Set the current expression for error context."""
         self.current_expression = expression
 
-    def _create_builtin_functions(self) -> dict[str, AIFPLFunction]:
-        """Create all built-in functions with their native implementations."""
-        # Get all regular builtins from the registry
-        builtins = self.builtin_registry.create_builtin_function_objects()
-
-        # Add special forms (these require special evaluation semantics)
-        builtins['and'] = AIFPLFunction(parameters=('args',), native_impl=self._builtin_and_special, name='and', is_variadic=True)
-        builtins['or'] = AIFPLFunction(parameters=('args',), native_impl=self._builtin_or_special, name='or', is_variadic=True)
-
-        return builtins
-
-    # Helper methods for common type checking patterns
     def _is_symbol_with_name(self, value: AIFPLValue, name: str) -> bool:
         """Check if value is a symbol with the given name."""
         return isinstance(value, AIFPLSymbol) and value.name == name
@@ -155,6 +143,12 @@ class AIFPLEvaluator:
 
             if self._is_symbol_with_name(first_elem, "let"):
                 return self._evaluate_let_form(expr, env, depth + 1, False)
+
+            if self._is_symbol_with_name(first_elem, "and"):
+                return self._evaluate_and_form(expr, env, depth + 1)
+
+            if self._is_symbol_with_name(first_elem, "or"):
+                return self._evaluate_or_form(expr, env, depth + 1)
 
             if self._is_symbol_with_name(first_elem, "match"):
                 return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
@@ -511,14 +505,6 @@ class AIFPLEvaluator:
                     suggestion=f"'{func_name}' is not a function - check spelling or define it first"
                 )
 
-            # Check if this is a special form that needs unevaluated arguments
-            if func_value.is_native and func_value.name and func_value.name in ['and', 'or']:
-                # Special forms get unevaluated arguments and evaluate themselves
-                if func_value.native_impl is None:
-                    raise AIFPLEvalError(f"Function {func_value.name} has no native implementation")
-
-                return func_value.native_impl(arg_exprs, current_env, depth)
-
             # Regular functions get evaluated arguments
             try:
                 arg_values = [self._evaluate_expression(arg, current_env, depth) for arg in arg_exprs]
@@ -674,6 +660,12 @@ class AIFPLEvaluator:
             if self._is_symbol_with_name(first_elem, 'let'):
                 return self._evaluate_let_form(expr, env, depth + 1, True)
 
+            if self._is_symbol_with_name(first_elem, 'and'):
+                return self._evaluate_and_form(expr, env, depth + 1)
+
+            if self._is_symbol_with_name(first_elem, 'or'):
+                return self._evaluate_or_form(expr, env, depth + 1)
+
             if self._is_symbol_with_name(first_elem, "match"):
                 return self.pattern_matcher.evaluate_match_form(expr, env, depth + 1, self._evaluate_expression)
 
@@ -750,13 +742,31 @@ class AIFPLEvaluator:
 
         return self._evaluate_expression_with_tail_detection(else_expr, env, depth + 1)
 
-    def _builtin_and_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
-        """Handle AND with short-circuit evaluation."""
-        # Empty AND returns True (identity)
+    def _evaluate_and_form(
+        self,
+        and_list: AIFPLList,
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLBoolean:
+        """
+        Evaluate (and expr1 expr2 ...) form with short-circuit evaluation.
+
+        Args:
+            and_list: List representing and expression
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Boolean result of the and operation
+        """
+        # Extract arguments (everything after 'and')
+        args = list(and_list.elements[1:])
+
+        # Empty (and) returns #t (identity for and)
         if not args:
             return AIFPLBoolean(True)
 
-        # Evaluate arguments one by one, short-circuiting on first False
+        # Evaluate arguments one by one, short-circuiting on first #f
         for i, arg in enumerate(args):
             result = self._evaluate_expression(arg, env, depth + 1)
 
@@ -777,13 +787,31 @@ class AIFPLEvaluator:
         # All arguments were True
         return AIFPLBoolean(True)
 
-    def _builtin_or_special(self, args: List[AIFPLValue], env: AIFPLEnvironment, depth: int) -> AIFPLBoolean:
-        """Handle OR with short-circuit evaluation."""
-        # Empty OR returns False (identity)
+    def _evaluate_or_form(
+        self,
+        or_list: AIFPLList,
+        env: AIFPLEnvironment,
+        depth: int
+    ) -> AIFPLBoolean:
+        """
+        Evaluate (or expr1 expr2 ...) form with short-circuit evaluation.
+
+        Args:
+            or_list: List representing or expression
+            env: Current environment
+            depth: Current recursion depth
+
+        Returns:
+            Boolean result of the or operation
+        """
+        # Extract arguments (everything after 'or')
+        args = list(or_list.elements[1:])
+
+        # Empty (or) returns #f (identity for or)
         if not args:
             return AIFPLBoolean(False)
 
-        # Evaluate arguments one by one, short-circuiting on first True
+        # Evaluate arguments one by one, short-circuiting on first #t
         for i, arg in enumerate(args):
             result = self._evaluate_expression(arg, env, depth + 1)
 
