@@ -260,10 +260,6 @@ class AIFPLCompiler:
 
         # List (function call or special form)
         if expr_type is AIFPLList:
-            if cast(AIFPLList, expr).is_empty():
-                ctx.emit(Opcode.LOAD_EMPTY_LIST)
-                return
-
             self._compile_list(cast(AIFPLList, expr), ctx)
             return
 
