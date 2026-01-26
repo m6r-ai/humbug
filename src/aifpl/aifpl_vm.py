@@ -1,6 +1,6 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
-from typing import List, Dict, Any, cast
+from typing import List, Dict, Any
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
@@ -10,7 +10,7 @@ from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLNumber, AIFPLString, AIFPLBoolean,
-    AIFPLList, AIFPLFunction, AIFPLSymbol, AIFPLAList
+    AIFPLList, AIFPLFunction, AIFPLAList
 )
 
 
@@ -115,167 +115,6 @@ class AIFPLVM:
             List of global variable names
         """
         return list(self.globals.keys())
-
-    def _values_equal(self, val1: AIFPLValue, val2: AIFPLValue) -> bool:
-        """
-        Check if two values are equal.
-
-        Args:
-            val1: First value
-            val2: Second value
-
-        Returns:
-            True if values are equal, False otherwise
-        """
-        # Different types are not equal
-        if type(val1) != type(val2):
-            return False
-
-        # Simple types: compare values directly
-        if isinstance(val1, AIFPLNumber):
-            return val1.value == cast(AIFPLNumber, val2).value
-
-        if isinstance(val1, AIFPLString):
-            return val1.value == cast(AIFPLString, val2).value
-
-        if isinstance(val1, AIFPLBoolean):
-            return val1.value == cast(AIFPLBoolean, val2).value
-
-        # Lists: compare element by element
-        if isinstance(val1, AIFPLList):
-            if len(val1.elements) != len(cast(AIFPLList, val2).elements):
-                return False
-
-            return all(self._values_equal(e1, e2) for e1, e2 in zip(val1.elements, cast(AIFPLList, val2).elements))
-
-        # For other types (functions, etc.), use identity comparison
-        return val1 is val2
-
-    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
-        """Ensure value is an integer, raise error if not."""
-        if not isinstance(value, AIFPLNumber) or not value.is_integer():
-            raise AIFPLEvalError(
-                f"Function '{function_name}' requires integer arguments, got {value.type_name()}"
-            )
-
-        # Type narrowing: we know value.value is int here
-        assert isinstance(value.value, int), "is_integer() should guarantee int type"
-        return value.value
-
-    def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> AIFPLNumber:
-        """Ensure value is a real number (int or float), raise error if complex."""
-        if not isinstance(value, AIFPLNumber):
-            raise AIFPLEvalError(
-                f"Function '{function_name}' requires numeric arguments, got {value.type_name()}"
-            )
-
-        if isinstance(value.value, complex):
-            raise AIFPLEvalError(
-                f"Function '{function_name}' does not support complex numbers"
-            )
-
-        return value
-
-    def _ensure_string(self, value: AIFPLValue, function_name: str) -> AIFPLString:
-        """Ensure value is a string, raise error if not."""
-        if not isinstance(value, AIFPLString):
-            raise AIFPLEvalError(
-                f"Function '{function_name}' requires string arguments, got {value.type_name()}"
-            )
-        return value
-
-    def _ensure_list(self, value: AIFPLValue, function_name: str) -> AIFPLList:
-        """Ensure value is a list, raise error if not."""
-        if not isinstance(value, AIFPLList):
-            raise AIFPLEvalError(
-                f"Function '{function_name}' requires list arguments, got {value.type_name()}"
-            )
-
-        return value
-
-    def _resolve_function(self, value: AIFPLValue) -> AIFPLFunction | None:
-        """Resolve a value to a function, handling builtin symbols."""
-        # If it's already a function, return it
-        if isinstance(value, AIFPLFunction):
-            return value
-
-        # If it's a symbol referring to a builtin, return the builtin function object
-        if isinstance(value, AIFPLSymbol):
-            if value.name in self.builtin_symbols:
-                # Get the builtin function from our own registry
-                return self._builtin_functions[value.name]
-
-        # Otherwise, it's not a valid function - return None
-        # Caller will handle the error with appropriate context
-        return None
-
-    def _raise_non_function_error(self, value: AIFPLValue, context: str) -> None:
-        """
-        Raise a detailed error for attempting to call a non-function value.
-
-        Args:
-            value: The value that was attempted to be called
-            context: The context where the call was attempted (e.g., "map", "filter")
-        """
-        # Build suggestion based on whether this is a symbol or not
-        if isinstance(value, AIFPLSymbol):
-            suggestion = f"'{value.name}' is not a function - check spelling or define it first"
-        else:
-            suggestion = "Only functions can be called - check that you're using correct syntax"
-
-        raise AIFPLEvalError(
-            message="Cannot call non-function value",
-            received=f"Trying to call: {self.format_result(value)} ({value.type_name()})",
-            context=f"In {context}: first argument must be a function",
-            expected="Function (builtin or lambda)",
-            example="(+ 1 2) calls function +\\n(42 1 2) tries to call number 42",
-            suggestion=suggestion
-        )
-
-    def _get_function_name(self, func: AIFPLValue) -> str:
-        """
-        Get function name for error messages.
-
-        Args:
-            func: Function value
-
-        Returns:
-            Function name or description
-        """
-        if isinstance(func, AIFPLFunction):
-            return func.name or "<lambda>"
-
-        return f"<{type(func).__name__}>"
-
-    def _format_call_stack(self) -> str:
-        """
-        Format call stack for error messages.
-
-        Returns:
-            Formatted call stack trace
-        """
-        if not self.frames:
-            return "No call stack"
-
-        lines = []
-        for i, frame in enumerate(self.frames):
-            depth = len(self.frames) - i - 1
-            func_name = frame.code.name or "<module>"
-            lines.append(f"  Frame {depth}: {func_name}")
-
-        return "\n".join(lines)
-
-    def _get_current_function_name(self) -> str:
-        """
-        Get name of currently executing function.
-
-        Returns:
-            Function name or '<module>' if at top level
-        """
-        if not self.frames:
-            return "<module>"
-
-        return self.frames[-1].code.name or "<lambda>"
 
     def execute(self, code: CodeObject) -> AIFPLValue:
         """
@@ -703,7 +542,8 @@ class AIFPLVM:
         raise AIFPLEvalError("Function did not return a value")
 
     def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
-        """Call a builtin function by index.
+        """
+        Call a builtin function by index.
 
         This method delegates to the unified builtin registry for regular builtins,
         and handles special forms (and, or, map, filter, fold, etc.) separately
