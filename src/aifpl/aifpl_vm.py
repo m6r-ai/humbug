@@ -92,7 +92,13 @@ class AIFPLVM:
         
         Uses the builtin registry to get standard implementations.
         """
-        return self._builtin_registry.create_builtin_function_objects()
+        builtins = self._builtin_registry.create_builtin_function_objects()
+
+        # Add special forms (these require special evaluation semantics)
+        builtins['and'] = AIFPLFunction(parameters=('args',), native_impl=self._builtin_and_special, name='and', is_variadic=True)
+        builtins['or'] = AIFPLFunction(parameters=('args',), native_impl=self._builtin_or_special, name='or', is_variadic=True)
+
+        return builtins
 
     def set_globals(self, globals_dict: Dict[str, AIFPLValue], prelude_functions: dict[str, AIFPLFunction] | None = None) -> None:
         """Set global variables (constants like pi, e, j) and add builtin functions."""
@@ -705,51 +711,6 @@ class AIFPLVM:
         """
         builtin_name = AIFPLCompiler.BUILTIN_TABLE[builtin_index]
 
-        # Special forms that need custom handling (not in the registry)
-        # These have special evaluation semantics and can't be handled generically
-
-        # Note: 'and' and 'or' are special forms in the evaluator but when called
-        # from bytecode, their arguments are already evaluated, so we can handle them simply
-        if builtin_name == 'and':
-            # All arguments are already evaluated by bytecode
-            if not args:
-                return AIFPLBoolean(True)
-
-            for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLBoolean):
-                    raise AIFPLEvalError(
-                        message=f"And operator argument {i+1} must be boolean",
-                        received=f"Argument {i+1}: {self.format_result(arg)} ({arg.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(and (> x 0) (< x 10))",
-                        suggestion="Use comparison or boolean operators to create boolean values"
-                    )
-
-                if not arg.value:
-                    return AIFPLBoolean(False)
-
-            return AIFPLBoolean(True)
-
-        if builtin_name == 'or':
-            # All arguments are already evaluated by bytecode
-            if not args:
-                return AIFPLBoolean(False)
-
-            for i, arg in enumerate(args):
-                if not isinstance(arg, AIFPLBoolean):
-                    raise AIFPLEvalError(
-                        message=f"Or operator argument {i+1} must be boolean",
-                        received=f"Argument {i+1}: {self.format_result(arg)} ({arg.type_name()})",
-                        expected="Boolean value (#t or #f)",
-                        example="(or (= x 0) (> x 10))",
-                        suggestion="Use comparison or boolean operators to create boolean values"
-                    )
-
-                if arg.value:
-                    return AIFPLBoolean(True)
-
-            return AIFPLBoolean(False)
-
         # Check if this builtin is in the registry
         if not self._builtin_registry.has_function(builtin_name):
             # Unknown builtin
@@ -760,6 +721,48 @@ class AIFPLVM:
 
         # Call through the registry
         return self._builtin_registry.call_builtin(builtin_name, args)
+
+    def _builtin_and_special(self, args: List[AIFPLValue]) -> AIFPLBoolean:
+        """Handle AND with short-circuit evaluation."""
+        # Empty AND returns True (identity)
+        if not args:
+            return AIFPLBoolean(True)
+
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLBoolean):
+                raise AIFPLEvalError(
+                    message=f"And operator argument {i+1} must be boolean",
+                    received=f"Argument {i+1}: {self.format_result(arg)} ({arg.type_name()})",
+                    expected="Boolean value (#t or #f)",
+                    example="(and (> x 0) (< x 10))",
+                    suggestion="Use comparison or boolean operators to create boolean values"
+                )
+
+            if not arg.value:
+                return AIFPLBoolean(False)
+
+        return AIFPLBoolean(True)
+
+    def _builtin_or_special(self, args: List[AIFPLValue]) -> AIFPLBoolean:
+        """Handle OR with short-circuit evaluation."""
+        # Empty OR returns False (identity)
+        if not args:
+            return AIFPLBoolean(False)
+
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLBoolean):
+                raise AIFPLEvalError(
+                    message=f"Or operator argument {i+1} must be boolean",
+                    received=f"Argument {i+1}: {self.format_result(arg)} ({arg.type_name()})",
+                    expected="Boolean value (#t or #f)",
+                    example="(or (= x 0) (> x 10))",
+                    suggestion="Use comparison or boolean operators to create boolean values"
+                )
+
+            if arg.value:
+                return AIFPLBoolean(True)
+
+        return AIFPLBoolean(False)
 
     def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
         """Simplify complex results to real numbers when imaginary part is negligible."""
