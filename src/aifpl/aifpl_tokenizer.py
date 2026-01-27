@@ -134,10 +134,11 @@ class AIFPLTokenizer:
 
             # Numbers (including complex, hex, binary, octal, scientific notation)
             # Check numbers BEFORE symbols to handle .5 correctly
-            if self._is_number_start(expression, i):
+            # Also check for 'j' or 'J' as it could be a complex literal like 'j' or '5j'
+            if self._is_number_start(expression, i) or self._is_complex_literal_start(expression, i):
                 try:
-                    number, length = self._read_number(expression, i)
-                    tokens.append(AIFPLToken(AIFPLTokenType.NUMBER, number, i, length))
+                    number_value, length, token_type = self._read_number(expression, i)
+                    tokens.append(AIFPLToken(token_type, number_value, i, length))
                     i += length
                     continue
 
@@ -293,6 +294,27 @@ class AIFPLTokenizer:
 
         return False
 
+    def _is_complex_literal_start(self, expression: str, pos: int) -> bool:
+        """
+        Check if position starts a complex literal like 'j', '-j', or is part of '5j'.
+
+        This handles standalone 'j' or 'J' which should be treated as complex literal 1j,
+        not as a symbol.
+        """
+        char = expression[pos]
+
+        # Check for 'j' or 'J' followed by delimiter
+        if char in 'jJ':
+            if pos + 1 >= len(expression) or self._is_delimiter(expression[pos + 1]):
+                return True
+
+        # Check for '-j' or '+j'
+        if char in '+-' and pos + 1 < len(expression) and expression[pos + 1] in 'jJ':
+            if pos + 2 >= len(expression) or self._is_delimiter(expression[pos + 2]):
+                return True
+
+        return False
+
     def _is_delimiter(self, char: str) -> bool:
         """Check if character is a LISP token delimiter."""
         return char.isspace() or char in "()'\";,"
@@ -437,12 +459,12 @@ class AIFPLTokenizer:
 
         return -value if negative else value
 
-    def _read_number(self, expression: str, start: int) -> tuple[Union[int, float, complex], int]:
+    def _read_number(self, expression: str, start: int) -> tuple[Union[int, float, complex], int, AIFPLTokenType]:
         """
-        Read a number literal from the expression using robust token boundary detection.
+        Read a number literal (including complex) from the expression.
 
         Returns:
-            Tuple of (number_value, length_consumed)
+            Tuple of (number_value, length_consumed, token_type)
 
         Raises:
             AIFPLTokenError: If the token is not a valid number
@@ -450,7 +472,12 @@ class AIFPLTokenizer:
         # Get the complete token until delimiter (this will check for control characters)
         complete_token = self._read_complete_token(expression, start)
 
-        # Validate that this token is a valid number
+        # Check if this is a complex number literal
+        if 'j' in complete_token.lower():
+            complex_value = self._parse_complex_literal(complete_token, start)
+            return complex_value, len(complete_token), AIFPLTokenType.COMPLEX
+
+        # Validate that this token is a valid real number
         if not self._is_valid_number(complete_token):
             raise AIFPLTokenError(
                 message=f"Invalid number format: {complete_token}",
@@ -459,12 +486,148 @@ class AIFPLTokenizer:
                 expected="Valid number format",
                 suggestion=f"Fix the number format: {complete_token}",
                 context="Token appears to be a number but contains invalid characters",
-                example="Valid: 1.23, .5, 42, 1e-10, 0xFF"
+                example="Valid: 1.23, .5, 42, 1e-10, 0xFF, 3+4j"
             )
 
         # Parse the valid number
         number_value = self._parse_number_value(complete_token)
-        return number_value, len(complete_token)
+
+        # Determine token type based on Python type
+        if isinstance(number_value, int):
+            token_type = AIFPLTokenType.INTEGER
+
+        elif isinstance(number_value, float):
+            token_type = AIFPLTokenType.FLOAT
+
+        else:
+            token_type = AIFPLTokenType.COMPLEX
+
+        return number_value, len(complete_token), token_type
+
+    def _parse_complex_literal(self, token: str, start: int) -> complex:
+        """
+        Parse a complex number literal.
+
+        Supported formats:
+        - j or J → 1j
+        - +j or -j → ±1j
+        - 4j → 4j
+        - -5j → -5j
+        - 3+4j → (3+4j)
+        - 3-4j → (3-4j)
+        - 1.5e2+3.7e-1j → (150+0.37j)
+
+        Args:
+            token: The complete token string
+            start: Position in expression
+
+        Returns:
+            Complex number value
+
+        Raises:
+            AIFPLTokenError: If the complex literal is malformed
+        """
+        # Validate it ends with 'j' or 'J'
+        if not token.endswith(('j', 'J')):
+            raise AIFPLTokenError(
+                message=f"Invalid complex literal: {token}",
+                position=start,
+                received=f"Token: {token}",
+                expected="Complex literal ending with 'j' or 'J'",
+                example="Valid: 3+4j, 2-5j, 4j, j",
+                suggestion="Add 'j' suffix for imaginary numbers",
+                context="Complex numbers must end with 'j' or 'J'"
+            )
+
+        token_without_j = token[:-1]
+
+        # Special case: just "j", "J", "+j", or "-j" → ±1j
+        if not token_without_j:
+            return complex(0, 1)
+
+        if token_without_j == '+':
+            return complex(0, 1)
+
+        if token_without_j == '-':
+            return complex(0, -1)
+
+        # Try to find the + or - that separates real and imaginary parts
+        separator_pos = self._find_complex_separator(token_without_j)
+
+        if separator_pos == -1:
+            # Pure imaginary number (e.g., "4j", "-5j")
+            try:
+                imag_part = float(token_without_j)
+                return complex(0, imag_part)
+
+            except ValueError as e:
+                raise AIFPLTokenError(
+                    message=f"Invalid imaginary part: {token_without_j}",
+                    position=start,
+                    received=f"Imaginary part: {token_without_j}",
+                    expected="Valid number format",
+                    example="Valid: 4j, -5j, 1.5e2j",
+                    suggestion="Check the number format before 'j'",
+                    context="The imaginary part must be a valid number"
+                ) from e
+
+        # Complex number with both real and imaginary parts
+        real_part_str = token_without_j[:separator_pos]
+        imag_part_str = token_without_j[separator_pos:]  # Includes the +/- sign
+
+        try:
+            real_part = float(real_part_str) if real_part_str else 0
+            imag_part = float(imag_part_str)
+            return complex(real_part, imag_part)
+
+        except ValueError as e:
+            raise AIFPLTokenError(
+                message=f"Invalid complex literal: {token}",
+                position=start,
+                received=f"Token: {token}",
+                expected="Valid complex number format",
+                example="Valid: 3+4j, 2-5j, 1.5e2+3.7e-1j",
+                suggestion="Check both real and imaginary parts are valid numbers",
+                context=f"Parse error: {str(e)}"
+            ) from e
+
+    def _find_complex_separator(self, token: str) -> int:
+        """
+        Find the position of + or - that separates real and imaginary parts.
+
+        Must handle scientific notation correctly (e.g., "1e-10+2" should find the +, not the -)
+
+        Examples:
+        - "3+4" → 1 (position of +)
+        - "3-4" → 1 (position of -)
+        - "1e-10+2" → 5 (position of +, not the - in e-10)
+        - "1.5e2+3.7e-1" → 5 (position of +)
+        - "4" → -1 (no separator, pure imaginary)
+        - "-5" → -1 (leading -, not separator)
+
+        Args:
+            token: Token without the trailing 'j'
+
+        Returns:
+            Position of separator, or -1 if not found (pure imaginary)
+        """
+        # Scan from left to right, skip over scientific notation
+        i = 0
+        if token and token[0] in '+-':
+            i = 1  # Skip leading sign
+
+        while i < len(token):
+            char = token[i]
+
+            # Check if this is a separator (not part of scientific notation)
+            if char in '+-':
+                # It's a separator if it's not immediately after 'e' or 'E'
+                if i > 0 and token[i-1].lower() != 'e':
+                    return i
+
+            i += 1
+
+        return -1  # No separator found
 
     def _is_symbol_start(self, char: str) -> bool:
         """Check if character can start a symbol."""

@@ -59,7 +59,6 @@ class AIFPL:
     CONSTANTS = {
         'pi': AIFPLFloat(math.pi),
         'e': AIFPLFloat(math.e),
-        'j': AIFPLComplex(1j),
         'true': AIFPLBoolean(True),
         'false': AIFPLBoolean(False),
     }

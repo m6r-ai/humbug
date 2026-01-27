@@ -225,7 +225,7 @@ class TestAIFPLTokenizerEdgeCases:
         valid_symbols = [
             "pi",           # Mathematical constant
             "e",            # Mathematical constant
-            "j",            # Imaginary unit
+            "j",            # Complex literal (1j)
             "+",            # Operator
             "-",            # Operator
             "*",            # Operator

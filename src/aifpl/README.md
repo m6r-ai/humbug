@@ -24,7 +24,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Number formats**: Integers, floats, complex numbers, hex (0xFF), binary (0b1010), octal (0o755)
 - **String literals**: `"hello world"` with escape sequences
 - **Boolean literals**: `#t` (true) and `#f` (false)
-- **Constants**: `pi`, `e`, `j` (imaginary unit), `true`, `false`
+- **Constants**: `pi`, `e`, `true`, `false`
 - **Type promotion**: Automatic promotion from int → float → complex
 - **Result simplification**: Complex numbers with negligible imaginary parts become real
 - **Comments**: `;` introduces comments
@@ -67,6 +67,15 @@ except AIFPLError as e:
 ```
 
 ## Supported Operations
+
+### Numeric literals
+
+```aifpl
+3                                     ; → 3 (integer)
+3.2                                   ; → 3.2 (float)
+3e-2                                  ; → 0.03 (float)
+5+2.3j                                ; → 5+2.3j (complex)
+```
 
 ### Quote - Data Literals and Code as Data
 
@@ -353,24 +362,24 @@ Lambda expressions create anonymous functions with lexical scoping and closure s
 #### Recursive Lambda Functions
 ```aifpl
 ; Factorial with tail recursion (automatically optimized)
-(let ((factorial (lambda (n acc)
-                   (if (<= n 1)
-                       acc
-                       (factorial (- n 1) (* n acc))))))
+(letrec ((factorial (lambda (n acc)
+                      (if (<= n 1)
+                          acc
+                          (factorial (- n 1) (* n acc))))))
   (factorial 5 1))                          ; → 120
 
 ; List sum with recursion
-(let ((sum-list (lambda (lst acc)
-                  (if (null? lst)
-                      acc
-                      (sum-list (rest lst) (+ acc (first lst)))))))
+(letrec ((sum-list (lambda (lst acc)
+                     (if (null? lst)
+                         acc
+                         (sum-list (rest lst) (+ acc (first lst)))))))
   (sum-list (list 1 2 3 4 5) 0))           ; → 15
 
 ; Fibonacci with mutual recursion
-(let ((fib-helper (lambda (n a b)
-                    (if (<= n 0)
-                        a
-                        (fib-helper (- n 1) b (+ a b))))))
+(letrec ((fib-helper (lambda (n a b)
+                       (if (<= n 0)
+                           a
+                           (fib-helper (- n 1) b (+ a b))))))
   (let ((fibonacci (lambda (n) (fib-helper n 0 1))))
     (fibonacci 10)))                        ; → 55
 ```
@@ -430,10 +439,10 @@ Let expressions create local variable bindings with sequential evaluation and le
     (square-then-add 4)))                   ; → 17
 
 ; Recursive function binding
-(let ((countdown (lambda (n)
-                   (if (<= n 0)
-                       (list)
-                       (cons n (countdown (- n 1)))))))
+(letrec ((countdown (lambda (n)
+                      (if (<= n 0)
+                          (list)
+                          (cons n (countdown (- n 1)))))))
   (countdown 5))                            ; → (5 4 3 2 1)
 ```
 
@@ -1032,22 +1041,22 @@ AIFPL provides powerful higher-order functions for functional programming patter
 #### Recursive Data Processing
 ```aifpl
 ; Process nested lists recursively
-(let ((deep-sum (lambda (lst)
-                  (if (null? lst)
-                      0
-                      (let ((head (first lst))
-                            (tail (rest lst)))
-                        (+ (if (list? head)
-                               (deep-sum head)
-                               head)
-                           (deep-sum tail)))))))
+(letrec ((deep-sum (lambda (lst)
+                     (if (null? lst)
+                         0
+                         (let ((head (first lst))
+                               (tail (rest lst)))
+                           (+ (if (list? head)
+                                  (deep-sum head)
+                                  head)
+                              (deep-sum tail)))))))
   (deep-sum (list 1 (list 2 3) 4)))        ; → 10
 
 ; Tree traversal patterns
-(let ((count-leaves (lambda (tree)
-                      (if (list? tree)
-                          (fold + 0 (map count-leaves tree))
-                          1))))
+(letrec ((count-leaves (lambda (tree)
+                         (if (list? tree)
+                             (fold + 0 (map count-leaves tree))
+                             1))))
   (count-leaves (list 1 (list 2 (list 3 4)) 5)))  ; → 5
 ```
 
@@ -1891,36 +1900,10 @@ AIFPL has a strict type system with the following types:
 The pure list approach provides several advantages:
 
 1. **True homoiconicity**: Code and data have identical representation
-2. **Simpler architecture**: Only `AIFPLValue` types, no special AST nodes
 3. **Traditional Lisp semantics**: Everything is data, following Lisp philosophy
 4. **Easier to understand**: One consistent representation for all expressions
 5. **Future extensibility**: Natural foundation for features like macros
 6. **Reduced complexity**: Fewer types, simpler parser, more straightforward evaluator
-
-### Internal Representation Examples
-
-```aifpl
-; Lambda expression: (lambda (x) (* x x))
-; Represented as: AIFPLList([AIFPLSymbol("lambda"), AIFPLList([AIFPLSymbol("x")]), AIFPLList([...])])
-
-; Let expression: (let ((x 5)) (+ x 1))
-; Represented as: AIFPLList([AIFPLSymbol("let"), AIFPLList([AIFPLList([...])]), ...])
-
-; Function call: (+ 1 2 3)
-; Represented as: AIFPLList([AIFPLSymbol("+"), AIFPLNumber(1), AIFPLNumber(2), AIFPLNumber(3)])
-
-; Quote expression: (quote (+ 1 2))
-; Represented as: AIFPLList([AIFPLSymbol("quote"), AIFPLList([AIFPLSymbol("+"), AIFPLNumber(1), AIFPLNumber(2)])])
-
-; Single quote shortcut: '(+ 1 2)
-; Represented as: AIFPLList([AIFPLSymbol("quote"), AIFPLList([AIFPLSymbol("+"), AIFPLNumber(1), AIFPLNumber(2)])])
-; (Identical to the full quote form - the shortcut is purely syntactic sugar)
-
-; Match expression: (match x ((number? n) (* n 2)) (_ "not a number"))
-; Represented as: AIFPLList([AIFPLSymbol("match"), AIFPLSymbol("x"), AIFPLList([...]), ...])
-```
-
-The evaluator recognizes special forms by examining the first element of lists, maintaining the traditional Lisp approach where syntax is determined by structure, not by special types.
 
 ## Common Usage Patterns
 
@@ -2209,10 +2192,10 @@ AIFPL automatically optimizes tail calls to prevent stack overflow in recursive 
   (factorial 1000 1))                       ; Works with large numbers
 
 ; Mutual recursion is also optimized
-(let ((is-even (lambda (n)
-                 (if (= n 0) #t (is-odd (- n 1)))))
-      (is-odd (lambda (n)
-                (if (= n 0) #f (is-even (- n 1))))))
+(letrec ((is-even (lambda (n)
+                    (if (= n 0) #t (is-odd (- n 1)))))
+         (is-odd (lambda (n)
+                   (if (= n 0) #f (is-even (- n 1))))))
   (is-even 10000))                          ; → #t (no stack overflow)
 ```
 
@@ -2401,192 +2384,3 @@ AIFPL uses a **pure list representation** for all code, following traditional Li
 - **No special AST nodes**: Lambda expressions, let expressions, and function calls are all just lists
 - **Homoiconic**: The same data structures represent both code and data
 - **Simple and consistent**: One unified representation for all expressions
-
-### Package Structure
-
-```plaintext
-src/aifpl/
-├── __init__.py              # Package exports
-├── aifpl.py                 # Main AIFPL class (public API)
-├── aifpl_error.py           # Exception classes
-├── aifpl_token.py           # Token types and definitions
-├── aifpl_tokenizer.py       # Tokenizer implementation
-├── aifpl_parser.py          # Parser (creates AIFPLValue objects)
-├── aifpl_evaluator.py       # Expression evaluator
-├── aifpl_environment.py     # Environment and function management
-├── aifpl_value.py           # Value hierarchy (AIFPLValue types)
-└── aifpl_dependency_analyzer.py  # Let binding dependency analysis
-```
-
-### Core Types
-
-- **AIFPLValue**: Base class for all values (numbers, strings, booleans, symbols, lists, functions)
-
-### Exception Hierarchy
-
-- `AIFPLError` - Base exception
-  - `AIFPLTokenError` - Tokenization errors
-  - `AIFPLParseError` - Parsing errors
-  - `AIFPLEvalError` - Evaluation errors
-
-## Advanced Usage
-
-### Custom Configuration
-
-```python
-# Increase recursion depth for deeply nested expressions
-tool = AIFPL(max_depth=500)
-
-# Adjust tolerance for complex number simplification
-tool = AIFPL(floating_point_tolerance=1e-15)
-```
-
-### Working with Results
-
-```python
-# Raw evaluation returns Python objects
-result = tool.evaluate('(list 1 2 3)')
-print(f"Result: {result}")  # Result: [1, 2, 3]
-print(f"Type: {type(result)}")  # Type: <class 'list'>
-
-# Formatted evaluation returns LISP-style strings
-formatted = tool.evaluate_and_format('(list 1 2 3)')
-print(f"Formatted: {formatted}")  # Formatted: (1 2 3)
-
-# Function results
-func_result = tool.evaluate('(lambda (x) (* x x))')
-print(f"Function: {func_result}")  # Function: <aifpl.aifpl_environment.AIFPLLambdaFunction object>
-
-formatted_func = tool.evaluate_and_format('(lambda (x) (* x x))')
-print(f"Formatted Function: {formatted_func}")  # Formatted Function: <lambda (x)>
-
-# Boolean results
-bool_result = tool.evaluate('(member? 2 (list 1 2 3))')
-print(f"Boolean: {bool_result}")  # Boolean: True
-
-formatted_bool = tool.evaluate_and_format('(member? 2 (list 1 2 3))')
-print(f"Formatted Boolean: {formatted_bool}")  # Formatted Boolean: #t
-
-inequality_result = tool.evaluate('(!= 1 2 3)')
-print(f"Inequality: {inequality_result}")  # Inequality: True
-
-type_check = tool.evaluate('(number? 42)')
-print(f"Type check: {type_check}")  # Type check: True
-
-position_result = tool.evaluate('(position "world" (list "hello" "world"))')
-print(f"Position: {position_result}")  # Position: 1
-
-# Quote results (both forms produce identical results)
-quote_result = tool.evaluate('(quote (+ 1 2 3))')
-print(f"Quote result: {quote_result}")  # Quote result: ['+', 1, 2, 3]
-
-shortcut_result = tool.evaluate("'(+ 1 2 3)")
-print(f"Shortcut result: {shortcut_result}")  # Shortcut result: ['+', 1, 2, 3]
-
-formatted_quote = tool.evaluate_and_format('(quote (+ 1 2 3))')
-print(f"Formatted quote: {formatted_quote}")  # Formatted quote: (+ 1 2 3)
-
-formatted_shortcut = tool.evaluate_and_format("'(+ 1 2 3)")
-print(f"Formatted shortcut: {formatted_shortcut}")  # Formatted shortcut: (+ 1 2 3)
-
-# Pattern matching results
-pattern_result = tool.evaluate('(match 42 ((number? n) (* n 2)) (_ "not a number"))')
-print(f"Pattern match: {pattern_result}")  # Pattern match: 84
-
-complex_pattern = tool.evaluate('(match (list 1 2 3) ((a b c) (+ a b c)) (_ "no match"))')
-print(f"Complex pattern: {complex_pattern}")  # Complex pattern: 6
-```
-
-### Error Handling Patterns
-
-```python
-from aifpl import AIFPL, AIFPLTokenError, AIFPLParseError, AIFPLEvalError
-
-tool = AIFPL()
-
-try:
-    result = tool.evaluate(expression)
-
-except AIFPLTokenError as e:
-    print(f"Tokenization error: {e}")
-
-except AIFPLParseError as e:
-    print(f"Parsing error: {e}")
-
-except AIFPLEvalError as e:
-    print(f"Evaluation error: {e}")
-
-except AIFPLError as e:
-    print(f"General AIFPL error: {e}")
-```
-
-### Complex Functional Processing
-
-```python
-# Complex nested operations with functional programming
-functional_expr = '''
-(let ((data (list 1 2 3 4 5 6 7 8 9 10)))
-  (let ((process (lambda (nums)
-                   (let ((evens (filter (lambda (x) (= (% x 2) 0)) nums))
-                         (squares (map (lambda (x) (* x x)) evens))
-                         (sum (fold + 0 squares)))
-                     sum))))
-    (process data)))
-'''
-
-# Higher-order function composition
-composition_expr = '''
-(let ((compose (lambda (f g) (lambda (x) (f (g x)))))
-      (add-one (lambda (x) (+ x 1)))
-      (double (lambda (x) (* x 2))))
-  (let ((transform (compose add-one double)))
-    (map transform (list 1 2 3 4 5))))
-'''
-
-# Recursive data processing with tail optimization
-recursive_expr = '''
-(let ((factorial (lambda (n acc)
-                   (if (<= n 1)
-                       acc
-                       (factorial (- n 1) (* n acc))))))
-  (factorial 20 1))
-'''
-
-# Quote-based symbolic programming (using shortcuts for cleaner syntax)
-symbolic_expr = '''
-(let ((expressions (list '(+ 1 2)
-                        '(* 3 4)
-                        '(- 10 5))))
-  (let ((operators (map first expressions))
-        (operands (map rest expressions)))
-    (list "operators" operators "operands" operands)))
-'''
-
-# Pattern matching for data processing
-pattern_matching_expr = '''
-(let ((process-items (lambda (items)
-                       (map (lambda (item)
-                              (match item
-                                (("person" name age)
-                                 (string-append name " (" (number->string age) ")"))
-                                (("product" id price)
-                                 (string-append "Product " (number->string id) ": $" (number->string price)))
-                                (_ "unknown item")))
-                            items))))
-  (process-items (list (list "person" "Alice" 30)
-                      (list "product" 123 29.99)
-                      (list "invalid" "data"))))
-'''
-
-advanced_processing = '''
-(let ((data (list "  hello  " "WORLD" "test" "  EXAMPLE  "))
-      (clean-normalize (lambda (text)
-                         (string-downcase (string-trim text)))))
-  (let ((cleaned (map clean-normalize data))
-        (filtered (remove "test" cleaned))
-        (positions (map (lambda (item)
-                          (position item cleaned))
-                       filtered)))
-    (list "cleaned" cleaned "filtered" filtered "positions" positions)))
-'''
-```

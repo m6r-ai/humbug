@@ -16,7 +16,6 @@ class ParenStackFrame:
     position: int
     parser: 'AIFPLParser'  # Reference to parser for lazy evaluation
     _expression_type: str | None = None  # Cached lazily
-    _context_snippet: str | None = None  # Cached lazily
     elements_parsed: int = 0
     last_complete_position: int | None = None
     related_symbol: str | None = None  # For bindings: the variable name
@@ -35,10 +34,7 @@ class ParenStackFrame:
 
     def get_context_snippet(self) -> str:
         """Lazily compute context snippet only when needed."""
-        if self._context_snippet is None:
-            self._context_snippet = self.parser.get_context_snippet(self.position, length=30)
-
-        return self._context_snippet
+        return self.parser.get_context_snippet(self.position, length=30)
 
 
 class AIFPLParser:
@@ -51,16 +47,12 @@ class AIFPLParser:
         Args:
             tokens: List of tokens to parse
             expression: Original expression string for error context
-            use_typed_numbers: If True, create AIFPLInteger/Float/Complex (deprecated, always True now)
         """
         self.tokens = tokens
         self.pos = 0
         self.current_token: AIFPLToken | None = tokens[0] if tokens else None
         self.expression = expression
         self.message_builder = ErrorMessageBuilder()
-
-        # Phase 2: Enable typed numbers by default
-        self.use_typed_numbers = True
 
         # Paren stack for tracking unclosed expressions
         self.paren_stack: List[ParenStackFrame] = []
@@ -121,20 +113,17 @@ class AIFPLParser:
             self._advance()
             return AIFPLSymbol(token.value, token.position)
 
-        if token.type == AIFPLTokenType.NUMBER:
+        if token.type == AIFPLTokenType.INTEGER:
             self._advance()
-            # Phase 1 migration: conditionally create typed numbers
-            if self.use_typed_numbers:
-                if isinstance(token.value, int):
-                    return AIFPLInteger(token.value)
+            return AIFPLInteger(token.value)
 
-                if isinstance(token.value, float):
-                    return AIFPLFloat(token.value)
+        if token.type == AIFPLTokenType.FLOAT:
+            self._advance()
+            return AIFPLFloat(token.value)
 
-                return AIFPLComplex(token.value)
-
-            # This should never happen with use_typed_numbers=True
-            raise ValueError(f"Unexpected number token type: {type(token.value)}")
+        if token.type == AIFPLTokenType.COMPLEX:
+            self._advance()
+            return AIFPLComplex(token.value)
 
         if token.type == AIFPLTokenType.STRING:
             self._advance()
@@ -235,18 +224,13 @@ class AIFPLParser:
         # Classify based on first symbol
         special_forms = {
             'let': 'let binding',
+            'letrec': 'letrec binding',
             'lambda': 'lambda function',
             'if': 'if expression',
             'match': 'match expression',
             'quote': 'quote expression',
-            'map': 'map call',
-            'filter': 'filter call',
-            'fold': 'fold call',
-            'alist': 'alist construction',
-            'cond': 'cond expression',
             'and': 'and expression',
-            'or': 'or expression',
-            'not': 'not expression',
+            'or': 'or expression'
         }
 
         return special_forms.get(first_symbol, 'list/function call')
@@ -351,9 +335,11 @@ class AIFPLParser:
         elements: List[AIFPLValue] = []
 
         # Check if this is a 'let' form to enable special tracking
-        if (self.current_token and
+        if (
+            self.current_token and
             self.current_token.type == AIFPLTokenType.SYMBOL and
-            self.current_token.value == 'let'):
+            self.current_token.value in ('let', 'letrec')
+        ):
             return self._parse_let_with_tracking(start_pos, frame, elements)
 
         # Regular list parsing
@@ -440,7 +426,7 @@ class AIFPLParser:
 
     def _parse_let_bindings(self) -> AIFPLList:
         """
-        Parse the bindings list of a let form with per-binding tracking.
+        Parse the bindings list of a let or letrec form with per-binding tracking.
 
         Returns:
             AIFPLList of bindings
@@ -450,7 +436,7 @@ class AIFPLParser:
 
         # Push frame for bindings list
         bindings_frame = self._push_paren_frame(bindings_start)
-        bindings_frame.set_expression_type("let bindings list")
+        bindings_frame.set_expression_type("bindings list")
 
         self._advance()  # consume '('
 
@@ -485,7 +471,7 @@ class AIFPLParser:
 
     def _parse_single_binding(self, binding_index: int) -> AIFPLList:
         """
-        Parse a single let binding with tracking.
+        Parse a single let or letrec binding with tracking.
 
         Args:
             binding_index: The index of this binding (1-based)
@@ -498,7 +484,7 @@ class AIFPLParser:
 
         # Push frame for this binding
         binding_frame = self._push_paren_frame(binding_start)
-        binding_frame.set_expression_type(f"let binding #{binding_index}")
+        binding_frame.set_expression_type(f"binding #{binding_index}")
 
         self._advance()  # consume '('
 
@@ -508,10 +494,11 @@ class AIFPLParser:
         if self.current_token is not None and self.current_token.type == AIFPLTokenType.SYMBOL:
             var_name = self.current_token.value
             binding_frame.related_symbol = var_name
-            binding_frame.set_expression_type(f"let binding #{binding_index} ('{var_name}')")
+            binding_frame.set_expression_type(f"binding #{binding_index} ('{var_name}')")
             self._mark_element_start()
             elements.append(self._parse_expression())
             self._update_frame_after_element()
+
         elif self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Not a symbol, but parse it anyway (for error recovery)
             self._mark_element_start()
@@ -590,6 +577,7 @@ class AIFPLParser:
                 incomplete_snippet = self.get_context_snippet(frame.incomplete_element_start, length=20)
                 line += f"\n     Started parsing element at position {frame.incomplete_element_start}: {incomplete_snippet}"
                 line += "\n     → This element is incomplete"
+
             elif frame.last_complete_position:
                 line += f"\n     → Needs ')' after position {frame.last_complete_position}"
 
@@ -604,13 +592,13 @@ class AIFPLParser:
         paren_word = "parentheses"  # Always plural since depth >= 2
 
         context_msg = (
-            f"Reached end of input while parsing let bindings.\n\n"
+            f"Reached end of input while parsing let/letrec bindings.\n\n"
             f"Bindings parsed:\n{summary_text}\n\n"
             f"Unclosed expressions:\n{stack_trace}"
         )
 
         return AIFPLParseError(
-            message=f"Incomplete let bindings - missing {depth} closing {paren_word}",
+            message=f"Incomplete let/letrec bindings - missing {depth} closing {paren_word}",
             position=bindings_start,
             expected=f'Add "{closing_parens}" to close all expressions',
             suggestion="Close each incomplete expression with ')', working from innermost to outermost",

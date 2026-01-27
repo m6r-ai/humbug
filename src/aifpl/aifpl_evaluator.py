@@ -534,9 +534,7 @@ class AIFPLEvaluator:
             placeholder.resolve(resolved_values[name])
 
         # Step 4: Create final environment with resolved values (batch for efficiency)
-        final_env = env.define_many(resolved_values)
-
-        return final_env
+        return env.define_many(resolved_values)
 
     def _evaluate_function_call(
         self,

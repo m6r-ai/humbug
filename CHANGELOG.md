@@ -4,10 +4,20 @@
 
 New features:
 
+- Introduced a new AIFPL compiler and VM design that is much faster than the interpreter.
+- Changed the syntax of AIFPL `alist` to be less surprising.
+- Added `letrec` to AIFPL to avoid ambiguity in recursive bindings.
+- Introduced `integer`, `float`, and `complex` types into AIFPL and removed `number`, allowing optimizations.
+- Added support for complex number literals.
+
 Bug fixes:
 
 - If we wrote more then 1k as "keystrokes" to a zsh then this could corrupt the output buffer.
 - Resolved a problem with nested Markdown code blocks incorrectly rendering.
+
+Internal structure changes
+
+- Removed built-in higher-order functions from AIFPL and replaced them with standard library implementations.
 
 ## v38 (2026-01-17)
 

@@ -11,7 +11,9 @@ class AIFPLTokenType(Enum):
     RPAREN = ")"
     QUOTE = "'"
     SYMBOL = "SYMBOL"
-    NUMBER = "NUMBER"
+    INTEGER = "INTEGER"
+    FLOAT = "FLOAT"
+    COMPLEX = "COMPLEX"
     STRING = "STRING"
     BOOLEAN = "BOOLEAN"
 

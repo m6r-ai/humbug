@@ -60,9 +60,12 @@ class AIFPLAITool(AITool):
                 "- Base conversion: (bin 255), (hex 255), (oct 255)\n\n"
 
                 "Complex Numbers:\n"
+                "- Literals: 3+4j, 5j, j (same as Python), j or J → 1j\n"
+                "- Pure imaginary: 4j, -5j, 1.5e2j → 4j, -5j, 150j\n"
+                "- Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)\n"
                 "- (complex 3 4) → (3+4j) (construct complex number)\n"
-                "- (+ 1 (* 2 j)), constants: pi, e, j\n"
-                "- (real 3+4j) → 3, (imag 3+4j) → 4\n"
+                "- Use in expressions: (+ 1 2+3j) → (3+3j), (* 2 3+4j) → (6+8j)\n"
+                "- (real 3+4j) → 3, (imag 3+4j) → 4, (abs 3+4j) → 5.0\n"
                 "- (real 42) → 42, (imag 42) → 0 (works on all numbers)\n\n"
 
                 "Type Construction and Conversion:\n"
@@ -164,8 +167,9 @@ class AIFPLAITool(AITool):
                 "- Mixed-type lists supported: (list 1 \"hi\" #t)\n"
                 "- String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX\n"
                 "- Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment\n"
-                "- Literals: 42, 3.14, 0xFF, 0b1010, \"hello\", #t, #f, ()\n"
-                "- Constants: pi, e, j, true, false\n\n"
+                "- Numeric literals: 42 (integer), 3.14 (float), 3+4j (complex), 5j (pure imaginary), j (1j)\n"
+                "- Other literals: 0xFF (hex), 0b1010 (binary), 0o755 (octal), \"hello\" (string), #t/#f (boolean), () (empty list)\n"
+                "- Constants: pi, e, true, false\n\n"
 
                 "Important Notes:\n"
                 "- Prefix notation: (+ 1 2) not (1 + 2)\n"
