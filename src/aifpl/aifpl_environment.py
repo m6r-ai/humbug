@@ -46,9 +46,6 @@ class AIFPLEnvironment:
         Returns:
             New environment with all bindings added
         """
-        if not new_bindings:
-            return self
-
         merged_bindings = {**self.bindings, **new_bindings}
         return AIFPLEnvironment(merged_bindings, self.parent, self.function)
 
