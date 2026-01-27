@@ -786,27 +786,20 @@ class AIFPLCompiler:
         for free_var in free_vars:
             var_type, depth, index = ctx.resolve_variable(free_var)
             if var_type == 'local':
-                # Check if this is a self-reference
+                # Check if this is a self-reference or sibling
                 if free_var == binding_name:
                     # Self-reference - don't capture, will be patched later
-                    pass
+                    continue
 
-                elif let_bindings and free_var in let_bindings:
+                if let_bindings and free_var in let_bindings:
                     # Sibling in the same recursive group - don't capture, will be patched later
                     # This handles mutual recursion where siblings reference each other
-                    pass
+                    continue
 
-                else:
-                    # Variable from an outer scope - capture it
-                    # With dependency analysis, all dependencies are evaluated before
-                    # the lambda is created, so we can safely capture them
-                    ctx.emit(Opcode.LOAD_VAR, depth, index)
-                    captured_vars.append(free_var)
+                # Variable from an outer scope - capture it
+                ctx.emit(Opcode.LOAD_VAR, depth, index)
+                captured_vars.append(free_var)
 
-                # else: self-reference, skip capturing
-                # else: in current scope - it's a self-reference
-                # Don't capture, lambda will look it up via LOAD_NAME -> closure_env
-            # else: global variable - don't capture or track as free
 
         # Create new compilation context for lambda body
         lambda_ctx = CompilationContext()
