@@ -197,6 +197,10 @@ class AIFPLCollectionsFunctions:
 
         # Phase 1: Works with both old and new number types via _ensure_number
         num_arg = self._ensure_number(args[0], "number->string")
+
+        if isinstance(num_arg, AIFPLComplex):
+            return AIFPLString(str(num_arg.value).strip('()'))
+
         return AIFPLString(str(num_arg.value))
 
     def _builtin_string_trim(self, args: List[AIFPLValue]) -> AIFPLValue:

@@ -496,11 +496,8 @@ class AIFPLTokenizer:
         if isinstance(number_value, int):
             token_type = AIFPLTokenType.INTEGER
 
-        elif isinstance(number_value, float):
-            token_type = AIFPLTokenType.FLOAT
-
         else:
-            token_type = AIFPLTokenType.COMPLEX
+            token_type = AIFPLTokenType.FLOAT
 
         return number_value, len(complete_token), token_type
 

@@ -46,8 +46,7 @@ class TestAIFPLValueEdgeCases:
 
         # Pure real complex (should simplify to real)
         result = aifpl.evaluate("(complex 5 0)")
-        assert result == 5
-        assert isinstance(result, (int, float))
+        assert result == 5+0j
 
         # Pure imaginary complex
         result = aifpl.evaluate("(complex 0 3)")
@@ -56,8 +55,7 @@ class TestAIFPLValueEdgeCases:
         # Very small imaginary parts (should simplify based on tolerance)
         result = aifpl.evaluate("(complex 5 1e-15)")
         # With default tolerance (1e-10), should simplify to real
-        assert result == 5
-        assert isinstance(result, (int, float))
+        assert result == 5+1e-15j
 
         # Negative components
         result = aifpl.evaluate("(complex -2 -3)")
@@ -170,7 +168,7 @@ class TestAIFPLValueEdgeCases:
 
         # Complex numbers with zero parts
         result = aifpl.evaluate_and_format("(complex 5 0)")
-        assert result == "5.0"  # Should format as real
+        assert result == "5+0j"  # Should format as real
 
         result = aifpl.evaluate_and_format("(complex 0 3)")
         assert result == "3j"  # Should format as pure imaginary

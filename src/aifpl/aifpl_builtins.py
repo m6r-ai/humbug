@@ -32,17 +32,13 @@ class AIFPLBuiltinRegistry:
     a unified interface for both the evaluator and VM to access them.
     """
 
-    def __init__(self, floating_point_tolerance: float = 1e-10):
+    def __init__(self):
         """
         Initialize the builtin registry.
-
-        Args:
-            floating_point_tolerance: Tolerance for floating point operations
         """
-        self.floating_point_tolerance = floating_point_tolerance
 
         # Create function modules
-        self.math_functions = AIFPLMathFunctions(floating_point_tolerance)
+        self.math_functions = AIFPLMathFunctions()
         self.collections_functions = AIFPLCollectionsFunctions()
 
         # Build the registry

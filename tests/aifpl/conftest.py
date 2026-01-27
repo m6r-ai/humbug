@@ -21,8 +21,8 @@ def aifpl_bytecode():
 @pytest.fixture
 def aifpl_custom():
     """Factory for AIFPL instances with custom configuration."""
-    def _create_aifpl(max_depth: int = 100, floating_point_tolerance: float = 1e-10) -> AIFPL:
-        return AIFPL(max_depth=max_depth, floating_point_tolerance=floating_point_tolerance)
+    def _create_aifpl(max_depth: int = 100) -> AIFPL:
+        return AIFPL(max_depth=max_depth)
     return _create_aifpl
 
 

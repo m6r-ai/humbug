@@ -3,7 +3,7 @@
 import math
 from typing import Union, Dict
 
-from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLComplex, AIFPLBoolean
+from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean
 from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
@@ -112,17 +112,15 @@ class AIFPL:
         cls._prelude_bytecode_cache = bytecode_prelude
         return bytecode_prelude
 
-    def __init__(self, max_depth: int = 1000, floating_point_tolerance: float = 1e-10, use_bytecode: bool = False):
+    def __init__(self, max_depth: int = 1000, use_bytecode: bool = False):
         """
         Initialize enhanced AIFPL calculator.
 
         Args:
             max_depth: Maximum recursion depth for expression evaluation
-            floating_point_tolerance: Tolerance for floating point comparisons and simplifications
             use_bytecode: If True, use bytecode compiler and VM instead of tree-walking interpreter
         """
         self.max_depth = max_depth
-        self.floating_point_tolerance = floating_point_tolerance
         self.use_bytecode = use_bytecode
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
@@ -156,12 +154,10 @@ class AIFPL:
             result = vm.execute(code, self.CONSTANTS, bytecode_prelude)
 
             # VM returns AIFPLValue, convert to Python
-            simplified = vm.simplify_result(result)
-            return simplified.to_python()
+            return result.to_python()
 
         evaluator = AIFPLEvaluator(
-            max_depth=self.max_depth,
-            floating_point_tolerance=self.floating_point_tolerance
+            max_depth=self.max_depth
         )
 
         # Set expression context for error reporting
@@ -171,11 +167,8 @@ class AIFPL:
         prelude_funcs = self._load_prelude_for_evaluator()
         result = evaluator.evaluate(parsed_expr, self.CONSTANTS, prelude_funcs)
 
-        # Simplify the result
-        simplified = evaluator.simplify_result(result)
-
         # Convert to Python types for backward compatibility
-        return simplified.to_python()
+        return result.to_python()
 
     def evaluate_and_format(self, expression: str) -> str:
         """
@@ -208,13 +201,9 @@ class AIFPL:
             result = vm.execute(code, self.CONSTANTS, bytecode_prelude)
 
             # VM returns AIFPLValue, format it
-            simplified = vm.simplify_result(result)
-            return vm.format_result(simplified)
+            return vm.format_result(result)
 
-        evaluator = AIFPLEvaluator(
-            max_depth=self.max_depth,
-            floating_point_tolerance=self.floating_point_tolerance
-        )
+        evaluator = AIFPLEvaluator(max_depth=self.max_depth)
 
         # Set expression context for error reporting
         evaluator.set_expression_context(expression)
@@ -223,6 +212,5 @@ class AIFPL:
         prelude_funcs = self._load_prelude_for_evaluator()
         result = evaluator.evaluate(parsed_expr, self.CONSTANTS, prelude_funcs)
 
-        # Simplify and format the result
-        simplified = evaluator.simplify_result(result)
-        return evaluator.format_result(simplified)
+        # Format the result
+        return evaluator.format_result(result)

@@ -43,7 +43,7 @@ result = tool.evaluate("(+ 1 2 3)")  # Returns: 6
 ### With Configuration
 
 ```python
-tool = AIFPL(max_depth=200, floating_point_tolerance=1e-12)
+tool = AIFPL(max_depth=200)
 result = tool.evaluate("(sin (* pi 0.5))")  # Returns: 1
 ```
 

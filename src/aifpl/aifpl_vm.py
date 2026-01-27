@@ -38,12 +38,11 @@ class AIFPLVM:
     Uses a stack-based architecture with lexically-scoped frames.
     """
 
-    def __init__(self, floating_point_tolerance: float = 1e-10) -> None:
+    def __init__(self) -> None:
         self.stack: List[AIFPLValue] = []
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
         self.message_builder = ErrorMessageBuilder()
-        self.floating_point_tolerance = floating_point_tolerance
 
         # Create builtin registry
         self._builtin_registry = AIFPLBuiltinRegistry()
@@ -679,22 +678,6 @@ class AIFPLVM:
         # Call through the registry
         return self._builtin_registry.call_builtin(builtin_name, args)
 
-    def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
-        """
-        Simplify complex results to real numbers when imaginary part is negligible.
-
-        Note: This method does NOT convert floats to integers, preserving type information.
-        E.g., 5.0 stays as AIFPLFloat(5.0), not converted to AIFPLInteger(5).
-        """
-        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, complex):
-            # If imaginary part is effectively zero, return just the real part
-            if abs(result.value.imag) < self.floating_point_tolerance:
-                real_part = result.value.real
-                # Preserve type: return as float (complex real parts are floats)
-                return AIFPLFloat(real_part)
-
-        return result
-
     def format_result(self, result: AIFPLValue) -> str:
         """
         Format result for display in error messages, using LISP conventions.
@@ -712,8 +695,11 @@ class AIFPLVM:
             escaped_content = self._escape_string_for_lisp(result.value)
             return f'"{escaped_content}"'
 
-        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if isinstance(result, (AIFPLInteger, AIFPLFloat)):
             return str(result.value)
+
+        if isinstance(result, AIFPLComplex):
+            return str(result.value).strip('()')
 
         if isinstance(result, AIFPLList):
             # Format list in LISP notation: (element1 element2 ...)

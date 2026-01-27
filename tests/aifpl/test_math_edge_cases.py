@@ -371,9 +371,12 @@ class TestAIFPLMathEdgeCases:
         assert aifpl.evaluate("(floor -1e-10)") == -1
 
         # Complex numbers that we deem to be real
-        assert aifpl.evaluate("(round (complex 2.0 0.00000000000001))") == 2
-        assert aifpl.evaluate("(ceil (complex 2.0 0.00000000000001))") == 2
-        assert aifpl.evaluate("(floor (complex 2.0 0.00000000000001))") == 2
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(round (complex 2.0 0.00000000000001))")
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(ceil (complex 2.0 0.00000000000001))")
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(floor (complex 2.0 0.00000000000001))")
 
     def test_rounding_functions_reject_complex(self, aifpl):
         """Test that rounding functions reject complex numbers."""
@@ -573,8 +576,8 @@ class TestAIFPLMathEdgeCases:
 
         # Pure real complex (should simplify)
         result = aifpl.evaluate("(complex 5 0)")
-        assert result == 5
-        assert isinstance(result, (int, float))
+        assert result == 5+0j
+        assert isinstance(result, complex)
 
         # Pure imaginary complex
         result = aifpl.evaluate("(complex 0 3)")

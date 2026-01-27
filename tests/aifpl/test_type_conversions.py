@@ -31,13 +31,15 @@ class TestIntegerConversion:
 
     def test_integer_from_complex_with_zero_imaginary(self, aifpl):
         """Test integer conversion from complex with zero imaginary part."""
-        result = aifpl.evaluate("(integer (complex 3 0))")
-        assert result == 3
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate("(integer (complex 3 0))")
+        assert "cannot convert complex number with non-zero imaginary part" in str(exc_info.value).lower()
 
     def test_integer_from_complex_with_tiny_imaginary(self, aifpl):
-        """Test integer conversion from complex with tiny imaginary part (within tolerance)."""
-        result = aifpl.evaluate("(integer (complex 3.0 0.00000000001))")
-        assert result == 3
+        """Test integer conversion from complex with tiny imaginary part."""
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate("(integer (complex 3.0 0.00000000001))")
+        assert "cannot convert complex number with non-zero imaginary part" in str(exc_info.value).lower()
 
     def test_integer_from_complex_with_nonzero_imaginary_error(self, aifpl):
         """Test integer conversion from complex with non-zero imaginary part raises error."""
@@ -108,15 +110,15 @@ class TestFloatConversion:
 
     def test_float_from_complex_with_zero_imaginary(self, aifpl):
         """Test float conversion from complex with zero imaginary part."""
-        result = aifpl.evaluate("(float (complex 3 0))")
-        # Note: AIFPL currently converts 3.0 to 3 when returning Python values
-        assert result == 3
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate("(float (complex 3 0))")
+        assert "cannot convert complex number with non-zero imaginary part" in str(exc_info.value).lower()
 
     def test_float_from_complex_with_tiny_imaginary(self, aifpl):
-        """Test float conversion from complex with tiny imaginary part (within tolerance)."""
-        result = aifpl.evaluate("(float (complex 3.14 0.00000000001))")
-        assert result == 3.14
-        assert isinstance(result, float)
+        """Test float conversion from complex with tiny imaginary part."""
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate("(float (complex 3.14 0.00000000001))")
+        assert "cannot convert complex number with non-zero imaginary part" in str(exc_info.value).lower()
 
     def test_float_from_complex_with_nonzero_imaginary_error(self, aifpl):
         """Test float conversion from complex with non-zero imaginary part raises error."""

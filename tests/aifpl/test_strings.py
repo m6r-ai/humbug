@@ -339,7 +339,7 @@ class TestStrings:
         ('(string->number "1.5e-2")', '0.015'),
 
         # Complex numbers
-        ('(string->number "1+2j")', '(1+2j)'),
+        ('(string->number "1+2j")', '1+2j'),
         ('(string->number "3j")', '3j'),
     ])
     def test_string_to_number(self, aifpl, expression, expected):
@@ -365,7 +365,7 @@ class TestStrings:
         ('(number->string 0)', '"0"'),
 
         # Complex numbers
-        ('(number->string (complex 1 2))', '"(1+2j)"'),
+        ('(number->string (complex 1 2))', '"1+2j"'),
         ('(number->string j)', '"1j"'),
     ])
     def test_number_to_string(self, aifpl, expression, expected):

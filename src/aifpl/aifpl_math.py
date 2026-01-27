@@ -11,9 +11,8 @@ from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex
 class AIFPLMathFunctions:
     """Mathematical built-in functions for AIFPL."""
 
-    def __init__(self, floating_point_tolerance: float = 1e-10):
+    def __init__(self):
         """Initialize with floating point tolerance."""
-        self.floating_point_tolerance = floating_point_tolerance
 
     def _extract_numeric_value(self, value: AIFPLValue) -> Union[int, float, complex]:
         """Extract Python numeric value from AIFPL number types."""
@@ -35,28 +34,6 @@ class AIFPLMathFunctions:
 
         # Fallback (shouldn't happen)
         raise AIFPLEvalError(f"Unexpected numeric type: {type(result)}")
-
-    def _promote_numeric_types(self, values: List[Union[int, float, complex]]) -> type:
-        """
-        Determine the result type based on type promotion rules.
-
-        Rules:
-        - int + int -> int
-        - int + float -> float
-        - int + complex -> complex
-        - float + complex -> complex
-
-        Returns the Python type (int, float, or complex) for the result.
-        """
-        has_complex = any(isinstance(v, complex) for v in values)
-        if has_complex:
-            return complex
-
-        has_float = any(isinstance(v, float) for v in values)
-        if has_float:
-            return float
-
-        return int
 
     def _is_numeric_type(self, value: AIFPLValue) -> bool:
         """Check if value is any numeric type."""
@@ -544,10 +521,7 @@ class AIFPLMathFunctions:
 
         # Extract real part if complex
         if isinstance(val, complex):
-            if abs(val.imag) >= self.floating_point_tolerance:
-                raise AIFPLEvalError("Function 'round' does not support complex numbers")
-
-            val = val.real
+            raise AIFPLEvalError("Function 'round' does not support complex numbers")
 
         return AIFPLInteger(round(val))
 
@@ -560,10 +534,7 @@ class AIFPLMathFunctions:
 
         # Extract real part if complex
         if isinstance(val, complex):
-            if abs(val.imag) >= self.floating_point_tolerance:
-                raise AIFPLEvalError("Function 'floor' does not support complex numbers")
-
-            val = val.real
+            raise AIFPLEvalError("Function 'floor' does not support complex numbers")
 
         return AIFPLInteger(math.floor(val))
 
@@ -576,10 +547,7 @@ class AIFPLMathFunctions:
 
         # Extract real part if complex
         if isinstance(val, complex):
-            if abs(val.imag) >= self.floating_point_tolerance:
-                raise AIFPLEvalError("Function 'ceil' does not support complex numbers")
-
-            val = val.real
+            raise AIFPLEvalError("Function 'ceil' does not support complex numbers")
 
         return AIFPLInteger(math.ceil(val))
 
@@ -706,10 +674,7 @@ class AIFPLMathFunctions:
 
         # Handle complex numbers
         if isinstance(val, complex):
-            if abs(val.imag) >= self.floating_point_tolerance:
-                raise AIFPLEvalError("Function 'integer' cannot convert complex number with non-zero imaginary part")
-
-            val = val.real
+            raise AIFPLEvalError("Function 'integer' cannot convert complex number with non-zero imaginary part")
 
         # Handle float - truncate toward zero
         if isinstance(val, float):
@@ -730,10 +695,7 @@ class AIFPLMathFunctions:
 
         # Handle complex numbers
         if isinstance(val, complex):
-            if abs(val.imag) >= self.floating_point_tolerance:
-                raise AIFPLEvalError("Function 'float' cannot convert complex number with non-zero imaginary part")
-
-            val = val.real
+            raise AIFPLEvalError("Function 'float' cannot convert complex number with non-zero imaginary part")
 
         # Convert to float
         return AIFPLFloat(float(val))

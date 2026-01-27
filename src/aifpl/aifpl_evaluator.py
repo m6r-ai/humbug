@@ -17,16 +17,14 @@ from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindin
 class AIFPLEvaluator:
     """Evaluates AIFPL Abstract Syntax Trees using pure list representation with detailed error messages."""
 
-    def __init__(self, max_depth: int = 1000, floating_point_tolerance: float = 1e-10):
+    def __init__(self, max_depth: int = 1000):
         """
         Initialize evaluator.
 
         Args:
             max_depth: Maximum recursion depth
-            floating_point_tolerance: Tolerance for floating point comparisons and simplifications
         """
         self.max_depth = max_depth
-        self.floating_point_tolerance = floating_point_tolerance
         self.call_stack = AIFPLCallStack()
         self.current_expression = ""  # Store original expression for context
         self.message_builder = ErrorMessageBuilder()
@@ -36,7 +34,7 @@ class AIFPLEvaluator:
         self.call_chain_set: set = set()  # For O(1) membership check
 
         # Create builtin registry
-        self.builtin_registry = AIFPLBuiltinRegistry(floating_point_tolerance)
+        self.builtin_registry = AIFPLBuiltinRegistry()
 
         # Create pattern matcher
         self.pattern_matcher = AIFPLPatternMatcher(self.format_result)
@@ -121,14 +119,12 @@ class AIFPLEvaluator:
                 ) from e
 
         # List evaluation - check for special forms FIRST before any symbol evaluation
-        if not isinstance(expr, AIFPLList):
-            raise AIFPLEvalError(f"Unexpected expression type: {type(expr)}")
+        assert isinstance(expr, AIFPLList), f"Unexpected expression type: {type(expr)}"
 
         # Empty list evaluates to itself
         if expr.is_empty():
             return expr
 
-        # Non-empty list - check first element for special forms
         first_elem = expr.first()
         if isinstance(first_elem, AIFPLSymbol):
             # Handle special forms BEFORE attempting any symbol lookup
@@ -491,7 +487,7 @@ class AIFPLEvaluator:
 
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
-                    message=f"Error evaluating let binding '{name}'",
+                    message=f"Error evaluating letrec binding '{name}'",
                     context=str(e),
                     received=f"Binding: ({name} {self.format_result(expr)})",
                     suggestion=f"Check the expression for variable '{name}'"
@@ -523,7 +519,7 @@ class AIFPLEvaluator:
 
             except AIFPLEvalError as e:
                 raise AIFPLEvalError(
-                    message=f"Error evaluating recursive let binding '{name}'",
+                    message=f"Error evaluating recursive letrec binding '{name}'",
                     context=str(e),
                     received=f"Recursive binding: ({name} {self.format_result(expr)})",
                     suggestion=f"Check the recursive expression for variable '{name}'"
@@ -622,9 +618,7 @@ class AIFPLEvaluator:
                 ) from e
 
             if func_value.is_native:
-                if func_value.native_impl is None:
-                    raise AIFPLEvalError(f"Function {func_value.name} has no native implementation")
-
+                assert func_value.native_impl is not None, "Native function implementation is missing"
                 return func_value.native_impl(arg_values)
 
             result = self._call_lambda_function(func_value, arg_values, env, depth)
@@ -741,9 +735,8 @@ class AIFPLEvaluator:
                     example=f"(let (({expr.name} some-value)) ...)"
                 ) from e
 
-        # If this isn't a list, evaluate normally
-        if not isinstance(expr, AIFPLList):
-            raise AIFPLEvalError(f"Unexpected expression type: {type(expr)}")
+        # List evaluation - check for special forms FIRST before any symbol evaluation
+        assert isinstance(expr, AIFPLList), f"Unexpected expression type: {type(expr)}"
 
         # Empty list evaluates to itself
         if expr.is_empty():
@@ -939,31 +932,6 @@ class AIFPLEvaluator:
         # All arguments were False
         return AIFPLBoolean(False)
 
-    def simplify_result(self, result: AIFPLValue) -> AIFPLValue:
-        """
-        Simplify complex results to real numbers when imaginary part is negligible.
-
-        Note: This method does NOT convert floats to integers, preserving type information.
-        E.g., 5.0 stays as AIFPLFloat(5.0), not converted to AIFPLInteger(5).
-        """
-        # Handle AIFPLComplex type - extract real part if imaginary is negligible
-        if isinstance(result, AIFPLComplex):
-            # If imaginary part is effectively zero, return just the real part
-            if abs(result.value.imag) < self.floating_point_tolerance:
-                real_part = result.value.real
-                # Preserve type: return as float (complex real parts are floats)
-                return AIFPLFloat(real_part)
-
-        # Legacy handling for old unified number type (should be rare now)
-        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) and isinstance(result.value, complex):
-            # If imaginary part is effectively zero, return just the real part
-            if abs(result.value.imag) < self.floating_point_tolerance:
-                real_part = result.value.real
-                # Preserve type: return as float
-                return AIFPLFloat(real_part)
-
-        return result
-
     def format_result(self, result: AIFPLValue) -> str:
         """
         Format result for display, using LISP conventions for lists and booleans.
@@ -981,8 +949,11 @@ class AIFPLEvaluator:
             escaped_content = self._escape_string_for_lisp(result.value)
             return f'"{escaped_content}"'
 
-        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if isinstance(result, (AIFPLInteger, AIFPLFloat)):
             return str(result.value)
+
+        if isinstance(result, AIFPLComplex):
+            return str(result.value).strip('()')
 
         if isinstance(result, AIFPLList):
             # Format list in LISP notation: (element1 element2 ...)

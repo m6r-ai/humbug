@@ -28,12 +28,12 @@ class TestArithmetic:
         ("(+ 1.1 2.2)", "3.3000000000000003"),  # Floating point precision
 
         # Type promotion int/float -> complex
-        ("(+ 1 j)", "(1+1j)"),
-        ("(+ 2.5 j)", "(2.5+1j)"),
-        ("(+ j 3)", "(3+1j)"),
+        ("(+ 1 j)", "1+1j"),
+        ("(+ 2.5 j)", "2.5+1j"),
+        ("(+ j 3)", "3+1j"),
 
         # Complex addition
-        ("(+ (complex 1 2) (complex 3 4))", "(4+6j)"),
+        ("(+ (complex 1 2) (complex 3 4))", "4+6j"),
 
         # Negative numbers
         ("(+ -1 2)", "1"),
@@ -58,8 +58,8 @@ class TestArithmetic:
         ("(- 5 2.5)", "2.5"),
 
         # Complex subtraction
-        ("(- (complex 5 3) (complex 2 1))", "(3+2j)"),
-        ("(- 5 j)", "(5-1j)"),
+        ("(- (complex 5 3) (complex 2 1))", "3+2j"),
+        ("(- 5 j)", "5-1j"),
 
         # Multiple arguments
         ("(- 10 1 2 3)", "4"),  # ((((10 - 1) - 2) - 3)
@@ -85,8 +85,8 @@ class TestArithmetic:
 
         # Complex multiplication
         ("(* 2 j)", "2j"),
-        ("(* j j)", "-1.0"),  # j*j = -1, simplifies to float when imag part is 0
-        ("(* (complex 2 3) (complex 1 4))", "(-10+11j)"),
+        ("(* j j)", "-1+0j"),  # j*j = -1, simplifies to float when imag part is 0
+        ("(* (complex 2 3) (complex 1 4))", "-10+11j"),
 
         # Zero multiplication
         ("(* 5 0)", "0"),
@@ -116,7 +116,7 @@ class TestArithmetic:
         ("(/ 10 2.5)", "4.0"),  # Division always returns float
 
         # Complex division
-        ("(/ (complex 4 2) (complex 1 1))", "(3-1j)"),
+        ("(/ (complex 4 2) (complex 1 1))", "3-1j"),
         ("(/ 6 j)", "-6j"),
 
         # Fraction results
@@ -195,7 +195,7 @@ class TestArithmetic:
         ("(** 8 0.3333333333333333)", "2"),  # Cube root (approximately)
 
         # Complex exponentiation
-        ("(** j 2)", "-1.0"),  # j^2 = -1, simplifies to float when imag part is 0
+        ("(** j 2)", "-1+0j"),  # j^2 = -1, simplifies to float when imag part is 0
         ("(** (complex 1 1) 2)", "2j"),
     ])
     def test_exponentiation(self, aifpl, expression, expected):
@@ -458,10 +458,10 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Complex number construction
-        ("(complex 3 4)", "(3+4j)"),
+        ("(complex 3 4)", "3+4j"),
         ("(complex 0 1)", "1j"),
-        ("(complex 5 0)", "5.0"),  # Complex with 0 imaginary simplifies to float
-        ("(complex -2 -3)", "(-2-3j)"),
+        ("(complex 5 0)", "5+0j"),
+        ("(complex -2 -3)", "-2-3j"),
 
         # Real part extraction
         ("(real (complex 3 4))", "3"),

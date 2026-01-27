@@ -39,13 +39,13 @@ class TestFormatting:
 
     @pytest.mark.parametrize("expression,expected_format", [
         # Complex number formatting
-        ("(complex 1 2)", "(1+2j)"),
+        ("(complex 1 2)", "1+2j"),
         ("(complex 0 1)", "1j"),
-        ("(complex 3 0)", "3.0"),  # Simplifies to float when imaginary is 0
-        ("(complex -1 -2)", "(-1-2j)"),
+        ("(complex 3 0)", "3+0j"),
+        ("(complex -1 -2)", "-1-2j"),
         ("j", "1j"),
         ("(* 2 j)", "2j"),
-        ("(+ 1 j)", "(1+1j)"),
+        ("(+ 1 j)", "1+1j"),
     ])
     def test_complex_number_formatting(self, aifpl, expression, expected_format):
         """Test complex number formatting in LISP output."""
@@ -54,15 +54,15 @@ class TestFormatting:
     def test_complex_number_simplification(self, aifpl_custom):
         """Test that complex numbers with negligible imaginary parts are simplified."""
         # Test with default tolerance
-        aifpl_default = aifpl_custom(floating_point_tolerance=1e-10)
+        aifpl_default = aifpl_custom()
 
         # Very small imaginary part should be simplified
         result = aifpl_default.evaluate_and_format("(+ 5 (* 1e-15 j))")
-        assert result == "5.0"  # Should be simplified to float (real part of complex)
+        assert result == "5+1e-15j"  # Should be simplified to float (real part of complex)
 
         # Larger imaginary part should be preserved
         result = aifpl_default.evaluate_and_format("(+ 5 (* 1e-5 j))")
-        assert "(5+" in result and "j)" in result  # Should remain complex
+        assert "5+1" in result and "j" in result  # Should remain complex
 
     @pytest.mark.parametrize("expression,expected_format", [
         # String formatting (quoted in LISP output)
@@ -173,7 +173,7 @@ class TestFormatting:
           (list "nested" "strings"))
         '''
 
-        expected = '(42 3.14 (1+2j) "hello" #t #f (1 2 3) ("nested" "strings"))'
+        expected = '(42 3.14 1+2j "hello" #t #f (1 2 3) ("nested" "strings"))'
         helpers.assert_evaluates_to(aifpl, complex_list, expected)
 
     def test_arithmetic_result_formatting(self, aifpl, helpers):
@@ -187,8 +187,8 @@ class TestFormatting:
         helpers.assert_evaluates_to(aifpl, '(+ 1.5 2.5)', '4.0')  # Preserves float type
 
         # Complex results
-        helpers.assert_evaluates_to(aifpl, '(+ 1 j)', '(1+1j)')
-        helpers.assert_evaluates_to(aifpl, '(* j j)', '-1.0')  # Simplifies to float when imag is 0
+        helpers.assert_evaluates_to(aifpl, '(+ 1 j)', '1+1j')
+        helpers.assert_evaluates_to(aifpl, '(* j j)', '-1+0j')  # Simplifies to float when imag is 0
 
     def test_string_operation_result_formatting(self, aifpl, helpers):
         """Test that string operations produce properly formatted results."""
