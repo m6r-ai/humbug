@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, List, Tuple, Union, Callable
+from typing import Any, List, Tuple, Callable
 
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -97,6 +97,7 @@ class AIFPLComplex(AIFPLValue):
         """Compare numeric values, allowing cross-type comparison."""
         if isinstance(other, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             return self.value == other.value
+
         return False
 
     def __hash__(self) -> int:
