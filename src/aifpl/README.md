@@ -17,7 +17,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Conditional evaluation**: `if` expressions with lazy evaluation of branches
 - **Lazy evaluation**: `and` and `or` perform lazy evaluation of operands
 - **Lambda expressions**: Anonymous functions with lexical scoping and closures
-- **Local bindings**: `let` expressions for sequential variable binding
+- **Local bindings**: `let` for sequential binding, `letrec` for recursive binding
 - **Higher-order functions**: `map`, `filter`, `fold`, `range`, and more for functional programming
 - **Tail call optimization**: Automatic optimization for recursive and mutually recursive functions
 - **Type predicates**: Built-in functions to check value types
@@ -451,6 +451,99 @@ Let expressions create local variable bindings with sequential evaluation and le
     (let ((total (sum-fn squared))
           (average (/ total (length squared))))
       (list "sum" total "average" average))))  ; → ("sum" 55 "average" 11)
+```
+
+### Recursive Binding with Letrec
+
+Letrec expressions create recursive bindings where functions can reference themselves and each other (mutual recursion). Use `letrec` when you need recursive or mutually recursive functions.
+
+#### Basic Letrec Syntax
+```aifpl
+(letrec ((var1 val1) (var2 val2) ...) body)
+```
+
+#### Simple Letrec Examples
+```aifpl
+; Factorial with recursion
+(letrec ((factorial (lambda (n)
+                      (if (<= n 1)
+                          1
+                          (* n (factorial (- n 1)))))))
+  (factorial 5))                            ; → 120
+
+; List length
+(letrec ((len (lambda (lst)
+                (if (null? lst)
+                    0
+                    (+ 1 (len (rest lst)))))))
+  (len (list 1 2 3 4 5)))                   ; → 5
+
+; Sum of list
+(letrec ((sum (lambda (lst)
+                (if (null? lst)
+                    0
+                    (+ (first lst) (sum (rest lst)))))))
+  (sum (list 1 2 3 4 5)))                   ; → 15
+```
+
+#### Mutual Recursion
+```aifpl
+; Even/odd predicates
+(letrec ((is-even? (lambda (n)
+                     (if (= n 0)
+                         #t
+                         (is-odd? (- n 1)))))
+         (is-odd? (lambda (n)
+                    (if (= n 0)
+                        #f
+                        (is-even? (- n 1))))))
+  (list (is-even? 10) (is-odd? 10)))        ; → (#t #f)
+
+; Tree processing with mutual recursion
+(letrec ((process-node (lambda (node)
+                         (if (list? node)
+                             (process-list node)
+                             (* node 2))))
+         (process-list (lambda (lst)
+                         (if (null? lst)
+                             (list)
+                             (cons (process-node (first lst))
+                                   (process-list (rest lst)))))))
+  (process-node (list 1 (list 2 3) 4)))    ; → (2 (4 6) 8)
+```
+
+#### Tail-Recursive Functions with Letrec
+```aifpl
+; Tail-recursive factorial (automatically optimized)
+(letrec ((factorial (lambda (n acc)
+                      (if (<= n 1)
+                          acc
+                          (factorial (- n 1) (* n acc))))))
+  (factorial 100 1))                        ; Works with large numbers
+
+; Tail-recursive list reversal
+(letrec ((rev (lambda (lst acc)
+                (if (null? lst)
+                    acc
+                    (rev (rest lst) (cons (first lst) acc))))))
+  (rev (list 1 2 3 4 5) (list)))            ; → (5 4 3 2 1)
+```
+
+#### When to Use Let vs Letrec
+```aifpl
+; Use LET for normal sequential bindings
+(let ((x 5) (y (* x 2))) (+ x y))           ; → 15
+
+; Use LET for shadowing outer variables
+(let ((x 1)) (let ((x (+ x 10))) x))        ; → 11
+
+; Use LETREC for recursive functions
+(letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))  ; → 120
+
+; Use LETREC for mutually recursive functions
+(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
+         (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+  (even? 10))                               ; → #t
 ```
 
 ### Pattern Matching

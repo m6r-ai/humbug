@@ -127,7 +127,14 @@ class AIFPLAITool(AITool):
                 "Local Bindings:\n"
                 "- (let ((var1 val1) (var2 val2) ...) body) → sequential binding\n"
                 "- (let ((x 5) (y (* x 2))) (+ x y)) → 15 (y can reference x)\n"
-                "- Automatic dependency analysis for recursive bindings\n\n"
+                "- (let ((x 1)) (let ((x (+ x 10))) x)) → 11 (shadowing works)\n"
+                "- Use for normal sequential bindings, no recursion support\n\n"
+
+                "Recursive Bindings:\n"
+                "- (letrec ((var1 val1) (var2 val2) ...) body) → recursive binding\n"
+                "- (letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5)) → 120\n"
+                "- Supports self-recursion and mutual recursion\n"
+                "- Use only when you need functions that reference themselves\n\n"
 
                 "Higher-Order Functions:\n"
                 "- (map func list) → (map (lambda (x) (* x 2)) (list 1 2 3)) → (2 4 6)\n"
