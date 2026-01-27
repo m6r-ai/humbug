@@ -26,3 +26,6 @@
 
 # Ignore Mac system files
 .DS_Store
+
+# Ignore the planner app
+/tools/planner
