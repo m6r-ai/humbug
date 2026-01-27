@@ -1,4 +1,7 @@
-"""Dependency analysis for let bindings to support automatic recursion detection."""
+"""
+Dependency analysis for letrec bindings to support mutual recursion.
+Note: This is only used for letrec, not for regular let (which uses simple sequential binding).
+"""
 
 from typing import Dict, List, Set, Tuple
 from dataclasses import dataclass
@@ -18,10 +21,11 @@ class AIFPLBindingGroup:
 class AIFPLDependencyAnalyzer:
     """Analyzes dependencies in let bindings to determine evaluation strategy."""
 
-    def analyze_let_bindings(self, bindings: List[Tuple[str, AIFPLValue]]) -> List[AIFPLBindingGroup]:
+    def analyze_letrec_bindings(self, bindings: List[Tuple[str, AIFPLValue]]) -> List[AIFPLBindingGroup]:
         """
-        Analyze let bindings and group them by dependencies.
+        Analyze letrec bindings and group them by dependencies.
 
+        For letrec, all bindings can reference each other (including themselves).
         Returns:
             List of AIFPLBindingGroup objects in topological order
         """
@@ -31,7 +35,8 @@ class AIFPLDependencyAnalyzer:
 
         for name, expr in bindings:
             free_vars = self._find_free_variables(expr)
-            # Only consider dependencies on other bindings in this let
+            # For letrec, include ALL references to binding names (including self-references)
+            # This allows mutual recursion and self-recursion
             local_deps = free_vars & binding_names
             dependencies[name] = local_deps
 

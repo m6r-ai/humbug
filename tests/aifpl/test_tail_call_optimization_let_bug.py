@@ -33,10 +33,10 @@ class TestTailCallOptimizationWithLet:
         """
         # Simple countdown - direct tail call
         direct_recursion = '''
-        (let ((countdown (lambda (n)
-                          (if (<= n 0) 
-                              "done" 
-                              (countdown (- n 1))))))
+        (letrec ((countdown (lambda (n)
+                             (if (<= n 0) 
+                                 "done" 
+                                 (countdown (- n 1))))))
           (countdown 200))
         '''
         helpers.assert_evaluates_to(aifpl, direct_recursion, '"done"')
@@ -49,11 +49,11 @@ class TestTailCallOptimizationWithLet:
         inside a let body, and TCO should be applied.
         """
         let_then_recursion = '''
-        (let ((countdown (lambda (n)
-                          (if (<= n 0) 
-                              "done" 
-                              (let ((next-n (- n 1)))
-                                (countdown next-n))))))
+        (letrec ((countdown (lambda (n)
+                             (if (<= n 0) 
+                                 "done" 
+                                 (let ((next-n (- n 1)))
+                                   (countdown next-n))))))
           (countdown 200))
         '''
         helpers.assert_evaluates_to(aifpl, let_then_recursion, '"done"')
@@ -66,11 +66,11 @@ class TestTailCallOptimizationWithLet:
         before making the tail call.
         """
         accumulator_with_let = '''
-        (let ((sum-to-n (lambda (n acc)
-                         (if (<= n 0) 
-                             acc 
-                             (let ((next-acc (+ acc n)))
-                               (sum-to-n (- n 1) next-acc))))))
+        (letrec ((sum-to-n (lambda (n acc)
+                            (if (<= n 0) 
+                                acc 
+                                (let ((next-acc (+ acc n)))
+                                  (sum-to-n (- n 1) next-acc))))))
           (sum-to-n 200 0))
         '''
         # Sum from 1 to 200 = 200 * 201 / 2 = 20100
@@ -84,12 +84,12 @@ class TestTailCallOptimizationWithLet:
         values before making the tail call.
         """
         multiple_bindings = '''
-        (let ((compute (lambda (n result)
-                        (if (<= n 0) 
-                            result 
-                            (let ((next-n (- n 1))
-                                  (next-result (* result 2)))
-                              (compute next-n next-result))))))
+        (letrec ((compute (lambda (n result)
+                           (if (<= n 0) 
+                               result 
+                               (let ((next-n (- n 1))
+                                     (next-result (* result 2)))
+                                 (compute next-n next-result))))))
           (compute 10 1))
         '''
         # 2^10 = 1024
@@ -108,12 +108,12 @@ class TestTailCallOptimizationWithLet:
         This pattern is essential for CSV parsing, JSON parsing, etc.
         """
         char_counter = '''
-        (let ((count-chars (lambda (chars acc)
-                            (if (null? chars) 
-                                acc 
-                                (let ((c (first chars))
-                                      (rest-chars (rest chars)))
-                                  (count-chars rest-chars (+ acc 1)))))))
+        (letrec ((count-chars (lambda (chars acc)
+                               (if (null? chars) 
+                                   acc 
+                                   (let ((c (first chars))
+                                         (rest-chars (rest chars)))
+                                     (count-chars rest-chars (+ acc 1)))))))
           (count-chars (string->list "This is a test string with many characters in it for testing purposes") 0))
         '''
         helpers.assert_evaluates_to(aifpl, char_counter, '69')
@@ -126,12 +126,12 @@ class TestTailCallOptimizationWithLet:
         then recursively process tail.
         """
         list_sum = '''
-        (let ((sum-list (lambda (lst acc)
-                         (if (null? lst) 
-                             acc 
-                             (let ((head (first lst))
-                                   (tail (rest lst)))
-                               (sum-list tail (+ acc head)))))))
+        (letrec ((sum-list (lambda (lst acc)
+                            (if (null? lst) 
+                                acc 
+                                (let ((head (first lst))
+                                      (tail (rest lst)))
+                                  (sum-list tail (+ acc head)))))))
           (sum-list (range 1 101) 0))
         '''
         # Sum from 1 to 100 = 5050
@@ -146,19 +146,19 @@ class TestTailCallOptimizationWithLet:
         check if we're in quotes, and make a tail call.
         """
         simple_csv_parser = '''
-        (let ((parse-chars (lambda (chars in-quotes current-field fields)
-                            (if (null? chars)
-                                (reverse (cons current-field fields))
-                                (let ((c (first chars))
-                                      (rest-chars (rest chars)))
-                                  (if (string=? c ",")
-                                      (if in-quotes
-                                          (parse-chars rest-chars in-quotes 
-                                                     (string-append current-field c) fields)
-                                          (parse-chars rest-chars #f "" 
-                                                     (cons current-field fields)))
-                                      (parse-chars rest-chars in-quotes 
-                                                 (string-append current-field c) fields)))))))
+        (letrec ((parse-chars (lambda (chars in-quotes current-field fields)
+                               (if (null? chars)
+                                   (reverse (cons current-field fields))
+                                   (let ((c (first chars))
+                                         (rest-chars (rest chars)))
+                                     (if (string=? c ",")
+                                         (if in-quotes
+                                             (parse-chars rest-chars in-quotes 
+                                                        (string-append current-field c) fields)
+                                             (parse-chars rest-chars #f "" 
+                                                        (cons current-field fields)))
+                                         (parse-chars rest-chars in-quotes 
+                                                    (string-append current-field c) fields)))))))
           (parse-chars (string->list "field1,field2,field3") #f "" (list)))
         '''
         helpers.assert_evaluates_to(aifpl, simple_csv_parser, '("field1" "field2" "field3")')
@@ -170,12 +170,12 @@ class TestTailCallOptimizationWithLet:
         Tests that TCO works even with multiple levels of let nesting.
         """
         nested_let = '''
-        (let ((process (lambda (n acc)
-                        (if (<= n 0) 
-                            acc 
-                            (let ((temp1 (- n 1)))
-                              (let ((temp2 (+ acc n)))
-                                (process temp1 temp2)))))))
+        (letrec ((process (lambda (n acc)
+                           (if (<= n 0) 
+                               acc 
+                               (let ((temp1 (- n 1)))
+                                 (let ((temp2 (+ acc n)))
+                                   (process temp1 temp2)))))))
           (process 100 0))
         '''
         helpers.assert_evaluates_to(aifpl, nested_let, '5050')
@@ -188,11 +188,11 @@ class TestTailCallOptimizationWithLet:
         that's inside a let.
         """
         conditional_in_let = '''
-        (let ((collatz (lambda (n steps)
-                        (if (= n 1) 
-                            steps 
-                            (let ((next-n (if (= (% n 2) 0) (/ n 2) (+ (* n 3) 1))))
-                              (collatz next-n (+ steps 1)))))))
+        (letrec ((collatz (lambda (n steps)
+                           (if (= n 1) 
+                               steps 
+                               (let ((next-n (if (= (% n 2) 0) (/ n 2) (+ (* n 3) 1))))
+                                 (collatz next-n (+ steps 1)))))))
           (collatz 100 0))
         '''
         # Collatz sequence starting from 100 takes 25 steps
@@ -208,14 +208,14 @@ class TestTailCallOptimizationWithLet:
 
         # Direct tail call - works
         direct = '''
-        (let ((f (lambda (n) (if (<= n 0) "done" (f (- n 1))))))
+        (letrec ((f (lambda (n) (if (<= n 0) "done" (f (- n 1))))))
           (f 500))
         '''
         assert aifpl.evaluate_and_format(direct) == '"done"'
 
         # Let-based tail call - now also works!
         with_let = '''
-        (let ((f (lambda (n) (if (<= n 0) "done" (let ((x (- n 1))) (f x))))))
+        (letrec ((f (lambda (n) (if (<= n 0) "done" (let ((x (- n 1))) (f x))))))
           (f 500))
         '''
         assert aifpl.evaluate_and_format(with_let) == '"done"'
@@ -231,7 +231,7 @@ class TestTailCallOptimizationWithLet:
 
         # This now works with proper TCO
         test_depth = '''
-        (let ((f (lambda (n) (if (<= n 0) n (let ((x (- n 1))) (f x))))))
+        (letrec ((f (lambda (n) (if (<= n 0) n (let ((x (- n 1))) (f x))))))
           (f 500))
         '''
 
@@ -245,12 +245,12 @@ class TestTailCallOptimizationWithLet:
         This is a real-world use case that requires TCO with let bindings.
         """
         string_reverse = '''
-        (let ((reverse-chars (lambda (chars acc)
-                              (if (null? chars) 
-                                  acc 
-                                  (let ((head (first chars))
-                                        (tail (rest chars)))
-                                    (reverse-chars tail (cons head acc)))))))
+        (letrec ((reverse-chars (lambda (chars acc)
+                                 (if (null? chars) 
+                                     acc 
+                                     (let ((head (first chars))
+                                           (tail (rest chars)))
+                                       (reverse-chars tail (cons head acc)))))))
           (list->string (reverse-chars (string->list "This is a reasonably long string to reverse") (list))))
         '''
         helpers.assert_evaluates_to(aifpl, string_reverse, '"esrever ot gnirts gnol ylbanosaer a si sihT"')
@@ -262,14 +262,14 @@ class TestTailCallOptimizationWithLet:
         Shows that we can implement our own filter function with proper TCO.
         """
         custom_filter = '''
-        (let ((my-filter (lambda (pred lst acc)
-                          (if (null? lst) 
-                              (reverse acc) 
-                              (let ((head (first lst))
-                                    (tail (rest lst)))
-                                (if (pred head)
-                                    (my-filter pred tail (cons head acc))
-                                    (my-filter pred tail acc)))))))
+        (letrec ((my-filter (lambda (pred lst acc)
+                             (if (null? lst) 
+                                 (reverse acc) 
+                                 (let ((head (first lst))
+                                       (tail (rest lst)))
+                                   (if (pred head)
+                                       (my-filter pred tail (cons head acc))
+                                       (my-filter pred tail acc)))))))
           (my-filter (lambda (x) (> x 5)) (range 1 11) (list)))
         '''
         # Should return list of numbers from 6 to 10
@@ -284,7 +284,7 @@ class TestTailCallOptimizationLetEdgeCases:
         Edge case: Empty let before tail call works.
         """
         empty_let = '''
-        (let ((f (lambda (n) (if (<= n 0) "done" (let () (f (- n 1)))))))
+        (letrec ((f (lambda (n) (if (<= n 0) "done" (let () (f (- n 1)))))))
           (f 100))
         '''
         helpers.assert_evaluates_to(aifpl, empty_let, '"done"')
@@ -294,11 +294,11 @@ class TestTailCallOptimizationLetEdgeCases:
         Edge case: Let binding that's not used in the tail call still allows TCO.
         """
         unused_binding = '''
-        (let ((f (lambda (n) 
-                  (if (<= n 0) 
-                      "done" 
-                      (let ((unused 42))
-                        (f (- n 1)))))))
+        (letrec ((f (lambda (n) 
+                     (if (<= n 0) 
+                         "done" 
+                         (let ((unused 42))
+                           (f (- n 1)))))))
           (f 100))
         '''
         helpers.assert_evaluates_to(aifpl, unused_binding, '"done"')
@@ -312,16 +312,16 @@ class TestTailCallOptimizationLetEdgeCases:
         with let bindings still has some limitations.
         """
         mutual_with_let = '''
-        (let ((is-even (lambda (n) 
-                        (if (= n 0) 
-                            #t 
-                            (let ((next (- n 1)))
-                              (is-odd next)))))
-              (is-odd (lambda (n) 
-                       (if (= n 0) 
-                           #f 
-                           (let ((next (- n 1)))
-                             (is-even next))))))
+        (letrec ((is-even (lambda (n) 
+                           (if (= n 0) 
+                               #t 
+                               (let ((next (- n 1)))
+                                 (is-odd next)))))
+                 (is-odd (lambda (n) 
+                          (if (= n 0) 
+                              #f 
+                              (let ((next (- n 1)))
+                                (is-even next))))))
           (is-even 20))
         '''
         helpers.assert_evaluates_to(aifpl, mutual_with_let, '#t')
@@ -337,11 +337,11 @@ class TestTailCallOptimizationLetEdgeCases:
 
         # From TCO_BUG_REPORT.md - this now works!
         bug_example = '''
-        (let ((test (lambda (n acc)
-                     (if (= n 0)
-                         acc
-                         (let ((next-n (- n 1)))
-                           (test next-n (+ acc 1)))))))
+        (letrec ((test (lambda (n acc)
+                        (if (= n 0)
+                            acc
+                            (let ((next-n (- n 1)))
+                              (test next-n (+ acc 1)))))))
           (test 500 0))
         '''
 
@@ -360,8 +360,8 @@ class TestTailCallOptimizationVerification:
     def test_direct_tail_calls_still_work(self, aifpl, helpers):
         """Verify that direct tail calls continue to work after the fix."""
         direct = '''
-        (let ((f (lambda (n acc) 
-                  (if (<= n 0) acc (f (- n 1) (+ acc 1))))))
+        (letrec ((f (lambda (n acc) 
+                     (if (<= n 0) acc (f (- n 1) (+ acc 1))))))
           (f 500 0))
         '''
         helpers.assert_evaluates_to(aifpl, direct, '500')
@@ -369,12 +369,12 @@ class TestTailCallOptimizationVerification:
     def test_if_branch_tail_calls_still_work(self, aifpl, helpers):
         """Verify that tail calls in if branches continue to work."""
         if_branches = '''
-        (let ((f (lambda (n) 
-                  (if (<= n 0) 
-                      "zero" 
-                      (if (= n 1) 
-                          "one" 
-                          (f (- n 2)))))))
+        (letrec ((f (lambda (n) 
+                     (if (<= n 0) 
+                         "zero" 
+                         (if (= n 1) 
+                             "one" 
+                             (f (- n 2)))))))
           (f 100))
         '''
         helpers.assert_evaluates_to(aifpl, if_branches, '"zero"')
@@ -384,14 +384,14 @@ class TestTailCallOptimizationVerification:
         Verify that combining if and let in tail position works.
         """
         combined = '''
-        (let ((f (lambda (n acc)
-                  (if (<= n 0)
-                      acc
-                      (if (= (% n 2) 0)
-                          (let ((half (/ n 2)))
-                            (f half (+ acc 1)))
-                          (let ((next (- n 1)))
-                            (f next (+ acc 1))))))))
+        (letrec ((f (lambda (n acc)
+                     (if (<= n 0)
+                         acc
+                         (if (= (% n 2) 0)
+                             (let ((half (/ n 2)))
+                               (f half (+ acc 1)))
+                             (let ((next (- n 1)))
+                               (f next (+ acc 1))))))))
           (f 100 0))
         '''
         # Count steps from 100 to 0 (using halving for evens, decrement for odds)
@@ -408,19 +408,19 @@ class TestTailCallOptimizationVerification:
         aifpl = aifpl_custom(max_depth=1000)
 
         comprehensive = '''
-        (let ((process (lambda (n mode acc)
-                        (if (<= n 0)
-                            acc
-                            (if (= mode 0)
-                                ; Direct tail call
-                                (process (- n 1) 1 (+ acc 1))
-                                (if (= mode 1)
-                                    ; Tail call in if branch
-                                    (process (- n 1) 2 (+ acc 2))
-                                    ; Tail call after let
-                                    (let ((next-n (- n 1))
-                                          (next-acc (+ acc 3)))
-                                      (process next-n 0 next-acc))))))))
+        (letrec ((process (lambda (n mode acc)
+                           (if (<= n 0)
+                               acc
+                               (if (= mode 0)
+                                   ; Direct tail call
+                                   (process (- n 1) 1 (+ acc 1))
+                                   (if (= mode 1)
+                                       ; Tail call in if branch
+                                       (process (- n 1) 2 (+ acc 2))
+                                       ; Tail call after let
+                                       (let ((next-n (- n 1))
+                                             (next-acc (+ acc 3)))
+                                         (process next-n 0 next-acc))))))))
           (process 300 0 0))
         '''
 
@@ -439,11 +439,11 @@ class TestTailCallOptimizationPerformance:
         aifpl = aifpl_custom(max_depth=5000)
 
         deep = '''
-        (let ((countdown (lambda (n)
-                          (if (<= n 0)
-                              "done"
-                              (let ((next (- n 1)))
-                                (countdown next))))))
+        (letrec ((countdown (lambda (n)
+                             (if (<= n 0)
+                                 "done"
+                                 (let ((next (- n 1)))
+                                   (countdown next))))))
           (countdown 1000))
         '''
 
@@ -454,12 +454,12 @@ class TestTailCallOptimizationPerformance:
         Test factorial computation using let-based tail recursion.
         """
         factorial = '''
-        (let ((fact (lambda (n acc)
-                     (if (<= n 1)
-                         acc
-                         (let ((next-n (- n 1))
-                               (next-acc (* n acc)))
-                           (fact next-n next-acc))))))
+        (letrec ((fact (lambda (n acc)
+                        (if (<= n 1)
+                            acc
+                            (let ((next-n (- n 1))
+                                  (next-acc (* n acc)))
+                              (fact next-n next-acc))))))
           (fact 10 1))
         '''
         helpers.assert_evaluates_to(aifpl, factorial, '3628800')
@@ -469,13 +469,13 @@ class TestTailCallOptimizationPerformance:
         Test Fibonacci computation using let-based tail recursion with two accumulators.
         """
         fibonacci = '''
-        (let ((fib (lambda (n a b)
-                    (if (<= n 0)
-                        a
-                        (let ((next-n (- n 1))
-                              (next-a b)
-                              (next-b (+ a b)))
-                          (fib next-n next-a next-b))))))
+        (letrec ((fib (lambda (n a b)
+                       (if (<= n 0)
+                           a
+                           (let ((next-n (- n 1))
+                                 (next-a b)
+                                 (next-b (+ a b)))
+                             (fib next-n next-a next-b))))))
           (fib 20 0 1))
         '''
         # 20th Fibonacci number

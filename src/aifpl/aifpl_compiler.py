@@ -22,18 +22,19 @@ class CompilationScope:
     Maps variable names to their index within the scope.
     """
     bindings: Dict[str, int] = field(default_factory=dict)
-    next_index: int = 0  # Track next available index
 
-    def add_binding(self, name: str) -> int:
-        """Add a binding and return its index.
+    def add_binding(self, name: str, index: int) -> None:
+        """
+        Add a binding with the given index.
 
         Note: If a binding with the same name already exists, it will be
         overwritten with a new index. This is intentional to support shadowing.
+
+        Args:
+            name: Variable name
+            index: Global index for this variable
         """
-        index = self.next_index
         self.bindings[name] = index
-        self.next_index += 1
-        return index
 
     def get_binding(self, name: str) -> int | None:
         """Get binding index, or None if not found."""
@@ -57,6 +58,7 @@ class CompilationContext:
     max_locals: int = 0  # Track maximum locals needed
     parent_ctx: 'CompilationContext | None' = None  # Parent context for nested lambdas
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
+    next_local_index: int = 0  # Global counter for local variable indices (for flat indexing)
     in_tail_position: bool = False  # Whether we're compiling in tail position
     current_function_name: str | None = None  # Name of the function being compiled (for tail recursion detection)
 
@@ -73,8 +75,14 @@ class CompilationContext:
 
     def update_max_locals(self) -> None:
         """Update max locals based on current scope depth."""
-        total_locals = sum(scope.next_index for scope in self.scopes)
-        self.max_locals = max(self.max_locals, total_locals)
+        # For flat indexing, max_locals is just the highest index we've used
+        self.max_locals = max(self.max_locals, self.next_local_index)
+
+    def allocate_local_index(self) -> int:
+        """Allocate a new local variable index from the global counter."""
+        index = self.next_local_index
+        self.next_local_index += 1
+        return index
 
     def current_scope(self) -> CompilationScope:
         """Get current scope."""
@@ -114,26 +122,19 @@ class CompilationContext:
         """
         Resolve variable to (type, depth, index).
 
-        For variables in let bindings, we use flat indexing within the same frame.
-        All lets in the same function/module use depth=0 with different flat indices.
+        With global index allocation, the index stored in each binding is already
+        the final flat index. We just need to find which scope has the binding.
 
         Returns:
             ('local', depth, index) for local variables
             ('global', 0, name_index) for global variables
         """
         # Search from innermost to outermost scope
-        flat_index_offset = 0
-        for depth, scope in enumerate(reversed(self.scopes)):
+        for scope in reversed(self.scopes):
             index = scope.get_binding(name)
             if index is not None:
-                # Calculate flat index: sum of all previous scope sizes + index within scope
-                # All scopes in the same function use depth=0 (same frame)
-                for i in range(len(self.scopes) - depth - 1):
-                    flat_index_offset += len(self.scopes[i].bindings)
-
-                flat_index = flat_index_offset + index
-                # Always use depth=0 for let variables (they're all in the same frame)
-                return ('local', 0, flat_index)
+                # Index is already the global flat index
+                return ('local', 0, index)
 
         # Not found in local scopes, must be global
         name_index = self.add_name(name)
@@ -314,6 +315,10 @@ class AIFPLCompiler:
 
             if name == 'let':
                 self._compile_let(expr, ctx)
+                return
+
+            if name == 'letrec':
+                self._compile_letrec(expr, ctx)
                 return
 
             if name == 'lambda':
@@ -509,7 +514,12 @@ class AIFPLCompiler:
         ctx.patch_jump(jump_to_end, end)
 
     def _compile_let(self, expr: AIFPLList, ctx: CompilationContext) -> None:
-        """Compile let expression: (let ((var val) ...) body)"""
+        """
+        Compile let expression with simple sequential binding: (let ((var val) ...) body)
+
+        Bindings are evaluated left-to-right, with each able to reference previous bindings.
+        Self-references see the outer scope (shadowing works).
+        """
         if len(expr.elements) < 3:
             raise AIFPLEvalError(
                 message="Let expression structure is incorrect",
@@ -533,12 +543,98 @@ class AIFPLCompiler:
         # Push a new scope for let bindings
         ctx.push_scope()
 
+        # Parse and validate bindings
+        binding_pairs = []
+        for i, binding in enumerate(bindings_list.elements):
+            if not isinstance(binding, AIFPLList) or len(binding.elements) != 2:
+                raise AIFPLEvalError(
+                    message=f"Let binding {i+1} must be a list with 2 elements",
+                    received=f"Binding {i+1}: {binding.type_name() if not isinstance(binding, AIFPLList) else f'{len(binding.elements)} elements'}",
+                    expected="Each binding: (variable value-expression)",
+                    example='(x 5)'
+                )
+
+            name_expr, value_expr = binding.elements
+            if not isinstance(name_expr, AIFPLSymbol):
+                raise AIFPLEvalError(
+                    message=f"Let binding {i+1} variable must be a symbol",
+                    received=f"Variable: {name_expr.type_name()}",
+                    expected="Unquoted symbol (variable name)",
+                    example='Correct: (x 5)\\nIncorrect: ("x" 5)'
+                )
+
+            binding_pairs.append((name_expr.name, value_expr))
+
+        # Check for duplicates
+        var_names = [name for name, _ in binding_pairs]
+        if len(var_names) != len(set(var_names)):
+            duplicates = [name for name in var_names if var_names.count(name) > 1]
+            raise AIFPLEvalError(
+                message="Let binding variables must be unique",
+                received=f"Duplicate variables: {duplicates}",
+                expected="All variable names should be different"
+            )
+
+        # Simple sequential evaluation - compile and store each binding in order
+        for name, value_expr in binding_pairs:
+            # Compile value expression FIRST (before adding binding to scope)
+            # This ensures self-references see the outer scope (shadowing works)
+            old_tail = ctx.in_tail_position
+            ctx.in_tail_position = False
+            self._compile_expression(value_expr, ctx)
+            ctx.in_tail_position = old_tail
+
+            # NOW add binding to scope (after evaluating the value)
+            # This makes it available for subsequent bindings
+            var_index = ctx.allocate_local_index()
+            ctx.current_scope().add_binding(name, var_index)
+            ctx.update_max_locals()
+
+            # Store in local variable (depth=0 for current frame)
+            ctx.emit(Opcode.STORE_VAR, 0, var_index)
+
+        # Compile body
+        self._compile_expression(body, ctx)
+
+        # Pop the scope
+        ctx.pop_scope()
+
+    def _compile_letrec(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+        """
+        Compile letrec expression with recursive binding: (letrec ((var val) ...) body)
+
+        All bindings can reference themselves and each other (mutual recursion).
+        Uses dependency analysis and placeholders to support this.
+        """
+        if len(expr.elements) < 3:
+            raise AIFPLEvalError(
+                message="Letrec expression structure is incorrect",
+                received=f"Got {len(expr.elements)} elements",
+                expected="Exactly 3 elements: (letrec ((bindings...)) body)",
+                example="(letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))",
+                suggestion="Letrec needs binding list and body: (letrec ((var1 val1) (var2 val2) ...) body)"
+            )
+
+        _, bindings_list, body = expr.elements[0], expr.elements[1], expr.elements[2]
+
+        if not isinstance(bindings_list, AIFPLList):
+            raise AIFPLEvalError(
+                message="Letrec binding list must be a list",
+                received=f"Binding list: {bindings_list.type_name()}",
+                expected="List of bindings: ((var1 val1) (var2 val2) ...)",
+                example="(letrec ((f (lambda (n) (if (= n 0) 1 (* n (f (- n 1))))))) (f 5))",
+                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
+            )
+
+        # Push a new scope for letrec bindings
+        ctx.push_scope()
+
         # First pass: Add all binding names to scope (for recursive references)
         binding_pairs = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, AIFPLList):
                 raise AIFPLEvalError(
-                    message=f"Let binding {i+1} must be a list",
+                    message=f"Letrec binding {i+1} must be a list",
                     received=f"Binding {i+1}: {binding.type_name()}",
                     expected="List with variable and value: (var val)",
                     example='Correct: (x 5)\\nIncorrect: x or "x"',
@@ -547,7 +643,7 @@ class AIFPLCompiler:
 
             if len(binding.elements) != 2:
                 raise AIFPLEvalError(
-                    message=f"Let binding {i+1} has wrong number of elements",
+                    message=f"Letrec binding {i+1} has wrong number of elements",
                     received=f"Binding {i+1}: has {len(binding.elements)} elements",
                     expected="Each binding needs exactly 2 elements: (variable value)",
                     example='Correct: (x 5)\\nIncorrect: (x) or (x 5 6)',
@@ -557,7 +653,7 @@ class AIFPLCompiler:
             name_expr, value_expr = binding.elements
             if not isinstance(name_expr, AIFPLSymbol):
                 raise AIFPLEvalError(
-                    message=f"Let binding {i+1} variable must be a symbol",
+                    message=f"Letrec binding {i+1} variable must be a symbol",
                     received=f"Variable: {name_expr.type_name()}",
                     expected="Unquoted symbol (variable name)",
                     example='Correct: (x 5)\\nIncorrect: ("x" 5) or (1 5)',
@@ -566,14 +662,15 @@ class AIFPLCompiler:
 
             binding_pairs.append((name_expr.name, value_expr))
             # Add binding to scope NOW so recursive lambdas can reference it
-            ctx.current_scope().add_binding(name_expr.name)
+            var_index = ctx.allocate_local_index()
+            ctx.current_scope().add_binding(name_expr.name, var_index)
 
         # Check for duplicate binding names
         var_names = [name for name, _ in binding_pairs]
         if len(var_names) != len(set(var_names)):
             duplicates = [name for name in var_names if var_names.count(name) > 1]
             raise AIFPLEvalError(
-                message="Let binding variables must be unique",
+                message="Letrec binding variables must be unique",
                 received=f"Duplicate variables: {duplicates}",
                 expected="All variable names should be different",
                 example='Correct: (let ((x 1) (y 2)) ...)\\nIncorrect: (let ((x 1) (x 2)) ...)',
@@ -583,9 +680,9 @@ class AIFPLCompiler:
         # Update max locals after adding all bindings
         ctx.update_max_locals()
 
-        # Analyze dependencies to determine evaluation order
+        # Analyze dependencies for letrec (supports mutual recursion)
         analyzer = AIFPLDependencyAnalyzer()
-        binding_groups = analyzer.analyze_let_bindings(binding_pairs)
+        binding_groups = analyzer.analyze_letrec_bindings(binding_pairs)
 
         # Topologically sort the groups based on their dependencies
         # (The SCC algorithm should return them in the right order, but let's be explicit)
@@ -604,7 +701,7 @@ class AIFPLCompiler:
 
             else:
                 # No group found - circular dependency (shouldn't happen)
-                raise AIFPLEvalError("Circular dependency detected in let bindings")
+                raise AIFPLEvalError("Circular dependency detected in letrec bindings")
 
         binding_groups = sorted_groups
 
@@ -807,11 +904,13 @@ class AIFPLCompiler:
 
         # Add parameters to lambda scope
         for param_name in param_names:
-            lambda_ctx.current_scope().add_binding(param_name)
+            param_index = lambda_ctx.allocate_local_index()
+            lambda_ctx.current_scope().add_binding(param_name, param_index)
 
         # Add captured free variables to lambda scope
         for free_var in captured_vars:
-            lambda_ctx.current_scope().add_binding(free_var)
+            free_var_index = lambda_ctx.allocate_local_index()
+            lambda_ctx.current_scope().add_binding(free_var, free_var_index)
 
         # For sibling bindings that weren't captured, we need to track them differently
         # They should be resolved from parent frame at runtime

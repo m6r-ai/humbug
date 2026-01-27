@@ -410,19 +410,19 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         """Test dependency analysis with edge case ordering."""
         # Variables defined in reverse dependency order
         result = aifpl.evaluate("""
-        (let ((z (+ x y))
-              (y (+ x 1))
-              (x 5))
+        (letrec ((z (+ x y))
+                 (y (+ x 1))
+                 (x 5))
           z)
         """)
         assert result == 11  # x=5, y=6, z=11
 
         # Mixed ordering
         result = aifpl.evaluate("""
-        (let ((c (+ a b))
-              (a 3)
-              (b (* a 2))
-              (d (- c a)))
+        (letrec ((c (+ a b))
+                 (a 3)
+                 (b (* a 2))
+                 (d (- c a)))
           d)
         """)
         assert result == 6  # a=3, b=6, c=9, d=6

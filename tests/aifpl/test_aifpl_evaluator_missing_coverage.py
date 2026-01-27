@@ -186,10 +186,10 @@ class TestEvaluatorMissingCoverage:
     def test_recursive_lambda_call_chain_cleanup(self, aifpl):
         """Test that recursive lambda call chain is properly cleaned up."""
         recursive_code = """
-        (let ((factorial (lambda (n)
-                           (if (<= n 1)
-                               1
-                               (* n (factorial (- n 1)))))))
+        (letrec ((factorial (lambda (n)
+                              (if (<= n 1)
+                                  1
+                                  (* n (factorial (- n 1)))))))
           (factorial 5))
         """
         result = aifpl.evaluate(recursive_code)
@@ -198,14 +198,14 @@ class TestEvaluatorMissingCoverage:
     def test_mutual_recursion_call_chain_cleanup(self, aifpl):
         """Test call chain cleanup with mutual recursion."""
         mutual_recursion_code = """
-        (let ((is-even (lambda (n)
-                         (if (= n 0)
-                             #t
-                             (is-odd (- n 1)))))
-              (is-odd (lambda (n)
-                        (if (= n 0)
-                            #f
-                            (is-even (- n 1))))))
+        (letrec ((is-even (lambda (n)
+                            (if (= n 0)
+                                #t
+                                (is-odd (- n 1)))))
+                 (is-odd (lambda (n)
+                           (if (= n 0)
+                               #f
+                               (is-even (- n 1))))))
           (is-even 4))
         """
         result = aifpl.evaluate(mutual_recursion_code)
@@ -312,10 +312,10 @@ class TestEvaluatorMissingCoverage:
 
         # Create a tail-recursive countdown function
         countdown_code = """
-        (let ((countdown (lambda (n acc)
-                          (if (= n 0)
-                              acc
-                              (countdown (- n 1) (+ acc n))))))
+        (letrec ((countdown (lambda (n acc)
+                             (if (= n 0)
+                                 acc
+                                 (countdown (- n 1) (+ acc n))))))
           (countdown 10 0))
         """
         result = aifpl_deep.evaluate(countdown_code)
@@ -326,10 +326,10 @@ class TestEvaluatorMissingCoverage:
         """Test error propagation through tail call optimization."""
         # Create recursive function that will eventually error
         error_code = """
-        (let ((error-func (lambda (n)
-                           (if (= n 0)
-                               (/ 1 0)
-                               (error-func (- n 1))))))
+        (letrec ((error-func (lambda (n)
+                              (if (= n 0)
+                                  (/ 1 0)
+                                  (error-func (- n 1))))))
           (error-func 3))
         """
         with pytest.raises(AIFPLEvalError) as exc_info:

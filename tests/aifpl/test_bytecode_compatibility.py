@@ -92,7 +92,7 @@ class TestLambda:
     def test_recursive_lambda(self, aifpl_both):
         """Test recursive functions (critical test!)"""
         result = aifpl_both.evaluate("""
-            (let ((factorial (lambda (n)
+            (letrec ((factorial (lambda (n)
                 (if (= n 0)
                     1
                     (* n (factorial (- n 1)))))))

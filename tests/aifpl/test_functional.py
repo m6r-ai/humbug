@@ -404,18 +404,18 @@ class TestFunctional:
         """Test recursive lambda functions with tail call optimization."""
         # Factorial using tail recursion
         factorial_expr = '''
-        (let ((factorial (lambda (n acc)
-                          (if (<= n 1) acc (factorial (- n 1) (* n acc))))))
+        (letrec ((factorial (lambda (n acc)
+                             (if (<= n 1) acc (factorial (- n 1) (* n acc))))))
           (factorial 5 1))
         '''
         helpers.assert_evaluates_to(aifpl, factorial_expr, '120')
 
         # Sum of list using tail recursion
         sum_list_expr = '''
-        (let ((sum-list (lambda (lst acc)
-                         (if (null? lst) 
-                             acc 
-                             (sum-list (rest lst) (+ acc (first lst)))))))
+        (letrec ((sum-list (lambda (lst acc)
+                            (if (null? lst) 
+                                acc 
+                                (sum-list (rest lst) (+ acc (first lst)))))))
           (sum-list (list 1 2 3 4) 0))
         '''
         helpers.assert_evaluates_to(aifpl, sum_list_expr, '10')
@@ -427,8 +427,8 @@ class TestFunctional:
 
         # Deep tail recursion should not cause stack overflow
         deep_recursion = '''
-        (let ((count-down (lambda (n)
-                           (if (<= n 0) "done" (count-down (- n 1))))))
+        (letrec ((count-down (lambda (n)
+                              (if (<= n 0) "done" (count-down (- n 1))))))
           (count-down 5000))
         '''
         result = aifpl.evaluate_and_format(deep_recursion)
@@ -438,8 +438,8 @@ class TestFunctional:
         """Test mutual recursion between lambda functions."""
         # Even/odd mutual recursion
         even_odd_expr = '''
-        (let ((is-even (lambda (n) (if (= n 0) #t (is-odd (- n 1)))))
-              (is-odd (lambda (n) (if (= n 0) #f (is-even (- n 1))))))
+        (letrec ((is-even (lambda (n) (if (= n 0) #t (is-odd (- n 1)))))
+                 (is-odd (lambda (n) (if (= n 0) #f (is-even (- n 1))))))
           (list (is-even 4) (is-odd 4) (is-even 7) (is-odd 7)))
         '''
         helpers.assert_evaluates_to(aifpl, even_odd_expr, '(#t #f #f #t)')
@@ -685,10 +685,10 @@ class TestFunctional:
         # (this should work both before and after the fix)
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((factorial (lambda (n)
-                                (if (<= n 1) 
-                                    1 
-                                    (* n (factorial (- n 1)))))))
+            '''(letrec ((factorial (lambda (n)
+                                   (if (<= n 1) 
+                                       1 
+                                       (* n (factorial (- n 1)))))))
                  (factorial 4))''',
             '24'
         )

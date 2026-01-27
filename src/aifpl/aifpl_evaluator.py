@@ -144,6 +144,9 @@ class AIFPLEvaluator:
             if self._is_symbol_with_name(first_elem, "let"):
                 return self._evaluate_let_form(expr, env, depth + 1, False)
 
+            if self._is_symbol_with_name(first_elem, "letrec"):
+                return self._evaluate_letrec_form(expr, env, depth + 1, False)
+
             if self._is_symbol_with_name(first_elem, "and"):
                 return self._evaluate_and_form(expr, env, depth + 1)
 
@@ -269,7 +272,10 @@ class AIFPLEvaluator:
         in_tail_position: bool = False
     ) -> AIFPLValue:
         """
-        Evaluate (let ((var1 val1) (var2 val2) ...) body) form with enhanced error messages.
+        Evaluate (let ((var1 val1) (var2 val2) ...) body) form with sequential binding.
+
+        Bindings are evaluated left-to-right, with each binding able to reference
+        previous bindings. Self-references see the outer scope (shadowing works).
 
         Args:
             let_list: List representing let expression
@@ -349,12 +355,113 @@ class AIFPLEvaluator:
 
         body = let_list.get(2)
 
-        # Analyze dependencies
+        # Simple sequential evaluation - no dependency analysis needed
+        # Evaluate each binding in order, extending the environment as we go
+        current_env = env  # Start with parent environment
+        for name, expr in bindings:
+            try:
+                # Evaluate in current environment (includes previous bindings)
+                value = self._evaluate_expression(expr, current_env, depth + 1)
+                # Extend environment with new binding
+                current_env = current_env.define(name, value)
+
+            except AIFPLEvalError as e:
+                raise AIFPLEvalError(
+                    message=f"Error evaluating let binding '{name}'",
+                    context=str(e),
+                    received=f"Binding: ({name} {self.format_result(expr)})",
+                    suggestion=f"Check the expression for variable '{name}'"
+                ) from e
+
+        # Evaluate body in the final environment
+        # Use tail detection if we're in tail position
+        if in_tail_position:
+            return self._evaluate_expression_with_tail_detection(body, current_env, depth)
+
+        return self._evaluate_expression(body, current_env, depth)
+
+    def _evaluate_letrec_form(
+        self,
+        letrec_list: AIFPLList,
+        env: AIFPLEnvironment,
+        depth: int,
+        in_tail_position: bool = False
+    ) -> AIFPLValue:
+        """
+        Evaluate (letrec ((var1 val1) (var2 val2) ...) body) form with recursive binding.
+
+        All bindings can reference themselves and each other (mutual recursion).
+        Uses dependency analysis and placeholders to support this.
+
+        Args:
+            letrec_list: List representing letrec expression
+            env: Current environment
+            depth: Current recursion depth
+            in_tail_position: Whether this letrec is in tail position (for TCO)
+
+        Returns:
+            Result of evaluating the letrec body
+        """
+        # Reuse let's parsing logic - same structure, different semantics
+        if letrec_list.length() != 3:
+            raise AIFPLEvalError(
+                message="Letrec expression structure is incorrect",
+                received=f"Got {letrec_list.length()} elements: {self.format_result(letrec_list)}",
+                expected="Exactly 3 elements: (letrec ((bindings...)) body)",
+                example="(letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))",
+                suggestion="Letrec needs binding list and body: (letrec ((var1 val1) (var2 val2) ...) body)"
+            )
+
+        # Parse bindings (same validation as let)
+        binding_expr = letrec_list.get(1)
+        if not isinstance(binding_expr, AIFPLList):
+            raise AIFPLEvalError(
+                message="Letrec binding list must be a list",
+                received=f"Binding list: {self.format_result(binding_expr)} ({binding_expr.type_name()})",
+                expected="List of bindings: ((var1 val1) (var2 val2) ...)",
+                example="(letrec ((f (lambda (n) (if (= n 0) 1 (* n (f (- n 1))))))) (f 5))",
+                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
+            )
+
+        # Parse bindings - reuse the same parsing code structure as let
+        bindings = []
+        for i, binding in enumerate(binding_expr.elements):
+            if not isinstance(binding, AIFPLList) or binding.length() != 2:
+                raise AIFPLEvalError(
+                    message=f"Letrec binding {i+1} must be a list with 2 elements",
+                    received=f"Binding {i+1}: {self.format_result(binding)}",
+                    expected="Each binding: (variable value-expression)",
+                    example="(fact (lambda (n) ...))"
+                )
+
+            var_name_expr = binding.get(0)
+            if not isinstance(var_name_expr, AIFPLSymbol):
+                raise AIFPLEvalError(
+                    message=f"Letrec binding {i+1} variable must be a symbol",
+                    received=f"Variable: {self.format_result(var_name_expr)}",
+                    expected="Unquoted symbol (variable name)"
+                )
+
+            bindings.append((var_name_expr.name, binding.get(1)))
+
+        # Check for duplicates
+        var_names = [name for name, _ in bindings]
+        if len(var_names) != len(set(var_names)):
+            duplicates = [name for name in var_names if var_names.count(name) > 1]
+            raise AIFPLEvalError(
+                message="Letrec binding variables must be unique",
+                received=f"Duplicate variables: {duplicates}",
+                expected="All variable names should be different"
+            )
+
+        body = letrec_list.get(2)
+
+        # Use dependency analysis for letrec
         analyzer = AIFPLDependencyAnalyzer()
-        binding_groups = analyzer.analyze_let_bindings(bindings)
+        binding_groups = analyzer.analyze_letrec_bindings(bindings)
 
         # Evaluate groups in order
-        current_env = AIFPLEnvironment(bindings={}, parent=env)  # Let environment, no function reference
+        current_env = AIFPLEnvironment(bindings={}, parent=env)
         for group in binding_groups:
             if group.is_recursive:
                 current_env = self._evaluate_recursive_binding_group(group, current_env, depth)
@@ -363,7 +470,6 @@ class AIFPLEvaluator:
                 current_env = self._evaluate_sequential_binding_group(group, current_env, depth)
 
         # Evaluate body in the final environment
-        # Use tail detection if we're in tail position
         if in_tail_position:
             return self._evaluate_expression_with_tail_detection(body, current_env, depth)
 
@@ -659,6 +765,9 @@ class AIFPLEvaluator:
 
             if self._is_symbol_with_name(first_elem, 'let'):
                 return self._evaluate_let_form(expr, env, depth + 1, True)
+
+            if self._is_symbol_with_name(first_elem, 'letrec'):
+                return self._evaluate_letrec_form(expr, env, depth + 1, True)
 
             if self._is_symbol_with_name(first_elem, 'and'):
                 return self._evaluate_and_form(expr, env, depth + 1)

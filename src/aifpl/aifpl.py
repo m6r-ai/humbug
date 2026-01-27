@@ -28,30 +28,30 @@ class AIFPL:
     # AIFPL implementations of higher-order functions
     _PRELUDE_SOURCE = {
         'map': """(lambda (f lst)
-                    (let ((helper (lambda (f lst acc)
-                                    (if (null? lst) (reverse acc)
-                                        (helper f (rest lst) (cons (f (first lst)) acc))))))
+                    (letrec ((helper (lambda (f lst acc)
+                                       (if (null? lst) (reverse acc)
+                                           (helper f (rest lst) (cons (f (first lst)) acc))))))
                     (helper f lst (list))))""",
         'filter': """(lambda (pred lst)
-                    (let ((helper (lambda (pred lst acc)
-                                    (if (null? lst) (reverse acc)
-                                        (if (pred (first lst))
-                                            (helper pred (rest lst) (cons (first lst) acc))
-                                            (helper pred (rest lst) acc))))))
+                    (letrec ((helper (lambda (pred lst acc)
+                                       (if (null? lst) (reverse acc)
+                                           (if (pred (first lst))
+                                               (helper pred (rest lst) (cons (first lst) acc))
+                                               (helper pred (rest lst) acc))))))
                         (helper pred lst (list))))""",
         'fold': """(lambda (f init lst)
-                    (let ((helper (lambda (f acc lst)
-                                    (if (null? lst) acc
-                                        (helper f (f acc (first lst)) (rest lst))))))
+                    (letrec ((helper (lambda (f acc lst)
+                                       (if (null? lst) acc
+                                           (helper f (f acc (first lst)) (rest lst))))))
                     (helper f init lst)))""",
         'find': """(lambda (pred lst)
-                    (let ((find (lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) (first lst) (find pred (rest lst)))))))
+                    (letrec ((find (lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) (first lst) (find pred (rest lst)))))))
                     (find pred lst)))""",
         'any?': """(lambda (pred lst)
-                    (let ((any? (lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) #t (any? pred (rest lst)))))))
+                    (letrec ((any? (lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) #t (any? pred (rest lst)))))))
                     (any? pred lst)))""",
         'all?': """(lambda (pred lst)
-                    (let ((all? (lambda (pred lst) (if (null? lst) #t (if (pred (first lst)) (all? pred (rest lst)) #f)))))
+                    (letrec ((all? (lambda (pred lst) (if (null? lst) #t (if (pred (first lst)) (all? pred (rest lst)) #f)))))
                     (all? pred lst)))""",
     }
 

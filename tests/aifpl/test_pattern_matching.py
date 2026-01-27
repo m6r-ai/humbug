@@ -497,10 +497,10 @@ class TestPatternMatching:
         """Test practical list processing with pattern matching."""
         # Safe list operations
         safe_head = '''
-        (let ((safe-first (lambda (lst)
-                           (match lst
-                                  (() "empty")
-                                  ((head . tail) head)))))
+        (letrec ((safe-first (lambda (lst)
+                              (match lst
+                                     (() "empty")
+                                     ((head . tail) head)))))
           (list (safe-first (list 1 2 3))
                 (safe-first (list))))
         '''
@@ -508,10 +508,10 @@ class TestPatternMatching:
 
         # List length calculation
         list_length = '''
-        (let ((my-length (lambda (lst)
-                          (match lst
-                                 (() 0)
-                                 ((head . tail) (+ 1 (my-length tail)))))))
+        (letrec ((my-length (lambda (lst)
+                             (match lst
+                                    (() 0)
+                                    ((head . tail) (+ 1 (my-length tail)))))))
           (my-length (list 1 2 3 4 5)))
         '''
         helpers.assert_evaluates_to(aifpl, list_length, '5')
@@ -544,11 +544,11 @@ class TestPatternMatching:
         """Test pattern matching with tree-like structures."""
         # Simple binary tree sum (represented as nested lists)
         tree_sum = '''
-        (let ((sum-tree (lambda (tree)
-                         (match tree
-                                ((number? n) n)
-                                ((left right) (+ (sum-tree left) (sum-tree right)))
-                                (_ 0)))))
+        (letrec ((sum-tree (lambda (tree)
+                            (match tree
+                                   ((number? n) n)
+                                   ((left right) (+ (sum-tree left) (sum-tree right)))
+                                   (_ 0)))))
           (sum-tree (list (list 1 2) (list 3 4))))
         '''
         helpers.assert_evaluates_to(aifpl, tree_sum, '10')
@@ -630,12 +630,12 @@ class TestPatternMatching:
 
         # Pattern matching with recursive function
         recursive_pattern = '''
-        (let ((process-nested (lambda (data)
-                               (match data
-                                      ((number? n) n)
-                                      ((string? s) (string-length s))
-                                      ((list? l) (fold + 0 (map process-nested l)))
-                                      (_ 0)))))
+        (letrec ((process-nested (lambda (data)
+                                  (match data
+                                         ((number? n) n)
+                                         ((string? s) (string-length s))
+                                         ((list? l) (fold + 0 (map process-nested l)))
+                                         (_ 0)))))
           (process-nested (list 10 "test" (list 5 "hi") 20)))
         '''
         helpers.assert_evaluates_to(aifpl, recursive_pattern, '41')  # 10 + 4 + (5 + 2) + 20

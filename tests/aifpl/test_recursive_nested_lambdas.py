@@ -23,10 +23,10 @@ class TestRecursiveNestedLambdas:
         # Basic factorial
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((factorial (lambda (n) 
-                              (if (<= n 1) 
-                                  1 
-                                  (* n (factorial (- n 1)))))))
+            '''(letrec ((factorial (lambda (n)
+                                 (if (<= n 1)
+                                     1
+                                     (* n (factorial (- n 1)))))))
               (factorial 5))''',
             '120'
         )
@@ -34,10 +34,10 @@ class TestRecursiveNestedLambdas:
         # Two bindings with recursion
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((x 10)
-                  (factorial (lambda (n) 
-                              (if (<= n 1) 
-                                  1 
+            '''(letrec ((x 10)
+                  (factorial (lambda (n)
+                              (if (<= n 1)
+                                  1
                                   (* n (factorial (- n 1)))))))
               (+ x (factorial 5)))''',
             '130'
@@ -48,12 +48,12 @@ class TestRecursiveNestedLambdas:
         # Lambda factory pattern
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((make-factorial 
-                    (lambda () 
-                      (lambda (n) 
-                        (if (<= n 1) 
-                            1 
-                            (* n ((make-factorial) (- n 1))))))))
+            '''(letrec ((make-factorial
+                       (lambda ()
+                         (lambda (n)
+                           (if (<= n 1)
+                               1
+                               (* n ((make-factorial) (- n 1))))))))
               ((make-factorial) 5))''',
             '120'
         )
@@ -63,7 +63,7 @@ class TestRecursiveNestedLambdas:
         # Simple case: recursive call inside map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((visit (lambda (id path)
+            '''(letrec ((visit (lambda (id path)
                           (if (member? id path)
                               (list)
                               (let ((new-path (cons id path)))
@@ -81,7 +81,7 @@ class TestRecursiveNestedLambdas:
         # Simplified version without map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((all-ids (list 1 2 3))
+            '''(letrec ((all-ids (list 1 2 3))
                   (visit (lambda (id path)
                           (if (member? id path)
                               (list id)
@@ -98,8 +98,8 @@ class TestRecursiveNestedLambdas:
         # Full DFS structure with map and fold
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((all-task-ids (list "T001" "T002" "T003"))
-                  (get-successors (lambda (task-id) 
+            '''(letrec ((all-task-ids (list "T001" "T002" "T003"))
+                  (get-successors (lambda (task-id)
                                    (if (string=? task-id "T001")
                                        (list "T002")
                                        (list))))
@@ -124,10 +124,10 @@ class TestRecursiveNestedLambdas:
         # Recursive predicate in filter
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((is-valid (lambda (n)
-                              (if (<= n 1)
-                                  #t
-                                  (and (> n 0) (is-valid (- n 1)))))))
+            '''(letrec ((is-valid (lambda (n)
+                                 (if (<= n 1)
+                                     #t
+                                     (and (> n 0) (is-valid (- n 1)))))))
               (filter (lambda (x) (is-valid x)) (list 1 2 3)))''',
             '(1 2 3)'
         )
@@ -137,10 +137,10 @@ class TestRecursiveNestedLambdas:
         # Recursive function used in fold accumulator
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((sum-to (lambda (n)
-                            (if (<= n 0)
-                                0
-                                (+ n (sum-to (- n 1)))))))
+            '''(letrec ((sum-to (lambda (n)
+                               (if (<= n 0)
+                                   0
+                                   (+ n (sum-to (- n 1)))))))
               (fold + 0
                     (map (lambda (x) (sum-to x)) (list 1 2 3))))''',
             '10'  # sum-to(1)=1, sum-to(2)=3, sum-to(3)=6, total=10
@@ -151,7 +151,7 @@ class TestRecursiveNestedLambdas:
         # Even/odd mutual recursion used in map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((is-even (lambda (n) (if (= n 0) #t (is-odd (- n 1)))))
+            '''(letrec ((is-even (lambda (n) (if (= n 0) #t (is-odd (- n 1)))))
                   (is-odd (lambda (n) (if (= n 0) #f (is-even (- n 1))))))
               (map (lambda (x) (is-even x)) (list 0 1 2 3 4)))''',
             '(#t #f #t #f #t)'
@@ -162,13 +162,13 @@ class TestRecursiveNestedLambdas:
         # Three levels: outer recursive function -> map -> inner lambda -> recursive call
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((process (lambda (n)
-                            (if (<= n 0)
-                                (list)
-                                (fold append
-                                      (list n)
-                                      (map (lambda (x) (process (- x 1)))
-                                           (list n)))))))
+            '''(letrec ((process (lambda (n)
+                               (if (<= n 0)
+                                   (list)
+                                   (fold append
+                                         (list n)
+                                         (map (lambda (x) (process (- x 1)))
+                                              (list n)))))))
               (process 3))''',
             '(3 2 1)'
         )
@@ -178,10 +178,10 @@ class TestRecursiveNestedLambdas:
         # Recursive predicate in any?
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((has-path (lambda (n)
-                              (if (<= n 1)
-                                  #t
-                                  (has-path (- n 1))))))
+            '''(letrec ((has-path (lambda (n)
+                                 (if (<= n 1)
+                                     #t
+                                     (has-path (- n 1))))))
               (any? (lambda (x) (has-path x)) (list 1 2 3)))''',
             '#t'
         )
@@ -189,10 +189,10 @@ class TestRecursiveNestedLambdas:
         # Recursive predicate in all?
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((is-positive-chain (lambda (n)
-                                        (if (<= n 1)
-                                            #t
-                                            (and (> n 0) (is-positive-chain (- n 1)))))))
+            '''(letrec ((is-positive-chain (lambda (n)
+                                           (if (<= n 1)
+                                               #t
+                                               (and (> n 0) (is-positive-chain (- n 1)))))))
               (all? (lambda (x) (is-positive-chain x)) (list 1 2 3)))''',
             '#t'
         )
@@ -202,12 +202,12 @@ class TestRecursiveNestedLambdas:
         # Recursive predicate in find
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((reaches-target (lambda (n target)
-                                    (if (= n target)
-                                        #t
-                                        (if (< n target)
-                                            #f
-                                            (reaches-target (- n 1) target))))))
+            '''(letrec ((reaches-target (lambda (n target)
+                                        (if (= n target)
+                                           #t
+                                           (if (< n target)
+                                               #f
+                                               (reaches-target (- n 1) target))))))
               (find (lambda (x) (reaches-target x 5)) (list 3 5 7)))''',
             '5'
         )
@@ -217,12 +217,12 @@ class TestRecursiveNestedLambdas:
         # Simulated graph traversal with adjacency list
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((get-neighbors (lambda (node)
-                                    (if (= node 1)
-                                        (list 2 3)
-                                        (if (= node 2)
-                                            (list 4)
-                                            (list)))))
+            '''(letrec ((get-neighbors (lambda (node)
+                                       (if (= node 1)
+                                           (list 2 3)
+                                           (if (= node 2)
+                                               (list 4)
+                                               (list)))))
                   (visit-all (lambda (node visited)
                               (if (member? node visited)
                                   visited
@@ -240,15 +240,15 @@ class TestRecursiveNestedLambdas:
         # Recursive call inside let inside map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((compute (lambda (n)
-                            (if (<= n 1)
-                                (list n)
-                                (fold append
-                                      (list n)
-                                      (map (lambda (x)
-                                            (let ((result (compute (- x 1))))
-                                              result))
-                                           (list n)))))))
+            '''(letrec ((compute (lambda (n)
+                               (if (<= n 1)
+                                   (list n)
+                                   (fold append
+                                         (list n)
+                                         (map (lambda (x)
+                                               (let ((result (compute (- x 1))))
+                                                 result))
+                                              (list n)))))))
               (compute 3))''',
             '(3 2 1)'
         )
@@ -258,16 +258,16 @@ class TestRecursiveNestedLambdas:
         # Recursive call in conditional inside map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((process (lambda (n)
-                            (if (<= n 0)
-                                0
-                                (fold +
-                                      n
-                                      (map (lambda (x)
-                                            (if (> x 1)
-                                                (process (- x 1))
-                                                0))
-                                           (list n)))))))
+            '''(letrec ((process (lambda (n)
+                               (if (<= n 0)
+                                   0
+                                   (fold +
+                                         n
+                                         (map (lambda (x)
+                                               (if (> x 1)
+                                                   (process (- x 1))
+                                                   0))
+                                              (list n)))))))
               (process 3))''',
             '6'  # 3 + process(2) = 3 + (2 + process(1)) = 3 + (2 + 1) = 6
         )
@@ -277,20 +277,20 @@ class TestRecursiveNestedLambdas:
         # Four levels of nesting
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((outer (lambda (n)
-                          (if (<= n 0)
-                              0
-                              (fold +
-                                    0
-                                    (map (lambda (a)
-                                          (fold +
-                                                0
-                                                (map (lambda (b)
-                                                      (if (> b 0)
-                                                          (outer (- b 1))
-                                                          b))
-                                                     (list a))))
-                                         (list n)))))))
+            '''(letrec ((outer (lambda (n)
+                             (if (<= n 0)
+                                 0
+                                 (fold +
+                                       0
+                                       (map (lambda (a)
+                                             (fold +
+                                                   0
+                                                   (map (lambda (b)
+                                                         (if (> b 0)
+                                                             (outer (- b 1))
+                                                             b))
+                                                        (list a))))
+                                            (list n)))))))
               (outer 2))''',
             '0'
         )
@@ -300,13 +300,13 @@ class TestRecursiveNestedLambdas:
         # Multiple recursive calls in the same map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((fib (lambda (n)
-                        (if (<= n 1)
-                            n
-                            (fold +
-                                  0
-                                  (map (lambda (x) (fib x))
-                                       (list (- n 1) (- n 2))))))))
+            '''(letrec ((fib (lambda (n)
+                           (if (<= n 1)
+                               n
+                               (fold +
+                                     0
+                                     (map (lambda (x) (fib x))
+                                          (list (- n 1) (- n 2))))))))
               (fib 6))''',
             '8'  # Fibonacci(6) = 8
         )
@@ -316,7 +316,7 @@ class TestRecursiveNestedLambdas:
         # Recursive function capturing outer variables
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((base 10)
+            '''(letrec ((base 10)
                   (compute (lambda (n)
                             (if (<= n 0)
                                 base
@@ -333,13 +333,13 @@ class TestRecursiveNestedLambdas:
         # Moderate recursion depth (should complete quickly)
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((count-down (lambda (n acc)
-                                (if (<= n 0)
-                                    acc
-                                    (fold +
-                                          0
-                                          (map (lambda (x) (count-down (- x 1) (+ acc 1)))
-                                               (list n)))))))
+            '''(letrec ((count-down (lambda (n acc)
+                                   (if (<= n 0)
+                                       acc
+                                       (fold +
+                                             0
+                                             (map (lambda (x) (count-down (- x 1) (+ acc 1)))
+                                                   (list n)))))))
               (count-down 10 0))''',
             '10'
         )
@@ -352,13 +352,13 @@ class TestRecursiveNestedLambdasBytecode:
         """Test bytecode compilation of recursive calls in map."""
         helpers.assert_evaluates_to(
             aifpl_bytecode,
-            '''(let ((visit (lambda (n)
-                          (if (<= n 1)
-                              (list n)
-                              (fold append
-                                    (list n)
-                                    (map (lambda (x) (visit (- x 1)))
-                                         (list n)))))))
+            '''(letrec ((visit (lambda (n)
+                             (if (<= n 1)
+                                 (list n)
+                                 (fold append
+                                       (list n)
+                                       (map (lambda (x) (visit (- x 1)))
+                                            (list n)))))))
               (visit 4))''',
             '(4 3 2 1)'
         )
@@ -367,12 +367,12 @@ class TestRecursiveNestedLambdasBytecode:
         """Test bytecode compilation of nested lambda factory pattern."""
         helpers.assert_evaluates_to(
             aifpl_bytecode,
-            '''(let ((make-counter 
-                    (lambda (start) 
-                      (lambda (n) 
-                        (if (<= n 0)
-                            start
-                            ((make-counter (+ start 1)) (- n 1)))))))
+            '''(letrec ((make-counter
+                       (lambda (start)
+                         (lambda (n)
+                           (if (<= n 0)
+                               start
+                               ((make-counter (+ start 1)) (- n 1)))))))
               ((make-counter 0) 5))''',
             '0'  # Returns start value after 5 recursive calls
         )
@@ -381,7 +381,7 @@ class TestRecursiveNestedLambdasBytecode:
         """Test bytecode compilation of mutual recursion in map."""
         helpers.assert_evaluates_to(
             aifpl_bytecode,
-            '''(let ((ping (lambda (n) (if (<= n 0) 0 (+ 1 (pong (- n 1))))))
+            '''(letrec ((ping (lambda (n) (if (<= n 0) 0 (+ 1 (pong (- n 1))))))
                   (pong (lambda (n) (if (<= n 0) 0 (+ 1 (ping (- n 1)))))))
               (map (lambda (x) (ping x)) (list 1 2 3)))''',
             '(1 2 3)'
@@ -391,7 +391,7 @@ class TestRecursiveNestedLambdasBytecode:
         """Test that bytecode properly traverses environment chain for recursive bindings."""
         helpers.assert_evaluates_to(
             aifpl_bytecode,
-            '''(let ((outer 100)
+            '''(letrec ((outer 100)
                   (recurse (lambda (n)
                             (if (<= n 0)
                                 outer

@@ -661,10 +661,10 @@ class TestCallStackFormatting:
 
         # Create non-tail recursive function that will exceed depth
         deep_recursion = """
-        (let ((factorial (lambda (n)
-                           (if (<= n 1)
-                               1
-                               (* n (factorial (- n 1)))))))
+        (letrec ((factorial (lambda (n)
+                              (if (<= n 1)
+                                  1
+                                  (* n (factorial (- n 1)))))))
           (factorial 50))
         """
 
