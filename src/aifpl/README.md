@@ -1106,11 +1106,16 @@ AIFPL provides comprehensive type checking functions:
 ; Numeric type checking
 (number? 42)                          ; → #t (any numeric type)
 (number? #t)                          ; → #f (booleans are not numbers)
+
+; Specific numeric type checking
 (integer? 42)                         ; → #t
 (integer? 3.14)                       ; → #f
+(integer? (round 3.7))                ; → #t (round returns integer)
+
 (float? 3.14)                         ; → #t
 (float? 42)                           ; → #f
 (float? (/ 1 2))                      ; → #t (division produces float)
+
 (complex? (+ 1 j))                    ; → #t
 (complex? 42)                         ; → #f
 
@@ -1182,11 +1187,97 @@ Comments extend to the end of the line and are ignored during evaluation.
         (safe-length 42)))            ; → "not a sequence"
 ```
 
+### Type Construction and Conversion
+
+AIFPL provides explicit functions to construct or convert between numeric types. These functions form a complete set, with one constructor/converter for each of the three numeric types.
+
+#### Integer Conversion
+
+Convert any numeric value to an integer by truncating toward zero:
+
+```aifpl
+; Basic conversion
+(integer 3.7)                         ; → 3
+(integer -2.9)                        ; → -2
+(integer 42)                          ; → 42 (already integer)
+
+; Float to integer (truncates toward zero)
+(integer 5.9)                         ; → 5
+(integer -5.9)                        ; → -5
+
+; Complex to integer (only if imaginary part is negligible)
+(integer (complex 5.0 0.0))           ; → 5
+(integer (complex 3.0 0.1))           ; → Error: cannot convert complex with non-zero imaginary part
+```
+
+#### Float Conversion
+
+Convert any numeric value to a floating-point number:
+
+```aifpl
+; Basic conversion
+(float 42)                            ; → 42.0
+(float 3)                             ; → 3.0
+(float 7.5)                           ; → 7.5 (already float)
+
+; Integer to float
+(float 100)                           ; → 100.0
+
+; Complex to float (only if imaginary part is negligible)
+(float (complex 3.14 0.0))            ; → 3.14
+(float (complex 2.0 0.1))             ; → Error: cannot convert complex with non-zero imaginary part
+```
+
+#### Complex Construction
+
+Construct a complex number from two real components:
+
+```aifpl
+; Basic construction
+(complex 3 4)                         ; → (3+4j)
+(complex 0 1)                         ; → (0+1j) (same as j constant)
+(complex 5 0)                         ; → 5 (simplified to real)
+
+; Using integer or float arguments
+(complex 1.5 2.5)                     ; → (1.5+2.5j)
+(complex 3.0 4)                       ; → (3+4j)
+
+; Arguments must be real numbers
+(complex (complex 1 2) 3)             ; → Error: arguments must be real numbers
+```
+
+#### Conversion Usage Patterns
+
+```aifpl
+; Ensure integer arithmetic
+(integer (/ 10 3))                    ; → 3 (truncate division result)
+
+; Ensure float precision
+(float (+ 1 2))                       ; → 3.0 (convert integer result to float)
+```
+
 ### Mathematical Functions
-- `(sin (* pi 0.5))` → `1`
-- `(cos 0)` → `1`
-- `(log e)` → `1`
-- `(sqrt 16)` → `4`
+
+#### Functions that Return Integers
+
+These functions always return integer results:
+
+- `(round 3.7)` → `4` (round to nearest integer)
+- `(round 3.2)` → `3`
+- `(floor 3.7)` → `3` (round down)
+- `(floor -2.3)` → `-3`
+- `(ceil 3.2)` → `4` (round up)
+- `(ceil -2.7)` → `-2`
+
+#### Functions that Preserve or Promote Types
+
+These functions return results based on input types or mathematical requirements:
+
+- `(sin (* pi 0.5))` → `1.0` (returns float)
+- `(cos 0)` → `1.0` (returns float)
+- `(log e)` → `1.0` (returns float)
+- `(sqrt 16)` → `4.0` (returns float)
+- `(sqrt -1)` → `(0+1j)` (returns complex for negative input)
 - `(abs -5)` → `5`
 
 ### Bitwise Operations
@@ -1201,12 +1292,32 @@ Comments extend to the end of the line and are ignored during evaluation.
 - `(oct 8)` → `"0o10"`
 
 ### Complex Numbers
-- `(complex 3 4)` → `(3+4j)`
-- `(+ 1 (* 2 j))` → `(1+2j)`
-- `(real (complex 3 4))` → `3` (extract real part)
-- `(imag (complex 3 4))` → `4` (extract imaginary part)
-- `(real 5)` → `5` (real part of real number)
-- `(imag 5)` → `0` (imaginary part of real number)
+
+#### Complex Number Construction
+
+Complex numbers can be constructed using the `complex` function or arithmetic with the `j` constant:
+
+- `(complex 3 4)` → `(3+4j)` (construct from real and imaginary parts)
+- `(+ 1 (* 2 j))` → `(1+2j)` (arithmetic with j constant)
+- `(* 3 j)` → `(0+3j)` (pure imaginary)
+
+See the "Type Construction and Conversion" section for more details on the `complex` function.
+
+#### Component Extraction
+
+Extract real and imaginary parts from any numeric value:
+
+```aifpl
+; Extract from complex numbers
+(real (complex 3 4))                  ; → 3
+(imag (complex 3 4))                  ; → 4
+
+; Extract from real numbers (imaginary part is always 0)
+(real 5)                              ; → 5
+(real 3.14)                           ; → 3.14
+(imag 5)                              ; → 0
+(imag 3.14)                           ; → 0
+```
 
 ### List Operations
 

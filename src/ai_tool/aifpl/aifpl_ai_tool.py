@@ -52,7 +52,8 @@ class AIFPLAITool(AITool):
                 "- Basic: (+ 1 2 3), (- 10 3), (* 2 3 4), (/ 12 3), (// 7 3), (% 7 3), (** 2 3)\n"
                 "- Trig: (sin (* pi 0.5)), (cos 0), (tan (* pi 0.25))\n"
                 "- Logs: (log e), (log10 100), (exp 1)\n"
-                "- Other: (sqrt 16), (abs -5), (round 3.7), (floor 3.7), (ceil 3.2)\n"
+                "- Other: (sqrt 16), (abs -5)\n"
+                "- Round to integer: (round 3.7) → 4, (floor 3.7) → 3, (ceil 3.2) → 4\n"
                 "- Aggregation: (min 1 5 3), (max 1 5 3), (pow 2 3)\n"
                 "- Bitwise: (bit-or 5 3), (bit-and 7 3), (bit-xor 5 3), (bit-not 5)\n"
                 "- Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)\n"
@@ -63,6 +64,12 @@ class AIFPLAITool(AITool):
                 "- (+ 1 (* 2 j)), constants: pi, e, j\n"
                 "- (real 3+4j) → 3, (imag 3+4j) → 4\n"
                 "- (real 42) → 42, (imag 42) → 0 (works on all numbers)\n\n"
+
+                "Type Construction and Conversion:\n"
+                "- (integer x) → convert to integer (truncates toward zero): (integer 3.7) → 3, (integer -2.9) → -2\n"
+                "- (float x) → convert to float: (float 42) → 42.0, (float 3) → 3.0\n"
+                "- (complex real imag) → construct complex: (complex 3 4) → (3+4j)\n"
+                "- Use for explicit type control and conversions between numeric types\n\n"
 
                 "Comparison and Boolean:\n"
                 "- (= 1 1), (!= 1 2), (< 1 2), (> 3 2), (<= 1 1), (>= 2 1)\n"
@@ -105,7 +112,9 @@ class AIFPLAITool(AITool):
 
                 "Type Predicates:\n"
                 "- (number? 42) → #t, excludes booleans: (number? #t) → #f\n"
-                "- (integer? 42) → #t, (float? 3.14) → #t, (complex? (+ 1 j)) → #t\n"
+                "- (integer? 42) → #t, (integer? 3.14) → #f, (integer? (round 3.7)) → #t\n"
+                "- (float? 3.14) → #t, (float? 42) → #f, (float? (/ 1 2)) → #t\n"
+                "- (complex? (+ 1 j)) → #t, (complex? 42) → #f\n"
                 "- (string? \"hello\") → #t, (boolean? #t) → #t, (list? (list 1 2)) → #t, (alist? (alist ...)) → #t\n"
                 "- (function? (lambda (x) x)) → #t\n\n"
 
