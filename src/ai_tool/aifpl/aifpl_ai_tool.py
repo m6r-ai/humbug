@@ -50,6 +50,7 @@ class AIFPLAITool(AITool):
 
                 "Arithmetic and Math:\n"
                 "- Basic: (+ 1 2 3), (- 10 3), (* 2 3 4), (/ 12 3), (// 7 3), (% 7 3), (** 2 3)\n"
+                "- Division (/) always returns float: (/ 10 2) → 5.0, (/ 10 3) → 3.333...; use (//) for integer division\n"
                 "- Trig: (sin (* pi 0.5)), (cos 0), (tan (* pi 0.25))\n"
                 "- Logs: (log e), (log10 100), (exp 1)\n"
                 "- Other: (sqrt 16), (abs -5)\n"
@@ -163,7 +164,8 @@ class AIFPLAITool(AITool):
                 "- Pure functional: no side effects, immutable data\n"
                 "- Homoiconic: code and data use same representation\n"
                 "- Tail call optimization prevents stack overflow\n"
-                "- Strict type system with automatic numeric promotion\n"
+                "- Strict type system with automatic numeric promotion (integer → float → complex)\n"
+                "- Numeric promotion is one-way: types promote up but never downgrade automatically\n"
                 "- Mixed-type lists supported: (list 1 \"hi\" #t)\n"
                 "- String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX\n"
                 "- Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment\n"
