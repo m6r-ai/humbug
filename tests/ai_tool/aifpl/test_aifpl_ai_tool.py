@@ -171,8 +171,8 @@ class TestAIFPLAIToolExecution:
             ("j", "1j"),  # Fixed: AIFPL returns "1j", not "(0+1j)"
             ("(complex 3 4)", "3+4j"),
             ("(+ 1 (* 2 j))", "1+2j"),
-            ("(real (complex 3 4))", "3"),
-            ("(imag (complex 3 4))", "4"),
+            ("(real (complex 3 4))", "3.0"),
+            ("(imag (complex 3 4))", "4.0"),
         ]
 
         for expression, expected in test_cases:

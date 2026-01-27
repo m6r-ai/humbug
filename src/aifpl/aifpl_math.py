@@ -2,7 +2,7 @@
 
 import cmath
 import math
-from typing import List, Union, Callable
+from typing import List, Union, Callable, cast
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean
@@ -34,14 +34,6 @@ class AIFPLMathFunctions:
 
         # Fallback (shouldn't happen)
         raise AIFPLEvalError(f"Unexpected numeric type: {type(result)}")
-
-    def _is_numeric_type(self, value: AIFPLValue) -> bool:
-        """Check if value is any numeric type."""
-        return isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
-
-    def _is_integer_type(self, value: AIFPLValue) -> bool:
-        """Check if value is an integer type."""
-        return isinstance(value, AIFPLInteger)
 
     def get_functions(self) -> dict[str, Callable]:
         """Return dictionary of mathematical function implementations."""
@@ -111,13 +103,10 @@ class AIFPLMathFunctions:
         if not args:
             return self._wrap_numeric_result(0)
 
-        # Phase 1: Extract values from both old and new types
         values = []
         for arg in args:
-            if not self._is_numeric_type(arg):
-                raise AIFPLEvalError(f"Function '+' requires numeric arguments, got {arg.type_name()}")
-
-            values.append(self._extract_numeric_value(arg))
+            val = self._ensure_number(arg, "+")
+            values.append(val)
 
         return self._wrap_numeric_result(sum(values))
 
@@ -126,13 +115,10 @@ class AIFPLMathFunctions:
         if len(args) == 0:
             raise AIFPLEvalError("Function '-' requires at least 1 argument, got 0")
 
-        # Phase 1: Extract values from both old and new types
         values = []
         for arg in args:
-            if not self._is_numeric_type(arg):
-                raise AIFPLEvalError(f"Function '-' requires numeric arguments, got {arg.type_name()}")
-
-            values.append(self._extract_numeric_value(arg))
+            val = self._ensure_number(arg, "-")
+            values.append(val)
 
         if len(args) == 1:
             return self._wrap_numeric_result(-values[0])
@@ -148,17 +134,15 @@ class AIFPLMathFunctions:
         if not args:
             return self._wrap_numeric_result(1)
 
-        # Phase 1: Extract values from both old and new types
         values = []
         for arg in args:
-            if not self._is_numeric_type(arg):
-                raise AIFPLEvalError(f"Function '*' requires numeric arguments, got {arg.type_name()}")
-
-            values.append(self._extract_numeric_value(arg))
+            val = self._ensure_number(arg, "*")
+            values.append(val)
 
         result = values[0]
         for val in values[1:]:
             result *= val
+
         return self._wrap_numeric_result(result)
 
     def _builtin_slash(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -166,13 +150,10 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError("Function '/' requires at least 2 arguments, got " + str(len(args)))
 
-        # Phase 1: Extract values from both old and new types
         values = []
         for arg in args:
-            if not self._is_numeric_type(arg):
-                raise AIFPLEvalError(f"Function '/' requires numeric arguments, got {arg.type_name()}")
-
-            values.append(self._extract_numeric_value(arg))
+            val = self._ensure_number(arg, "/")
+            values.append(val)
 
         # Check for division by zero
         for i, val in enumerate(values[1:], 1):
@@ -218,7 +199,7 @@ class AIFPLMathFunctions:
 
         base = self._ensure_number(args[0], "**")
         exponent = self._ensure_number(args[1], "**")
-        result = self._extract_numeric_value(base) ** self._extract_numeric_value(exponent)
+        result = base ** exponent
         return self._wrap_numeric_result(result)
 
     # Comparison operations
@@ -249,16 +230,9 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function '<' requires at least 2 arguments, got {len(args)}")
 
-        # Phase 2: Extract values and ensure they're numeric and real (not complex)
         values = []
         for i, arg in enumerate(args):
-            if not self._is_numeric_type(arg):
-                raise AIFPLEvalError(f"Function '<' requires numeric arguments, argument {i+1} is {arg.type_name()}")
-
-            val = self._extract_numeric_value(arg)
-            if isinstance(val, complex):
-                raise AIFPLEvalError("Function '<' does not support complex numbers")
-
+            val = self._ensure_real_number(arg, "<")
             values.append(val)
 
         # Check comparison chain
@@ -274,16 +248,9 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function '>' requires at least 2 arguments, got {len(args)}")
 
-        # Phase 2: Extract values and ensure they're numeric and real (not complex)
         values = []
         for i, arg in enumerate(args):
-            if not self._is_numeric_type(arg):
-                raise AIFPLEvalError(f"Function '>' requires numeric arguments, argument {i+1} is {arg.type_name()}")
-
-            val = self._extract_numeric_value(arg)
-            if isinstance(val, complex):
-                raise AIFPLEvalError("Function '>' does not support complex numbers")
-
+            val = self._ensure_real_number(arg, ">")
             values.append(val)
 
         # Check comparison chain
@@ -298,16 +265,9 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function '<=' requires at least 2 arguments, got {len(args)}")
 
-        # Phase 2: Extract values and ensure they're numeric and real (not complex)
         values = []
         for i, arg in enumerate(args):
-            if not self._is_numeric_type(arg):
-                raise AIFPLEvalError(f"Function '<=' requires numeric arguments, argument {i+1} is {arg.type_name()}")
-
-            val = self._extract_numeric_value(arg)
-            if isinstance(val, complex):
-                raise AIFPLEvalError("Function '<=' does not support complex numbers")
-
+            val = self._ensure_real_number(arg, "<=")
             values.append(val)
 
         # Check comparison chain
@@ -322,16 +282,9 @@ class AIFPLMathFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function '>=' requires at least 2 arguments, got {len(args)}")
 
-        # Phase 2: Extract values and ensure they're numeric and real (not complex)
         values = []
         for i, arg in enumerate(args):
-            if not self._is_numeric_type(arg):
-                raise AIFPLEvalError(f"Function '>=' requires numeric arguments, argument {i+1} is {arg.type_name()}")
-
-            val = self._extract_numeric_value(arg)
-            if isinstance(val, complex):
-                raise AIFPLEvalError("Function '>=' does not support complex numbers")
-
+            val = self._ensure_real_number(arg, ">=")
             values.append(val)
 
         # Check comparison chain
@@ -347,7 +300,7 @@ class AIFPLMathFunctions:
             raise AIFPLEvalError(f"Function 'not' requires exactly 1 argument, got {len(args)}")
 
         bool_val = self._ensure_boolean(args[0], "not")
-        return AIFPLBoolean(not bool_val.value)
+        return AIFPLBoolean(not bool_val)
 
     # Bitwise operations
     def _builtin_bit_or(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -418,43 +371,43 @@ class AIFPLMathFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'sin' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "sin")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.sin(val))
 
-        return self._wrap_numeric_result(math.sin(val))
+        return self._wrap_numeric_result(math.sin(cast(float, val)))
 
     def _builtin_cos(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement cos function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'cos' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "cos")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.cos(val))
 
-        return self._wrap_numeric_result(math.cos(val))
+        return self._wrap_numeric_result(math.cos(cast(float, val)))
 
     def _builtin_tan(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement tan function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'tan' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "tan")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.tan(val))
 
-        return self._wrap_numeric_result(math.tan(val))
+        return self._wrap_numeric_result(math.tan(cast(float, val)))
 
     def _builtin_log(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement log (natural logarithm) function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'log' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "log")
 
         # Handle log(0) = -inf
         if isinstance(val, (int, float)) and val == 0:
@@ -463,14 +416,14 @@ class AIFPLMathFunctions:
         if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
             return self._wrap_numeric_result(cmath.log(val))
 
-        return self._wrap_numeric_result(math.log(val))
+        return self._wrap_numeric_result(math.log(cast(float, val)))
 
     def _builtin_log10(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement log10 function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'log10' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "log10")
 
         # Handle log10(0) = -inf
         if isinstance(val, (int, float)) and val == 0:
@@ -479,50 +432,49 @@ class AIFPLMathFunctions:
         if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
             return self._wrap_numeric_result(cmath.log10(val))
 
-        return self._wrap_numeric_result(math.log10(val))
+        return self._wrap_numeric_result(math.log10(cast(float, val)))
 
     def _builtin_exp(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement exp function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'exp' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "exp")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.exp(val))
 
-        return self._wrap_numeric_result(math.exp(val))
+        return self._wrap_numeric_result(math.exp(cast(float, val)))
 
     def _builtin_sqrt(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement sqrt function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'sqrt' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "sqrt")
 
-        if isinstance(val, complex) or (isinstance(val, (int, float)) and val < 0):
+        if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.sqrt(val))
 
-        return self._wrap_numeric_result(math.sqrt(val))
+        if val < 0:
+            raise AIFPLEvalError("Function 'sqrt' requires a non-negative argument")
+
+        return self._wrap_numeric_result(math.sqrt(float(val)))
 
     def _builtin_abs(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement abs function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'abs' requires exactly 1 argument, got {len(args)}")
 
-        return self._wrap_numeric_result(abs(self._extract_numeric_value(args[0])))
+        val = self._ensure_number(args[0], "abs")
+        return self._wrap_numeric_result(abs(val))
 
     def _builtin_round(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement round function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'round' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
-
-        # Extract real part if complex
-        if isinstance(val, complex):
-            raise AIFPLEvalError("Function 'round' does not support complex numbers")
-
+        val = self._ensure_real_number(args[0], "round")
         return AIFPLInteger(round(val))
 
     def _builtin_floor(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -530,12 +482,7 @@ class AIFPLMathFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'floor' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
-
-        # Extract real part if complex
-        if isinstance(val, complex):
-            raise AIFPLEvalError("Function 'floor' does not support complex numbers")
-
+        val = self._ensure_real_number(args[0], "floor")
         return AIFPLInteger(math.floor(val))
 
     def _builtin_ceil(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -543,12 +490,7 @@ class AIFPLMathFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'ceil' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
-
-        # Extract real part if complex
-        if isinstance(val, complex):
-            raise AIFPLEvalError("Function 'ceil' does not support complex numbers")
-
+        val = self._ensure_real_number(args[0], "ceil")
         return AIFPLInteger(math.ceil(val))
 
     def _builtin_min(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -582,8 +524,8 @@ class AIFPLMathFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"Function 'pow' requires exactly 2 arguments, got {len(args)}")
 
-        base = self._extract_numeric_value(args[0])
-        exponent = self._extract_numeric_value(args[1])
+        base = self._ensure_real_number(args[0], "pow")
+        exponent = self._ensure_real_number(args[1], "pow")
         return self._wrap_numeric_result(base ** exponent)
 
     # Base conversion functions
@@ -617,48 +559,34 @@ class AIFPLMathFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'real' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "real")
 
         if isinstance(val, complex):
-            real_part = val.real
-            # Convert to int if it's a whole number
-            if isinstance(real_part, float) and real_part.is_integer():
-                return AIFPLInteger(int(real_part))
-
-            return AIFPLFloat(real_part)
+            return AIFPLFloat(val.real)
 
         # For real numbers, return as-is
-        return args[0]
+        return AIFPLFloat(float(cast(float, val)))
 
     def _builtin_imag(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement imag function."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'imag' requires exactly 1 argument, got {len(args)}")
 
-        val = self._extract_numeric_value(args[0])
+        val = self._ensure_number(args[0], "imag")
 
         if isinstance(val, complex):
-            imag_part = val.imag
-            # Convert to int if it's a whole number
-            if isinstance(imag_part, float) and imag_part.is_integer():
-                return AIFPLInteger(int(imag_part))
+            return AIFPLFloat(val.imag)
 
-            return AIFPLFloat(imag_part)
-
-        # For real numbers, imaginary part is 0
-        return AIFPLInteger(0)
+        # For real numbers, imaginary part is 0.0
+        return AIFPLFloat(0.0)
 
     def _builtin_complex(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement complex function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"Function 'complex' requires exactly 2 arguments, got {len(args)}")
 
-        real_part = self._extract_numeric_value(args[0])
-        imag_part = self._extract_numeric_value(args[1])
-
-        if isinstance(real_part, complex) or isinstance(imag_part, complex):
-            raise AIFPLEvalError("Function 'complex' arguments must be real numbers")
-
+        real_part = self._ensure_real_number(args[0], "complex")
+        imag_part = self._ensure_real_number(args[1], "complex")
         return AIFPLComplex(complex(real_part, imag_part))
 
     # Type conversion functions
@@ -667,14 +595,7 @@ class AIFPLMathFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'integer' requires exactly 1 argument, got {len(args)}")
 
-        if not self._is_numeric_type(args[0]):
-            raise AIFPLEvalError(f"Function 'integer' requires numeric arguments, got {args[0].type_name()}")
-
-        val = self._extract_numeric_value(args[0])
-
-        # Handle complex numbers
-        if isinstance(val, complex):
-            raise AIFPLEvalError("Function 'integer' cannot convert complex number with non-zero imaginary part")
+        val = self._ensure_real_number(args[0], "integer")
 
         # Handle float - truncate toward zero
         if isinstance(val, float):
@@ -688,32 +609,23 @@ class AIFPLMathFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'float' requires exactly 1 argument, got {len(args)}")
 
-        if not self._is_numeric_type(args[0]):
-            raise AIFPLEvalError(f"Function 'float' requires numeric arguments, got {args[0].type_name()}")
-
-        val = self._extract_numeric_value(args[0])
-
-        # Handle complex numbers
-        if isinstance(val, complex):
-            raise AIFPLEvalError("Function 'float' cannot convert complex number with non-zero imaginary part")
-
-        # Convert to float
+        val = self._ensure_real_number(args[0], "float")
         return AIFPLFloat(float(val))
 
     # Helper methods for type checking and conversion
-    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLInteger | AIFPLFloat | AIFPLComplex:
+    def _ensure_number(self, value: AIFPLValue, function_name: str) -> int | float | complex:
         """Ensure value is a number, raise error if not."""
         if not isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
 
-        return value
+        return value.value
 
-    def _ensure_boolean(self, value: AIFPLValue, function_name: str) -> AIFPLBoolean:
+    def _ensure_boolean(self, value: AIFPLValue, function_name: str) -> bool:
         """Ensure value is a boolean, raise error if not."""
         if not isinstance(value, AIFPLBoolean):
             raise AIFPLEvalError(f"Function '{function_name}' requires boolean arguments, got {value.type_name()}")
 
-        return value
+        return value.value
 
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
         """Ensure value is an integer, raise error if not, return Python int."""
@@ -726,7 +638,6 @@ class AIFPLMathFunctions:
 
         # Not a numeric type at all
         raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
-
 
     def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> Union[int, float]:
         """Ensure value is a real number (int or float), raise error if complex."""

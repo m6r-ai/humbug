@@ -220,10 +220,10 @@ class TestMathMissingCoverage:
     def test_complex_function_with_complex_arguments(self, aifpl):
         """Test complex function with complex number arguments (should fail)."""
         # This tests line 632
-        with pytest.raises(AIFPLEvalError, match="Function 'complex' arguments must be real numbers"):
+        with pytest.raises(AIFPLEvalError, match="Function 'complex' does not support complex numbers"):
             aifpl.evaluate("(complex (complex 1 2) 3)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'complex' arguments must be real numbers"):
+        with pytest.raises(AIFPLEvalError, match="Function 'complex' does not support complex numbers"):
             aifpl.evaluate("(complex 1 (complex 2 3))")
 
     def test_real_imag_functions_with_complex_return_paths(self, aifpl):

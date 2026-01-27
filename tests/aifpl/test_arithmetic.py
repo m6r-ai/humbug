@@ -195,7 +195,7 @@ class TestArithmetic:
         ("(** 8 0.3333333333333333)", "2"),  # Cube root (approximately)
 
         # Complex exponentiation
-        ("(** j 2)", "-1+0j"),  # j^2 = -1, simplifies to float when imag part is 0
+        ("(** j 2)", "-1+0j"),
         ("(** (complex 1 1) 2)", "2j"),
     ])
     def test_exponentiation(self, aifpl, expression, expected):
@@ -282,12 +282,6 @@ class TestArithmetic:
             assert abs(actual - math.sqrt(2)) < 1e-10
         else:
             assert result == expected
-
-    def test_sqrt_negative_returns_complex(self, aifpl):
-        """Test that sqrt of negative number returns complex result."""
-        result = aifpl.evaluate("(sqrt -4)")
-        assert isinstance(result, complex)
-        assert result == 2j
 
     @pytest.mark.parametrize("expression,expected", [
         # Absolute value
@@ -464,16 +458,16 @@ class TestArithmetic:
         ("(complex -2 -3)", "-2-3j"),
 
         # Real part extraction
-        ("(real (complex 3 4))", "3"),
-        ("(real 42)", "42"),
+        ("(real (complex 3 4))", "3.0"),
+        ("(real 42)", "42.0"),
         ("(real 3.14)", "3.14"),
-        ("(real j)", "0"),
+        ("(real j)", "0.0"),
 
         # Imaginary part extraction
-        ("(imag (complex 3 4))", "4"),
-        ("(imag 42)", "0"),
-        ("(imag 3.14)", "0"),
-        ("(imag j)", "1"),
+        ("(imag (complex 3 4))", "4.0"),
+        ("(imag 42)", "0.0"),
+        ("(imag 3.14)", "0.0"),
+        ("(imag j)", "1.0"),
     ])
     def test_complex_number_functions(self, aifpl, expression, expected):
         """Test complex number construction and component extraction."""
@@ -587,10 +581,9 @@ class TestArithmetic:
 
     def test_sqrt_negative_and_complex_numbers(self, aifpl):
         """Test sqrt with negative and complex numbers."""
-        # Test sqrt with negative numbers (returns complex)
-        result = aifpl.evaluate("(sqrt -9)")
-        expected = cmath.sqrt(-9)
-        assert abs(result - expected) < 1e-10
+        # Test sqrt with negative numbers
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(sqrt -9)")
 
         # Test sqrt with complex numbers
         result = aifpl.evaluate("(sqrt (complex 0 4))")
@@ -626,9 +619,9 @@ class TestArithmetic:
         """Test real/imag functions that return integers."""
         # Test cases where real/imag parts are whole numbers
         result = aifpl.evaluate("(real (complex 5.0 3.0))")
-        assert result == 5
-        assert isinstance(result, int)
+        assert result == 5.0
+        assert isinstance(result, float)
 
         result = aifpl.evaluate("(imag (complex 2.0 7.0))")
-        assert result == 7
-        assert isinstance(result, int)
+        assert result == 7.0
+        assert isinstance(result, float)

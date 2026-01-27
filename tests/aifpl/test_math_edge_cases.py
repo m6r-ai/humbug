@@ -121,14 +121,13 @@ class TestAIFPLMathEdgeCases:
         result = aifpl.evaluate("(sqrt 3)")
         assert abs(result - math.sqrt(3)) < 1e-10
 
-        # Square root of negative numbers (should return complex)
-        result = aifpl.evaluate("(sqrt -4)")
+        # Square root of complex negative numbers (should return complex)
+        result = aifpl.evaluate("(sqrt -4+0j)")
         assert isinstance(result, complex)
         assert abs(result - 2j) < 1e-10
 
-        result = aifpl.evaluate("(sqrt -1)")
-        assert isinstance(result, complex)
-        assert abs(result - 1j) < 1e-10
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(sqrt -1)")
 
         # Square root of complex numbers
         result = aifpl.evaluate("(sqrt (complex 3 4))")
@@ -316,14 +315,9 @@ class TestAIFPLMathEdgeCases:
         assert aifpl.evaluate("(abs -3.14)") == 3.14
 
         # Complex absolute value (magnitude)
-        result = aifpl.evaluate("(abs (complex 3 4))")
-        assert abs(result - 5) < 1e-10  # |3+4i| = 5
-
-        result = aifpl.evaluate("(abs j)")
-        assert abs(result - 1) < 1e-10  # |i| = 1
-
-        result = aifpl.evaluate("(abs (complex -3 -4))")
-        assert abs(result - 5) < 1e-10  # |-3-4i| = 5
+        assert aifpl.evaluate("(abs (complex 3 4))") == 5.0
+        assert aifpl.evaluate("(abs j)") == 1.0
+        assert aifpl.evaluate("(abs (complex -3 -4))") == 5.0
 
         # Very small numbers
         result = aifpl.evaluate("(abs -1e-100)")
