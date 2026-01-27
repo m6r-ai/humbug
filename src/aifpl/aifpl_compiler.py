@@ -547,9 +547,11 @@ class AIFPLCompiler:
         binding_pairs = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, AIFPLList) or len(binding.elements) != 2:
+                binding_str = (f"{binding.type_name()}" if not isinstance(binding, AIFPLList)
+                               else f"{len(binding.elements)} elements")
                 raise AIFPLEvalError(
                     message=f"Let binding {i+1} must be a list with 2 elements",
-                    received=f"Binding {i+1}: {binding.type_name() if not isinstance(binding, AIFPLList) else f'{len(binding.elements)} elements'}",
+                    received=f"Binding {i+1}: {binding_str}",
                     expected="Each binding: (variable value-expression)",
                     example='(x 5)'
                 )

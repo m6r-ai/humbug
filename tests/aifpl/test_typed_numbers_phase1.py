@@ -8,7 +8,7 @@ import pytest
 from aifpl import AIFPLInteger, AIFPLFloat, AIFPLComplex
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_builtins import extract_numeric_value, is_numeric_type
+from aifpl.aifpl_builtins import is_numeric_type
 
 
 class TestTypedNumberTypes:
@@ -89,26 +89,6 @@ class TestParserWithTypedNumbers:
 
 class TestNumericHelpers:
     """Test helper functions for numeric type compatibility."""
-    
-    def test_extract_numeric_value_from_old_type(self):
-        """extract_numeric_value should work with typed numbers."""
-        val = AIFPLInteger(42)
-        assert extract_numeric_value(val) == 42
-    
-    def test_extract_numeric_value_from_integer(self):
-        """extract_numeric_value should work with AIFPLInteger."""
-        val = AIFPLInteger(42)
-        assert extract_numeric_value(val) == 42
-    
-    def test_extract_numeric_value_from_float(self):
-        """extract_numeric_value should work with AIFPLFloat."""
-        val = AIFPLFloat(3.14)
-        assert extract_numeric_value(val) == 3.14
-    
-    def test_extract_numeric_value_from_complex(self):
-        """extract_numeric_value should work with AIFPLComplex."""
-        val = AIFPLComplex(3+4j)
-        assert extract_numeric_value(val) == 3+4j
     
     def test_is_numeric_type_old(self):
         """is_numeric_type should recognize typed numbers."""

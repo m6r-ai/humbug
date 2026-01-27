@@ -27,10 +27,10 @@ class AIFPLMathFunctions:
         if isinstance(result, int):
             return AIFPLInteger(result)
 
-        elif isinstance(result, float):
+        if isinstance(result, float):
             return AIFPLFloat(result)
 
-        elif isinstance(result, complex):
+        if isinstance(result, complex):
             return AIFPLComplex(result)
 
         # Fallback (shouldn't happen)
@@ -176,6 +176,7 @@ class AIFPLMathFunctions:
         for arg in args:
             if not self._is_numeric_type(arg):
                 raise AIFPLEvalError(f"Function '*' requires numeric arguments, got {arg.type_name()}")
+
             values.append(self._extract_numeric_value(arg))
 
         result = values[0]

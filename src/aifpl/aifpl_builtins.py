@@ -6,7 +6,6 @@ used by both the tree-walking evaluator and the bytecode VM.
 
 from typing import List, Dict, Callable
 
-from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
 from aifpl.aifpl_math import AIFPLMathFunctions
 from aifpl.aifpl_value import (
@@ -16,31 +15,6 @@ from aifpl.aifpl_value import (
 
 
 # Helper functions for numeric type compatibility during Phase 1 migration
-
-def extract_numeric_value(value: AIFPLValue) -> int | float | complex:
-    """
-    Extract numeric value from typed number types.
-
-    This helper function allows builtins to work with typed numbers
-    and the new AIFPLInteger/AIFPLFloat/AIFPLComplex types during the migration.
-
-    Args:
-        value: An AIFPL value that should be numeric
-
-    Returns:
-        The underlying Python numeric value (int, float, or complex)
-
-    Raises:
-        AIFPLEvalError: If value is not a numeric type
-    """
-    if isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-        return value.value
-
-    raise AIFPLEvalError(
-        message=f"Expected number, got {value.type_name()}",
-        suggestion="Use a numeric value (integer, float, or complex)"
-    )
-
 
 def is_numeric_type(value: AIFPLValue) -> bool:
     """
@@ -82,7 +56,6 @@ class AIFPLBuiltinRegistry:
 
         # Add collections functions
         self._registry.update(self.collections_functions.get_functions())
-
 
     def get_function(self, name: str) -> Callable:
         """
@@ -176,10 +149,6 @@ class AIFPLBuiltinRegistry:
         """
         # Arithmetic operations are variadic
         if name in ['+', '-', '*', '/', '//', '%', '**', 'min', 'max']:
-            return True
-
-        # Logical operations are variadic
-        if name in ['and', 'or']:
             return True
 
         # List construction is variadic

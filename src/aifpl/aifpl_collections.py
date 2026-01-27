@@ -793,46 +793,37 @@ class AIFPLCollectionsFunctions:
         start_val = args[0]
         end_val = args[1]
 
-        if not isinstance(start_val, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if not isinstance(start_val, AIFPLInteger):
             raise AIFPLEvalError(
-                message="Range start must be a number",
+                message="Range start must be an integer",
                 received=f"Start: {start_val.type_name()}",
                 expected="Number (integer)",
                 example="(range 1 5)",
                 suggestion="Use numeric values for range bounds"
             )
 
-        if not isinstance(end_val, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+        if not isinstance(end_val, AIFPLInteger):
             raise AIFPLEvalError(
-                message="Range end must be a number",
+                message="Range end must be an integer",
                 received=f"End: {end_val.type_name()}",
                 expected="Number (integer)",
                 example="(range 1 5)",
                 suggestion="Use numeric values for range bounds"
             )
 
-        if not isinstance(start_val, AIFPLInteger):
-            raise AIFPLEvalError("Range start must be an integer")
-
-        if not isinstance(end_val, AIFPLInteger):
-            raise AIFPLEvalError("Range end must be an integer")
-
         start_int = int(start_val.value.real) if isinstance(start_val.value, complex) else int(start_val.value)
         end_int = int(end_val.value.real) if isinstance(end_val.value, complex) else int(end_val.value)
 
         if len(args) == 3:
             step_val = args[2]
-            if not isinstance(step_val, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+            if not isinstance(step_val, AIFPLInteger):
                 raise AIFPLEvalError(
-                    message="Range step must be a number",
+                    message="Range step must be an integer",
                     received=f"Step: {step_val.type_name()}",
                     expected="Number (integer)",
                     example="(range 0 10 2)",
                     suggestion="Use numeric values for range parameters"
                 )
-            if not isinstance(step_val, AIFPLInteger):
-                raise AIFPLEvalError("Range step must be an integer")
-
             step_int = int(step_val.value.real) if isinstance(step_val.value, complex) else int(step_val.value)
 
         else:

@@ -1048,14 +1048,3 @@ class AIFPLEvaluator:
                 result.append(char)  # Keep Unicode as-is
 
         return ''.join(result)
-
-    def _is_close_to_nice_number(self, value: float) -> float | None:
-        """Check if a float is very close to a 'nice' number and return the nice number if so."""
-        # Check if it's close to common fractions with small denominators
-        for denominator in range(1, 11):  # Check denominators 1-10
-            for numerator in range(-50, 51):  # Check reasonable range
-                nice_value = numerator / denominator
-                if abs(value - nice_value) < self.floating_point_tolerance:
-                    return nice_value
-
-        return None

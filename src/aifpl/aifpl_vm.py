@@ -158,23 +158,57 @@ class AIFPLVM:
         # Frame finished without explicit return
         return None
 
-    def _op_load_const(self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_load_const(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        code: CodeObject,
+        arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """LOAD_CONST: Push constant from pool onto stack."""
         self.stack.append(code.constants[arg1])
+        return None
 
-    def _op_load_true(self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_load_true(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """LOAD_TRUE: Push boolean true onto stack."""
         self.stack.append(AIFPLBoolean(True))
+        return None
 
-    def _op_load_false(self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_load_false(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """LOAD_FALSE: Push boolean false onto stack."""
         self.stack.append(AIFPLBoolean(False))
+        return None
 
-    def _op_load_empty_list(self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_load_empty_list(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """LOAD_EMPTY_LIST: Push empty list onto stack."""
         self.stack.append(AIFPLList(()))
+        return None
 
-    def _op_load_var(self, _frame: Frame, _code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
+    def _op_load_var(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        arg2: int
+    ) -> AIFPLValue | None:
         """LOAD_VAR: Load variable from frame at depth/index."""
         depth = arg1
         index = arg2
@@ -195,16 +229,30 @@ class AIFPLVM:
             raise AIFPLEvalError(f"Uninitialized local variable at depth {depth}, index {index}")
 
         self.stack.append(value)
+        return None
 
-    def _op_store_var(self, _frame: Frame, _code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
+    def _op_store_var(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        arg2: int
+    ) -> AIFPLValue | None:
         """STORE_VAR: Store top of stack to variable at depth/index."""
         depth = arg1
         index = arg2
         value = self.stack.pop()
         target_frame = self.frames[-(depth + 1)]
         target_frame.locals[index] = value
+        return None
 
-    def _op_load_name(self, frame: Frame, code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_load_name(  # pylint: disable=useless-return
+        self,
+        frame: Frame,
+        code: CodeObject,
+        arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """LOAD_NAME: Load global variable by name."""
         name = code.names[arg1]
 
@@ -215,13 +263,13 @@ class AIFPLVM:
         while current_env is not None:
             if name in current_env.bindings:
                 self.stack.append(current_env.bindings[name])
-                return
+                return None
 
             current_env = current_env.parent
 
         if name in self.globals:
             self.stack.append(self.globals[name])
-            return
+            return None
 
         # Not found - generate helpful error
         available_vars = list(self.globals.keys())
@@ -242,11 +290,24 @@ class AIFPLVM:
             example=f"(let (({name} some-value)) ...)"
         )
 
-    def _op_jump(self, frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_jump(  # pylint: disable=useless-return
+        self,
+        frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """JUMP: Unconditional jump to instruction."""
         frame.ip = arg1
+        return None
 
-    def _op_pop_jump_if_false(self, frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_pop_jump_if_false(  # pylint: disable=useless-return
+        self,
+        frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """POP_JUMP_IF_FALSE: Pop stack, jump if false."""
         condition = self.stack.pop()
         if not isinstance(condition, AIFPLBoolean):
@@ -255,7 +316,15 @@ class AIFPLVM:
         if not condition.value:
             frame.ip = arg1
 
-    def _op_pop_jump_if_true(self, frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
+        return None
+
+    def _op_pop_jump_if_true(  # pylint: disable=useless-return
+        self,
+        frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """POP_JUMP_IF_TRUE: Pop stack, jump if true."""
         condition = self.stack.pop()
         if not isinstance(condition, AIFPLBoolean):
@@ -264,7 +333,15 @@ class AIFPLVM:
         if condition.value:
             frame.ip = arg1
 
-    def _op_raise_error(self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
+        return None
+
+    def _op_raise_error(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        code: CodeObject,
+        arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """RAISE_ERROR: Raise error with message from constant pool."""
         error_msg = code.constants[arg1]
         if not isinstance(error_msg, AIFPLString):
@@ -272,7 +349,13 @@ class AIFPLVM:
 
         raise AIFPLEvalError(error_msg.value)
 
-    def _op_make_closure(self, _frame: Frame, code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
+    def _op_make_closure(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        code: CodeObject,
+        arg1: int,
+        arg2: int
+    ) -> AIFPLValue | None:
         """MAKE_CLOSURE: Create closure from code object and captured values."""
         closure_code = code.code_objects[arg1]
         capture_count = arg2
@@ -306,8 +389,15 @@ class AIFPLVM:
             captured_values=tuple(captured_values)
         )
         self.stack.append(closure)
+        return None
 
-    def _op_call_function(self, _frame: Frame, _code: CodeObject, arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_call_function(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """CALL_FUNCTION: Call function with arguments from stack."""
         arity = arg1
 
@@ -339,7 +429,7 @@ class AIFPLVM:
 
             result = func.native_impl(args)
             self.stack.append(result)
-            return
+            return None
 
         # Check arity for bytecode functions
         expected_arity = func.bytecode.param_count
@@ -373,13 +463,20 @@ class AIFPLVM:
         if is_tail_call and is_self_recursive:
             assert current_frame is not None
             current_frame.ip = 0
-            return  # Continue in same frame
+            return None  # Continue in same frame
 
         # Normal call: create new frame
         result = self._call_bytecode_function(func)
         self.stack.append(result)
+        return None
 
-    def _op_call_builtin(self, _frame: Frame, _code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
+    def _op_call_builtin(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        arg2: int
+    ) -> AIFPLValue | None:
         """CALL_BUILTIN: Call builtin function by index."""
         builtin_index = arg1
         arity = arg2
@@ -390,8 +487,15 @@ class AIFPLVM:
 
         result = self._call_builtin(builtin_index, args)
         self.stack.append(result)
+        return None
 
-    def _op_return(self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int) -> AIFPLValue | None:
+    def _op_return(
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
         """RETURN: Pop frame and return value from stack."""
         self.frames.pop()
         if not self.stack:
@@ -399,7 +503,13 @@ class AIFPLVM:
 
         return self.stack.pop()
 
-    def _op_patch_closure_self(self, _frame: Frame, code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
+    def _op_patch_closure_self(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        code: CodeObject,
+        arg1: int,
+        arg2: int
+    ) -> AIFPLValue | None:
         """PATCH_CLOSURE_SELF: Patch closure to reference itself (for recursion)."""
         name_index = arg1
         var_index = arg2
@@ -437,8 +547,15 @@ class AIFPLVM:
 
         # Recursively patch any nested closures that reference this function
         self._patch_nested_closures_recursively(patched_closure, var_name, patched_closure)
+        return None
 
-    def _op_patch_closure_sibling(self, _frame: Frame, code: CodeObject, arg1: int, arg2: int) -> AIFPLValue | None:
+    def _op_patch_closure_sibling(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        code: CodeObject,
+        arg1: int,
+        arg2: int
+    ) -> AIFPLValue | None:
         """PATCH_CLOSURE_SIBLING: Patch closure to add sibling reference (for mutual recursion)."""
         closure_var_index = arg1
         const_index = arg2
@@ -449,10 +566,7 @@ class AIFPLVM:
             raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: invalid patch info")
 
         elements = patch_info.elements
-        if not isinstance(elements[0], (AIFPLInteger, AIFPLFloat, AIFPLComplex)) or not isinstance(elements[1], (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: patch info elements must be numbers")
-
-        if not isinstance(elements[0].value, int) or not isinstance(elements[1].value, int):
+        if not isinstance(elements[0], AIFPLInteger) or not isinstance(elements[1], AIFPLInteger):
             raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: patch info elements must be integers")
 
         sibling_var_index = int(elements[0].value)
@@ -477,6 +591,7 @@ class AIFPLVM:
 
         # Add sibling to closure's environment
         target_closure.closure_environment.bindings[sibling_name] = sibling
+        return None
 
     def _patch_nested_closures_recursively(
         self,
@@ -504,7 +619,10 @@ class AIFPLVM:
         for captured_value in parent_closure.captured_values:
             if isinstance(captured_value, AIFPLFunction):
                 # This is a nested closure - patch it if it references var_name
-                if var_name in captured_value.closure_environment.bindings or var_name in getattr(captured_value.bytecode, 'free_vars', []):
+                if (
+                    var_name in captured_value.closure_environment.bindings or
+                    var_name in getattr(captured_value.bytecode, 'free_vars', [])
+                ):
                     captured_value.closure_environment.bindings[var_name] = patched_value
                     # Recursively patch any further nested closures
                     self._patch_nested_closures_recursively(captured_value, var_name, patched_value)
@@ -659,4 +777,3 @@ class AIFPLVM:
                 result.append(char)  # Keep Unicode as-is
 
         return ''.join(result)
-

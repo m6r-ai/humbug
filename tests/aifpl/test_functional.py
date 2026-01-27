@@ -264,13 +264,13 @@ class TestFunctional:
 
     def test_range_requires_numeric_arguments(self, aifpl):
         """Test that range requires numeric arguments."""
-        with pytest.raises(AIFPLEvalError, match="must be.*number"):
+        with pytest.raises(AIFPLEvalError, match="must be an integer"):
             aifpl.evaluate('(range "hello" 5)')
 
-        with pytest.raises(AIFPLEvalError, match="must be.*number"):
+        with pytest.raises(AIFPLEvalError, match="must be an integer"):
             aifpl.evaluate('(range 1 "world")')
 
-        with pytest.raises(AIFPLEvalError, match="must be.*number"):
+        with pytest.raises(AIFPLEvalError, match="must be an integer"):
             aifpl.evaluate('(range 1 5 "step")')
 
     def test_range_zero_step_error(self, aifpl):

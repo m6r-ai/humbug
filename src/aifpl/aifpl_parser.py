@@ -128,7 +128,7 @@ class AIFPLParser:
                 if isinstance(token.value, int):
                     return AIFPLInteger(token.value)
 
-                elif isinstance(token.value, float):
+                if isinstance(token.value, float):
                     return AIFPLFloat(token.value)
 
                 return AIFPLComplex(token.value)

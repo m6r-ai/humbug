@@ -222,18 +222,9 @@ class AIFPLPatternMatcher:
         """
         type_checks = {
             'number?': lambda v: isinstance(v, (AIFPLInteger, AIFPLFloat, AIFPLComplex)),
-            'integer?': lambda v: (
-                isinstance(v, AIFPLInteger) or
-                isinstance(v, AIFPLInteger)
-            ),
-            'float?': lambda v: (
-                isinstance(v, AIFPLFloat) or
-                isinstance(v, AIFPLFloat)
-            ),
-            'complex?': lambda v: (
-                isinstance(v, AIFPLComplex) or
-                isinstance(v, AIFPLComplex)
-            ),
+            'integer?': lambda v: isinstance(v, AIFPLInteger),
+            'float?': lambda v: isinstance(v, AIFPLFloat),
+            'complex?': lambda v: isinstance(v, AIFPLComplex),
             'string?': lambda v: isinstance(v, AIFPLString),
             'boolean?': lambda v: isinstance(v, AIFPLBoolean),
             'list?': lambda v: isinstance(v, AIFPLList),
