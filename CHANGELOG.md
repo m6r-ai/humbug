@@ -9,6 +9,7 @@ New features:
 - Added `letrec` to AIFPL to avoid ambiguity in recursive bindings.
 - Introduced `integer`, `float`, and `complex` types into AIFPL and removed `number`, allowing optimizations.
 - Added support for complex number literals.
+- Signficantly improved the error reporting for AIFPL tokenization and parsing errors.
 
 Bug fixes:
 

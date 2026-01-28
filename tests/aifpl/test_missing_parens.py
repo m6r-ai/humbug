@@ -14,7 +14,8 @@ class TestMissingParens:
 
         error = str(exc_info.value)
         assert "missing 1 closing parenthesis" in error.lower()
-        assert "position" in error.lower()
+        assert "line" in error.lower()
+        assert "column" in error.lower()
 
     def test_nested_missing_closing_parens(self, aifpl):
         """Test error message for nested missing closing parens."""
@@ -58,7 +59,8 @@ class TestMissingParens:
 
         error = str(exc_info.value)
         # Should have position information
-        assert "position" in error.lower()
+        assert "line" in error.lower()
+        assert "column" in error.lower()
 
     def test_deeply_nested_let_bindings(self, aifpl):
         """Test error reporting for deeply nested structures."""
@@ -142,7 +144,8 @@ class TestMissingParens:
 
         error = str(exc_info.value)
         # Should have information about where things are
-        assert "position" in error.lower()
+        assert "line" in error.lower()
+        assert "column" in error.lower()
 
     def test_empty_binding_list_missing_paren(self, aifpl):
         """Test error for let with empty bindings missing paren."""

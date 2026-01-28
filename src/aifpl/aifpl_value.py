@@ -139,7 +139,6 @@ class AIFPLBoolean(AIFPLValue):
 class AIFPLSymbol(AIFPLValue):
     """Represents symbols that require environment lookup."""
     name: str
-    position: int = 0
 
     def is_self_evaluating(self) -> bool:
         return False

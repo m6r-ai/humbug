@@ -23,42 +23,78 @@ class AIFPLTokenizer:
         """
         tokens = []
         i = 0
+        line = 1  # Current line number (1-indexed)
+        column = 1  # Current column number (1-indexed)
+
+        def make_token(
+            token_type: AIFPLTokenType,
+            value,
+            length: int = 1,
+            token_line: int | None = None,
+            token_col: int | None = None
+        ) -> AIFPLToken:
+            """Helper to create token with line/column info."""
+            # Use current line/column if not explicitly provided
+            tl = token_line if token_line is not None else line
+            tc = token_col if token_col is not None else column
+            return AIFPLToken(token_type, value, length, tl, tc)
+
+        def advance_position(char: str) -> None:
+            """Update line/column based on character."""
+            nonlocal line, column
+            if char == '\n':
+                line += 1
+                column = 1
+
+            else:
+                column += 1
 
         while i < len(expression):
             # Skip whitespace
             if expression[i].isspace():
+                advance_position(expression[i])
                 i += 1
                 continue
 
             # Comments - skip from ';' to end of line
             if expression[i] == ';':
                 while i < len(expression) and expression[i] != '\n':
+                    advance_position(expression[i])
                     i += 1
 
                 continue
 
             # Parentheses
             if expression[i] == '(':
-                tokens.append(AIFPLToken(AIFPLTokenType.LPAREN, '(', i))
+                tokens.append(make_token(AIFPLTokenType.LPAREN, '('))
+                advance_position(expression[i])
                 i += 1
                 continue
 
             if expression[i] == ')':
-                tokens.append(AIFPLToken(AIFPLTokenType.RPAREN, ')', i))
+                tokens.append(make_token(AIFPLTokenType.RPAREN, ')'))
+                advance_position(expression[i])
                 i += 1
                 continue
 
             # Quote character
             if expression[i] == "'":
-                tokens.append(AIFPLToken(AIFPLTokenType.QUOTE, "'", i))
+                tokens.append(make_token(AIFPLTokenType.QUOTE, "'"))
+                advance_position(expression[i])
                 i += 1
                 continue
 
             # String literals
             if expression[i] == '"':
                 try:
+                    # Save line/column at start of string
+                    string_line = line
+                    string_col = column
                     string_value, length = self._read_string(expression, i)
-                    tokens.append(AIFPLToken(AIFPLTokenType.STRING, string_value, i, length))
+                    tokens.append(make_token(AIFPLTokenType.STRING, string_value, length, string_line, string_col))
+                    # Advance position for each character in the string
+                    for j in range(length):
+                        advance_position(expression[i + j])
                     i += length
                     continue
 
@@ -67,7 +103,8 @@ class AIFPLTokenizer:
                     if "Unterminated string" in str(e):
                         raise AIFPLTokenError(
                             message="Unterminated string literal",
-                            position=i,
+                            line=line,
+                            column=column,
                             received=f"String starting with: {expression[i:i+10]}...",
                             expected="Closing quote \" at end of string",
                             example='Correct: "hello world"\\nIncorrect: "hello world',
@@ -78,13 +115,21 @@ class AIFPLTokenizer:
                     if "Invalid escape sequence" in str(e):
                         # Find the escape position
                         escape_pos = i + 1
+                        escape_line = line
+                        escape_col = column
                         while escape_pos < len(expression) and expression[escape_pos] != '\\':
+                            if expression[escape_pos] == '\\n':
+                                escape_line += 1
+                                escape_col = 1
+                            else:
+                                escape_col += 1
                             escape_pos += 1
 
                         bad_escape = expression[escape_pos:escape_pos+2]
                         raise AIFPLTokenError(
                             message=f"Invalid escape sequence: {bad_escape}",
-                            position=escape_pos,
+                            line=escape_line,
+                            column=escape_col,
                             received=f"Escape sequence: {bad_escape}",
                             expected="Valid escape: \\n, \\t, \\r, \\\", \\\\, or \\uXXXX",
                             example='Valid: "line1\\nline2" or "tab\\there"\\nInvalid: "bad\\qsequence"',
@@ -107,7 +152,8 @@ class AIFPLTokenizer:
                         invalid_literal = expression[i:end]
                         raise AIFPLTokenError(
                             message=f"Invalid boolean literal: {invalid_literal}",
-                            position=i,
+                            line=line,
+                            column=column,
                             received=f"Boolean literal: {invalid_literal}",
                             expected="Valid boolean: #t or #f",
                             example="Correct: #t, #f\\nIncorrect: #true, #false, #T, #F",
@@ -116,7 +162,9 @@ class AIFPLTokenizer:
                         )
 
                     boolean_value = expression[i + 1] == 't'
-                    tokens.append(AIFPLToken(AIFPLTokenType.BOOLEAN, boolean_value, i, 2))
+                    tokens.append(make_token(AIFPLTokenType.BOOLEAN, boolean_value, 2))
+                    advance_position(expression[i])
+                    advance_position(expression[i + 1])
                     i += 2
                     continue
 
@@ -124,7 +172,8 @@ class AIFPLTokenizer:
                 invalid_char = expression[i + 1] if i + 1 < len(expression) else ""
                 raise AIFPLTokenError(
                     message=f"Invalid boolean literal: #{invalid_char}",
-                    position=i,
+                    line=line,
+                    column=column,
                     received=f"Found: #{invalid_char}",
                     expected="Valid boolean: #t or #f",
                     example="Correct: #t (true), #f (false)\\nIncorrect: #x, #1, #true",
@@ -137,8 +186,13 @@ class AIFPLTokenizer:
             # Also check for 'j' or 'J' as it could be a complex literal like 'j' or '5j'
             if self._is_number_start(expression, i) or self._is_complex_literal_start(expression, i):
                 try:
-                    number_value, length, token_type = self._read_number(expression, i)
-                    tokens.append(AIFPLToken(token_type, number_value, i, length))
+                    # Save line/column at start of number
+                    number_line = line
+                    number_col = column
+                    number_value, length, token_type = self._read_number(expression, i, number_line, number_col)
+                    tokens.append(make_token(token_type, number_value, length, number_line, number_col))
+                    for j in range(length):
+                        advance_position(expression[i + j])
                     i += length
                     continue
 
@@ -147,8 +201,13 @@ class AIFPLTokenizer:
 
             # Symbols (variables, parameters, functions, constants)
             if self._is_symbol_start(expression[i]):
-                symbol, length = self._read_symbol(expression, i)
-                tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, i, length))
+                # Save line/column at start of symbol
+                symbol_line = line
+                symbol_col = column
+                symbol, length = self._read_symbol(expression, i, symbol_line, symbol_col)
+                tokens.append(make_token(AIFPLTokenType.SYMBOL, symbol, length, symbol_line, symbol_col))
+                for j in range(length):
+                    advance_position(expression[i + j])
                 i += length
                 continue
 
@@ -161,7 +220,8 @@ class AIFPLTokenizer:
                 char_display = f"\\u{char_code:04x}"
                 raise AIFPLTokenError(
                     message=f"Invalid control character in source code: {char_display}",
-                    position=i,
+                    line=line,
+                    column=column,
                     received=f"Control character: {char_display} (code {char_code})",
                     expected="Valid AIFPL characters or escape sequences in strings",
                     example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
@@ -188,7 +248,8 @@ class AIFPLTokenizer:
 
             raise AIFPLTokenError(
                 message=f"Invalid character: {char}",
-                position=i,
+                line=line,
+                column=column,
                 received=f"Character: {char} (code {char_code})",
                 expected="Valid AIFPL characters: letters, digits, +, -, *, /, etc.",
                 example="Valid: (+ 1 2), my-var, func?\\nInvalid: @var, $value, [list]",
@@ -319,13 +380,14 @@ class AIFPLTokenizer:
         """Check if character is a LISP token delimiter."""
         return char.isspace() or char in "()'\";,"
 
-    def _check_for_control_character(self, char: str, position: int) -> None:
+    def _check_for_control_character(self, char: str, line: int, column: int) -> None:
         """
         Check if a character is a control character and raise an error if so.
 
         Args:
             char: Character to check
-            position: Position in the expression
+            line: Line number in the expression
+            column: Column number in the expression
 
         Raises:
             AIFPLTokenError: If the character is a control character
@@ -337,7 +399,8 @@ class AIFPLTokenizer:
             char_display = f"\\u{char_code:04x}"
             raise AIFPLTokenError(
                 message=f"Invalid control character in source code: {char_display}",
-                position=position,
+                line=line,
+                column=column,
                 received=f"Control character: {char_display} (code {char_code})",
                 expected="Valid AIFPL characters or escape sequences in strings",
                 example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
@@ -346,7 +409,7 @@ class AIFPLTokenizer:
                     "sequences like \\n, \\t, or \\uXXXX in strings."
             )
 
-    def _read_complete_token(self, expression: str, start: int) -> str:
+    def _read_complete_token(self, expression: str, start: int, start_line: int, start_col: int) -> str:
         """
         Read a complete token until delimiter, following LISP tokenization rules.
 
@@ -359,13 +422,23 @@ class AIFPLTokenizer:
             AIFPLTokenError: If a control character is encountered
         """
         i = start
+        curr_line = start_line
+        curr_col = start_col
 
         # Consume characters until we hit a delimiter
         while i < len(expression):
             char = expression[i]
 
             # Check for control characters before processing
-            self._check_for_control_character(char, i)
+            self._check_for_control_character(char, curr_line, curr_col)
+
+            # Update line/column for next iteration
+            if char == '\n':
+                curr_line += 1
+                curr_col = 1
+
+            else:
+                curr_col += 1
 
             if self._is_delimiter(char):
                 break
@@ -459,7 +532,13 @@ class AIFPLTokenizer:
 
         return -value if negative else value
 
-    def _read_number(self, expression: str, start: int) -> tuple[Union[int, float, complex], int, AIFPLTokenType]:
+    def _read_number(
+        self,
+        expression: str,
+        start: int,
+        start_line: int,
+        start_col: int
+    ) -> tuple[Union[int, float, complex], int, AIFPLTokenType]:
         """
         Read a number literal (including complex) from the expression.
 
@@ -470,18 +549,19 @@ class AIFPLTokenizer:
             AIFPLTokenError: If the token is not a valid number
         """
         # Get the complete token until delimiter (this will check for control characters)
-        complete_token = self._read_complete_token(expression, start)
+        complete_token = self._read_complete_token(expression, start, start_line, start_col)
 
         # Check if this is a complex number literal
         if 'j' in complete_token.lower():
-            complex_value = self._parse_complex_literal(complete_token, start)
+            complex_value = self._parse_complex_literal(complete_token, start_line, start_col)
             return complex_value, len(complete_token), AIFPLTokenType.COMPLEX
 
         # Validate that this token is a valid real number
         if not self._is_valid_number(complete_token):
             raise AIFPLTokenError(
                 message=f"Invalid number format: {complete_token}",
-                position=start,
+                line=start_line,
+                column=start_col,
                 received=f"Malformed number token: {complete_token}",
                 expected="Valid number format",
                 suggestion=f"Fix the number format: {complete_token}",
@@ -501,7 +581,7 @@ class AIFPLTokenizer:
 
         return number_value, len(complete_token), token_type
 
-    def _parse_complex_literal(self, token: str, start: int) -> complex:
+    def _parse_complex_literal(self, token: str, start_line: int, start_col: int) -> complex:
         """
         Parse a complex number literal.
 
@@ -516,7 +596,8 @@ class AIFPLTokenizer:
 
         Args:
             token: The complete token string
-            start: Position in expression
+            start_line: Line number where token starts
+            start_col: Column number where token starts
 
         Returns:
             Complex number value
@@ -528,7 +609,8 @@ class AIFPLTokenizer:
         if not token.endswith(('j', 'J')):
             raise AIFPLTokenError(
                 message=f"Invalid complex literal: {token}",
-                position=start,
+                line=start_line,
+                column=start_col,
                 received=f"Token: {token}",
                 expected="Complex literal ending with 'j' or 'J'",
                 example="Valid: 3+4j, 2-5j, 4j, j",
@@ -560,7 +642,8 @@ class AIFPLTokenizer:
             except ValueError as e:
                 raise AIFPLTokenError(
                     message=f"Invalid imaginary part: {token_without_j}",
-                    position=start,
+                    line=start_line,
+                    column=start_col,
                     received=f"Imaginary part: {token_without_j}",
                     expected="Valid number format",
                     example="Valid: 4j, -5j, 1.5e2j",
@@ -580,7 +663,8 @@ class AIFPLTokenizer:
         except ValueError as e:
             raise AIFPLTokenError(
                 message=f"Invalid complex literal: {token}",
-                position=start,
+                line=start_line,
+                column=start_col,
                 received=f"Token: {token}",
                 expected="Valid complex number format",
                 example="Valid: 3+4j, 2-5j, 1.5e2+3.7e-1j",
@@ -630,7 +714,7 @@ class AIFPLTokenizer:
         """Check if character can start a symbol."""
         return char.isalpha() or char in '+-*/%<>=!&|^~_.'
 
-    def _read_symbol(self, expression: str, start: int) -> tuple[str, int]:
+    def _read_symbol(self, expression: str, start: int, start_line: int, start_col: int) -> tuple[str, int]:
         """
         Read a symbol from the expression.
 
@@ -643,6 +727,8 @@ class AIFPLTokenizer:
             AIFPLTokenError: If a control character is encountered
         """
         i = start
+        curr_line = start_line
+        curr_col = start_col
 
         while i < len(expression):
             char = expression[i]
@@ -650,7 +736,16 @@ class AIFPLTokenizer:
             # Symbol characters: letters, digits, hyphens, and operator chars
             if char.isalnum() or char in '-+*/%<>=!&|^~?_.':
                 # Check for control characters before adding to symbol
-                self._check_for_control_character(char, i)
+                self._check_for_control_character(char, curr_line, curr_col)
+
+                # Update line/column for next iteration
+                if char == '\n':
+                    curr_line += 1
+                    curr_col = 1
+
+                else:
+                    curr_col += 1
+
                 i += 1
 
             else:

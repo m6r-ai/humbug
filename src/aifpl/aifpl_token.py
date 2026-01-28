@@ -23,8 +23,9 @@ class AIFPLToken:
     """Represents a single token in an AIFPL expression."""
     type: AIFPLTokenType
     value: Any
-    position: int
     length: int = 1
+    line: int = 1  # Line number (1-indexed)
+    column: int = 1  # Column number (1-indexed)
 
     def __repr__(self) -> str:
-        return f"AIFPLToken({self.type.name}, {self.value!r}, pos={self.position})"
+        return f"AIFPLToken({self.type.name}, {self.value!r}, line={self.line}, col={self.column})"
