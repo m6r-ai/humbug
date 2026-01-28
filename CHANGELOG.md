@@ -16,6 +16,7 @@ Bug fixes:
 - If we wrote more then 1k as "keystrokes" to a zsh then this could corrupt the output buffer.
 - Resolved a problem with nested Markdown code blocks incorrectly rendering.
 - Resolved a problem where "dim" attributes were not resetting correctly in the terminal.
+- Added a few missing escape sequences for the terminal.
 
 Internal structure changes
 

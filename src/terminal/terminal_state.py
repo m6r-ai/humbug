@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from typing import Dict, Tuple, Any
+from typing import Dict, Tuple, Any, Callable
 
 from terminal.terminal_buffer import TerminalBuffer, TerminalCharacterAttributes
 
@@ -19,7 +19,13 @@ class MouseTrackingState:
 class TerminalState:
     """Manages terminal emulator state and processing."""
 
-    def __init__(self, rows: int, cols: int, scrollback_limit: int | None = None) -> None:
+    def __init__(
+        self,
+        rows: int,
+        cols: int,
+        scrollback_limit: int | None = None,
+        response_callback: Callable[[bytes], None] | None = None
+    ) -> None:
         """
         Initialize terminal state.
 
@@ -27,6 +33,7 @@ class TerminalState:
             rows: Initial number of rows
             cols: Initial number of columns
             scrollback_limit: Maximum total lines to keep (including visible rows), None for unlimited
+            response_callback: Optional callback to send responses back to terminal process
         """
         self._logger = logging.getLogger("TerminalState")
 
@@ -43,12 +50,25 @@ class TerminalState:
         self._screen_reverse_mode = False
         self._mouse_tracking = MouseTrackingState()
 
+        # Response callback for sending data back to terminal process
+        self._response_callback = response_callback
+
         # Default colors (will be set by widget)
         self._default_fg = 0
         self._default_bg = 0
 
         # ANSI color mapping - will be populated by widget
         self._ansi_colors: dict = {}
+
+    def _send_response(self, response: bytes) -> None:
+        """
+        Send a response back to the terminal process.
+
+        Args:
+            response: Response bytes to send
+        """
+        if self._response_callback:
+            self._response_callback(response)
 
     def current_buffer(self) -> TerminalBuffer:
         """Get current terminal buffer."""
@@ -230,8 +250,10 @@ class TerminalState:
             params = sequence[3:-1]  # Remove ESC[? and final character
             if code == 'h':
                 self._process_private_mode(params, True)
+
             elif code == 'l':
                 self._process_private_mode(params, False)
+
             return
 
         # CSI sequences
@@ -242,6 +264,11 @@ class TerminalState:
         # DEC special sequences
         if sequence.startswith('\x1b#'):
             self._process_dec_special(sequence)
+            return
+
+        # DCS sequences
+        if sequence.startswith('\x1bP'):
+            # Device Control String - we don't support any DCS operations
             return
 
         # Simple escape sequences
@@ -266,6 +293,10 @@ class TerminalState:
 
             elif code == 'M':  # Reverse Index
                 buffer.reverse_index()
+
+            elif code == '\\':  # String Terminator
+                # Terminates DCS, OSC, APC, PM sequences
+                pass
 
             else:
                 self._logger.warning("Unknown simple ESC sequence: %r", sequence)
@@ -495,6 +526,25 @@ class TerminalState:
 
         elif code == 'u':  # Restore cursor position
             buffer.restore_cursor()
+
+        elif code == 'n':  # Device Status Report
+            if params[0] == 5:  # DSR - Device Status Report (terminal status)
+                # Respond with "OK" status
+                self._send_response(b'\x1b[0n')
+
+            elif params[0] == 6:  # CPR - Cursor Position Report
+                cursor = buffer.cursor()
+                # Terminal coordinates are 1-based (cursor is stored 0-based)
+                row = cursor.row + 1
+                col = cursor.col + 1
+                response = f'\x1b[{row};{col}R'.encode()
+                self._send_response(response)
+
+        elif code == 'c':  # Device Attributes
+            # Check if this is Secondary DA (has '>' prefix in params)
+            if params_str.startswith('>'):
+                # Respond with VT220 compatibility, version 1, no options
+                self._send_response(b'\x1b[>1;1;0c')
 
         else:
             self._logger.warning("Unknown CSI sequence %r", sequence)

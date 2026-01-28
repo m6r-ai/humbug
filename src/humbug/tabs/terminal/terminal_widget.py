@@ -56,7 +56,7 @@ class TerminalWidget(QAbstractScrollArea):
         self.setViewportMargins(4, 4, 4, 4)
 
         # Initialize terminal state with scrollback limit
-        self._state = TerminalState(24, 80, scrollback_limit)  # Default size
+        self._state = TerminalState(24, 80, scrollback_limit, self._on_terminal_response)
 
         # Initialize highlight tracking
         self._search_highlights: Dict[int, List[Tuple[int, int, bool]]] = {}
@@ -1123,6 +1123,16 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Show menu at click position
         menu.exec_(self.mapToGlobal(pos))
+
+    def _on_terminal_response(self, response: bytes) -> None:
+        """
+        Handle responses from terminal state that need to be sent back to the terminal process.
+
+        Args:
+            response: Response bytes to send to terminal process
+        """
+        # Emit the response so it gets sent back to the terminal process
+        self.data_ready.emit(response)
 
     def put_data(self, data: bytes) -> None:
         """Display received data with ANSI sequence handling."""
