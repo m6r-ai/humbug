@@ -543,9 +543,6 @@ class AIFPLVM:
 
         # Store patched closure back
         target_frame.locals[var_index] = patched_closure
-
-        # Recursively patch any nested closures that reference this function
-        self._patch_nested_closures_recursively(patched_closure, var_name, patched_closure)
         return None
 
     def _op_patch_closure_sibling(  # pylint: disable=useless-return
@@ -591,40 +588,6 @@ class AIFPLVM:
         # Add sibling to closure's environment
         target_closure.closure_environment.bindings[sibling_name] = sibling
         return None
-
-    def _patch_nested_closures_recursively(
-        self,
-        parent_closure: AIFPLFunction,
-        var_name: str,
-        patched_value: AIFPLFunction
-    ) -> None:
-        """
-        Recursively patch nested closures to reference the patched parent function.
-
-        This is needed because nested lambdas (e.g., inside map/filter/fold) need to
-        be able to call the parent function recursively. When the parent is patched
-        to reference itself, we need to update all nested closures that captured
-        the parent's environment.
-
-        Args:
-            parent_closure: The parent closure that was just patched
-            var_name: The variable name of the recursive function
-            patched_value: The patched function value to propagate to nested closures
-        """
-        # Check if this closure has any nested closures in its captured values
-        if not parent_closure.captured_values:
-            return
-
-        for captured_value in parent_closure.captured_values:
-            if isinstance(captured_value, AIFPLFunction):
-                # This is a nested closure - patch it if it references var_name
-                if (
-                    var_name in captured_value.closure_environment.bindings or
-                    var_name in getattr(captured_value.bytecode, 'free_vars', [])
-                ):
-                    captured_value.closure_environment.bindings[var_name] = patched_value
-                    # Recursively patch any further nested closures
-                    self._patch_nested_closures_recursively(captured_value, var_name, patched_value)
 
     def _call_bytecode_function(self, func: AIFPLFunction) -> AIFPLValue:
         """
