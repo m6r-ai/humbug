@@ -82,6 +82,7 @@ class AIFPLCollectionsFunctions:
             'alist-remove': self._builtin_alist_remove,
             'alist-merge': self._builtin_alist_merge,
             'alist?': self._builtin_alist_p,
+            'alist-length': self._builtin_alist_length,
 
             # Range function
             'range': self._builtin_range,
@@ -345,12 +346,19 @@ class AIFPLCollectionsFunctions:
             raise AIFPLEvalError(f"list-ref index out of range: {index}") from e
 
     def _builtin_length(self, args: List[AIFPLValue]) -> AIFPLValue:
-        """Implement length function."""
+        """Implement length function for lists and alists."""
         if len(args) != 1:
             raise AIFPLEvalError(f"length requires exactly 1 argument, got {len(args)}")
 
-        list_val = self._ensure_list(args[0], "length")
-        return AIFPLInteger(list_val.length())
+        arg = args[0]
+
+        if isinstance(arg, AIFPLList):
+            return AIFPLInteger(arg.length())
+
+        if isinstance(arg, AIFPLAList):
+            return AIFPLInteger(arg.length())
+
+        raise AIFPLEvalError(f"length requires list or alist argument, got {arg.type_name()}")
 
     def _builtin_null_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement null? function."""
@@ -782,6 +790,23 @@ class AIFPLCollectionsFunctions:
             )
 
         return AIFPLBoolean(isinstance(args[0], AIFPLAList))
+
+    def _builtin_alist_length(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Get number of entries in alist: (alist-length my-alist)"""
+        if len(args) != 1:
+            raise AIFPLEvalError(
+                message="alist-length requires exactly 1 argument",
+                received=f"Got {len(args)} arguments",
+                expected="1 argument: (alist-length alist)",
+                example='(alist-length person)',
+                suggestion="Provide an alist"
+            )
+
+        alist_val = args[0]
+        if not isinstance(alist_val, AIFPLAList):
+            raise AIFPLEvalError(f"alist-length requires alist argument, got {alist_val.type_name()}")
+
+        return AIFPLInteger(alist_val.length())
 
     def _builtin_range(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Generate range of numbers: (range start end) or (range start end step)"""

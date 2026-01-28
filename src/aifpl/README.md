@@ -1695,6 +1695,13 @@ All alist operations return new alists without modifying the original:
 (alist-values (alist (list "a" 1) (list "b" 2) (list "c" 3)))
 ; → (1 2 3)
 
+; Get alist length
+(alist-length (alist (list "a" 1) (list "b" 2) (list "c" 3)))
+; → 3
+
+(length (alist (list "a" 1) (list "b" 2) (list "c" 3)))
+; → 3 (length is polymorphic, covering lists and alists)
+
 ; Type checking
 (alist? (alist (list "x" 1)))
 ; → #t

@@ -97,7 +97,7 @@ class AIFPLAITool(AITool):
                 "- Construction: (list 1 2 3), (cons 1 (list 2 3)), (append (list 1 2) (list 3 4))\n"
                 "- Access: (first (list 1 2 3)), (rest (list 1 2 3)), (last (list 1 2 3))\n"
                 "- Indexed access: (list-ref (list \"a\" \"b\" \"c\") 1) → \"b\" (0-based index)\n"
-                "- Properties: (length (list 1 2 3)), (null? (list)), (member? 2 (list 1 2 3))\n"
+                "- Properties: (length (list 1 2 3)) [also works with alists], (null? (list)), (member? 2 (list 1 2 3))\n"
                 "- Utilities: (reverse (list 1 2 3)), (remove 2 (list 1 2 3 2 4)), (position 2 (list 1 2 3)) → 1 or #f\n"
                 "- Slicing: (take 3 (list 1 2 3 4 5)), (drop 2 (list 1 2 3 4 5))\n\n"
 
@@ -106,7 +106,8 @@ class AIFPLAITool(AITool):
                 "- Construction: (alist (list \"name\" \"Alice\") (list \"age\" 30))\n"
                 "- Access: (alist-get my-alist \"key\"), (alist-get my-alist \"key\" \"default\")\n"
                 "- Modification: (alist-set my-alist \"key\" value), (alist-remove my-alist \"key\")\n"
-                "- Queries: (alist-has? my-alist \"key\"), (alist-keys my-alist), (alist-values my-alist)\n"
+                "- Queries: (alist-has? my-alist \"key\"), (alist-keys my-alist), (alist-values my-alist), "
+                "(alist-length my-alist)\n"
                 "- Merging: (alist-merge alist1 alist2) - second wins on conflicts\n"
                 "- Type checking: (alist? value)\n"
                 "- Nested alists: (alist (list \"user\" (alist (list \"name\" \"Bob\") (list \"id\" 123))))\n"
