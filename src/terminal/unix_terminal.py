@@ -18,7 +18,6 @@ import select
 import signal
 import struct
 import termios
-import time
 import tty
 from typing import Tuple, cast
 
@@ -240,7 +239,7 @@ class UnixTerminal(TerminalBase):
 
             raise
 
-    def _write_all(self, fd: int, data: bytes) -> None:
+    async def _write_data_async(self, fd: int, data: bytes) -> None:
         """
         Write all data to file descriptor, handling partial writes.
 
@@ -251,45 +250,57 @@ class UnixTerminal(TerminalBase):
         Raises:
             OSError: If write fails or returns 0
         """
-        # Temporarily make FD blocking for simpler write logic
-        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK)
+        loop = asyncio.get_event_loop()
 
-        # Write out all data in 256-byte chunks with small delays to avoid overwhelming the terminal and
-        # getting weird corruptions where anything more than 1kbyte at once gets garbled on MacOS 26's zsh.
-        # This is definitely working around a bug elsewhere!
+        # Temporarily make FD blocking for simpler write logic (in executor)
+        flags = await loop.run_in_executor(
+            None, fcntl.fcntl, fd, fcntl.F_GETFL
+        )
+        await loop.run_in_executor(
+            None, fcntl.fcntl, fd, fcntl.F_SETFL, flags & ~os.O_NONBLOCK
+        )
+
         try:
             offset = 0
-            chunk_size = 256
+            chunk_size = 96
+
             while offset < len(data):
-                # Write in chunks with small delays
+                # Write in chunks with async delays to avoid overwhelming the terminal and getting weird corruptions
+                # where anything more than 1kbyte at once gets garbled on MacOS 26's zsh.  It seems something wants
+                # to rate limit to 9600 bps or similar.
                 end = min(offset + chunk_size, len(data))
-                written = os.write(fd, data[offset:end])
+
+                # Do the actual write in executor (it's a blocking syscall)
+                written = await loop.run_in_executor(
+                    None, os.write, fd, data[offset:end]
+                )
+
                 if written == 0:
                     raise OSError("write() returned 0, connection may be closed")
 
                 offset += written
 
-                # Small delay between chunks
+                # Async delay between chunks - doesn't block thread!
                 if offset < len(data):
-                    time.sleep(0.01)
+                    await asyncio.sleep(0.1)
 
         finally:
-            # Restore non-blocking mode
-            fcntl.fcntl(fd, fcntl.F_SETFL, flags)
+            # Restore non-blocking mode (in executor)
+            await loop.run_in_executor(
+                None, fcntl.fcntl, fd, fcntl.F_SETFL, flags
+            )
 
     async def write_data(self, data: bytes) -> None:
         """
         Write data to Unix terminal.
 
         Handles partial writes by retrying until all data is written.
-        
+
         Args:
             data: Data to write to terminal
         """
         if self._main_fd is not None and self._running:
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, self._write_all, self._main_fd, data)
+            await self._write_data_async(self._main_fd, data)
 
     def transfer_to(self, other: 'TerminalBase') -> None:
         """Transfer Unix terminal ownership."""
