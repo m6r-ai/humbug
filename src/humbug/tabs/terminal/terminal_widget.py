@@ -860,6 +860,9 @@ class TerminalWidget(QAbstractScrollArea):
         if attrs & TerminalCharacterAttributes.DIM:
             fg.setAlpha(128)
 
+        else:
+            fg.setAlpha(255)
+
         # Calculate start x position
         x_start = start_col * self._char_width
 
