@@ -26,8 +26,8 @@ class Opcode(IntEnum):
 
     # Control flow
     JUMP = auto()            # Unconditional jump: JUMP offset
-    POP_JUMP_IF_FALSE = auto()  # Pop and jump if false
-    POP_JUMP_IF_TRUE = auto()   # Pop and jump if true
+    JUMP_IF_FALSE = auto()   # Conditional jump if false
+    JUMP_IF_TRUE = auto()    # Conditional jump if true
     RAISE_ERROR = auto()     # Raise error with message from constant pool: RAISE_ERROR const_index
 
     # Functions

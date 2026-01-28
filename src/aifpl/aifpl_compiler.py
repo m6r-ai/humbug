@@ -388,7 +388,7 @@ class AIFPLCompiler:
         ctx.in_tail_position = old_tail
 
         # Jump to else if condition is false
-        jump_to_else = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)  # Will patch later
+        jump_to_else = ctx.emit(Opcode.JUMP_IF_FALSE, 0)  # Will patch later
 
         # Compile then branch
         # Then branch IS in tail position if the if is
@@ -448,7 +448,7 @@ class AIFPLCompiler:
             self._compile_expression(arg, ctx)
 
             # If false, jump to "return false" section
-            jump = ctx.emit(Opcode.POP_JUMP_IF_FALSE, 0)
+            jump = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
             jump_to_false.append(jump)
 
         # All arguments were true - return #t
@@ -495,7 +495,7 @@ class AIFPLCompiler:
             self._compile_expression(arg, ctx)
 
             # If true, jump to "return true" section
-            jump = ctx.emit(Opcode.POP_JUMP_IF_TRUE, 0)
+            jump = ctx.emit(Opcode.JUMP_IF_TRUE, 0)
             jump_to_true.append(jump)
 
         # All arguments were false - return #f

@@ -81,8 +81,8 @@ Jump instructions for conditionals and loops.
 | Opcode | Args | Description | Example |
 |--------|------|-------------|---------|
 | `JUMP` | offset | Unconditional jump to instruction | `JUMP 10` → set IP to 10 |
-| `POP_JUMP_IF_FALSE` | offset | Pop stack, jump if false | `POP_JUMP_IF_FALSE 15` → if top is #f, jump to 15 |
-| `POP_JUMP_IF_TRUE` | offset | Pop stack, jump if true | `POP_JUMP_IF_TRUE 20` → if top is #t, jump to 20 |
+| `JUMP_IF_FALSE` | offset | Pop stack, jump if false | `JUMP_IF_FALSE 15` → if top is #f, jump to 15 |
+| `JUMP_IF_TRUE` | offset | Pop stack, jump if true | `JUMP_IF_TRUE 20` → if top is #t, jump to 20 |
 | `RAISE_ERROR` | const_index | Raise error with message | `RAISE_ERROR 0` → raise error with constants[0] as message |
 
 ### Functions (6 opcodes)

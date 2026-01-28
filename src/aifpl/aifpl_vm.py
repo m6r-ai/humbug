@@ -73,8 +73,8 @@ class AIFPLVM:
         table[Opcode.STORE_VAR] = self._op_store_var
         table[Opcode.LOAD_NAME] = self._op_load_name
         table[Opcode.JUMP] = self._op_jump
-        table[Opcode.POP_JUMP_IF_FALSE] = self._op_pop_jump_if_false
-        table[Opcode.POP_JUMP_IF_TRUE] = self._op_pop_jump_if_true
+        table[Opcode.JUMP_IF_FALSE] = self._op_jump_if_false
+        table[Opcode.JUMP_IF_TRUE] = self._op_jump_if_true
         table[Opcode.RAISE_ERROR] = self._op_raise_error
         table[Opcode.MAKE_CLOSURE] = self._op_make_closure
         table[Opcode.CALL_FUNCTION] = self._op_call_function
@@ -291,14 +291,14 @@ class AIFPLVM:
         frame.ip = arg1
         return None
 
-    def _op_pop_jump_if_false(  # pylint: disable=useless-return
+    def _op_jump_if_false(  # pylint: disable=useless-return
         self,
         frame: Frame,
         _code: CodeObject,
         arg1: int,
         _arg2: int
     ) -> AIFPLValue | None:
-        """POP_JUMP_IF_FALSE: Pop stack, jump if false."""
+        """JUMP_IF_FALSE: Pop stack, jump if false."""
         condition = self.stack.pop()
         if not isinstance(condition, AIFPLBoolean):
             raise AIFPLEvalError("If condition must be boolean")
@@ -308,14 +308,14 @@ class AIFPLVM:
 
         return None
 
-    def _op_pop_jump_if_true(  # pylint: disable=useless-return
+    def _op_jump_if_true(  # pylint: disable=useless-return
         self,
         frame: Frame,
         _code: CodeObject,
         arg1: int,
         _arg2: int
     ) -> AIFPLValue | None:
-        """POP_JUMP_IF_TRUE: Pop stack, jump if true."""
+        """JUMP_IF_TRUE: Pop stack, jump if true."""
         condition = self.stack.pop()
         if not isinstance(condition, AIFPLBoolean):
             raise AIFPLEvalError("If condition must be boolean")
