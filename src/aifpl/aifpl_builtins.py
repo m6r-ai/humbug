@@ -32,7 +32,7 @@ class AIFPLBuiltinRegistry:
     a unified interface for both the evaluator and VM to access them.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize the builtin registry.
         """

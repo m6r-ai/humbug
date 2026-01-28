@@ -1,6 +1,7 @@
 """Tokenizer for AIFPL expressions with detailed error messages."""
 
-from typing import List, Union
+from typing import List, Union, Any
+
 from aifpl.aifpl_error import AIFPLTokenError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 
@@ -28,7 +29,7 @@ class AIFPLTokenizer:
 
         def make_token(
             token_type: AIFPLTokenType,
-            value,
+            value: Any,
             length: int = 1,
             token_line: int | None = None,
             token_col: int | None = None

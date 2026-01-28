@@ -342,7 +342,9 @@ class AIFPLParser:
             # Check if we're in the middle of parsing an incomplete element
             if frame.incomplete_element_line is not None and frame.incomplete_element_column is not None:
                 # This frame was parsing an element that's incomplete
-                incomplete_snippet = self.get_context_snippet(frame.incomplete_element_line, frame.incomplete_element_column, length=20)
+                incomplete_snippet = self.get_context_snippet(
+                    frame.incomplete_element_line, frame.incomplete_element_column, length=20
+                )
                 line += f"\n     Started parsing element {frame.elements_parsed + 1} at "
                 line += f"line {frame.incomplete_element_line}, column {frame.incomplete_element_column}: {incomplete_snippet}"
                 line += "\n     → This element is incomplete (see below)"
@@ -636,8 +638,11 @@ class AIFPLParser:
                 line += f" - parsed {frame.elements_parsed} element{'s' if frame.elements_parsed != 1 else ''}"
 
             if frame.incomplete_element_line is not None and frame.incomplete_element_column is not None:
-                incomplete_snippet = self.get_context_snippet(frame.incomplete_element_line, frame.incomplete_element_column, length=20)
-                line += f"\n     Started parsing element at line {frame.incomplete_element_line}, column {frame.incomplete_element_column}: {incomplete_snippet}"
+                incomplete_snippet = self.get_context_snippet(
+                    frame.incomplete_element_line, frame.incomplete_element_column, length=20
+                )
+                line += f"\n     Started parsing element at line {frame.incomplete_element_line}, "
+                line += f"column {frame.incomplete_element_column}: {incomplete_snippet}"
                 line += "\n     → This element is incomplete"
 
             elif frame.last_complete_line:

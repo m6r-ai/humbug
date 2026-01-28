@@ -11,9 +11,6 @@ from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex
 class AIFPLMathFunctions:
     """Mathematical built-in functions for AIFPL."""
 
-    def __init__(self):
-        """Initialize with floating point tolerance."""
-
     def _extract_numeric_value(self, value: AIFPLValue) -> Union[int, float, complex]:
         """Extract Python numeric value from AIFPL number types."""
         if isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
