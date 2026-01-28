@@ -111,24 +111,15 @@ class AIFPLVM:
         self.frames = [Frame(code)]
 
         # Execute until we return
-        while self.frames:
-            result = self._execute_frame()
-            if result is not None:
-                return result
+        return self._execute_frame()
 
-        # Should not reach here
-        raise AIFPLEvalError("Execution ended without return value")
-
-    def _execute_frame(self) -> AIFPLValue | None:
+    def _execute_frame(self) -> AIFPLValue:
         """
         Execute current frame using jump table dispatch.
 
         Returns:
-            Result value if frame returns, None if continuing execution
+            Result value when frame returns
         """
-        if not self.frames:
-            return None
-
         frame = self.frames[-1]
         code = frame.code
         instructions = code.instructions
@@ -155,7 +146,7 @@ class AIFPLVM:
                 return result
 
         # Frame finished without explicit return
-        return None
+        raise AIFPLEvalError("Frame execution ended without RETURN instruction")
 
     def _op_load_const(  # pylint: disable=useless-return
         self,
@@ -613,12 +604,7 @@ class AIFPLVM:
         self.frames.append(new_frame)
 
         # Execute until return
-        while self.frames and self.frames[-1] == new_frame:
-            result = self._execute_frame()
-            if result is not None:
-                return result
-
-        raise AIFPLEvalError("Function did not return a value")
+        return self._execute_frame()
 
     def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
         """
