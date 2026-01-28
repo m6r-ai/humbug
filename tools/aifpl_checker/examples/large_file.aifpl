@@ -1,0 +1,15 @@
+; Large file example
+; Line 2
+; Line 3
+; Line 4
+; Line 5
+(let ((x 1)
+      (y 2)
+      (z 3))
+  ; Line 9
+  ; Line 10
+  (+ x y z))
+; Line 12
+; Line 13
+; Line 14
+; Line 15
