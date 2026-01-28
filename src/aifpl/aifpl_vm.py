@@ -414,9 +414,7 @@ class AIFPLVM:
             args = [self.stack.pop() for _ in range(arity)]
             args.reverse()
             self.stack.pop()  # Pop function
-            if func.native_impl is None:
-                raise AIFPLEvalError(f"Function {func.name} has no native implementation")
-
+            assert func.native_impl is not None, f"Function {func.name} has no native implementation"
             result = func.native_impl(args)
             self.stack.append(result)
             return None
