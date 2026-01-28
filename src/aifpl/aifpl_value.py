@@ -453,7 +453,7 @@ class AIFPLFunction(AIFPLValue):
     def describe(self) -> str:
         """Return a human-readable description of this function."""
         param_str = ', '.join(self.parameters)
-        if self.is_variadic and self.parameters:
+        if self.is_variadic and len(self.parameters) > 0:
             # Last parameter is variadic (rest parameter)
             regular_params = ', '.join(self.parameters[:-1]) if len(self.parameters) > 1 else ''
             rest_param = self.parameters[-1]
