@@ -623,7 +623,7 @@ def profile_benchmarks(benchmarks: List[Benchmark]):
 
     # Run each benchmark a few times
     for benchmark in benchmarks:
-        for _ in range(min(10, benchmark.iterations // 10)):
+        for _ in range(benchmark.iterations // 10):
             aifpl.evaluate(benchmark.expression)
 
     profiler.disable()
@@ -632,10 +632,10 @@ def profile_benchmarks(benchmarks: List[Benchmark]):
     s = StringIO()
     stats = pstats.Stats(profiler, stream=s)
     stats.sort_stats('cumulative')
-    stats.print_stats(30)
+    stats.print_stats(50)
 
     print("\n" + "=" * 100)
-    print("PROFILING RESULTS (Top 30 functions by cumulative time)")
+    print("PROFILING RESULTS (Top 50 functions by cumulative time)")
     print("=" * 100)
     print(s.getvalue())
 
