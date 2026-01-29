@@ -131,12 +131,12 @@ class TestAIFPLValueEdgeCases:
         assert isinstance(result, float)
 
         # Float to complex promotion
-        result = aifpl.evaluate("(+ 2.5 j)")
+        result = aifpl.evaluate("(+ 2.5 1j)")
         assert result == 2.5+1j
         assert isinstance(result, complex)
 
         # Integer to complex promotion
-        result = aifpl.evaluate("(+ 1 j)")
+        result = aifpl.evaluate("(+ 1 1j)")
         assert result == 1+1j
         assert isinstance(result, complex)
 
@@ -196,7 +196,7 @@ class TestAIFPLValueEdgeCases:
 
         # Complex number predicates
         assert aifpl.evaluate("(complex? (complex 1 2))") is True
-        assert aifpl.evaluate("(complex? j)") is True
+        assert aifpl.evaluate("(complex? 1j)") is True
         assert aifpl.evaluate("(complex? 5)") is False
 
         # String predicates with edge cases
@@ -267,7 +267,7 @@ class TestAIFPLValueEdgeCases:
 
         # Complex number equality
         assert aifpl.evaluate("(= (complex 5 0) 5)") is True
-        assert aifpl.evaluate("(= (complex 0 1) j)") is True
+        assert aifpl.evaluate("(= (complex 0 1) 1j)") is True
 
         # List equality
         assert aifpl.evaluate("(= (list 1 2) (list 1 2))") is True

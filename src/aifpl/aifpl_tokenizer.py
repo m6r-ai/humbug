@@ -184,8 +184,7 @@ class AIFPLTokenizer:
 
             # Numbers (including complex, hex, binary, octal, scientific notation)
             # Check numbers BEFORE symbols to handle .5 correctly
-            # Also check for 'j' or 'J' as it could be a complex literal like 'j' or '5j'
-            if self._is_number_start(expression, i) or self._is_complex_literal_start(expression, i):
+            if self._is_number_start(expression, i):
                 try:
                     # Save line/column at start of number
                     number_line = line
@@ -352,27 +351,6 @@ class AIFPLTokenizer:
             next_char = expression[pos + 1]
             # Positive digit or positive decimal starting with dot (only if followed by digit)
             if next_char.isdigit() or (next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit()):
-                return True
-
-        return False
-
-    def _is_complex_literal_start(self, expression: str, pos: int) -> bool:
-        """
-        Check if position starts a complex literal like 'j', '-j', or is part of '5j'.
-
-        This handles standalone 'j' or 'J' which should be treated as complex literal 1j,
-        not as a symbol.
-        """
-        char = expression[pos]
-
-        # Check for 'j' or 'J' followed by delimiter
-        if char in 'jJ':
-            if pos + 1 >= len(expression) or self._is_delimiter(expression[pos + 1]):
-                return True
-
-        # Check for '-j' or '+j'
-        if char in '+-' and pos + 1 < len(expression) and expression[pos + 1] in 'jJ':
-            if pos + 2 >= len(expression) or self._is_delimiter(expression[pos + 2]):
                 return True
 
         return False

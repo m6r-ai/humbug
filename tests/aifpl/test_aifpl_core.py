@@ -93,7 +93,7 @@ class TestAIFPLCore:
         assert abs(result - 2.71828182) < 1e-6
 
         # Test imaginary unit
-        result = aifpl.evaluate("j")
+        result = aifpl.evaluate("1j")
         assert result == 1j
 
         # Test boolean constants

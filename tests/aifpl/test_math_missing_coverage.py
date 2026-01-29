@@ -15,8 +15,8 @@ class TestMathMissingCoverage:
         """Test that <, >, <=, >= reject complex number arguments."""
         complex_values = [
             "(complex 1 2)",
-            "j",
-            "(+ 3 j)",
+            "1j",
+            "(+ 3 1j)",
             "(complex -1 5)"
         ]
 
@@ -258,7 +258,7 @@ class TestMathMissingCoverage:
             aifpl.evaluate("(min (complex 1 2) 5)")
 
         with pytest.raises(AIFPLEvalError, match="Function 'max' does not support complex numbers"):
-            aifpl.evaluate("(max j 3)")
+            aifpl.evaluate("(max 1j 3)")
 
     # ========== Additional Edge Cases ==========
 

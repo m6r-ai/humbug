@@ -49,8 +49,8 @@ class TestParserWithTypedNumbers:
     def test_parser_creates_complex_with_flag(self):
         """With flag enabled, parser should create AIFPLComplex."""
         tokenizer = AIFPLTokenizer()
-        tokens = tokenizer.tokenize("(+ 3 (* 4 j))")
-        parser = AIFPLParser(tokens, "(+ 3 (* 4 j))")
+        tokens = tokenizer.tokenize("(+ 3 (* 4 1j))")
+        parser = AIFPLParser(tokens, "(+ 3 (* 4 1j))")
         parser.use_typed_numbers = True
         result = parser.parse()
         
@@ -99,7 +99,7 @@ class TestTypePredicatesWithNewTypes:
         aifpl = AIFPL()
         assert aifpl.evaluate("(number? 42)") == True
         assert aifpl.evaluate("(number? 3.14)") == True
-        assert aifpl.evaluate("(number? (+ 1 (* 2 j)))") == True
+        assert aifpl.evaluate("(number? (+ 1 (* 2 1j)))") == True
         assert aifpl.evaluate('(number? "hello")') == False
     
     def test_integer_predicate_with_old_type(self):
@@ -108,7 +108,7 @@ class TestTypePredicatesWithNewTypes:
         aifpl = AIFPL()
         assert aifpl.evaluate("(integer? 42)") == True
         assert aifpl.evaluate("(integer? 3.14)") == False
-        assert aifpl.evaluate("(integer? (+ 1 (* 2 j)))") == False
+        assert aifpl.evaluate("(integer? (+ 1 (* 2 1j)))") == False
     
     def test_float_predicate_with_old_type(self):
         """float? should work with typed numbers."""
@@ -116,13 +116,13 @@ class TestTypePredicatesWithNewTypes:
         aifpl = AIFPL()
         assert aifpl.evaluate("(float? 3.14)") == True
         assert aifpl.evaluate("(float? 42)") == False
-        assert aifpl.evaluate("(float? (+ 1 (* 2 j)))") == False
+        assert aifpl.evaluate("(float? (+ 1 (* 2 1j)))") == False
     
     def test_complex_predicate_with_old_type(self):
         """complex? should work with typed numbers."""
         from aifpl import AIFPL
         aifpl = AIFPL()
-        assert aifpl.evaluate("(complex? (+ 1 (* 2 j)))") == True
+        assert aifpl.evaluate("(complex? (+ 1 (* 2 1j)))") == True
         assert aifpl.evaluate("(complex? 42)") == False
         assert aifpl.evaluate("(complex? 3.14)") == False
     

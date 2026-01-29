@@ -99,7 +99,7 @@ class TestAIFPLMathEdgeCases:
         assert result == 10000000000
 
         # Complex exponentiation
-        result = aifpl.evaluate("(** j 2)")
+        result = aifpl.evaluate("(** 1j 2)")
         assert abs(result - (-1)) < 1e-10
 
         result = aifpl.evaluate("(** (complex 1 1) 2)")
@@ -182,12 +182,12 @@ class TestAIFPLMathEdgeCases:
     def test_trigonometric_with_complex_numbers(self, aifpl):
         """Test trigonometric functions with complex arguments."""
         # sin(i) = i*sinh(1)
-        result = aifpl.evaluate("(sin j)")
+        result = aifpl.evaluate("(sin 1j)")
         expected = 1j * math.sinh(1)
         assert abs(result - expected) < 1e-10
 
         # cos(i) = cosh(1)
-        result = aifpl.evaluate("(cos j)")
+        result = aifpl.evaluate("(cos 1j)")
         expected = math.cosh(1)
         assert abs(result - expected) < 1e-10
 
@@ -240,7 +240,7 @@ class TestAIFPLMathEdgeCases:
         assert abs(result - expected) < 1e-10
 
         # log(i) = i*pi/2
-        result = aifpl.evaluate("(log j)")
+        result = aifpl.evaluate("(log 1j)")
         expected = 1j * math.pi / 2
         assert abs(result - expected) < 1e-10
 
@@ -256,6 +256,7 @@ class TestAIFPLMathEdgeCases:
             result = aifpl.evaluate("(log 0)")
             # If it doesn't raise an error, it should be -inf
             assert math.isinf(result) and result < 0
+
         except AIFPLEvalError:
             # Error is also acceptable
             pass
@@ -298,11 +299,11 @@ class TestAIFPLMathEdgeCases:
         assert abs(result - math.exp(-10)) < 1e-15
 
         # exp(i*pi) = -1 (Euler's identity)
-        result = aifpl.evaluate("(exp (* j pi))")
+        result = aifpl.evaluate("(exp (* 1j pi))")
         assert abs(result - (-1)) < 1e-10
 
         # exp(i*pi/2) = i
-        result = aifpl.evaluate("(exp (* j pi 0.5))")
+        result = aifpl.evaluate("(exp (* 1j pi 0.5))")
         assert abs(result - 1j) < 1e-10
 
     def test_absolute_value_edge_cases(self, aifpl):
@@ -316,7 +317,7 @@ class TestAIFPLMathEdgeCases:
 
         # Complex absolute value (magnitude)
         assert aifpl.evaluate("(abs (complex 3 4))") == 5.0
-        assert aifpl.evaluate("(abs j)") == 1.0
+        assert aifpl.evaluate("(abs 1j)") == 1.0
         assert aifpl.evaluate("(abs (complex -3 -4))") == 5.0
 
         # Very small numbers
@@ -376,9 +377,9 @@ class TestAIFPLMathEdgeCases:
         """Test that rounding functions reject complex numbers."""
         complex_values = [
             "(complex 1 2)",
-            "j",
+            "1j",
             "(complex 3 4)",
-            "(+ 5 j)",
+            "(+ 5 1j)",
         ]
 
         for value in complex_values:
@@ -584,8 +585,8 @@ class TestAIFPLMathEdgeCases:
         assert aifpl.evaluate("(imag 42)") == 0
         assert aifpl.evaluate("(real 3.14)") == 3.14
         assert aifpl.evaluate("(imag 3.14)") == 0
-        assert aifpl.evaluate("(real j)") == 0
-        assert aifpl.evaluate("(imag j)") == 1
+        assert aifpl.evaluate("(real 1j)") == 0
+        assert aifpl.evaluate("(imag 1j)") == 1
 
         # Complex arithmetic edge cases
         result = aifpl.evaluate("(+ (complex 1 2) (complex 3 4))")
@@ -609,7 +610,7 @@ class TestAIFPLMathEdgeCases:
         assert abs(e_value - math.e) < 1e-10
 
         # Imaginary unit
-        j_value = aifpl.evaluate("j")
+        j_value = aifpl.evaluate("1j")
         assert j_value == 1j
 
         # Use constants in expressions
@@ -619,7 +620,7 @@ class TestAIFPLMathEdgeCases:
         result = aifpl.evaluate("(** e 2)")
         assert abs(result - (math.e ** 2)) < 1e-10
 
-        result = aifpl.evaluate("(* j j)")
+        result = aifpl.evaluate("(* 1j 1j)")
         assert abs(result - (-1)) < 1e-10
 
     def test_arithmetic_type_coercion_edge_cases(self, aifpl):
@@ -634,17 +635,17 @@ class TestAIFPLMathEdgeCases:
         assert isinstance(result, float)
 
         # Float to complex coercion
-        result = aifpl.evaluate("(+ 2.5 j)")
+        result = aifpl.evaluate("(+ 2.5 1j)")
         assert result == 2.5+1.0j
         assert isinstance(result, complex)
 
         # Integer to complex coercion
-        result = aifpl.evaluate("(+ 1 j)")
+        result = aifpl.evaluate("(+ 1 1j)")
         assert result == 1.0+1.0j
         assert isinstance(result, complex)
 
         # Mixed operations
-        result = aifpl.evaluate("(+ 1 2.5 j)")
+        result = aifpl.evaluate("(+ 1 2.5 1j)")
         assert result == 3.5+1.0j
         assert isinstance(result, complex)
 

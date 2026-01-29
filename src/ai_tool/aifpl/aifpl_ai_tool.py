@@ -61,7 +61,7 @@ class AIFPLAITool(AITool):
                 "- Base conversion: (bin 255), (hex 255), (oct 255)\n\n"
 
                 "Complex Numbers:\n"
-                "- Literals: 3+4j, 5j, j (same as Python), j or J → 1j\n"
+                "- Literals: 3+4j, 5j, 1j\n"
                 "- Pure imaginary: 4j, -5j, 1.5e2j → 4j, -5j, 150j\n"
                 "- Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)\n"
                 "- (complex 3 4) → (3+4j) (construct complex number)\n"

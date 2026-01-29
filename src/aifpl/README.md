@@ -1400,8 +1400,8 @@ These functions return results based on input types or mathematical requirements
 Complex numbers can be constructed using the `complex` function or arithmetic with the `j` constant:
 
 - `(complex 3 4)` → `(3+4j)` (construct from real and imaginary parts)
-- `(+ 1 (* 2 j))` → `(1+2j)` (arithmetic with j constant)
-- `(* 3 j)` → `(0+3j)` (pure imaginary)
+- `(+ 1 (* 2 1j))` → `(1+2j)` (arithmetic with j constant)
+- `(* 3 1j)` → `(0+3j)` (pure imaginary)
 
 See the "Type Construction and Conversion" section for more details on the `complex` function.
 
@@ -1809,7 +1809,7 @@ The `real` and `imag` functions extract components from any numeric value:
 ```aifpl
 (real (+ (complex 1 2) (complex 3 4)))  ; → 4
 (imag (sqrt -1))                        ; → 1
-(real (* j j))                          ; → -1
+(real (* 1j 1j))                        ; → -1
 ```
 
 ## Type System
@@ -2042,60 +2042,60 @@ The pure list approach provides several advantages:
 ### Function Composition and Higher-Order Patterns
 ```aifpl
 ; Create reusable transformations
-(let ((process-data (lambda (data)
-                      (let ((clean (filter (lambda (x) (> x 0)) data))
-                            (transformed (map (lambda (x) (+ (* x x) 1)) clean))
-                            (limited (take 5 transformed)))
-                        limited))))
+(letrec ((process-data (lambda (data)
+                         (let ((clean (filter (lambda (x) (> x 0)) data))
+                               (transformed (map (lambda (x) (+ (* x x) 1)) clean))
+                               (limited (take 5 transformed)))
+                           limited))))
   (process-data (list -1 2 3 -4 5 6 7 8)))  ; → (5 10 26 37 50)
 
 ; Build complex predicates
-(let ((in-range (lambda (min max)
-                  (lambda (x) (and (>= x min) (<= x max)))))
-      (is-even (lambda (x) (= (% x 2) 0))))
-  (let ((even-in-range (lambda (x) (and (is-even x) ((in-range 10 50) x)))))
+(letrec ((in-range (lambda (min max)
+                     (lambda (x) (and (>= x min) (<= x max)))))
+         (is-even (lambda (x) (= (% x 2) 0))))
+  (letrec ((even-in-range (lambda (x) (and (is-even x) ((in-range 10 50) x)))))
     (filter even-in-range (range 1 60))))   ; → (10 12 14 16 18 20 22 24 26 28 30 32 34 36 38 40 42 44 46 48 50)
 
 ; Recursive data structures
-(let ((tree-sum (lambda (tree)
-                  (if (list? tree)
-                      (fold + 0 (map tree-sum tree))
-                      tree))))
+(letrec ((tree-sum (lambda (tree)
+                     (if (list? tree)
+                         (fold + 0 (map tree-sum tree))
+                         tree))))
   (tree-sum (list 1 (list 2 3) (list (list 4 5) 6))))  ; → 21
 ```
 
 ### Type-Safe Programming Patterns
 ```aifpl
 ; Polymorphic function with type checking
-(let ((safe-process (lambda (value)
-                      (if (number? value)
-                          (* value value)
-                          (if (string? value)
-                              (string-upcase value)
-                              (if (list? value)
-                                  (length value)
-                                  "unknown type"))))))
+(letrec ((safe-process (lambda (value)
+                         (if (number? value)
+                             (* value value)
+                             (if (string? value)
+                                 (string-upcase value)
+                                 (if (list? value)
+                                     (length value)
+                                     "unknown type"))))))
   (map safe-process (list 5 "hello" (list 1 2 3) #t)))  ; → (25 "HELLO" 3 "unknown type")
 
 ; Type validation pipeline
-(let ((validate-input (lambda (data)
-                        (if (list? data)
-                            (if (all? number? data)
-                                (fold + 0 data)
-                                "error: non-numeric data")
-                            "error: not a list"))))
+(letrec ((validate-input (lambda (data)
+                           (if (list? data)
+                               (if (all? number? data)
+                                   (fold + 0 data)
+                                   "error: non-numeric data")
+                               "error: not a list"))))
   (list (validate-input (list 1 2 3))        ; → 6
         (validate-input (list 1 "x" 3))      ; → "error: non-numeric data"
         (validate-input "not a list")))      ; → "error: not a list"
 
 ; Mixed type list processing
-(let ((categorize (lambda (items)
-                    (let ((numbers (filter number? items))
-                          (strings (filter string? items))
-                          (booleans (filter boolean? items)))
-                      (list (list "numbers" numbers)
-                            (list "strings" strings)
-                            (list "booleans" booleans))))))
+(letrec ((categorize (lambda (items)
+                       (let ((numbers (filter number? items))
+                             (strings (filter string? items))
+                             (booleans (filter boolean? items)))
+                         (list (list "numbers" numbers)
+                               (list "strings" strings)
+                               (list "booleans" booleans))))))
   (categorize (list 1 "hello" #t 3.14 "world" #f)))
 ; → (("numbers" (1 3.14)) ("strings" ("hello" "world")) ("booleans" (#t #f)))
 ```

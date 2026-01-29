@@ -24,7 +24,7 @@ class TestLists:
         ('(list 1 (list 2 3) 4)', '(1 (2 3) 4)'),
 
         # Lists with complex numbers
-        ('(list (complex 1 2) j)', '(1+2j 1j)'),
+        ('(list (complex 1 2) 1j)', '(1+2j 1j)'),
     ])
     def test_list_construction(self, aifpl, expression, expected):
         """Test list construction with various element types."""

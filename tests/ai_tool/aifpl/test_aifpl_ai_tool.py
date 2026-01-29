@@ -168,9 +168,9 @@ class TestAIFPLAIToolExecution:
     def test_execute_complex_numbers(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with complex numbers."""
         test_cases = [
-            ("j", "1j"),  # Fixed: AIFPL returns "1j", not "(0+1j)"
+            ("1j", "1j"),  # Fixed: AIFPL returns "1j", not "(0+1j)"
             ("(complex 3 4)", "3+4j"),
-            ("(+ 1 (* 2 j))", "1+2j"),
+            ("(+ 1 (* 2 1j))", "1+2j"),
             ("(real (complex 3 4))", "3.0"),
             ("(imag (complex 3 4))", "4.0"),
         ]
@@ -355,7 +355,7 @@ class TestAIFPLAIToolExecution:
             ("(number? #t)", "#f"),
             ("(integer? 42)", "#t"),
             ("(float? 3.14)", "#t"),
-            ("(complex? (+ 1 j))", "#t"),
+            ("(complex? (+ 1 1j))", "#t"),
             ('(string? "hello")', "#t"),
             ("(boolean? #t)", "#t"),
             ("(list? (list 1 2))", "#t"),

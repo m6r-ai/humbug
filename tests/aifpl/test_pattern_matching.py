@@ -35,7 +35,7 @@ class TestPatternMatching:
         ('(match #t (#f "wrong") (#t "right"))', '"right"'),
 
         # Complex number literal patterns
-        ('(match j (j "imaginary unit") (_ "other"))', '"imaginary unit"'),
+        ('(match 1j (1j "imaginary unit") (_ "other"))', '"imaginary unit"'),
     ])
     def test_literal_pattern_matching(self, aifpl, expression, expected):
         """Test basic literal pattern matching for all AIFPL types."""

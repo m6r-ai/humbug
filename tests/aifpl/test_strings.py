@@ -366,7 +366,7 @@ class TestStrings:
 
         # Complex numbers
         ('(number->string (complex 1 2))', '"1+2j"'),
-        ('(number->string j)', '"1j"'),
+        ('(number->string 1j)', '"1j"'),
     ])
     def test_number_to_string(self, aifpl, expression, expected):
         """Test number->string conversion."""

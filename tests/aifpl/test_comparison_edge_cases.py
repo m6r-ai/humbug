@@ -43,9 +43,9 @@ class TestComparisonEdgeCases:
         """Test that <, >, <=, >= properly reject complex numbers."""
         complex_expressions = [
             "(complex 1 2)",
-            "j",
-            "(+ 1 j)",
-            "(* 2 j)"
+            "1j",
+            "(+ 1 1j)",
+            "(* 2 1j)"
         ]
 
         comparison_ops = ["<", ">", "<=", ">="]
@@ -71,13 +71,13 @@ class TestComparisonEdgeCases:
             aifpl.evaluate("(< 1 2 (complex 3 1) 4)")
 
         with pytest.raises(AIFPLEvalError, match="Function '>' does not support complex numbers"):
-            aifpl.evaluate("(> 10 (+ 5 j) 3 1)")
+            aifpl.evaluate("(> 10 (+ 5 1j) 3 1)")
 
         with pytest.raises(AIFPLEvalError, match="Function '<=' does not support complex numbers"):
-            aifpl.evaluate("(<= 1 j 3)")
+            aifpl.evaluate("(<= 1 1j 3)")
 
         with pytest.raises(AIFPLEvalError, match="Function '>=' does not support complex numbers"):
-            aifpl.evaluate("(>= j 0)")
+            aifpl.evaluate("(>= 1j 0)")
 
     def test_comparison_operators_type_errors(self, aifpl):
         """Test comparison operators with non-numeric types."""

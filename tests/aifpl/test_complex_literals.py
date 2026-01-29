@@ -11,19 +11,19 @@ class TestComplexNumberLiterals:
     def test_pure_imaginary_unit(self, aifpl):
         """Test standalone 'j' or 'J' as imaginary unit (1j)."""
         # Lowercase j
-        result = aifpl.evaluate("j")
+        result = aifpl.evaluate("1j")
         assert result == 1j
 
         # Uppercase J
-        result = aifpl.evaluate("J")
+        result = aifpl.evaluate("1J")
         assert result == 1j
 
         # With explicit positive sign
-        result = aifpl.evaluate("+j")
+        result = aifpl.evaluate("+1j")
         assert result == 1j
 
         # With negative sign
-        result = aifpl.evaluate("-j")
+        result = aifpl.evaluate("-1j")
         assert result == -1j
 
     def test_pure_imaginary_numbers(self, aifpl):
@@ -147,7 +147,7 @@ class TestComplexNumberLiterals:
         tokenizer = AIFPLTokenizer()
 
         test_cases = [
-            ("j", AIFPLTokenType.COMPLEX, 1j),
+            ("1j", AIFPLTokenType.COMPLEX, 1j),
             ("4j", AIFPLTokenType.COMPLEX, 4j),
             ("3+4j", AIFPLTokenType.COMPLEX, 3+4j),
             ("1.5e2+3.7e-1j", AIFPLTokenType.COMPLEX, 150+0.37j),
@@ -174,8 +174,8 @@ class TestComplexNumberLiterals:
         """Test that complex literals are correctly distinguished from symbols."""
         # These should be complex literals (not symbols)
         complex_cases = [
-            "j",
-            "J",
+            "1j",
+            "1J",
             "4j",
             "3+4j",
         ]
@@ -184,10 +184,6 @@ class TestComplexNumberLiterals:
             result = aifpl.evaluate(expr)
             assert isinstance(result, complex), \
                 f"Expected {expr} to evaluate to complex, got {type(result)}"
-
-        # In expressions, 'j' should be the complex literal
-        result = aifpl.evaluate("(* 2 j)")
-        assert result == 2j, f"Expected (* 2 j) to evaluate to 2j, got {result}"
 
     def test_complex_literal_edge_cases(self, aifpl):
         """Test edge cases for complex literals."""
@@ -227,7 +223,7 @@ class TestComplexNumberLiterals:
             "3+4jk",     # Extra characters after 'j'
             "3++4j",     # Double operator
             "3+j+4",     # 'j' not at end
-            "j+3",       # 'j' at start (would parse as two tokens)
+            "1j+3",      # 'j' at start (would parse as two tokens)
             "3+4i",      # Wrong imaginary unit (i instead of j)
         ]
 
@@ -242,28 +238,6 @@ class TestComplexNumberLiterals:
             except AIFPLTokenError:
                 # Expected for truly invalid formats
                 pass
-
-    def test_complex_backward_compatibility_break(self, aifpl):
-        """
-        Test that the old way of creating complex numbers no longer works.
-
-        Previously, 'j' was a symbol constant for the imaginary unit.
-        Now it's a complex literal (1j), so old expressions like (* 4 j)
-        should still work but with different semantics.
-        """
-        # Old way: (* 4 j) where j is a symbol
-        # New way: (* 4 j) where j is the literal 1j
-        # Both should give 4j
-        result = aifpl.evaluate("(* 4 j)")
-        assert result == 4j
-
-        # The (+ 3 (* 4 j)) pattern should still work
-        result = aifpl.evaluate("(+ 3 (* 4 j))")
-        assert result == 3+4j
-
-        # But now we can also write it more simply
-        result = aifpl.evaluate("3+4j")
-        assert result == 3+4j
 
     def test_complex_mixed_with_other_types(self, aifpl):
         """Test complex literals mixed with other numeric types."""
@@ -326,13 +300,13 @@ class TestComplexNumberLiterals:
         # complex? predicate
         assert aifpl.evaluate("(complex? 3+4j)") is True
         assert aifpl.evaluate("(complex? 5j)") is True
-        assert aifpl.evaluate("(complex? j)") is True
+        assert aifpl.evaluate("(complex? 1j)") is True
         assert aifpl.evaluate("(complex? 42)") is False
         assert aifpl.evaluate("(complex? 3.14)") is False
 
         # number? should return true for complex
         assert aifpl.evaluate("(number? 3+4j)") is True
-        assert aifpl.evaluate("(number? j)") is True
+        assert aifpl.evaluate("(number? 1j)") is True
 
         # integer? and float? should return false for complex
         assert aifpl.evaluate("(integer? 3+4j)") is False
@@ -377,7 +351,7 @@ class TestComplexNumberLiterals:
     def test_complex_uppercase_j(self, aifpl):
         """Test that uppercase 'J' works the same as lowercase 'j'."""
         test_cases = [
-            ("J", "j", 1j),
+            ("1J", "1j", 1j),
             ("4J", "4j", 4j),
             ("3+4J", "3+4j", 3+4j),
             ("1.5E2+3.7E-1J", "1.5e2+3.7e-1j", 150+0.37j),

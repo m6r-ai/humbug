@@ -643,7 +643,7 @@ class TestAIFPLCollectionEdgeCases:
             aifpl.evaluate("(complex?)")
 
         with pytest.raises(AIFPLEvalError, match="complex\\? requires exactly 1 argument"):
-            aifpl.evaluate("(complex? (+ 1 j) (+ 2 j))")
+            aifpl.evaluate("(complex? (+ 1 1j) (+ 2 1j))")
 
         # string? requires exactly 1 argument
         with pytest.raises(AIFPLEvalError, match="string\\? requires exactly 1 argument"):

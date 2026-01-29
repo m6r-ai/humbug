@@ -28,9 +28,9 @@ class TestArithmetic:
         ("(+ 1.1 2.2)", "3.3000000000000003"),  # Floating point precision
 
         # Type promotion int/float -> complex
-        ("(+ 1 j)", "1+1j"),
-        ("(+ 2.5 j)", "2.5+1j"),
-        ("(+ j 3)", "3+1j"),
+        ("(+ 1 1j)", "1+1j"),
+        ("(+ 2.5 1j)", "2.5+1j"),
+        ("(+ 1j 3)", "3+1j"),
 
         # Complex addition
         ("(+ (complex 1 2) (complex 3 4))", "4+6j"),
@@ -59,7 +59,7 @@ class TestArithmetic:
 
         # Complex subtraction
         ("(- (complex 5 3) (complex 2 1))", "3+2j"),
-        ("(- 5 j)", "5-1j"),
+        ("(- 5 1j)", "5-1j"),
 
         # Multiple arguments
         ("(- 10 1 2 3)", "4"),  # ((((10 - 1) - 2) - 3)
@@ -84,8 +84,8 @@ class TestArithmetic:
         ("(* 2.5 4)", "10.0"),  # float * int = float
 
         # Complex multiplication
-        ("(* 2 j)", "2j"),
-        ("(* j j)", "-1+0j"),  # j*j = -1, simplifies to float when imag part is 0
+        ("(* 2 1j)", "2j"),
+        ("(* 1j 1j)", "-1+0j"),  # j*j = -1, simplifies to float when imag part is 0
         ("(* (complex 2 3) (complex 1 4))", "-10+11j"),
 
         # Zero multiplication
@@ -117,7 +117,7 @@ class TestArithmetic:
 
         # Complex division
         ("(/ (complex 4 2) (complex 1 1))", "3-1j"),
-        ("(/ 6 j)", "-6j"),
+        ("(/ 6 1j)", "-6j"),
 
         # Fraction results
         ("(/ 1 3)", "0.3333333333333333"),
@@ -195,7 +195,7 @@ class TestArithmetic:
         ("(** 8 0.3333333333333333)", "2"),  # Cube root (approximately)
 
         # Complex exponentiation
-        ("(** j 2)", "-1+0j"),
+        ("(** 1j 2)", "-1+0j"),
         ("(** (complex 1 1) 2)", "2j"),
     ])
     def test_exponentiation(self, aifpl, expression, expected):
@@ -237,7 +237,7 @@ class TestArithmetic:
     def test_trigonometric_with_complex(self, aifpl):
         """Test trigonometric functions with complex arguments."""
         # sin(i) = i*sinh(1)
-        result = aifpl.evaluate("(sin j)")
+        result = aifpl.evaluate("(sin 1j)")
         expected = 1j * math.sinh(1)
         assert abs(result - expected) < 1e-10
 
@@ -293,7 +293,7 @@ class TestArithmetic:
 
         # Complex absolute value (magnitude)
         ("(abs (complex 3 4))", "5.0"),  # |3+4i| = 5, abs of complex returns float
-        ("(abs j)", "1.0"),  # |i| = 1, abs of complex returns float
+        ("(abs 1j)", "1.0"),  # |i| = 1, abs of complex returns float
     ])
     def test_abs_function(self, aifpl, expression, expected):
         """Test absolute value function."""
@@ -330,7 +330,7 @@ class TestArithmetic:
             aifpl.evaluate("(round (complex 1 2))")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(floor j)")
+            aifpl.evaluate("(floor 1j)")
 
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(ceil (complex 3 4))")
@@ -461,13 +461,13 @@ class TestArithmetic:
         ("(real (complex 3 4))", "3.0"),
         ("(real 42)", "42.0"),
         ("(real 3.14)", "3.14"),
-        ("(real j)", "0.0"),
+        ("(real 1j)", "0.0"),
 
         # Imaginary part extraction
         ("(imag (complex 3 4))", "4.0"),
         ("(imag 42)", "0.0"),
         ("(imag 3.14)", "0.0"),
-        ("(imag j)", "1.0"),
+        ("(imag 1j)", "1.0"),
     ])
     def test_complex_number_functions(self, aifpl, expression, expected):
         """Test complex number construction and component extraction."""
@@ -563,7 +563,7 @@ class TestArithmetic:
     def test_complex_trigonometric_edge_cases(self, aifpl):
         """Test trigonometric functions with pure imaginary numbers."""
         # Test tan with complex numbers to hit the complex branch
-        result = aifpl.evaluate("(tan j)")
+        result = aifpl.evaluate("(tan 1j)")
         expected = cmath.tan(1j)
         assert abs(result - expected) < 1e-10
 
@@ -598,7 +598,7 @@ class TestArithmetic:
         assert abs(result - expected) < 1e-10
 
         # Test exp with pure imaginary
-        result = aifpl.evaluate("(exp j)")
+        result = aifpl.evaluate("(exp 1j)")
         expected = cmath.exp(1j)
         assert abs(result - expected) < 1e-10
 
@@ -607,13 +607,13 @@ class TestArithmetic:
         # This should test the tolerance checking in rounding functions
         # Create a complex number with a very small but non-zero imaginary part
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(round (+ 3.5 (* j 1e-5)))")
+            aifpl.evaluate("(round (+ 3.5 (* 1j 1e-5)))")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(floor (+ 2.7 (* j 1e-8)))")
+            aifpl.evaluate("(floor (+ 2.7 (* 1j 1e-8)))")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(ceil (+ 4.1 (* j 1e-6)))")
+            aifpl.evaluate("(ceil (+ 4.1 (* 1j 1e-6)))")
 
     def test_real_imag_with_integer_results(self, aifpl):
         """Test real/imag functions that return integers."""

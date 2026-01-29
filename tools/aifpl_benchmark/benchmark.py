@@ -169,30 +169,30 @@ BENCHMARKS = [
     Benchmark(
         "Factorial (10)",
         "recursion",
-        """(let ((factorial (lambda (n)
-                             (if (<= n 1)
-                                 1
-                                 (* n (factorial (- n 1)))))))
+        """(letrec ((factorial (lambda (n)
+                                (if (<= n 1)
+                                    1
+                                    (* n (factorial (- n 1)))))))
              (factorial 10))""",
         iterations=200
     ),
     Benchmark(
         "Fibonacci (15)",
         "recursion",
-        """(let ((fib (lambda (n)
-                       (if (< n 2)
-                           n
-                           (+ (fib (- n 1)) (fib (- n 2)))))))
+        """(letrec ((fib (lambda (n)
+                          (if (< n 2)
+                              n
+                              (+ (fib (- n 1)) (fib (- n 2)))))))
              (fib 15))""",
         iterations=20
     ),
     Benchmark(
         "Tail Recursive Sum (100)",
         "recursion",
-        """(let ((sum-tail (lambda (n acc)
-                            (if (<= n 0)
-                                acc
-                                (sum-tail (- n 1) (+ acc n))))))
+        """(letrec ((sum-tail (lambda (n acc)
+                               (if (<= n 0)
+                                   acc
+                                   (sum-tail (- n 1) (+ acc n))))))
              (sum-tail 100 0))""",
         iterations=200
     ),
@@ -277,8 +277,8 @@ BENCHMARKS = [
     Benchmark(
         "Recursive Let Binding",
         "let",
-        """(let ((factorial (lambda (n)
-                             (if (<= n 1) 1 (* n (factorial (- n 1)))))))
+        """(letrec ((factorial (lambda (n)
+                                (if (<= n 1) 1 (* n (factorial (- n 1)))))))
              (factorial 5))""",
         iterations=1000
     ),
@@ -334,9 +334,9 @@ BENCHMARKS = [
     Benchmark(
         "Nested Data Transformation",
         "complex",
-        """(let ((transform (lambda (x) (* x 2)))
-                   (filter-fn (lambda (x) (> x 10)))
-                   (data (range 1 51)))
+        """(letrec ((transform (lambda (x) (* x 2)))
+                      (filter-fn (lambda (x) (> x 10)))
+                      (data (range 1 51)))
              (fold + 0 (filter filter-fn (map transform data))))""",
         iterations=40
     ),

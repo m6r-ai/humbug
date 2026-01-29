@@ -17,7 +17,7 @@ class TestAIFPLEnvironmentEdgeCases:
         e_value = aifpl.evaluate("e")
         assert abs(e_value - 2.71828182) < 1e-6
 
-        j_value = aifpl.evaluate("j")
+        j_value = aifpl.evaluate("1j")
         assert j_value == 1j
 
         # Boolean constants
