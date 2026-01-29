@@ -12,7 +12,7 @@ All validation happens in a single pass to provide clear, precise error messages
 before any transformations occur.
 """
 
-from typing import List
+from typing import List, cast
 
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
@@ -551,7 +551,7 @@ class AIFPLSemanticAnalyzer:
                 self._analyze_pattern(pattern.elements[i], clause_num)
 
             # Validate tail pattern
-            tail_pattern = pattern.elements[dot_position + 1]
+            tail_pattern = cast(AIFPLValue, pattern.elements[dot_position + 1])
             self._analyze_pattern(tail_pattern, clause_num)
 
             return
