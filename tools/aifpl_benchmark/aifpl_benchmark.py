@@ -34,10 +34,10 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from io import StringIO
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 
 # Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+#sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from aifpl import AIFPL
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
@@ -55,26 +55,29 @@ class BenchmarkResult:
     category: str
     expression: str
     iterations: int
-    
+
     # Full pipeline (tokenize + parse + analyze + desugar + compile + execute)
     full_mean: float
     full_median: float
     full_std_dev: float
-    
+
     # Compilation only (tokenize + parse + analyze + desugar + compile)
     compile_mean: float
     compile_median: float
     compile_std_dev: float
-    
+
     # Execution only (VM bytecode execution)
     exec_mean: float
     exec_median: float
     exec_std_dev: float
-    
+
     # Derived metrics
     ops_per_sec: float
-    compile_pct: float  # Percentage of time spent in compilation
-    exec_pct: float     # Percentage of time spent in execution
+
+    # More accurate breakdown - what % of full pipeline time is spent where
+    compile_time_ms: float  # Absolute time in ms
+    exec_time_ms: float     # Absolute time in ms
+    overhead_time_ms: float # Difference between full and (compile + exec)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -115,8 +118,9 @@ class Benchmark:
         self.warmup = warmup
 
     def run(self, iterations_multiplier: float = 1.0) -> BenchmarkResult:
-        """Run the benchmark and return results.
-        
+        """
+        Run the benchmark and return results.
+
         Args:
             iterations_multiplier: Multiply iteration counts by this factor for better statistics
         """
@@ -126,12 +130,12 @@ class Benchmark:
         desugarer = AIFPLDesugarer()
         compiler = AIFPLCompiler()
         vm = AIFPLVM()
-        
+
         # Get prelude for VM
         aifpl = AIFPL()
         prelude = aifpl._prelude
         constants = AIFPL.CONSTANTS
-        
+
         # Pre-compile for execution-only benchmark
         tokens = tokenizer.tokenize(self.expression)
         ast = AIFPLParser(tokens, self.expression).parse()
@@ -189,8 +193,15 @@ class Benchmark:
         exec_std = statistics.stdev(exec_times) if len(exec_times) > 1 else 0.0
 
         ops_per_sec = 1.0 / full_mean if full_mean > 0 else 0.0
-        compile_pct = (compile_mean / full_mean * 100) if full_mean > 0 else 0.0
-        exec_pct = (exec_mean / full_mean * 100) if full_mean > 0 else 0.0
+
+        # Calculate absolute times in milliseconds
+        compile_time_ms = compile_mean * 1000
+        exec_time_ms = exec_mean * 1000
+        full_time_ms = full_mean * 1000
+
+        # Calculate overhead (the difference between full pipeline and measured components)
+        # This represents AIFPL wrapper overhead, context setup, etc.
+        overhead_time_ms = full_time_ms - (compile_time_ms + exec_time_ms)
 
         return BenchmarkResult(
             name=self.name,
@@ -207,8 +218,9 @@ class Benchmark:
             exec_median=exec_median,
             exec_std_dev=exec_std,
             ops_per_sec=ops_per_sec,
-            compile_pct=compile_pct,
-            exec_pct=exec_pct
+            compile_time_ms=compile_time_ms,
+            exec_time_ms=exec_time_ms,
+            overhead_time_ms=overhead_time_ms
         )
 
 
@@ -224,7 +236,12 @@ BENCHMARKS = [
     Benchmark("Simple Comparison", "comparisons", "(< 5 10)", iterations=5000),
     Benchmark("Chained Comparisons", "comparisons", "(and (< 1 5) (> 10 3) (= 7 7) (!= 4 5))", iterations=5000),
     Benchmark("List Equality", "comparisons", "(= (list 1 2 3 4 5) (list 1 2 3 4 5))", iterations=3000),
-    Benchmark("Deep List Equality", "comparisons", "(= (list (list 1 2) (list 3 4)) (list (list 1 2) (list 3 4)))", iterations=2000),
+    Benchmark(
+        "Deep List Equality",
+        "comparisons",
+        "(= (list (list 1 2) (list 3 4)) (list (list 1 2) (list 3 4)))",
+        iterations=2000
+    ),
 
     # === BOOLEAN LOGIC ===
     Benchmark("AND Operations", "boolean", "(and #t #t #t #t #t)", iterations=5000),
@@ -247,20 +264,55 @@ BENCHMARKS = [
     Benchmark("Simple Closure", "closures", "(let ((x 10)) ((lambda (y) (+ x y)) 5))", iterations=3000),
     Benchmark("Multiple Captures", "closures", "(let ((a 1) (b 2) (c 3)) ((lambda (x) (+ a b c x)) 4))", iterations=2000),
     Benchmark("Nested Closures", "closures", "(let ((x 10)) (let ((f (lambda (y) (+ x y)))) (f 5)))", iterations=2000),
-    Benchmark("Closure Factory", "closures", "(let ((make-adder (lambda (n) (lambda (x) (+ x n))))) ((make-adder 10) 5))", iterations=2000),
+    Benchmark(
+        "Closure Factory",
+        "closures",
+        "(let ((make-adder (lambda (n) (lambda (x) (+ x n))))) ((make-adder 10) 5))",
+        iterations=2000
+    ),
 
     # === LET BINDINGS ===
     Benchmark("Simple Let", "let", "(let ((x 5) (y 10)) (+ x y))", iterations=5000),
-    Benchmark("Let Many Bindings", "let", "(let ((a 1) (b 2) (c 3) (d 4) (e 5) (f 6) (g 7) (h 8) (i 9) (j 10)) (+ a b c d e f g h i j))", iterations=3000),
+    Benchmark(
+        "Let Many Bindings",
+        "let",
+        "(let ((a 1) (b 2) (c 3) (d 4) (e 5) (f 6) (g 7) (h 8) (i 9) (j 10)) (+ a b c d e f g h i j))",
+        iterations=3000
+    ),
     Benchmark("Nested Let", "let", "(let ((x 5)) (let ((y 10)) (let ((z 15)) (+ x y z))))", iterations=3000),
     Benchmark("Let with Computation", "let", "(let ((x (* 5 5)) (y (+ 10 10)) (z (- 30 5))) (* x y z))", iterations=3000),
 
     # === RECURSION ===
-    Benchmark("Factorial (5)", "recursion", "(letrec ((factorial (lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1))))))) (factorial 5))", iterations=1000),
-    Benchmark("Factorial (10)", "recursion", "(letrec ((factorial (lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1))))))) (factorial 10))", iterations=500),
-    Benchmark("Fibonacci (10)", "recursion", "(letrec ((fib (lambda (n) (if (<= n 1) n (+ (fib (- n 1)) (fib (- n 2))))))) (fib 10))", iterations=100),
-    Benchmark("Tail Recursive Sum (50)", "recursion", "(letrec ((sum-tail (lambda (n acc) (if (<= n 0) acc (sum-tail (- n 1) (+ acc n)))))) (sum-tail 50 0))", iterations=1000),
-    Benchmark("Tail Recursive Sum (100)", "recursion", "(letrec ((sum-tail (lambda (n acc) (if (<= n 0) acc (sum-tail (- n 1) (+ acc n)))))) (sum-tail 100 0))", iterations=500),
+    Benchmark(
+        "Factorial (5)",
+        "recursion",
+        "(letrec ((factorial (lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1))))))) (factorial 5))",
+        iterations=1000
+    ),
+    Benchmark(
+        "Factorial (10)",
+        "recursion",
+        "(letrec ((factorial (lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1))))))) (factorial 10))",
+        iterations=500
+    ),
+    Benchmark(
+        "Fibonacci (10)",
+        "recursion",
+        "(letrec ((fib (lambda (n) (if (<= n 1) n (+ (fib (- n 1)) (fib (- n 2))))))) (fib 10))",
+        iterations=100
+    ),
+    Benchmark(
+        "Tail Recursive Sum (50)",
+        "recursion",
+        "(letrec ((sum-tail (lambda (n acc) (if (<= n 0) acc (sum-tail (- n 1) (+ acc n)))))) (sum-tail 50 0))",
+        iterations=1000
+    ),
+    Benchmark(
+        "Tail Recursive Sum (100)",
+        "recursion",
+        "(letrec ((sum-tail (lambda (n acc) (if (<= n 0) acc (sum-tail (- n 1) (+ acc n)))))) (sum-tail 100 0))",
+        iterations=500
+    ),
 
     # === LIST OPERATIONS ===
     Benchmark("List Creation (5)", "lists", "(list 1 2 3 4 5)", iterations=5000),
@@ -282,7 +334,10 @@ BENCHMARKS = [
     Benchmark("Filter (100)", "higher-order", "(filter (lambda (x) (> x 50)) (range 1 101))", iterations=100),
     Benchmark("Fold (50)", "higher-order", "(fold + 0 (range 1 51))", iterations=200),
     Benchmark("Fold (100)", "higher-order", "(fold + 0 (range 1 101))", iterations=100),
-    Benchmark("Map+Filter Pipeline", "higher-order", "(filter (lambda (x) (> x 50)) (map (lambda (x) (* x 2)) (range 1 51)))", iterations=100),
+    Benchmark(
+        "Map+Filter Pipeline", "higher-order", "(filter (lambda (x) (> x 50)) (map (lambda (x) (* x 2)) (range 1 51)))",
+        iterations=100
+    ),
     Benchmark("Map+Fold Pipeline", "higher-order", "(fold + 0 (map (lambda (x) (* x x)) (range 1 51)))", iterations=100),
     Benchmark("Find", "higher-order", "(find (lambda (x) (> x 50)) (range 1 101))", iterations=500),
     Benchmark("Any?", "higher-order", "(any? (lambda (x) (> x 90)) (range 1 101))", iterations=500),
@@ -336,19 +391,19 @@ BENCHMARKS = [
               """(let ((data (range 1 21)))
                    (fold + 0 (map (lambda (x) (* x x)) (filter (lambda (x) (> x 10)) data))))""", iterations=200),
     Benchmark("Nested Data Structure", "realistic",
-              """(let ((users (list 
+              """(let ((users (list
                               (alist (list "name" "Alice") (list "age" 30))
                               (alist (list "name" "Bob") (list "age" 25))
                               (alist (list "name" "Charlie") (list "age" 35)))))
                    (map (lambda (user) (alist-get user "age")) users))""", iterations=500),
     Benchmark("Recursive List Processing", "realistic",
               """(letrec ((sum-list (lambda (lst)
-                                     (if (null? lst) 
-                                         0 
+                                     (if (null? lst)
+                                         0
                                          (+ (first lst) (sum-list (rest lst)))))))
                    (sum-list (list 1 2 3 4 5 6 7 8 9 10)))""", iterations=500),
     Benchmark("Pattern Match Pipeline", "realistic",
-              """(map (lambda (x) 
+              """(map (lambda (x)
                           (match x
                             ((integer? i) (* i 2))
                             ((string? s) (string-length s))
@@ -365,10 +420,14 @@ BENCHMARKS = [
 QUICK_BENCHMARKS = [b for b in BENCHMARKS if b.category in ["arithmetic", "functions", "lists", "let"]]
 
 
-def run_benchmarks(benchmarks: List[Benchmark], verbose: bool = True, 
-                   iterations_multiplier: float = 1.0) -> List[BenchmarkResult]:
-    """Run a list of benchmarks and return results.
-    
+def run_benchmarks(
+    benchmarks: List[Benchmark],
+    verbose: bool = True,
+    iterations_multiplier: float = 1.0
+) -> List[BenchmarkResult]:
+    """
+    Run a list of benchmarks and return results.
+
     Args:
         benchmarks: List of benchmarks to run
         verbose: Print progress
@@ -378,7 +437,7 @@ def run_benchmarks(benchmarks: List[Benchmark], verbose: bool = True,
 
     if verbose:
         print(f"\nRunning {len(benchmarks)} benchmarks...")
-        print("=" * 100)
+        print("=" * 120)
 
     for i, benchmark in enumerate(benchmarks, 1):
         if verbose:
@@ -389,14 +448,14 @@ def run_benchmarks(benchmarks: List[Benchmark], verbose: bool = True,
             results.append(result)
 
             if verbose:
-                print(f"✓ {result.full_mean*1000:.3f}ms (compile: {result.compile_pct:.1f}%, exec: {result.exec_pct:.1f}%)")
+                print(f"✓ {result.full_mean*1000:.3f}ms (compile: {result.compile_time_ms:.3f}ms, exec: {result.exec_time_ms:.3f}ms, overhead: {result.overhead_time_ms:.3f}ms)")
 
         except Exception as e:
             if verbose:
                 print(f"✗ ERROR: {e}")
 
     if verbose:
-        print("=" * 100)
+        print("=" * 120)
 
     return results
 
@@ -410,30 +469,31 @@ def print_results(results: List[BenchmarkResult], show_breakdown: bool = False):
             by_category[result.category] = []
         by_category[result.category].append(result)
 
-    print("\n" + "=" * 100)
+    print("\n" + "=" * 120)
     print("BENCHMARK RESULTS")
-    print("=" * 100)
+    print("=" * 120)
 
     for category in sorted(by_category.keys()):
         print(f"\n{category.upper()}")
-        print("-" * 100)
-        
+        print("-" * 120)
+
         if show_breakdown:
-            print(f"{'Benchmark':<35} {'Full':<12} {'Compile':<12} {'Exec':<12} {'C%':<8} {'E%':<8}")
+            print(f"{'Benchmark':<35} {'Full':<12} {'Compile':<12} {'Exec':<12} {'Overhead':<12} {'Ops/sec':<12}")
         else:
             print(f"{'Benchmark':<40} {'Mean':<12} {'Median':<12} {'Ops/sec':<12}")
-        print("-" * 100)
+
+        print("-" * 120)
 
         for result in by_category[category]:
             name = result.name[:33] + ".." if len(result.name) > 35 else result.name
-            
+
             if show_breakdown:
                 full = f"{result.full_mean*1000:.3f}ms"
-                compile = f"{result.compile_mean*1000:.3f}ms"
-                exec_time = f"{result.exec_mean*1000:.3f}ms"
-                c_pct = f"{result.compile_pct:.1f}%"
-                e_pct = f"{result.exec_pct:.1f}%"
-                print(f"{name:<35} {full:<12} {compile:<12} {exec_time:<12} {c_pct:<8} {e_pct:<8}")
+                compile = f"{result.compile_time_ms:.3f}ms"
+                exec_time = f"{result.exec_time_ms:.3f}ms"
+                overhead = f"{result.overhead_time_ms:.3f}ms"
+                ops = f"{result.ops_per_sec:.1f}"
+                print(f"{name:<35} {full:<12} {compile:<12} {exec_time:<12} {overhead:<12} {ops:<12}")
             else:
                 name = result.name[:38] + ".." if len(result.name) > 40 else result.name
                 mean = f"{result.full_mean*1000:.3f}ms"
@@ -442,21 +502,22 @@ def print_results(results: List[BenchmarkResult], show_breakdown: bool = False):
                 print(f"{name:<40} {mean:<12} {median:<12} {ops:<12}")
 
     # Summary statistics
-    print("\n" + "=" * 100)
+    print("\n" + "=" * 120)
     print("SUMMARY")
-    print("=" * 100)
-    
+    print("=" * 120)
+
     total_benchmarks = len(results)
     avg_full = statistics.mean([r.full_mean for r in results])
-    avg_compile = statistics.mean([r.compile_mean for r in results])
-    avg_exec = statistics.mean([r.exec_mean for r in results])
-    avg_compile_pct = statistics.mean([r.compile_pct for r in results])
-    avg_exec_pct = statistics.mean([r.exec_pct for r in results])
+    avg_compile = statistics.mean([r.compile_time_ms for r in results])
+    avg_exec = statistics.mean([r.exec_time_ms for r in results])
+    avg_overhead = statistics.mean([r.overhead_time_ms for r in results])
 
     print(f"Total benchmarks:        {total_benchmarks}")
     print(f"Average full time:       {avg_full*1000:.3f}ms")
-    print(f"Average compile time:    {avg_compile*1000:.3f}ms ({avg_compile_pct:.1f}%)")
-    print(f"Average exec time:       {avg_exec*1000:.3f}ms ({avg_exec_pct:.1f}%)")
+    print(f"  - Compile time:        {avg_compile:.3f}ms ({avg_compile/(avg_full*1000)*100:.1f}%)")
+    print(f"  - Exec time:           {avg_exec:.3f}ms ({avg_exec/(avg_full*1000)*100:.1f}%)")
+    print(f"  - Overhead:            {avg_overhead:.3f}ms ({avg_overhead/(avg_full*1000)*100:.1f}%)")
+    print(f"  - Accounted for:       {(avg_compile + avg_exec + avg_overhead):.3f}ms ({(avg_compile + avg_exec + avg_overhead)/(avg_full*1000)*100:.1f}%)")
 
     # Find slowest and fastest
     slowest = max(results, key=lambda r: r.full_mean)
@@ -464,6 +525,15 @@ def print_results(results: List[BenchmarkResult], show_breakdown: bool = False):
 
     print(f"\nSlowest: {slowest.name} ({slowest.full_mean*1000:.3f}ms)")
     print(f"Fastest: {fastest.name} ({fastest.full_mean*1000:.3f}ms)")
+
+    # Analyze overhead
+    high_overhead = [r for r in results if r.overhead_time_ms < 0]
+    if high_overhead:
+        print(f"\nNOTE: {len(high_overhead)} benchmarks show negative overhead (measurement variance)")
+        print("This indicates compile+exec times exceed full pipeline time, likely due to:")
+        print("  - Timing measurement variance")
+        print("  - CPU cache effects between separate measurement runs")
+        print("  - Different code paths in separate vs. integrated execution")
 
 
 def save_results(results: List[BenchmarkResult], filename: str):
@@ -584,13 +654,19 @@ def main():
     parser.add_argument('--no-save', action='store_true', help='Do not save results')
     parser.add_argument('--breakdown', action='store_true', help='Show compile/exec breakdown in results')
     parser.add_argument('--quiet', action='store_true', help='Minimal output')
-    parser.add_argument('--iterations-multiplier', type=float, default=1.0, metavar='N', help='Multiply all iteration counts by N for better statistics (default: 1.0)')
+    parser.add_argument(
+        '--iterations-multiplier',
+        type=float,
+        default=1.0,
+        metavar='N',
+        help='Multiply all iteration counts by N for better statistics (default: 1.0)'
+    )
 
     args = parser.parse_args()
 
     # Select benchmark set
     benchmarks = QUICK_BENCHMARKS if args.quick else BENCHMARKS
-    
+
     if args.category:
         benchmarks = [b for b in BENCHMARKS if b.category.lower() == args.category.lower()]
         if not benchmarks:
