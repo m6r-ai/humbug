@@ -4,7 +4,7 @@
 
 New features:
 
-- Introduced a new AIFPL compiler and VM design that is much faster than the interpreter.
+- Introduced a new AIFPL compiler and VM design that is much faster than the interpreter.  Removed the interpreter.
 - Changed the syntax of AIFPL `alist` to be less surprising.
 - Added `letrec` to AIFPL to avoid ambiguity in recursive bindings.
 - Introduced `integer`, `float`, and `complex` types into AIFPL and removed `number`, allowing optimizations.
