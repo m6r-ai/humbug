@@ -236,27 +236,7 @@ class AIFPLCompiler:
         expr_type = type(expr)
 
         # Self-evaluating values
-        if expr_type in (AIFPLInteger, AIFPLFloat, AIFPLComplex):
-            const_index = ctx.add_constant(expr)
-            ctx.emit(Opcode.LOAD_CONST, const_index)
-            return
-
-        if expr_type is AIFPLInteger:
-            const_index = ctx.add_constant(expr)
-            ctx.emit(Opcode.LOAD_CONST, const_index)
-            return
-
-        if expr_type is AIFPLFloat:
-            const_index = ctx.add_constant(expr)
-            ctx.emit(Opcode.LOAD_CONST, const_index)
-            return
-
-        if expr_type is AIFPLComplex:
-            const_index = ctx.add_constant(expr)
-            ctx.emit(Opcode.LOAD_CONST, const_index)
-            return
-
-        if expr_type is AIFPLString:
+        if expr_type in (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString):
             const_index = ctx.add_constant(expr)
             ctx.emit(Opcode.LOAD_CONST, const_index)
             return
@@ -334,14 +314,8 @@ class AIFPLCompiler:
 
             if name == 'quote':
                 # Quote: return the quoted value as a constant
-                if len(expr.elements) != 2:
-                    raise AIFPLEvalError(
-                        message="Quote expression has wrong number of arguments",
-                        received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
-                        expected="Exactly 1 argument",
-                        example="(quote expr) or 'expr",
-                        suggestion="Quote requires exactly one expression to quote"
-                    )
+                # Validation already done by semantic analyzer
+                assert len(expr.elements) == 2, "Quote expression should have exactly 2 elements (validated by semantic analyzer)"
 
                 quoted = expr.elements[1]
                 const_index = ctx.add_constant(quoted)
@@ -368,14 +342,8 @@ class AIFPLCompiler:
 
     def _compile_if(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """Compile if expression: (if condition then else)"""
-        if len(expr.elements) != 4:
-            raise AIFPLEvalError(
-                message="If expression has wrong number of arguments",
-                received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
-                expected="Exactly 3 arguments: (if condition then else)",
-                example="(if (> x 0) \"positive\" \"negative\")",
-                suggestion="If needs condition, then-branch, and else-branch"
-            )
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) == 4, "If expression should have exactly 4 elements (validated by semantic analyzer)"
 
         _, condition, then_expr, else_expr = expr.elements
 
@@ -519,62 +487,26 @@ class AIFPLCompiler:
         Bindings are evaluated left-to-right, with each able to reference previous bindings.
         Self-references see the outer scope (shadowing works).
         """
-        if len(expr.elements) < 3:
-            raise AIFPLEvalError(
-                message="Let expression structure is incorrect",
-                received=f"Got {len(expr.elements)} elements",
-                expected="Exactly 3 elements: (let ((bindings...)) body)",
-                example="(let ((x 5) (y 10)) (+ x y))",
-                suggestion="Let needs binding list and body: (let ((var1 val1) (var2 val2) ...) body)"
-            )
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) == 3, "Let expression should have exactly 3 elements (validated by semantic analyzer)"
 
         _, bindings_list, body = expr.elements[0], expr.elements[1], expr.elements[2]
 
-        if not isinstance(bindings_list, AIFPLList):
-            raise AIFPLEvalError(
-                message="Let binding list must be a list",
-                received=f"Binding list: {bindings_list.type_name()}",
-                expected="List of bindings: ((var1 val1) (var2 val2) ...)",
-                example="(let ((x 5) (y (* x 2))) (+ x y))",
-                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
-            )
+        assert isinstance(bindings_list, AIFPLList), "Binding list should be a list (validated by semantic analyzer)"
 
         # Push a new scope for let bindings
         ctx.push_scope()
 
-        # Parse and validate bindings
+        # Parse bindings (already validated by semantic analyzer)
         binding_pairs = []
         for i, binding in enumerate(bindings_list.elements):
-            if not isinstance(binding, AIFPLList) or len(binding.elements) != 2:
-                binding_str = (f"{binding.type_name()}" if not isinstance(binding, AIFPLList)
-                               else f"{len(binding.elements)} elements")
-                raise AIFPLEvalError(
-                    message=f"Let binding {i+1} must be a list with 2 elements",
-                    received=f"Binding {i+1}: {binding_str}",
-                    expected="Each binding: (variable value-expression)",
-                    example='(x 5)'
-                )
+            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2, \
+                f"Binding {i+1} should be a list with 2 elements (validated by semantic analyzer)"
 
             name_expr, value_expr = binding.elements
-            if not isinstance(name_expr, AIFPLSymbol):
-                raise AIFPLEvalError(
-                    message=f"Let binding {i+1} variable must be a symbol",
-                    received=f"Variable: {name_expr.type_name()}",
-                    expected="Unquoted symbol (variable name)",
-                    example='Correct: (x 5)\\nIncorrect: ("x" 5)'
-                )
+            assert isinstance(name_expr, AIFPLSymbol), f"Binding {i+1} variable should be a symbol (validated by semantic analyzer)"
 
             binding_pairs.append((name_expr.name, value_expr))
-
-        # Check for duplicates
-        var_names = [name for name, _ in binding_pairs]
-        if len(var_names) != len(set(var_names)):
-            duplicates = [name for name in var_names if var_names.count(name) > 1]
-            raise AIFPLEvalError(
-                message="Let binding variables must be unique",
-                received=f"Duplicate variables: {duplicates}",
-                expected="All variable names should be different"
-            )
 
         # Simple sequential evaluation - compile and store each binding in order
         for name, value_expr in binding_pairs:
@@ -607,76 +539,29 @@ class AIFPLCompiler:
         All bindings can reference themselves and each other (mutual recursion).
         Uses dependency analysis and placeholders to support this.
         """
-        if len(expr.elements) < 3:
-            raise AIFPLEvalError(
-                message="Letrec expression structure is incorrect",
-                received=f"Got {len(expr.elements)} elements",
-                expected="Exactly 3 elements: (letrec ((bindings...)) body)",
-                example="(letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))",
-                suggestion="Letrec needs binding list and body: (letrec ((var1 val1) (var2 val2) ...) body)"
-            )
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) == 3, "Letrec expression should have exactly 3 elements (validated by semantic analyzer)"
 
         _, bindings_list, body = expr.elements[0], expr.elements[1], expr.elements[2]
 
-        if not isinstance(bindings_list, AIFPLList):
-            raise AIFPLEvalError(
-                message="Letrec binding list must be a list",
-                received=f"Binding list: {bindings_list.type_name()}",
-                expected="List of bindings: ((var1 val1) (var2 val2) ...)",
-                example="(letrec ((f (lambda (n) (if (= n 0) 1 (* n (f (- n 1))))))) (f 5))",
-                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
-            )
+        assert isinstance(bindings_list, AIFPLList), "Binding list should be a list (validated by semantic analyzer)"
 
         # Push a new scope for letrec bindings
         ctx.push_scope()
 
-        # First pass: Add all binding names to scope (for recursive references)
+        # First pass: Add all binding names to scope (for recursive references) - already validated
         binding_pairs = []
         for i, binding in enumerate(bindings_list.elements):
-            if not isinstance(binding, AIFPLList):
-                raise AIFPLEvalError(
-                    message=f"Letrec binding {i+1} must be a list",
-                    received=f"Binding {i+1}: {binding.type_name()}",
-                    expected="List with variable and value: (var val)",
-                    example='Correct: (x 5)\\nIncorrect: x or "x"',
-                    suggestion="Wrap each binding in parentheses: (variable value)"
-                )
-
-            if len(binding.elements) != 2:
-                raise AIFPLEvalError(
-                    message=f"Letrec binding {i+1} has wrong number of elements",
-                    received=f"Binding {i+1}: has {len(binding.elements)} elements",
-                    expected="Each binding needs exactly 2 elements: (variable value)",
-                    example='Correct: (x 5)\\nIncorrect: (x) or (x 5 6)',
-                    suggestion="Each binding: (variable-name value-expression)"
-                )
+            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2, \
+                f"Binding {i+1} should be a list with 2 elements (validated by semantic analyzer)"
 
             name_expr, value_expr = binding.elements
-            if not isinstance(name_expr, AIFPLSymbol):
-                raise AIFPLEvalError(
-                    message=f"Letrec binding {i+1} variable must be a symbol",
-                    received=f"Variable: {name_expr.type_name()}",
-                    expected="Unquoted symbol (variable name)",
-                    example='Correct: (x 5)\\nIncorrect: ("x" 5) or (1 5)',
-                    suggestion='Use unquoted variable names: x, not "x"'
-                )
+            assert isinstance(name_expr, AIFPLSymbol), f"Binding {i+1} variable should be a symbol (validated by semantic analyzer)"
 
             binding_pairs.append((name_expr.name, value_expr))
             # Add binding to scope NOW so recursive lambdas can reference it
             var_index = ctx.allocate_local_index()
             ctx.current_scope().add_binding(name_expr.name, var_index)
-
-        # Check for duplicate binding names
-        var_names = [name for name, _ in binding_pairs]
-        if len(var_names) != len(set(var_names)):
-            duplicates = [name for name in var_names if var_names.count(name) > 1]
-            raise AIFPLEvalError(
-                message="Letrec binding variables must be unique",
-                received=f"Duplicate variables: {duplicates}",
-                expected="All variable names should be different",
-                example='Correct: (let ((x 1) (y 2)) ...)\\nIncorrect: (let ((x 1) (x 2)) ...)',
-                suggestion="Use different names for each variable"
-            )
 
         # Update max locals after adding all bindings
         ctx.update_max_locals()
@@ -830,49 +715,20 @@ class AIFPLCompiler:
     def _compile_lambda(self, expr: AIFPLList, ctx: CompilationContext,
                        binding_name: str | None = None, let_bindings: List[str] | None = None) -> None:
         """Compile lambda expression: (lambda (params...) body)"""
-        if len(expr.elements) != 3:
-            raise AIFPLEvalError(
-                message="Lambda expression structure is incorrect",
-                received=f"Got {len(expr.elements)} elements",
-                expected="Exactly 3 elements: (lambda (params...) body)",
-                example="(lambda (x y) (+ x y))",
-                suggestion="Lambda needs parameter list and body: (lambda (param1 param2 ...) body-expression)"
-            )
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) == 3, "Lambda expression should have exactly 3 elements (validated by semantic analyzer)"
 
         _, params_list, body = expr.elements
 
-        if not isinstance(params_list, AIFPLList):
-            raise AIFPLEvalError(
-                message="Lambda parameters must be a list",
-                received=f"Parameter list: {params_list.type_name()}",
-                expected="List of symbols: (param1 param2 ...)",
-                example="(lambda (x y z) (+ x y z))",
-                suggestion="Parameters should be unquoted variable names"
-            )
+        assert isinstance(params_list, AIFPLList), "Parameter list should be a list (validated by semantic analyzer)"
 
-        # Extract parameter names
+        # Extract parameter names (already validated)
         param_names = []
         for i, param in enumerate(params_list.elements):
-            if not isinstance(param, AIFPLSymbol):
-                raise AIFPLEvalError(
-                    message=f"Lambda parameter {i+1} must be a symbol",
-                    received=f"Parameter {i+1}: {param.type_name()}",
-                    expected="Unquoted symbol (variable name)",
-                    example='Correct: (lambda (x y) (+ x y))\\nIncorrect: (lambda ("x" 1) ...)',
-                    suggestion='Use unquoted names: x, not "x" or 1'
-                )
+            assert isinstance(param, AIFPLSymbol), f"Parameter {i+1} should be a symbol (validated by semantic analyzer)"
             param_names.append(param.name)
 
-        # Check for duplicate parameters
-        if len(param_names) != len(set(param_names)):
-            duplicates = [p for p in param_names if param_names.count(p) > 1]
-            raise AIFPLEvalError(
-                message="Lambda parameters must be unique",
-                received=f"Duplicate parameters: {duplicates}",
-                expected="All parameter names should be different",
-                example='Correct: (lambda (x y z) ...)\\nIncorrect: (lambda (x y x) ...)',
-                suggestion="Use different names for each parameter"
-            )
+        # Duplicate parameters already checked by semantic analyzer
 
         # Find free variables (variables used in body but not parameters)
         bound_vars = set(param_names)

@@ -9,18 +9,22 @@ import pytest
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_parser import AIFPLParser
+from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLInteger, AIFPLString, AIFPLBoolean
 )
 from aifpl.aifpl_error import AIFPLEvalError
 
 
-def parse_expression(expr_str: str) -> AIFPLValue:
-    """Helper to parse an expression string into AST."""
+def parse_and_analyze_expression(expr_str: str) -> AIFPLValue:
+    """Helper to parse and semantically analyze an expression string into AST."""
     tokenizer = AIFPLTokenizer()
     tokens = tokenizer.tokenize(expr_str)
     parser = AIFPLParser(tokens, expr_str)
-    return parser.parse()
+    ast = parser.parse()
+    # Run semantic analysis before desugaring
+    analyzer = AIFPLSemanticAnalyzer()
+    return analyzer.analyze(ast)
 
 
 class TestDesugarerBasic:
@@ -61,7 +65,7 @@ class TestDesugarerBasic:
         desugarer = AIFPLDesugarer()
 
         # (quote (match x (42 "found")))
-        expr = parse_expression("(quote (match x (42 \"found\")))")
+        expr = parse_and_analyze_expression("(quote (match x (42 \"found\")))")
         result = desugarer.desugar(expr)
 
         # Should remain unchanged
@@ -78,7 +82,7 @@ class TestDesugarerCoreConstructs:
 
         # (if (match x (42 #t) (_ #f)) "yes" "no")
         # The match should be desugared, but if structure preserved
-        expr = parse_expression('(if (match x (42 #t) (_ #f)) "yes" "no")')
+        expr = parse_and_analyze_expression('(if (match x (42 #t) (_ #f)) "yes" "no")')
         result = desugarer.desugar(expr)
 
         # Result should be an if
@@ -95,7 +99,7 @@ class TestDesugarerCoreConstructs:
         desugarer = AIFPLDesugarer()
 
         # (let ((x (match y (42 1) (_ 0)))) x)
-        expr = parse_expression('(let ((x (match y (42 1) (_ 0)))) x)')
+        expr = parse_and_analyze_expression('(let ((x (match y (42 1) (_ 0)))) x)')
         result = desugarer.desugar(expr)
 
         # Result should be a let
@@ -114,7 +118,7 @@ class TestDesugarerCoreConstructs:
         desugarer = AIFPLDesugarer()
 
         # (lambda (x) (match x (42 "found") (_ "not found")))
-        expr = parse_expression('(lambda (x) (match x (42 "found") (_ "not found")))')
+        expr = parse_and_analyze_expression('(lambda (x) (match x (42 "found") (_ "not found")))')
         result = desugarer.desugar(expr)
 
         # Result should be a lambda
@@ -131,7 +135,7 @@ class TestDesugarerCoreConstructs:
         desugarer = AIFPLDesugarer()
 
         # (+ (match x (42 1) (_ 0)) (match y (1 10) (_ 0)))
-        expr = parse_expression('(+ (match x (42 1) (_ 0)) (match y (1 10) (_ 0)))')
+        expr = parse_and_analyze_expression('(+ (match x (42 1) (_ 0)) (match y (1 10) (_ 0)))')
         result = desugarer.desugar(expr)
 
         # Result should be a call to +
@@ -155,7 +159,7 @@ class TestDesugarerMatchLiteral:
         desugarer = AIFPLDesugarer()
 
         # (match x (42 "found") (_ "default"))
-        expr = parse_expression('(match x (42 "found") (_ "default"))')
+        expr = parse_and_analyze_expression('(match x (42 "found") (_ "default"))')
         result = desugarer.desugar(expr)
 
         # Should be a let binding a temp variable
@@ -183,7 +187,7 @@ class TestDesugarerMatchLiteral:
         desugarer = AIFPLDesugarer()
 
         # (match x ("hello" "greeting") (_ "other"))
-        expr = parse_expression('(match x ("hello" "greeting") (_ "other"))')
+        expr = parse_and_analyze_expression('(match x ("hello" "greeting") (_ "other"))')
         result = desugarer.desugar(expr)
 
         # Should be a let with if
@@ -199,7 +203,7 @@ class TestDesugarerMatchLiteral:
         desugarer = AIFPLDesugarer()
 
         # (match x (#t "true") (#f "false"))
-        expr = parse_expression('(match x (#t "true") (#f "false"))')
+        expr = parse_and_analyze_expression('(match x (#t "true") (#f "false"))')
         result = desugarer.desugar(expr)
 
         # Should be a let with if
@@ -215,7 +219,7 @@ class TestDesugarerMatchVariable:
         desugarer = AIFPLDesugarer()
 
         # (match x (n n))
-        expr = parse_expression('(match x (n n))')
+        expr = parse_and_analyze_expression('(match x (n n))')
         result = desugarer.desugar(expr)
 
         # Should be: (let ((#:tmp x)) (if #t (let ((n #:tmp)) n) error))
@@ -241,7 +245,7 @@ class TestDesugarerMatchVariable:
         desugarer = AIFPLDesugarer()
 
         # (match x (_ "anything"))
-        expr = parse_expression('(match x (_ "anything"))')
+        expr = parse_and_analyze_expression('(match x (_ "anything"))')
         result = desugarer.desugar(expr)
 
         # Should be: (let ((#:tmp x)) (if #t "anything" error))
@@ -271,7 +275,7 @@ class TestDesugarerMatchType:
         desugarer = AIFPLDesugarer()
 
         # (match x ((number? n) n) (_ "not a number"))
-        expr = parse_expression('(match x ((number? n) n) (_ "not a number"))')
+        expr = parse_and_analyze_expression('(match x ((number? n) n) (_ "not a number"))')
         result = desugarer.desugar(expr)
 
         # Should be: (let ((#:tmp x)) (if (number? #:tmp) (let ((n #:tmp)) n) ...))
@@ -297,7 +301,7 @@ class TestDesugarerMatchType:
         desugarer = AIFPLDesugarer()
 
         # (match x ((string? _) "is string") (_ "not string"))
-        expr = parse_expression('(match x ((string? _) "is string") (_ "not string"))')
+        expr = parse_and_analyze_expression('(match x ((string? _) "is string") (_ "not string"))')
         result = desugarer.desugar(expr)
 
         # Should test type but not bind variable
@@ -323,7 +327,7 @@ class TestDesugarerMatchList:
         desugarer = AIFPLDesugarer()
 
         # (match x (() "empty") (_ "not empty"))
-        expr = parse_expression('(match x (() "empty") (_ "not empty"))')
+        expr = parse_and_analyze_expression('(match x (() "empty") (_ "not empty"))')
         result = desugarer.desugar(expr)
 
         # Should test with null?
@@ -340,7 +344,7 @@ class TestDesugarerMatchList:
         desugarer = AIFPLDesugarer()
 
         # (match x ((a b) (list a b)) (_ "wrong"))
-        expr = parse_expression('(match x ((a b) (list a b)) (_ "wrong"))')
+        expr = parse_and_analyze_expression('(match x ((a b) (list a b)) (_ "wrong"))')
         result = desugarer.desugar(expr)
 
         # Should test list? and length
@@ -374,7 +378,7 @@ class TestDesugarerMatchList:
         desugarer = AIFPLDesugarer()
 
         # (match x ((1 2 3) "found") (_ "not found"))
-        expr = parse_expression('(match x ((1 2 3) "found") (_ "not found"))')
+        expr = parse_and_analyze_expression('(match x ((1 2 3) "found") (_ "not found"))')
         result = desugarer.desugar(expr)
 
         # Should desugar to nested tests
@@ -390,7 +394,7 @@ class TestDesugarerMatchCons:
         desugarer = AIFPLDesugarer()
 
         # (match x ((head . tail) (list head tail)) (_ "not list"))
-        expr = parse_expression('(match x ((head . tail) (list head tail)) (_ "not list"))')
+        expr = parse_and_analyze_expression('(match x ((head . tail) (list head tail)) (_ "not list"))')
         result = desugarer.desugar(expr)
 
         # Should test list? and length
@@ -409,7 +413,7 @@ class TestDesugarerMatchCons:
         desugarer = AIFPLDesugarer()
 
         # (match x ((a b . rest) (list a b rest)) (_ "not list"))
-        expr = parse_expression('(match x ((a b . rest) (list a b rest)) (_ "not list"))')
+        expr = parse_and_analyze_expression('(match x ((a b . rest) (list a b rest)) (_ "not list"))')
         result = desugarer.desugar(expr)
 
         # Should test list? and length >= 2
@@ -425,7 +429,7 @@ class TestDesugarerMatchNested:
         desugarer = AIFPLDesugarer()
 
         # (match x (((a b)) (list a b)) (_ "wrong"))
-        expr = parse_expression('(match x (((a b)) (list a b)) (_ "wrong"))')
+        expr = parse_and_analyze_expression('(match x (((a b)) (list a b)) (_ "wrong"))')
         result = desugarer.desugar(expr)
 
         # Should desugar to nested tests
@@ -437,7 +441,7 @@ class TestDesugarerMatchNested:
         desugarer = AIFPLDesugarer()
 
         # (match x (((number? n)) n) (_ "not list with number"))
-        expr = parse_expression('(match x (((number? n)) n) (_ "not list with number"))')
+        expr = parse_and_analyze_expression('(match x (((number? n)) n) (_ "not list with number"))')
         result = desugarer.desugar(expr)
 
         # Should desugar to nested tests
@@ -453,7 +457,7 @@ class TestDesugarerMatchMultipleClauses:
         desugarer = AIFPLDesugarer()
 
         # (match x (1 "one") (2 "two") (3 "three") (_ "other"))
-        expr = parse_expression('(match x (1 "one") (2 "two") (3 "three") (_ "other"))')
+        expr = parse_and_analyze_expression('(match x (1 "one") (2 "two") (3 "three") (_ "other"))')
         result = desugarer.desugar(expr)
 
         # Should be nested if expressions
@@ -474,7 +478,7 @@ class TestDesugarerMatchMultipleClauses:
         desugarer = AIFPLDesugarer()
 
         # (match x ((number? n) n) ((string? s) s) (() "empty") (_ "other"))
-        expr = parse_expression('(match x ((number? n) n) ((string? s) s) (() "empty") (_ "other"))')
+        expr = parse_and_analyze_expression('(match x ((number? n) n) ((string? s) s) (() "empty") (_ "other"))')
         result = desugarer.desugar(expr)
 
         # Should be nested if expressions
@@ -483,57 +487,61 @@ class TestDesugarerMatchMultipleClauses:
 
 
 class TestDesugarerMatchErrors:
-    """Test error handling in desugarer."""
+    """Test error handling in semantic analyzer (errors caught before desugaring)."""
 
     def test_match_no_clauses(self):
         """Test error when match has no clauses."""
-        desugarer = AIFPLDesugarer()
-
-        # (match x)
-        expr = parse_expression('(match x)')
+        # Errors should be caught by semantic analyzer, not desugarer
+        analyzer = AIFPLSemanticAnalyzer()
+        tokenizer = AIFPLTokenizer()
+        parser = AIFPLParser(tokenizer.tokenize('(match x)'), '(match x)')
+        expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            desugarer.desugar(expr)
+            analyzer.analyze(expr)
 
     def test_match_invalid_clause(self):
         """Test error when match clause is invalid."""
-        desugarer = AIFPLDesugarer()
-
-        # (match x (42))  - clause missing result
-        expr = parse_expression('(match x (42))')
+        analyzer = AIFPLSemanticAnalyzer()
+        tokenizer = AIFPLTokenizer()
+        parser = AIFPLParser(tokenizer.tokenize('(match x (42))'), '(match x (42))')
+        expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="wrong number of elements"):
-            desugarer.desugar(expr)
+            analyzer.analyze(expr)
 
     def test_cons_pattern_dot_at_start(self):
         """Test error when cons pattern has dot at start."""
-        desugarer = AIFPLDesugarer()
-
-        # (match x ((. tail) "bad") (_ "other"))
-        expr = parse_expression('(match x ((. tail) "bad") (_ "other"))')
+        analyzer = AIFPLSemanticAnalyzer()
+        tokenizer = AIFPLTokenizer()
+        code = '(match x ((. tail) "bad") (_ "other"))'
+        parser = AIFPLParser(tokenizer.tokenize(code), code)
+        expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="dot at beginning"):
-            desugarer.desugar(expr)
+            analyzer.analyze(expr)
 
     def test_cons_pattern_dot_at_end(self):
         """Test error when cons pattern has dot at end."""
-        desugarer = AIFPLDesugarer()
-
-        # (match x ((head .) "bad") (_ "other"))
-        expr = parse_expression('(match x ((head .) "bad") (_ "other"))')
+        analyzer = AIFPLSemanticAnalyzer()
+        tokenizer = AIFPLTokenizer()
+        code = '(match x ((head .) "bad") (_ "other"))'
+        parser = AIFPLParser(tokenizer.tokenize(code), code)
+        expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="dot at end"):
-            desugarer.desugar(expr)
+            analyzer.analyze(expr)
 
     def test_cons_pattern_multiple_after_dot(self):
         """Test error when cons pattern has multiple elements after dot."""
-        desugarer = AIFPLDesugarer()
-
-        # (match x ((head . a b) "bad") (_ "other"))
-        expr = parse_expression('(match x ((head . a b) "bad") (_ "other"))')
+        analyzer = AIFPLSemanticAnalyzer()
+        tokenizer = AIFPLTokenizer()
+        code = '(match x ((head . a b) "bad") (_ "other"))'
+        parser = AIFPLParser(tokenizer.tokenize(code), code)
+        expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="multiple elements after dot"):
-            desugarer.desugar(expr)
+            analyzer.analyze(expr)
 
 
 class TestDesugarerTempVariables:
@@ -544,10 +552,10 @@ class TestDesugarerTempVariables:
         desugarer = AIFPLDesugarer()
 
         # Multiple match expressions should get different temp vars
-        expr1 = parse_expression('(match x (42 "found") (_ "not"))')
+        expr1 = parse_and_analyze_expression('(match x (42 "found") (_ "not"))')
         result1 = desugarer.desugar(expr1)
 
-        expr2 = parse_expression('(match y (1 "one") (_ "other"))')
+        expr2 = parse_and_analyze_expression('(match y (1 "one") (_ "other"))')
         result2 = desugarer.desugar(expr2)
 
         # Extract temp var names
@@ -570,7 +578,7 @@ class TestDesugarerTempVariables:
         desugarer = AIFPLDesugarer()
 
         # (match x ((number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))
-        expr = parse_expression('(match x ((number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))')
+        expr = parse_and_analyze_expression('(match x ((number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))')
         result = desugarer.desugar(expr)
 
         # Both matches should have different temp variables
@@ -589,7 +597,7 @@ class TestDesugarerIntegration:
         desugarer = AIFPLDesugarer()
 
         # (match 42 (42 "found") (_ "not found"))
-        expr = parse_expression('(match 42 (42 "found") (_ "not found"))')
+        expr = parse_and_analyze_expression('(match 42 (42 "found") (_ "not found"))')
         result = desugarer.desugar(expr)
 
         # The desugared expression should be valid AIFPL code

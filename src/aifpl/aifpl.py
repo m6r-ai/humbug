@@ -6,6 +6,7 @@ from typing import Union, Dict
 from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
+from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
 
@@ -86,6 +87,9 @@ class AIFPL:
             tokens = tokenizer.tokenize(source_code)
             parser = AIFPLParser(tokens, source_code)
             expr = parser.parse()
+            # Analyze semantics before compilation
+            analyzer = AIFPLSemanticAnalyzer()
+            expr = analyzer.analyze(expr)
             bytecode = compiler.compile(expr, name=f"<prelude:{name}>")
             func = vm.execute(bytecode, cls.CONSTANTS, {})
             if isinstance(func, AIFPLFunction):
@@ -105,6 +109,7 @@ class AIFPL:
         self.max_depth = max_depth
 
         # VM components (always used)
+        self.analyzer = AIFPLSemanticAnalyzer()
         self.compiler = AIFPLCompiler()
         self.vm = AIFPLVM()
 
@@ -133,6 +138,9 @@ class AIFPL:
         # Parse
         parser = AIFPLParser(tokens, expression)
         parsed_expr = parser.parse()
+
+        # Semantic analysis
+        parsed_expr = self.analyzer.analyze(parsed_expr)
 
         # Compile
         code = self.compiler.compile(parsed_expr)
@@ -165,6 +173,9 @@ class AIFPL:
         # Parse
         parser = AIFPLParser(tokens, expression)
         parsed_expr = parser.parse()
+
+        # Semantic analysis
+        parsed_expr = self.analyzer.analyze(parsed_expr)
 
         # Compile
         code = self.compiler.compile(parsed_expr)

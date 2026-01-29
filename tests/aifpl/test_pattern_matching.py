@@ -426,11 +426,11 @@ class TestPatternMatching:
             aifpl.evaluate('(match 42 ((number? x y) "invalid") (_ "other"))')
 
         # Invalid cons pattern (more than one dot)
-        with pytest.raises(AIFPLEvalError, match="Invalid cons pattern"):
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern"):
             aifpl.evaluate('(match (list 1 2 3) ((a . b . c) "invalid") (_ "other"))')
 
         # Invalid cons pattern (dot at beginning)
-        with pytest.raises(AIFPLEvalError, match="Invalid cons pattern"):
+        with pytest.raises(AIFPLEvalError, match="Invalid pattern"):
             aifpl.evaluate('(match (list 1 2 3) ((. a b) "invalid") (_ "other"))')
 
         with pytest.raises(AIFPLEvalError, match="Invalid type pattern"):

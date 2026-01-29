@@ -69,12 +69,8 @@ class AIFPLDesugarer:
 
     def _desugar_if(self, expr: AIFPLList) -> AIFPLValue:
         """Desugar if expression by desugaring its subexpressions."""
-        if len(expr.elements) != 4:
-            raise AIFPLEvalError(
-                message="If expression has wrong number of arguments",
-                received=f"Got {len(expr.elements) - 1} arguments",
-                expected="Exactly 3 arguments: (if condition then else)"
-            )
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) == 4, "If expression should have exactly 4 elements (validated by semantic analyzer)"
 
         _, condition, then_expr, else_expr = expr.elements
 
@@ -92,41 +88,20 @@ class AIFPLDesugarer:
 
     def _desugar_let(self, expr: AIFPLList) -> AIFPLValue:
         """Desugar let expression by desugaring its subexpressions."""
-        if len(expr.elements) < 3:
-            raise AIFPLEvalError(
-                message="Let expression structure is incorrect",
-                received=f"Got {len(expr.elements)} elements",
-                expected="At least 3 elements: (let ((bindings...)) body)"
-            )
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) == 3, "Let expression should have exactly 3 elements (validated by semantic analyzer)"
 
         let_symbol = expr.elements[0]
         bindings_list = expr.elements[1]
         body = expr.elements[2]
 
-        if not isinstance(bindings_list, AIFPLList):
-            raise AIFPLEvalError(
-                message="Let binding list must be a list",
-                received=f"Binding list: {bindings_list.type_name()}"
-            )
+        assert isinstance(bindings_list, AIFPLList), "Binding list should be a list (validated by semantic analyzer)"
 
         # Desugar each binding value
         desugared_bindings = []
         for i, binding in enumerate(bindings_list.elements):
-            # Check if binding is a list
-            if not isinstance(binding, AIFPLList):
-                raise AIFPLEvalError(
-                    message=f"Let binding {i+1} must be a list",
-                    received=f"Binding: {binding}"
-                )
-
-            # Check if binding has exactly 2 elements
-            if len(binding.elements) != 2:
-                raise AIFPLEvalError(
-                    message=f"Let binding {i+1} has wrong number of elements",
-                    received=f"Binding: {binding}",
-                    expected="Exactly 2 elements: (variable value)",
-                    example="(x 5) not (x) or (x 1 2)"
-                )
+            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2, \
+                f"Binding {i+1} should be a list with 2 elements (validated by semantic analyzer)"
 
             var_name, value_expr = binding.elements
             desugared_value = self.desugar(value_expr)
@@ -143,12 +118,8 @@ class AIFPLDesugarer:
 
     def _desugar_lambda(self, expr: AIFPLList) -> AIFPLValue:
         """Desugar lambda expression by desugaring its body."""
-        if len(expr.elements) != 3:
-            raise AIFPLEvalError(
-                message="Lambda expression structure is incorrect",
-                received=f"Got {len(expr.elements)} elements",
-                expected="Exactly 3 elements: (lambda (params...) body)"
-            )
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) == 3, "Lambda expression should have exactly 3 elements (validated by semantic analyzer)"
 
         lambda_symbol, params_list, body = expr.elements
 
@@ -175,24 +146,16 @@ class AIFPLDesugarer:
         Returns:
             Desugared if/let AST
         """
-        if len(expr.elements) < 3:
-            raise AIFPLEvalError(
-                message="Match expression has wrong number of arguments",
-                received=f"Got {len(expr.elements) - 1} arguments",
-                expected="At least 2 arguments: (match value (pattern1 result1) ...)"
-            )
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) >= 3, "Match expression should have at least 3 elements (validated by semantic analyzer)"
 
         value_expr = expr.elements[1]
         clauses = list(expr.elements[2:])
 
-        # Validate all clauses
+        # All clauses already validated by semantic analyzer
         for i, clause in enumerate(clauses):
-            if not isinstance(clause, AIFPLList) or len(clause.elements) != 2:
-                raise AIFPLEvalError(
-                    message=f"Match clause {i+1} has wrong number of elements",
-                    received=f"Clause {i+1}: {clause}",
-                    expected="Each clause needs exactly 2 elements: (pattern result)"
-                )
+            assert isinstance(clause, AIFPLList) and len(clause.elements) == 2, \
+                f"Clause {i+1} should be a list with 2 elements (validated by semantic analyzer)"
 
         # Generate temp variable for match value
         temp_var = self._gen_temp()
@@ -457,10 +420,8 @@ class AIFPLDesugarer:
         if isinstance(pattern, AIFPLList):
             return self._desugar_list_pattern(pattern, temp_var)
 
-        raise AIFPLEvalError(
-            message=f"Unknown pattern type: {type(pattern).__name__}",
-            received=f"Pattern: {pattern}"
-        )
+        # Should never reach here - semantic analyzer validates patterns
+        assert False, f"Unknown pattern type: {type(pattern).__name__} (should be validated by semantic analyzer)"
 
     def _desugar_list_pattern(
         self,
@@ -501,15 +462,9 @@ class AIFPLDesugarer:
             }
 
             if type_pred in valid_predicates:
-                # Validate variable pattern
-                if not isinstance(var_pattern, AIFPLSymbol):
-                    raise AIFPLEvalError(
-                        message="Pattern variable must be a symbol",
-                        received=f"Variable in type pattern: {var_pattern}",
-                        expected="Symbol (variable name)",
-                        example="(number? x) not (number? 42)",
-                        suggestion="Use unquoted variable names in type patterns"
-                    )
+                # Variable pattern already validated by semantic analyzer
+                assert isinstance(var_pattern, AIFPLSymbol), \
+                    "Type pattern variable should be a symbol (validated by semantic analyzer)"
 
                 # Test: (type? temp_var)
                 test_expr = AIFPLList((
@@ -524,43 +479,11 @@ class AIFPLDesugarer:
 
                 return (test_expr, bindings)
 
-            # Unknown type predicate
-            raise AIFPLEvalError(
-                message="Invalid type pattern",
-                received=f"Type pattern: ({type_pred} {var_pattern})",
-                expected="Valid type predicate like number?, string?, list?, etc.",
-                example="(number? x) or (string? s)",
-                suggestion="Use a valid type predicate ending with ?"
-            )
-        # Check for malformed type patterns
-        if (len(pattern.elements) >= 1 and
-            isinstance(pattern.elements[0], AIFPLSymbol) and
-            pattern.elements[0].name.endswith('?')):
+            # Unknown type predicate - should have been caught by semantic analyzer
+            assert False, f"Unknown type predicate: {type_pred} (should be validated by semantic analyzer)"
 
-            type_pred = pattern.elements[0].name
-            valid_predicates = {
-                'number?', 'integer?', 'float?', 'complex?',
-                'string?', 'boolean?', 'list?', 'alist?', 'function?'
-            }
-
-            if type_pred in valid_predicates:
-                # Type predicate but wrong number of arguments
-                if len(pattern.elements) == 1:
-                    raise AIFPLEvalError(
-                        message="Invalid type pattern",
-                        received=f"Type pattern: ({type_pred}) - missing variable",
-                        expected="Type pattern with variable: (type? var)",
-                        example="(number? x) not (number?)",
-                        suggestion="Add a variable name after the type predicate"
-                    )
-
-                raise AIFPLEvalError(
-                    message="Invalid type pattern",
-                    received=f"Type pattern: {pattern} - too many variables",
-                    expected="Type pattern with one variable: (type? var)",
-                    example="(number? x) not (number? x y)",
-                    suggestion="Use only one variable in type patterns"
-                )
+        # Malformed type patterns should have been caught by semantic analyzer
+        # Continue with other pattern types
 
         # Check for cons pattern: (head . tail) or (a b . rest)
         dot_positions = []
@@ -568,12 +491,8 @@ class AIFPLDesugarer:
             if isinstance(elem, AIFPLSymbol) and elem.name == '.':
                 dot_positions.append(i)
 
-        # Validate: at most one dot
-        if len(dot_positions) > 1:
-            raise AIFPLEvalError(
-                message="Invalid cons pattern",
-                received=f"Pattern: {pattern} - multiple dots"
-            )
+        # Validation already done by semantic analyzer
+        assert len(dot_positions) <= 1, "Pattern should have at most one dot (validated by semantic analyzer)"
 
         # If we have a dot, use cons pattern
         if dot_positions:
@@ -848,24 +767,11 @@ class AIFPLDesugarer:
         Returns:
             (test_expression, bindings)
         """
-        # Validate dot position
-        if dot_position == 0:
-            raise AIFPLEvalError(
-                message="Invalid cons pattern",
-                received=f"Pattern: {pattern} - dot at beginning"
-            )
-
-        if dot_position == len(pattern.elements) - 1:
-            raise AIFPLEvalError(
-                message="Invalid cons pattern",
-                received=f"Pattern: {pattern} - dot at end"
-            )
-
-        if dot_position != len(pattern.elements) - 2:
-            raise AIFPLEvalError(
-                message="Invalid cons pattern",
-                received=f"Pattern: {pattern} - multiple elements after dot"
-            )
+        # Validation already done by semantic analyzer
+        assert dot_position > 0, "Dot should not be at beginning (validated by semantic analyzer)"
+        assert dot_position < len(pattern.elements) - 1, "Dot should not be at end (validated by semantic analyzer)"
+        assert dot_position == len(pattern.elements) - 2, \
+            "Should have exactly one element after dot (validated by semantic analyzer)"
 
         # Test: (and (list? temp_var) (>= (length temp_var) dot_position))
         list_test = AIFPLList((
