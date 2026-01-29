@@ -51,42 +51,44 @@ class AIFPLTokenizer:
                 column += 1
 
         while i < len(expression):
+            next_char = expression[i]
+
             # Skip whitespace
-            if expression[i].isspace():
-                advance_position(expression[i])
+            if next_char.isspace():
+                advance_position(next_char)
                 i += 1
                 continue
 
             # Comments - skip from ';' to end of line
-            if expression[i] == ';':
+            if next_char == ';':
                 while i < len(expression) and expression[i] != '\n':
-                    advance_position(expression[i])
+                    column += 1
                     i += 1
 
                 continue
 
             # Parentheses
-            if expression[i] == '(':
+            if next_char == '(':
                 tokens.append(make_token(AIFPLTokenType.LPAREN, '('))
-                advance_position(expression[i])
+                column += 1
                 i += 1
                 continue
 
-            if expression[i] == ')':
+            if next_char == ')':
                 tokens.append(make_token(AIFPLTokenType.RPAREN, ')'))
-                advance_position(expression[i])
+                column += 1
                 i += 1
                 continue
 
             # Quote character
-            if expression[i] == "'":
+            if next_char == "'":
                 tokens.append(make_token(AIFPLTokenType.QUOTE, "'"))
-                advance_position(expression[i])
+                column += 1
                 i += 1
                 continue
 
             # String literals
-            if expression[i] == '"':
+            if next_char == '"':
                 try:
                     # Save line/column at start of string
                     string_line = line
@@ -96,6 +98,7 @@ class AIFPLTokenizer:
                     # Advance position for each character in the string
                     for j in range(length):
                         advance_position(expression[i + j])
+
                     i += length
                     continue
 
@@ -141,7 +144,7 @@ class AIFPLTokenizer:
                     raise  # Re-raise if not handled
 
             # Boolean literals (#t, #f) with validation for invalid patterns like #true, #false
-            if expression[i] == '#' and i + 1 < len(expression):
+            if next_char == '#' and i + 1 < len(expression):
                 if expression[i + 1] in 'tf':
                     # Check if this is part of a longer invalid sequence like #true or #false
                     if i + 2 < len(expression) and not self._is_delimiter(expression[i + 2]):
@@ -164,8 +167,7 @@ class AIFPLTokenizer:
 
                     boolean_value = expression[i + 1] == 't'
                     tokens.append(make_token(AIFPLTokenType.BOOLEAN, boolean_value, 2))
-                    advance_position(expression[i])
-                    advance_position(expression[i + 1])
+                    column += 2
                     i += 2
                     continue
 
@@ -191,8 +193,7 @@ class AIFPLTokenizer:
                     number_col = column
                     number_value, length, token_type = self._read_number(expression, i, number_line, number_col)
                     tokens.append(make_token(token_type, number_value, length, number_line, number_col))
-                    for j in range(length):
-                        advance_position(expression[i + j])
+                    column += length
                     i += length
                     continue
 
@@ -200,20 +201,18 @@ class AIFPLTokenizer:
                     raise e
 
             # Symbols (variables, parameters, functions, constants)
-            if self._is_symbol_start(expression[i]):
+            if self._is_symbol_start(next_char):
                 # Save line/column at start of symbol
                 symbol_line = line
                 symbol_col = column
                 symbol, length = self._read_symbol(expression, i, symbol_line, symbol_col)
                 tokens.append(make_token(AIFPLTokenType.SYMBOL, symbol, length, symbol_line, symbol_col))
-                for j in range(length):
-                    advance_position(expression[i + j])
+                column += length
                 i += length
                 continue
 
             # Invalid character - check for control characters first
-            char = expression[i]
-            char_code = ord(char)
+            char_code = ord(next_char)
 
             if char_code < 32:
                 # Control character - provide specific error
@@ -243,14 +242,14 @@ class AIFPLTokenizer:
                 '}': "Use parentheses ( ) for all grouping, not braces { }",
             }
 
-            suggestion = suggestions.get(char, f"'{char}' is not a valid character in AIFPL")
+            suggestion = suggestions.get(next_char, f"'{next_char}' is not a valid character in AIFPL")
             context = "Only letters, digits, and specific symbols are allowed"
 
             raise AIFPLTokenError(
-                message=f"Invalid character: {char}",
+                message=f"Invalid character: {next_char}",
                 line=line,
                 column=column,
-                received=f"Character: {char} (code {char_code})",
+                received=f"Character: {next_char} (code {char_code})",
                 expected="Valid AIFPL characters: letters, digits, +, -, *, /, etc.",
                 example="Valid: (+ 1 2), my-var, func?\\nInvalid: @var, $value, [list]",
                 suggestion=suggestion,
@@ -437,36 +436,39 @@ class AIFPLTokenizer:
             True if the token represents a valid number
         """
         # Handle negative numbers
+        first_char = token[0]
         check_token = token
-        if token.startswith('-'):
+        if first_char == '-':
             # We don't need to worry about just '-' being a number, as that would be caught earlier
             check_token = token[1:]
 
         # Try different number formats
 
         # Hexadecimal
-        if check_token.startswith('0x') or check_token.startswith('0X'):
-            if len(check_token) <= 2:
-                return False
+        if first_char == '0' and len(check_token) > 1:
+            second_char = check_token[1]
+            if second_char in ('x', 'X'):
+                if len(check_token) <= 2:
+                    return False
 
-            hex_part = check_token[2:]
-            return all(c in '0123456789abcdefABCDEF' for c in hex_part)
+                hex_part = check_token[2:]
+                return all(c in '0123456789abcdefABCDEF' for c in hex_part)
 
-        # Binary
-        if check_token.startswith('0b') or check_token.startswith('0B'):
-            if len(check_token) <= 2:
-                return False
+            # Binary
+            if second_char in ('b', 'B'):
+                if len(check_token) <= 2:
+                    return False
 
-            bin_part = check_token[2:]
-            return all(c in '01' for c in bin_part)
+                bin_part = check_token[2:]
+                return all(c in '01' for c in bin_part)
 
-        # Octal
-        if check_token.startswith('0o') or check_token.startswith('0O'):
-            if len(check_token) <= 2:
-                return False
+            # Octal
+            if second_char in ('o', 'O'):
+                if len(check_token) <= 2:
+                    return False
 
-            oct_part = check_token[2:]
-            return all(c in '01234567' for c in oct_part)
+                oct_part = check_token[2:]
+                return all(c in '01234567' for c in oct_part)
 
         # Decimal numbers (int, float, scientific notation)
         try:
@@ -487,27 +489,34 @@ class AIFPLTokenizer:
             The numeric value
         """
         # Handle negative numbers
-        negative = token.startswith('-')
+        first_char = token[0]
+        check_token = token
+        negative = first_char == '-'
         if negative:
-            token = token[1:]
+            check_token = token[1:]
 
         # Parse different formats
-        if token.startswith('0x') or token.startswith('0X'):
-            value: int | float = int(token, 16)
+        value: int | float
+        if first_char == '0' and len(check_token) > 1:
+            second_char = check_token[1]
+            if second_char in ('x', 'X'):
+                value = int(check_token, 16)
+                return -value if negative else value
 
-        elif token.startswith('0b') or token.startswith('0B'):
-            value = int(token, 2)
+            if second_char in ('b', 'B'):
+                value = int(check_token, 2)
+                return -value if negative else value
 
-        elif token.startswith('0o') or token.startswith('0O'):
-            value = int(token, 8)
+            if second_char in ('o', 'O'):
+                value = int(check_token, 8)
+                return -value if negative else value
+
+        # Decimal number - use float if it contains . or e/E, otherwise int
+        if '.' in check_token or 'e' in check_token.lower():
+            value = float(check_token)
 
         else:
-            # Decimal number - use float if it contains . or e/E, otherwise int
-            if '.' in token or 'e' in token.lower():
-                value = float(token)
-
-            else:
-                value = int(token)
+            value = int(check_token)
 
         return -value if negative else value
 
@@ -530,8 +539,9 @@ class AIFPLTokenizer:
         # Get the complete token until delimiter (this will check for control characters)
         complete_token = self._read_complete_token(expression, start, start_line, start_col)
 
-        # Check if this is a complex number literal
-        if 'j' in complete_token.lower():
+        # Check if this is a complex number literal - must have 'j' or 'J' at the end
+        last_char = complete_token[-1]
+        if last_char in ('j', 'J'):
             complex_value = self._parse_complex_literal(complete_token, start_line, start_col)
             return complex_value, len(complete_token), AIFPLTokenType.COMPLEX
 
@@ -565,8 +575,6 @@ class AIFPLTokenizer:
         Parse a complex number literal.
 
         Supported formats:
-        - j or J → 1j
-        - +j or -j → ±1j
         - 4j → 4j
         - -5j → -5j
         - 3+4j → (3+4j)
@@ -584,30 +592,7 @@ class AIFPLTokenizer:
         Raises:
             AIFPLTokenError: If the complex literal is malformed
         """
-        # Validate it ends with 'j' or 'J'
-        if not token.endswith(('j', 'J')):
-            raise AIFPLTokenError(
-                message=f"Invalid complex literal: {token}",
-                line=start_line,
-                column=start_col,
-                received=f"Token: {token}",
-                expected="Complex literal ending with 'j' or 'J'",
-                example="Valid: 3+4j, 2-5j, 4j, j",
-                suggestion="Add 'j' suffix for imaginary numbers",
-                context="Complex numbers must end with 'j' or 'J'"
-            )
-
         token_without_j = token[:-1]
-
-        # Special case: just "j", "J", "+j", or "-j" → ±1j
-        if not token_without_j:
-            return complex(0, 1)
-
-        if token_without_j == '+':
-            return complex(0, 1)
-
-        if token_without_j == '-':
-            return complex(0, -1)
 
         # Try to find the + or - that separates real and imaginary parts
         separator_pos = self._find_complex_separator(token_without_j)
