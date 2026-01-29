@@ -8,7 +8,6 @@ from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
 from aifpl.aifpl_value import AIFPLBoolean, AIFPLString, AIFPLList, AIFPLInteger, AIFPLFloat, AIFPLComplex
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_evaluator import AIFPLEvaluator
 
 
 def compile_and_run(expression: str) -> any:

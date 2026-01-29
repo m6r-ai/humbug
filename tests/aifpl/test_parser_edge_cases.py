@@ -487,21 +487,3 @@ class TestAIFPLParserEdgeCases:
         for expr, exp in zip(expressions, expected):
             result = aifpl.evaluate(expr)
             assert result == exp
-
-    def test_parser_recursive_descent_limits(self, aifpl_custom):
-        """Test parser recursive descent limits."""
-        # Create AIFPL with very low depth limit
-        aifpl_shallow = aifpl_custom(max_depth=5)
-
-        # Very deep nesting should be caught by evaluator, not parser
-        deep_expr = "(+ 1 (+ 1 (+ 1 (+ 1 (+ 1 (+ 1 1))))))"
-
-        try:
-            # This might fail in parsing or evaluation
-            result = aifpl_shallow.evaluate(deep_expr)
-        except AIFPLEvalError as e:
-            # Evaluation depth limit is expected
-            assert "too deeply nested" in str(e)
-        except (AIFPLParseError, AIFPLTokenError):
-            # Parser depth limit is also acceptable
-            pass

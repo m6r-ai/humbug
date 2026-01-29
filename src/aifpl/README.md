@@ -1910,7 +1910,7 @@ The pure list approach provides several advantages:
 3. **Traditional Lisp semantics**: Everything is data, following Lisp philosophy
 4. **Easier to understand**: One consistent representation for all expressions
 5. **Future extensibility**: Natural foundation for features like macros
-6. **Reduced complexity**: Fewer types, simpler parser, more straightforward evaluator
+6. **Reduced complexity**: Fewer types, simpler parser, more straightforward compiler/VM
 
 ## Common Usage Patterns
 

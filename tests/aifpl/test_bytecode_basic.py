@@ -7,7 +7,6 @@ from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
 from aifpl.aifpl_value import AIFPLBoolean, AIFPLInteger, AIFPLFloat, AIFPLComplex
-from aifpl.aifpl_evaluator import AIFPLEvaluator
 
 
 def compile_and_run(expression: str) -> any:

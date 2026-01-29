@@ -15,7 +15,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 @pytest.fixture(params=[False, True], ids=["interpreter", "bytecode"])
 def aifpl_both(request):
     """Fixture that provides both interpreter and bytecode versions."""
-    return AIFPL(use_bytecode=request.param)
+    return AIFPL()
 
 
 class TestBasicArithmetic:

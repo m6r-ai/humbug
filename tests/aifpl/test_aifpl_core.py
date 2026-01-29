@@ -8,16 +8,6 @@ from aifpl import AIFPL, AIFPLError, AIFPLTokenError, AIFPLParseError, AIFPLEval
 class TestAIFPLCore:
     """Test the main AIFPL class and basic integration."""
 
-    def test_aifpl_default_initialization(self):
-        """Test AIFPL initializes with default parameters."""
-        aifpl = AIFPL()
-        assert aifpl.max_depth == 1000
-
-    def test_aifpl_custom_initialization(self, aifpl_custom):
-        """Test AIFPL initializes with custom parameters."""
-        aifpl = aifpl_custom(max_depth=200)
-        assert aifpl.max_depth == 200
-
     def test_evaluate_returns_python_objects(self, aifpl):
         """Test that evaluate() returns Python objects."""
         # Integer
@@ -128,22 +118,6 @@ class TestAIFPLCore:
 
         with pytest.raises(AIFPLTokenError):
             aifpl.evaluate("@invalid")  # Invalid character
-
-    def test_max_depth_configuration_effect(self, aifpl_custom):
-        """Test that max_depth configuration affects recursion limits."""
-        # Create AIFPL with very low max depth
-        aifpl_shallow = aifpl_custom(max_depth=5)
-
-        # Create deeply nested expression that should exceed limit
-        deep_expr = "(+ 1 (+ 1 (+ 1 (+ 1 (+ 1 (+ 1 1))))))"  # Depth > 5
-
-        with pytest.raises(AIFPLEvalError, match="too deeply nested"):
-            aifpl_shallow.evaluate(deep_expr)
-
-        # Same expression should work with default depth
-        aifpl_normal = aifpl_custom(max_depth=100)
-        result = aifpl_normal.evaluate(deep_expr)
-        assert result == 7
 
     def test_both_evaluation_methods_consistent(self, aifpl):
         """Test that evaluate() and evaluate_and_format() are consistent."""

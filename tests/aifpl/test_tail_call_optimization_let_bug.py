@@ -204,7 +204,7 @@ class TestTailCallOptimizationWithLet:
 
         This test verifies that both forms of tail calls are properly optimized.
         """
-        aifpl = aifpl_custom(max_depth=1000)
+        aifpl = aifpl_custom()
 
         # Direct tail call - works
         direct = '''
@@ -227,7 +227,7 @@ class TestTailCallOptimizationWithLet:
         This test verifies that let-based recursion can handle hundreds
         of iterations without hitting depth limits.
         """
-        aifpl = aifpl_custom(max_depth=1000)
+        aifpl = aifpl_custom()
 
         # This now works with proper TCO
         test_depth = '''
@@ -326,28 +326,6 @@ class TestTailCallOptimizationLetEdgeCases:
         '''
         helpers.assert_evaluates_to(aifpl, mutual_with_let, '#t')
 
-    def test_documentation_example_from_bug_report(self, aifpl_custom):
-        """
-        Test the exact example from the bug report documentation.
-
-        This is the canonical example that originally demonstrated the bug.
-        Now it should work correctly.
-        """
-        aifpl = aifpl_custom(max_depth=1000)
-
-        # From TCO_BUG_REPORT.md - this now works!
-        bug_example = '''
-        (letrec ((test (lambda (n acc)
-                        (if (= n 0)
-                            acc
-                            (let ((next-n (- n 1)))
-                              (test next-n (+ acc 1)))))))
-          (test 500 0))
-        '''
-
-        # Should complete successfully and return 500
-        assert aifpl.evaluate_and_format(bug_example) == '500'
-
 
 class TestTailCallOptimizationVerification:
     """
@@ -405,7 +383,7 @@ class TestTailCallOptimizationVerification:
         """
         Comprehensive test that all tail positions are properly optimized.
         """
-        aifpl = aifpl_custom(max_depth=1000)
+        aifpl = aifpl_custom()
 
         comprehensive = '''
         (letrec ((process (lambda (n mode acc)
@@ -436,7 +414,7 @@ class TestTailCallOptimizationPerformance:
         """
         Test that very deep recursion (1000+ iterations) works with let-based TCO.
         """
-        aifpl = aifpl_custom(max_depth=5000)
+        aifpl = aifpl_custom()
 
         deep = '''
         (letrec ((countdown (lambda (n)

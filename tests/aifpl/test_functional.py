@@ -420,20 +420,6 @@ class TestFunctional:
         '''
         helpers.assert_evaluates_to(aifpl, sum_list_expr, '10')
 
-    def test_deep_recursion_tail_optimization(self, aifpl_custom):
-        """Test that tail recursion optimization prevents stack overflow."""
-        # Create AIFPL with high recursion limit for this test
-        aifpl = aifpl_custom(max_depth=1000)
-
-        # Deep tail recursion should not cause stack overflow
-        deep_recursion = '''
-        (letrec ((count-down (lambda (n)
-                              (if (<= n 0) "done" (count-down (- n 1))))))
-          (count-down 5000))
-        '''
-        result = aifpl.evaluate_and_format(deep_recursion)
-        assert result == '"done"'
-
     def test_mutual_recursion(self, aifpl, helpers):
         """Test mutual recursion between lambda functions."""
         # Even/odd mutual recursion

@@ -14,15 +14,21 @@ def aifpl():
 
 @pytest.fixture
 def aifpl_bytecode():
-    """Create a fresh AIFPL instance with bytecode enabled for each test."""
-    return AIFPL(use_bytecode=True)
+    """
+    Create a fresh AIFPL instance for each test.
+    
+    Note: This fixture is kept for backward compatibility.
+    All AIFPL instances now use bytecode/VM execution.
+    """
+    return AIFPL()
 
 
 @pytest.fixture
 def aifpl_custom():
     """Factory for AIFPL instances with custom configuration."""
-    def _create_aifpl(max_depth: int = 100) -> AIFPL:
-        return AIFPL(max_depth=max_depth)
+    def _create_aifpl() -> AIFPL:
+        return AIFPL()
+
     return _create_aifpl
 
 

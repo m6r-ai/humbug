@@ -379,17 +379,6 @@ class TestErrors:
         with pytest.raises(AIFPLEvalError, match="requires list argument"):
             aifpl.evaluate('(filter (lambda (x) #t) "hello")')
 
-    def test_recursion_depth_limit_error(self, aifpl_custom):
-        """Test that recursion depth limits are enforced."""
-        # Create AIFPL with very low depth limit
-        aifpl_shallow = aifpl_custom(max_depth=5)
-
-        # Deep recursion should cause error
-        deep_expr = "(+ 1 (+ 1 (+ 1 (+ 1 (+ 1 (+ 1 1))))))"
-
-        with pytest.raises(AIFPLEvalError, match="too deeply nested"):
-            aifpl_shallow.evaluate(deep_expr)
-
     def test_non_function_call_error(self, aifpl):
         """Test that trying to call non-functions causes evaluation errors."""
         # Can't call numbers

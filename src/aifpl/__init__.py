@@ -17,7 +17,6 @@ from aifpl.aifpl_value import (
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_evaluator import AIFPLEvaluator
 from aifpl.aifpl_environment import AIFPLEnvironment
 
 
@@ -34,5 +33,5 @@ __all__ = [
     "AIFPLRecursivePlaceholder", "AIFPLFunction",
 
     # Lower-level components
-    "AIFPLToken", "AIFPLTokenType", "AIFPLTokenizer", "AIFPLParser", "AIFPLEvaluator", "AIFPLEnvironment"
+    "AIFPLToken", "AIFPLTokenType", "AIFPLTokenizer", "AIFPLParser", "AIFPLEnvironment"
 ]
