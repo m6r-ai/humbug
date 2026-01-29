@@ -371,7 +371,6 @@ class AIFPLVM:
 
         closure = AIFPLFunction(
             parameters=tuple(f"param{i}" for i in range(closure_code.param_count)),
-            body=None,
             closure_environment=AIFPLEnvironment(bindings=captured_dict, parent=parent_env),
             name=closure_code.name,
             bytecode=closure_code,
@@ -519,7 +518,6 @@ class AIFPLVM:
         # Create patched closure
         patched_closure = AIFPLFunction(
             parameters=target_closure.parameters,
-            body=target_closure.body,
             closure_environment=new_env,
             name=target_closure.name,
             bytecode=target_closure.bytecode,

@@ -458,28 +458,16 @@ class AIFPLFunction(AIFPLValue):
     and passed around as a value.
 
     A function can be either:
-    - A user-defined lambda with bytecode or AST body
+    - A user-defined lambda
     - A builtin with a native Python implementation
     """
     parameters: Tuple[str, ...]
-    body: AIFPLValue | None = None  # AST body for evaluator
     closure_environment: Any = None  # AIFPLEnvironment, avoiding circular import
     name: str | None = None
     bytecode: Any = None  # CodeObject for bytecode-compiled functions
     captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
     native_impl: Callable | None = None  # Python function for builtins
     is_variadic: bool = False  # True if function accepts variable number of args
-
-    def __post_init__(self) -> None:
-        """Validate that function has either body/bytecode or native_impl, but not both."""
-        has_body = self.body is not None or self.bytecode is not None
-        has_native = self.native_impl is not None
-
-        if has_body and has_native:
-            raise ValueError("Function cannot have both body/bytecode and native_impl")
-
-        if not has_body and not has_native:
-            raise ValueError("Function must have either body/bytecode or native_impl")
 
     def to_python(self) -> 'AIFPLFunction | str':
         """Functions return themselves (or their name for builtins as string)."""
