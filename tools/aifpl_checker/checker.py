@@ -6,9 +6,6 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
-# Import AIFPL tokenizer
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
 from aifpl.aifpl_tokenizer import AIFPLTokenizer
 from aifpl.aifpl_token import AIFPLTokenType
 from aifpl.aifpl_error import AIFPLTokenError
@@ -329,7 +326,7 @@ class ParenChecker:
         if not self.errors:
             return []
 
-        line_set = set()
+        line_set: set[int] = set()
         for error in self.errors:
             start = max(1, error.line_num - context_size)
             end = min(len(self.lines), error.line_num + context_size)
@@ -359,13 +356,15 @@ class ParenChecker:
         if not self.line_info:
             return "No line information available"
 
+        lines_to_show: List[int] = []
+
         # Determine which lines to show
         if line_range:
             start, end = line_range
-            lines_to_show = range(start, min(end + 1, len(self.line_info) + 1))
+            lines_to_show = list(range(start, min(end + 1, len(self.line_info) + 1)))
 
         elif show_all:
-            lines_to_show = range(1, len(self.line_info) + 1)
+            lines_to_show = list(range(1, len(self.line_info) + 1))
 
         else:
             # Auto-focus on errors
@@ -534,7 +533,7 @@ def parse_line_range(range_str: str) -> Tuple[int, int]:
 
     elif not parts[1]:  # "100-" format
         start = int(parts[0])
-        end = float('inf')  # Will be clamped to file length
+        end = 999999999  # Will be clamped to file length
 
     else:  # "100-200" format
         start = int(parts[0])
@@ -543,13 +542,13 @@ def parse_line_range(range_str: str) -> Tuple[int, int]:
     if start < 1:
         raise ValueError("Start line must be >= 1")
 
-    if end != float('inf') and end < start:
+    if end < start:
         raise ValueError("End line must be >= start line")
 
-    return (start, int(end) if end != float('inf') else 999999999)
+    return (start, end)
 
 
-def main():
+def main() -> int:
     """Main entry point for CLI."""
     parser = argparse.ArgumentParser(
         description="Check parenthesis balance in AIFPL files",
