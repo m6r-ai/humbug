@@ -83,13 +83,13 @@ class CloseAnnotation:
 @dataclass
 class LineInfo:
     """Information about a line in the source file."""
+    close_annotations: List[CloseAnnotation]  # Annotations for closing parens
+    paren_positions: List[ParenPosition]  # Positions of parens on this line
     line_num: int
     depth: int  # Depth at end of line
     content: str
     has_open: bool = False
     has_close: bool = False
-    close_annotations: List[CloseAnnotation] = None  # Annotations for closing parens
-    paren_positions: List[ParenPosition] = None  # Positions of parens on this line
     start_depth: int = 0  # Depth at start of line (for line number coloring)
 
 
@@ -109,8 +109,7 @@ class ParenChecker:
     TRACKED_FORMS = {'lambda', 'let', 'letrec', 'if', 'match'}
 
     # Color palette for depth-based paren coloring (cycles through these)
-    PAREN_COLORS = [Colors.CYAN, Colors.YELLOW, Colors.GREEN, Colors.MAGENTA, 
-                    Colors.BLUE, Colors.RED]
+    PAREN_COLORS = [Colors.CYAN, Colors.YELLOW, Colors.GREEN, Colors.MAGENTA, Colors.BLUE, Colors.RED]
 
     def __init__(self, filepath: str):
         """
@@ -282,7 +281,7 @@ class ParenChecker:
                         line_num=token.line,
                         depth=current_depth,
                         error_type="negative_depth",
-                        message=f"Extra closing parenthesis (depth went negative)"
+                        message="Extra closing parenthesis (depth went negative)"
                     ))
 
             # Update depth for this line
@@ -304,9 +303,7 @@ class ParenChecker:
 
         # Fill in depth for lines without tokens (empty lines, comment-only lines)
         # by propagating depth from previous lines
-        for i in range(len(self.line_info)):
-            line = self.line_info[i]
-
+        for i, line in enumerate(self.line_info):
             # If this line has no tokens (depth and start_depth are both 0 from init),
             # inherit from previous line
             if i > 0 and line.depth == 0 and line.start_depth == 0 and not line.has_open and not line.has_close:
