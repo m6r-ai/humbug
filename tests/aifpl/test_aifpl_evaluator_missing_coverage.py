@@ -111,14 +111,14 @@ class TestEvaluatorMissingCoverage:
         """Test formatting of builtin function references."""
         # Get reference to builtin function without calling it
         result = aifpl.evaluate_and_format("+")
-        assert result == "<builtin +>"
+        assert result == "<builtin + (args)>"
 
     def test_builtin_function_formatting_various(self, aifpl):
         """Test formatting of various builtin functions."""
         functions_to_test = ["*", "list"]
         for func_name in functions_to_test:
             result = aifpl.evaluate_and_format(func_name)
-            assert result == f"<builtin {func_name}>"
+            assert result == f"<builtin {func_name} (args)>"
 
     # ========== Call Chain Management Tests ==========
 

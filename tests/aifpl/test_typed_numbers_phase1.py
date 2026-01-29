@@ -11,34 +11,6 @@ from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_builtins import is_numeric_type
 
 
-class TestTypedNumberTypes:
-    """Test the new typed number classes."""
-    
-    def test_integer_type(self):
-        """Test AIFPLInteger type."""
-        val = AIFPLInteger(42)
-        assert val.value == 42
-        assert val.type_name() == "integer"
-        assert val.is_self_evaluating()
-        assert val.to_python() == 42
-    
-    def test_float_type(self):
-        """Test AIFPLFloat type."""
-        val = AIFPLFloat(3.14)
-        assert val.value == 3.14
-        assert val.type_name() == "float"
-        assert val.is_self_evaluating()
-        assert val.to_python() == 3.14
-    
-    def test_complex_type(self):
-        """Test AIFPLComplex type."""
-        val = AIFPLComplex(3+4j)
-        assert val.value == 3+4j
-        assert val.type_name() == "complex"
-        assert val.is_self_evaluating()
-        assert val.to_python() == 3+4j
-
-
 class TestParserWithTypedNumbers:
     """Test parser with use_typed_numbers flag."""
     

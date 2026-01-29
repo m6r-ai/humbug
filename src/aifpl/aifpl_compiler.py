@@ -9,8 +9,7 @@ from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLString, AIFPLBoolean,
-    AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction
+    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
 )
 
 
@@ -338,7 +337,7 @@ class AIFPLCompiler:
                 if len(expr.elements) != 2:
                     raise AIFPLEvalError(
                         message="Quote expression has wrong number of arguments",
-                        received=f"Got {len(expr.elements) - 1} arguments: {self._format_result(expr)}",
+                        received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
                         expected="Exactly 1 argument",
                         example="(quote expr) or 'expr",
                         suggestion="Quote requires exactly one expression to quote"
@@ -372,7 +371,7 @@ class AIFPLCompiler:
         if len(expr.elements) != 4:
             raise AIFPLEvalError(
                 message="If expression has wrong number of arguments",
-                received=f"Got {len(expr.elements) - 1} arguments: {self._format_result(expr)}",
+                received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
                 expected="Exactly 3 arguments: (if condition then else)",
                 example="(if (> x 0) \"positive\" \"negative\")",
                 suggestion="If needs condition, then-branch, and else-branch"
@@ -1157,132 +1156,3 @@ class AIFPLCompiler:
 
         # Emit call
         ctx.emit(Opcode.CALL_FUNCTION, len(arg_exprs))
-
-    def _format_result(self, result: AIFPLValue) -> str:
-        """
-        Format result for display, using LISP conventions for lists and booleans.
-
-        Args:
-            result: The result to format
-
-        Returns:
-            String representation of the result
-        """
-        if isinstance(result, AIFPLBoolean):
-            return "#t" if result.value else "#f"
-
-        if isinstance(result, AIFPLString):
-            escaped_content = self._escape_string_for_lisp(result.value)
-            return f'"{escaped_content}"'
-
-        if isinstance(result, AIFPLInteger):
-            return str(result.value)
-
-        if isinstance(result, AIFPLFloat):
-            nice_number = self._is_close_to_nice_number(result.value)
-            if nice_number is not None:
-                # If it's close to an integer, show as integer
-                if nice_number == int(nice_number):
-                    return str(int(nice_number))
-
-                return str(nice_number)
-
-            return str(result.value)
-
-        if isinstance(result, AIFPLComplex):
-            return str(result.value)
-
-        if isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            # Old unified number type - format based on value type
-            if isinstance(result.value, int):
-                return str(result.value)
-
-            if isinstance(result.value, complex):
-                return str(result.value)
-
-            # Float
-            if isinstance(result.value, float):
-                nice_number = self._is_close_to_nice_number(result.value)
-                if nice_number is not None:
-                    # If it's close to an integer, show as integer
-                    if nice_number == int(nice_number):
-                        return str(int(nice_number))
-
-                    return str(nice_number)
-
-            return str(result.value)
-
-        if isinstance(result, AIFPLList):
-            # Format list in LISP notation: (element1 element2 ...)
-            if result.is_empty():
-                return "()"
-
-            formatted_elements = []
-            for element in result.elements:
-                formatted_elements.append(self._format_result(element))
-
-            return f"({' '.join(formatted_elements)})"
-
-        if isinstance(result, AIFPLAList):
-            # Format alist in LISP notation: (alist (key1 val1) (key2 val2) ...)
-            if result.is_empty():
-                return "(alist)"
-
-            formatted_pairs = []
-            for key, value in result.pairs:
-                formatted_key = self._format_result(key)
-                formatted_value = self._format_result(value)
-                formatted_pairs.append(f"({formatted_key} {formatted_value})")
-
-            pairs_str = ' '.join(formatted_pairs)
-            return f"(alist {pairs_str})"
-
-        if isinstance(result, AIFPLFunction):
-            # Use the describe method which handles both native and user-defined
-            if result.is_native:
-                return f"<builtin {result.name}>"
-
-            param_str = " ".join(result.parameters)
-            return f"<lambda ({param_str})>"
-
-        # For other types, use standard string representation
-        return str(result)
-
-    def _escape_string_for_lisp(self, s: str) -> str:
-        """Escape a string for LISP display format."""
-        result = []
-        for char in s:
-            if char == '"':
-                result.append('\\"')
-
-            elif char == '\\':
-                result.append('\\\\')
-
-            elif char == '\n':
-                result.append('\\n')
-
-            elif char == '\t':
-                result.append('\\t')
-
-            elif char == '\r':
-                result.append('\\r')
-
-            elif ord(char) < 32:  # Other control characters
-                result.append(f'\\u{ord(char):04x}')
-
-            else:
-                result.append(char)  # Keep Unicode as-is
-
-        return ''.join(result)
-
-    def _is_close_to_nice_number(self, value: float) -> float | None:
-        """Check if a float is very close to a 'nice' number and return the nice number if so."""
-        # Check if it's close to common fractions with small denominators
-        for denominator in range(1, 11):  # Check denominators 1-10
-            for numerator in range(-50, 51):  # Check reasonable range
-                nice_value = numerator / denominator
-                # Use a small tolerance for floating point comparison
-                if abs(value - nice_value) < 1e-10:
-                    return nice_value
-
-        return None

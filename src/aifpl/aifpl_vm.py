@@ -9,8 +9,7 @@ from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction, AIFPLAList
+    AIFPLValue, AIFPLInteger, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction,
 )
 
 
@@ -404,7 +403,7 @@ class AIFPLVM:
         if not isinstance(func, AIFPLFunction):
             raise AIFPLEvalError(
                 message="Cannot call non-function value",
-                received=f"Attempted to call: {self.format_result(func)} ({func.type_name()})",
+                received=f"Attempted to call: {func.describe()} ({func.type_name()})",
                 expected="Function (lambda or builtin)",
                 suggestion="Only functions can be called"
             )
@@ -624,89 +623,3 @@ class AIFPLVM:
 
         # Call through the registry
         return self._builtin_registry.call_builtin(builtin_name, args)
-
-    def format_result(self, result: AIFPLValue) -> str:
-        """
-        Format result for display in error messages, using LISP conventions.
-
-        Args:
-            result: The result to format
-
-        Returns:
-            String representation of the result
-        """
-        if isinstance(result, AIFPLBoolean):
-            return "#t" if result.value else "#f"
-
-        if isinstance(result, AIFPLString):
-            escaped_content = self._escape_string_for_lisp(result.value)
-            return f'"{escaped_content}"'
-
-        if isinstance(result, (AIFPLInteger, AIFPLFloat)):
-            return str(result.value)
-
-        if isinstance(result, AIFPLComplex):
-            return str(result.value).strip('()')
-
-        if isinstance(result, AIFPLList):
-            # Format list in LISP notation: (element1 element2 ...)
-            if result.is_empty():
-                return "()"
-
-            formatted_elements = []
-            for element in result.elements:
-                formatted_elements.append(self.format_result(element))
-
-            return f"({' '.join(formatted_elements)})"
-
-        if isinstance(result, AIFPLAList):
-            # Format alist in LISP notation
-            if result.is_empty():
-                return "(alist)"
-
-            formatted_pairs = []
-            for key, value in result.pairs:
-                formatted_key = self.format_result(key)
-                formatted_value = self.format_result(value)
-                formatted_pairs.append(f"(list {formatted_key} {formatted_value})")
-
-            pairs_str = ' '.join(formatted_pairs)
-            return f"(alist {pairs_str})"
-
-        if isinstance(result, AIFPLFunction):
-            # Use the describe method which handles both native and user-defined
-            if result.is_native:
-                return f"<builtin {result.name}>"
-
-            param_str = " ".join(result.parameters)
-            return f"<lambda ({param_str})>"
-
-        # For other types, use standard string representation
-        return str(result)
-
-    def _escape_string_for_lisp(self, s: str) -> str:
-        """Escape a string for LISP display format."""
-        result = []
-        for char in s:
-            if char == '"':
-                result.append('\\"')
-
-            elif char == '\\':
-                result.append('\\\\')
-
-            elif char == '\n':
-                result.append('\\n')
-
-            elif char == '\t':
-                result.append('\\t')
-
-            elif char == '\r':
-                result.append('\\r')
-
-            elif ord(char) < 32:  # Other control characters
-                result.append(f'\\u{ord(char):04x}')
-
-            else:
-                result.append(char)  # Keep Unicode as-is
-
-        return ''.join(result)

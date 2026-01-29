@@ -15,10 +15,6 @@ class AIFPLValue(ABC):
     """
 
     @abstractmethod
-    def is_self_evaluating(self) -> bool:
-        """Return True if this value evaluates to itself (doesn't need evaluation)."""
-
-    @abstractmethod
     def to_python(self) -> Any:
         """Convert to Python value for operations."""
 
@@ -26,20 +22,24 @@ class AIFPLValue(ABC):
     def type_name(self) -> str:
         """Return AIFPL type name for error messages."""
 
+    @abstractmethod
+    def describe(self) -> str:
+        """Describe the value."""
+
 
 @dataclass(frozen=True)
 class AIFPLInteger(AIFPLValue):
     """Represents integer values."""
     value: int
 
-    def is_self_evaluating(self) -> bool:
-        return True
-
     def to_python(self) -> int:
         return self.value
 
     def type_name(self) -> str:
         return "integer"
+
+    def describe(self) -> str:
+        return str(self.value)
 
     def __eq__(self, other: Any) -> bool:
         """Compare numeric values, allowing cross-type comparison."""
@@ -58,14 +58,14 @@ class AIFPLFloat(AIFPLValue):
     """Represents floating-point values."""
     value: float
 
-    def is_self_evaluating(self) -> bool:
-        return True
-
     def to_python(self) -> float:
         return self.value
 
     def type_name(self) -> str:
         return "float"
+
+    def describe(self) -> str:
+        return str(self.value)
 
     def __eq__(self, other: Any) -> bool:
         """Compare numeric values, allowing cross-type comparison."""
@@ -84,14 +84,14 @@ class AIFPLComplex(AIFPLValue):
     """Represents complex number values."""
     value: complex
 
-    def is_self_evaluating(self) -> bool:
-        return True
-
     def to_python(self) -> complex:
         return self.value
 
     def type_name(self) -> str:
         return "complex"
+
+    def describe(self) -> str:
+        return str(self.value).strip('()')
 
     def __eq__(self, other: Any) -> bool:
         """Compare numeric values, allowing cross-type comparison."""
@@ -110,14 +110,42 @@ class AIFPLString(AIFPLValue):
     """Represents string values."""
     value: str
 
-    def is_self_evaluating(self) -> bool:
-        return True
-
     def to_python(self) -> str:
         return self.value
 
     def type_name(self) -> str:
         return "string"
+
+    def _escape_string(self, s: str) -> str:
+        """Escape a string for display format."""
+        result = []
+        for char in s:
+            if char == '"':
+                result.append('\\"')
+
+            elif char == '\\':
+                result.append('\\\\')
+
+            elif char == '\n':
+                result.append('\\n')
+
+            elif char == '\t':
+                result.append('\\t')
+
+            elif char == '\r':
+                result.append('\\r')
+
+            elif ord(char) < 32:  # Other control characters
+                result.append(f'\\u{ord(char):04x}')
+
+            else:
+                result.append(char)  # Keep Unicode as-is
+
+        return ''.join(result)
+
+    def describe(self) -> str:
+        escaped_content = self._escape_string(self.value)
+        return f'"{escaped_content}"'
 
 
 @dataclass(frozen=True)
@@ -125,14 +153,14 @@ class AIFPLBoolean(AIFPLValue):
     """Represents boolean values."""
     value: bool
 
-    def is_self_evaluating(self) -> bool:
-        return True
-
     def to_python(self) -> bool:
         return self.value
 
     def type_name(self) -> str:
         return "boolean"
+
+    def describe(self) -> str:
+        return "#t" if self.value else "#f"
 
 
 @dataclass(frozen=True)
@@ -140,15 +168,15 @@ class AIFPLSymbol(AIFPLValue):
     """Represents symbols that require environment lookup."""
     name: str
 
-    def is_self_evaluating(self) -> bool:
-        return False
-
     def to_python(self) -> str:
         """Symbols convert to their name string."""
         return self.name
 
     def type_name(self) -> str:
         return "symbol"
+
+    def describe(self) -> str:
+        return self.name
 
     def __str__(self) -> str:
         return self.name
@@ -162,15 +190,23 @@ class AIFPLList(AIFPLValue):
     """Represents lists of AIFPL values."""
     elements: Tuple[AIFPLValue, ...] = ()
 
-    def is_self_evaluating(self) -> bool:
-        return False
-
     def to_python(self) -> List[Any]:
         """Convert to Python list with Python values."""
         return [elem.to_python() for elem in self.elements]
 
     def type_name(self) -> str:
         return "list"
+
+    def describe(self) -> str:
+        # Format list: (element1 element2 ...)
+        if self.is_empty():
+            return "()"
+
+        formatted_elements = []
+        for element in self.elements:
+            formatted_elements.append(element.describe())
+
+        return f"({' '.join(formatted_elements)})"
 
     def length(self) -> int:
         """Return the length of the list."""
@@ -263,9 +299,6 @@ class AIFPLAList(AIFPLValue):
             lookup[hashable_key] = (key, value)
         object.__setattr__(self, '_lookup', lookup)
 
-    def is_self_evaluating(self) -> bool:
-        return True
-
     def to_python(self) -> dict:
         """Convert to Python dict."""
         result = {}
@@ -287,6 +320,20 @@ class AIFPLAList(AIFPLValue):
     def type_name(self) -> str:
         """Return type name for error messages."""
         return "alist"
+
+    def describe(self) -> str:
+        # Format alist in notation: (alist (list key1 val1) (list key2 val2) ...)
+        if self.is_empty():
+            return "(alist)"
+
+        formatted_pairs = []
+        for key, value in self.pairs:
+            formatted_key = key.describe()
+            formatted_value = value.describe()
+            formatted_pairs.append(f"(list {formatted_key} {formatted_value})")
+
+        pairs_str = ' '.join(formatted_pairs)
+        return f"(alist {pairs_str})"
 
     def get(self, key: AIFPLValue) -> AIFPLValue | None:
         """Get value by key, returns None if not found."""
@@ -434,9 +481,6 @@ class AIFPLFunction(AIFPLValue):
         if not has_body and not has_native:
             raise ValueError("Function must have either body/bytecode or native_impl")
 
-    def is_self_evaluating(self) -> bool:
-        return True
-
     def to_python(self) -> 'AIFPLFunction | str':
         """Functions return themselves (or their name for builtins as string)."""
         return self
@@ -459,58 +503,6 @@ class AIFPLFunction(AIFPLValue):
             param_str = f"{regular_params} . {rest_param}".strip(' .')
 
         if self.is_native:
-            return f"<builtin {self.name}({param_str})>"
+            return f"<builtin {self.name} ({param_str})>"
 
         return f"<lambda ({param_str})>"
-
-
-class AIFPLRecursivePlaceholder(AIFPLValue):
-    """Placeholder for recursive bindings that resolves to actual value when accessed."""
-
-    def __init__(self, name: str):
-        self._name = name
-        self._resolved_value: AIFPLValue | None = None
-
-    def resolve(self, value: AIFPLValue) -> None:
-        """Resolve the placeholder to an actual value."""
-        self._resolved_value = value
-
-    def get_resolved_value(self) -> AIFPLValue:
-        """Get the resolved value, handling recursive calls."""
-        if self._resolved_value is None:
-            raise AIFPLEvalError(f"Recursive placeholder '{self._name}' accessed before resolution")
-
-        return self._resolved_value
-
-    def is_self_evaluating(self) -> bool:
-        return False
-
-    def to_python(self) -> Any:
-        return self.get_resolved_value().to_python()
-
-    def type_name(self) -> str:
-        return f"recursive-placeholder({self._name})"
-
-
-@dataclass(frozen=True)
-class AIFPLTailCall(AIFPLValue):
-    """
-    Represents a tail call to be optimized.
-
-    This is a special internal value type that represents a deferred function call
-    for tail call optimization. It should never be visible to user code and is
-    only used internally by the evaluator.
-    """
-    function: AIFPLValue
-    arguments: List[AIFPLValue]
-    environment: Any  # AIFPLEnvironment, avoiding circular import
-
-    def to_python(self) -> Any:
-        """Tail calls should never be converted to Python values."""
-        raise AIFPLEvalError("Internal error: AIFPLTailCall should never be converted to Python value")
-
-    def type_name(self) -> str:
-        return "tail-call"
-
-    def is_self_evaluating(self) -> bool:
-        return False

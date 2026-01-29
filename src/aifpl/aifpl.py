@@ -103,11 +103,11 @@ class AIFPL:
                       Note: VM uses tail-call optimization, so deep recursion is supported
         """
         self.max_depth = max_depth
-        
+
         # VM components (always used)
         self.compiler = AIFPLCompiler()
         self.vm = AIFPLVM()
-        
+
         # Load prelude once at initialization
         self._prelude = self._load_prelude(self.compiler, self.vm)
 
@@ -136,7 +136,7 @@ class AIFPL:
 
         # Compile
         code = self.compiler.compile(parsed_expr)
-        
+
         # Execute
         result = self.vm.execute(code, self.CONSTANTS, self._prelude)
 
@@ -168,9 +168,9 @@ class AIFPL:
 
         # Compile
         code = self.compiler.compile(parsed_expr)
-        
+
         # Execute
         result = self.vm.execute(code, self.CONSTANTS, self._prelude)
 
         # VM returns AIFPLValue, format it
-        return self.vm.format_result(result)
+        return result.describe()

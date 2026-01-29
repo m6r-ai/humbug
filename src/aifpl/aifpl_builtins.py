@@ -183,9 +183,9 @@ class AIFPLBuiltinRegistry:
             'sin': ('x',), 'cos': ('x',), 'tan': ('x',),
             'log': ('x',), 'log10': ('x',), 'exp': ('x',),
             'round': ('x',), 'floor': ('x',), 'ceil': ('x',),
+
             # Binary functions
             'pow': ('base', 'exponent'),
-            # Add more as needed...
         }
 
         # Default to ('a', 'b') for unknown fixed-arity functions
