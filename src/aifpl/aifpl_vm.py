@@ -1,5 +1,6 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
+import difflib
 from typing import List, Dict, Any
 from dataclasses import dataclass, field
 
@@ -7,7 +8,7 @@ from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_environment import AIFPLEnvironment
-from aifpl.aifpl_error import AIFPLEvalError, ErrorMessageBuilder
+from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction,
 )
@@ -41,7 +42,6 @@ class AIFPLVM:
         self.stack: List[AIFPLValue] = []
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
-        self.message_builder = ErrorMessageBuilder()
 
         # Create builtin registry
         self._builtin_registry = AIFPLBuiltinRegistry()
@@ -262,7 +262,7 @@ class AIFPLVM:
 
         # Not found - generate helpful error
         available_vars = list(self.globals.keys())
-        similar = self.message_builder.suggest_similar_functions(name, available_vars, max_suggestions=3)
+        similar = difflib.get_close_matches(name, available_vars, n=3, cutoff=0.6)
 
         suggestion_text = (
             f"Did you mean: {', '.join(similar)}?" if similar

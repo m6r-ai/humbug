@@ -4,7 +4,7 @@
 from aifpl.aifpl import AIFPL
 
 # Exceptions (enhanced with detailed context)
-from aifpl.aifpl_error import AIFPLError, AIFPLTokenError, AIFPLParseError, AIFPLEvalError, ErrorMessageBuilder
+from aifpl.aifpl_error import AIFPLError, AIFPLTokenError, AIFPLParseError, AIFPLEvalError
 
 # Value types
 from aifpl.aifpl_value import (
@@ -24,7 +24,7 @@ __all__ = [
     "AIFPL",
 
     # Exceptions (enhanced with detailed context)
-    "AIFPLError", "AIFPLTokenError", "AIFPLParseError", "AIFPLEvalError", "ErrorMessageBuilder",
+    "AIFPLError", "AIFPLTokenError", "AIFPLParseError", "AIFPLEvalError",
 
     # Value types
     "AIFPLValue", "AIFPLInteger", "AIFPLFloat", "AIFPLComplex",

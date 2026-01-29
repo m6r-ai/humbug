@@ -2,7 +2,7 @@
 
 from typing import List
 from dataclasses import dataclass
-from aifpl.aifpl_error import AIFPLParseError, ErrorMessageBuilder
+from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
@@ -55,7 +55,6 @@ class AIFPLParser:
         self.pos = 0
         self.current_token: AIFPLToken | None = tokens[0] if tokens else None
         self.expression = expression
-        self.message_builder = ErrorMessageBuilder()
 
         # Paren stack for tracking unclosed expressions
         self.paren_stack: List[ParenStackFrame] = []
