@@ -115,8 +115,10 @@ class AIFPLLexer:
                             if expression[escape_pos] == '\\n':
                                 escape_line += 1
                                 escape_col = 1
+
                             else:
                                 escape_col += 1
+
                             escape_pos += 1
 
                         bad_escape = expression[escape_pos:escape_pos+2]
@@ -377,44 +379,6 @@ class AIFPLLexer:
                     "sequences like \\n, \\t, or \\uXXXX in strings."
             )
 
-    def _read_complete_token(self, expression: str, start: int, start_line: int, start_col: int) -> str:
-        """
-        Read a complete token until delimiter, following LISP tokenization rules.
-
-        Validates that no control characters are present in the token.
-
-        Returns:
-            The complete token string
-
-        Raises:
-            AIFPLTokenError: If a control character is encountered
-        """
-        i = start
-        curr_line = start_line
-        curr_col = start_col
-
-        # Consume characters until we hit a delimiter
-        while i < len(expression):
-            char = expression[i]
-
-            # Check for control characters before processing
-            self._check_for_control_character(char, curr_line, curr_col)
-
-            # Update line/column for next iteration
-            if char == '\n':
-                curr_line += 1
-                curr_col = 1
-
-            else:
-                curr_col += 1
-
-            if self._is_delimiter(char):
-                break
-
-            i += 1
-
-        return expression[start:i]
-
     def _is_valid_number(self, token: str) -> bool:
         """
         Check if a complete token is a valid number format.
@@ -527,7 +491,31 @@ class AIFPLLexer:
             AIFPLTokenError: If the token is not a valid number
         """
         # Get the complete token until delimiter (this will check for control characters)
-        complete_token = self._read_complete_token(expression, start, start_line, start_col)
+        i = start
+        curr_line = start_line
+        curr_col = start_col
+
+        # Consume characters until we hit a delimiter
+        while i < len(expression):
+            char = expression[i]
+
+            # Check for control characters before processing
+            self._check_for_control_character(char, curr_line, curr_col)
+
+            # Update line/column for next iteration
+            if char == '\n':
+                curr_line += 1
+                curr_col = 1
+
+            else:
+                curr_col += 1
+
+            if self._is_delimiter(char):
+                break
+
+            i += 1
+
+        complete_token = expression[start:i]
 
         # Check if this is a complex number literal - must have 'j' or 'J' at the end
         last_char = complete_token[-1]
