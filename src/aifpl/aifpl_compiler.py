@@ -588,26 +588,9 @@ class AIFPLCompiler:
         analyzer = AIFPLDependencyAnalyzer()
         binding_groups = analyzer.analyze_letrec_bindings(binding_pairs)
 
-        # Topologically sort the groups based on their dependencies
-        # (The SCC algorithm should return them in the right order, but let's be explicit)
-        sorted_groups = []
-        remaining_groups = list(binding_groups)
-        processed_names: Set[str] = set()
-
-        while remaining_groups:
-            # Find a group with no unprocessed dependencies
-            for i, group in enumerate(remaining_groups):
-                if group.depends_on.issubset(processed_names):
-                    sorted_groups.append(group)
-                    processed_names.update(group.names)
-                    remaining_groups.pop(i)
-                    break
-
-            else:
-                # No group found - circular dependency (shouldn't happen)
-                raise AIFPLEvalError("Circular dependency detected in letrec bindings")
-
-        binding_groups = sorted_groups
+        # Note: Tarjan's SCC algorithm already returns groups in topological order
+        # (dependencies before dependents), so no additional sorting is needed.
+        # Any circular dependencies are captured within an SCC, not between SCCs.
 
         # Second pass: Compile values and store them in dependency order
         # Track which bindings are lambdas that reference siblings (for mutual recursion)
