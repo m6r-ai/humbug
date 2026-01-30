@@ -16,7 +16,7 @@ import cmath
 
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
+    AIFPLBoolean, AIFPLSymbol, AIFPLList
 )
 
 
@@ -26,10 +26,10 @@ class ASTOptimizationPass:
     def optimize(self, expr: AIFPLValue) -> AIFPLValue:
         """
         Transform AST, returning optimized version.
-        
+
         Args:
             expr: Input AST expression
-            
+
         Returns:
             Optimized AST expression
         """
@@ -39,11 +39,11 @@ class ASTOptimizationPass:
 class ConstantFoldingPass(ASTOptimizationPass):
     """
     Fold constant expressions at compile time.
-    
+
     This pass evaluates expressions that contain only compile-time constants,
     replacing them with their computed values. This reduces bytecode size and
     improves runtime performance.
-    
+
     Examples:
         (+ 1 2) → 3
         (* 2 3) → 6
@@ -67,13 +67,71 @@ class ConstantFoldingPass(ASTOptimizationPass):
         'bit-shift-left', 'bit-shift-right'
     }
 
+    def __init__(self) -> None:
+        """
+        Initialize the jump table for fast builtin operation dispatch.
+
+        This is called once during initialization to build a dictionary mapping
+        operation names to their corresponding fold methods. This replaces the
+        expensive if-elif chain with O(1) dictionary lookup.
+        """
+        # Build jump table mapping operation names to fold methods
+        self._builtin_jump_table = {
+            # Arithmetic operations
+            '+': self._fold_add,
+            '-': self._fold_subtract,
+            '*': self._fold_multiply,
+            '/': self._fold_divide,
+            '//': self._fold_floor_divide,
+            '%': self._fold_modulo,
+            '**': self._fold_power,
+
+            # Comparison operations
+            '=': self._fold_equal,
+            '!=': self._fold_not_equal,
+            '<': self._fold_less_than,
+            '>': self._fold_greater_than,
+            '<=': self._fold_less_equal,
+            '>=': self._fold_greater_equal,
+
+            # Boolean logic
+            'not': self._fold_not,
+
+            # Math functions
+            'sqrt': self._fold_sqrt,
+            'abs': self._fold_abs,
+            'min': self._fold_min,
+            'max': self._fold_max,
+            'pow': self._fold_pow,
+            'sin': self._fold_sin,
+            'cos': self._fold_cos,
+            'tan': self._fold_tan,
+            'log': self._fold_log,
+            'log10': self._fold_log10,
+            'exp': self._fold_exp,
+            'round': self._fold_round,
+            'floor': self._fold_floor,
+            'ceil': self._fold_ceil,
+            'real': self._fold_real,
+            'imag': self._fold_imag,
+            'complex': self._fold_complex,
+
+            # Bitwise operations
+            'bit-or': self._fold_bit_or,
+            'bit-and': self._fold_bit_and,
+            'bit-xor': self._fold_bit_xor,
+            'bit-not': self._fold_bit_not,
+            'bit-shift-left': self._fold_bit_shift_left,
+            'bit-shift-right': self._fold_bit_shift_right,
+        }
+
     def optimize(self, expr: AIFPLValue) -> AIFPLValue:
         """
         Recursively fold constants in expression tree.
-        
+
         Args:
             expr: Input expression
-            
+
         Returns:
             Optimized expression (may be same as input if no folding possible)
         """
@@ -120,7 +178,7 @@ class ConstantFoldingPass(ASTOptimizationPass):
     def _optimize_special_form(self, expr: AIFPLList, form_name: str) -> AIFPLValue:
         """
         Optimize special forms by recursively optimizing their subexpressions.
-        
+
         We don't fold special forms themselves, but we can optimize their parts.
         """
         if form_name == 'if':
@@ -217,9 +275,11 @@ class ConstantFoldingPass(ASTOptimizationPass):
 
         # Try to evaluate the builtin
         try:
-            result = self._evaluate_builtin(op_name, opt_args)
-            if result is not None:
-                return result
+            fold_func = self._builtin_jump_table.get(op_name)
+            if fold_func is not None:
+                result = fold_func(opt_args)
+                if result is not None:
+                    return result
 
         except Exception:
             # Evaluation failed - preserve runtime error by not folding
@@ -231,7 +291,7 @@ class ConstantFoldingPass(ASTOptimizationPass):
     def _fold_and(self, args: List[AIFPLValue]) -> AIFPLValue:
         """
         Fold 'and' with short-circuit evaluation.
-        
+
         (and) → #t
         (and #f anything) → #f (short-circuit)
         (and #t #t #t) → #t
@@ -315,157 +375,25 @@ class ConstantFoldingPass(ASTOptimizationPass):
         - Symbols (variables)
         - Function calls (even with constant args - we fold those separately)
         """
-        # Numeric and boolean literals
-        if isinstance(expr, (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLBoolean, AIFPLString)):
-            return True
-
-        # Empty list is a constant
-        if isinstance(expr, AIFPLList) and expr.is_empty():
-            return True
+        if isinstance(expr, AIFPLSymbol):
+            return False
 
         # Lists with all constant elements are constants (for quote, etc.)
         # But we don't consider function calls as constants here
         if isinstance(expr, AIFPLList):
+            # Empty list is a constant
+            if expr.is_empty():
+                return True
+
             # If first element is a symbol, it's a function call, not a constant
-            if not expr.is_empty() and isinstance(expr.first(), AIFPLSymbol):
+            if isinstance(expr.first(), AIFPLSymbol):
                 return False
 
             # Otherwise check if all elements are constants
             return all(self._is_constant(elem) for elem in expr.elements)
 
-        # Symbols are not constants
-        return False
-
-    def _evaluate_builtin(self, op_name: str, args: List[AIFPLValue]) -> AIFPLValue | None:
-        """
-        Evaluate a builtin operation on constant arguments.
-
-        Args:
-            op_name: Name of the builtin
-            args: Constant arguments
-
-        Returns:
-            Result value, or None if evaluation fails
-        """
-        # Arithmetic operations
-        if op_name == '+':
-            return self._fold_add(args)
-
-        if op_name == '-':
-            return self._fold_subtract(args)
-
-        if op_name == '*':
-            return self._fold_multiply(args)
-
-        if op_name == '/':
-            return self._fold_divide(args)
-
-        if op_name == '//':
-            return self._fold_floor_divide(args)
-
-        if op_name == '%':
-            return self._fold_modulo(args)
-
-        if op_name == '**':
-            return self._fold_power(args)
-
-        # Comparison operations
-        if op_name == '=':
-            return self._fold_equal(args)
-
-        if op_name == '!=':
-            return self._fold_not_equal(args)
-
-        if op_name == '<':
-            return self._fold_less_than(args)
-
-        if op_name == '>':
-            return self._fold_greater_than(args)
-
-        if op_name == '<=':
-            return self._fold_less_equal(args)
-
-        if op_name == '>=':
-            return self._fold_greater_equal(args)
-
-        # Boolean logic
-        if op_name == 'not':
-            return self._fold_not(args)
-
-        # Math functions
-        if op_name == 'sqrt':
-            return self._fold_sqrt(args)
-
-        if op_name == 'abs':
-            return self._fold_abs(args)
-
-        if op_name == 'min':
-            return self._fold_min(args)
-
-        if op_name == 'max':
-            return self._fold_max(args)
-
-        if op_name == 'pow':
-            return self._fold_pow(args)
-
-        if op_name == 'sin':
-            return self._fold_sin(args)
-
-        if op_name == 'cos':
-            return self._fold_cos(args)
-
-        if op_name == 'tan':
-            return self._fold_tan(args)
-
-        if op_name == 'log':
-            return self._fold_log(args)
-
-        if op_name == 'log10':
-            return self._fold_log10(args)
-
-        if op_name == 'exp':
-            return self._fold_exp(args)
-
-        if op_name == 'round':
-            return self._fold_round(args)
-
-        if op_name == 'floor':
-            return self._fold_floor(args)
-
-        if op_name == 'ceil':
-            return self._fold_ceil(args)
-
-        if op_name == 'real':
-            return self._fold_real(args)
-
-        if op_name == 'imag':
-            return self._fold_imag(args)
-
-        if op_name == 'complex':
-            return self._fold_complex(args)
-
-        # Bitwise operations
-        if op_name == 'bit-or':
-            return self._fold_bit_or(args)
-
-        if op_name == 'bit-and':
-            return self._fold_bit_and(args)
-
-        if op_name == 'bit-xor':
-            return self._fold_bit_xor(args)
-
-        if op_name == 'bit-not':
-            return self._fold_bit_not(args)
-
-        if op_name == 'bit-shift-left':
-            return self._fold_bit_shift_left(args)
-
-        if op_name == 'bit-shift-right':
-            return self._fold_bit_shift_right(args)
-
-        return None
-
-    # Arithmetic operations
+        # Other types are constants
+        return True
 
     def _fold_add(self, args: List[AIFPLValue]) -> AIFPLValue | None:
         """Fold addition: (+ a b c ...) → sum"""

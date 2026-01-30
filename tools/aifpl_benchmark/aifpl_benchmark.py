@@ -632,10 +632,10 @@ def profile_benchmarks(benchmarks: List[Benchmark]):
     s = StringIO()
     stats = pstats.Stats(profiler, stream=s)
     stats.sort_stats('cumulative')
-    stats.print_stats(50)
+    stats.print_stats(80)
 
     print("\n" + "=" * 100)
-    print("PROFILING RESULTS (Top 50 functions by cumulative time)")
+    print("PROFILING RESULTS (Top 80 functions)")
     print("=" * 100)
     print(s.getvalue())
 

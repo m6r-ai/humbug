@@ -29,8 +29,8 @@ class AIFPLLexer:
         self._jump_table[10] = self._handle_newline  # \n
 
         # Special single-character tokens
-        self._jump_table[ord('(')] = self._handle_paren
-        self._jump_table[ord(')')] = self._handle_paren
+        self._jump_table[ord('(')] = self._handle_lparen
+        self._jump_table[ord(')')] = self._handle_rparen
         self._jump_table[ord("'")] = self._handle_quote
         self._jump_table[ord('"')] = self._handle_string
         self._jump_table[ord(';')] = self._handle_comment
@@ -163,11 +163,17 @@ class AIFPLLexer:
             self._column += 1
             self._position += 1
 
-    def _handle_paren(self) -> None:
-        """Handle parentheses."""
+    def _handle_lparen(self) -> None:
+        """Handle left parenthesis."""
         char = self._expression[self._position]
-        token_type = AIFPLTokenType.LPAREN if char == '(' else AIFPLTokenType.RPAREN
-        self._tokens.append(AIFPLToken(token_type, char, 1, self._line, self._column))
+        self._tokens.append(AIFPLToken(AIFPLTokenType.LPAREN, char, 1, self._line, self._column))
+        self._column += 1
+        self._position += 1
+
+    def _handle_rparen(self) -> None:
+        """Handle right parenthesis."""
+        char = self._expression[self._position]
+        self._tokens.append(AIFPLToken(AIFPLTokenType.RPAREN, char, 1, self._line, self._column))
         self._column += 1
         self._position += 1
 

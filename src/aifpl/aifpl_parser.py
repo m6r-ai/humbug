@@ -1,6 +1,6 @@
 """Parser for AIFPL expressions with detailed error messages."""
 
-from typing import List
+from typing import List, cast
 from dataclasses import dataclass
 from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
@@ -105,13 +105,10 @@ class AIFPLParser:
 
     def _parse_expression(self) -> AIFPLValue:
         """Parse a single expression with detailed error reporting."""
-        assert self.current_token is not None, "Current token must not be None here"
-        start_line = self.current_token.line
-        start_col = self.current_token.column
-        token = self.current_token
+        token = cast(AIFPLToken, self.current_token)
 
         if token.type == AIFPLTokenType.LPAREN:
-            return self._parse_list(start_line, start_col)
+            return self._parse_list()
 
         if token.type == AIFPLTokenType.QUOTE:
             return self._parse_quoted_expression()
@@ -382,9 +379,12 @@ class AIFPLParser:
             source=self.expression
         )
 
-    def _parse_list(self, start_line: int, start_col: int) -> AIFPLList:
+    def _parse_list(self) -> AIFPLList:
         """Parse (element1 element2 ...) with enhanced error tracking."""
         # Push opening paren onto tracking stack
+        current_token = cast(AIFPLToken, self.current_token)
+        start_line = current_token.line
+        start_col = current_token.column
         frame = self._push_paren_frame(start_line, start_col)
 
         self._advance()  # consume '('
