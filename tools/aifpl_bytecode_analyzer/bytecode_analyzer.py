@@ -182,8 +182,7 @@ class BytecodeAnalyzer:
         # Desugar
         ast = self.desugarer.desugar(ast)
         
-        # TODO: Add optimization flag to compiler when implemented
-        compiler = AIFPLCompiler()
+        compiler = AIFPLCompiler(optimize=optimize)
         return compiler.compile(ast)
     
     def analyze_code_object(self, code: CodeObject) -> BytecodeStats:

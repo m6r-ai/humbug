@@ -32,3 +32,4 @@
 
 # Ignore benchmark test results
 /tools/aifpl_benchmark/benchmark_results.json
+/tools/aifpl_bytecode_analyzer/optimization_report.md

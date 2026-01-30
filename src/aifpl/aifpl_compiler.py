@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode, make_instruction
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_desugarer import AIFPLDesugarer
+from aifpl.aifpl_ast_optimizer import ASTOptimizer
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
@@ -190,11 +191,18 @@ class AIFPLCompiler:
         'bin', 'hex', 'oct', 'real', 'imag', 'complex',
     ]
 
-    def __init__(self) -> None:
-        """Initialize compiler.
+    def __init__(self, optimize: bool = True) -> None:
         """
+        Initialize compiler.
+
+        Args:
+            optimize: Enable AST optimizations (constant folding, etc.)
+        """
+        self.optimize = optimize
         self.builtin_indices = {name: i for i, name in enumerate(self.BUILTIN_TABLE)}
         self.desugarer = AIFPLDesugarer()
+        if optimize:
+            self.optimizer = ASTOptimizer()
 
     def compile(self, expr: AIFPLValue, name: str = "<module>") -> CodeObject:
         """
@@ -209,6 +217,10 @@ class AIFPLCompiler:
         """
         # Desugar the expression first
         expr = self.desugarer.desugar(expr)
+
+        # Apply optimizations if enabled
+        if self.optimize:
+            expr = self.optimizer.optimize(expr)
 
         ctx = CompilationContext()
 

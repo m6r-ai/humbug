@@ -3,7 +3,7 @@
 import math
 from typing import Union, Dict
 
-from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean
+from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean, AIFPLValue
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
@@ -116,55 +116,15 @@ class AIFPL:
         # Load prelude once at initialization
         self._prelude = self._load_prelude(self.compiler, self.vm)
 
-    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
+    def _evaluate_raw(self, expression: str) -> 'AIFPLValue':
         """
-        Evaluate an AIFPL expression with comprehensive enhanced error reporting.
+        Evaluate an AIFPL expression without error handling.
 
         Args:
             expression: AIFPL expression string to evaluate
 
         Returns:
-            The result of evaluating the expression converted to Python types
-
-        Raises:
-            AIFPLTokenError: If tokenization fails (with detailed context and suggestions)
-            AIFPLParseError: If parsing fails (with detailed context and suggestions)
-            AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
-        """
-        # Lex 
-        lexer = AIFPLLexer()
-        tokens = lexer.lex(expression)
-
-        # Parse
-        parser = AIFPLParser(tokens, expression)
-        parsed_expr = parser.parse()
-
-        # Semantic analysis
-        parsed_expr = self.analyzer.analyze(parsed_expr)
-
-        # Compile
-        code = self.compiler.compile(parsed_expr)
-
-        # Execute
-        result = self.vm.execute(code, self.CONSTANTS, self._prelude)
-
-        # VM returns AIFPLValue, convert to Python
-        return result.to_python()
-
-    def evaluate_and_format(self, expression: str) -> str:
-        """
-        Evaluate an AIFPL expression and return formatted result with comprehensive enhanced error reporting.
-
-        Args:
-            expression: AIFPL expression string to evaluate
-
-        Returns:
-            String representation of the result using LISP conventions
-
-        Raises:
-            AIFPLTokenError: If tokenization fails (with detailed context and suggestions)
-            AIFPLParseError: If parsing fails (with detailed context and suggestions)
-            AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
+            The result of evaluating the expression as AIFPLValue
         """
         # Lex
         lexer = AIFPLLexer()
@@ -183,5 +143,40 @@ class AIFPL:
         # Execute
         result = self.vm.execute(code, self.CONSTANTS, self._prelude)
 
-        # VM returns AIFPLValue, format it
+        return result
+
+    def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
+        """
+        Evaluate an AIFPL expression with comprehensive enhanced error reporting.
+
+        Args:
+            expression: AIFPL expression string to evaluate
+
+        Returns:
+            The result of evaluating the expression converted to Python types
+
+        Raises:
+            AIFPLTokenError: If tokenization fails (with detailed context and suggestions)
+            AIFPLParseError: If parsing fails (with detailed context and suggestions)
+            AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
+        """
+        result = self._evaluate_raw(expression)
+        return result.to_python()
+
+    def evaluate_and_format(self, expression: str) -> str:
+        """
+        Evaluate an AIFPL expression and return formatted result with comprehensive enhanced error reporting.
+
+        Args:
+            expression: AIFPL expression string to evaluate
+
+        Returns:
+            String representation of the result using LISP conventions
+
+        Raises:
+            AIFPLTokenError: If tokenization fails (with detailed context and suggestions)
+            AIFPLParseError: If parsing fails (with detailed context and suggestions)
+            AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
+        """
+        result = self._evaluate_raw(expression)
         return result.describe()
