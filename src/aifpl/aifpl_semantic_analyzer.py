@@ -14,9 +14,7 @@ before any transformations occur.
 
 from typing import List, cast
 
-from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
-)
+from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList
 from aifpl.aifpl_error import AIFPLEvalError
 
 
@@ -41,15 +39,11 @@ class AIFPLSemanticAnalyzer:
         Raises:
             AIFPLEvalError: If validation fails with detailed error message
         """
-        # Self-evaluating values need no validation
-        if isinstance(expr, (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean, AIFPLSymbol)):
-            return expr
-
         # Lists need inspection
         if isinstance(expr, AIFPLList):
             return self._analyze_list(expr)
 
-        # Unknown type - shouldn't happen after parsing
+        # Self-evaluating values need no validation
         return expr
 
     def _analyze_list(self, expr: AIFPLList) -> AIFPLList:
@@ -387,49 +381,24 @@ class AIFPLSemanticAnalyzer:
             pattern, result_expr = clause.elements
 
             # Validate the pattern
-            self._analyze_pattern(pattern, i + 1)
+            self._analyze_match_pattern(pattern, i + 1)
 
             # Analyze the result expression
             self.analyze(result_expr)
 
         return expr
 
-    def _analyze_pattern(self, pattern: AIFPLValue, clause_num: int) -> None:
+    def _analyze_match_pattern(self, pattern: AIFPLValue, clause_num: int) -> None:
         """
         Validate a match pattern.
 
         Args:
             pattern: Pattern to validate
             clause_num: Clause number (for error messages)
-
-        Raises:
-            AIFPLEvalError: If pattern is invalid
         """
-        # Literal patterns are valid
-        if isinstance(pattern, (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
+        if not isinstance(pattern, AIFPLList):
             return
 
-        # Symbol patterns (variables or wildcard)
-        if isinstance(pattern, AIFPLSymbol):
-            # All symbols are valid (variable binding or wildcard _)
-            return
-
-        # List patterns
-        if isinstance(pattern, AIFPLList):
-            self._analyze_list_pattern(pattern, clause_num)
-            return
-
-        # Unknown pattern type
-        raise AIFPLEvalError(
-            message=f"Invalid pattern in clause {clause_num}",
-            received=f"Pattern type: {pattern.type_name()}",
-            expected="Literal, symbol, or list pattern",
-            example="42, \"text\", x, (number? n), (a b c)",
-            suggestion="Use valid pattern syntax"
-        )
-
-    def _analyze_list_pattern(self, pattern: AIFPLList, clause_num: int) -> None:
-        """Validate a list pattern."""
         # Empty list pattern is valid
         if pattern.is_empty():
             return
@@ -548,18 +517,18 @@ class AIFPLSemanticAnalyzer:
 
             # Recursively validate head patterns
             for i in range(dot_position):
-                self._analyze_pattern(pattern.elements[i], clause_num)
+                self._analyze_match_pattern(pattern.elements[i], clause_num)
 
             # Validate tail pattern
             tail_pattern = cast(AIFPLValue, pattern.elements[dot_position + 1])
-            self._analyze_pattern(tail_pattern, clause_num)
+            self._analyze_match_pattern(tail_pattern, clause_num)
 
             return
 
         # Fixed-length list pattern: (p1 p2 p3)
         # Recursively validate each element pattern
         for elem_pattern in pattern.elements:
-            self._analyze_pattern(elem_pattern, clause_num)
+            self._analyze_match_pattern(elem_pattern, clause_num)
 
     def _analyze_and(self, expr: AIFPLList) -> AIFPLList:
         """Validate and expression: (and arg1 arg2 ...)"""
