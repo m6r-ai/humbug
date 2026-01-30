@@ -5,7 +5,7 @@ from typing import Union, Dict
 
 from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean
 from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_tokenizer import AIFPLTokenizer
+from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
@@ -83,8 +83,8 @@ class AIFPL:
 
         bytecode_prelude: dict[str, AIFPLFunction] = {}
         for name, source_code in cls._PRELUDE_SOURCE.items():
-            tokenizer = AIFPLTokenizer()
-            tokens = tokenizer.tokenize(source_code)
+            lexer = AIFPLLexer()
+            tokens = lexer.lex(source_code)
             parser = AIFPLParser(tokens, source_code)
             expr = parser.parse()
             # Analyze semantics before compilation
@@ -131,9 +131,9 @@ class AIFPL:
             AIFPLParseError: If parsing fails (with detailed context and suggestions)
             AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
         """
-        # Tokenize
-        tokenizer = AIFPLTokenizer()
-        tokens = tokenizer.tokenize(expression)
+        # Lex 
+        lexer = AIFPLLexer()
+        tokens = lexer.lex(expression)
 
         # Parse
         parser = AIFPLParser(tokens, expression)
@@ -166,9 +166,9 @@ class AIFPL:
             AIFPLParseError: If parsing fails (with detailed context and suggestions)
             AIFPLEvalError: If evaluation fails (with detailed context and suggestions)
         """
-        # Tokenize
-        tokenizer = AIFPLTokenizer()
-        tokens = tokenizer.tokenize(expression)
+        # Lex
+        lexer = AIFPLLexer()
+        tokens = lexer.lex(expression)
 
         # Parse
         parser = AIFPLParser(tokens, expression)

@@ -1,12 +1,12 @@
-"""Tests for AIFPL tokenizer edge cases."""
+"""Tests for AIFPL lexer edge cases."""
 
 import pytest
 
 from aifpl import AIFPLError, AIFPLTokenError, AIFPLParseError
 
 
-class TestAIFPLTokenizerEdgeCases:
-    """Test tokenizer edge cases and comprehensive token handling."""
+class TestAIFPLLexerEdgeCases:
+    """Test lexer edge cases and comprehensive token handling."""
 
     def test_whitespace_tokenization_edge_cases(self, aifpl):
         """Test comprehensive whitespace handling in tokenization."""
@@ -278,7 +278,7 @@ class TestAIFPLTokenizerEdgeCases:
         ]
 
         for expr in nested_cases:
-            # Should tokenize without error
+            # Should lex without error
             try:
                 aifpl.evaluate(expr)
                 # If evaluation succeeds, that's fine
@@ -321,7 +321,7 @@ class TestAIFPLTokenizerEdgeCases:
         for expr in quote_cases:
             try:
                 aifpl.evaluate(expr)
-                # Should tokenize without error
+                # Should lex without error
             except AIFPLError:
                 # Evaluation errors are fine, we're testing tokenization
                 pass
@@ -339,7 +339,7 @@ class TestAIFPLTokenizerEdgeCases:
             with pytest.raises(AIFPLTokenError):
                 aifpl.evaluate(expr)
 
-    def test_tokenizer_control_characters_outside_strings(self, aifpl):
+    def test_lexer_control_characters_outside_strings(self, aifpl):
         """Test that control characters outside strings are rejected with proper error messages."""
         # Control characters (ASCII < 32) that are NOT considered whitespace by Python's isspace()
         # Python's isspace() returns True for: 0x09 (tab), 0x0A (newline), 0x0B (vertical tab),
@@ -415,8 +415,8 @@ class TestAIFPLTokenizerEdgeCases:
             result = aifpl.evaluate(expr)
             assert result == expected, "Control characters should be allowed in strings via escape sequences"
 
-    def test_tokenizer_position_tracking(self, aifpl):
-        """Test that tokenizer tracks positions for error reporting."""
+    def test_lexer_position_tracking(self, aifpl):
+        """Test that lexer tracks positions for error reporting."""
         # Test position tracking in error messages
         position_cases = [
             ("@", "@"),         # Invalid char at start
@@ -433,8 +433,8 @@ class TestAIFPLTokenizerEdgeCases:
                 # Error should mention the problematic character or position
                 assert bad_char in error_msg or "position" in error_msg.lower()
 
-    def test_tokenizer_buffer_edge_cases(self, aifpl):
-        """Test tokenizer buffer handling edge cases."""
+    def test_lexer_buffer_edge_cases(self, aifpl):
+        """Test lexer buffer handling edge cases."""
         # Very long tokens
         long_string = '"' + "a" * 1000 + '"'
         result = aifpl.evaluate(long_string)
@@ -449,14 +449,14 @@ class TestAIFPLTokenizerEdgeCases:
         # Very long identifiers (if allowed)
         try:
             long_identifier = "a" * 100
-            # This might be undefined, but should tokenize
+            # This might be undefined, but should lex
             aifpl.evaluate(long_identifier)
         except AIFPLError:
             # Evaluation error is fine, we're testing tokenization
             pass
 
-    def test_tokenizer_unicode_edge_cases(self, aifpl):
-        """Test tokenizer Unicode handling edge cases."""
+    def test_lexer_unicode_edge_cases(self, aifpl):
+        """Test lexer Unicode handling edge cases."""
         # Unicode in strings
         unicode_cases = [
             ('"α"', "α"),           # Greek letter
@@ -486,8 +486,8 @@ class TestAIFPLTokenizerEdgeCases:
             result = aifpl.evaluate(expr)
             assert result == expected
 
-    def test_tokenizer_edge_case_combinations(self, aifpl):
-        """Test tokenizer with edge case combinations."""
+    def test_lexer_edge_case_combinations(self, aifpl):
+        """Test lexer with edge case combinations."""
         # Mixed token types in expressions
         mixed_cases = [
             '(+ 42 3.14)',                      # Integer + float
@@ -499,7 +499,7 @@ class TestAIFPLTokenizerEdgeCases:
         for expr in mixed_cases:
             try:
                 result = aifpl.evaluate(expr)
-                # Should tokenize and evaluate without error
+                # Should lex and evaluate without error
             except AIFPLError:
                 # Some combinations might not be supported
                 pass
@@ -515,9 +515,9 @@ class TestAIFPLTokenizerEdgeCases:
             result = aifpl.evaluate(expr)
             assert result == 3
 
-    def test_tokenizer_error_recovery(self, aifpl):
-        """Test tokenizer error recovery and state management."""
-        # After a tokenization error, tokenizer should be ready for next input
+    def test_lexer_error_recovery(self, aifpl):
+        """Test lexer error recovery and state management."""
+        # After a tokenization error, lexer should be ready for next input
         with pytest.raises(AIFPLTokenError):
             aifpl.evaluate("@invalid")
 
@@ -535,8 +535,8 @@ class TestAIFPLTokenizerEdgeCases:
         result = aifpl.evaluate("(+ 1 2)")
         assert result == 3
 
-    def test_tokenizer_memory_efficiency(self, aifpl):
-        """Test tokenizer memory efficiency with large inputs."""
+    def test_lexer_memory_efficiency(self, aifpl):
+        """Test lexer memory efficiency with large inputs."""
         # Large expression with many tokens
         large_expr = "(+ " + " ".join(str(i) for i in range(1000)) + ")"
         result = aifpl.evaluate(large_expr)
@@ -548,7 +548,7 @@ class TestAIFPLTokenizerEdgeCases:
         assert len(result) == 10000
         assert result == "x" * 10000
 
-    def test_tokenizer_numeric_edge_cases_comprehensive(self, aifpl):
+    def test_lexer_numeric_edge_cases_comprehensive(self, aifpl):
         """Test comprehensive numeric tokenization edge cases."""
         # Edge cases for floating point
         float_edge_cases = [
@@ -579,7 +579,7 @@ class TestAIFPLTokenizerEdgeCases:
             result = aifpl.evaluate(expr)
             assert result == expected
 
-    def test_tokenizer_string_edge_cases_comprehensive(self, aifpl):
+    def test_lexer_string_edge_cases_comprehensive(self, aifpl):
         """Test comprehensive string tokenization edge cases."""
         # Strings with all escape sequences
         escape_comprehensive = [
@@ -615,7 +615,7 @@ class TestAIFPLTokenizerEdgeCases:
             assert result == expected
 
 
-    def test_tokenizer_control_characters_in_tokens(self, aifpl):
+    def test_lexer_control_characters_in_tokens(self, aifpl):
         """Test that control characters are caught even when embedded in tokens."""
         # This tests the fix for the issue where control characters adjacent to
         # other characters (non-isolated) were being consumed as part of a token
@@ -682,7 +682,7 @@ class TestAIFPLTokenizerEdgeCases:
                     f"Expected control character error for {description}, got: {error_msg}"
 
     def test_positive_sign_number_literals(self, aifpl):
-        """Test that numbers with explicit positive sign (+) are correctly tokenized as numbers, not symbols."""
+        """Test that numbers with explicit positive sign (+) are correctly lexed as numbers, not symbols."""
         # Positive integers
         positive_integer_cases = [
             ("+0", 0),

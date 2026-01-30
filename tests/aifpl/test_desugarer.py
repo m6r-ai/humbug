@@ -7,7 +7,7 @@ This module tests the desugarer's ability to transform complex constructs
 import pytest
 
 from aifpl.aifpl_desugarer import AIFPLDesugarer
-from aifpl.aifpl_tokenizer import AIFPLTokenizer
+from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
 from aifpl.aifpl_value import (
@@ -18,8 +18,8 @@ from aifpl.aifpl_error import AIFPLEvalError
 
 def parse_and_analyze_expression(expr_str: str) -> AIFPLValue:
     """Helper to parse and semantically analyze an expression string into AST."""
-    tokenizer = AIFPLTokenizer()
-    tokens = tokenizer.tokenize(expr_str)
+    lexer = AIFPLLexer()
+    tokens = lexer.lex(expr_str)
     parser = AIFPLParser(tokens, expr_str)
     ast = parser.parse()
     # Run semantic analysis before desugaring
@@ -493,8 +493,8 @@ class TestDesugarerMatchErrors:
         """Test error when match has no clauses."""
         # Errors should be caught by semantic analyzer, not desugarer
         analyzer = AIFPLSemanticAnalyzer()
-        tokenizer = AIFPLTokenizer()
-        parser = AIFPLParser(tokenizer.tokenize('(match x)'), '(match x)')
+        lexer = AIFPLLexer()
+        parser = AIFPLParser(lexer.lex('(match x)'), '(match x)')
         expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
@@ -503,8 +503,8 @@ class TestDesugarerMatchErrors:
     def test_match_invalid_clause(self):
         """Test error when match clause is invalid."""
         analyzer = AIFPLSemanticAnalyzer()
-        tokenizer = AIFPLTokenizer()
-        parser = AIFPLParser(tokenizer.tokenize('(match x (42))'), '(match x (42))')
+        lexer = AIFPLLexer()
+        parser = AIFPLParser(lexer.lex('(match x (42))'), '(match x (42))')
         expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="wrong number of elements"):
@@ -513,9 +513,9 @@ class TestDesugarerMatchErrors:
     def test_cons_pattern_dot_at_start(self):
         """Test error when cons pattern has dot at start."""
         analyzer = AIFPLSemanticAnalyzer()
-        tokenizer = AIFPLTokenizer()
+        lexer = AIFPLLexer()
         code = '(match x ((. tail) "bad") (_ "other"))'
-        parser = AIFPLParser(tokenizer.tokenize(code), code)
+        parser = AIFPLParser(lexer.lex(code), code)
         expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="dot at beginning"):
@@ -524,9 +524,9 @@ class TestDesugarerMatchErrors:
     def test_cons_pattern_dot_at_end(self):
         """Test error when cons pattern has dot at end."""
         analyzer = AIFPLSemanticAnalyzer()
-        tokenizer = AIFPLTokenizer()
+        lexer = AIFPLLexer()
         code = '(match x ((head .) "bad") (_ "other"))'
-        parser = AIFPLParser(tokenizer.tokenize(code), code)
+        parser = AIFPLParser(lexer.lex(code), code)
         expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="dot at end"):
@@ -535,9 +535,9 @@ class TestDesugarerMatchErrors:
     def test_cons_pattern_multiple_after_dot(self):
         """Test error when cons pattern has multiple elements after dot."""
         analyzer = AIFPLSemanticAnalyzer()
-        tokenizer = AIFPLTokenizer()
+        lexer = AIFPLLexer()
         code = '(match x ((head . a b) "bad") (_ "other"))'
-        parser = AIFPLParser(tokenizer.tokenize(code), code)
+        parser = AIFPLParser(lexer.lex(code), code)
         expr = parser.parse()
 
         with pytest.raises(AIFPLEvalError, match="multiple elements after dot"):

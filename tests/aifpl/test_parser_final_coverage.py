@@ -1,7 +1,7 @@
 """Final test to achieve 100% coverage - nested let with related_symbol in stack."""
 
 import pytest
-from aifpl import AIFPLTokenizer, AIFPLParser, AIFPLParseError
+from aifpl import AIFPLLexer, AIFPLParser, AIFPLParseError
 
 
 def test_nested_let_with_related_symbol_in_incomplete_bindings_stack():
@@ -11,10 +11,10 @@ def test_nested_let_with_related_symbol_in_incomplete_bindings_stack():
     This covers line 523 in _create_incomplete_bindings_error where it adds
     the related_symbol to the stack trace line.
     """
-    tokenizer = AIFPLTokenizer()
+    lexer = AIFPLLexer()
     # Outer let with binding 'x', inner let with binding 'y' that's incomplete
     code = "(let ((x (let ((y 5"
-    tokens = tokenizer.tokenize(code)
+    tokens = lexer.lex(code)
     parser = AIFPLParser(tokens, code)
 
     with pytest.raises(AIFPLParseError) as exc_info:

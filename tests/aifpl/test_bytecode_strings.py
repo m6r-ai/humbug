@@ -3,7 +3,7 @@
 import pytest
 from aifpl import AIFPL
 from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_tokenizer import AIFPLTokenizer
+from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
 from aifpl.aifpl_value import AIFPLBoolean, AIFPLString, AIFPLList, AIFPLInteger, AIFPLFloat, AIFPLComplex
@@ -12,8 +12,8 @@ from aifpl.aifpl_error import AIFPLEvalError
 
 def compile_and_run(expression: str) -> any:
     """Helper to compile and execute an expression."""
-    tokenizer = AIFPLTokenizer()
-    tokens = tokenizer.tokenize(expression)
+    lexer = AIFPLLexer()
+    tokens = lexer.lex(expression)
     ast = AIFPLParser(tokens, expression).parse()
 
     compiler = AIFPLCompiler()

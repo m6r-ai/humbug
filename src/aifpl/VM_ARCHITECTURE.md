@@ -6,20 +6,6 @@ AIFPL includes a bytecode compiler and virtual machine (VM) for efficient execut
 
 ## Architecture Components
 
-### Core Files
-
-- **`aifpl_bytecode.py`** - Opcode definitions and bytecode structures
-- **`aifpl_compiler.py`** - Compiles AIFPL expressions to bytecode
-- **`aifpl_vm.py`** - Virtual machine that executes bytecode
-- **`aifpl_builtins.py`** - Registry of builtin functions
-
-### Execution Flow
-
-```
-Source Code → Tokenizer → Parser → Compiler → Bytecode → VM → Result
-   (string)     (tokens)   (AST)   (CodeObject)  (execute)  (value)
-```
-
 ## Bytecode Structure
 
 ### CodeObject

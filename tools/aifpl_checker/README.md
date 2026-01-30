@@ -15,7 +15,7 @@ A standalone tool for validating parenthesis balance in AIFPL files. Provides de
 
 ## Installation
 
-No installation needed! The tool uses the AIFPL tokenizer from `src/aifpl`.
+No installation needed! The tool uses the AIFPL lexer from `src/aifpl`.
 
 ## Usage
 
@@ -192,7 +192,7 @@ Line | Depth | Code
 
 ## How It Works
 
-1. **Tokenization**: Uses the robust AIFPL tokenizer to parse the file, correctly handling:
+1. **Lexing**: Uses the robust AIFPL lexer to parse the file, correctly handling:
    - String literals with embedded parens: `"(hello)"`
    - Comments with parens: `; (comment)`
    - Complex numbers: `3+4j`
@@ -254,9 +254,9 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
 python -m tools.aifpl_checker.checker file.aifpl
 ```
 
-### Tokenization Errors
+### Lexer Errors
 
-If the tokenizer reports errors (invalid syntax, bad escape sequences, etc.), fix those first before checking paren balance.
+If the lexer reports errors (invalid syntax, bad escape sequences, etc.), fix those first before checking paren balance.
 
 ## Limitations
 

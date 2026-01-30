@@ -2,7 +2,7 @@
 
 import pytest
 
-from aifpl import AIFPLTokenError, AIFPLTokenType, AIFPLTokenizer
+from aifpl import AIFPLTokenError, AIFPLTokenType, AIFPLLexer
 
 
 class TestComplexNumberLiterals:
@@ -142,9 +142,9 @@ class TestComplexNumberLiterals:
         # Complex constructor still works
         assert aifpl.evaluate("(complex 3 4)") == 3+4j
 
-    def test_tokenizer_complex_token_types(self):
-        """Test that tokenizer produces correct token types for complex literals."""
-        tokenizer = AIFPLTokenizer()
+    def test_lexer_complex_token_types(self):
+        """Test that lexer produces correct token types for complex literals."""
+        lexer = AIFPLLexer()
 
         test_cases = [
             ("1j", AIFPLTokenType.COMPLEX, 1j),
@@ -157,7 +157,7 @@ class TestComplexNumberLiterals:
         ]
 
         for expr, expected_type, expected_value in test_cases:
-            tokens = tokenizer.tokenize(expr)
+            tokens = lexer.lex(expr)
             assert len(tokens) == 1, f"Expected 1 token for '{expr}', got {len(tokens)}"
             token = tokens[0]
             assert token.type == expected_type, \
@@ -216,7 +216,7 @@ class TestComplexNumberLiterals:
 
     def test_invalid_complex_literals(self):
         """Test that invalid complex literal formats are rejected."""
-        tokenizer = AIFPLTokenizer()
+        lexer = AIFPLLexer()
 
         invalid_cases = [
             "3+4",       # No 'j' suffix
@@ -229,9 +229,9 @@ class TestComplexNumberLiterals:
 
         for expr in invalid_cases:
             try:
-                tokens = tokenizer.tokenize(expr)
-                # Some of these might tokenize but fail differently
-                # (e.g., "3+4" would tokenize as three tokens: 3, +, 4)
+                tokens = lexer.lex(expr)
+                # Some of these might lex but fail differently
+                # (e.g., "3+4" would lex as three tokens: 3, +, 4)
                 # We're mainly testing that "3+4jk" etc. fail at tokenization
                 if 'j' in expr and expr.endswith('j') and any(c.isalpha() and c not in 'jJ' for c in expr):
                     pytest.fail(f"Expected tokenization error for invalid complex: {expr}")
@@ -329,7 +329,7 @@ class TestComplexNumberLiterals:
 
     def test_complex_separator_detection(self):
         """Test that complex separator detection handles scientific notation correctly."""
-        tokenizer = AIFPLTokenizer()
+        lexer = AIFPLLexer()
 
         # These should all parse correctly - the separator finder must not
         # confuse the minus in scientific notation with the complex separator
@@ -341,7 +341,7 @@ class TestComplexNumberLiterals:
         ]
 
         for expr, expected in scientific_cases:
-            tokens = tokenizer.tokenize(expr)
+            tokens = lexer.lex(expr)
             assert len(tokens) == 1
             token = tokens[0]
             assert token.type == AIFPLTokenType.COMPLEX

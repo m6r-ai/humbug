@@ -3,8 +3,8 @@
 AIFPL Unified Performance Benchmark Suite
 
 Comprehensive benchmarking tool for AIFPL that measures:
-- Full pipeline performance (tokenize + parse + semantic analysis + desugar + compile + execute)
-- Compilation performance (tokenize + parse + semantic analysis + desugar + compile)
+- Full pipeline performance (lex + parse + semantic analysis + desugar + compile + execute)
+- Compilation performance (lex + parse + semantic analysis + desugar + compile)
 - Execution performance (VM bytecode execution only)
 
 Features:
@@ -40,7 +40,7 @@ from typing import List, Dict, Any
 #sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from aifpl import AIFPL
-from aifpl.aifpl_tokenizer import AIFPLTokenizer
+from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
 from aifpl.aifpl_desugarer import AIFPLDesugarer
@@ -56,12 +56,12 @@ class BenchmarkResult:
     expression: str
     iterations: int
 
-    # Full pipeline (tokenize + parse + analyze + desugar + compile + execute)
+    # Full pipeline (lex + parse + analyze + desugar + compile + execute)
     full_mean: float
     full_median: float
     full_std_dev: float
 
-    # Compilation only (tokenize + parse + analyze + desugar + compile)
+    # Compilation only (lex + parse + analyze + desugar + compile)
     compile_mean: float
     compile_median: float
     compile_std_dev: float
@@ -125,7 +125,7 @@ class Benchmark:
             iterations_multiplier: Multiply iteration counts by this factor for better statistics
         """
         # Setup - parse and compile once for execution-only benchmarks
-        tokenizer = AIFPLTokenizer()
+        lexer = AIFPLLexer()
         analyzer = AIFPLSemanticAnalyzer()
         desugarer = AIFPLDesugarer()
         compiler = AIFPLCompiler()
@@ -137,7 +137,7 @@ class Benchmark:
         constants = AIFPL.CONSTANTS
 
         # Pre-compile for execution-only benchmark
-        tokens = tokenizer.tokenize(self.expression)
+        tokens = lexer.lex(self.expression)
         ast = AIFPLParser(tokens, self.expression).parse()
         ast = analyzer.analyze(ast)
         ast = desugarer.desugar(ast)
@@ -163,7 +163,7 @@ class Benchmark:
         compile_times = []
         for _ in range(actual_iterations):
             start = time.perf_counter()
-            tokens = tokenizer.tokenize(self.expression)
+            tokens = lexer.lex(self.expression)
             ast = AIFPLParser(tokens, self.expression).parse()
             ast = analyzer.analyze(ast)
             ast = desugarer.desugar(ast)

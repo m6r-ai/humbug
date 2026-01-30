@@ -6,7 +6,7 @@ work correctly when enabled via the parser flag.
 
 import pytest
 from aifpl import AIFPLInteger, AIFPLFloat, AIFPLComplex
-from aifpl.aifpl_tokenizer import AIFPLTokenizer
+from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_builtins import is_numeric_type
 
@@ -16,8 +16,8 @@ class TestParserWithTypedNumbers:
     
     def test_parser_creates_old_types_by_default(self):
         """Parser should create typed numbers."""
-        tokenizer = AIFPLTokenizer()
-        tokens = tokenizer.tokenize("42")
+        lexer = AIFPLLexer()
+        tokens = lexer.lex("42")
         parser = AIFPLParser(tokens, "42")
         result = parser.parse()
         
@@ -26,8 +26,8 @@ class TestParserWithTypedNumbers:
     
     def test_parser_creates_integer_with_flag(self):
         """With flag enabled, parser should create AIFPLInteger."""
-        tokenizer = AIFPLTokenizer()
-        tokens = tokenizer.tokenize("42")
+        lexer = AIFPLLexer()
+        tokens = lexer.lex("42")
         parser = AIFPLParser(tokens, "42")
         parser.use_typed_numbers = True
         result = parser.parse()
@@ -37,8 +37,8 @@ class TestParserWithTypedNumbers:
     
     def test_parser_creates_float_with_flag(self):
         """With flag enabled, parser should create AIFPLFloat."""
-        tokenizer = AIFPLTokenizer()
-        tokens = tokenizer.tokenize("3.14")
+        lexer = AIFPLLexer()
+        tokens = lexer.lex("3.14")
         parser = AIFPLParser(tokens, "3.14")
         parser.use_typed_numbers = True
         result = parser.parse()
@@ -48,8 +48,8 @@ class TestParserWithTypedNumbers:
     
     def test_parser_creates_complex_with_flag(self):
         """With flag enabled, parser should create AIFPLComplex."""
-        tokenizer = AIFPLTokenizer()
-        tokens = tokenizer.tokenize("(+ 3 (* 4 1j))")
+        lexer = AIFPLLexer()
+        tokens = lexer.lex("(+ 3 (* 4 1j))")
         parser = AIFPLParser(tokens, "(+ 3 (* 4 1j))")
         parser.use_typed_numbers = True
         result = parser.parse()

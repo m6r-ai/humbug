@@ -6,7 +6,7 @@ from pathlib import Path
 from dataclasses import dataclass
 from typing import List, Tuple, Optional
 
-from aifpl.aifpl_tokenizer import AIFPLTokenizer
+from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_token import AIFPLTokenType
 from aifpl.aifpl_error import AIFPLTokenError
 
@@ -197,10 +197,10 @@ class ParenChecker:
             print(f"Error reading file: {e}", file=sys.stderr)
             return False
 
-        # Tokenize the file
-        tokenizer = AIFPLTokenizer()
+        # Lex the file
+        lexer = AIFPLLexer()
         try:
-            tokens = tokenizer.tokenize(content)
+            tokens = lexer.lex(content)
 
         except AIFPLTokenError as e:
             print(f"Tokenization error: {e}", file=sys.stderr)

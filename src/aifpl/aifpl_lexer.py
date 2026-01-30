@@ -6,15 +6,15 @@ from aifpl.aifpl_error import AIFPLTokenError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 
 
-class AIFPLTokenizer:
-    """Tokenizes AIFPL expressions into tokens with detailed error messages."""
+class AIFPLLexer:
+    """Lexes AIFPL expressions into tokens with detailed error messages."""
 
-    def tokenize(self, expression: str) -> List[AIFPLToken]:
+    def lex(self, expression: str) -> List[AIFPLToken]:
         """
-        Tokenize an AIFPL expression with detailed error reporting.
+        Lex an AIFPL expression with detailed error reporting.
 
         Args:
-            expression: The expression string to tokenize
+            expression: The expression string to lex
 
         Returns:
             List of tokens
