@@ -716,7 +716,7 @@ class AIFPLLexer:
 
         except ValueError:
             # Not a valid number but the ValueError exception isn't interesting to propagate
-            raise AIFPLTokenError(  # pylint: disable=raise-missing-from
+            raise AIFPLTokenError(
                 message=f"Invalid number format: {complete_token}",
                 line=start_line,
                 column=start_col,
@@ -725,7 +725,7 @@ class AIFPLLexer:
                 suggestion=f"Fix the number format: {complete_token}",
                 context="Token appears to be a number but contains invalid characters",
                 example="Valid: 1.23, .5, 42, 1e-10, 3+4j. For hex/binary/octal use: #xFF, #b1010, #o755"
-            )
+            ) from None
 
         # Parse the valid number
         number_value: int | float
