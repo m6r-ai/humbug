@@ -121,8 +121,3 @@ class CodeObject:
     def disassemble(self) -> str:
         """Return disassembled bytecode for debugging."""
         return repr(self)
-
-
-def make_instruction(opcode: Opcode, arg1: int = 0, arg2: int = 0) -> Instruction:
-    """Helper to create instruction."""
-    return Instruction(opcode, arg1, arg2)

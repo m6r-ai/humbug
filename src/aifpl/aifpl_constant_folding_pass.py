@@ -1,42 +1,23 @@
-"""AIFPL AST Optimizer - Optimizes AST before bytecode compilation.
+"""
+AIFPL AST Optimizer - Optimizes AST before bytecode compilation.
 
 This module provides a framework for AST optimization passes that run after
 desugaring but before bytecode compilation. Optimizations transform the AST
 while preserving runtime semantics.
-
-Architecture:
-    ASTOptimizationPass - Base class for optimization passes
-    ConstantFoldingPass - Folds constant expressions at compile time
-    ASTOptimizer - Orchestrates multiple optimization passes
 """
 
 from typing import List
 import math
 import cmath
 
+from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
     AIFPLBoolean, AIFPLSymbol, AIFPLList
 )
 
 
-class ASTOptimizationPass:
-    """Base class for AST optimization passes."""
-
-    def optimize(self, expr: AIFPLValue) -> AIFPLValue:
-        """
-        Transform AST, returning optimized version.
-
-        Args:
-            expr: Input AST expression
-
-        Returns:
-            Optimized AST expression
-        """
-        raise NotImplementedError
-
-
-class ConstantFoldingPass(ASTOptimizationPass):
+class AIFPLConstantFoldingPass(AIFPLOptimizationPass):
     """
     Fold constant expressions at compile time.
 
@@ -268,11 +249,7 @@ class ConstantFoldingPass(ASTOptimizationPass):
 
         Can eliminate branches if condition is a constant boolean.
         """
-        if len(expr.elements) != 4:
-            # Malformed if - just optimize elements
-            optimized_elements = [self.optimize(elem) for elem in expr.elements]
-            return AIFPLList(tuple(optimized_elements))
-
+        assert len(expr.elements) == 4  # Earlier semantic analysis should ensure this
         _, condition, then_expr, else_expr = expr.elements
 
         # Optimize the condition
@@ -298,30 +275,20 @@ class ConstantFoldingPass(ASTOptimizationPass):
 
         Optimizes binding values and body.
         """
-        if len(expr.elements) != 3:
-            # Malformed let - just optimize elements
-            optimized_elements = [self.optimize(elem) for elem in expr.elements]
-            return AIFPLList(tuple(optimized_elements))
-
+        assert len(expr.elements) == 3  # Earlier semantic analysis should ensure this
         form_symbol, bindings_list, body = expr.elements
 
         # Optimize binding values
         opt_bindings_list: AIFPLValue
-        if isinstance(bindings_list, AIFPLList):
-            opt_bindings: List[AIFPLValue] = []
-            for binding in bindings_list.elements:
-                if isinstance(binding, AIFPLList) and len(binding.elements) == 2:
-                    var, val = binding.elements
-                    opt_val = self.optimize(val)
-                    opt_bindings.append(AIFPLList((var, opt_val)))
+        assert isinstance(bindings_list, AIFPLList)
+        opt_bindings: List[AIFPLValue] = []
+        for binding in bindings_list.elements:
+            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2
+            var, val = binding.elements
+            opt_val = self.optimize(val)
+            opt_bindings.append(AIFPLList((var, opt_val)))
 
-                else:
-                    opt_bindings.append(binding)
-
-            opt_bindings_list = AIFPLList(tuple(opt_bindings))
-
-        else:
-            opt_bindings_list = bindings_list
+        opt_bindings_list = AIFPLList(tuple(opt_bindings))
 
         # Optimize body
         opt_body = self.optimize(body)
@@ -329,14 +296,10 @@ class ConstantFoldingPass(ASTOptimizationPass):
 
     def _optimize_lambda(self, expr: AIFPLList) -> AIFPLValue:
         """Optimize 'lambda' special form: (lambda (params) body)"""
-        if len(expr.elements) == 3:
-            lambda_symbol, params, body = expr.elements
-            opt_body = self.optimize(body)
-            return AIFPLList((lambda_symbol, params, opt_body))
-
-        # Malformed lambda - just optimize elements
-        optimized_elements = [self.optimize(elem) for elem in expr.elements]
-        return AIFPLList(tuple(optimized_elements))
+        assert len(expr.elements) == 3  # Earlier semantic analysis should ensure this
+        lambda_symbol, params, body = expr.elements
+        opt_body = self.optimize(body)
+        return AIFPLList((lambda_symbol, params, opt_body))
 
     def _optimize_quote(self, expr: AIFPLList) -> AIFPLValue:
         """Optimize 'quote' special form - quoted expressions are not evaluated."""
@@ -995,50 +958,3 @@ class ConstantFoldingPass(ASTOptimizationPass):
             return AIFPLComplex(value)
 
         raise ValueError(f"Unsupported numeric type: {type(value)}")
-
-
-class ASTOptimizer:
-    """
-    Orchestrates AST optimization passes.
-
-    This class manages multiple optimization passes and applies them in sequence
-    to transform the AST before bytecode compilation.
-    """
-
-    def __init__(self, enable_passes: List[str] | None = None):
-        """
-        Initialize with optional pass selection.
-
-        Args:
-            enable_passes: List of pass names to enable, or None for all passes
-        """
-        all_passes = {
-            'constant_folding': ConstantFoldingPass(),
-            # Future passes can be added here:
-            # 'dead_code_elimination': DeadCodeEliminationPass(),
-            # 'common_subexpression_elimination': CSEPass(),
-        }
-
-        if enable_passes is None:
-            # Enable all passes by default
-            self.passes = list(all_passes.values())
-
-        else:
-            # Enable only specified passes
-            self.passes = [all_passes[name] for name in enable_passes if name in all_passes]
-
-    def optimize(self, expr: AIFPLValue) -> AIFPLValue:
-        """
-        Run all enabled optimization passes in sequence.
-
-        Args:
-            expr: Input AST expression
-
-        Returns:
-            Optimized AST expression
-        """
-        optimized = expr
-        for pass_instance in self.passes:
-            optimized = pass_instance.optimize(optimized)
-
-        return optimized

@@ -3,10 +3,10 @@
 from typing import List, Dict, Tuple, Set, cast
 from dataclasses import dataclass, field
 
-from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode, make_instruction
+from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_desugarer import AIFPLDesugarer
-from aifpl.aifpl_ast_optimizer import ASTOptimizer
+from aifpl.aifpl_optimizer import AIFPLOptimizer
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
@@ -143,7 +143,7 @@ class CompilationContext:
 
     def emit(self, opcode: Opcode, arg1: int = 0, arg2: int = 0) -> int:
         """Emit an instruction and return its index."""
-        instr = make_instruction(opcode, arg1, arg2)
+        instr = Instruction(opcode, arg1, arg2)
         index = len(self.instructions)
         self.instructions.append(instr)
         return index
@@ -202,7 +202,7 @@ class AIFPLCompiler:
         self.builtin_indices = {name: i for i, name in enumerate(self.BUILTIN_TABLE)}
         self.desugarer = AIFPLDesugarer()
         if optimize:
-            self.optimizer = ASTOptimizer()
+            self.optimizer = AIFPLOptimizer()
 
     def compile(self, expr: AIFPLValue, name: str = "<module>") -> CodeObject:
         """
