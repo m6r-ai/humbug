@@ -83,32 +83,17 @@ class AIFPLLexer:
             # Use jump table for ASCII, fallback to slow path for non-ASCII
             char_code = ord(char)
             if char_code < 128:
-                handler = self._jump_table[char_code]
+                self._jump_table[char_code]()
+                continue
 
-            else:
-                # Non-ASCII characters - use slow path
-                handler = self._get_handler_slow(char)
+            # Non-ASCII characters - use slow path
+            if char.isalpha():
+                self._handle_symbol()
+                continue
 
-            handler()
+            self._handle_invalid_char()
 
         return self._tokens
-
-    def _get_handler_slow(self, char: str) -> Callable[[], None]:
-        """
-        Slow path for non-ASCII characters.
-
-        Args:
-            char: The character to find a handler for
-
-        Returns:
-            Handler function for this character type
-        """
-        # Symbols
-        if self._is_symbol_start(char):
-            return self._handle_symbol
-
-        # Invalid character
-        return self._handle_invalid_char
 
     def _handle_dot(self) -> None:
         """Handle period - could be start of decimal number (.5) or symbol (.)."""
@@ -742,10 +727,6 @@ class AIFPLLexer:
     def _is_delimiter(self, char: str) -> bool:
         """Check if character is a token delimiter."""
         return char.isspace() or char in "()'\";,"
-
-    def _is_symbol_start(self, char: str) -> bool:
-        """Check if character can start a symbol."""
-        return char.isalpha() or char in '+-*/%<>=!&|^~_.'
 
     def _parse_complex_literal(self, token: str, start_line: int, start_col: int) -> complex:
         """
