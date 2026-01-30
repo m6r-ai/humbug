@@ -1,6 +1,6 @@
 """Tokenizer for AIFPL expressions with detailed error messages."""
 
-from typing import List, Union, Any
+from typing import List, Union
 
 from aifpl.aifpl_error import AIFPLTokenError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
@@ -26,29 +26,6 @@ class AIFPLLexer:
         i = 0
         line = 1  # Current line number (1-indexed)
         column = 1  # Current column number (1-indexed)
-
-        def make_token(
-            token_type: AIFPLTokenType,
-            value: Any,
-            length: int = 1,
-            token_line: int | None = None,
-            token_col: int | None = None
-        ) -> AIFPLToken:
-            """Helper to create token with line/column info."""
-            # Use current line/column if not explicitly provided
-            tl = token_line if token_line is not None else line
-            tc = token_col if token_col is not None else column
-            return AIFPLToken(token_type, value, length, tl, tc)
-
-        def advance_position(char: str) -> None:
-            """Update line/column based on character."""
-            nonlocal line, column
-            if char == '\n':
-                line += 1
-                column = 1
-
-            else:
-                column += 1
 
         while i < len(expression):
             next_char = expression[i]
@@ -76,20 +53,20 @@ class AIFPLLexer:
 
             # Parentheses
             if next_char == '(':
-                tokens.append(make_token(AIFPLTokenType.LPAREN, '('))
+                tokens.append(AIFPLToken(AIFPLTokenType.LPAREN, '(', 1, line, column))
                 column += 1
                 i += 1
                 continue
 
             if next_char == ')':
-                tokens.append(make_token(AIFPLTokenType.RPAREN, ')'))
+                tokens.append(AIFPLToken(AIFPLTokenType.RPAREN, ')', 1, line, column))
                 column += 1
                 i += 1
                 continue
 
             # Quote character
             if next_char == "'":
-                tokens.append(make_token(AIFPLTokenType.QUOTE, "'"))
+                tokens.append(AIFPLToken(AIFPLTokenType.QUOTE, "'", 1, line, column))
                 column += 1
                 i += 1
                 continue
@@ -101,10 +78,16 @@ class AIFPLLexer:
                     string_line = line
                     string_col = column
                     string_value, length = self._read_string(expression, i)
-                    tokens.append(make_token(AIFPLTokenType.STRING, string_value, length, string_line, string_col))
+                    tokens.append(AIFPLToken(AIFPLTokenType.STRING, string_value, length, string_line, string_col))
+
                     # Advance position for each character in the string
                     for j in range(length):
-                        advance_position(expression[i + j])
+                        if expression[i + j] == '\n':
+                            line += 1
+                            column = 1
+
+                        else:
+                            column += 1
 
                     i += length
                     continue
@@ -173,7 +156,7 @@ class AIFPLLexer:
                         )
 
                     boolean_value = expression[i + 1] == 't'
-                    tokens.append(make_token(AIFPLTokenType.BOOLEAN, boolean_value, 2))
+                    tokens.append(AIFPLToken(AIFPLTokenType.BOOLEAN, boolean_value, 2, line, column))
                     column += 2
                     i += 2
                     continue
@@ -199,7 +182,7 @@ class AIFPLLexer:
                     number_line = line
                     number_col = column
                     number_value, length, token_type = self._read_number(expression, i, number_line, number_col)
-                    tokens.append(make_token(token_type, number_value, length, number_line, number_col))
+                    tokens.append(AIFPLToken(token_type, number_value, length, number_line, number_col))
                     column += length
                     i += length
                     continue
@@ -213,7 +196,7 @@ class AIFPLLexer:
                 symbol_line = line
                 symbol_col = column
                 symbol, length = self._read_symbol(expression, i, symbol_line, symbol_col)
-                tokens.append(make_token(AIFPLTokenType.SYMBOL, symbol, length, symbol_line, symbol_col))
+                tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, length, symbol_line, symbol_col))
                 column += length
                 i += length
                 continue
