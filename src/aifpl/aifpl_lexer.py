@@ -197,7 +197,7 @@ class AIFPLLexer:
                 # Save line/column at start of symbol
                 symbol_line = line
                 symbol_col = column
-                symbol, length = self._read_symbol(expression, i, symbol_line, symbol_col)
+                symbol, length = self._read_symbol(expression, i)
                 tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, length, symbol_line, symbol_col))
                 column += length
                 i += length
@@ -656,7 +656,7 @@ class AIFPLLexer:
         """Check if character can start a symbol."""
         return char.isalpha() or char in '+-*/%<>=!&|^~_.'
 
-    def _read_symbol(self, expression: str, start: int, start_line: int, start_col: int) -> tuple[str, int]:
+    def _read_symbol(self, expression: str, start: int) -> tuple[str, int]:
         """
         Read a symbol from the expression.
 
@@ -669,29 +669,15 @@ class AIFPLLexer:
             AIFPLTokenError: If a control character is encountered
         """
         i = start
-        curr_line = start_line
-        curr_col = start_col
 
         while i < len(expression):
             char = expression[i]
 
             # Symbol characters: letters, digits, hyphens, and operator chars
-            if char.isalnum() or char in '-+*/%<>=!&|^~?_.':
-                # Check for control characters before adding to symbol
-                self._check_for_control_character(char, curr_line, curr_col)
-
-                # Update line/column for next iteration
-                if char == '\n':
-                    curr_line += 1
-                    curr_col = 1
-
-                else:
-                    curr_col += 1
-
-                i += 1
-
-            else:
+            if not char.isalnum() and char not in '-+*/%<>=!&|^~?_.':
                 break
+
+            i += 1
 
         symbol = expression[start:i]
         return symbol, i - start
