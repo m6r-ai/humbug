@@ -17,6 +17,47 @@ class AIFPLLexer:
         self._line = 1
         self._column = 1
 
+        # Build jump table for ASCII characters (0-127)
+        # This provides O(1) lookup instead of O(n) if/elif chain
+        self._jump_table: List[Callable[[], None]] = [self._handle_invalid_char] * 128
+
+        # Whitespace characters (except newline which is handled separately)
+        for code in [9, 11, 12, 13, 32]:  # \t, \v, \f, \r, space
+            self._jump_table[code] = self._handle_whitespace
+
+        # Newline
+        self._jump_table[10] = self._handle_newline  # \n
+
+        # Special single-character tokens
+        self._jump_table[ord('(')] = self._handle_paren
+        self._jump_table[ord(')')] = self._handle_paren
+        self._jump_table[ord("'")] = self._handle_quote
+        self._jump_table[ord('"')] = self._handle_string
+        self._jump_table[ord(';')] = self._handle_comment
+        self._jump_table[ord('#')] = self._handle_hash
+
+        # Digits - all lead to number handling
+        for code in range(ord('0'), ord('9') + 1):
+            self._jump_table[code] = self._handle_number
+
+        # Period - could be decimal number or symbol
+        self._jump_table[ord('.')] = self._handle_dot
+
+        # Plus and minus - could be number or symbol
+        self._jump_table[ord('+')] = self._handle_plus_minus
+        self._jump_table[ord('-')] = self._handle_plus_minus
+
+        # Letters - all lead to symbol handling
+        for code in range(ord('a'), ord('z') + 1):
+            self._jump_table[code] = self._handle_symbol
+
+        for code in range(ord('A'), ord('Z') + 1):
+            self._jump_table[code] = self._handle_symbol
+
+        # Other symbol-starting characters
+        for char in '*/%<>=!&|^~_':
+            self._jump_table[ord(char)] = self._handle_symbol
+
     def lex(self, expression: str) -> List[AIFPLToken]:
         """
         Lex an AIFPL expression with detailed error reporting.
@@ -39,15 +80,22 @@ class AIFPLLexer:
         while self._position < len(self._expression):
             char = self._expression[self._position]
 
-            # Get the appropriate handler for this character
-            handler = self._get_handler(char)
+            # Use jump table for ASCII, fallback to slow path for non-ASCII
+            char_code = ord(char)
+            if char_code < 128:
+                handler = self._jump_table[char_code]
+
+            else:
+                # Non-ASCII characters - use slow path
+                handler = self._get_handler_slow(char)
+
             handler()
 
         return self._tokens
 
-    def _get_handler(self, char: str) -> Callable[[], None]:
+    def _get_handler_slow(self, char: str) -> Callable[[], None]:
         """
-        Get the appropriate handler function for the given character.
+        Slow path for non-ASCII characters.
 
         Args:
             char: The character to find a handler for
@@ -55,44 +103,30 @@ class AIFPLLexer:
         Returns:
             Handler function for this character type
         """
-        # Newlines
-        if char == '\n':
-            return self._handle_newline
-
-        # Whitespace
-        if char.isspace():
-            return self._handle_whitespace
-
-        # Comments
-        if char == ';':
-            return self._handle_comment
-
-        # Parentheses
-        if char in '()':
-            return self._handle_paren
-
-        # Quote
-        if char == "'":
-            return self._handle_quote
-
-        # Strings
-        if char == '"':
-            return self._handle_string
-
-        # Hash literals (booleans and based numbers)
-        if char == '#':
-            return self._handle_hash_literal
-
-        # Numbers
-        if self._is_number_start(self._expression, self._position):
-            return self._handle_number
-
         # Symbols
         if self._is_symbol_start(char):
             return self._handle_symbol
 
         # Invalid character
         return self._handle_invalid_char
+
+    def _handle_dot(self) -> None:
+        """Handle period - could be start of decimal number (.5) or symbol (.)."""
+        # Check if this is a decimal number like .5
+        if self._is_number_start(self._expression, self._position):
+            self._handle_number()
+            return
+
+        self._handle_symbol()
+
+    def _handle_plus_minus(self) -> None:
+        """Handle + or - - could be start of number or symbol."""
+        # Check if this is a number like +42, -3.14, or -#xFF
+        if self._is_number_start(self._expression, self._position):
+            self._handle_number()
+            return
+
+        self._handle_symbol()
 
     def _handle_newline(self) -> None:
         """Handle newline character."""
@@ -140,6 +174,7 @@ class AIFPLLexer:
                 if self._expression[self._position + j] == '\n':
                     self._line += 1
                     self._column = 1
+
                 else:
                     self._column += 1
 
@@ -168,8 +203,10 @@ class AIFPLLexer:
                     if self._expression[escape_pos] == '\n':
                         escape_line += 1
                         escape_col = 1
+
                     else:
                         escape_col += 1
+
                     escape_pos += 1
 
                 bad_escape = self._expression[escape_pos:escape_pos+2]
@@ -186,7 +223,7 @@ class AIFPLLexer:
 
             raise  # Re-raise if not handled
 
-    def _handle_hash_literal(self) -> None:
+    def _handle_hash(self) -> None:
         """Handle hash literals: booleans (#t, #f) or based numbers (#xFF, #b1010, #o755)."""
         if self._position + 1 >= len(self._expression):
             # Lone # at end of input - invalid
@@ -202,7 +239,20 @@ class AIFPLLexer:
 
         # Based numbers (hex, binary, octal)
         if next_char in 'xXbBoO':
-            self._handle_based_number()
+            start_line = self._line
+            start_col = self._column
+
+            try:
+                number_value, length, token_type = self._read_hash_number(
+                    self._expression, self._position, start_line, start_col
+                )
+                self._tokens.append(AIFPLToken(token_type, number_value, length, start_line, start_col))
+                self._column += length
+                self._position += length
+
+            except AIFPLTokenError as e:
+                raise e
+
             return
 
         # Invalid # sequence
@@ -234,22 +284,6 @@ class AIFPLLexer:
         self._column += 2
         self._position += 2
 
-    def _handle_based_number(self) -> None:
-        """Handle hexadecimal, binary, or octal literals (#xFF, #b1010, #o755)."""
-        start_line = self._line
-        start_col = self._column
-
-        try:
-            number_value, length, token_type = self._read_hash_number(
-                self._expression, self._position, start_line, start_col
-            )
-            self._tokens.append(AIFPLToken(token_type, number_value, length, start_line, start_col))
-            self._column += length
-            self._position += length
-
-        except AIFPLTokenError:
-            raise
-
     def _handle_invalid_hash_sequence(self) -> None:
         """Handle invalid # sequence with helpful error message."""
         invalid_char = self._expression[self._position + 1] if self._position + 1 < len(self._expression) else ''
@@ -258,6 +292,7 @@ class AIFPLLexer:
         suggestion = "Use #t for true or #f for false"
         if invalid_char.isdigit():
             suggestion = "For hex/binary/octal use #x, #b, or #o prefix (e.g., #xFF, #b1010, #o755)"
+
         elif invalid_char in 'xXbBoO':
             suggestion = f"Use #{invalid_char} followed by digits (e.g., #xFF, #b1010, #o755)"
 
@@ -277,16 +312,12 @@ class AIFPLLexer:
         start_line = self._line
         start_col = self._column
 
-        try:
-            number_value, length, token_type = self._read_number(
-                self._expression, self._position, start_line, start_col
-            )
-            self._tokens.append(AIFPLToken(token_type, number_value, length, start_line, start_col))
-            self._column += length
-            self._position += length
-
-        except AIFPLTokenError:
-            raise
+        number_value, length, token_type = self._read_number(
+            self._expression, self._position, start_line, start_col
+        )
+        self._tokens.append(AIFPLToken(token_type, number_value, length, start_line, start_col))
+        self._column += length
+        self._position += length
 
     def _handle_symbol(self) -> None:
         """Handle symbols (variables, parameters, functions, constants)."""
@@ -378,14 +409,19 @@ class AIFPLLexer:
 
                 if next_char == '"':
                     result.append('"')
+
                 elif next_char == '\\':
                     result.append('\\')
+
                 elif next_char == 'n':
                     result.append('\n')
+
                 elif next_char == 't':
                     result.append('\t')
+
                 elif next_char == 'r':
                     result.append('\r')
+
                 elif next_char == 'u':
                     # Unicode escape sequence \uXXXX
                     if i + 5 >= len(expression):
@@ -398,6 +434,7 @@ class AIFPLLexer:
                     code_point = int(hex_digits, 16)
                     result.append(chr(code_point))
                     i += 4  # Skip the extra 4 characters (uXXXX)
+
                 else:
                     raise AIFPLTokenError(f"Invalid escape sequence at position {i}: \\{next_char}")
 
@@ -591,7 +628,7 @@ class AIFPLLexer:
                 if format_char in 'xbo':
                     # Delegate to _read_hash_number, adjusting for potential negative sign
                     hash_start = start + hash_pos
-                    value, hash_length, token_type = self._read_hash_number(expression, hash_start, start_line, start_col + hash_pos)
+                    value, _, token_type = self._read_hash_number(expression, hash_start, start_line, start_col + hash_pos)
 
                     # Apply negative sign if present
                     if hash_pos == 1 and complete_token[0] == '-':
@@ -606,8 +643,12 @@ class AIFPLLexer:
             return complex_value, len(complete_token), AIFPLTokenType.COMPLEX
 
         # Validate that this token is a valid real number
-        if not self._is_valid_number(complete_token):
-            raise AIFPLTokenError(
+        try:
+            float(complete_token)
+
+        except ValueError:
+            # Not a valid number but the ValueError exception isn't interesting to propagate
+            raise AIFPLTokenError(  # pylint: disable=raise-missing-from
                 message=f"Invalid number format: {complete_token}",
                 line=start_line,
                 column=start_col,
@@ -619,13 +660,14 @@ class AIFPLLexer:
             )
 
         # Parse the valid number
-        number_value = self._parse_number_value(complete_token)
-
-        # Determine token type based on Python type
-        if isinstance(number_value, int):
-            token_type = AIFPLTokenType.INTEGER
-        else:
+        number_value: int | float
+        if '.' in complete_token or 'e' in complete_token.lower():
+            number_value = float(complete_token)
             token_type = AIFPLTokenType.FLOAT
+
+        else:
+            number_value = int(complete_token)
+            token_type = AIFPLTokenType.INTEGER
 
         return number_value, len(complete_token), token_type
 
@@ -682,10 +724,6 @@ class AIFPLLexer:
         symbol = expression[start:i]
         return symbol, i - start
 
-    # ============================================================================
-    # Validation and parsing helper methods
-    # ============================================================================
-
     def _is_number_start(self, expression: str, pos: int) -> bool:
         """Check if position starts a number literal."""
         char = expression[pos]
@@ -704,8 +742,10 @@ class AIFPLLexer:
             # Negative digit, negative decimal, or negative Scheme-style hex/bin/oct (-#xFF, -#b1010, -#o755)
             if next_char.isdigit():
                 return True
+
             if next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit():
                 return True
+
             if next_char == '#' and pos + 2 < len(expression) and expression[pos + 2] in 'xXbBoO':
                 return True
 
@@ -719,61 +759,12 @@ class AIFPLLexer:
         return False
 
     def _is_delimiter(self, char: str) -> bool:
-        """Check if character is a LISP token delimiter."""
+        """Check if character is a token delimiter."""
         return char.isspace() or char in "()'\";,"
 
     def _is_symbol_start(self, char: str) -> bool:
         """Check if character can start a symbol."""
         return char.isalpha() or char in '+-*/%<>=!&|^~_.'
-
-    def _is_valid_number(self, token: str) -> bool:
-        """
-        Check if a complete token is a valid number format.
-
-        Args:
-            token: The complete token string to validate
-
-        Returns:
-            True if the token represents a valid number
-        """
-        # Handle negative numbers
-        first_char = token[0]
-        check_token = token
-        if first_char == '-':
-            check_token = token[1:]
-
-        # Decimal numbers (int, float, scientific notation)
-        try:
-            float(check_token)
-            return True
-        except ValueError:
-            return False
-
-    def _parse_number_value(self, token: str) -> int | float:
-        """
-        Parse a valid number token into its numeric value.
-
-        Args:
-            token: The complete valid number token
-
-        Returns:
-            The numeric value
-        """
-        # Handle negative numbers
-        first_char = token[0]
-        check_token = token
-        negative = first_char == '-'
-        if negative:
-            check_token = token[1:]
-
-        # Decimal number - use float if it contains . or e/E, otherwise int
-        value: int | float
-        if '.' in check_token or 'e' in check_token.lower():
-            value = float(check_token)
-        else:
-            value = int(check_token)
-
-        return -value if negative else value
 
     def _parse_complex_literal(self, token: str, start_line: int, start_col: int) -> complex:
         """
@@ -800,13 +791,29 @@ class AIFPLLexer:
         token_without_j = token[:-1]
 
         # Try to find the + or - that separates real and imaginary parts
-        separator_pos = self._find_complex_separator(token_without_j)
+        separator_pos = -1
+        i = 0
+        if token and token[0] in '+-':
+            i = 1  # Skip leading sign
+
+        while i < len(token):
+            char = token[i]
+
+            # Check if this is a separator (not part of scientific notation)
+            if char in '+-':
+                # It's a separator if it's not immediately after 'e' or 'E'
+                if i > 0 and token[i-1].lower() != 'e':
+                    separator_pos = i
+                    break
+
+            i += 1
 
         if separator_pos == -1:
             # Pure imaginary number (e.g., "4j", "-5j")
             try:
                 imag_part = float(token_without_j)
                 return complex(0, imag_part)
+
             except ValueError as e:
                 raise AIFPLTokenError(
                     message=f"Invalid imaginary part: {token_without_j}",
@@ -827,6 +834,7 @@ class AIFPLLexer:
             real_part = float(real_part_str) if real_part_str else 0
             imag_part = float(imag_part_str)
             return complex(real_part, imag_part)
+
         except ValueError as e:
             raise AIFPLTokenError(
                 message=f"Invalid complex literal: {token}",
@@ -838,41 +846,3 @@ class AIFPLLexer:
                 suggestion="Check both real and imaginary parts are valid numbers",
                 context=f"Parse error: {str(e)}"
             ) from e
-
-    def _find_complex_separator(self, token: str) -> int:
-        """
-        Find the position of + or - that separates real and imaginary parts.
-
-        Must handle scientific notation correctly (e.g., "1e-10+2" should find the +, not the -)
-
-        Examples:
-        - "3+4" → 1 (position of +)
-        - "3-4" → 1 (position of -)
-        - "1e-10+2" → 5 (position of +, not the - in e-10)
-        - "1.5e2+3.7e-1" → 5 (position of +)
-        - "4" → -1 (no separator, pure imaginary)
-        - "-5" → -1 (leading -, not separator)
-
-        Args:
-            token: Token without the trailing 'j'
-
-        Returns:
-            Position of separator, or -1 if not found (pure imaginary)
-        """
-        # Scan from left to right, skip over scientific notation
-        i = 0
-        if token and token[0] in '+-':
-            i = 1  # Skip leading sign
-
-        while i < len(token):
-            char = token[i]
-
-            # Check if this is a separator (not part of scientific notation)
-            if char in '+-':
-                # It's a separator if it's not immediately after 'e' or 'E'
-                if i > 0 and token[i-1].lower() != 'e':
-                    return i
-
-            i += 1
-
-        return -1  # No separator found
