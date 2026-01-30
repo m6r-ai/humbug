@@ -53,9 +53,16 @@ class AIFPLTokenizer:
         while i < len(expression):
             next_char = expression[i]
 
+            # Skip newlines
+            if next_char == '\n':
+                line += 1
+                column = 1
+                i += 1
+                continue
+
             # Skip whitespace
             if next_char.isspace():
-                advance_position(next_char)
+                column += 1
                 i += 1
                 continue
 
