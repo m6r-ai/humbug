@@ -44,8 +44,8 @@ class AIFPLLexer:
         self._jump_table[ord('.')] = self._handle_dot
 
         # Plus and minus - could be number or symbol
-        self._jump_table[ord('+')] = self._handle_plus_minus
-        self._jump_table[ord('-')] = self._handle_plus_minus
+        self._jump_table[ord('+')] = self._handle_plus
+        self._jump_table[ord('-')] = self._handle_minus
 
         # Letters - all lead to symbol handling
         for code in range(ord('a'), ord('z') + 1):
@@ -113,18 +113,51 @@ class AIFPLLexer:
     def _handle_dot(self) -> None:
         """Handle period - could be start of decimal number (.5) or symbol (.)."""
         # Check if this is a decimal number like .5
-        if self._is_number_start(self._expression, self._position):
+        if self._position + 1 < len(self._expression) and self._expression[self._position + 1].isdigit():
             self._handle_number()
             return
 
         self._handle_symbol()
 
-    def _handle_plus_minus(self) -> None:
-        """Handle + or - - could be start of number or symbol."""
-        # Check if this is a number like +42, -3.14, or -#xFF
-        if self._is_number_start(self._expression, self._position):
-            self._handle_number()
-            return
+    def _handle_plus(self) -> None:
+        """Handle + - could be start of number or symbol."""
+        # Check if this is a number like +42, or +3.14
+        expression = self._expression
+        pos = self._position
+
+        # Positive numbers (explicit + sign)
+        if pos + 1 < len(expression):
+            next_char = expression[pos + 1]
+            if next_char.isdigit():
+                self._handle_number()
+                return
+
+            if next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit():
+                self._handle_number()
+                return
+
+        self._handle_symbol()
+
+    def _handle_minus(self) -> None:
+        """Handle - - could be start of number or symbol."""
+        # Check if this is a number like -3.14 or -#xFF
+        expression = self._expression
+        pos = self._position
+
+        # Negative numbers
+        if pos + 1 < len(expression):
+            next_char = expression[pos + 1]
+            if next_char.isdigit():
+                self._handle_number()
+                return
+
+            if next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit():
+                self._handle_number()
+                return
+
+            if next_char == '#' and pos + 2 < len(expression) and expression[pos + 2] in 'xXbBoO':
+                self._handle_number()
+                return
 
         self._handle_symbol()
 
@@ -264,7 +297,7 @@ class AIFPLLexer:
         if (self._position + 2 < len(self._expression) and not self._is_delimiter(self._expression[self._position + 2])):
             # Find end of the invalid sequence
             end = self._position + 2
-            while end < len(self._expression) and self._expression[end].isalnum():
+            while end < len(self._expression) and not self._is_delimiter(self._expression[end]):
                 end += 1
 
             invalid_literal = self._expression[self._position:end]
@@ -324,7 +357,46 @@ class AIFPLLexer:
         start_line = self._line
         start_col = self._column
 
-        symbol, length = self._read_symbol(self._expression, self._position, start_line, start_col)
+        i = self._position
+
+        while i < len(self._expression):
+            char = self._expression[i]
+
+            # Symbol characters: letters, digits, hyphens, and operator chars
+            if not char.isalnum() and char not in '-+*/%<>=!&|^~?_.':
+                break
+
+            i += 1
+
+        if i < len(self._expression):
+            char = self._expression[i]
+            if not self._is_delimiter(char):
+                char_code = ord(char)
+                if char_code < 32:
+                    char_display = f"\\u{char_code:04x}"
+                    raise AIFPLTokenError(
+                        message=f"Invalid control character in source code: {char_display}",
+                        line=start_line,
+                        column=start_col,
+                        received=f"Control character: {char_display} (code {char_code})",
+                        expected="Valid AIFPL characters or escape sequences in strings",
+                        example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
+                        suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
+                        context="Control characters are not allowed in source code. Use escape "
+                            "sequences like \\n, \\t, or \\uXXXX in strings."
+                    )
+
+                raise AIFPLTokenError(
+                    message=f"Invalid character in symbol: {char}",
+                    line=self._line,
+                    column=i,
+                    received=f"Expression: {self._expression[self._position:i+1]}",
+                    expected="Valid symbol characters: letters, digits, and specific symbols",
+                    suggestion=f"Remove or replace invalid character '{char}' in symbol"
+                )
+
+        symbol = self._expression[self._position:i]
+        length = i - self._position
         self._tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, length, start_line, start_col))
         self._column += length
         self._position += length
@@ -374,10 +446,6 @@ class AIFPLLexer:
             suggestion=suggestion,
             context=context
         )
-
-    # ============================================================================
-    # Helper methods for reading tokens
-    # ============================================================================
 
     def _read_string(self, expression: str, start: int) -> tuple[str, int]:
         """
@@ -624,8 +692,8 @@ class AIFPLLexer:
             # Found a # in the token - it should be a Scheme-style number
             # The # should be at position 0 (positive) or 1 (negative with -)
             if hash_pos <= 1 and hash_pos + 1 < len(complete_token):
-                format_char = complete_token[hash_pos + 1].lower()
-                if format_char in 'xbo':
+                format_char = complete_token[hash_pos + 1]
+                if format_char in 'xXbBoO':
                     # Delegate to _read_hash_number, adjusting for potential negative sign
                     hash_start = start + hash_pos
                     value, _, token_type = self._read_hash_number(expression, hash_start, start_line, start_col + hash_pos)
@@ -670,93 +738,6 @@ class AIFPLLexer:
             token_type = AIFPLTokenType.INTEGER
 
         return number_value, len(complete_token), token_type
-
-    def _read_symbol(self, expression: str, start: int, start_line: int, start_col: int) -> tuple[str, int]:
-        """
-        Read a symbol from the expression.
-
-        Validates that no control characters are present in the symbol.
-
-        Returns:
-            Tuple of (symbol_string, length_consumed)
-
-        Raises:
-            AIFPLTokenError: If an invalid character is encountered
-        """
-        i = start
-
-        while i < len(expression):
-            char = expression[i]
-
-            # Symbol characters: letters, digits, hyphens, and operator chars
-            if not char.isalnum() and char not in '-+*/%<>=!&|^~?_.':
-                break
-
-            i += 1
-
-        if i < len(expression):
-            char = expression[i]
-            if not self._is_delimiter(char):
-                char_code = ord(char)
-                if char_code < 32:
-                    char_display = f"\\u{char_code:04x}"
-                    raise AIFPLTokenError(
-                        message=f"Invalid control character in source code: {char_display}",
-                        line=start_line,
-                        column=start_col,
-                        received=f"Control character: {char_display} (code {char_code})",
-                        expected="Valid AIFPL characters or escape sequences in strings",
-                        example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
-                        suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
-                        context="Control characters are not allowed in source code. Use escape "
-                            "sequences like \\n, \\t, or \\uXXXX in strings."
-                    )
-
-                raise AIFPLTokenError(
-                    message=f"Invalid character in symbol: {char}",
-                    line=start_line,
-                    column=i,
-                    received=f"Expression: {expression[start:i+1]}",
-                    expected="Valid symbol characters: letters, digits, and specific symbols",
-                    suggestion=f"Remove or replace invalid character '{char}' in symbol"
-                )
-
-        symbol = expression[start:i]
-        return symbol, i - start
-
-    def _is_number_start(self, expression: str, pos: int) -> bool:
-        """Check if position starts a number literal."""
-        char = expression[pos]
-
-        # Standard number starts
-        if char.isdigit():
-            return True
-
-        # Decimal numbers starting with a dot (like .5) - ONLY if followed by digit
-        if char == '.' and pos + 1 < len(expression) and expression[pos + 1].isdigit():
-            return True
-
-        # Negative numbers
-        if char == '-' and pos + 1 < len(expression):
-            next_char = expression[pos + 1]
-            # Negative digit, negative decimal, or negative Scheme-style hex/bin/oct (-#xFF, -#b1010, -#o755)
-            if next_char.isdigit():
-                return True
-
-            if next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit():
-                return True
-
-            if next_char == '#' and pos + 2 < len(expression) and expression[pos + 2] in 'xXbBoO':
-                return True
-
-        # Positive numbers (explicit + sign)
-        if char == '+' and pos + 1 < len(expression):
-            next_char = expression[pos + 1]
-            # Positive digit or positive decimal starting with dot (only if followed by digit)
-            if next_char.isdigit() or (next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit()):
-                return True
-
-        return False
 
     def _is_delimiter(self, char: str) -> bool:
         """Check if character is a token delimiter."""
