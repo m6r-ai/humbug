@@ -107,19 +107,26 @@ class AIFPLParser:
         """Parse a single expression with detailed error reporting."""
         token = cast(AIFPLToken, self.current_token)
 
+        # Our if table is quicker than using a jump table.  As we've got to do this sequentially we
+        # try to order the checks by expected frequency.
         if token.type == AIFPLTokenType.LPAREN:
             return self._parse_list()
-
-        if token.type == AIFPLTokenType.QUOTE:
-            return self._parse_quoted_expression()
 
         if token.type == AIFPLTokenType.SYMBOL:
             self._advance()
             return AIFPLSymbol(token.value)
 
+        if token.type == AIFPLTokenType.BOOLEAN:
+            self._advance()
+            return AIFPLBoolean(token.value)
+
         if token.type == AIFPLTokenType.INTEGER:
             self._advance()
             return AIFPLInteger(token.value)
+
+        if token.type == AIFPLTokenType.STRING:
+            self._advance()
+            return AIFPLString(token.value)
 
         if token.type == AIFPLTokenType.FLOAT:
             self._advance()
@@ -129,13 +136,8 @@ class AIFPLParser:
             self._advance()
             return AIFPLComplex(token.value)
 
-        if token.type == AIFPLTokenType.STRING:
-            self._advance()
-            return AIFPLString(token.value)
-
-        if token.type == AIFPLTokenType.BOOLEAN:
-            self._advance()
-            return AIFPLBoolean(token.value)
+        if token.type == AIFPLTokenType.QUOTE:
+            return self._parse_quoted_expression()
 
         # Enhanced error for unexpected tokens
         assert token.type == AIFPLTokenType.RPAREN, f"Unexpected token type ({token.type}) encountered"

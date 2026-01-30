@@ -135,23 +135,10 @@ class ConstantFoldingPass(ASTOptimizationPass):
         Returns:
             Optimized expression (may be same as input if no folding possible)
         """
-        # Literals are already optimal
-        if self._is_constant(expr):
+        # We're only interested in lists.  Anything else we allow to pass through.
+        if not isinstance(expr, AIFPLList):
             return expr
 
-        # Symbols (variables) cannot be folded
-        if isinstance(expr, AIFPLSymbol):
-            return expr
-
-        # Lists may be foldable function calls
-        if isinstance(expr, AIFPLList):
-            return self._optimize_list(expr)
-
-        # Other types pass through unchanged
-        return expr
-
-    def _optimize_list(self, expr: AIFPLList) -> AIFPLValue:
-        """Optimize a list expression (potential function call)."""
         if expr.is_empty():
             return expr
 
