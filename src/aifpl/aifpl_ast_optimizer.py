@@ -53,29 +53,27 @@ class ConstantFoldingPass(ASTOptimizationPass):
     """
 
     # Builtin operations we can fold
-    FOLDABLE_ARITHMETIC = {'+', '-', '*', '/', '//', '%', '**'}
-    FOLDABLE_COMPARISON = {'=', '!=', '<', '>', '<=', '>='}
-    FOLDABLE_LOGIC = {'and', 'or', 'not'}
-    FOLDABLE_MATH = {
+    FOLDABLE_BUILTINS = {
+        '+', '-', '*', '/', '//', '%', '**',
+        '=', '!=', '<', '>', '<=', '>=',
+        'not',
         'sqrt', 'abs', 'min', 'max', 'pow',
         'sin', 'cos', 'tan', 'log', 'log10', 'exp',
         'round', 'floor', 'ceil',
-        'real', 'imag', 'complex'
-    }
-    FOLDABLE_BITWISE = {
+        'real', 'imag', 'complex',
         'bit-or', 'bit-and', 'bit-xor', 'bit-not',
         'bit-shift-left', 'bit-shift-right'
     }
 
     def __init__(self) -> None:
         """
-        Initialize the jump table for fast builtin operation dispatch.
+        Initialize jump tables for fast operation dispatch.
 
         This is called once during initialization to build a dictionary mapping
-        operation names to their corresponding fold methods. This replaces the
-        expensive if-elif chain with O(1) dictionary lookup.
+        operation names to their corresponding fold/optimize methods. This replaces
+        expensive if-elif chains with O(1) dictionary lookup.
         """
-        # Build jump table mapping operation names to fold methods
+        # Build jump table for foldable builtin operations
         self._builtin_jump_table = {
             # Arithmetic operations
             '+': self._fold_add,
@@ -125,6 +123,19 @@ class ConstantFoldingPass(ASTOptimizationPass):
             'bit-shift-right': self._fold_bit_shift_right,
         }
 
+        # Build jump table for special form optimization.  Note we don't include match here because it
+        # has already been removed by desugaring.
+        self._special_form_jump_table = {
+            'and': self._optimize_and,
+            'or': self._optimize_or,
+            'if': self._optimize_if,
+            'let': self._optimize_let,
+            'letrec': self._optimize_let,
+            'lambda': self._optimize_lambda,
+            'quote': self._optimize_quote,
+            'error': self._optimize_error,
+        }
+
     def optimize(self, expr: AIFPLValue) -> AIFPLValue:
         """
         Recursively fold constants in expression tree.
@@ -148,91 +159,188 @@ class ConstantFoldingPass(ASTOptimizationPass):
         if isinstance(first, AIFPLSymbol):
             op_name = first.name
 
-            # Special forms should not be folded (if, let, lambda, etc.)
-            if op_name in {'if', 'let', 'letrec', 'lambda', 'quote', 'match', 'error'}:
-                # Recursively optimize their subexpressions
-                return self._optimize_special_form(expr, op_name)
+            # Check if it's a special form (use jump table)
+            if op_name in self._special_form_jump_table:
+                optimizer = self._special_form_jump_table[op_name]
+                assert optimizer is not None
+                return optimizer(expr)
 
             # Check if it's a foldable builtin
-            if op_name in (self.FOLDABLE_ARITHMETIC | self.FOLDABLE_COMPARISON |
-                          self.FOLDABLE_LOGIC | self.FOLDABLE_MATH | self.FOLDABLE_BITWISE):
+            if op_name in self.FOLDABLE_BUILTINS:
                 return self._try_fold_builtin(op_name, list(expr.elements[1:]))
 
         # Not a foldable call - recursively optimize arguments
         optimized_elements = [self.optimize(elem) for elem in expr.elements]
         return AIFPLList(tuple(optimized_elements))
 
-    def _optimize_special_form(self, expr: AIFPLList, form_name: str) -> AIFPLValue:
+    def _optimize_error(self, expr: AIFPLList) -> AIFPLValue:
         """
-        Optimize special forms by recursively optimizing their subexpressions.
+        Optimize 'error' special form: (error message)
 
-        We don't fold special forms themselves, but we can optimize their parts.
+        Currently, we just recursively optimize all elements.
         """
-        if form_name == 'if':
-            # (if condition then else)
-            if len(expr.elements) == 4:
-                _, condition, then_expr, else_expr = expr.elements
-
-                # Optimize the condition
-                opt_condition = self.optimize(condition)
-
-                # If condition is a constant boolean, we can eliminate branches
-                if isinstance(opt_condition, AIFPLBoolean):
-                    if opt_condition.value:
-                        # Condition is true, return optimized then branch
-                        return self.optimize(then_expr)
-
-                    # Condition is false, return optimized else branch
-                    return self.optimize(else_expr)
-
-                # Can't eliminate, but optimize all branches
-                opt_then = self.optimize(then_expr)
-                opt_else = self.optimize(else_expr)
-                return AIFPLList((expr.elements[0], opt_condition, opt_then, opt_else))
-
-        if form_name in {'let', 'letrec'}:
-            # (let ((var val) ...) body)
-            if len(expr.elements) == 3:
-                form_symbol, bindings_list, body = expr.elements
-
-                # Optimize binding values
-                opt_bindings_list: AIFPLValue
-                if isinstance(bindings_list, AIFPLList):
-                    opt_bindings: List[AIFPLValue] = []
-                    for binding in bindings_list.elements:
-                        if isinstance(binding, AIFPLList) and len(binding.elements) == 2:
-                            var, val = binding.elements
-                            opt_val = self.optimize(val)
-                            opt_bindings.append(AIFPLList((var, opt_val)))
-
-                        else:
-                            opt_bindings.append(binding)
-
-                    opt_bindings_list = AIFPLList(tuple(opt_bindings))
-
-                else:
-                    opt_bindings_list = bindings_list
-
-                # Optimize body
-                opt_body = self.optimize(body)
-
-                return AIFPLList((form_symbol, opt_bindings_list, opt_body))
-
-        if form_name == 'lambda':
-            # (lambda (params) body)
-            if len(expr.elements) == 3:
-                lambda_symbol, params, body = expr.elements
-                # Optimize lambda body
-                opt_body = self.optimize(body)
-                return AIFPLList((lambda_symbol, params, opt_body))
-
-        if form_name == 'quote':
-            # Quoted expressions are not evaluated, don't optimize
-            return expr
-
-        # Default: recursively optimize all elements
         optimized_elements = [self.optimize(elem) for elem in expr.elements]
         return AIFPLList(tuple(optimized_elements))
+
+    def _optimize_and(self, expr: AIFPLList) -> AIFPLValue:
+        """
+        Optimize 'and' special form with short-circuit evaluation.
+
+        (and) → #t
+        (and #f anything) → #f (short-circuit - don't optimize 'anything')
+        (and #t #t #t) → #t
+        (and #t x) → (and x) (remove constant, keep wrapper for type checking)
+        (and #t #t x y) → (and x y) (remove all true constants)
+        """
+        if expr.is_empty() or len(expr.elements) == 1:
+            # (and) → #t
+            return AIFPLBoolean(True)
+
+        # Get arguments (skip the 'and' symbol)
+        args = expr.elements[1:]
+
+        # Optimize arguments one at a time, short-circuiting when possible
+        folded_args = []
+        for arg in args:
+            opt_arg = self.optimize(arg)
+
+            # If we hit a false constant, short-circuit immediately
+            if isinstance(opt_arg, AIFPLBoolean) and not opt_arg.value:
+                return AIFPLBoolean(False)
+
+            # If it's a true constant, we can skip it (doesn't affect result)
+            if isinstance(opt_arg, AIFPLBoolean) and opt_arg.value:
+                continue
+
+            # Non-constant argument - keep it
+            folded_args.append(opt_arg)
+
+        # If all args were true constants, result is true
+        if len(folded_args) == 0:
+            return AIFPLBoolean(True)
+
+        # One or more non-constant args remain - keep 'and' wrapper for runtime type checking
+        return AIFPLList((AIFPLSymbol('and'),) + tuple(folded_args))
+
+    def _optimize_or(self, expr: AIFPLList) -> AIFPLValue:
+        """
+        Optimize 'or' special form with short-circuit evaluation.
+
+        (or) → #f
+        (or #t anything) → #t (short-circuit - don't optimize 'anything')
+        (or #f #f #f) → #f
+        (or #f x) → (or x) (remove constant, keep wrapper for type checking)
+        (or #f #f x y) → (or x y) (remove all false constants)
+        """
+        if expr.is_empty() or len(expr.elements) == 1:
+            # (or) → #f
+            return AIFPLBoolean(False)
+
+        # Get arguments (skip the 'or' symbol)
+        args = expr.elements[1:]
+
+        # Optimize arguments one at a time, short-circuiting when possible
+        folded_args = []
+        for arg in args:
+            opt_arg = self.optimize(arg)
+
+            # If we hit a true constant, short-circuit immediately
+            if isinstance(opt_arg, AIFPLBoolean) and opt_arg.value:
+                return AIFPLBoolean(True)
+
+            # If it's a false constant, we can skip it (doesn't affect result)
+            if isinstance(opt_arg, AIFPLBoolean) and not opt_arg.value:
+                continue
+
+            # Non-constant argument - keep it
+            folded_args.append(opt_arg)
+
+        # If all args were false constants, result is false
+        if len(folded_args) == 0:
+            return AIFPLBoolean(False)
+
+        # One or more non-constant args remain - keep 'or' wrapper for runtime type checking
+        return AIFPLList((AIFPLSymbol('or'),) + tuple(folded_args))
+
+    def _optimize_if(self, expr: AIFPLList) -> AIFPLValue:
+        """
+        Optimize 'if' special form: (if condition then else)
+
+        Can eliminate branches if condition is a constant boolean.
+        """
+        if len(expr.elements) != 4:
+            # Malformed if - just optimize elements
+            optimized_elements = [self.optimize(elem) for elem in expr.elements]
+            return AIFPLList(tuple(optimized_elements))
+
+        _, condition, then_expr, else_expr = expr.elements
+
+        # Optimize the condition
+        opt_condition = self.optimize(condition)
+
+        # If condition is a constant boolean, we can eliminate branches
+        if isinstance(opt_condition, AIFPLBoolean):
+            if opt_condition.value:
+                # Condition is true, return optimized then branch
+                return self.optimize(then_expr)
+
+            # Condition is false, return optimized else branch
+            return self.optimize(else_expr)
+
+        # Can't eliminate, but optimize all branches
+        opt_then = self.optimize(then_expr)
+        opt_else = self.optimize(else_expr)
+        return AIFPLList((expr.elements[0], opt_condition, opt_then, opt_else))
+
+    def _optimize_let(self, expr: AIFPLList) -> AIFPLValue:
+        """
+        Optimize 'let'/'letrec' special form: (let ((var val) ...) body)
+
+        Optimizes binding values and body.
+        """
+        if len(expr.elements) != 3:
+            # Malformed let - just optimize elements
+            optimized_elements = [self.optimize(elem) for elem in expr.elements]
+            return AIFPLList(tuple(optimized_elements))
+
+        form_symbol, bindings_list, body = expr.elements
+
+        # Optimize binding values
+        opt_bindings_list: AIFPLValue
+        if isinstance(bindings_list, AIFPLList):
+            opt_bindings: List[AIFPLValue] = []
+            for binding in bindings_list.elements:
+                if isinstance(binding, AIFPLList) and len(binding.elements) == 2:
+                    var, val = binding.elements
+                    opt_val = self.optimize(val)
+                    opt_bindings.append(AIFPLList((var, opt_val)))
+
+                else:
+                    opt_bindings.append(binding)
+
+            opt_bindings_list = AIFPLList(tuple(opt_bindings))
+
+        else:
+            opt_bindings_list = bindings_list
+
+        # Optimize body
+        opt_body = self.optimize(body)
+        return AIFPLList((form_symbol, opt_bindings_list, opt_body))
+
+    def _optimize_lambda(self, expr: AIFPLList) -> AIFPLValue:
+        """Optimize 'lambda' special form: (lambda (params) body)"""
+        if len(expr.elements) == 3:
+            lambda_symbol, params, body = expr.elements
+            opt_body = self.optimize(body)
+            return AIFPLList((lambda_symbol, params, opt_body))
+
+        # Malformed lambda - just optimize elements
+        optimized_elements = [self.optimize(elem) for elem in expr.elements]
+        return AIFPLList(tuple(optimized_elements))
+
+    def _optimize_quote(self, expr: AIFPLList) -> AIFPLValue:
+        """Optimize 'quote' special form - quoted expressions are not evaluated."""
+        return expr
 
     def _try_fold_builtin(self, op_name: str, args: List[AIFPLValue]) -> AIFPLValue:
         """
@@ -245,142 +353,42 @@ class ConstantFoldingPass(ASTOptimizationPass):
         Returns:
             Folded constant value, or original expression if folding not possible
         """
-        # First, recursively optimize all arguments
-        opt_args = [self.optimize(arg) for arg in args]
+        # Optimize arguments and check if all are constants in a single pass
+        all_constants = True
+        opt_args = []
+        for arg in args:
+            opt_arg = self.optimize(arg)
+            opt_args.append(opt_arg)
 
-        # Special handling for short-circuit operators
-        if op_name == 'and':
-            return self._fold_and(opt_args)
+            # Check if this arg is a constant (only if we haven't already determined it's not all constants)
+            if not all_constants:
+                continue
 
-        if op_name == 'or':
-            return self._fold_or(opt_args)
+            # Symbols are not constants (variables)
+            # Lists with symbol as first element are not constants (function calls)
+            # Everything else is a constant (literals, empty lists, data lists)
+            if isinstance(opt_arg, AIFPLSymbol):
+                all_constants = False
+                continue
 
-        # For other operations, all arguments must be constants
-        if not all(self._is_constant(arg) for arg in opt_args):
-            # Can't fold - return expression with optimized arguments
-            return AIFPLList((AIFPLSymbol(op_name),) + tuple(opt_args))
+            if isinstance(opt_arg, AIFPLList) and not opt_arg.is_empty() and isinstance(opt_arg.first(), AIFPLSymbol):
+                all_constants = False
 
-        # Try to evaluate the builtin
-        try:
-            fold_func = self._builtin_jump_table.get(op_name)
-            if fold_func is not None:
+        if all_constants:
+            # Try to evaluate the builtin
+            try:
+                fold_func = self._builtin_jump_table.get(op_name)
+                assert fold_func is not None
                 result = fold_func(opt_args)
                 if result is not None:
                     return result
 
-        except Exception:
-            # Evaluation failed - preserve runtime error by not folding
-            pass
+            except Exception:
+                # Evaluation failed - preserve runtime error by not folding
+                pass
 
         # Couldn't fold - return expression with optimized arguments
         return AIFPLList((AIFPLSymbol(op_name),) + tuple(opt_args))
-
-    def _fold_and(self, args: List[AIFPLValue]) -> AIFPLValue:
-        """
-        Fold 'and' with short-circuit evaluation.
-
-        (and) → #t
-        (and #f anything) → #f (short-circuit)
-        (and #t #t #t) → #t
-        """
-        if len(args) == 0:
-            return AIFPLBoolean(True)
-
-        # Check each argument
-        folded_args = []
-        for arg in args:
-            # If we hit a false constant, short-circuit
-            if isinstance(arg, AIFPLBoolean) and not arg.value:
-                return AIFPLBoolean(False)
-
-            # If it's a true constant, we can skip it
-            if isinstance(arg, AIFPLBoolean) and arg.value:
-                continue
-
-            # Non-constant argument - can't fully fold
-            folded_args.append(arg)
-
-        # If all args were true constants, result is true
-        if len(folded_args) == 0:
-            return AIFPLBoolean(True)
-
-        # If only one arg remains, return it
-        if len(folded_args) == 1:
-            return AIFPLList((AIFPLSymbol('and'), folded_args[0]))
-
-        # Multiple non-constant args remain
-        return AIFPLList((AIFPLSymbol('and'),) + tuple(folded_args))
-
-    def _fold_or(self, args: List[AIFPLValue]) -> AIFPLValue:
-        """
-        Fold 'or' with short-circuit evaluation.
-
-        (or) → #f
-        (or #t anything) → #t (short-circuit)
-        (or #f #f #f) → #f
-        """
-        if len(args) == 0:
-            return AIFPLBoolean(False)
-
-        # Check each argument
-        folded_args = []
-        for arg in args:
-            # If we hit a true constant, short-circuit
-            if isinstance(arg, AIFPLBoolean) and arg.value:
-                return AIFPLBoolean(True)
-
-            # If it's a false constant, we can skip it
-            if isinstance(arg, AIFPLBoolean) and not arg.value:
-                continue
-
-            # Non-constant argument - can't fully fold
-            folded_args.append(arg)
-
-        # If all args were false constants, result is false
-        if len(folded_args) == 0:
-            return AIFPLBoolean(False)
-
-        # If only one arg remains, return it
-        if len(folded_args) == 1:
-            return AIFPLList((AIFPLSymbol('or'), folded_args[0]))
-
-        # Multiple non-constant args remain
-        return AIFPLList((AIFPLSymbol('or'),) + tuple(folded_args))
-
-    def _is_constant(self, expr: AIFPLValue) -> bool:
-        """
-        Check if expression is a compile-time constant.
-
-        Constants are:
-        - Numeric literals (integer, float, complex)
-        - String literals
-        - Boolean literals
-        - Empty lists
-        - Lists where all elements are constants
-
-        NOT constants:
-        - Symbols (variables)
-        - Function calls (even with constant args - we fold those separately)
-        """
-        if isinstance(expr, AIFPLSymbol):
-            return False
-
-        # Lists with all constant elements are constants (for quote, etc.)
-        # But we don't consider function calls as constants here
-        if isinstance(expr, AIFPLList):
-            # Empty list is a constant
-            if expr.is_empty():
-                return True
-
-            # If first element is a symbol, it's a function call, not a constant
-            if isinstance(expr.first(), AIFPLSymbol):
-                return False
-
-            # Otherwise check if all elements are constants
-            return all(self._is_constant(elem) for elem in expr.elements)
-
-        # Other types are constants
-        return True
 
     def _fold_add(self, args: List[AIFPLValue]) -> AIFPLValue | None:
         """Fold addition: (+ a b c ...) → sum"""
