@@ -268,9 +268,11 @@ class AIFPLVM:
         for parent_frame in reversed(self.frames[:-1]):
             if name in parent_frame.local_names:
                 local_idx = parent_frame.local_names[name]
-                if local_idx < len(parent_frame.locals) and parent_frame.locals[local_idx] is not None:
-                    self.stack.append(parent_frame.locals[local_idx])
-                    return None
+                if local_idx < len(parent_frame.locals):
+                    value = parent_frame.locals[local_idx]
+                    if value is not None:
+                        self.stack.append(value)
+                        return None
 
         # Not found - generate helpful error
         available_vars = list(self.globals.keys())

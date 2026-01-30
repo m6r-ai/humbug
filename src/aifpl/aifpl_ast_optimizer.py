@@ -66,7 +66,7 @@ class ConstantFoldingPass(ASTOptimizationPass):
         'bit-or', 'bit-and', 'bit-xor', 'bit-not',
         'bit-shift-left', 'bit-shift-right'
     }
-    
+
     def optimize(self, expr: AIFPLValue) -> AIFPLValue:
         """
         Recursively fold constants in expression tree.
@@ -145,14 +145,15 @@ class ConstantFoldingPass(ASTOptimizationPass):
                 opt_else = self.optimize(else_expr)
                 return AIFPLList((expr.elements[0], opt_condition, opt_then, opt_else))
 
-        elif form_name == 'let' or form_name == 'letrec':
+        if form_name in {'let', 'letrec'}:
             # (let ((var val) ...) body)
             if len(expr.elements) == 3:
                 form_symbol, bindings_list, body = expr.elements
 
                 # Optimize binding values
+                opt_bindings_list: AIFPLValue
                 if isinstance(bindings_list, AIFPLList):
-                    opt_bindings = []
+                    opt_bindings: List[AIFPLValue] = []
                     for binding in bindings_list.elements:
                         if isinstance(binding, AIFPLList) and len(binding.elements) == 2:
                             var, val = binding.elements
@@ -172,7 +173,7 @@ class ConstantFoldingPass(ASTOptimizationPass):
 
                 return AIFPLList((form_symbol, opt_bindings_list, opt_body))
 
-        elif form_name == 'lambda':
+        if form_name == 'lambda':
             # (lambda (params) body)
             if len(expr.elements) == 3:
                 lambda_symbol, params, body = expr.elements
@@ -180,7 +181,7 @@ class ConstantFoldingPass(ASTOptimizationPass):
                 opt_body = self.optimize(body)
                 return AIFPLList((lambda_symbol, params, opt_body))
 
-        elif form_name == 'quote':
+        if form_name == 'quote':
             # Quoted expressions are not evaluated, don't optimize
             return expr
 
@@ -599,9 +600,17 @@ class ConstantFoldingPass(ASTOptimizationPass):
 
         # Check if arguments are in strictly increasing order
         prev = self._to_python_number(args[0])
+
+        # Complex numbers don't support ordering - can't fold
+        if isinstance(prev, complex):
+            return None
+
         for arg in args[1:]:
             curr = self._to_python_number(arg)
-            if not (prev < curr):
+            if isinstance(curr, complex):
+                return None
+
+            if prev >= curr:
                 return AIFPLBoolean(False)
 
             prev = curr
@@ -615,9 +624,17 @@ class ConstantFoldingPass(ASTOptimizationPass):
 
         # Check if arguments are in strictly decreasing order
         prev = self._to_python_number(args[0])
+
+        # Complex numbers don't support ordering - can't fold
+        if isinstance(prev, complex):
+            return None
+
         for arg in args[1:]:
             curr = self._to_python_number(arg)
-            if not (prev > curr):
+            if isinstance(curr, complex):
+                return None
+
+            if prev <= curr:
                 return AIFPLBoolean(False)
 
             prev = curr
@@ -630,9 +647,17 @@ class ConstantFoldingPass(ASTOptimizationPass):
             return None
 
         prev = self._to_python_number(args[0])
+
+        # Complex numbers don't support ordering - can't fold
+        if isinstance(prev, complex):
+            return None
+
         for arg in args[1:]:
             curr = self._to_python_number(arg)
-            if not (prev <= curr):
+            if isinstance(curr, complex):
+                return None
+
+            if prev > curr:
                 return AIFPLBoolean(False)
 
             prev = curr
@@ -645,9 +670,17 @@ class ConstantFoldingPass(ASTOptimizationPass):
             return None
 
         prev = self._to_python_number(args[0])
+
+        # Complex numbers don't support ordering - can't fold
+        if isinstance(prev, complex):
+            return None
+
         for arg in args[1:]:
             curr = self._to_python_number(arg)
-            if not (prev >= curr):
+            if isinstance(curr, complex):
+                return None
+
+            if prev < curr:
                 return AIFPLBoolean(False)
 
             prev = curr
@@ -703,7 +736,15 @@ class ConstantFoldingPass(ASTOptimizationPass):
             return None
 
         vals = [self._to_python_number(arg) for arg in args]
-        result = min(vals)
+
+        # min/max don't work with complex numbers - can't fold
+        if any(isinstance(v, complex) for v in vals):
+            return None
+
+        # Type narrowing: we've excluded complex, so only int | float remain
+        # Cast to help mypy understand this
+        real_vals = [v for v in vals if not isinstance(v, complex)]
+        result = min(real_vals)
 
         return self._from_python_number(result)
 
@@ -713,7 +754,15 @@ class ConstantFoldingPass(ASTOptimizationPass):
             return None
 
         vals = [self._to_python_number(arg) for arg in args]
-        result = max(vals)
+
+        # min/max don't work with complex numbers - can't fold
+        if any(isinstance(v, complex) for v in vals):
+            return None
+
+        # Type narrowing: we've excluded complex, so only int | float remain
+        # Cast to help mypy understand this
+        real_vals = [v for v in vals if not isinstance(v, complex)]
+        result = max(real_vals)
 
         return self._from_python_number(result)
 
@@ -910,8 +959,13 @@ class ConstantFoldingPass(ASTOptimizationPass):
         if not all(isinstance(arg, AIFPLInteger) for arg in args):
             return None
 
-        result = args[0].value
+        # Extract first arg with type narrowing
+        first_arg = args[0]
+        assert isinstance(first_arg, AIFPLInteger)
+        result = first_arg.value
         for arg in args[1:]:
+            # Type already checked above, but help mypy
+            assert isinstance(arg, AIFPLInteger)
             result = result | arg.value
 
         return AIFPLInteger(result)
@@ -924,8 +978,12 @@ class ConstantFoldingPass(ASTOptimizationPass):
         if not all(isinstance(arg, AIFPLInteger) for arg in args):
             return None
 
-        result = args[0].value
+        # Extract first arg with type narrowing
+        first_arg = args[0]
+        assert isinstance(first_arg, AIFPLInteger)
+        result = first_arg.value
         for arg in args[1:]:
+            assert isinstance(arg, AIFPLInteger)
             result = result & arg.value
 
         return AIFPLInteger(result)
@@ -938,8 +996,12 @@ class ConstantFoldingPass(ASTOptimizationPass):
         if not all(isinstance(arg, AIFPLInteger) for arg in args):
             return None
 
-        result = args[0].value
+        # Extract first arg with type narrowing
+        first_arg = args[0]
+        assert isinstance(first_arg, AIFPLInteger)
+        result = first_arg.value
         for arg in args[1:]:
+            assert isinstance(arg, AIFPLInteger)
             result = result ^ arg.value
 
         return AIFPLInteger(result)
@@ -949,10 +1011,12 @@ class ConstantFoldingPass(ASTOptimizationPass):
         if len(args) != 1:
             return None
 
-        if not isinstance(args[0], AIFPLInteger):
+        arg = args[0]
+        if not isinstance(arg, AIFPLInteger):
             return None
 
-        result = ~args[0].value
+        # Type narrowed by isinstance check above
+        result = ~arg.value
         return AIFPLInteger(result)
 
     def _fold_bit_shift_left(self, args: List[AIFPLValue]) -> AIFPLValue | None:
@@ -963,7 +1027,11 @@ class ConstantFoldingPass(ASTOptimizationPass):
         if not all(isinstance(arg, AIFPLInteger) for arg in args):
             return None
 
-        result = args[0].value << args[1].value
+        # Type narrowing for mypy
+        arg0 = args[0]
+        arg1 = args[1]
+        assert isinstance(arg0, AIFPLInteger) and isinstance(arg1, AIFPLInteger)
+        result = arg0.value << arg1.value
         return AIFPLInteger(result)
 
     def _fold_bit_shift_right(self, args: List[AIFPLValue]) -> AIFPLValue | None:
@@ -974,7 +1042,11 @@ class ConstantFoldingPass(ASTOptimizationPass):
         if not all(isinstance(arg, AIFPLInteger) for arg in args):
             return None
 
-        result = args[0].value >> args[1].value
+        # Type narrowing for mypy
+        arg0 = args[0]
+        arg1 = args[1]
+        assert isinstance(arg0, AIFPLInteger) and isinstance(arg1, AIFPLInteger)
+        result = arg0.value >> arg1.value
         return AIFPLInteger(result)
 
     def _to_python_number(self, value: AIFPLValue) -> int | float | complex:
