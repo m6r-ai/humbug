@@ -527,28 +527,40 @@ class AIFPLMathFunctions:
 
     # Base conversion functions
     def _builtin_bin(self, args: List[AIFPLValue]) -> AIFPLValue:
-        """Implement bin function."""
+        """Implement bin function - returns Scheme-style binary string (#b1010 or -#b1010)."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'bin' requires exactly 1 argument, got {len(args)}")
 
         int_val = self._ensure_integer(args[0], "bin")
-        return AIFPLString(bin(int_val))
+        # Convert Python's 0b1010 to Scheme's #b1010 or -#b1010
+        if int_val < 0:
+            return AIFPLString(f"-#b{bin(-int_val)[2:]}")
+
+        return AIFPLString(f"#b{bin(int_val)[2:]}")
 
     def _builtin_hex(self, args: List[AIFPLValue]) -> AIFPLValue:
-        """Implement hex function."""
+        """Implement hex function - returns Scheme-style hex string (#xff or -#xff)."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'hex' requires exactly 1 argument, got {len(args)}")
 
         int_val = self._ensure_integer(args[0], "hex")
-        return AIFPLString(hex(int_val))
+        # Convert Python's 0xff to Scheme's #xff or -#xff
+        if int_val < 0:
+            return AIFPLString(f"-#x{hex(-int_val)[2:]}")
+
+        return AIFPLString(f"#x{hex(int_val)[2:]}")
 
     def _builtin_oct(self, args: List[AIFPLValue]) -> AIFPLValue:
-        """Implement oct function."""
+        """Implement oct function - returns Scheme-style octal string (#o755 or -#o755)."""
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'oct' requires exactly 1 argument, got {len(args)}")
 
         int_val = self._ensure_integer(args[0], "oct")
-        return AIFPLString(oct(int_val))
+        # Convert Python's 0o755 to Scheme's #o755 or -#o755
+        if int_val < 0:
+            return AIFPLString(f"-#o{oct(-int_val)[2:]}")
+
+        return AIFPLString(f"#o{oct(int_val)[2:]}")
 
     # Complex number functions
     def _builtin_real(self, args: List[AIFPLValue]) -> AIFPLValue:

@@ -520,34 +520,34 @@ class TestAIFPLMathEdgeCases:
     def test_base_conversion_edge_cases(self, aifpl):
         """Test base conversion edge cases."""
         # Binary conversion edge cases
-        assert aifpl.evaluate('(bin 0)') == '0b0'
-        assert aifpl.evaluate('(bin 1)') == '0b1'
-        assert aifpl.evaluate('(bin 5)') == '0b101'
-        assert aifpl.evaluate('(bin 255)') == '0b11111111'
-        assert aifpl.evaluate('(bin -1)') == '-0b1'
-        assert aifpl.evaluate('(bin -5)') == '-0b101'
+        assert aifpl.evaluate('(bin 0)') == '#b0'
+        assert aifpl.evaluate('(bin 1)') == '#b1'
+        assert aifpl.evaluate('(bin 5)') == '#b101'
+        assert aifpl.evaluate('(bin 255)') == '#b11111111'
+        assert aifpl.evaluate('(bin -1)') == '-#b1'
+        assert aifpl.evaluate('(bin -5)') == '-#b101'
 
         # Hexadecimal conversion edge cases
-        assert aifpl.evaluate('(hex 0)') == '0x0'
-        assert aifpl.evaluate('(hex 10)') == '0xa'
-        assert aifpl.evaluate('(hex 15)') == '0xf'
-        assert aifpl.evaluate('(hex 16)') == '0x10'
-        assert aifpl.evaluate('(hex 255)') == '0xff'
-        assert aifpl.evaluate('(hex -1)') == '-0x1'
-        assert aifpl.evaluate('(hex -15)') == '-0xf'
+        assert aifpl.evaluate('(hex 0)') == '#x0'
+        assert aifpl.evaluate('(hex 10)') == '#xa'
+        assert aifpl.evaluate('(hex 15)') == '#xf'
+        assert aifpl.evaluate('(hex 16)') == '#x10'
+        assert aifpl.evaluate('(hex 255)') == '#xff'
+        assert aifpl.evaluate('(hex -1)') == '-#x1'
+        assert aifpl.evaluate('(hex -15)') == '-#xf'
 
         # Octal conversion edge cases
-        assert aifpl.evaluate('(oct 0)') == '0o0'
-        assert aifpl.evaluate('(oct 7)') == '0o7'
-        assert aifpl.evaluate('(oct 8)') == '0o10'
-        assert aifpl.evaluate('(oct 64)') == '0o100'
-        assert aifpl.evaluate('(oct -1)') == '-0o1'
-        assert aifpl.evaluate('(oct -8)') == '-0o10'
+        assert aifpl.evaluate('(oct 0)') == '#o0'
+        assert aifpl.evaluate('(oct 7)') == '#o7'
+        assert aifpl.evaluate('(oct 8)') == '#o10'
+        assert aifpl.evaluate('(oct 64)') == '#o100'
+        assert aifpl.evaluate('(oct -1)') == '-#o1'
+        assert aifpl.evaluate('(oct -8)') == '-#o10'
 
         # Large numbers
-        assert aifpl.evaluate('(bin 1024)') == '0b10000000000'
-        assert aifpl.evaluate('(hex 4096)') == '0x1000'
-        assert aifpl.evaluate('(oct 512)') == '0o1000'
+        assert aifpl.evaluate('(bin 1024)') == '#b10000000000'
+        assert aifpl.evaluate('(hex 4096)') == '#x1000'
+        assert aifpl.evaluate('(oct 512)') == '#o1000'
 
     def test_base_conversion_requires_integers(self, aifpl):
         """Test that base conversion functions require integer arguments."""

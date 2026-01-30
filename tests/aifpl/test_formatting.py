@@ -16,9 +16,10 @@ class TestFormatting:
         ("1000000", "1000000"),
 
         # Different integer bases should format as decimal
-        ("0xFF", "255"),
-        ("0b1010", "10"),
-        ("0o777", "511"),
+        ("#xFF", "255"),
+        ("-#xEF", "-239"),
+        ("#b1010", "10"),
+        ("#o777", "511"),
     ])
     def test_integer_formatting(self, aifpl, expression, expected_format):
         """Test integer formatting in LISP output."""

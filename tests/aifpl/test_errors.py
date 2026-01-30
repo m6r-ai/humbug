@@ -56,7 +56,7 @@ class TestErrors:
 
     def test_invalid_boolean_literal_token_error(self, aifpl):
         """Test that invalid boolean literals cause tokenization errors."""
-        with pytest.raises(AIFPLTokenError, match="Invalid boolean literal"):
+        with pytest.raises(AIFPLTokenError, match="Incomplete number"):
             aifpl.evaluate("#x")  # Not #t or #f
 
         with pytest.raises(AIFPLTokenError, match="Invalid boolean literal"):
@@ -64,14 +64,14 @@ class TestErrors:
 
     def test_invalid_number_format_token_error(self, aifpl):
         """Test that invalid number formats cause tokenization errors."""
-        with pytest.raises(AIFPLTokenError, match="Invalid"):
-            aifpl.evaluate("0x")  # Hex without digits
+        with pytest.raises(AIFPLTokenError, match="Incomplete"):
+            aifpl.evaluate("#x")  # Hex without digits
 
-        with pytest.raises(AIFPLTokenError, match="Invalid"):
-            aifpl.evaluate("0b")  # Binary without digits
+        with pytest.raises(AIFPLTokenError, match="Incomplete"):
+            aifpl.evaluate("#b")  # Binary without digits
 
-        with pytest.raises(AIFPLTokenError, match="Invalid"):
-            aifpl.evaluate("0o")  # Octal without digits
+        with pytest.raises(AIFPLTokenError, match="Incomplete"):
+            aifpl.evaluate("#o")  # Octal without digits
 
     def test_malformed_scientific_notation_token_error(self, aifpl):
         """Test that malformed scientific notation causes tokenization errors."""

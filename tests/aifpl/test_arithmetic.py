@@ -418,22 +418,22 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Binary conversion
-        ("(bin 0)", '"0b0"'),
-        ("(bin 5)", '"0b101"'),
-        ("(bin 255)", '"0b11111111"'),
-        ("(bin -1)", '"-0b1"'),
+        ("(bin 0)", '"#b0"'),
+        ("(bin 5)", '"#b101"'),
+        ("(bin 255)", '"#b11111111"'),
+        ("(bin -1)", '"-#b1"'),
 
         # Hexadecimal conversion
-        ("(hex 0)", '"0x0"'),
-        ("(hex 15)", '"0xf"'),
-        ("(hex 255)", '"0xff"'),
-        ("(hex -1)", '"-0x1"'),
+        ("(hex 0)", '"#x0"'),
+        ("(hex 15)", '"#xf"'),
+        ("(hex 255)", '"#xff"'),
+        ("(hex -1)", '"-#x1"'),
 
         # Octal conversion
-        ("(oct 0)", '"0o0"'),
-        ("(oct 8)", '"0o10"'),
-        ("(oct 64)", '"0o100"'),
-        ("(oct -1)", '"-0o1"'),
+        ("(oct 0)", '"#o0"'),
+        ("(oct 8)", '"#o10"'),
+        ("(oct 64)", '"#o100"'),
+        ("(oct -1)", '"-#o1"'),
     ])
     def test_base_conversion_functions(self, aifpl, expression, expected):
         """Test base conversion functions (bin, hex, oct)."""
@@ -475,20 +475,20 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("number_format,expected", [
         # Hexadecimal literals
-        ("0xFF", "255"),
-        ("0x10", "16"),
-        ("0xABC", "2748"),
-        ("0xff", "255"),  # Lowercase
+        ("#xFF", "255"),
+        ("#x10", "16"),
+        ("#xABC", "2748"),
+        ("#xff", "255"),  # Lowercase
 
         # Binary literals
-        ("0b1010", "10"),
-        ("0b11111111", "255"),
-        ("0B1010", "10"),  # Uppercase
+        ("#b1010", "10"),
+        ("#b11111111", "255"),
+        ("#B1010", "10"),  # Uppercase
 
         # Octal literals
-        ("0o777", "511"),
-        ("0o10", "8"),
-        ("0O777", "511"),  # Uppercase
+        ("#o777", "511"),
+        ("#o10", "8"),
+        ("#O777", "511"),  # Uppercase
 
         # Scientific notation
         ("1e2", "100.0"),  # Scientific notation produces float

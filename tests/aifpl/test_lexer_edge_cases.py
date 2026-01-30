@@ -70,12 +70,12 @@ class TestAIFPLLexerEdgeCases:
 
         # Hexadecimal
         hex_cases = [
-            ("0x0", 0),
-            ("0xFF", 255),
-            ("0xff", 255),
-            ("0x10", 16),
-            ("0xABC", 2748),
-            ("0xabc", 2748),
+            ("#x0", 0),
+            ("#xFF", 255),
+            ("#xff", 255),
+            ("#x10", 16),
+            ("#xABC", 2748),
+            ("#xabc", 2748),
         ]
 
         for expr, expected in hex_cases:
@@ -84,11 +84,11 @@ class TestAIFPLLexerEdgeCases:
 
         # Binary
         binary_cases = [
-            ("0b0", 0),
-            ("0b1", 1),
-            ("0b1010", 10),
-            ("0B1010", 10),
-            ("0b11111111", 255),
+            ("#b0", 0),
+            ("#b1", 1),
+            ("#b1010", 10),
+            ("#B1010", 10),
+            ("#b11111111", 255),
         ]
 
         for expr, expected in binary_cases:
@@ -97,11 +97,11 @@ class TestAIFPLLexerEdgeCases:
 
         # Octal
         octal_cases = [
-            ("0o0", 0),
-            ("0o7", 7),
-            ("0o10", 8),
-            ("0O10", 8),
-            ("0o777", 511),
+            ("#o0", 0),
+            ("#o7", 7),
+            ("#o10", 8),
+            ("#O10", 8),
+            ("#o777", 511),
         ]
 
         for expr, expected in octal_cases:
@@ -111,15 +111,15 @@ class TestAIFPLLexerEdgeCases:
     def test_invalid_number_tokenization(self, aifpl):
         """Test invalid number tokenization cases."""
         invalid_numbers = [
-            "0x",           # Hex without digits
-            "0b",           # Binary without digits
-            "0o",           # Octal without digits
+            "#x",           # Hex without digits
+            "#b",           # Binary without digits
+            "#o",           # Octal without digits
             "1e",           # Missing exponent
             "1.5e+",        # Missing exponent after sign
             "1.5e-",        # Missing exponent after sign
-            "0xGHI",        # Invalid hex digits
-            "0b123",        # Invalid binary digits
-            "0o89",         # Invalid octal digits
+            "#xGHI",        # Invalid hex digits
+            "#b123",        # Invalid binary digits
+            "#o89",         # Invalid octal digits
             "1.2.3",        # Multiple decimal points
             "1e2e3",        # Multiple exponents
         ]

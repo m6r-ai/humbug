@@ -171,7 +171,7 @@ class AIFPLAITool(AITool):
                 "- String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX\n"
                 "- Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment\n"
                 "- Numeric literals: 42 (integer), 3.14 (float), 3+4j (complex), 5j (pure imaginary), j (1j)\n"
-                "- Other literals: 0xFF (hex), 0b1010 (binary), 0o755 (octal), \"hello\" (string), "
+                "- Other literals: #xFF (hex), #b1010 (binary), #o755 (octal), \"hello\" (string), "
                 "#t/#f (boolean), () (empty list)\n"
                 "- Constants: pi, e, true, false\n\n"
 

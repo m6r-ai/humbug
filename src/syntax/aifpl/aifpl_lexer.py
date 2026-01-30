@@ -322,6 +322,7 @@ class AIFPLLexer(Lexer):
                 self._position += 1
                 if self._position < self._input_len:
                     self._position += 1
+
                 continue
 
             if ch == '"':
@@ -358,6 +359,7 @@ class AIFPLLexer(Lexer):
                 self._position += 1
                 if self._position < self._input_len:
                     self._position += 1
+
                 continue
 
             if ch == '"':

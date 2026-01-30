@@ -137,7 +137,8 @@ class AIFPLLexer:
 
             # Boolean literals (#t, #f) with validation for invalid patterns like #true, #false
             if next_char == '#' and i + 1 < len(expression):
-                if expression[i + 1] in 'tf':
+                next_after_hash = expression[i + 1]
+                if next_after_hash in 'tf':
                     # Check if this is part of a longer invalid sequence like #true or #false
                     if i + 2 < len(expression) and not self._is_delimiter(expression[i + 2]):
                         # Find end of the invalid sequence
@@ -163,17 +164,41 @@ class AIFPLLexer:
                     i += 2
                     continue
 
-                # Invalid # sequence
-                invalid_char = expression[i + 1] if i + 1 < len(expression) else ""
+                # Hexadecimal, binary, or octal literals (#xFF, #b1010, #o755)
+                if next_after_hash in 'xXbBoO':
+                    try:
+                        # Save line/column at start of number
+                        number_line = line
+                        number_col = column
+                        number_value, length, token_type = self._read_hash_number(expression, i, number_line, number_col)
+                        tokens.append(AIFPLToken(token_type, number_value, length, number_line, number_col))
+                        column += length
+                        i += length
+                        continue
+
+                    except AIFPLTokenError as e:
+                        raise e
+
+                # Invalid # sequence - provide helpful error message
+                invalid_char = next_after_hash
+
+                # Check if it looks like they tried Python-style 0x/0b/0o
+                suggestion = "Use #t for true or #f for false"
+                if invalid_char.isdigit():
+                    suggestion = "For hex/binary/octal use #x, #b, or #o prefix (e.g., #xFF, #b1010, #o755)"
+
+                elif invalid_char in 'xXbBoO':
+                    suggestion = f"Use #{invalid_char} followed by digits (e.g., #xFF, #b1010, #o755)"
+
                 raise AIFPLTokenError(
-                    message=f"Invalid boolean literal: #{invalid_char}",
+                    message=f"Invalid # literal: #{invalid_char}",
                     line=line,
                     column=column,
                     received=f"Found: #{invalid_char}",
-                    expected="Valid boolean: #t or #f",
-                    example="Correct: #t (true), #f (false)\\nIncorrect: #x, #1, #true",
-                    suggestion="Use #t for true or #f for false",
-                    context="# symbol must be followed by 't' or 'f' for booleans"
+                    expected="Valid # literal: #t, #f, #xFF, #b1010, #o755",
+                    example="Correct: #t, #f, #xFF, #b1010, #o755\\nIncorrect: #true, #1, 0xFF",
+                    suggestion=suggestion,
+                    context="# must be followed by: 't'/'f' (boolean), 'x'/'X' (hex), 'b'/'B' (binary), or 'o'/'O' (octal)"
                 )
 
             # Numbers (including complex, hex, binary, octal, scientific notation)
@@ -197,7 +222,7 @@ class AIFPLLexer:
                 # Save line/column at start of symbol
                 symbol_line = line
                 symbol_col = column
-                symbol, length = self._read_symbol(expression, i)
+                symbol, length = self._read_symbol(expression, i, symbol_line, symbol_col)
                 tokens.append(AIFPLToken(AIFPLTokenType.SYMBOL, symbol, length, symbol_line, symbol_col))
                 column += length
                 i += length
@@ -333,8 +358,12 @@ class AIFPLLexer:
         # Negative numbers
         if char == '-' and pos + 1 < len(expression):
             next_char = expression[pos + 1]
-            # Negative digit or negative decimal starting with dot (only if followed by digit)
-            if next_char.isdigit() or (next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit()):
+            # Negative digit, negative decimal, or negative Scheme-style hex/bin/oct (-#xFF, -#b1010, -#o755)
+            if next_char.isdigit():
+                return True
+            if next_char == '.' and pos + 2 < len(expression) and expression[pos + 2].isdigit():
+                return True
+            if next_char == '#' and pos + 2 < len(expression) and expression[pos + 2] in 'xXbBoO':
                 return True
 
         # Positive numbers (explicit + sign)
@@ -350,35 +379,6 @@ class AIFPLLexer:
         """Check if character is a LISP token delimiter."""
         return char.isspace() or char in "()'\";,"
 
-    def _check_for_control_character(self, char: str, line: int, column: int) -> None:
-        """
-        Check if a character is a control character and raise an error if so.
-
-        Args:
-            char: Character to check
-            line: Line number in the expression
-            column: Column number in the expression
-
-        Raises:
-            AIFPLTokenError: If the character is a control character
-        """
-        char_code = ord(char)
-
-        # Control characters are ASCII < 32 (excluding whitespace which is handled separately)
-        if char_code < 32 and not char.isspace():
-            char_display = f"\\u{char_code:04x}"
-            raise AIFPLTokenError(
-                message=f"Invalid control character in source code: {char_display}",
-                line=line,
-                column=column,
-                received=f"Control character: {char_display} (code {char_code})",
-                expected="Valid AIFPL characters or escape sequences in strings",
-                example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
-                suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
-                context="Control characters are not allowed in source code. Use escape "
-                    "sequences like \\n, \\t, or \\uXXXX in strings."
-            )
-
     def _is_valid_number(self, token: str) -> bool:
         """
         Check if a complete token is a valid number format.
@@ -393,36 +393,7 @@ class AIFPLLexer:
         first_char = token[0]
         check_token = token
         if first_char == '-':
-            # We don't need to worry about just '-' being a number, as that would be caught earlier
             check_token = token[1:]
-
-        # Try different number formats
-
-        # Hexadecimal
-        if first_char == '0' and len(check_token) > 1:
-            second_char = check_token[1]
-            if second_char in ('x', 'X'):
-                if len(check_token) <= 2:
-                    return False
-
-                hex_part = check_token[2:]
-                return all(c in '0123456789abcdefABCDEF' for c in hex_part)
-
-            # Binary
-            if second_char in ('b', 'B'):
-                if len(check_token) <= 2:
-                    return False
-
-                bin_part = check_token[2:]
-                return all(c in '01' for c in bin_part)
-
-            # Octal
-            if second_char in ('o', 'O'):
-                if len(check_token) <= 2:
-                    return False
-
-                oct_part = check_token[2:]
-                return all(c in '01234567' for c in oct_part)
 
         # Decimal numbers (int, float, scientific notation)
         try:
@@ -449,23 +420,8 @@ class AIFPLLexer:
         if negative:
             check_token = token[1:]
 
-        # Parse different formats
-        value: int | float
-        if first_char == '0' and len(check_token) > 1:
-            second_char = check_token[1]
-            if second_char in ('x', 'X'):
-                value = int(check_token, 16)
-                return -value if negative else value
-
-            if second_char in ('b', 'B'):
-                value = int(check_token, 2)
-                return -value if negative else value
-
-            if second_char in ('o', 'O'):
-                value = int(check_token, 8)
-                return -value if negative else value
-
         # Decimal number - use float if it contains . or e/E, otherwise int
+        value: int | float
         if '.' in check_token or 'e' in check_token.lower():
             value = float(check_token)
 
@@ -473,6 +429,126 @@ class AIFPLLexer:
             value = int(check_token)
 
         return -value if negative else value
+
+    def _read_hash_number(
+        self,
+        expression: str,
+        start: int,
+        start_line: int,
+        start_col: int
+    ) -> tuple[int, int, AIFPLTokenType]:
+        """
+        Read a Scheme-style hex/binary/octal number literal (#xFF, #b1010, #o755).
+
+        Returns:
+            Tuple of (number_value, length_consumed, token_type)
+
+        Raises:
+            AIFPLTokenError: If the token is not a valid number
+        """
+        # Must start with #
+        if expression[start] != '#':
+            raise AIFPLTokenError(
+                message="Internal error: _read_hash_number called without #",
+                line=start_line,
+                column=start_col,
+                received=expression[start],
+                expected="#"
+            )
+
+        # Need at least 3 characters: #, format char, and one digit
+        if start + 2 >= len(expression):
+            raise AIFPLTokenError(
+                message=f"Incomplete number literal: {expression[start:]}",
+                line=start_line,
+                column=start_col,
+                received=expression[start:],
+                expected="Complete hex/binary/octal literal",
+                example="Valid: #xFF, #b1010, #o755"
+            )
+
+        format_char = expression[start + 1].lower()
+
+        # Read digits until delimiter
+        i = start + 2
+        while i < len(expression) and not self._is_delimiter(expression[i]):
+            i += 1
+
+        digits = expression[start + 2:i]
+
+        if not digits:
+            raise AIFPLTokenError(
+                message=f"Missing digits after #{format_char}",
+                line=start_line,
+                column=start_col,
+                received=expression[start:i],
+                expected=f"Digits after #{format_char}",
+                example=f"Valid: #{format_char}FF, -#{format_char}FF (negative)"
+            )
+
+        # Parse based on format
+        try:
+            if format_char == 'x':
+                # Hexadecimal
+                if not all(c in '0123456789abcdefABCDEF' for c in digits):
+                    raise AIFPLTokenError(
+                        message=f"Invalid hexadecimal digits: {digits}",
+                        line=start_line,
+                        column=start_col,
+                        received=f"#{format_char}{digits}",
+                        expected="Hexadecimal digits (0-9, A-F)",
+                        example="Valid: #xFF, -#xFF, #x2A, #xDEADBEEF"
+                    )
+                value = int(digits, 16)
+
+            elif format_char == 'b':
+                # Binary
+                if not all(c in '01' for c in digits):
+                    raise AIFPLTokenError(
+                        message=f"Invalid binary digits: {digits}",
+                        line=start_line,
+                        column=start_col,
+                        received=f"#{format_char}{digits}",
+                        expected="Binary digits (0-1)",
+                        example="Valid: #b1010, -#b1010, #b11111111"
+                    )
+                value = int(digits, 2)
+
+            elif format_char == 'o':
+                # Octal
+                if not all(c in '01234567' for c in digits):
+                    raise AIFPLTokenError(
+                        message=f"Invalid octal digits: {digits}",
+                        line=start_line,
+                        column=start_col,
+                        received=f"#{format_char}{digits}",
+                        expected="Octal digits (0-7)",
+                        example="Valid: #o755, -#o755, #o644"
+                    )
+                value = int(digits, 8)
+
+            else:
+                raise AIFPLTokenError(
+                    message=f"Invalid number format: #{format_char}",
+                    line=start_line,
+                    column=start_col,
+                    received=f"#{format_char}",
+                    expected="#x (hex), #b (binary), or #o (octal)",
+                    example="Valid: #xFF, #b1010, #o755"
+                )
+
+        except ValueError as e:
+            raise AIFPLTokenError(
+                message=f"Invalid number literal: #{format_char}{digits}",
+                line=start_line,
+                column=start_col,
+                received=f"#{format_char}{digits}",
+                expected="Valid number digits",
+                context=str(e)
+            )
+
+        length = i - start
+        return value, length, AIFPLTokenType.INTEGER
 
     def _read_number(
         self,
@@ -492,7 +568,6 @@ class AIFPLLexer:
         """
         # Get the complete token until delimiter (this will check for control characters)
         i = start
-        curr_line = start_line
         curr_col = start_col
 
         # Consume characters until we hit a delimiter
@@ -500,22 +575,49 @@ class AIFPLLexer:
             char = expression[i]
 
             # Check for control characters before processing
-            self._check_for_control_character(char, curr_line, curr_col)
+            char_code = ord(char)
 
-            # Update line/column for next iteration
-            if char == '\n':
-                curr_line += 1
-                curr_col = 1
-
-            else:
-                curr_col += 1
+            # Control characters are ASCII < 32 (excluding whitespace which is handled separately)
+            if char_code < 32 and not char.isspace():
+                char_display = f"\\u{char_code:04x}"
+                raise AIFPLTokenError(
+                    message=f"Invalid control character in source code: {char_display}",
+                    line=start_line,
+                    column=curr_col,
+                    received=f"Control character: {char_display} (code {char_code})",
+                    expected="Valid AIFPL characters or escape sequences in strings",
+                    example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
+                    suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
+                    context="Control characters are not allowed in source code. Use escape "
+                        "sequences like \\n, \\t, or \\uXXXX in strings."
+                )
 
             if self._is_delimiter(char):
                 break
 
             i += 1
+            curr_col += 1
 
         complete_token = expression[start:i]
+
+        # Check if this is a Scheme-style hex/bin/oct literal (#xFF, -#xFF, etc.)
+        # This handles both positive (#xFF) and negative (-#xFF) cases
+        hash_pos = complete_token.find('#')
+        if hash_pos != -1:
+            # Found a # in the token - it should be a Scheme-style number
+            # The # should be at position 0 (positive) or 1 (negative with -)
+            if hash_pos <= 1 and hash_pos + 1 < len(complete_token):
+                format_char = complete_token[hash_pos + 1].lower()
+                if format_char in 'xbo':
+                    # Delegate to _read_hash_number, adjusting for potential negative sign
+                    hash_start = start + hash_pos
+                    value, hash_length, token_type = self._read_hash_number(expression, hash_start, start_line, start_col + hash_pos)
+
+                    # Apply negative sign if present
+                    if hash_pos == 1 and complete_token[0] == '-':
+                        value = -value
+
+                    return value, len(complete_token), token_type
 
         # Check if this is a complex number literal - must have 'j' or 'J' at the end
         last_char = complete_token[-1]
@@ -533,7 +635,7 @@ class AIFPLLexer:
                 expected="Valid number format",
                 suggestion=f"Fix the number format: {complete_token}",
                 context="Token appears to be a number but contains invalid characters",
-                example="Valid: 1.23, .5, 42, 1e-10, 0xFF, 3+4j"
+                example="Valid: 1.23, .5, 42, 1e-10, 3+4j. For hex/binary/octal use: #xFF, #b1010, #o755"
             )
 
         # Parse the valid number
@@ -656,7 +758,7 @@ class AIFPLLexer:
         """Check if character can start a symbol."""
         return char.isalpha() or char in '+-*/%<>=!&|^~_.'
 
-    def _read_symbol(self, expression: str, start: int) -> tuple[str, int]:
+    def _read_symbol(self, expression: str, start: int, start_line: int, start_col: int) -> tuple[str, int]:
         """
         Read a symbol from the expression.
 
@@ -666,7 +768,7 @@ class AIFPLLexer:
             Tuple of (symbol_string, length_consumed)
 
         Raises:
-            AIFPLTokenError: If a control character is encountered
+            AIFPLTokenError: If an invalid character is encountered
         """
         i = start
 
@@ -678,6 +780,33 @@ class AIFPLLexer:
                 break
 
             i += 1
+
+        if i < len(expression):
+            char = expression[i]
+            if not self._is_delimiter(char):
+                char_code = ord(char)
+                if char_code < 32:
+                    char_display = f"\\u{char_code:04x}"
+                    raise AIFPLTokenError(
+                        message=f"Invalid control character in source code: {char_display}",
+                        line=start_line,
+                        column=start_col,
+                        received=f"Control character: {char_display} (code {char_code})",
+                        expected="Valid AIFPL characters or escape sequences in strings",
+                        example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
+                        suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
+                        context="Control characters are not allowed in source code. Use escape "
+                            "sequences like \\n, \\t, or \\uXXXX in strings."
+                    )
+
+                raise AIFPLTokenError(
+                    message=f"Invalid character in symbol: {char}",
+                    line=start_line,
+                    column=i,
+                    received=f"Expression: {expression[start:i+1]}",
+                    expected="Valid symbol characters: letters, digits, and specific symbols",
+                    suggestion=f"Remove or replace invalid character '{char}' in symbol"
+                )
 
         symbol = expression[start:i]
         return symbol, i - start

@@ -441,12 +441,12 @@ class TestAIFPLAIToolExecution:
     def test_execute_base_conversion(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with base conversion functions."""
         test_cases = [
-            ("(bin 255)", '"0b11111111"'),
-            ("(hex 255)", '"0xff"'),
-            ("(oct 255)", '"0o377"'),
-            ("(bin 5)", '"0b101"'),
-            ("(hex 10)", '"0xa"'),
-            ("(oct 8)", '"0o10"'),
+            ("(bin 255)", '"#b11111111"'),
+            ("(hex 255)", '"#xff"'),
+            ("(oct 255)", '"#o377"'),
+            ("(bin 5)", '"#b101"'),
+            ("(hex 10)", '"#xa"'),
+            ("(oct 8)", '"#o10"'),
         ]
 
         for expression, expected in test_cases:

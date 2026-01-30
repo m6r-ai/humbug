@@ -21,7 +21,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Higher-order functions**: `map`, `filter`, `fold`, `range`, and more for functional programming
 - **Tail call optimization**: Automatic optimization for recursive and mutually recursive functions
 - **Type predicates**: Built-in functions to check value types
-- **Number formats**: Integers, floats, complex numbers, hex (0xFF), binary (0b1010), octal (0o755)
+- **Number formats**: Integers, floats, complex numbers, hex (#xFF), binary (#b1010), octal (#o755)
 - **String literals**: `"hello world"` with escape sequences
 - **Boolean literals**: `#t` (true) and `#f` (false)
 - **Constants**: `pi`, `e`, `true`, `false`
@@ -1389,9 +1389,9 @@ These functions return results based on input types or mathematical requirements
 - `(bit-not 5)` → `-6`
 
 ### Base Conversion
-- `(hex 255)` → `"0xff"`
-- `(bin 10)` → `"0b1010"`
-- `(oct 8)` → `"0o10"`
+- `(hex 255)` → `"#xff"`
+- `(bin 10)` → `"#b1010"`
+- `(oct 8)` → `"#o10"`
 
 ### Complex Numbers
 
