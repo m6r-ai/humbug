@@ -60,6 +60,7 @@ class CompilationContext:
     next_local_index: int = 0  # Global counter for local variable indices (for flat indexing)
     in_tail_position: bool = False  # Whether we're compiling in tail position
     current_function_name: str | None = None  # Name of the function being compiled (for tail recursion detection)
+    current_letrec_binding: str | None = None  # Name of the letrec binding being compiled (for nested lambdas)
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -673,6 +674,9 @@ class AIFPLCompiler:
         if is_self_ref_lambda:
             # Check if the lambda body references 'name'
             is_recursive = self._references_variable(value_expr, name)
+        elif is_recursive_group:
+            # Even if not a direct lambda, check if the expression references the binding name
+            is_recursive = self._references_variable(value_expr, name)
 
         # Compile the value expression
         # Check which siblings this lambda references (for mutual recursion)
@@ -682,6 +686,14 @@ class AIFPLCompiler:
             for other_name in group_names:
                 if other_name != name and self._references_variable(value_expr, other_name):
                     sibling_refs.append(other_name)
+
+        # Set the current letrec binding context for nested lambdas
+        # This allows lambdas nested in other expressions to know about self-references
+        old_letrec_binding = ctx.current_letrec_binding
+        old_sibling_bindings = ctx.sibling_bindings
+        if is_recursive_group:
+            ctx.current_letrec_binding = name
+            ctx.sibling_bindings = group_names
 
         # Pass the binding name if it's a lambda (for self-reference detection)
         if is_self_ref_lambda:
@@ -701,12 +713,22 @@ class AIFPLCompiler:
             self._compile_expression(value_expr, ctx)
             ctx.in_tail_position = old_tail
 
+        # Restore the previous letrec binding context
+        if is_recursive_group:
+            ctx.current_letrec_binding = old_letrec_binding
+            ctx.sibling_bindings = old_sibling_bindings
+
         # Store in local variable
         ctx.emit(Opcode.STORE_VAR, depth, var_index)
 
         # For recursive closures, patch them to reference themselves
-        if is_recursive:
-            # PATCH_CLOSURE_SELF: arg1 = name index, arg2 = var index (within current scope)
+        # Emit PATCH_CLOSURE_SELF for all bindings in a recursive group
+        # This serves two purposes:
+        # 1. For direct lambdas: patches the closure environment
+        # 2. For all recursive bindings: registers the name in the frame's local_names dict
+        #    (needed for mutual recursion where lambdas reference sibling bindings)
+        if is_recursive or (is_recursive_group and len(group_names) > 1):
+            # PATCH_CLOSURE_SELF: arg1 = name index, arg2 = var index
             # The VM will need to use depth=0 since we just stored there
             name_index = ctx.add_name(name)
             ctx.emit(Opcode.PATCH_CLOSURE_SELF, name_index, var_index)
@@ -759,11 +781,15 @@ class AIFPLCompiler:
             var_type, depth, index = ctx.resolve_variable(free_var)
             if var_type == 'local':
                 # Check if this is a self-reference or sibling
-                if free_var == binding_name:
+                # Use binding_name if provided, otherwise check context
+                current_binding = binding_name if binding_name else ctx.current_letrec_binding
+                current_siblings = let_bindings if let_bindings else ctx.sibling_bindings
+
+                if current_binding and free_var == current_binding:
                     # Self-reference - don't capture, will be patched later
                     continue
 
-                if let_bindings and free_var in let_bindings:
+                if current_siblings and free_var in current_siblings:
                     # Sibling in the same recursive group - don't capture, will be patched later
                     # This handles mutual recursion where siblings reference each other
                     continue

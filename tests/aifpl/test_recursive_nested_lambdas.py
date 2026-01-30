@@ -402,3 +402,260 @@ class TestRecursiveNestedLambdasBytecode:
               (recurse 3))''',
             '100'  # recurse(3) -> map over (list 3) -> recurse(2) -> ... -> recurse(0) -> outer = 100
         )
+
+
+
+class TestLetrecLambdasInDataStructures:
+    """
+    Test lambdas nested in data structures that reference their letrec binding.
+
+    This test suite covers the bug where lambdas nested inside data structures
+    (like lists, cons cells, or returned from conditionals) couldn't properly
+    reference their letrec binding variable.
+
+    The bug was fixed by:
+    1. Adding current_letrec_binding context to CompilationContext
+    2. Making _compile_lambda check context when binding_name not provided
+    3. Adding local_names dict to Frame to map variable names to local indices
+    4. Making PATCH_CLOSURE_SELF register names in frame.local_names
+    5. Making LOAD_NAME check parent frame local_names before failing
+
+    These tests ensure that self-referential lambdas work correctly even when
+    nested inside data structures, which is essential for patterns like creating
+    recursive data structures or returning recursive functions from conditionals.
+    """
+
+    def test_lambda_in_list_simple(self, aifpl, helpers):
+        """Test lambda nested in list can reference its binding."""
+        # Lambda in list that references its binding
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () x)))) x)',
+            '(<lambda ()>)'  # Returns a list containing the lambda
+        )
+
+    def test_lambda_in_list_called_once(self, aifpl, helpers):
+        """Test calling a lambda extracted from a list."""
+        # Extract lambda from list and call it
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () x)))) ((first x)))',
+            '(<lambda ()>)'  # Calling lambda returns x (the list)
+        )
+
+    def test_lambda_in_list_called_multiple_times(self, aifpl, helpers):
+        """Test calling lambda multiple times in a chain."""
+        # Call lambda, get result, extract lambda, call again
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () x)))) (first ((first x))))',
+            '<lambda ()>'  # Returns the lambda itself
+        )
+
+    def test_lambda_in_list_deep_recursion(self, aifpl, helpers):
+        """Test the original bug report case - deep recursive calls."""
+        # Original test case: ((first ((first ((first ((first x))))))))
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () x)))) ((first ((first ((first ((first x)))))))))',
+            '(<lambda ()>)'  # Returns x after multiple recursive calls
+        )
+
+    def test_lambda_in_cons(self, aifpl, helpers):
+        """Test lambda in cons cell can reference its binding."""
+        # Lambda in cons cell
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (cons (lambda () x) (list)))) (first x))',
+            '<lambda ()>'  # Returns the lambda
+        )
+
+    def test_lambda_in_cons_called(self, aifpl, helpers):
+        """Test calling lambda from cons cell."""
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (cons (lambda () x) (list)))) ((first x)))',
+            '(<lambda ()>)'  # Returns x (the cons cell)
+        )
+
+    def test_lambda_from_if_true_branch(self, aifpl, helpers):
+        """Test lambda returned from if true branch."""
+        # Lambda from if expression (true branch)
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (if #t (lambda () x) (lambda () 42)))) (x))',
+            '<lambda ()>'  # Calling lambda returns itself
+        )
+
+    def test_lambda_from_if_false_branch(self, aifpl, helpers):
+        """Test lambda returned from if false branch."""
+        # Lambda from if expression (false branch)
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (if #f (lambda () 42) (lambda () x)))) (x))',
+            '<lambda ()>'  # Calling lambda returns itself
+        )
+
+    def test_lambda_in_nested_list(self, aifpl, helpers):
+        """Test lambda in nested list structure."""
+        # Lambda in nested list
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (list (lambda () x))))) (first (first x)))',
+            '<lambda ()>'  # Returns the lambda
+        )
+
+    def test_lambda_in_nested_list_called(self, aifpl, helpers):
+        """Test calling lambda from nested list."""
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (list (lambda () x))))) ((first (first x))))',
+            '((<lambda ()>))'  # Calling lambda returns x
+        )
+
+    def test_multiple_lambdas_in_list(self, aifpl, helpers):
+        """Test multiple self-referential lambdas in same list."""
+        # Multiple lambdas in list, each referencing x
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () x) (lambda () x)))) (length x))',
+            '2'  # List has two lambdas
+        )
+
+    def test_multiple_lambdas_in_list_called(self, aifpl, helpers):
+        """Test calling different lambdas from list."""
+        # Call first lambda
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () x) (lambda () x)))) (length ((first x))))',
+            '2'  # First lambda returns x which has length 2
+        )
+
+        # Call second lambda
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () x) (lambda () x)))) (length ((first (rest x)))))',
+            '2'  # Second lambda also returns x which has length 2
+        )
+
+    def test_lambda_with_parameters_in_list(self, aifpl, helpers):
+        """Test lambda with parameters nested in list."""
+        # Lambda with params that references its binding
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda (n) (if (<= n 0) x (list n)))))) ((first x) 0))',
+            '(<lambda (param0)>)'  # Calling with 0 returns x
+        )
+
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda (n) (if (<= n 0) x (list n)))))) ((first x) 5))',
+            '(5)'  # Calling with 5 returns (list 5)
+        )
+
+    def test_lambda_in_list_with_mutual_recursion(self, aifpl, helpers):
+        """Test mutually recursive lambdas in data structures."""
+        # Two mutually recursive functions in lists
+        helpers.assert_evaluates_to(
+            aifpl,
+            '''(letrec ((x (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first y) (- n 1)))))))
+                        (y (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first x) (- n 1))))))))
+                  ((first x) 4))''',
+            '4'  # Mutual recursion works
+        )
+    def test_lambda_in_alist(self, aifpl, helpers):
+        """Test lambda nested in alist."""
+        # Lambda as value in alist
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (alist (list "func" (lambda () x))))) (alist-get x "func"))',
+            '<lambda ()>'  # Returns the lambda
+        )
+
+    def test_lambda_in_alist_called(self, aifpl, helpers):
+        """Test calling lambda from alist."""
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (alist (list "func" (lambda () x))))) ((alist-get x "func")))',
+            '(alist (list "func" <lambda ()>))'  # Calling lambda returns x (the alist)
+        )
+
+    def test_non_self_referential_lambda_in_list(self, aifpl, helpers):
+        """Test that non-self-referential lambdas in lists still work."""
+        # Lambda that doesn't reference x
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () 42)))) ((first x)))',
+            '42'  # Simple lambda works
+        )
+
+    def test_lambda_referencing_other_binding_in_list(self, aifpl, helpers):
+        """Test lambda in list referencing different letrec binding."""
+        # Lambda references y, not x
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(letrec ((x (list (lambda () y))) (y 100)) ((first x)))',
+            '100'  # Lambda returns y
+        )
+
+
+class TestLetrecLambdasInDataStructuresBytecode:
+    """Test lambdas in data structures specifically in bytecode mode."""
+
+    def test_bytecode_lambda_in_list_simple(self, aifpl_bytecode, helpers):
+        """Test bytecode compilation of lambda in list."""
+        helpers.assert_evaluates_to(
+            aifpl_bytecode,
+            '(letrec ((x (list (lambda () x)))) x)',
+            '(<lambda ()>)'
+        )
+
+    def test_bytecode_lambda_in_list_called(self, aifpl_bytecode, helpers):
+        """Test bytecode execution of calling lambda from list."""
+        helpers.assert_evaluates_to(
+            aifpl_bytecode,
+            '(letrec ((x (list (lambda () x)))) ((first x)))',
+            '(<lambda ()>)'
+        )
+
+    def test_bytecode_deep_recursion(self, aifpl_bytecode, helpers):
+        """Test bytecode handles deep recursive calls."""
+        helpers.assert_evaluates_to(
+            aifpl_bytecode,
+            '(letrec ((x (list (lambda () x)))) ((first ((first ((first ((first x)))))))))',
+            '(<lambda ()>)'
+        )
+
+    def test_bytecode_lambda_from_if(self, aifpl_bytecode, helpers):
+        """Test bytecode compilation of lambda from if expression."""
+        helpers.assert_evaluates_to(
+            aifpl_bytecode,
+            '(letrec ((x (if #t (lambda () x) (lambda () 42)))) (x))',
+            '<lambda ()>'
+        )
+
+    def test_bytecode_multiple_lambdas(self, aifpl_bytecode, helpers):
+        """Test bytecode handles multiple lambdas in data structure."""
+        helpers.assert_evaluates_to(
+            aifpl_bytecode,
+            '(letrec ((x (list (lambda () x) (lambda () x)))) (length ((first x))))',
+            '2'
+        )
+
+    def test_bytecode_mutual_recursion_in_lists(self, aifpl_bytecode, helpers):
+        """Test bytecode compilation of mutual recursion in lists."""
+        helpers.assert_evaluates_to(
+            aifpl_bytecode,
+            '''(letrec ((x (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first y) (- n 1)))))))
+                        (y (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first x) (- n 1))))))))
+                  ((first x) 4))''',
+            '4'
+        )
+
+    def test_bytecode_lambda_in_alist(self, aifpl_bytecode, helpers):
+        """Test bytecode compilation of lambda in alist."""
+        helpers.assert_evaluates_to(
+            aifpl_bytecode,
+            '(letrec ((x (alist (list "func" (lambda () x))))) ((alist-get x "func")))',
+            '(alist (list "func" <lambda ()>))'
+        )

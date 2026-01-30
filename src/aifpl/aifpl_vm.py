@@ -25,6 +25,7 @@ class Frame:
     ip: int = 0  # Instruction pointer
     locals: List[AIFPLValue | None] = field(init=False)  # Local variables
     closure_env: Any = None  # Closure environment for this frame
+    local_names: Dict[str, int] = field(default_factory=dict)  # Map variable names to local indices
 
     def __post_init__(self) -> None:
         """Initialize locals array based on code object."""
@@ -259,6 +260,17 @@ class AIFPLVM:
         if name in self.globals:
             self.stack.append(self.globals[name])
             return None
+
+        # Check parent frame locals by name (for letrec bindings)
+        # When a lambda nested in a letrec binding references the binding variable,
+        # it needs to look it up from the parent frame's locals at call time.
+        # Walk up the frame stack to find the variable by name.
+        for parent_frame in reversed(self.frames[:-1]):
+            if name in parent_frame.local_names:
+                local_idx = parent_frame.local_names[name]
+                if local_idx < len(parent_frame.locals) and parent_frame.locals[local_idx] is not None:
+                    self.stack.append(parent_frame.locals[local_idx])
+                    return None
 
         # Not found - generate helpful error
         available_vars = list(self.globals.keys())
@@ -509,7 +521,11 @@ class AIFPLVM:
         target_closure = target_frame.locals[var_index]
 
         if not isinstance(target_closure, AIFPLFunction):
-            raise AIFPLEvalError("PATCH_CLOSURE_SELF requires a function")
+            # Not a function - skip patching (this can happen with data structures)
+            # e.g., (letrec ((x (if cond (lambda () x) some-value))) ...)
+            # But still register the name so nested lambdas can find it
+            target_frame.local_names[var_name] = var_index
+            return None
 
         # Create new environment with self-reference
         new_bindings = {**target_closure.closure_environment.bindings}
@@ -526,6 +542,9 @@ class AIFPLVM:
 
         # Add self-reference
         new_env.bindings[var_name] = patched_closure
+
+        # Register the variable name in the frame so LOAD_NAME can find it
+        target_frame.local_names[var_name] = var_index
 
         # Store patched closure back
         target_frame.locals[var_index] = patched_closure
