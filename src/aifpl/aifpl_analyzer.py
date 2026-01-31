@@ -28,7 +28,7 @@ class LambdaInfo:
     free_vars: List[str]  # Free variables (need to be captured)
     self_name: Optional[str] = None  # Name if bound in let/letrec (for self-recursion)
     is_self_recursive: bool = False  # Does it reference itself?
-    mutually_recursive_with: Set[str] = field(default_factory=set)  # Sibling bindings it references
+    lambda_siblings: Set[str] = field(default_factory=set)  # Lambda siblings that need patching (mutual recursion)
 
 
 @dataclass
@@ -185,7 +185,7 @@ class AIFPLAnalyzer:
         # Check for self-recursion
         self_name = None
         is_self_recursive = False
-        mutually_recursive_with = set()
+        lambda_siblings_set = set()
 
         if let_context:
             binding_name, sibling_names, lambda_siblings = let_context
@@ -198,18 +198,15 @@ class AIFPLAnalyzer:
                 free_vars = [v for v in free_vars if v != binding_name]
 
             # Check for references to sibling bindings (mutual recursion)
-            # We distinguish between lambda siblings (need patching) and non-lambda siblings (capture normally)
             for var in body_vars:
                 if var in sibling_names and var != binding_name:
-                    mutually_recursive_with.add(var)
-
-                    # Remove lambda siblings from free_vars (they'll be patched)
-                    # Keep non-lambda siblings in free_vars (they'll be captured)
+                    # Check if this sibling is a lambda
                     if var in lambda_siblings:
+                        # Lambda sibling - needs patching
+                        lambda_siblings_set.add(var)
+                        # Remove from free_vars (will be patched, not captured)
                         free_vars = [v for v in free_vars if v != var]
-                    # Non-lambda siblings stay in free_vars
-                    # Non-lambda siblings will be captured normally (they're in free_vars)
-                    # This allows the compiler to distinguish between the two cases
+                    # else: non-lambda sibling stays in free_vars for normal capture
 
         # Store lambda info
         info = LambdaInfo(
@@ -218,7 +215,7 @@ class AIFPLAnalyzer:
             free_vars=free_vars,
             self_name=self_name,
             is_self_recursive=is_self_recursive,
-            mutually_recursive_with=mutually_recursive_with
+            lambda_siblings=lambda_siblings_set
         )
         result.lambda_info[id(expr)] = info
 

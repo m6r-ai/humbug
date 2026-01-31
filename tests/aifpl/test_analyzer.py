@@ -40,7 +40,7 @@ class TestLambdaAnalysis:
         assert info.params == ['x']
         assert info.free_vars == []
         assert not info.is_self_recursive
-        assert len(info.mutually_recursive_with) == 0
+        assert len(info.lambda_siblings) == 0
 
     def test_lambda_with_free_vars(self, analyzer):
         """Lambda capturing free variables."""
@@ -113,7 +113,7 @@ class TestLetrecAnalysis:
         lambda_info = list(result.lambda_info.values())[0]
         assert lambda_info.self_name == 'fact'
         assert lambda_info.is_self_recursive
-        assert len(lambda_info.mutually_recursive_with) == 0
+        assert len(lambda_info.lambda_siblings) == 0
         # Free vars should NOT include 'fact' (it's self-reference)
         assert 'fact' not in lambda_info.free_vars
 
@@ -145,10 +145,10 @@ class TestLetrecAnalysis:
         # Check lambda info
         for lambda_info in result.lambda_info.values():
             if lambda_info.self_name == 'even?':
-                assert 'odd?' in lambda_info.mutually_recursive_with
+                assert 'odd?' in lambda_info.lambda_siblings
                 assert 'odd?' not in lambda_info.free_vars  # Sibling, not free
             elif lambda_info.self_name == 'odd?':
-                assert 'even?' in lambda_info.mutually_recursive_with
+                assert 'even?' in lambda_info.lambda_siblings
                 assert 'even?' not in lambda_info.free_vars  # Sibling, not free
 
     def test_non_recursive_letrec(self, analyzer):
