@@ -10,7 +10,7 @@ from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLInteger, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction,
+    AIFPLValue, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction,
 )
 
 
@@ -326,17 +326,7 @@ class AIFPLVM:
         """LOAD_NAME: Load global variable by name."""
         name = code.names[arg1]
 
-        # Check closure environment chain (for recursive closures and nested lambdas)
-        # This traverses up the environment chain, allowing nested lambdas to find
-        # recursive bindings from outer let scopes
-        current_env = frame.closure_env
-        while current_env is not None:
-            if name in current_env.bindings:
-                self.stack.append(current_env.bindings[name])
-                return None
-
-            current_env = current_env.parent
-
+        # Load from globals (LOAD_PARENT_VAR handles parent scope access)
         if name in self.globals:
             self.stack.append(self.globals[name])
             return None
