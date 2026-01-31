@@ -163,7 +163,11 @@ class AIFPLCodeGenerator:
     def _generate_variable(self, plan: VariablePlan, ctx: CodeGenContext) -> None:
         """Generate code for a variable reference."""
         if plan.var_type == 'local':
-            ctx.emit(Opcode.LOAD_VAR, plan.depth, plan.index)
+            if plan.is_parent_ref:
+                # Load from parent frame (for recursive bindings)
+                ctx.emit(Opcode.LOAD_PARENT_VAR, plan.depth, plan.index)
+            else:
+                ctx.emit(Opcode.LOAD_VAR, plan.depth, plan.index)
 
         else:  # global
             # For globals, we need to assign the name index during codegen

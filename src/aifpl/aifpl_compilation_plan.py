@@ -5,7 +5,7 @@ It contains all the information needed for code generation without
 requiring any further analysis.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Optional, Union, Set
 
 from aifpl.aifpl_value import AIFPLValue
@@ -22,9 +22,10 @@ class ConstantPlan:
 class VariablePlan:
     """Plan for compiling a variable reference."""
     name: str
-    var_type: str  # 'local' or 'global'
-    depth: int     # Scope depth (0 for current frame)
-    index: int     # Variable index (local index or name index)
+    var_type: str       # 'local' or 'global'
+    depth: int          # Scope depth (0 for current frame, 1+ for parent frames)
+    index: int          # Variable index (local index or name index)
+    is_parent_ref: bool = False  # True if this loads from parent frame (for recursive bindings)
 
 
 @dataclass
@@ -86,10 +87,12 @@ class LambdaPlan:
     free_vars: List[str]  # Names of variables to capture
     free_var_plans: List['VariablePlan']  # Plans for loading free variables
     param_count: int
-    binding_name: Optional[str]  # Name if bound in let/letrec (for recursion)
-    is_self_recursive: bool  # Does this lambda call itself?
-    sibling_bindings: List[str]  # Sibling bindings for mutual recursion
     max_locals: int  # Maximum locals needed in lambda body
+    binding_name: Optional[str] = None  # Name if bound in let/letrec (for recursion)
+    is_self_recursive: bool = False  # Does this lambda call itself?
+    sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
+    parent_refs: List[str] = field(default_factory=list)  # Names of parent frame references (recursive bindings)
+    parent_ref_plans: List['VariablePlan'] = field(default_factory=list)  # Plans for loading parent references
 
 
 @dataclass

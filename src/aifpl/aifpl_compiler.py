@@ -65,6 +65,7 @@ class AnalysisContext:
     # Track names for global resolution (we need to know what's a global vs local)
     # But we don't assign indices - that's for codegen
     names: Set[str] = field(default_factory=set)
+    parent_ref_names: Set[str] = field(default_factory=set)  # Names that are parent references (recursive bindings)
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -94,15 +95,26 @@ class AnalysisContext:
         """
         Resolve variable to (type, depth, index).
 
+        Depth is the number of context boundaries (lambda frames) to cross.
+        This is used for LOAD_PARENT_VAR to walk the parent frame chain.
+
         Returns:
-            ('local', depth, index) for local variables
+            ('local', depth, index) for local variables (depth = context nesting level)
             ('global', 0, 0) for global variables (index assigned during codegen)
         """
-        # Search from innermost to outermost scope
+        # Search from innermost to outermost scope in current context
         for scope in reversed(self.scopes):
             index = scope.get_binding(name)
             if index is not None:
                 return ('local', 0, index)
+
+        # Search parent contexts (each parent context is one frame boundary)
+        if self.parent_ctx is not None:
+            var_type, parent_depth, index = self.parent_ctx.resolve_variable(name)
+            if var_type == 'local':
+                # Found in parent context - increment depth
+                return ('local', parent_depth + 1, index)
+            return (var_type, parent_depth, index)
 
         # Not found in local scopes, must be global
         self.names.add(name)
@@ -117,6 +129,7 @@ class AnalysisContext:
         child = AnalysisContext()
         child.parent_ctx = self
         child.sibling_bindings = []
+        child.parent_ref_names = self.parent_ref_names.copy()  # Inherit parent refs
         return child
 
 
@@ -224,11 +237,15 @@ class AIFPLCompiler:
     def _analyze_variable(self, name: str, ctx: AnalysisContext) -> VariablePlan:
         """Analyze a variable reference."""
         var_type, depth, index = ctx.resolve_variable(name)
+        # Check if this is a parent reference (recursive binding)
+        # Only use parent ref if it's from a parent context (depth > 0) and is a recursive binding
+        is_parent_ref = (depth > 0) and (name in ctx.parent_ref_names)
         return VariablePlan(
             name=name,
             var_type=var_type,
             depth=depth,
-            index=index
+            index=index,
+            is_parent_ref=is_parent_ref
         )
 
     def _analyze_list(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> ExprPlan:
@@ -388,6 +405,9 @@ class AIFPLCompiler:
             if group.is_recursive:
                 recursive_bindings.update(group.names)
 
+        # Add recursive bindings to parent_ref_names so nested lambdas know about them
+        ctx.parent_ref_names.update(recursive_bindings)
+
         # Second pass: Analyze binding values in topological order
         # The binding_groups are already in topological order from the analyzer
         binding_plans = []
@@ -448,22 +468,44 @@ class AIFPLCompiler:
         bound_vars = set(param_names)
         free_vars = self._find_free_variables(body, bound_vars, ctx)
 
-        # Filter free variables - don't capture self-references or siblings
+        # Separate free variables into captured (from outer scopes) and parent references (recursive bindings)
         captured_vars = []
         free_var_plans = []
+        parent_refs = []
+        parent_ref_plans = []
+
         current_binding = binding_name if binding_name else ctx.current_letrec_binding
         current_siblings = let_bindings if let_bindings else ctx.sibling_bindings
 
         for free_var in free_vars:
-            # Skip self-references and sibling references
-            if current_binding and free_var == current_binding:
-                continue
-            if current_siblings and free_var in current_siblings:
-                continue
-            captured_vars.append(free_var)
             # Create a plan for loading this free variable from parent scope
             var_type, depth, index = ctx.resolve_variable(free_var)
-            free_var_plans.append(VariablePlan(name=free_var, var_type=var_type, depth=depth, index=index))
+
+            # Check if this is a self-reference or sibling (parent reference)
+            is_parent_ref = False
+            if current_binding and free_var == current_binding:
+                is_parent_ref = True
+
+            elif current_siblings and free_var in current_siblings:
+                is_parent_ref = True
+
+            elif free_var in ctx.parent_ref_names:
+                # Also check if it's a recursive binding from a parent letrec
+                is_parent_ref = True
+
+            if is_parent_ref:
+                # Parent reference - will use LOAD_PARENT_VAR
+                parent_refs.append(free_var)
+                parent_ref_plans.append(VariablePlan(
+                    name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=True
+                ))
+
+            else:
+                # Regular free variable - will be captured
+                captured_vars.append(free_var)
+                free_var_plans.append(VariablePlan(
+                    name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=False
+                ))
 
         # Check if lambda is self-recursive
         is_self_recursive = False
@@ -486,6 +528,9 @@ class AIFPLCompiler:
 
         # Set function name for tail recursion detection
         lambda_ctx.current_function_name = binding_name
+
+        # Mark parent refs so they can be identified during body analysis
+        lambda_ctx.parent_ref_names = set(parent_refs)
         lambda_ctx.update_max_locals()
 
         # Analyze lambda body (in tail position)
@@ -498,6 +543,8 @@ class AIFPLCompiler:
             body_plan=body_plan,
             free_vars=captured_vars,
             free_var_plans=free_var_plans,
+            parent_refs=parent_refs,
+            parent_ref_plans=parent_ref_plans,
             param_count=len(param_names),
             binding_name=binding_name,
             is_self_recursive=is_self_recursive,

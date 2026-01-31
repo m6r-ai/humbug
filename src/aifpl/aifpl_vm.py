@@ -18,7 +18,7 @@ from aifpl.aifpl_value import (
 class TailCall:
     """
     Marker for tail call optimization.
-    
+
     When a handler returns this, the execution loop will replace the current
     frame with a new frame for the target function, achieving true tail call
     optimization with constant stack space.
@@ -38,6 +38,7 @@ class Frame:
     locals: List[AIFPLValue | None] = field(init=False)  # Local variables
     closure_env: Any = None  # Closure environment for this frame
     local_names: Dict[str, int] = field(default_factory=dict)  # Map variable names to local indices
+    parent_frame: 'Frame | None' = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
 
     def __post_init__(self) -> None:
         """Initialize locals array based on code object."""
@@ -84,6 +85,7 @@ class AIFPLVM:
         table[Opcode.LOAD_VAR] = self._op_load_var
         table[Opcode.STORE_VAR] = self._op_store_var
         table[Opcode.LOAD_NAME] = self._op_load_name
+        table[Opcode.LOAD_PARENT_VAR] = self._op_load_parent_var
         table[Opcode.JUMP] = self._op_jump
         table[Opcode.JUMP_IF_FALSE] = self._op_jump_if_false
         table[Opcode.JUMP_IF_TRUE] = self._op_jump_if_true
@@ -129,7 +131,7 @@ class AIFPLVM:
     def _execute_frame(self) -> AIFPLValue:
         """
         Execute frames using jump table dispatch with tail call optimization.
-        
+
         This method implements a trampoline pattern: when a handler returns a
         TailCall marker, we replace the current frame with the target frame
         and continue execution, achieving true tail call optimization with
@@ -273,6 +275,48 @@ class AIFPLVM:
         value = self.stack.pop()
         target_frame = self.frames[-(depth + 1)]
         target_frame.locals[index] = value
+        return None
+
+    def _op_load_parent_var(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        arg2: int
+    ) -> AIFPLValue | None:
+        """
+        LOAD_PARENT_VAR: Load variable from parent frame.
+
+        This is used for recursive closures in letrec - the closure references
+        a binding from its parent frame rather than capturing it.
+
+        Args:
+            arg1: depth - how many parent frames to walk up
+            arg2: index - variable index in the target parent frame
+        """
+        depth = arg1
+        index = arg2
+
+        # Walk up parent frame chain by depth
+        current_frame = self.frames[-1]
+        parent_frame = current_frame.parent_frame
+
+        for _ in range(depth - 1):
+            if parent_frame is None:
+                raise AIFPLEvalError(f"LOAD_PARENT_VAR: no parent frame at depth {depth}")
+            parent_frame = parent_frame.parent_frame
+
+        if parent_frame is None:
+            raise AIFPLEvalError(f"LOAD_PARENT_VAR: no parent frame at depth {depth}")
+
+        if index >= len(parent_frame.locals):
+            raise AIFPLEvalError(f"LOAD_PARENT_VAR: variable index {index} out of range (parent frame has {len(parent_frame.locals)} locals)")
+
+        value = parent_frame.locals[index]
+        if value is None:
+            raise AIFPLEvalError(f"LOAD_PARENT_VAR: uninitialized variable at index {index}")
+
+        self.stack.append(value)
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
@@ -427,7 +471,8 @@ class AIFPLVM:
             closure_environment=AIFPLEnvironment(bindings=captured_dict, parent=parent_env),
             name=closure_code.name,
             bytecode=closure_code,
-            captured_values=tuple(captured_values)
+            captured_values=tuple(captured_values),
+            parent_frame=current_frame  # Store parent frame for LOAD_PARENT_VAR
         )
         self.stack.append(closure)
         return None
@@ -494,7 +539,7 @@ class AIFPLVM:
     ) -> TailCall | None:
         """
         TAIL_CALL_FUNCTION: Perform tail call with optimization.
-        
+
         Returns a TailCall marker that the execution loop will handle by
         replacing the current frame with the target frame, achieving true
         tail call optimization with constant stack space for all tail calls.
@@ -613,7 +658,8 @@ class AIFPLVM:
             closure_environment=new_env,
             name=target_closure.name,
             bytecode=target_closure.bytecode,
-            captured_values=target_closure.captured_values
+            captured_values=target_closure.captured_values,
+            parent_frame=target_closure.parent_frame  # Preserve parent frame for LOAD_PARENT_VAR
         )
 
         # Add self-reference
@@ -673,14 +719,14 @@ class AIFPLVM:
     def _setup_call_frame(self, func: AIFPLFunction) -> None:
         """
         Setup a new frame for calling a function.
-        
+
         Creates a new frame, initializes it with the function's closure environment
         and captured values, and pushes it onto the frame stack.
-        
+
         Arguments are assumed to be already on the stack in correct order.
         The function prologue (STORE_VAR instructions at start of bytecode)
         will pop these arguments into locals.
-        
+
         Args:
             func: Function to call
         """
@@ -689,6 +735,7 @@ class AIFPLVM:
         # Create new frame
         new_frame = Frame(code)
         new_frame.closure_env = func.closure_environment
+        new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
 
         # Store captured values in locals (after parameters)
         if func.captured_values:
