@@ -4,8 +4,6 @@ from typing import List, Dict, Tuple, Set, cast
 from dataclasses import dataclass, field
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
-from aifpl.aifpl_analyzer import AIFPLAnalyzer, AnalysisResult
-from aifpl.aifpl_builtins import BUILTIN_TABLE, BUILTIN_ARITHMETIC, BUILTIN_COMPARISON, BUILTIN_LOGIC
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_optimizer import AIFPLOptimizer
@@ -63,7 +61,6 @@ class CompilationContext:
     next_local_index: int = 0  # Global counter for local variable indices (for flat indexing)
     current_function_name: str | None = None  # Name of the function being compiled (for tail recursion detection)
     current_letrec_binding: str | None = None  # Name of the letrec binding being compiled (for nested lambdas)
-    analysis_result: AnalysisResult | None = None  # Analysis results from static analyzer
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -166,6 +163,33 @@ class AIFPLCompiler:
     Uses a single-pass compiler with lexical addressing for variables.
     """
 
+    # Builtin functions that get special treatment
+    BUILTIN_ARITHMETIC = {'+', '-', '*', '/', '//', '%', '**'}
+    BUILTIN_COMPARISON = {'=', '!=', '<', '>', '<=', '>='}
+    BUILTIN_LOGIC = {'and', 'or', 'not'}
+
+    # Map builtin names to indices (for CALL_BUILTIN)
+    BUILTIN_TABLE = [
+        '+', '-', '*', '/', '//', '%', '**',
+        '=', '!=', '<', '>', '<=', '>=',
+        'and', 'or', 'not',
+        'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
+        'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
+        'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
+        'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
+        'range',
+        'string-append', 'string-length', 'string-upcase', 'string-downcase',
+        'string-trim', 'string-replace', 'string-split', 'string-join',
+        'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
+        'substring', 'string->number', 'number->string', 'string=?', 'string->list', 'list->string',
+        'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
+        'alist-keys', 'alist-values', 'alist-merge', 'alist?',
+        'sqrt', 'abs', 'min', 'max', 'pow',
+        'sin', 'cos', 'tan', 'log', 'log10', 'exp',
+        'round', 'floor', 'ceil',
+        'bin', 'hex', 'oct', 'real', 'imag', 'complex',
+    ]
+
     def __init__(self, optimize: bool = True) -> None:
         """
         Initialize compiler.
@@ -174,9 +198,8 @@ class AIFPLCompiler:
             optimize: Enable AST optimizations (constant folding, etc.)
         """
         self.optimize = optimize
-        self.builtin_indices = {name: i for i, name in enumerate(BUILTIN_TABLE)}
+        self.builtin_indices = {name: i for i, name in enumerate(self.BUILTIN_TABLE)}
         self.desugarer = AIFPLDesugarer()
-        self.analyzer = AIFPLAnalyzer()
         if optimize:
             self.optimizer = AIFPLOptimizer()
 
@@ -198,11 +221,7 @@ class AIFPLCompiler:
         if self.optimize:
             expr = self.optimizer.optimize(expr)
 
-        # Run static analysis
-        analysis_result = self.analyzer.analyze(expr)
-
         ctx = CompilationContext()
-        ctx.analysis_result = analysis_result
 
         # Compile the expression
         self._compile_expression(expr, ctx, in_tail_position=False)
@@ -733,23 +752,9 @@ class AIFPLCompiler:
 
         # Duplicate parameters already checked by semantic analyzer
 
-        # Try to use analyzer results if available
-        lambda_info = None
-        if ctx.analysis_result:
-            lambda_info = ctx.analysis_result.get_lambda_info(expr)
-
-        if lambda_info:
-            # Use pre-analyzed free variables
-            # Note: analyzer's free_vars excludes siblings, but we need them for the
-            # sibling_bindings logic below. Combine free_vars with lambda_siblings.
-            free_vars = lambda_info.free_vars + list(lambda_info.lambda_siblings)
-            # Also add self-reference if present
-            if lambda_info.is_self_recursive and lambda_info.self_name:
-                free_vars = [lambda_info.self_name] + free_vars
-        else:
-            # Fallback: Find free variables (variables used in body but not parameters)
-            bound_vars = set(param_names)
-            free_vars = self._find_free_variables(body, bound_vars, ctx)
+        # Find free variables (variables used in body but not parameters)
+        bound_vars = set(param_names)
+        free_vars = self._find_free_variables(body, bound_vars, ctx)
 
         # Emit instructions to load free variables onto stack (for capture).
         # Only capture variables from outer scopes, not self-references in current scope.
@@ -792,16 +797,11 @@ class AIFPLCompiler:
 
         # For sibling bindings that weren't captured, we need to track them differently
         # They should be resolved from parent frame at runtime
-        if lambda_info:
-            # Use analyzer's lambda_siblings
-            sibling_bindings = list(lambda_info.lambda_siblings)
-        else:
-            # Fallback: compute from free_vars and let_bindings
-            sibling_bindings = []
-            if let_bindings:
-                for free_var in free_vars:
-                    if free_var != binding_name and free_var in let_bindings:
-                        sibling_bindings.append(free_var)
+        sibling_bindings = []
+        if let_bindings:
+            for free_var in free_vars:
+                if free_var != binding_name and free_var in let_bindings:
+                    sibling_bindings.append(free_var)
 
         # Store parent context in lambda context for variable resolution
         lambda_ctx.parent_ctx = ctx

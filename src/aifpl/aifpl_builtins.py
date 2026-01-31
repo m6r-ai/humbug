@@ -14,41 +14,6 @@ from aifpl.aifpl_value import (
 )
 
 
-# Builtin function names and special forms (for compiler and analyzer)
-# These constants are used to identify builtin functions and special forms
-# without circular imports between compiler and analyzer
-
-# Builtin functions that get special treatment in the compiler
-BUILTIN_ARITHMETIC = {'+', '-', '*', '/', '//', '%', '**'}
-BUILTIN_COMPARISON = {'=', '!=', '<', '>', '<=', '>='}
-BUILTIN_LOGIC = {'and', 'or', 'not'}
-
-# Map builtin names to indices (for CALL_BUILTIN)
-# This table defines all builtin functions available in AIFPL
-BUILTIN_TABLE = [
-    '+', '-', '*', '/', '//', '%', '**',
-    '=', '!=', '<', '>', '<=', '>=',
-    'and', 'or', 'not',
-    'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
-    'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
-    'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
-    'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
-    'range',
-    'string-append', 'string-length', 'string-upcase', 'string-downcase',
-    'string-trim', 'string-replace', 'string-split', 'string-join',
-    'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
-    'substring', 'string->number', 'number->string', 'string=?', 'string->list', 'list->string',
-    'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
-    'alist-keys', 'alist-values', 'alist-merge', 'alist?',
-    'sqrt', 'abs', 'min', 'max', 'pow',
-    'sin', 'cos', 'tan', 'log', 'log10', 'exp',
-    'round', 'floor', 'ceil',
-    'bin', 'hex', 'oct', 'real', 'imag', 'complex',
-]
-
-# Special forms (not functions, but language constructs)
-SPECIAL_FORMS = {'if', 'let', 'letrec', 'lambda', 'quote', 'and', 'or', 'match', 'error'}
-
 # Helper functions for numeric type compatibility during Phase 1 migration
 
 def is_numeric_type(value: AIFPLValue) -> bool:

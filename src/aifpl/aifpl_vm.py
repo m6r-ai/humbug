@@ -4,8 +4,9 @@ import difflib
 from typing import List, Dict, Any
 from dataclasses import dataclass, field
 
-from aifpl.aifpl_builtins import AIFPLBuiltinRegistry, BUILTIN_TABLE
+from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
+from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
@@ -59,7 +60,7 @@ class AIFPLVM:
         self._builtin_registry = AIFPLBuiltinRegistry()
 
         # Build set of builtin symbols for quick lookup
-        self.builtin_symbols = set(BUILTIN_TABLE)
+        self.builtin_symbols = set(AIFPLCompiler.BUILTIN_TABLE)
 
         # Create builtin function objects for first-class function support (e.g., passed to map)
         self._builtin_functions = self._builtin_registry.create_builtin_function_objects()
@@ -718,7 +719,7 @@ class AIFPLVM:
         and handles special forms (and, or, map, filter, fold, etc.) separately
         because they require special evaluation semantics.
         """
-        builtin_name = BUILTIN_TABLE[builtin_index]
+        builtin_name = AIFPLCompiler.BUILTIN_TABLE[builtin_index]
 
         # Check if this builtin is in the registry
         if not self._builtin_registry.has_function(builtin_name):
