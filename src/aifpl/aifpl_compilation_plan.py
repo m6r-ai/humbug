@@ -111,6 +111,12 @@ class EmptyListPlan:
     """Plan for compiling an empty list literal."""
 
 
+@dataclass
+class ReturnPlan:
+    """Plan for compiling a return statement."""
+    value_plan: 'ExprPlan'
+
+
 # Union type for all expression plans
 ExprPlan = Union[
     ConstantPlan,
@@ -125,4 +131,5 @@ ExprPlan = Union[
     LambdaPlan,
     CallPlan,
     EmptyListPlan,
+    ReturnPlan,
 ]

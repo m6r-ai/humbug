@@ -7,7 +7,7 @@ from aifpl.aifpl_bytecode import CodeObject
 from aifpl.aifpl_compilation_plan import (
     ExprPlan, ConstantPlan, VariablePlan, IfPlan, LetPlan, LetrecPlan,
     LambdaPlan, CallPlan, QuotePlan, ErrorPlan, EmptyListPlan,
-    AndPlan, OrPlan
+    AndPlan, OrPlan, ReturnPlan
 )
 from aifpl.aifpl_codegen import AIFPLCodeGenerator
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
@@ -202,7 +202,12 @@ class AIFPLCompiler:
 
         # Phase 1: Analysis - build compilation plan
         analysis_ctx = AnalysisContext()
-        plan = self._analyze_expression(expr, analysis_ctx, in_tail_position=False)
+        plan = self._analyze_expression(expr, analysis_ctx, in_tail_position=True)
+
+        # Wrap the top-level expression in a ReturnPlan
+        # (unless it's already a tail call that doesn't need a return)
+        if not (isinstance(plan, CallPlan) and plan.is_tail_call):
+            plan = ReturnPlan(value_plan=plan)
 
         # Phase 2: Code generation - generate bytecode from plan
         codegen = AIFPLCodeGenerator()
@@ -309,6 +314,15 @@ class AIFPLCompiler:
         condition_plan = self._analyze_expression(condition, ctx, in_tail_position=False)
         then_plan = self._analyze_expression(then_expr, ctx, in_tail_position=in_tail_position)
         else_plan = self._analyze_expression(else_expr, ctx, in_tail_position=in_tail_position)
+
+        # Wrap branches in ReturnPlan when in tail position
+        # (unless they're already tail calls that don't need a return)
+        if in_tail_position:
+            if not (isinstance(then_plan, CallPlan) and then_plan.is_tail_call):
+                then_plan = ReturnPlan(value_plan=then_plan)
+
+            if not (isinstance(else_plan, CallPlan) and else_plan.is_tail_call):
+                else_plan = ReturnPlan(value_plan=else_plan)
 
         return IfPlan(
             condition_plan=condition_plan,
@@ -535,6 +549,11 @@ class AIFPLCompiler:
 
         # Analyze lambda body (in tail position)
         body_plan = self._analyze_expression(body, lambda_ctx, in_tail_position=True)
+
+        # Wrap the lambda body in a ReturnPlan
+        # (unless it's already a tail call that doesn't need a return)
+        if not (isinstance(body_plan, CallPlan) and body_plan.is_tail_call):
+            body_plan = ReturnPlan(value_plan=body_plan)
 
         lambda_ctx.pop_scope()
 

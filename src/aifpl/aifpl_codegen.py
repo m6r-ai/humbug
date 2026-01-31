@@ -12,7 +12,7 @@ from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
 from aifpl.aifpl_compilation_plan import (
     ExprPlan, ConstantPlan, VariablePlan, IfPlan, AndPlan, OrPlan,
     QuotePlan, ErrorPlan, LetPlan, LetrecPlan, LambdaPlan, CallPlan,
-    EmptyListPlan
+    EmptyListPlan, ReturnPlan
 )
 from aifpl.aifpl_value import AIFPLValue
 
@@ -99,8 +99,7 @@ class AIFPLCodeGenerator:
         # Generate code for the expression
         self._generate_expr(plan, ctx)
 
-        # Add RETURN instruction
-        ctx.emit(Opcode.RETURN)
+        # No automatic RETURN - the plan must explicitly include ReturnPlan
 
         # Build code object
         return CodeObject(
@@ -152,6 +151,9 @@ class AIFPLCodeGenerator:
         elif isinstance(plan, EmptyListPlan):
             self._generate_empty_list(plan, ctx)
 
+        elif isinstance(plan, ReturnPlan):
+            self._generate_return(plan, ctx)
+
         else:
             raise ValueError(f"Unknown plan type: {type(plan)}")
 
@@ -185,24 +187,23 @@ class AIFPLCodeGenerator:
         # Generate then branch
         self._generate_expr(plan.then_plan, ctx)
 
-        # Handle tail position
-        jump_past_else = None
-        if plan.in_tail_position:
-            # Then branch is in tail position, so emit RETURN
-            ctx.emit(Opcode.RETURN)
+        # Check if then branch ends with RETURN or TAIL_CALL (no need to jump in that case)
+        then_returns = False
+        if ctx.instructions:
+            last_op = ctx.instructions[-1].opcode
+            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL_FUNCTION):
+                then_returns = True
 
-        else:
-            # Not in tail position, emit jump past else
-            jump_past_else = ctx.emit(Opcode.JUMP, 0)
+        # Only jump past else if then branch doesn't return
+        jump_past_else = None if then_returns else ctx.emit(Opcode.JUMP, 0)
 
-        # Patch jump to else
         else_start = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_else, else_start)
 
         # Generate else branch
         self._generate_expr(plan.else_plan, ctx)
 
-        # Patch jump past else (if not in tail position)
+        # Patch jump past else (if we emitted one)
         if jump_past_else is not None:
             after_else = ctx.current_instruction_index()
             ctx.patch_jump(jump_past_else, after_else)
@@ -335,14 +336,7 @@ class AIFPLCodeGenerator:
         # Generate body
         self._generate_expr(plan.body_plan, lambda_ctx)
 
-        # Only emit RETURN if the body didn't already emit one
-        if lambda_ctx.instructions:
-            last_op = lambda_ctx.instructions[-1].opcode
-            if last_op not in (Opcode.RETURN, Opcode.JUMP, Opcode.TAIL_CALL_FUNCTION):
-                lambda_ctx.emit(Opcode.RETURN)
-
-        else:
-            lambda_ctx.emit(Opcode.RETURN)
+        # No automatic RETURN - the body_plan must explicitly include ReturnPlan
 
         # Create code object for lambda
         lambda_code = CodeObject(
@@ -403,3 +397,10 @@ class AIFPLCodeGenerator:
     def _generate_empty_list(self, _plan: EmptyListPlan, ctx: CodeGenContext) -> None:
         """Generate code for an empty list literal."""
         ctx.emit(Opcode.LOAD_EMPTY_LIST)
+
+    def _generate_return(self, plan: ReturnPlan, ctx: CodeGenContext) -> None:
+        """Generate code for a return statement."""
+        # Generate the value to return
+        self._generate_expr(plan.value_plan, ctx)
+        # Emit RETURN instruction
+        ctx.emit(Opcode.RETURN)
