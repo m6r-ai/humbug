@@ -464,8 +464,7 @@ class AIFPLCompiler:
             in_tail_position=in_tail_position
         )
 
-    def _analyze_lambda(self, expr: AIFPLList, ctx: AnalysisContext,
-                       binding_name: str | None = None, let_bindings: List[str] | None = None) -> LambdaPlan:
+    def _analyze_lambda(self, expr: AIFPLList, ctx: AnalysisContext) -> LambdaPlan:
         """Analyze a lambda expression."""
         assert len(expr.elements) == 3, "Lambda expression should have exactly 3 elements"
 
@@ -488,8 +487,8 @@ class AIFPLCompiler:
         parent_refs = []
         parent_ref_plans = []
 
-        current_binding = binding_name if binding_name else ctx.current_letrec_binding
-        current_siblings = let_bindings if let_bindings else ctx.sibling_bindings
+        current_binding = ctx.current_letrec_binding
+        current_siblings = ctx.sibling_bindings
 
         for free_var in free_vars:
             # Create a plan for loading this free variable from parent scope
@@ -507,24 +506,10 @@ class AIFPLCompiler:
                 # Also check if it's a recursive binding from a parent letrec
                 is_parent_ref = True
 
-            if is_parent_ref:
-                # Parent reference - will use LOAD_PARENT_VAR
-                parent_refs.append(free_var)
-                parent_ref_plans.append(VariablePlan(
-                    name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=True
-                ))
-
-            else:
-                # Regular free variable - will be captured
-                captured_vars.append(free_var)
-                free_var_plans.append(VariablePlan(
-                    name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=False
-                ))
-
-        # Check if lambda is self-recursive
-        is_self_recursive = False
-        if binding_name:
-            is_self_recursive = self._references_variable(body, binding_name)
+            parent_refs.append(free_var)
+            parent_ref_plans.append(VariablePlan(
+                name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=is_parent_ref
+            ))
 
         # Create child context for lambda body analysis
         lambda_ctx = ctx.create_child_context()
@@ -541,7 +526,7 @@ class AIFPLCompiler:
             lambda_ctx.current_scope().add_binding(free_var, free_var_index)
 
         # Set function name for tail recursion detection
-        lambda_ctx.current_function_name = binding_name
+        lambda_ctx.current_function_name = ctx.current_letrec_binding
 
         # Mark parent refs so they can be identified during body analysis
         lambda_ctx.parent_ref_names = set(parent_refs)
@@ -565,9 +550,8 @@ class AIFPLCompiler:
             parent_refs=parent_refs,
             parent_ref_plans=parent_ref_plans,
             param_count=len(param_names),
-            binding_name=binding_name,
-            is_self_recursive=is_self_recursive,
-            sibling_bindings=let_bindings or [],
+            binding_name=ctx.current_letrec_binding,
+            sibling_bindings=ctx.sibling_bindings,
             max_locals=lambda_ctx.max_locals
         )
 
@@ -620,18 +604,6 @@ class AIFPLCompiler:
             is_builtin=False,
             builtin_index=None
         )
-
-    def _references_variable(self, expr: AIFPLValue, var_name: str) -> bool:
-        """Check if an expression references a variable."""
-        expr_type = type(expr)
-
-        if expr_type is AIFPLSymbol:
-            return cast(AIFPLSymbol, expr).name == var_name
-
-        if expr_type is AIFPLList:
-            return any(self._references_variable(elem, var_name) for elem in cast(AIFPLList, expr).elements)
-
-        return False
 
     def _find_free_variables(self, expr: AIFPLValue, bound_vars: Set[str], parent_ctx: AnalysisContext) -> List[str]:
         """

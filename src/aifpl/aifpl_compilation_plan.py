@@ -89,7 +89,6 @@ class LambdaPlan:
     param_count: int
     max_locals: int  # Maximum locals needed in lambda body
     binding_name: Optional[str] = None  # Name if bound in let/letrec (for recursion)
-    is_self_recursive: bool = False  # Does this lambda call itself?
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
     parent_refs: List[str] = field(default_factory=list)  # Names of parent frame references (recursive bindings)
     parent_ref_plans: List['VariablePlan'] = field(default_factory=list)  # Plans for loading parent references
