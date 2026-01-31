@@ -538,6 +538,7 @@ class AIFPLCompiler:
         )
 
         # Analyze function and arguments
+        func_plan: ExprPlan
         if is_tail_recursive:
             func_plan = VariablePlan(name='<tail-recursive>', var_type='local', depth=0, index=0)
         else:
