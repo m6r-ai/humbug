@@ -224,18 +224,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      
+
       - name: Analyze bytecode
         run: |
           cd tools/aifpl_bytecode_analyzer
           python bytecode_analyzer.py --file test_cases.aifpl --json > results.json
-      
+
       - name: Check for regressions
         run: |
           # Compare with baseline
           # Fail if instruction count increased
           python check_regression.py results.json baseline.json
-      
+
       - name: Comment on PR
         run: |
           # Post results as PR comment

@@ -88,10 +88,10 @@ Add a single special form to load modules:
               (end-date (get-end-date tasks)))
           ((alist-get calendar "working-days-between") 
            start-date end-date my-calendar))))
-    
+
     (validate-task
       (lambda (task) ...)))
-    
+
     ; Export validation functions
     (alist
       (list "detect-cycles" detect-cycles)
@@ -115,24 +115,24 @@ class AIFPL:
     def __init__(self, module_path=None):
         """
         Initialize AIFPL with module search path.
-        
+
         Args:
             module_path: List of directories to search for modules
                         Default: ["."] (current directory)
         """
         self.module_path = module_path or ["."]
         self.module_cache = {}  # module_name -> alist
-    
+
     def resolve_module(self, module_name: str) -> str:
         """
         Find module file in search path.
-        
+
         Args:
             module_name: Name like "calendar" or "lib/validation"
-        
+
         Returns:
             Full path to module file
-            
+
         Raises:
             ModuleNotFoundError: If module not found in search path
         """
@@ -140,38 +140,38 @@ class AIFPL:
             module_path = Path(directory) / f"{module_name}.aifpl"
             if module_path.exists():
                 return str(module_path)
-        
+
         raise ModuleNotFoundError(
             f"Module '{module_name}' not found in {self.module_path}"
         )
-    
+
     def load_module(self, module_name: str):
         """
         Load and evaluate a module, with caching.
-        
+
         Args:
             module_name: Name of module to load
-            
+
         Returns:
             The alist returned by evaluating the module
         """
         # Check cache
         if module_name in self.module_cache:
             return self.module_cache[module_name]
-        
+
         # Resolve to file path
         module_path = self.resolve_module(module_name)
-        
+
         # Load and evaluate
         with open(module_path, 'r') as f:
             code = f.read()
-        
+
         # Parse and evaluate (imports within this module will recurse)
         result = self.evaluate(code)
-        
+
         # Cache the result
         self.module_cache[module_name] = result
-        
+
         return result
 ```
 
@@ -181,15 +181,15 @@ class AIFPL:
 class AIFPLEvaluator:
     def evaluate(self, expr, constants, prelude):
         """Evaluate an AIFPL expression."""
-        
+
         # ... existing code ...
-        
+
         # Handle import special form
         if self._is_import(expr):
             return self._evaluate_import(expr)
-        
+
         # ... rest of evaluation ...
-    
+
     def _is_import(self, expr):
         """Check if expression is (import "module-name")."""
         return (isinstance(expr, AIFPLList) and 
@@ -197,15 +197,15 @@ class AIFPLEvaluator:
                 isinstance(expr[0], AIFPLSymbol) and
                 expr[0].name == "import" and
                 isinstance(expr[1], AIFPLString))
-    
+
     def _evaluate_import(self, expr):
         """
         Evaluate (import "module-name").
-        
+
         Returns the alist from the module.
         """
         module_name = expr[1].value  # Extract string from AIFPLString
-        
+
         # Delegate to AIFPL instance to load the module
         # (AIFPL instance has module_path and cache)
         return self.aifpl_instance.load_module(module_name)
@@ -242,7 +242,7 @@ class AIFPLEvaluator:
                     ((alist-get calendar "working-days-between") 
                      start end (get-calendar project)))
                   #f)))))
-    
+
     ; Export
     (alist
       (list "analyze-project" analyze-project))))
@@ -328,7 +328,7 @@ class AIFPL:
         self.module_path = module_path or ["."]
         self.module_cache = {}
         self.loading_stack = []  # Track currently-loading modules
-    
+
     def load_module(self, module_name: str):
         # Check for circular dependency
         if module_name in self.loading_stack:
@@ -336,14 +336,14 @@ class AIFPL:
             raise CircularImportError(
                 f"Circular import detected: {' -> '.join(cycle)}"
             )
-        
+
         # Check cache
         if module_name in self.module_cache:
             return self.module_cache[module_name]
-        
+
         # Mark as loading
         self.loading_stack.append(module_name)
-        
+
         try:
             # Load and evaluate
             result = self._do_load_module(module_name)

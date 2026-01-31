@@ -83,10 +83,10 @@ BENCHMARK RESULTS
 
 ARITHMETIC
 --------------------------------------------------------------------------------
-Benchmark                                Mean         Median       Ops/sec     
+Benchmark                                Mean         Median       Ops/sec
 --------------------------------------------------------------------------------
-Simple Addition                          0.045ms      0.044ms      22222.2     
-Nested Arithmetic                        0.123ms      0.121ms      8130.1      
+Simple Addition                          0.045ms      0.044ms      22222.2
+Nested Arithmetic                        0.123ms      0.121ms      8130.1
 ...
 
 SUMMARY
@@ -143,10 +143,10 @@ Output:
 ================================================================================
 COMPARISON WITH BASELINE: baseline.json
 ================================================================================
-Benchmark                                Current      Baseline     Change      
+Benchmark                                Current      Baseline     Change
 --------------------------------------------------------------------------------
-Simple Addition                          0.045ms      0.050ms      ↑ 10.0%    
-Map (100 elements)                       5.234ms      15.123ms     ↑ 65.4%    
+Simple Addition                          0.045ms      0.050ms      ↑ 10.0%
+Map (100 elements)                       5.234ms      15.123ms     ↑ 65.4%
 ...
 
 SUMMARY
@@ -205,7 +205,7 @@ fi
 
 1. **High std_dev**: Indicates inconsistent performance, may need more iterations
 2. **Low ops/sec**: Identifies slow operations
-3. **Category patterns**: 
+3. **Category patterns**:
    - Slow "recursion" → Environment/call overhead
    - Slow "lists" → Data structure overhead
    - Slow "higher-order" → Function call overhead

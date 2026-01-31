@@ -92,10 +92,10 @@ python bytecode_analyzer.py --batch examples/*.aifpl
 
 ```
 ============================================================
-                 BYTECODE COMPARISON REPORT                 
+                 BYTECODE COMPARISON REPORT
 ============================================================
 
-                          SUMMARY                           
+                          SUMMARY
 ------------------------------------------------------------
   Instructions Eliminated:      5 ( 38.5%)
   Constants Eliminated:         2

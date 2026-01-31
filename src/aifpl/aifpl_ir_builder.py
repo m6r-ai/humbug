@@ -129,7 +129,7 @@ class AnalysisContext:
 class AIFPLIRBuilder:
     """
     Builds intermediate representation (IR) from AST.
-    
+
     This performs semantic analysis and builds an IR tree that can be
     passed to the code generator. This is a pure transformation - no
     desugaring or optimization happens here (those are separate passes).

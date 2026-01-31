@@ -22,46 +22,46 @@ def profile_workload(name, expression, iterations=100):
     print(f"{'='*80}")
     print(f"Expression: {expression[:100]}...")
     print(f"Iterations: {iterations}")
-    
+
     aifpl = AIFPL()
     profiler = cProfile.Profile()
-    
+
     # Warmup
     for _ in range(5):
         aifpl.evaluate(expression)
-    
+
     # Profile
     profiler.enable()
     for _ in range(iterations):
         aifpl.evaluate(expression)
     profiler.disable()
-    
+
     # Print stats
     s = StringIO()
     stats = pstats.Stats(profiler, stream=s)
     stats.sort_stats('cumulative')
     stats.print_stats(40)
-    
+
     print(s.getvalue())
 
 
 def main():
     """Profile key workloads."""
-    
+
     # Workload 1: Map with 100 elements (higher-order function overhead)
     profile_workload(
         "Map (100 elements)",
         "(map (lambda (x) (* x x)) (range 1 101))",
         iterations=50
     )
-    
+
     # Workload 2: Let with many bindings (environment overhead)
     profile_workload(
         "Let with Many Bindings (10)",
         "(let ((a 1) (b 2) (c 3) (d 4) (e 5) (f 6) (g 7) (h 8) (i 9) (j 10)) (+ a b c d e f g h i j))",
         iterations=100
     )
-    
+
     # Workload 3: Tail recursive sum (recursion + environment overhead)
     profile_workload(
         "Tail Recursive Sum (100)",
@@ -72,7 +72,7 @@ def main():
              (sum-tail 100 0))""",
         iterations=50
     )
-    
+
     # Workload 4: Map + Fold pipeline (combined overhead)
     profile_workload(
         "Map + Fold Pipeline",

@@ -17,10 +17,10 @@ python bytecode_analyzer.py --expr "(+ (* 2 3) (* 4 5))"
 **Output:**
 ```
 ============================================================
-                 BYTECODE COMPARISON REPORT                 
+                 BYTECODE COMPARISON REPORT
 ============================================================
 
-                          SUMMARY                           
+                          SUMMARY
 ------------------------------------------------------------
   Instructions Eliminated:      5 ( 62.5%)
   Constants Eliminated:         4
@@ -28,7 +28,7 @@ python bytecode_analyzer.py --expr "(+ (* 2 3) (* 4 5))"
   Arithmetic Ops Eliminated:    2
 
 ============================================================
-                   UNOPTIMIZED BYTECODE                     
+                   UNOPTIMIZED BYTECODE
 ============================================================
 
 Overall Statistics:
@@ -52,7 +52,7 @@ Instruction Frequency:
   RETURN                        1
 
 ============================================================
-                    OPTIMIZED BYTECODE                      
+                    OPTIMIZED BYTECODE
 ============================================================
 
 Overall Statistics:
@@ -74,7 +74,7 @@ Instruction Frequency:
   LOAD_CONST                    1
   RETURN                        1
 
-                    IMPROVEMENT ANALYSIS                    
+                    IMPROVEMENT ANALYSIS
 ------------------------------------------------------------
   ✓ Reduced instruction count by 62.5%
   ✓ Eliminated 4 constants
@@ -85,7 +85,7 @@ Instruction Frequency:
 ```
 
 **Interpretation:**
-- 62.5% fewer instructions! 
+- 62.5% fewer instructions!
 - All intermediate values computed at compile time
 - Final result (26) loaded as single constant
 
@@ -183,7 +183,7 @@ python bytecode_analyzer.py --expr "(+ 1 2)" --disassemble
 **Output:**
 ```
 ============================================================
-              DISASSEMBLY (Unoptimized)                     
+              DISASSEMBLY (Unoptimized)
 ============================================================
 
 CodeObject: <module>
@@ -199,7 +199,7 @@ CodeObject: <module>
       4: RETURN               ; Return result
 
 ============================================================
-               DISASSEMBLY (Optimized)                      
+               DISASSEMBLY (Optimized)
 ============================================================
 
 CodeObject: <module>
@@ -229,7 +229,7 @@ python bytecode_analyzer.py --batch test_cases/*.aifpl
 **Output:**
 ```
 ============================================================
-                  BATCH ANALYSIS SUMMARY                    
+                  BATCH ANALYSIS SUMMARY
 ============================================================
 
 Analyzed 10 files:

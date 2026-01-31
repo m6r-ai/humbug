@@ -41,10 +41,10 @@ python bytecode_analyzer.py --expr "(+ (* 2 3) (* 4 5))"
 **Output:**
 ```
 ============================================================
-                 BYTECODE COMPARISON REPORT                 
+                 BYTECODE COMPARISON REPORT
 ============================================================
 
-                          SUMMARY                           
+                          SUMMARY
 ------------------------------------------------------------
   Instructions Eliminated:      3 ( 25.0%)
   Constants Eliminated:         2
@@ -110,7 +110,7 @@ python bytecode_analyzer.py --batch examples/*.aifpl
 **Output:**
 ```
 ============================================================
-                  BATCH ANALYSIS SUMMARY                    
+                  BATCH ANALYSIS SUMMARY
 ============================================================
 
 Analyzed 10 files:

@@ -17,7 +17,7 @@ from aifpl.aifpl_codegen import AIFPLCodeGenerator
 class AIFPLCompiler:
     """
     Main compiler pass manager.
-    
+
     Orchestrates the complete compilation pipeline from source to bytecode:
     1. Lexing - source text → tokens
     2. Parsing - tokens → AST
@@ -28,16 +28,16 @@ class AIFPLCompiler:
     7. IR optimization - dead code, closure optimization (future)
     8. Code generation - IR → bytecode
     """
-    
+
     def __init__(self, optimize: bool = True):
         """
         Initialize compiler with all passes.
-        
+
         Args:
             optimize: Enable optimization passes (AST and IR level)
         """
         self.optimize = optimize
-        
+
         # Initialize all passes
         self.lexer = AIFPLLexer()
         self.semantic_analyzer = AIFPLSemanticAnalyzer()
@@ -46,45 +46,29 @@ class AIFPLCompiler:
         self.ir_builder = AIFPLIRBuilder()  # AST optimization done separately
         # Future: self.ir_optimizer = AIFPLIROptimizer() if optimize else None
         self.codegen = AIFPLCodeGenerator()
-    
+
     def compile(self, source: str, name: str = "<module>") -> CodeObject:
         """
         Compile AIFPL source code to bytecode.
-        
+
         This is the main entry point that runs the complete pipeline.
-        
+
         Args:
             source: AIFPL source code as a string
             name: Name for the code object (for debugging)
-        
+
         Returns:
             Compiled bytecode ready for execution
         """
-        # Phase 1: Lexing
         tokens = self.lexer.lex(source)
-        
-        # Phase 2: Parsing
         parser = AIFPLParser(tokens, source)
         ast = parser.parse()
-        
-        # Phase 3: Semantic Analysis
         ast = self.semantic_analyzer.analyze(ast)
-        
-        # Phase 4: Desugaring
         ast = self.desugarer.desugar(ast)
-        
-        # Phase 5: AST Optimization
         if self.ast_optimizer:
             ast = self.ast_optimizer.optimize(ast)
-        
-        # Phase 6: IR Building
+
         ir = self.ir_builder.build(ast, name)
-        
-        # Phase 7: IR Optimization (future)
-        # if self.ir_optimizer:
-        #     ir = self.ir_optimizer.optimize(ir)
-        
-        # Phase 8: Code Generation
         bytecode = self.codegen.generate(ir, name)
-        
+
         return bytecode
