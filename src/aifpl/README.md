@@ -26,12 +26,16 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Boolean literals**: `#t` (true) and `#f` (false)
 - **Constants**: `pi`, `e`, `true`, `false`
 - **Type promotion**: Automatic promotion from int → float → complex
-- **Result simplification**: Complex numbers with negligible imaginary parts become real
 - **Comments**: `;` introduces comments
+
+## Implementation
+
+AIFPL is currently implemented in Python (v3.10 or later).  The architecture is an optimizing compiler with a bytecode VM
+runtime.
 
 ## Usage
 
-### Basic Usage
+### Basic usage
 
 ```python
 from aifpl import AIFPL
@@ -40,21 +44,21 @@ tool = AIFPL()
 result = tool.evaluate("(+ 1 2 3)")  # Returns: 6
 ```
 
-### With Configuration
+### With configuration
 
 ```python
 tool = AIFPL(max_depth=200)
 result = tool.evaluate("(sin (* pi 0.5))")  # Returns: 1
 ```
 
-### Formatted Output
+### Formatted output
 
 ```python
 # Get results with LISP-style formatting
 result_str = tool.evaluate_and_format("(list 1 2 3)")  # Returns: "(1 2 3)"
 ```
 
-### Error Handling
+### Error handling
 
 ```python
 from aifpl import AIFPL, AIFPLError
@@ -66,7 +70,7 @@ except AIFPLError as e:
     print(f"AIFPL error: {e}")
 ```
 
-## Supported Operations
+## Supported operations
 
 ### Numeric literals
 
@@ -77,17 +81,17 @@ except AIFPLError as e:
 5+2.3j                                ; → 5+2.3j (complex)
 ```
 
-### Quote - Data Literals and Code as Data
+### Quote - data literals and code as data
 
 The `quote` special form prevents evaluation of expressions, enabling true code-as-data manipulation:
 
-#### Basic Quote Syntax
+#### Basic quote syntax
 ```aifpl
 (quote expr)
 'expr          ; Shortcut form (equivalent to (quote expr))
 ```
 
-#### Quote Examples - Preventing Evaluation
+#### Quote examples - preventing evaluation
 ```aifpl
 ; Without quote - expression gets evaluated
 (+ 1 2 3)                             ; → 6
@@ -103,7 +107,7 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
 'hello                                ; → hello (shortcut form)
 ```
 
-#### Single Quote Shortcut Examples
+#### Single quote shortcut examples
 ```aifpl
 ; Basic shortcut usage
 'x                                    ; → x (same as (quote x))
@@ -124,7 +128,7 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
 (cons '+ '(1 2 3))                    ; → (+ 1 2 3)
 ```
 
-#### Quote with Lists - Creating Data Structures
+#### Quote with lists - creating data structures
 ```aifpl
 ; Create lists as pure data
 (quote (1 2 3))                       ; → (1 2 3) (list as data)
@@ -141,7 +145,7 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
 (list 'hello (+ 1 2) 'world)         ; → (hello 3 world) (with shortcuts)
 ```
 
-#### Quote with Code Templates
+#### Quote with code templates
 ```aifpl
 ; Store code as data for later use
 (let ((template (quote (if CONDITION THEN ELSE))))
@@ -166,7 +170,7 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
   expressions)                        ; → ((+ 1 2) (* 3 4) (- 10 5)) (shortcuts)
 ```
 
-#### Symbolic Programming with Quote
+#### Symbolic programming with quote
 ```aifpl
 ; Manipulate code structure
 (let ((expr (quote (+ a b c))))
@@ -192,7 +196,7 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
   (cons op args))                     ; → (+ 1 2 3) (shortcuts)
 ```
 
-#### Quote vs. List Constructor
+#### Quote vs. list constructor
 ```aifpl
 ; Using list constructor - evaluates arguments
 (list + 1 2 3)                       ; → (<builtin +> 1 2 3)
@@ -206,7 +210,7 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
 (list '+ 1 2 3)                       ; → (+ 1 2 3) (shortcut)
 ```
 
-#### Data Processing with Quoted Expressions
+#### Data processing with quoted expressions
 ```aifpl
 ; Process a list of expressions
 (let ((exprs (list (quote (+ 1 2))
@@ -237,7 +241,7 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
 ; → (("op" + "args" (1 2)) "not-a-compound-expr" ("op" * "args" (a b c))) (shortcuts)
 ```
 
-#### Quote Enables Meta-Programming
+#### Quote enables meta-programming
 ```aifpl
 ; Create expressions that create expressions
 (let ((make-adder (lambda (n)
@@ -266,7 +270,7 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
         (make-predicate '= 0)))       ; → ((lambda (x) (> x 10)) (lambda (x) (= x 0))) (shortcuts)
 ```
 
-#### Homoiconicity in Action
+#### Homoiconicity in action
 ```aifpl
 ; Code and data have the same representation
 (let ((code (quote (+ (* 2 3) 4)))
@@ -301,16 +305,16 @@ The `quote` special form prevents evaluation of expressions, enabling true code-
   (transform-ops '(+ 1 (+ 2 3))))     ; → (* 1 (* 2 3)) (shortcuts)
 ```
 
-### Lambda Expressions and Anonymous Functions
+### Lambda expressions and anonymous functions
 
 Lambda expressions create anonymous functions with lexical scoping and closure support:
 
-#### Basic Lambda Syntax
+#### Basic lambda syntax
 ```aifpl
 (lambda (param1 param2 ...) body)
 ```
 
-#### Simple Lambda Examples
+#### Simple lambda examples
 ```aifpl
 ; Square function
 ((lambda (x) (* x x)) 5)                    ; → 25
@@ -325,7 +329,7 @@ Lambda expressions create anonymous functions with lexical scoping and closure s
 ((lambda (x) (if (> x 0) "positive" "non-positive")) -3)  ; → "non-positive"
 ```
 
-#### Lambda Functions as Values
+#### Lambda functions as values
 ```aifpl
 ; Lambda functions are first-class values
 (let ((square (lambda (x) (* x x))))
@@ -339,7 +343,7 @@ Lambda expressions create anonymous functions with lexical scoping and closure s
 (map (lambda (x) (* x x)) (list 1 2 3 4))   ; → (1 4 9 16)
 ```
 
-#### Closures and Lexical Scoping
+#### Closures and lexical scoping
 ```aifpl
 ; Closures capture their environment
 (let ((multiplier 10))
@@ -359,7 +363,7 @@ Lambda expressions create anonymous functions with lexical scoping and closure s
     (list (double 4) (triple 4))))          ; → (8 12)
 ```
 
-#### Recursive Lambda Functions
+#### Recursive lambda functions
 ```aifpl
 ; Factorial with tail recursion (automatically optimized)
 (letrec ((factorial (lambda (n acc)
@@ -384,16 +388,16 @@ Lambda expressions create anonymous functions with lexical scoping and closure s
     (fibonacci 10)))                        ; → 55
 ```
 
-### Local Variable Binding with Let
+### Local variable binding with let
 
 Let expressions create local variable bindings with sequential evaluation and lexical scoping:
 
-#### Basic Let Syntax
+#### Basic let syntax
 ```aifpl
 (let ((var1 val1) (var2 val2) ...) body)
 ```
 
-#### Simple Let Examples
+#### Simple let examples
 ```aifpl
 ; Basic binding
 (let ((x 5)) (+ x 10))                      ; → 15
@@ -406,7 +410,7 @@ Let expressions create local variable bindings with sequential evaluation and le
   (string-append name " is " (number->string age)))  ; → "Alice is 30"
 ```
 
-#### Sequential Binding
+#### Sequential binding
 ```aifpl
 ; Later variables can reference earlier ones
 (let ((x 5) (y (* x 2))) (+ x y))           ; → 15
@@ -424,7 +428,7 @@ Let expressions create local variable bindings with sequential evaluation and le
   (string-join (reverse words) "-"))        ; → "world-hello"
 ```
 
-#### Binding Functions
+#### Binding functions
 ```aifpl
 ; Bind lambda functions to names
 (let ((double (lambda (x) (* x 2)))
@@ -446,7 +450,7 @@ Let expressions create local variable bindings with sequential evaluation and le
   (countdown 5))                            ; → (5 4 3 2 1)
 ```
 
-#### Nested Let Expressions
+#### Nested let expressions
 ```aifpl
 ; Nested scoping
 (let ((x 10))
@@ -462,16 +466,16 @@ Let expressions create local variable bindings with sequential evaluation and le
       (list "sum" total "average" average))))  ; → ("sum" 55 "average" 11)
 ```
 
-### Recursive Binding with Letrec
+### Recursive binding with letrec
 
 Letrec expressions create recursive bindings where functions can reference themselves and each other (mutual recursion). Use `letrec` when you need recursive or mutually recursive functions.
 
-#### Basic Letrec Syntax
+#### Basic letrec syntax
 ```aifpl
 (letrec ((var1 val1) (var2 val2) ...) body)
 ```
 
-#### Simple Letrec Examples
+#### Simple letrec examples
 ```aifpl
 ; Factorial with recursion
 (letrec ((factorial (lambda (n)
@@ -495,7 +499,7 @@ Letrec expressions create recursive bindings where functions can reference thems
   (sum (list 1 2 3 4 5)))                   ; → 15
 ```
 
-#### Mutual Recursion
+#### Mutual recursion
 ```aifpl
 ; Even/odd predicates
 (letrec ((is-even? (lambda (n)
@@ -521,7 +525,7 @@ Letrec expressions create recursive bindings where functions can reference thems
   (process-node (list 1 (list 2 3) 4)))    ; → (2 (4 6) 8)
 ```
 
-#### Tail-Recursive Functions with Letrec
+#### Tail-recursive functions with letrec
 ```aifpl
 ; Tail-recursive factorial (automatically optimized)
 (letrec ((factorial (lambda (n acc)
@@ -538,28 +542,28 @@ Letrec expressions create recursive bindings where functions can reference thems
   (rev (list 1 2 3 4 5) (list)))            ; → (5 4 3 2 1)
 ```
 
-#### When to Use Let vs Letrec
+#### When to use let vs letrec
 ```aifpl
-; Use LET for normal sequential bindings
+; Use let for normal sequential bindings
 (let ((x 5) (y (* x 2))) (+ x y))           ; → 15
 
-; Use LET for shadowing outer variables
+; Use let for shadowing outer variables
 (let ((x 1)) (let ((x (+ x 10))) x))        ; → 11
 
-; Use LETREC for recursive functions
+; Use letrec for recursive functions
 (letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))  ; → 120
 
-; Use LETREC for mutually recursive functions
+; Use letrec for mutually recursive functions
 (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
          (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
   (even? 10))                               ; → #t
 ```
 
-### Pattern Matching
+### Pattern matching
 
 Pattern matching provides a powerful way to destructure and analyze data based on its shape and content. It offers a concise alternative to nested conditionals and enables elegant functional programming patterns.
 
-#### Basic Pattern Matching Syntax
+#### Basic pattern matching syntax
 ```aifpl
 (match expression
   (pattern1 result1)
@@ -568,7 +572,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   (_ default-result))  ; wildcard pattern (optional)
 ```
 
-#### Literal Pattern Matching
+#### Literal pattern matching
 ```aifpl
 ; Match exact values
 (match 42
@@ -588,7 +592,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   (#f "false value"))                       ; → "true value"
 ```
 
-#### Variable Pattern Matching
+#### Variable pattern matching
 ```aifpl
 ; Bind values to variables
 (match 42
@@ -604,7 +608,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   (y (* y 2)))                              ; → 11 (first pattern matches)
 ```
 
-#### Wildcard Pattern Matching
+#### Wildcard pattern matching
 ```aifpl
 ; Wildcard matches anything without binding
 (match 42
@@ -621,7 +625,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   (_ "got a result"))                       ; → "got a result"
 ```
 
-#### Type Pattern Matching
+#### Type pattern matching
 ```aifpl
 ; Match by type with binding
 (match 42
@@ -650,7 +654,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   (_ "not a function"))                     ; → "it's a function"
 ```
 
-#### List Structure Pattern Matching
+#### List structure pattern matching
 
 **Important:** In AIFPL, the `(head . tail)` pattern always binds `tail` to a list (possibly empty), never to an atom. This differs from Scheme/Lisp.
 
@@ -682,7 +686,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 
 **Note:** Unlike Scheme/Lisp where `(cdr '(1 . 2))` returns the atom `2`, AIFPL's `(head . tail)` pattern always binds `tail` to a list. Use fixed-length patterns like `(a b)` when you want direct access to individual elements.
 
-#### Nested Pattern Matching
+#### Nested pattern matching
 ```aifpl
 ; Nested list patterns
 (match (list (list 1 2) 3)
@@ -706,7 +710,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   (_ "not a list of numbers"))              ; → 6
 ```
 
-#### Pattern Matching with Conditionals
+#### Pattern matching with conditionals
 ```aifpl
 ; Combine patterns with guards (using nested match)
 (let ((classify-number (lambda (n)
@@ -723,7 +727,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
         (classify-number "hello")))          ; → ("positive" "negative" "zero" "not a number")
 ```
 
-#### Complex Data Structure Matching
+#### Complex data structure matching
 ```aifpl
 ; Process structured data
 (let ((process-person (lambda (person)
@@ -748,7 +752,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   (evaluate-expr (list "+" (list 10) (list "*" (list 5) (list 3)))))  ; → 25
 ```
 
-#### Pattern Matching vs. Conditional Chains
+#### Pattern matching vs. conditional chains
 ```aifpl
 ; Traditional nested conditionals
 (let ((process-traditional (lambda (data)
@@ -773,7 +777,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
   (process-pattern (list "score" 95 "points")))      ; → "score: 95"
 ```
 
-#### Advanced Pattern Matching Examples
+#### Advanced pattern matching examples
 ```aifpl
 ; List processing with patterns
 (let ((process-list (lambda (lst)
@@ -832,7 +836,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ; → "{\"name\": \"Alice\", \"age\": 30, \"active\": true}"
 ```
 
-#### Pattern Matching Best Practices
+#### Pattern matching best practices
 ```aifpl
 ; Order patterns from specific to general
 (let ((classify (lambda (x)
@@ -868,11 +872,11 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ; → ("Buy groceries [high]" "Note: Remember to call mom" "unknown item")
 ```
 
-### Higher-Order Functions
+### Higher-order functions
 
 AIFPL provides powerful higher-order functions for functional programming patterns:
 
-#### Map - Transform Each Element
+#### Map - transform each element
 ```aifpl
 ; Basic mapping
 (map (lambda (x) (* x 2)) (list 1 2 3 4))   ; → (2 4 6 8)
@@ -888,7 +892,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
      (list (list 1 2) (list 3 4) (list 5 6)))  ; → (3 7 11)
 ```
 
-#### Filter - Select Elements by Predicate
+#### Filter - select elements by predicate
 ```aifpl
 ; Basic filtering
 (filter (lambda (x) (> x 0)) (list -1 2 -3 4))  ; → (2 4)
@@ -905,7 +909,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
         (range 1 20))                       ; → (6 7 8 9 10 11 12 13 14)
 ```
 
-#### Fold - Accumulate Results
+#### Fold - accumulate results
 ```aifpl
 ; Sum all elements
 (fold + 0 (list 1 2 3 4 5))                ; → 15
@@ -926,7 +930,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
 (fold (lambda (acc x) (+ acc (* x x))) 0 (list 1 2 3 4))  ; → 30
 ```
 
-#### Range - Generate Numeric Sequences
+#### Range - generate numeric sequences
 ```aifpl
 ; Basic ranges
 (range 1 5)                                 ; → (1 2 3 4)
@@ -941,7 +945,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
 (map (lambda (i) (list "item" i)) (range 1 4))  ; → (("item" 1) ("item" 2) ("item" 3))
 ```
 
-#### Find - Locate First Matching Element
+#### Find - locate first matching element
 ```aifpl
 ; Find first positive number
 (find (lambda (x) (> x 0)) (list -1 -2 3 4))  ; → 3
@@ -958,7 +962,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
       (list (list "age" 25) (list "name" "John")))  ; → ("name" "John")
 ```
 
-#### Any? and All? - Boolean Predicates
+#### Any? and all? - boolean predicates
 ```aifpl
 ; Check if any element matches
 (any? (lambda (x) (> x 5)) (list 1 3 7 2))  ; → #t
@@ -976,7 +980,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
       (list "user@email.com" "plain-text")) ; → #t
 ```
 
-#### Take and Drop - List Slicing
+#### Take and drop - list slicing
 ```aifpl
 ; Take first n elements
 (take 3 (list 1 2 3 4 5))                  ; → (1 2 3)
@@ -994,9 +998,9 @@ AIFPL provides powerful higher-order functions for functional programming patter
 (take 3 (filter (lambda (x) (> x 0)) (list -1 2 -3 4 5 6)))  ; → (2 4 5)
 ```
 
-### Functional Programming Patterns
+### Functional programming patterns
 
-#### Data Transformation Pipelines
+#### Data transformation pipelines
 ```aifpl
 ; Process CSV-like data
 (let ((data (list "john,25" "alice,30" "bob,22")))
@@ -1020,7 +1024,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
     (string-join capitalized "-")))         ; → "QUICK-BROWN"
 ```
 
-#### Function Composition
+#### Function composition
 ```aifpl
 ; Compose two functions
 (let ((compose (lambda (f g) (lambda (x) (f (g x))))))
@@ -1038,7 +1042,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
     (pipe 2 add-ten multiply-by-three subtract-five)))  ; → 31
 ```
 
-#### Recursive Data Processing
+#### Recursive data processing
 ```aifpl
 ; Process nested lists recursively
 (letrec ((deep-sum (lambda (lst)
@@ -1060,7 +1064,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
   (count-leaves (list 1 (list 2 (list 3 4)) 5)))  ; → 5
 ```
 
-#### Validation and Error Handling
+#### Validation and error handling
 ```aifpl
 ; Validate all items in a list
 (let ((validate-positive (lambda (nums)
@@ -1079,7 +1083,7 @@ AIFPL provides powerful higher-order functions for functional programming patter
        (list (list 10 2) (list 15 3) (list 8 0))))  ; → (5 5 "undefined")
 ```
 
-### Conditional Operations
+### Conditional operations
 
 AIFPL supports conditional evaluation with lazy evaluation of branches:
 
@@ -1087,7 +1091,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 (if condition then-expr else-expr)
 ```
 
-#### Basic Examples:
+#### Basic examples:
 ```aifpl
 (if (> 5 3) "greater" "less")         ; → "greater"
 (if (= 1 2) (+ 1 1) (* 2 2))          ; → 4
@@ -1095,14 +1099,14 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 (if #f "true branch" "false branch")  ; → "false branch"
 ```
 
-#### Lazy Evaluation (Key Feature):
+#### Lazy evaluation (key feature):
 ```aifpl
 (if #t 42 (/ 1 0))                    ; → 42 (no division by zero error)
 (if #f (undefined-symbol) "safe")     ; → "safe" (no undefined symbol error)
 (if (> x 0) (/ 100 x) "undefined")    ; Safe division
 ```
 
-#### Practical Examples:
+#### Practical examples:
 ```aifpl
 ; Safe list operations
 (if (null? my-list) "empty" (first my-list))
@@ -1121,14 +1125,14 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
     "Not found")
 ```
 
-#### Nested Conditionals:
+#### Nested conditionals:
 ```aifpl
 (if (> x 0)
     (if (> x 10) "big positive" "small positive")
     (if (< x -10) "big negative" "small negative or zero"))
 ```
 
-#### Type Requirements:
+#### Type requirements:
 - Condition must be a boolean (`#t` or `#f`)
 - Both then-expr and else-expr are required
 - Only the chosen branch is evaluated (lazy evaluation)
@@ -1142,9 +1146,9 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 - `(% 7 3)` → `1` (modulo)
 - `(** 2 3)` → `8` (exponentiation)
 
-### Comparison Operations
+### Comparison operations
 
-#### Equality and Inequality
+#### Equality and inequality
 ```aifpl
 ; Equality - all values must be equal
 (= 1 1)                               ; → #t
@@ -1159,7 +1163,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 (!= 1 1 1)                            ; → #f (all equal)
 ```
 
-#### Numeric Comparisons
+#### Numeric comparisons
 ```aifpl
 ; Comparison chains (all must satisfy the relationship)
 (< 1 2)                               ; → #t
@@ -1176,7 +1180,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 (>= 3 2 2)                            ; → #t (3 ≥ 2 ≥ 2)
 ```
 
-#### Mixed Type Equality
+#### Mixed type equality
 ```aifpl
 ; Numeric types can be compared for equality
 (= 1 1.0)                             ; → #t (int/float equivalence)
@@ -1192,7 +1196,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 (= (list 1 2) (list 1 3))             ; → #f
 ```
 
-### Boolean Operations
+### Boolean operations
 - `(and #t #f)` → `#f`
 - `(and #t #t)` → `#t`
 - `(or #t #f)` → `#t`
@@ -1200,7 +1204,7 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 - `(not #t)` → `#f`
 - `(not #f)` → `#t`
 
-### Type Predicates
+### Type predicates
 
 AIFPL provides comprehensive type checking functions:
 
@@ -1256,7 +1260,7 @@ AIFPL supports single-line comments using the semicolon (`;`) character:
 
 Comments extend to the end of the line and are ignored during evaluation.
 
-### Type Predicate Usage Patterns
+### Type predicate usage patterns
 ```aifpl
 ; Conditional type handling
 (let ((process-value (lambda (x)
@@ -1289,11 +1293,11 @@ Comments extend to the end of the line and are ignored during evaluation.
         (safe-length 42)))            ; → "not a sequence"
 ```
 
-### Type Construction and Conversion
+### Type construction and conversion
 
 AIFPL provides explicit functions to construct or convert between numeric types. These functions form a complete set, with one constructor/converter for each of the three numeric types.
 
-#### Integer Conversion
+#### Integer conversion
 
 Convert any numeric value to an integer by truncating toward zero:
 
@@ -1312,7 +1316,7 @@ Convert any numeric value to an integer by truncating toward zero:
 (integer (complex 3.0 0.1))           ; → Error: cannot convert complex with non-zero imaginary part
 ```
 
-#### Float Conversion
+#### Float conversion
 
 Convert any numeric value to a floating-point number:
 
@@ -1330,7 +1334,7 @@ Convert any numeric value to a floating-point number:
 (float (complex 2.0 0.1))             ; → Error: cannot convert complex with non-zero imaginary part
 ```
 
-#### Complex Construction
+#### Complex construction
 
 Construct a complex number from two real components:
 
@@ -1348,7 +1352,7 @@ Construct a complex number from two real components:
 (complex (complex 1 2) 3)             ; → Error: arguments must be real numbers
 ```
 
-#### Conversion Usage Patterns
+#### Conversion usage patterns
 
 ```aifpl
 ; Ensure integer arithmetic
@@ -1358,9 +1362,9 @@ Construct a complex number from two real components:
 (float (+ 1 2))                       ; → 3.0 (convert integer result to float)
 ```
 
-### Mathematical Functions
+### Mathematical functions
 
-#### Functions that Return Integers
+#### Functions that return integers
 
 These functions always return integer results:
 
@@ -1371,7 +1375,7 @@ These functions always return integer results:
 - `(ceil 3.2)` → `4` (round up)
 - `(ceil -2.7)` → `-2`
 
-#### Functions that Preserve or Promote Types
+#### Functions that preserve or promote types
 
 These functions return results based on input types or mathematical requirements:
 
@@ -1382,20 +1386,20 @@ These functions return results based on input types or mathematical requirements
 - `(sqrt -1)` → `(0+1j)` (returns complex for negative input)
 - `(abs -5)` → `5`
 
-### Bitwise Operations
+### Bitwise operations
 - `(bit-or 5 3)` → `7`
 - `(bit-and 7 3)` → `3`
 - `(bit-xor 5 3)` → `6`
 - `(bit-not 5)` → `-6`
 
-### Base Conversion
+### Base conversion
 - `(hex 255)` → `"#xff"`
 - `(bin 10)` → `"#b1010"`
 - `(oct 8)` → `"#o10"`
 
-### Complex Numbers
+### Complex numbers
 
-#### Complex Number Construction
+#### Complex number construction
 
 Complex numbers can be constructed using the `complex` function or arithmetic with the `j` constant:
 
@@ -1405,7 +1409,7 @@ Complex numbers can be constructed using the `complex` function or arithmetic wi
 
 See the "Type Construction and Conversion" section for more details on the `complex` function.
 
-#### Component Extraction
+#### Component extraction
 
 Extract real and imaginary parts from any numeric value:
 
@@ -1421,9 +1425,9 @@ Extract real and imaginary parts from any numeric value:
 (imag 3.14)                           ; → 0
 ```
 
-### List Operations
+### List operations
 
-#### List Construction and Manipulation
+#### List construction and manipulation
 
 **Note:** AIFPL uses proper lists only. The `cons` function requires the second argument to be a list.
 
@@ -1440,7 +1444,7 @@ Extract real and imaginary parts from any numeric value:
 
 **Important:** Unlike Scheme/Lisp, `(cons 1 2)` is invalid in AIFPL. Use `(list 1 2)` to create pairs.
 
-#### List Access and Properties
+#### List access and properties
 
 **Note:** The `rest` function always returns a list, never an atom.
 
@@ -1459,7 +1463,7 @@ Extract real and imaginary parts from any numeric value:
 (member? 5 (list 1 2 3))              ; → #f
 ```
 
-#### List Utilities
+#### List utilities
 ```aifpl
 ; Remove all occurrences of an element
 (remove 2 (list 1 2 3 2 4))           ; → (1 3 4)
@@ -1473,7 +1477,7 @@ Extract real and imaginary parts from any numeric value:
 (position 2 (list 1 2 3 2))           ; → 1 (first occurrence)
 ```
 
-#### List Utility Usage Patterns
+#### List utility usage patterns
 ```aifpl
 ; Clean and process data
 (let ((data (list 1 -2 3 -4 5))
@@ -1498,16 +1502,16 @@ Extract real and imaginary parts from any numeric value:
   (list-difference (list 1 2 3 4 5) (list 2 4)))  ; → (1 3 5)
 ```
 
-#### List Equality
+#### List equality
 ```aifpl
 (= (list 1 2) (list 1 2))             ; → #t
 (= (list 1 2) (list 1 3))             ; → #f
 (= (list 1 2) (list 1 2 3))           ; → #f
 ```
 
-### String Operations
+### String operations
 
-#### String Construction and Conversion
+#### String construction and conversion
 ```aifpl
 (string-append "hello" " " "world")   ; → "hello world"
 (number->string 42)                   ; → "42"
@@ -1516,14 +1520,14 @@ Extract real and imaginary parts from any numeric value:
 (string->number "3.14")               ; → 3.14
 ```
 
-#### String Information and Access
+#### String information and access
 ```aifpl
 (string-length "hello")               ; → 5
 (string-ref "hello" 1)                ; → "e" (character at index 1)
 (substring "hello" 1 4)               ; → "ell" (start=1, end=4 exclusive)
 ```
 
-#### String Manipulation
+#### String manipulation
 ```aifpl
 (string-upcase "hello")               ; → "HELLO"
 (string-downcase "HELLO")             ; → "hello"
@@ -1533,7 +1537,7 @@ Extract real and imaginary parts from any numeric value:
 (string-replace "test" "x" "y")       ; → "test" (no change if not found)
 ```
 
-#### String Manipulation Usage Patterns
+#### String manipulation usage patterns
 ```aifpl
 ; Clean and normalize text
 (let ((normalize-text (lambda (text)
@@ -1557,7 +1561,7 @@ Extract real and imaginary parts from any numeric value:
   (clean-text "bad ugly wrong text"))     ; → "good pretty right text"
 ```
 
-#### String Predicates
+#### String predicates
 ```aifpl
 (string-contains? "hello world" "world")  ; → #t
 (string-prefix? "hello" "he")             ; → #t
@@ -1566,15 +1570,15 @@ Extract real and imaginary parts from any numeric value:
 (string=? "hello" "world")                ; → #f
 ```
 
-### String-List Integration
+### String-list integration
 
-#### String-List Conversion
+#### String-list conversion
 ```aifpl
 (string->list "hello")                ; → ("h" "e" "l" "l" "o")
 (list->string (list "h" "e" "l" "l" "o"))  ; → "hello"
 ```
 
-#### String Splitting and Joining
+#### String splitting and joining
 ```aifpl
 (string-split "name,age,city" ",")    ; → ("name" "age" "city")
 (string-split "hello world" " ")      ; → ("hello" "world")
@@ -1582,7 +1586,7 @@ Extract real and imaginary parts from any numeric value:
 (string-join (list "a" "b" "c") ",") ; → "a,b,c"
 ```
 
-### String Literals and Escape Sequences
+### String literals and escape sequences
 
 String literals use double quotes and support escape sequences:
 
@@ -1603,11 +1607,11 @@ String literals use double quotes and support escape sequences:
 - `\r` → carriage return
 - `\uXXXX` → Unicode code point (4 hex digits)
 
-### Association Lists (ALists)
+### Association lists (alists)
 
 Association lists (alists) are immutable key-value mappings with O(1) lookup performance. They are first-class data structures optimized for structured data processing.
 
-#### Creating ALists
+#### Creating alists
 
 ```aifpl
 ; Basic alist creation
@@ -1630,7 +1634,7 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 
 **Note**: Each pair must be explicitly created using `(list key value)`. The `alist` function is a regular builtin that takes evaluated list arguments.
 
-#### Accessing AList Values
+#### Accessing alist values
 
 ```aifpl
 ; Get value by key
@@ -1652,7 +1656,7 @@ Association lists (alists) are immutable key-value mappings with O(1) lookup per
 ; → "Carol"
 ```
 
-#### Modifying ALists (Immutably)
+#### Modifying alists (immutably)
 
 All alist operations return new alists without modifying the original:
 
@@ -1677,7 +1681,7 @@ All alist operations return new alists without modifying the original:
 ; → (alist (list "name" "Alice"))
 ```
 
-#### AList Queries
+#### AList queries
 
 ```aifpl
 ; Check if key exists
@@ -1710,7 +1714,7 @@ All alist operations return new alists without modifying the original:
 ; → #f
 ```
 
-#### Merging ALists
+#### Merging alists
 
 ```aifpl
 ; Merge two alists (second wins on conflicts)
@@ -1727,7 +1731,7 @@ All alist operations return new alists without modifying the original:
 ; → (alist (list "x" 1) (list "y" 2) (list "z" 3))
 ```
 
-#### ALists with Functional Operations
+#### ALists with functional operations
 
 ```aifpl
 ; Map over keys
@@ -1754,7 +1758,7 @@ All alist operations return new alists without modifying the original:
 ; → ("Alice" "Bob" "Carol")
 ```
 
-#### Pattern Matching with ALists
+#### Pattern matching with alists
 
 ```aifpl
 ; Match alist type
@@ -1774,7 +1778,7 @@ All alist operations return new alists without modifying the original:
 ; → ("alist" "list")
 ```
 
-#### AList Performance
+#### AList performance
 
 ALists in AIFPL use hash-backed storage for O(1) lookup performance:
 
@@ -1786,7 +1790,7 @@ ALists in AIFPL use hash-backed storage for O(1) lookup performance:
 
 ALists maintain insertion order and are optimized for read-heavy workloads common in data processing.
 
-### Complex Number Operations
+### Complex number operations
 The `real` and `imag` functions extract components from any numeric value:
 
 **Real Part Extraction:**
@@ -1812,7 +1816,7 @@ The `real` and `imag` functions extract components from any numeric value:
 (real (* 1j 1j))                        ; → -1
 ```
 
-## Type System
+## Type system
 
 AIFPL has a strict type system with the following types:
 
@@ -1822,7 +1826,7 @@ AIFPL has a strict type system with the following types:
 - **Lists**: Heterogeneous collections supporting any element type
 - **Functions**: First-class lambda functions with lexical scoping
 
-### Type Promotion Rules
+### Type promotion rules
 
 1. **Numeric promotion**: `int → float → complex`
 2. **No cross-type operations**: Strings, booleans, and lists don't mix with numbers
@@ -1830,7 +1834,7 @@ AIFPL has a strict type system with the following types:
 4. **List heterogeneity**: Lists can contain mixed types
 5. **Function values**: Functions are first-class values that can be stored and passed
 
-### Examples of Type Strictness
+### Examples of type strictness
 
 ```aifpl
 ; Valid - same types
@@ -1886,7 +1890,7 @@ AIFPL has a strict type system with the following types:
 (list->string (string->list "hello"))          ; → "hello"
 ```
 
-### List Type Rules
+### List type rules
 
 1. **Mixed types allowed**: `(list 1 "hi" #t)` is valid
 2. **No arithmetic operations**: `(+ (list 1 2))` is an error
@@ -1894,7 +1898,7 @@ AIFPL has a strict type system with the following types:
 4. **Type-specific functions**: List functions require lists, string functions require strings
 5. **Explicit conversion**: Use `string->list`, `list->string` for conversions
 
-### Function Type Rules
+### Function type rules
 
 1. **First-class values**: Functions can be passed, returned, stored in lists
 2. **Lexical scoping**: Functions access variables from their definition environment
@@ -1902,7 +1906,7 @@ AIFPL has a strict type system with the following types:
 4. **Arity checking**: Function calls must provide exact number of parameters
 5. **Identity equality**: Each lambda creates a unique function object
 
-## Pure List Representation Benefits
+## Pure list representation benefits
 
 The pure list approach provides several advantages:
 
@@ -1912,9 +1916,9 @@ The pure list approach provides several advantages:
 5. **Future extensibility**: Natural foundation for features like macros
 6. **Reduced complexity**: Fewer types, simpler parser, more straightforward compiler/VM
 
-## Common Usage Patterns
+## Common usage patterns
 
-### Pattern Matching for Data Processing
+### Pattern patching for data processing
 ```aifpl
 ; Replace complex nested conditionals with pattern matching
 (let ((process-data (lambda (item)
@@ -1966,7 +1970,8 @@ The pure list approach provides several advantages:
 ; → (("server-config" "localhost" 8080) ("db-config" "postgresql" "postgres://localhost/mydb") ("feature-toggle" "new-ui" #t) ("unknown-config" ("invalid" "config" "entry")))
 ```
 
-### Symbolic Programming with Quote
+### Symbolic programming with quote
+
 ```aifpl
 ; Store and manipulate code as data (using shortcuts for cleaner syntax)
 (let ((expressions (list '(+ 1 2)
@@ -1990,7 +1995,8 @@ The pure list approach provides several advantages:
   (negate-condition '(> x 5)))              ; → (<= x 5)
 ```
 
-### Functional Data Processing
+### Functional data processing
+
 ```aifpl
 ; Process list of numbers
 (let ((numbers (list 1 2 3 4 5 6 7 8 9 10)))
@@ -2015,7 +2021,8 @@ The pure list approach provides several advantages:
         (validate-and-double (list 1 -2 3))))  ; → ((2 4 6) "error: negative numbers")
 ```
 
-### Conditional Processing
+### Conditional processing
+
 ```aifpl
 ; Safe division
 (if (= divisor 0) "undefined" (/ dividend divisor))
@@ -2039,7 +2046,8 @@ The pure list approach provides several advantages:
     (if (> temperature 20) "warm" "cold"))
 ```
 
-### Function Composition and Higher-Order Patterns
+### Function composition and higher-order patterns
+
 ```aifpl
 ; Create reusable transformations
 (letrec ((process-data (lambda (data)
@@ -2064,7 +2072,8 @@ The pure list approach provides several advantages:
   (tree-sum (list 1 (list 2 3) (list (list 4 5) 6))))  ; → 21
 ```
 
-### Type-Safe Programming Patterns
+### Type-safe programming patterns
+
 ```aifpl
 ; Polymorphic function with type checking
 (letrec ((safe-process (lambda (value)
@@ -2100,7 +2109,8 @@ The pure list approach provides several advantages:
 ; → (("numbers" (1 3.14)) ("strings" ("hello" "world")) ("booleans" (#t #f)))
 ```
 
-### String Processing
+### String processing
+
 ```aifpl
 ; Split CSV data and process
 (string-split "name,age,city" ",")              ; → ("name" "age" "city")
@@ -2124,7 +2134,8 @@ The pure list approach provides several advantages:
   (clean-and-format "  hello    world  "))      ; → "HELLO  WORLD"
 ```
 
-### Character-Level Processing
+### Character-level processing
+
 ```aifpl
 ; Convert to characters, process, convert back
 (string->list "hello")                          ; → ("h" "e" "l" "l" "o")
@@ -2132,7 +2143,8 @@ The pure list approach provides several advantages:
 (list->string (reverse (string->list "hello"))) ; → "olleh"
 ```
 
-### Data Structure Manipulation
+### Data structure manipulation
+
 ```aifpl
 ; Build complex data structures
 (list (list "name" "John") (list "age" 25))     ; → (("name" "John") ("age" 25))
@@ -2155,7 +2167,8 @@ The pure list approach provides several advantages:
 ; → ("original" (1 2 3 2 4 2 5) "cleaned" (1 3 4 5) "first-position" 1)
 ```
 
-### Quote Shortcut Usage Patterns
+### Quote shortcut usage patterns
+
 ```aifpl
 ; Building expressions with mixed quoted and evaluated parts
 (let ((make-setter (lambda (var value)
@@ -2184,9 +2197,9 @@ The pure list approach provides several advantages:
         (match-expr '(+ ? ?) '(* 1 2))))   ; → no-match
 ```
 
-## Advanced Features
+## Advanced features
 
-### Tail Call Optimization
+### Tail call optimization
 
 AIFPL automatically optimizes tail calls to prevent stack overflow in recursive functions:
 
@@ -2206,7 +2219,7 @@ AIFPL automatically optimizes tail calls to prevent stack overflow in recursive 
   (is-even 10000))                          ; → #t (no stack overflow)
 ```
 
-### Lexical Scoping and Closures
+### Lexical scoping and closures
 
 Functions capture their lexical environment, creating closures:
 
@@ -2229,7 +2242,7 @@ Functions capture their lexical environment, creating closures:
             (add-with-offset 5 10)))))     ; → (105 + 10) = 115
 ```
 
-### Error Handling Patterns
+### Error handling patterns
 
 ```aifpl
 ; Validation chains
@@ -2256,13 +2269,13 @@ Functions capture their lexical environment, creating closures:
         (safe-divide 10 0 "undefined")))    ; → ("empty" 3 "undefined")
 ```
 
-## Differences from Traditional Lisp/Scheme
+## Differences from traditional Lisp/Scheme
 
 **AIFPL uses proper lists only, not cons cells.** This is a fundamental difference from traditional Lisp/Scheme that affects list construction and pattern matching.
 
-### Key Differences
+### Key differences
 
-#### 1. Cons Requires a List as Second Argument
+#### 1. cons requires a list as second argument
 
 **Traditional Lisp/Scheme:**
 ```scheme
@@ -2281,7 +2294,7 @@ Functions capture their lexical environment, creating closures:
 
 **To create pairs:** Use `(list a b)` instead of cons cells.
 
-#### 2. Rest Always Returns a List
+#### 2. Rest always returns a list
 
 **Traditional Lisp/Scheme:**
 ```scheme
@@ -2298,7 +2311,7 @@ Functions capture their lexical environment, creating closures:
 
 **Why?** This guarantees type safety. You always know `rest` returns a list, never an atom.
 
-#### 3. Pattern Matching: Tail is Always a List
+#### 3. Pattern matching: tail is always a list
 
 **Traditional Lisp/Scheme:**
 ```scheme
@@ -2314,7 +2327,7 @@ Functions capture their lexical environment, creating closures:
 
 **Why?** Consistency. The `(head . tail)` pattern always binds `tail` to a list (possibly empty), never to an atom.
 
-#### 4. No car/cdr - Use first/rest
+#### 4. No car/cdr - use first/rest
 
 AIFPL uses more descriptive names:
 - `first` instead of `car`
@@ -2323,7 +2336,7 @@ AIFPL uses more descriptive names:
 
 These names are clearer and emphasize that `rest` always returns a list.
 
-### Other Differences from Scheme/Lisp
+### Other differences from Scheme/Lisp
 
 - **No mutation**: No `set!`, `set-car!`, `set-cdr!` - all data is immutable
 - **No macros**: No `define-syntax` or `defmacro` - all special forms are built-in
@@ -2331,7 +2344,7 @@ These names are clearer and emphasize that `rest` always returns a list.
 - **Strict type system**: Boolean operations require booleans, no "truthy" values
 - **No continuations**: No `call/cc` - simpler execution model
 
-### Migration Guide
+### Migration guide
 
 If you're coming from Scheme/Lisp:
 
@@ -2358,14 +2371,14 @@ If you're coming from Scheme/Lisp:
   ((a b) (list a b)))               ; => (1 2)  - direct binding
 ```
 
-### Why These Differences?
+### Why these differences?
 
 1. **Simplicity**: Proper lists only means fewer edge cases
 2. **Type safety**: `rest` always returns a list - no runtime type checking needed
 3. **Predictability**: Consistent behavior makes code easier to reason about
 4. **AI-friendly**: Fewer special cases for AI models to learn
 
-## Design Principles
+## Design principles
 
 1. **Pure List Representation**: Everything is data, following traditional Lisp philosophy
 2. **Functional Programming**: First-class functions, immutable data, no side effects
