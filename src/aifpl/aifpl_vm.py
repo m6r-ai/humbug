@@ -7,7 +7,6 @@ from dataclasses import dataclass, field
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
 from aifpl.aifpl_compiler import AIFPLCompiler
-from aifpl.aifpl_environment import AIFPLEnvironment
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction,
@@ -36,7 +35,6 @@ class Frame:
     code: CodeObject
     ip: int = 0  # Instruction pointer
     locals: List[AIFPLValue | None] = field(init=False)  # Local variables
-    closure_env: Any = None  # Closure environment for this frame
     parent_frame: 'Frame | None' = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
 
     def __post_init__(self) -> None:
@@ -427,22 +425,12 @@ class AIFPLVM:
 
         captured_values.reverse()
 
-        # Create a dict mapping free var names to captured values
-        captured_dict = {}
-        if capture_count > 0:
-            for i, var_name in enumerate(closure_code.free_vars):
-                if i < len(captured_values):
-                    captured_dict[var_name] = captured_values[i]
-
-        # Create closure with captured environment and parent reference
-        # The parent is the current frame's closure environment, which allows
-        # nested lambdas to look up recursive bindings from outer let scopes
+        # Create closure with captured values and parent frame reference
+        # Parent frame is used by LOAD_PARENT_VAR for recursive bindings
         current_frame = self.frames[-1] if self.frames else None
-        parent_env = current_frame.closure_env if current_frame else None
 
         closure = AIFPLFunction(
             parameters=tuple(f"param{i}" for i in range(closure_code.param_count)),
-            closure_environment=AIFPLEnvironment(bindings=captured_dict, parent=parent_env),
             name=closure_code.name,
             bytecode=closure_code,
             captured_values=tuple(captured_values),
@@ -614,7 +602,6 @@ class AIFPLVM:
 
         # Create new frame
         new_frame = Frame(code)
-        new_frame.closure_env = func.closure_environment
         new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
 
         # Store captured values in locals (after parameters)

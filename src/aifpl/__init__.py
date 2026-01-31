@@ -16,7 +16,6 @@ from aifpl.aifpl_value import (
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_environment import AIFPLEnvironment
 
 
 __all__ = [
@@ -31,5 +30,5 @@ __all__ = [
     "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList", "AIFPLAList", "AIFPLFunction",
 
     # Lower-level components
-    "AIFPLToken", "AIFPLTokenType", "AIFPLLexer", "AIFPLParser", "AIFPLEnvironment"
+    "AIFPLToken", "AIFPLTokenType", "AIFPLLexer", "AIFPLParser"
 ]

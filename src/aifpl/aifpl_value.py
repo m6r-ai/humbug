@@ -454,15 +454,13 @@ class AIFPLFunction(AIFPLValue):
     """
     Represents a function (both user-defined lambdas and builtins).
 
-    This is a first-class value that can be stored in environments
-    and passed around as a value.
+    This is a first-class value that can be passed around as a value.
 
     A function can be either:
     - A user-defined lambda
     - A builtin with a native Python implementation
     """
     parameters: Tuple[str, ...]
-    closure_environment: Any = None  # AIFPLEnvironment, avoiding circular import
     name: str | None = None
     bytecode: Any = None  # CodeObject for bytecode-compiled functions
     captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
