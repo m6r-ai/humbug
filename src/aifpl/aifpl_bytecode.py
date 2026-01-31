@@ -36,8 +36,6 @@ class Opcode(IntEnum):
     CALL_FUNCTION = auto()   # Call function: CALL_FUNCTION arity
     TAIL_CALL_FUNCTION = auto()  # Tail call function: TAIL_CALL_FUNCTION arity
     CALL_BUILTIN = auto()    # Call builtin: CALL_BUILTIN builtin_index arity
-    PATCH_CLOSURE_SELF = auto()  # Patch closure to reference itself: PATCH_CLOSURE_SELF depth index
-    PATCH_CLOSURE_SIBLING = auto()  # Patch closure to add sibling reference: PATCH_CLOSURE_SIBLING closure_idx sibling_idx name_idx
     RETURN = auto()          # Return from function
 
 
@@ -66,8 +64,7 @@ class Instruction:
         # Opcodes with two arguments
         two_arg_opcodes = {
             Opcode.LOAD_VAR, Opcode.STORE_VAR, Opcode.MAKE_CLOSURE,
-            Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR, Opcode.PATCH_CLOSURE_SELF,
-            Opcode.PATCH_CLOSURE_SIBLING
+            Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR
         }
 
         # All other opcodes take one argument

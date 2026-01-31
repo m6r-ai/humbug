@@ -312,13 +312,6 @@ class AIFPLCodeGenerator:
             # Update max locals
             ctx.max_locals = max(ctx.max_locals, var_index + 1)
 
-        # Patch recursive closures to add self-references
-        # TODO: This could be eliminated by changing how recursive lambdas reference themselves
-        for name, value_plan, var_index in plan.bindings:
-            if name in plan.recursive_bindings:
-                name_index = ctx.add_name(name)
-                ctx.emit(Opcode.PATCH_CLOSURE_SELF, name_index, var_index)
-
         # Generate body
         self._generate_expr(plan.body_plan, ctx)
 

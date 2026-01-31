@@ -95,8 +95,6 @@ class AIFPLVM:
         table[Opcode.CALL_BUILTIN] = self._op_call_builtin
         table[Opcode.TAIL_CALL_FUNCTION] = self._op_tail_call_function
         table[Opcode.RETURN] = self._op_return
-        table[Opcode.PATCH_CLOSURE_SELF] = self._op_patch_closure_self
-        table[Opcode.PATCH_CLOSURE_SIBLING] = self._op_patch_closure_sibling
         return table
 
     def execute(
@@ -621,100 +619,6 @@ class AIFPLVM:
             raise AIFPLEvalError("RETURN with empty stack")
 
         return self.stack.pop()
-
-    def _op_patch_closure_self(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        code: CodeObject,
-        arg1: int,
-        arg2: int
-    ) -> AIFPLValue | None:
-        """PATCH_CLOSURE_SELF: Patch closure to reference itself (for recursion)."""
-        name_index = arg1
-        var_index = arg2
-        var_name = code.names[name_index]
-
-        target_frame = self.frames[-1]
-
-        if var_index >= len(target_frame.locals):
-            raise AIFPLEvalError(f"PATCH_CLOSURE_SELF: variable index {var_index} out of range")
-
-        target_closure = target_frame.locals[var_index]
-
-        if not isinstance(target_closure, AIFPLFunction):
-            # Not a function - skip patching (this can happen with data structures)
-            # e.g., (letrec ((x (if cond (lambda () x) some-value))) ...)
-            # But still register the name so nested lambdas can find it
-            target_frame.local_names[var_name] = var_index
-            return None
-
-        # Create new environment with self-reference
-        new_bindings = {**target_closure.closure_environment.bindings}
-        new_env = AIFPLEnvironment(bindings=new_bindings, parent=target_closure.closure_environment.parent)
-
-        # Create patched closure
-        patched_closure = AIFPLFunction(
-            parameters=target_closure.parameters,
-            closure_environment=new_env,
-            name=target_closure.name,
-            bytecode=target_closure.bytecode,
-            captured_values=target_closure.captured_values,
-            parent_frame=target_closure.parent_frame  # Preserve parent frame for LOAD_PARENT_VAR
-        )
-
-        # Add self-reference
-        new_env.bindings[var_name] = patched_closure
-
-        # Register the variable name in the frame so LOAD_NAME can find it
-        target_frame.local_names[var_name] = var_index
-
-        # Store patched closure back
-        target_frame.locals[var_index] = patched_closure
-        return None
-
-    def _op_patch_closure_sibling(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        code: CodeObject,
-        arg1: int,
-        arg2: int
-    ) -> AIFPLValue | None:
-        """PATCH_CLOSURE_SIBLING: Patch closure to add sibling reference (for mutual recursion)."""
-        closure_var_index = arg1
-        const_index = arg2
-
-        # Load patch info from constants
-        patch_info = code.constants[const_index]
-        if not isinstance(patch_info, AIFPLList) or len(patch_info.elements) != 2:
-            raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: invalid patch info")
-
-        elements = patch_info.elements
-        if not isinstance(elements[0], AIFPLInteger) or not isinstance(elements[1], AIFPLInteger):
-            raise AIFPLEvalError("PATCH_CLOSURE_SIBLING: patch info elements must be integers")
-
-        sibling_var_index = int(elements[0].value)
-        name_index = int(elements[1].value)
-        sibling_name = code.names[name_index]
-
-        target_frame = self.frames[-1]
-
-        # Load the closure to patch
-        if closure_var_index >= len(target_frame.locals):
-            raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: closure index {closure_var_index} out of range")
-
-        target_closure = target_frame.locals[closure_var_index]
-        if not isinstance(target_closure, AIFPLFunction):
-            raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: closure at index {closure_var_index} is not a function")
-
-        # Load the sibling from locals
-        if sibling_var_index >= len(target_frame.locals):
-            raise AIFPLEvalError(f"PATCH_CLOSURE_SIBLING: sibling index {sibling_var_index} out of range")
-
-        sibling = target_frame.locals[sibling_var_index]
-
-        # Add sibling to closure's environment
-        target_closure.closure_environment.bindings[sibling_name] = sibling
-        return None
 
     def _setup_call_frame(self, func: AIFPLFunction) -> None:
         """
