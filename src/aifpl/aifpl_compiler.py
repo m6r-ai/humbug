@@ -120,10 +120,6 @@ class AnalysisContext:
         self.names.add(name)
         return ('global', 0, 0)
 
-    def add_name(self, name: str) -> None:
-        """Track a name (for global resolution)."""
-        self.names.add(name)
-
     def create_child_context(self) -> 'AnalysisContext':
         """Create a child context for nested lambda analysis."""
         child = AnalysisContext()
