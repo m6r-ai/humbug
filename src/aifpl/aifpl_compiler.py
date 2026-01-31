@@ -3,17 +3,21 @@
 from typing import List, Dict, Tuple, Set, cast
 from dataclasses import dataclass, field
 
-from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
+from aifpl.aifpl_bytecode import CodeObject
+from aifpl.aifpl_compilation_plan import (
+    ExprPlan, ConstantPlan, VariablePlan, IfPlan, LetPlan, LetrecPlan,
+    LambdaPlan, CallPlan, QuotePlan, ErrorPlan, EmptyListPlan,
+    AndPlan, OrPlan
+)
+from aifpl.aifpl_codegen import AIFPLCodeGenerator
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_desugarer import AIFPLDesugarer
-from aifpl.aifpl_optimizer import AIFPLOptimizer
 from aifpl.aifpl_error import AIFPLEvalError
+from aifpl.aifpl_optimizer import AIFPLOptimizer
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
     AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
 )
-from aifpl.aifpl_compilation_plan import *
-from aifpl.aifpl_codegen import AIFPLCodeGenerator
 
 
 @dataclass
@@ -114,121 +118,6 @@ class AnalysisContext:
         child.parent_ctx = self
         child.sibling_bindings = []
         return child
-
-
-@dataclass
-class CompilationContext:
-    """
-    Compilation context tracking scopes and code generation.
-
-    Maintains a stack of scopes for lexical addressing.
-    """
-    scopes: List[CompilationScope] = field(default_factory=lambda: [CompilationScope()])
-    constants: List[AIFPLValue] = field(default_factory=list)
-    names: List[str] = field(default_factory=list)
-    constant_map: Dict[AIFPLValue, int] = field(default_factory=dict)  # Fast lookup for constants
-    name_map: Dict[str, int] = field(default_factory=dict)  # Fast lookup for names
-    code_objects: List[CodeObject] = field(default_factory=list)
-    instructions: List[Instruction] = field(default_factory=list)
-    max_locals: int = 0  # Track maximum locals needed
-    parent_ctx: 'CompilationContext | None' = None  # Parent context for nested lambdas
-    sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
-    next_local_index: int = 0  # Global counter for local variable indices (for flat indexing)
-    current_function_name: str | None = None  # Name of the function being compiled (for tail recursion detection)
-    current_letrec_binding: str | None = None  # Name of the letrec binding being compiled (for nested lambdas)
-
-    def push_scope(self) -> None:
-        """Enter a new lexical scope."""
-        self.scopes.append(CompilationScope())
-        # Update max locals
-        total_locals = sum(len(scope.bindings) for scope in self.scopes)
-        self.max_locals = max(self.max_locals, total_locals)
-
-    def pop_scope(self) -> CompilationScope:
-        """Exit current lexical scope."""
-        return self.scopes.pop()
-
-    def update_max_locals(self) -> None:
-        """Update max locals based on current scope depth."""
-        # For flat indexing, max_locals is just the highest index we've used
-        self.max_locals = max(self.max_locals, self.next_local_index)
-
-    def allocate_local_index(self) -> int:
-        """Allocate a new local variable index from the global counter."""
-        index = self.next_local_index
-        self.next_local_index += 1
-        return index
-
-    def current_scope(self) -> CompilationScope:
-        """Get current scope."""
-        return self.scopes[-1]
-
-    def add_constant(self, value: AIFPLValue) -> int:
-        """Add constant to pool and return its index."""
-        # Use dict lookup for O(1) performance instead of list.index() which is O(n)
-        if value in self.constant_map:
-            return self.constant_map[value]
-
-        # Not found - add new constant
-        index = len(self.constants)
-        self.constants.append(value)
-        self.constant_map[value] = index
-        return index
-
-    def add_name(self, name: str) -> int:
-        """Add name to pool and return its index."""
-        # Use dict lookup for O(1) performance instead of list.index() which is O(n)
-        if name in self.name_map:
-            return self.name_map[name]
-
-        # Not found - add new name
-        index = len(self.names)
-        self.names.append(name)
-        self.name_map[name] = index
-        return index
-
-    def add_code_object(self, code_obj: CodeObject) -> int:
-        """Add nested code object and return its index."""
-        index = len(self.code_objects)
-        self.code_objects.append(code_obj)
-        return index
-
-    def resolve_variable(self, name: str) -> Tuple[str, int, int]:
-        """
-        Resolve variable to (type, depth, index).
-
-        With global index allocation, the index stored in each binding is already
-        the final flat index. We just need to find which scope has the binding.
-
-        Returns:
-            ('local', depth, index) for local variables
-            ('global', 0, name_index) for global variables
-        """
-        # Search from innermost to outermost scope
-        for scope in reversed(self.scopes):
-            index = scope.get_binding(name)
-            if index is not None:
-                # Index is already the global flat index
-                return ('local', 0, index)
-
-        # Not found in local scopes, must be global
-        name_index = self.add_name(name)
-        return ('global', 0, name_index)
-
-    def emit(self, opcode: Opcode, arg1: int = 0, arg2: int = 0) -> int:
-        """Emit an instruction and return its index."""
-        instr = Instruction(opcode, arg1, arg2)
-        index = len(self.instructions)
-        self.instructions.append(instr)
-        return index
-
-    def patch_jump(self, instr_index: int, target: int) -> None:
-        """Patch a jump instruction to point to target."""
-        self.instructions[instr_index].arg1 = target
-
-    def current_instruction_index(self) -> int:
-        """Get index of next instruction to be emitted."""
-        return len(self.instructions)
 
 
 class AIFPLCompiler:
@@ -373,21 +262,21 @@ class AIFPLCompiler:
                 return self._analyze_or(expr, ctx)
 
             if name == 'quote':
-                return self._analyze_quote(expr, ctx)
+                return self._analyze_quote(expr)
 
             if name == 'error':
-                return self._analyze_error(expr, ctx)
+                return self._analyze_error(expr)
 
         # Regular function call
         return self._analyze_function_call(expr, ctx, in_tail_position)
 
-    def _analyze_quote(self, expr: AIFPLList, ctx: AnalysisContext) -> QuotePlan:
+    def _analyze_quote(self, expr: AIFPLList) -> QuotePlan:
         """Analyze a quote expression."""
         assert len(expr.elements) == 2, "Quote expression should have exactly 2 elements"
         quoted = expr.elements[1]
         return QuotePlan(quoted_value=quoted)
 
-    def _analyze_error(self, expr: AIFPLList, ctx: AnalysisContext) -> ErrorPlan:
+    def _analyze_error(self, expr: AIFPLList) -> ErrorPlan:
         """Analyze an error expression."""
         assert len(expr.elements) == 2, "Error expression should have exactly 2 elements"
         message = expr.elements[1]
@@ -649,7 +538,11 @@ class AIFPLCompiler:
         )
 
         # Analyze function and arguments
-        func_plan = self._analyze_expression(func_expr, ctx, in_tail_position=False) if not is_tail_recursive else VariablePlan(name='<tail-recursive>', var_type='local', depth=0, index=0)
+        if is_tail_recursive:
+            func_plan = VariablePlan(name='<tail-recursive>', var_type='local', depth=0, index=0)
+        else:
+            func_plan = self._analyze_expression(func_expr, ctx, in_tail_position=False)
+
         arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
 
         return CallPlan(
@@ -673,8 +566,7 @@ class AIFPLCompiler:
 
         return False
 
-    def _find_free_variables(self, expr: AIFPLValue, bound_vars: Set[str],
-                            parent_ctx: CompilationContext) -> List[str]:
+    def _find_free_variables(self, expr: AIFPLValue, bound_vars: Set[str], parent_ctx: AnalysisContext) -> List[str]:
         """
         Find free variables in an expression.
 
@@ -688,9 +580,14 @@ class AIFPLCompiler:
         self._collect_free_vars(expr, bound_vars, parent_ctx, free, set())
         return free
 
-    def _collect_free_vars(self, expr: AIFPLValue, bound_vars: Set[str],
-                          parent_ctx: CompilationContext, free: List[str],
-                          seen: Set[str]) -> None:
+    def _collect_free_vars(
+        self,
+        expr: AIFPLValue,
+        bound_vars: Set[str],
+        parent_ctx: AnalysisContext,
+        free: List[str],
+        seen: Set[str]
+    ) -> None:
         """Recursively collect free variables."""
         expr_type = type(expr)
 

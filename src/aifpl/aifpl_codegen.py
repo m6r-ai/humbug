@@ -118,28 +118,40 @@ class AIFPLCodeGenerator:
         # Dispatch based on plan type
         if isinstance(plan, ConstantPlan):
             self._generate_constant(plan, ctx)
+
         elif isinstance(plan, VariablePlan):
             self._generate_variable(plan, ctx)
+
         elif isinstance(plan, IfPlan):
             self._generate_if(plan, ctx)
+
         elif isinstance(plan, AndPlan):
             self._generate_and(plan, ctx)
+
         elif isinstance(plan, OrPlan):
             self._generate_or(plan, ctx)
+
         elif isinstance(plan, QuotePlan):
             self._generate_quote(plan, ctx)
+
         elif isinstance(plan, ErrorPlan):
             self._generate_error(plan, ctx)
+
         elif isinstance(plan, LetPlan):
             self._generate_let(plan, ctx)
+
         elif isinstance(plan, LetrecPlan):
             self._generate_letrec(plan, ctx)
+
         elif isinstance(plan, LambdaPlan):
             self._generate_lambda(plan, ctx)
+
         elif isinstance(plan, CallPlan):
             self._generate_call(plan, ctx)
+
         elif isinstance(plan, EmptyListPlan):
             self._generate_empty_list(plan, ctx)
+
         else:
             raise ValueError(f"Unknown plan type: {type(plan)}")
 
@@ -152,6 +164,7 @@ class AIFPLCodeGenerator:
         """Generate code for a variable reference."""
         if plan.var_type == 'local':
             ctx.emit(Opcode.LOAD_VAR, plan.depth, plan.index)
+
         else:  # global
             # For globals, we need to assign the name index during codegen
             name_index = ctx.add_name(plan.name)
@@ -173,6 +186,7 @@ class AIFPLCodeGenerator:
         if plan.in_tail_position:
             # Then branch is in tail position, so emit RETURN
             ctx.emit(Opcode.RETURN)
+
         else:
             # Not in tail position, emit jump past else
             jump_past_else = ctx.emit(Opcode.JUMP, 0)
@@ -268,7 +282,7 @@ class AIFPLCodeGenerator:
     def _generate_let(self, plan: LetPlan, ctx: CodeGenContext) -> None:
         """Generate code for a let expression."""
         # Generate and store each binding
-        for name, value_plan, var_index in plan.bindings:
+        for _, value_plan, var_index in plan.bindings:
             # Generate value
             self._generate_expr(value_plan, ctx)
 
@@ -329,6 +343,7 @@ class AIFPLCodeGenerator:
             last_op = lambda_ctx.instructions[-1].opcode
             if last_op not in (Opcode.RETURN, Opcode.JUMP, Opcode.TAIL_CALL_FUNCTION):
                 lambda_ctx.emit(Opcode.RETURN)
+
         else:
             lambda_ctx.emit(Opcode.RETURN)
 
@@ -384,9 +399,10 @@ class AIFPLCodeGenerator:
         # Emit call
         if plan.is_tail_call:
             ctx.emit(Opcode.TAIL_CALL_FUNCTION, len(plan.arg_plans))
+
         else:
             ctx.emit(Opcode.CALL_FUNCTION, len(plan.arg_plans))
 
-    def _generate_empty_list(self, plan: EmptyListPlan, ctx: CodeGenContext) -> None:
+    def _generate_empty_list(self, _plan: EmptyListPlan, ctx: CodeGenContext) -> None:
         """Generate code for an empty list literal."""
         ctx.emit(Opcode.LOAD_EMPTY_LIST)
