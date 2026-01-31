@@ -1,4 +1,5 @@
-"""Compilation plan data structures for AIFPL two-phase compiler.
+"""
+Compilation plan data structures for AIFPL two-phase compiler.
 
 The compilation plan represents the result of the analysis phase.
 It contains all the information needed for code generation without

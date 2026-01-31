@@ -303,7 +303,7 @@ class AIFPLCodeGenerator:
     def _generate_letrec(self, plan: LetrecPlan, ctx: CodeGenContext) -> None:
         """Generate code for a letrec expression."""
         # Generate and store each binding
-        for name, value_plan, var_index in plan.bindings:
+        for _, value_plan, var_index in plan.bindings:
             # Generate value
             self._generate_expr(value_plan, ctx)
 
