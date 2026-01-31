@@ -313,23 +313,23 @@ class AIFPLCompiler:
                 return
 
             if name == 'lambda':
-                self._compile_lambda(expr, ctx, in_tail_position)
+                self._compile_lambda(expr, ctx)
                 return
 
             if name == 'and':
-                self._compile_and(expr, ctx, in_tail_position)
+                self._compile_and(expr, ctx)
                 return
 
             if name == 'or':
-                self._compile_or(expr, ctx, in_tail_position)
+                self._compile_or(expr, ctx)
                 return
 
             if name == 'quote':
-                self._compile_quote(expr, ctx, in_tail_position)
+                self._compile_quote(expr, ctx)
                 return
 
             if name == 'error':
-                self.compile_error(expr, ctx, in_tail_position)
+                self.compile_error(expr, ctx)
                 return
 
         # Regular function call
@@ -378,7 +378,7 @@ class AIFPLCompiler:
             after_else = ctx.current_instruction_index()
             ctx.patch_jump(jump_past_else, after_else)
 
-    def _compile_quote(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
+    def _compile_quote(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """
         Compile quote expression.
 
@@ -395,7 +395,7 @@ class AIFPLCompiler:
         const_index = ctx.add_constant(quoted)
         ctx.emit(Opcode.LOAD_CONST, const_index)
 
-    def compile_error(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
+    def compile_error(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """
         Compile an error raise with the given message.
         """
@@ -412,7 +412,7 @@ class AIFPLCompiler:
         const_index = ctx.add_constant(error_msg)
         ctx.emit(Opcode.RAISE_ERROR, const_index)
 
-    def _compile_and(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
+    def _compile_and(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """
         Compile and expression with short-circuit evaluation.
 
@@ -459,7 +459,7 @@ class AIFPLCompiler:
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
 
-    def _compile_or(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
+    def _compile_or(self, expr: AIFPLList, ctx: CompilationContext) -> None:
         """
         Compile or expression with short-circuit evaluation.
 
@@ -659,11 +659,8 @@ class AIFPLCompiler:
 
         # Check if lambda references itself (recursive)
         is_recursive = False
-        if is_self_ref_lambda:
+        if is_self_ref_lambda or is_recursive_group:
             # Check if the lambda body references 'name'
-            is_recursive = self._references_variable(value_expr, name)
-        elif is_recursive_group:
-            # Even if not a direct lambda, check if the expression references the binding name
             is_recursive = self._references_variable(value_expr, name)
 
         # Compile the value expression
@@ -692,7 +689,7 @@ class AIFPLCompiler:
             if not isinstance(value_expr, AIFPLList):
                 raise AIFPLEvalError("Expected lambda expression to be a list")
 
-            self._compile_lambda(value_expr, ctx, in_tail_position=False, binding_name=name, let_bindings=sibling_bindings)
+            self._compile_lambda(value_expr, ctx, binding_name=name, let_bindings=sibling_bindings)
 
         else:
             # Binding values are NOT in tail position
@@ -738,7 +735,6 @@ class AIFPLCompiler:
         return False
 
     def _compile_lambda(self, expr: AIFPLList, ctx: CompilationContext,
-                       in_tail_position: bool = False,
                        binding_name: str | None = None, let_bindings: List[str] | None = None) -> None:
         """Compile lambda expression: (lambda (params...) body)"""
         # Validation already done by semantic analyzer
