@@ -38,7 +38,6 @@ class Frame:
     locals: List[AIFPLValue | None] = field(init=False)  # Local variables
     closure_env: Any = None  # Closure environment for this frame
     local_names: Dict[str, int] = field(default_factory=dict)  # Map variable names to local indices
-    binding_group_id: int | None = None  # Binding group ID for mutual recursion TCO
 
     def __post_init__(self) -> None:
         """Initialize locals array based on code object."""
@@ -428,8 +427,7 @@ class AIFPLVM:
             closure_environment=AIFPLEnvironment(bindings=captured_dict, parent=parent_env),
             name=closure_code.name,
             bytecode=closure_code,
-            captured_values=tuple(captured_values),
-            binding_group_id=closure_code.binding_group_id
+            captured_values=tuple(captured_values)
         )
         self.stack.append(closure)
         return None
@@ -615,8 +613,7 @@ class AIFPLVM:
             closure_environment=new_env,
             name=target_closure.name,
             bytecode=target_closure.bytecode,
-            captured_values=target_closure.captured_values,
-            binding_group_id=target_closure.binding_group_id
+            captured_values=target_closure.captured_values
         )
 
         # Add self-reference
@@ -692,7 +689,6 @@ class AIFPLVM:
         # Create new frame
         new_frame = Frame(code)
         new_frame.closure_env = func.closure_environment
-        new_frame.binding_group_id = func.binding_group_id
 
         # Store captured values in locals (after parameters)
         if func.captured_values:

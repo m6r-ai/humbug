@@ -106,7 +106,6 @@ class CodeObject:
     param_count: int = 0  # Number of parameters (for functions)
     local_count: int = 0  # Number of local variables
     name: str = "<module>"  # Name for debugging
-    binding_group_id: int | None = None  # Binding group ID for mutual recursion TCO
 
     def __repr__(self) -> str:
         """Human-readable representation."""
