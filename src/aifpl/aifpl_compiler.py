@@ -59,7 +59,6 @@ class CompilationContext:
     parent_ctx: 'CompilationContext | None' = None  # Parent context for nested lambdas
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
     next_local_index: int = 0  # Global counter for local variable indices (for flat indexing)
-    in_tail_position: bool = False  # Whether we're compiling in tail position
     current_function_name: str | None = None  # Name of the function being compiled (for tail recursion detection)
     current_letrec_binding: str | None = None  # Name of the letrec binding being compiled (for nested lambdas)
 
@@ -225,7 +224,7 @@ class AIFPLCompiler:
         ctx = CompilationContext()
 
         # Compile the expression
-        self._compile_expression(expr, ctx)
+        self._compile_expression(expr, ctx, in_tail_position=False)
 
         # Add RETURN instruction
         ctx.emit(Opcode.RETURN)
@@ -241,7 +240,7 @@ class AIFPLCompiler:
             name=name
         )
 
-    def _compile_expression(self, expr: AIFPLValue, ctx: CompilationContext) -> None:
+    def _compile_expression(self, expr: AIFPLValue, ctx: CompilationContext, in_tail_position: bool = False) -> None:
         """Compile an expression, leaving result on stack."""
 
         # Cache the type - check once instead of multiple isinstance() calls
@@ -269,7 +268,7 @@ class AIFPLCompiler:
 
         # List (function call or special form)
         if expr_type is AIFPLList:
-            self._compile_list(cast(AIFPLList, expr), ctx)
+            self._compile_list(cast(AIFPLList, expr), ctx, in_tail_position)
             return
 
         raise AIFPLEvalError(
@@ -287,7 +286,7 @@ class AIFPLCompiler:
 
         ctx.emit(Opcode.LOAD_NAME, index)
 
-    def _compile_list(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_list(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """Compile a list expression (function call or special form)."""
         if expr.is_empty():
             ctx.emit(Opcode.LOAD_EMPTY_LIST)
@@ -302,41 +301,41 @@ class AIFPLCompiler:
         if first_type is AIFPLSymbol:
             name = cast(AIFPLSymbol, first).name
             if name == 'if':
-                self._compile_if(expr, ctx)
+                self._compile_if(expr, ctx, in_tail_position)
                 return
 
             if name == 'let':
-                self._compile_let(expr, ctx)
+                self._compile_let(expr, ctx, in_tail_position)
                 return
 
             if name == 'letrec':
-                self._compile_letrec(expr, ctx)
+                self._compile_letrec(expr, ctx, in_tail_position)
                 return
 
             if name == 'lambda':
-                self._compile_lambda(expr, ctx)
+                self._compile_lambda(expr, ctx, in_tail_position)
                 return
 
             if name == 'and':
-                self._compile_and(expr, ctx)
+                self._compile_and(expr, ctx, in_tail_position)
                 return
 
             if name == 'or':
-                self._compile_or(expr, ctx)
+                self._compile_or(expr, ctx, in_tail_position)
                 return
 
             if name == 'quote':
-                self._compile_quote(expr, ctx)
+                self._compile_quote(expr, ctx, in_tail_position)
                 return
 
             if name == 'error':
-                self.compile_error(expr, ctx)
+                self.compile_error(expr, ctx, in_tail_position)
                 return
 
         # Regular function call
-        self._compile_function_call(expr, ctx)
+        self._compile_function_call(expr, ctx, in_tail_position)
 
-    def _compile_if(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_if(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """Compile if expression: (if condition then else)"""
         # Validation already done by semantic analyzer
         assert len(expr.elements) == 4, "If expression should have exactly 4 elements (validated by semantic analyzer)"
@@ -345,23 +344,20 @@ class AIFPLCompiler:
 
         # Compile condition
         # Condition is NOT in tail position
-        old_tail = ctx.in_tail_position
-        ctx.in_tail_position = False
-        self._compile_expression(condition, ctx)
-        ctx.in_tail_position = old_tail
+        self._compile_expression(condition, ctx, in_tail_position=False)
 
         # Jump to else if condition is false
         jump_to_else = ctx.emit(Opcode.JUMP_IF_FALSE, 0)  # Will patch later
 
         # Compile then branch
         # Then branch IS in tail position if the if is
-        self._compile_expression(then_expr, ctx)
+        self._compile_expression(then_expr, ctx, in_tail_position=in_tail_position)
 
         # Jump past else branch
         # If we're in tail position, emit RETURN after then branch
         # Otherwise, emit JUMP to skip else branch
         jump_past_else = None
-        if ctx.in_tail_position:
+        if in_tail_position:
             # Then branch is in tail position, so emit RETURN
             ctx.emit(Opcode.RETURN)
 
@@ -375,14 +371,14 @@ class AIFPLCompiler:
 
         # Compile else branch
         # Else branch IS in tail position if the if is
-        self._compile_expression(else_expr, ctx)
+        self._compile_expression(else_expr, ctx, in_tail_position=in_tail_position)
 
         # Patch jump past else
         if jump_past_else is not None:
             after_else = ctx.current_instruction_index()
             ctx.patch_jump(jump_past_else, after_else)
 
-    def _compile_quote(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_quote(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """
         Compile quote expression.
 
@@ -399,7 +395,7 @@ class AIFPLCompiler:
         const_index = ctx.add_constant(quoted)
         ctx.emit(Opcode.LOAD_CONST, const_index)
 
-    def compile_error(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def compile_error(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """
         Compile an error raise with the given message.
         """
@@ -416,7 +412,7 @@ class AIFPLCompiler:
         const_index = ctx.add_constant(error_msg)
         ctx.emit(Opcode.RAISE_ERROR, const_index)
 
-    def _compile_and(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_and(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """
         Compile and expression with short-circuit evaluation.
 
@@ -442,7 +438,7 @@ class AIFPLCompiler:
 
         for arg in args:
             # Compile argument
-            self._compile_expression(arg, ctx)
+            self._compile_expression(arg, ctx, in_tail_position=False)
 
             # If false, jump to "return false" section
             jump = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
@@ -463,7 +459,7 @@ class AIFPLCompiler:
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
 
-    def _compile_or(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_or(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """
         Compile or expression with short-circuit evaluation.
 
@@ -489,7 +485,7 @@ class AIFPLCompiler:
 
         for arg in args:
             # Compile argument
-            self._compile_expression(arg, ctx)
+            self._compile_expression(arg, ctx, in_tail_position=False)
 
             # If true, jump to "return true" section
             jump = ctx.emit(Opcode.JUMP_IF_TRUE, 0)
@@ -510,7 +506,7 @@ class AIFPLCompiler:
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
 
-    def _compile_let(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_let(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """
         Compile let expression with simple sequential binding: (let ((var val) ...) body)
 
@@ -542,10 +538,7 @@ class AIFPLCompiler:
         for name, value_expr in binding_pairs:
             # Compile value expression FIRST (before adding binding to scope)
             # This ensures self-references see the outer scope (shadowing works)
-            old_tail = ctx.in_tail_position
-            ctx.in_tail_position = False
-            self._compile_expression(value_expr, ctx)
-            ctx.in_tail_position = old_tail
+            self._compile_expression(value_expr, ctx, in_tail_position=False)
 
             # NOW add binding to scope (after evaluating the value)
             # This makes it available for subsequent bindings
@@ -557,12 +550,12 @@ class AIFPLCompiler:
             ctx.emit(Opcode.STORE_VAR, 0, var_index)
 
         # Compile body
-        self._compile_expression(body, ctx)
+        self._compile_expression(body, ctx, in_tail_position=in_tail_position)
 
         # Pop the scope
         ctx.pop_scope()
 
-    def _compile_letrec(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_letrec(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """
         Compile letrec expression with recursive binding: (letrec ((var val) ...) body)
 
@@ -638,7 +631,7 @@ class AIFPLCompiler:
             ctx.emit(Opcode.PATCH_CLOSURE_SIBLING, closure_var_index, const_index)
 
         # Compile body
-        self._compile_expression(body, ctx)
+        self._compile_expression(body, ctx, in_tail_position=in_tail_position)
 
         # Pop the scope to remove let bindings
         # Note: We don't emit any cleanup instructions because the VM uses flat indexing
@@ -699,14 +692,11 @@ class AIFPLCompiler:
             if not isinstance(value_expr, AIFPLList):
                 raise AIFPLEvalError("Expected lambda expression to be a list")
 
-            self._compile_lambda(value_expr, ctx, binding_name=name, let_bindings=sibling_bindings)
+            self._compile_lambda(value_expr, ctx, in_tail_position=False, binding_name=name, let_bindings=sibling_bindings)
 
         else:
             # Binding values are NOT in tail position
-            old_tail = ctx.in_tail_position
-            ctx.in_tail_position = False
-            self._compile_expression(value_expr, ctx)
-            ctx.in_tail_position = old_tail
+            self._compile_expression(value_expr, ctx, in_tail_position=False)
 
         # Restore the previous letrec binding context
         if is_recursive_group:
@@ -748,6 +738,7 @@ class AIFPLCompiler:
         return False
 
     def _compile_lambda(self, expr: AIFPLList, ctx: CompilationContext,
+                       in_tail_position: bool = False,
                        binding_name: str | None = None, let_bindings: List[str] | None = None) -> None:
         """Compile lambda expression: (lambda (params...) body)"""
         # Validation already done by semantic analyzer
@@ -838,10 +829,7 @@ class AIFPLCompiler:
 
         # Compile lambda body - free vars will be resolved as locals
         # The body is in tail position (last expression before RETURN)
-        old_tail_position = lambda_ctx.in_tail_position
-        lambda_ctx.in_tail_position = True
-        self._compile_expression(body, lambda_ctx)
-        lambda_ctx.in_tail_position = old_tail_position
+        self._compile_expression(body, lambda_ctx, in_tail_position=True)
 
         # Only emit RETURN if the body didn't already emit one (or JUMP or TAIL_CALL_FUNCTION)
         # TAIL_CALL_FUNCTION handles its own return (either replaces frame or returns result)
@@ -967,7 +955,7 @@ class AIFPLCompiler:
             for elem in cast(AIFPLList, expr).elements:
                 self._collect_free_vars(elem, bound_vars, parent_ctx, free, seen)
 
-    def _compile_function_call(self, expr: AIFPLList, ctx: CompilationContext) -> None:
+    def _compile_function_call(self, expr: AIFPLList, ctx: CompilationContext, in_tail_position: bool) -> None:
         """Compile a function call."""
         func_expr = expr.first()
         arg_exprs = list(expr.elements[1:])
@@ -979,12 +967,9 @@ class AIFPLCompiler:
         if func_type is AIFPLSymbol and cast(AIFPLSymbol, func_expr).name in self.builtin_indices:
             # Compile arguments
             # Arguments are NOT in tail position
-            old_tail = ctx.in_tail_position
-            ctx.in_tail_position = False
             for arg in arg_exprs:
-                self._compile_expression(arg, ctx)
+                self._compile_expression(arg, ctx, in_tail_position=False)
 
-            ctx.in_tail_position = old_tail
 
             # Emit builtin call
             builtin_index = self.builtin_indices[cast(AIFPLSymbol, func_expr).name]
@@ -996,7 +981,7 @@ class AIFPLCompiler:
         # Check for tail-recursive call
         # If we're in tail position and calling the current function by name, use JUMP
         is_tail_recursive = (
-            ctx.in_tail_position and
+            in_tail_position and
             ctx.current_function_name is not None and
             func_type is AIFPLSymbol and
             cast(AIFPLSymbol, func_expr).name == ctx.current_function_name
@@ -1007,10 +992,7 @@ class AIFPLCompiler:
             # Don't compile the function expression - we're not calling, we're jumping
             for arg in arg_exprs:
                 # Arguments are not in tail position
-                old_tail = ctx.in_tail_position
-                ctx.in_tail_position = False
-                self._compile_expression(arg, ctx)
-                ctx.in_tail_position = old_tail
+                self._compile_expression(arg, ctx, in_tail_position=False)
 
             # Emit JUMP to instruction 0 (start of function, after prologue)
             # The prologue will pop these args from the stack
@@ -1039,23 +1021,17 @@ class AIFPLCompiler:
                         )
 
         # Compile function expression (NOT in tail position - result needs to be called)
-        old_tail = ctx.in_tail_position
-        ctx.in_tail_position = False
-        self._compile_expression(func_expr, ctx)
-        ctx.in_tail_position = old_tail
+        self._compile_expression(func_expr, ctx, in_tail_position=False)
 
         # Compile arguments
         # Arguments are NOT in tail position
-        old_tail = ctx.in_tail_position
-        ctx.in_tail_position = False
         for arg in arg_exprs:
-            self._compile_expression(arg, ctx)
+            self._compile_expression(arg, ctx, in_tail_position=False)
 
-        ctx.in_tail_position = old_tail
 
         # Emit call
         # Use TAIL_CALL_FUNCTION if in tail position, otherwise CALL_FUNCTION
-        if ctx.in_tail_position:
+        if in_tail_position:
             ctx.emit(Opcode.TAIL_CALL_FUNCTION, len(arg_exprs))
 
         else:
