@@ -506,10 +506,18 @@ class AIFPLCompiler:
                 # Also check if it's a recursive binding from a parent letrec
                 is_parent_ref = True
 
-            parent_refs.append(free_var)
-            parent_ref_plans.append(VariablePlan(
-                name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=is_parent_ref
-            ))
+            if is_parent_ref:
+                # Parent reference - will use LOAD_PARENT_VAR
+                parent_refs.append(free_var)
+                parent_ref_plans.append(VariablePlan(
+                    name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=True
+                ))
+            else:
+                # Regular free variable - will be captured
+                captured_vars.append(free_var)
+                free_var_plans.append(VariablePlan(
+                    name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=False
+                ))
 
         # Create child context for lambda body analysis
         lambda_ctx = ctx.create_child_context()
@@ -700,6 +708,13 @@ class AIFPLCompiler:
                         # Recurse into let body with new bound variables
                         self._collect_free_vars(body, new_bound, parent_ctx, free, seen)
                     return
+
+                # Note: We don't need special handling for 'letrec' here.
+                # Unlike 'let', letrec bindings are already in scope when we analyze them
+                # (they're added to the parent context before analyzing binding values).
+                # So when we recurse into letrec bodies, resolve_variable() will correctly
+                # find letrec bindings as locals in the parent context, and they won't be
+                # added to the free variables list.
 
             # Recursively check all elements
             for elem in cast(AIFPLList, expr).elements:
