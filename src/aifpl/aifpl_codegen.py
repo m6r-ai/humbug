@@ -294,8 +294,8 @@ class AIFPLCodeGenerator:
             # Update max locals
             ctx.max_locals = max(ctx.max_locals, var_index + 1)
 
-        # TODO: Handle recursive closures without patching
-        # For now, emit patching opcodes (will be removed later)
+        # Patch recursive closures to add self-references
+        # TODO: This could be eliminated by changing how recursive lambdas reference themselves
         for name, value_plan, var_index in plan.bindings:
             if name in plan.recursive_bindings:
                 name_index = ctx.add_name(name)
