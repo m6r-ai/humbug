@@ -37,7 +37,6 @@ class Frame:
     ip: int = 0  # Instruction pointer
     locals: List[AIFPLValue | None] = field(init=False)  # Local variables
     closure_env: Any = None  # Closure environment for this frame
-    local_names: Dict[str, int] = field(default_factory=dict)  # Map variable names to local indices
     parent_frame: 'Frame | None' = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
 
     def __post_init__(self) -> None:
@@ -341,19 +340,6 @@ class AIFPLVM:
         if name in self.globals:
             self.stack.append(self.globals[name])
             return None
-
-        # Check parent frame locals by name (for letrec bindings)
-        # When a lambda nested in a letrec binding references the binding variable,
-        # it needs to look it up from the parent frame's locals at call time.
-        # Walk up the frame stack to find the variable by name.
-        for parent_frame in reversed(self.frames[:-1]):
-            if name in parent_frame.local_names:
-                local_idx = parent_frame.local_names[name]
-                if local_idx < len(parent_frame.locals):
-                    value = parent_frame.locals[local_idx]
-                    if value is not None:
-                        self.stack.append(value)
-                        return None
 
         # Not found - generate helpful error
         available_vars = list(self.globals.keys())
