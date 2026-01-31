@@ -855,11 +855,11 @@ class AIFPLCompiler:
         self._compile_expression(body, lambda_ctx)
         lambda_ctx.in_tail_position = old_tail_position
 
-        # Only emit RETURN if the body didn't already emit one (or JUMP)
-        # Check if the last instruction is RETURN or JUMP
+        # Only emit RETURN if the body didn't already emit one (or JUMP or TAIL_CALL_FUNCTION)
+        # TAIL_CALL_FUNCTION handles its own return (either replaces frame or returns result)
         if lambda_ctx.instructions:
             last_op = lambda_ctx.instructions[-1].opcode
-            if last_op not in (Opcode.RETURN, Opcode.JUMP):
+            if last_op not in (Opcode.RETURN, Opcode.JUMP, Opcode.TAIL_CALL_FUNCTION):
                 lambda_ctx.emit(Opcode.RETURN)
 
         else:
@@ -1051,7 +1051,11 @@ class AIFPLCompiler:
                             suggestion=f"Provide exactly {expected_arity} {arguments_text}"
                         )
 
+        # Compile function expression (NOT in tail position - result needs to be called)
+        old_tail = ctx.in_tail_position
+        ctx.in_tail_position = False
         self._compile_expression(func_expr, ctx)
+        ctx.in_tail_position = old_tail
 
         # Compile arguments
         # Arguments are NOT in tail position

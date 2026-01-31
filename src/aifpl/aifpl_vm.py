@@ -15,6 +15,18 @@ from aifpl.aifpl_value import (
 
 
 @dataclass
+class TailCall:
+    """
+    Marker for tail call optimization.
+    
+    When a handler returns this, the execution loop will replace the current
+    frame with a new frame for the target function, achieving true tail call
+    optimization with constant stack space.
+    """
+    func: AIFPLFunction
+
+
+@dataclass
 class Frame:
     """
     Execution frame for function calls.
@@ -117,7 +129,12 @@ class AIFPLVM:
 
     def _execute_frame(self) -> AIFPLValue:
         """
-        Execute current frame using jump table dispatch.
+        Execute frames using jump table dispatch with tail call optimization.
+        
+        This method implements a trampoline pattern: when a handler returns a
+        TailCall marker, we replace the current frame with the target frame
+        and continue execution, achieving true tail call optimization with
+        constant stack space.
 
         Returns:
             Result value when frame returns
@@ -146,10 +163,27 @@ class AIFPLVM:
             if handler is None:
                 raise AIFPLEvalError(f"Unimplemented opcode: {opcode}")
 
-            # Call the handler - it may return a value for RETURN
+            # Call the handler
             result = handler(frame, code, instr.arg1, instr.arg2)
-            if result is not None:
-                return result
+            if result is None:
+                # Fast path: continue execution
+                continue
+
+            # Check if it's a tail call
+            if isinstance(result, TailCall):
+                # Optimization: reuse frame for self-recursion
+                if result.func.bytecode == frame.code:
+                    frame.ip = 0
+                    continue
+
+                # Replace frame for general tail call
+                self.frames.pop()
+                self._setup_call_frame(result.func)
+                frame = self.frames[-1]  # Update frame reference
+                continue
+
+            # Otherwise it's a return value (from RETURN opcode)
+            return result
 
         # Frame finished without explicit return
         raise AIFPLEvalError("Frame execution ended without RETURN instruction")
@@ -459,8 +493,14 @@ class AIFPLVM:
         _code: CodeObject,
         arg1: int,
         _arg2: int
-    ) -> AIFPLValue | None:
-        """TAIL_CALL_FUNCTION: Tail call with optimization."""
+    ) -> TailCall | None:
+        """
+        TAIL_CALL_FUNCTION: Perform tail call with optimization.
+        
+        Returns a TailCall marker that the execution loop will handle by
+        replacing the current frame with the target frame, achieving true
+        tail call optimization with constant stack space for all tail calls.
+        """
         arity = arg1
 
         if len(self.stack) < arity + 1:
@@ -470,7 +510,7 @@ class AIFPLVM:
                 suggestion="This is likely a compiler bug"
             )
 
-        # Get function from under the arguments
+        # Get function from stack (below arguments)
         func = self.stack[-(arity + 1)]
 
         if not isinstance(func, AIFPLFunction):
@@ -481,15 +521,15 @@ class AIFPLVM:
                 suggestion="Only functions can be called"
             )
 
-        # Handle builtin functions (no TCO for builtins)
+        # Handle builtin functions
+        # Builtins can't be tail-call-optimized, but we can return their result directly
         if func.is_native:
             args = [self.stack.pop() for _ in range(arity)]
             args.reverse()
             self.stack.pop()  # Pop function
             assert func.native_impl is not None, f"Function {func.name} has no native implementation"
             result = func.native_impl(args)
-            self.stack.append(result)
-            return None
+            return result  # Return directly (we're in tail position)
 
         # Check arity for bytecode functions
         expected_arity = func.bytecode.param_count
@@ -500,46 +540,11 @@ class AIFPLVM:
                 suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
             )
 
-        current_frame = self.frames[-1]
-
-        # Check for self-recursion (same bytecode)
-        if func.bytecode == current_frame.code:
-            # Self-recursive tail call - reuse frame
-            del self.stack[-(arity + 1)]  # Remove function
-            current_frame.ip = 0  # Reset to start
-            return None
-
-        # Check for mutual recursion (same binding group)
-        if (func.binding_group_id is not None and
-            current_frame.binding_group_id is not None and
-            func.binding_group_id == current_frame.binding_group_id):
-
-            # Mutual recursion - reuse frame with different code
-            del self.stack[-(arity + 1)]  # Remove function
-            current_frame.code = func.bytecode  # Switch to new function's code
-            current_frame.ip = 0  # Reset to start
-
-            # DON'T reset locals - let the prologue overwrite parameters
-            current_frame.locals = [None] * func.bytecode.local_count
-
-            # Clear local_names since we're switching to a different function
-            current_frame.local_names = {}
-
-            # Update closure environment for new function
-            current_frame.closure_env = func.closure_environment
-
-            # Store captured values in locals (after parameters)
-            if func.captured_values:
-                for i, captured_val in enumerate(func.captured_values):
-                    current_frame.locals[func.bytecode.param_count + i] = captured_val
-
-            return None
-
-        # Not recursive - normal call (still creates frame)
+        # Remove function from stack (leave arguments for new frame)
         del self.stack[-(arity + 1)]
-        result = self._call_bytecode_function(func)
-        self.stack.append(result)
-        return None
+
+        # Return TailCall marker - execution loop will handle frame replacement
+        return TailCall(func)
 
     def _op_call_builtin(  # pylint: disable=useless-return
         self,
@@ -668,12 +673,19 @@ class AIFPLVM:
         target_closure.closure_environment.bindings[sibling_name] = sibling
         return None
 
-    def _call_bytecode_function(self, func: AIFPLFunction) -> AIFPLValue:
+    def _setup_call_frame(self, func: AIFPLFunction) -> None:
         """
-        Call a bytecode function.
-
-        Arguments are already on the stack. The function prologue will pop them
-        and store them in locals.
+        Setup a new frame for calling a function.
+        
+        Creates a new frame, initializes it with the function's closure environment
+        and captured values, and pushes it onto the frame stack.
+        
+        Arguments are assumed to be already on the stack in correct order.
+        The function prologue (STORE_VAR instructions at start of bytecode)
+        will pop these arguments into locals.
+        
+        Args:
+            func: Function to call
         """
         code = func.bytecode
 
@@ -683,14 +695,22 @@ class AIFPLVM:
         new_frame.binding_group_id = func.binding_group_id
 
         # Store captured values in locals (after parameters)
-        # The lambda compiler puts captured vars after parameters in the local space
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
-                # Captured values start after parameters
                 new_frame.locals[code.param_count + i] = captured_val
 
-        # Push frame
+        # Push frame onto stack
         self.frames.append(new_frame)
+
+    def _call_bytecode_function(self, func: AIFPLFunction) -> AIFPLValue:
+        """
+        Call a bytecode function.
+
+        Arguments are already on the stack. The function prologue will pop them
+        and store them in locals.
+        """
+        # Setup frame using helper
+        self._setup_call_frame(func)
 
         # Execute until return
         return self._execute_frame()
