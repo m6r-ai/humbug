@@ -7,15 +7,15 @@ from typing import List, Dict
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
 from aifpl.aifpl_ir import (
-    ExprPlan, ConstantPlan, VariablePlan, IfPlan, AndPlan, OrPlan,
-    QuotePlan, ErrorPlan, LetPlan, LetrecPlan, LambdaPlan, CallPlan,
-    EmptyListPlan, ReturnPlan
+    AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRAnd, AIFPLIROr,
+    AIFPLIRQuote, AIFPLIRError, AIFPLIRLet, AIFPLIRLetrec, AIFPLIRLambda, AIFPLIRCall,
+    AIFPLIREmptyList, AIFPLIRReturn
 )
 from aifpl.aifpl_value import AIFPLValue
 
 
 @dataclass
-class CodeGenContext:
+class AIFPLCodeGenContext:
     """
     Code generation context - tracks bytecode emission.
 
@@ -72,7 +72,7 @@ class CodeGenContext:
         return len(self.instructions)
 
 
-class AIFPLCodeGenerator:
+class AIFPLCodeGen:
     """
     Generates bytecode from compilation plans.
 
@@ -80,7 +80,7 @@ class AIFPLCodeGenerator:
     without performing any analysis.
     """
 
-    def generate(self, plan: ExprPlan, name: str = "<module>") -> CodeObject:
+    def generate(self, plan: AIFPLIRExpr, name: str = "<module>") -> CodeObject:
         """
         Generate bytecode from a compilation plan.
 
@@ -91,12 +91,12 @@ class AIFPLCodeGenerator:
         Returns:
             Compiled code object
         """
-        ctx = CodeGenContext()
+        ctx = AIFPLCodeGenContext()
 
         # Generate code for the expression
         self._generate_expr(plan, ctx)
 
-        # No automatic RETURN - the plan must explicitly include ReturnPlan
+        # No automatic RETURN - the plan must explicitly include AIFPLIRReturn
 
         # Build code object
         return CodeObject(
@@ -109,57 +109,57 @@ class AIFPLCodeGenerator:
             name=name
         )
 
-    def _generate_expr(self, plan: ExprPlan, ctx: CodeGenContext) -> None:
+    def _generate_expr(self, plan: AIFPLIRExpr, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an expression plan."""
         # Dispatch based on plan type
-        if isinstance(plan, ConstantPlan):
+        if isinstance(plan, AIFPLIRConstant):
             self._generate_constant(plan, ctx)
 
-        elif isinstance(plan, VariablePlan):
+        elif isinstance(plan, AIFPLIRVariable):
             self._generate_variable(plan, ctx)
 
-        elif isinstance(plan, IfPlan):
+        elif isinstance(plan, AIFPLIRIf):
             self._generate_if(plan, ctx)
 
-        elif isinstance(plan, AndPlan):
+        elif isinstance(plan, AIFPLIRAnd):
             self._generate_and(plan, ctx)
 
-        elif isinstance(plan, OrPlan):
+        elif isinstance(plan, AIFPLIROr):
             self._generate_or(plan, ctx)
 
-        elif isinstance(plan, QuotePlan):
+        elif isinstance(plan, AIFPLIRQuote):
             self._generate_quote(plan, ctx)
 
-        elif isinstance(plan, ErrorPlan):
+        elif isinstance(plan, AIFPLIRError):
             self._generate_error(plan, ctx)
 
-        elif isinstance(plan, LetPlan):
+        elif isinstance(plan, AIFPLIRLet):
             self._generate_let(plan, ctx)
 
-        elif isinstance(plan, LetrecPlan):
+        elif isinstance(plan, AIFPLIRLetrec):
             self._generate_letrec(plan, ctx)
 
-        elif isinstance(plan, LambdaPlan):
+        elif isinstance(plan, AIFPLIRLambda):
             self._generate_lambda(plan, ctx)
 
-        elif isinstance(plan, CallPlan):
+        elif isinstance(plan, AIFPLIRCall):
             self._generate_call(plan, ctx)
 
-        elif isinstance(plan, EmptyListPlan):
+        elif isinstance(plan, AIFPLIREmptyList):
             self._generate_empty_list(plan, ctx)
 
-        elif isinstance(plan, ReturnPlan):
+        elif isinstance(plan, AIFPLIRReturn):
             self._generate_return(plan, ctx)
 
         else:
             raise ValueError(f"Unknown plan type: {type(plan)}")
 
-    def _generate_constant(self, plan: ConstantPlan, ctx: CodeGenContext) -> None:
+    def _generate_constant(self, plan: AIFPLIRConstant, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a constant."""
         const_index = ctx.add_constant(plan.value)
         ctx.emit(Opcode.LOAD_CONST, const_index)
 
-    def _generate_variable(self, plan: VariablePlan, ctx: CodeGenContext) -> None:
+    def _generate_variable(self, plan: AIFPLIRVariable, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a variable reference."""
         if plan.var_type == 'local':
             if plan.is_parent_ref:
@@ -173,7 +173,7 @@ class AIFPLCodeGenerator:
             name_index = ctx.add_name(plan.name)
             ctx.emit(Opcode.LOAD_NAME, name_index)
 
-    def _generate_if(self, plan: IfPlan, ctx: CodeGenContext) -> None:
+    def _generate_if(self, plan: AIFPLIRIf, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an if expression."""
         # Generate condition
         self._generate_expr(plan.condition_plan, ctx)
@@ -205,7 +205,7 @@ class AIFPLCodeGenerator:
             after_else = ctx.current_instruction_index()
             ctx.patch_jump(jump_past_else, after_else)
 
-    def _generate_and(self, plan: AndPlan, ctx: CodeGenContext) -> None:
+    def _generate_and(self, plan: AIFPLIRAnd, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an and expression with short-circuit evaluation."""
         if len(plan.arg_plans) == 0:
             # (and) -> #t
@@ -238,7 +238,7 @@ class AIFPLCodeGenerator:
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
 
-    def _generate_or(self, plan: OrPlan, ctx: CodeGenContext) -> None:
+    def _generate_or(self, plan: AIFPLIROr, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an or expression with short-circuit evaluation."""
         if len(plan.arg_plans) == 0:
             # (or) -> #f
@@ -271,17 +271,17 @@ class AIFPLCodeGenerator:
         end = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_end, end)
 
-    def _generate_quote(self, plan: QuotePlan, ctx: CodeGenContext) -> None:
+    def _generate_quote(self, plan: AIFPLIRQuote, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a quote expression."""
         const_index = ctx.add_constant(plan.quoted_value)
         ctx.emit(Opcode.LOAD_CONST, const_index)
 
-    def _generate_error(self, plan: ErrorPlan, ctx: CodeGenContext) -> None:
+    def _generate_error(self, plan: AIFPLIRError, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an error expression."""
         const_index = ctx.add_constant(plan.message)
         ctx.emit(Opcode.RAISE_ERROR, const_index)
 
-    def _generate_let(self, plan: LetPlan, ctx: CodeGenContext) -> None:
+    def _generate_let(self, plan: AIFPLIRLet, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a let expression."""
         # Generate and store each binding
         for _, value_plan, var_index in plan.bindings:
@@ -297,7 +297,7 @@ class AIFPLCodeGenerator:
         # Generate body
         self._generate_expr(plan.body_plan, ctx)
 
-    def _generate_letrec(self, plan: LetrecPlan, ctx: CodeGenContext) -> None:
+    def _generate_letrec(self, plan: AIFPLIRLetrec, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a letrec expression."""
         # Generate and store each binding
         for _, value_plan, var_index in plan.bindings:
@@ -313,7 +313,7 @@ class AIFPLCodeGenerator:
         # Generate body
         self._generate_expr(plan.body_plan, ctx)
 
-    def _generate_lambda(self, plan: LambdaPlan, ctx: CodeGenContext) -> None:
+    def _generate_lambda(self, plan: AIFPLIRLambda, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a lambda expression."""
         # Emit LOAD_VAR for each free variable (for capture)
         for free_var_plan in plan.free_var_plans:
@@ -321,7 +321,7 @@ class AIFPLCodeGenerator:
             self._generate_variable(free_var_plan, ctx)
 
         # Create nested context for lambda body
-        lambda_ctx = CodeGenContext()
+        lambda_ctx = AIFPLCodeGenContext()
 
         # Generate function prologue: pop arguments from stack into locals
         for i in range(len(plan.params) - 1, -1, -1):
@@ -333,7 +333,7 @@ class AIFPLCodeGenerator:
         # Generate body
         self._generate_expr(plan.body_plan, lambda_ctx)
 
-        # No automatic RETURN - the body_plan must explicitly include ReturnPlan
+        # No automatic RETURN - the body_plan must explicitly include AIFPLIRReturn
 
         # Create code object for lambda
         lambda_code = CodeObject(
@@ -353,7 +353,7 @@ class AIFPLCodeGenerator:
         # Emit MAKE_CLOSURE instruction
         ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(plan.free_vars))
 
-    def _generate_call(self, plan: CallPlan, ctx: CodeGenContext) -> None:
+    def _generate_call(self, plan: AIFPLIRCall, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a function call."""
         # Check for tail-recursive call (jump to start)
         if plan.is_tail_recursive:
@@ -391,11 +391,11 @@ class AIFPLCodeGenerator:
         else:
             ctx.emit(Opcode.CALL_FUNCTION, len(plan.arg_plans))
 
-    def _generate_empty_list(self, _plan: EmptyListPlan, ctx: CodeGenContext) -> None:
+    def _generate_empty_list(self, _plan: AIFPLIREmptyList, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an empty list literal."""
         ctx.emit(Opcode.LOAD_EMPTY_LIST)
 
-    def _generate_return(self, plan: ReturnPlan, ctx: CodeGenContext) -> None:
+    def _generate_return(self, plan: AIFPLIRReturn, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a return statement."""
         # Generate the value to return
         self._generate_expr(plan.value_plan, ctx)

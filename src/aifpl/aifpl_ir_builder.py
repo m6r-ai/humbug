@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_ir import (
-    ExprPlan, ConstantPlan, VariablePlan, IfPlan, LetPlan, LetrecPlan,
-    LambdaPlan, CallPlan, QuotePlan, ErrorPlan, EmptyListPlan,
-    AndPlan, OrPlan, ReturnPlan
+    AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRLet, AIFPLIRLetrec,
+    AIFPLIRLambda, AIFPLIRCall, AIFPLIRQuote, AIFPLIRError, AIFPLIREmptyList,
+    AIFPLIRAnd, AIFPLIROr, AIFPLIRReturn
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_value import (
@@ -141,13 +141,12 @@ class AIFPLIRBuilder:
         """
         self.builtin_indices = {name: i for i, name in enumerate(AIFPLBuiltinRegistry.BUILTIN_TABLE)}
 
-    def build(self, expr: AIFPLValue, name: str = "<module>") -> ExprPlan:
+    def build(self, expr: AIFPLValue) -> AIFPLIRExpr:
         """
         Build IR from an AST expression.
 
         Args:
             expr: AST expression (should already be desugared and optimized)
-            name: Name for the code object (for debugging)
 
         Returns:
             IR tree ready for code generation
@@ -155,14 +154,14 @@ class AIFPLIRBuilder:
         analysis_ctx = AnalysisContext()
         plan = self._analyze_expression(expr, analysis_ctx, in_tail_position=True)
 
-        # Wrap the top-level expression in a ReturnPlan
+        # Wrap the top-level expression in a AIFPLIRReturn
         # (unless it's already a tail call that doesn't need a return)
-        if not (isinstance(plan, CallPlan) and plan.is_tail_call):
-            plan = ReturnPlan(value_plan=plan)
+        if not (isinstance(plan, AIFPLIRCall) and plan.is_tail_call):
+            plan = AIFPLIRReturn(value_plan=plan)
 
         return plan
 
-    def _analyze_expression(self, expr: AIFPLValue, ctx: AnalysisContext, in_tail_position: bool = False) -> ExprPlan:
+    def _analyze_expression(self, expr: AIFPLValue, ctx: AnalysisContext, in_tail_position: bool = False) -> AIFPLIRExpr:
         """Analyze an expression and return a compilation plan (Phase 1)."""
 
         # Cache the type - check once instead of multiple isinstance() calls
@@ -170,10 +169,10 @@ class AIFPLIRBuilder:
 
         # Self-evaluating values (constants)
         if expr_type in (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString):
-            return ConstantPlan(value=expr)
+            return AIFPLIRConstant(value=expr)
 
         if expr_type is AIFPLBoolean:
-            return ConstantPlan(value=expr)
+            return AIFPLIRConstant(value=expr)
 
         # Symbol (variable reference)
         if expr_type is AIFPLSymbol:
@@ -188,13 +187,13 @@ class AIFPLIRBuilder:
             received=str(expr)
         )
 
-    def _analyze_variable(self, name: str, ctx: AnalysisContext) -> VariablePlan:
+    def _analyze_variable(self, name: str, ctx: AnalysisContext) -> AIFPLIRVariable:
         """Analyze a variable reference."""
         var_type, depth, index = ctx.resolve_variable(name)
         # Check if this is a parent reference (recursive binding)
         # Only use parent ref if it's from a parent context (depth > 0) and is a recursive binding
         is_parent_ref = (depth > 0) and (name in ctx.parent_ref_names)
-        return VariablePlan(
+        return AIFPLIRVariable(
             name=name,
             var_type=var_type,
             depth=depth,
@@ -202,10 +201,10 @@ class AIFPLIRBuilder:
             is_parent_ref=is_parent_ref
         )
 
-    def _analyze_list(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> ExprPlan:
+    def _analyze_list(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRExpr:
         """Analyze a list expression (function call or special form)."""
         if expr.is_empty():
-            return EmptyListPlan()
+            return AIFPLIREmptyList()
 
         first = expr.first()
         first_type = type(first)
@@ -241,19 +240,19 @@ class AIFPLIRBuilder:
         # Regular function call
         return self._analyze_function_call(expr, ctx, in_tail_position)
 
-    def _analyze_quote(self, expr: AIFPLList) -> QuotePlan:
+    def _analyze_quote(self, expr: AIFPLList) -> AIFPLIRQuote:
         """Analyze a quote expression."""
         assert len(expr.elements) == 2, "Quote expression should have exactly 2 elements"
         quoted = expr.elements[1]
-        return QuotePlan(quoted_value=quoted)
+        return AIFPLIRQuote(quoted_value=quoted)
 
-    def _analyze_error(self, expr: AIFPLList) -> ErrorPlan:
+    def _analyze_error(self, expr: AIFPLList) -> AIFPLIRError:
         """Analyze an error expression."""
         assert len(expr.elements) == 2, "Error expression should have exactly 2 elements"
         message = expr.elements[1]
-        return ErrorPlan(message=message)
+        return AIFPLIRError(message=message)
 
-    def _analyze_if(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> IfPlan:
+    def _analyze_if(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRIf:
         """Analyze an if expression."""
         assert len(expr.elements) == 4, "If expression should have exactly 4 elements"
 
@@ -264,35 +263,35 @@ class AIFPLIRBuilder:
         then_plan = self._analyze_expression(then_expr, ctx, in_tail_position=in_tail_position)
         else_plan = self._analyze_expression(else_expr, ctx, in_tail_position=in_tail_position)
 
-        # Wrap branches in ReturnPlan when in tail position
+        # Wrap branches in AIFPLIRReturn when in tail position
         # (unless they're already tail calls that don't need a return)
         if in_tail_position:
-            if not (isinstance(then_plan, CallPlan) and then_plan.is_tail_call):
-                then_plan = ReturnPlan(value_plan=then_plan)
+            if not (isinstance(then_plan, AIFPLIRCall) and then_plan.is_tail_call):
+                then_plan = AIFPLIRReturn(value_plan=then_plan)
 
-            if not (isinstance(else_plan, CallPlan) and else_plan.is_tail_call):
-                else_plan = ReturnPlan(value_plan=else_plan)
+            if not (isinstance(else_plan, AIFPLIRCall) and else_plan.is_tail_call):
+                else_plan = AIFPLIRReturn(value_plan=else_plan)
 
-        return IfPlan(
+        return AIFPLIRIf(
             condition_plan=condition_plan,
             then_plan=then_plan,
             else_plan=else_plan,
             in_tail_position=in_tail_position
         )
 
-    def _analyze_and(self, expr: AIFPLList, ctx: AnalysisContext) -> AndPlan:
+    def _analyze_and(self, expr: AIFPLList, ctx: AnalysisContext) -> AIFPLIRAnd:
         """Analyze an and expression."""
         args = list(expr.elements[1:])
         arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in args]
-        return AndPlan(arg_plans=arg_plans)
+        return AIFPLIRAnd(arg_plans=arg_plans)
 
-    def _analyze_or(self, expr: AIFPLList, ctx: AnalysisContext) -> OrPlan:
+    def _analyze_or(self, expr: AIFPLList, ctx: AnalysisContext) -> AIFPLIROr:
         """Analyze an or expression."""
         args = list(expr.elements[1:])
         arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in args]
-        return OrPlan(arg_plans=arg_plans)
+        return AIFPLIROr(arg_plans=arg_plans)
 
-    def _analyze_let(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> LetPlan:
+    def _analyze_let(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRLet:
         """Analyze a let expression."""
         assert len(expr.elements) == 3, "Let expression should have exactly 3 elements"
 
@@ -327,13 +326,13 @@ class AIFPLIRBuilder:
         # Pop scope
         ctx.pop_scope()
 
-        return LetPlan(
+        return AIFPLIRLet(
             bindings=binding_plans,
             body_plan=body_plan,
             in_tail_position=in_tail_position
         )
 
-    def _analyze_letrec(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> LetrecPlan:
+    def _analyze_letrec(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRLetrec:
         """Analyze a letrec expression."""
         assert len(expr.elements) == 3, "Letrec expression should have exactly 3 elements"
 
@@ -405,7 +404,7 @@ class AIFPLIRBuilder:
         # Pop scope
         ctx.pop_scope()
 
-        return LetrecPlan(
+        return AIFPLIRLetrec(
             bindings=binding_plans,
             body_plan=body_plan,
             binding_groups=binding_groups,
@@ -413,7 +412,7 @@ class AIFPLIRBuilder:
             in_tail_position=in_tail_position
         )
 
-    def _analyze_lambda(self, expr: AIFPLList, ctx: AnalysisContext) -> LambdaPlan:
+    def _analyze_lambda(self, expr: AIFPLList, ctx: AnalysisContext) -> AIFPLIRLambda:
         """Analyze a lambda expression."""
         assert len(expr.elements) == 3, "Lambda expression should have exactly 3 elements"
 
@@ -458,13 +457,14 @@ class AIFPLIRBuilder:
             if is_parent_ref:
                 # Parent reference - will use LOAD_PARENT_VAR
                 parent_refs.append(free_var)
-                parent_ref_plans.append(VariablePlan(
+                parent_ref_plans.append(AIFPLIRVariable(
                     name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=True
                 ))
+
             else:
                 # Regular free variable - will be captured
                 captured_vars.append(free_var)
-                free_var_plans.append(VariablePlan(
+                free_var_plans.append(AIFPLIRVariable(
                     name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=False
                 ))
 
@@ -492,14 +492,14 @@ class AIFPLIRBuilder:
         # Analyze lambda body (in tail position)
         body_plan = self._analyze_expression(body, lambda_ctx, in_tail_position=True)
 
-        # Wrap the lambda body in a ReturnPlan
+        # Wrap the lambda body in a AIFPLIRReturn
         # (unless it's already a tail call that doesn't need a return)
-        if not (isinstance(body_plan, CallPlan) and body_plan.is_tail_call):
-            body_plan = ReturnPlan(value_plan=body_plan)
+        if not (isinstance(body_plan, AIFPLIRCall) and body_plan.is_tail_call):
+            body_plan = AIFPLIRReturn(value_plan=body_plan)
 
         lambda_ctx.pop_scope()
 
-        return LambdaPlan(
+        return AIFPLIRLambda(
             params=param_names,
             body_plan=body_plan,
             free_vars=captured_vars,
@@ -512,7 +512,7 @@ class AIFPLIRBuilder:
             max_locals=lambda_ctx.max_locals
         )
 
-    def _analyze_function_call(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> CallPlan:
+    def _analyze_function_call(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRCall:
         """Analyze a function call."""
         func_expr = expr.first()
         arg_exprs = list(expr.elements[1:])
@@ -527,8 +527,8 @@ class AIFPLIRBuilder:
             # Analyze arguments
             arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
 
-            return CallPlan(
-                func_plan=VariablePlan(name=builtin_name, var_type='global', depth=0, index=0),
+            return AIFPLIRCall(
+                func_plan=AIFPLIRVariable(name=builtin_name, var_type='global', depth=0, index=0),
                 arg_plans=arg_plans,
                 is_tail_call=False,  # Builtins are never tail-called
                 is_tail_recursive=False,
@@ -545,15 +545,16 @@ class AIFPLIRBuilder:
         )
 
         # Analyze function and arguments
-        func_plan: ExprPlan
+        func_plan: AIFPLIRExpr
         if is_tail_recursive:
-            func_plan = VariablePlan(name='<tail-recursive>', var_type='local', depth=0, index=0)
+            func_plan = AIFPLIRVariable(name='<tail-recursive>', var_type='local', depth=0, index=0)
+
         else:
             func_plan = self._analyze_expression(func_expr, ctx, in_tail_position=False)
 
         arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
 
-        return CallPlan(
+        return AIFPLIRCall(
             func_plan=func_plan,
             arg_plans=arg_plans,
             is_tail_call=in_tail_position,
