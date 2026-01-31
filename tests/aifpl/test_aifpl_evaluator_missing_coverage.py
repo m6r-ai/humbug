@@ -1,10 +1,9 @@
 """
 Tests for previously missing coverage areas in AIFPL evaluator.
 
-NOTE: Many tests in this file test the old tree-walking interpreter which
-is now deprecated. Tests that rely on max_depth behavior are skipped since
-the VM uses tail-call optimization and doesn't have the same depth limits.
-Tests for other evaluator features remain valid.
+NOTE: Tests that rely on max_depth behavior are skipped since the bytecode VM
+uses tail-call optimization and doesn't have the same depth limits as the old
+tree-walking interpreter had.
 """
 
 import pytest

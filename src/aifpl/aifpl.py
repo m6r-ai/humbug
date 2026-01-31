@@ -27,7 +27,7 @@ class AIFPL:
     Execution Model:
     - Uses bytecode compiler and VM for all evaluation
     - Tail-call optimized for recursive functions
-    - 5-10x faster than tree-walking interpretation
+    - High performance through bytecode compilation and optimized VM
     """
 
     # AIFPL implementations of higher-order functions

@@ -1,10 +1,10 @@
 """
-Test bytecode compatibility by running representative tests with both interpreter and bytecode.
+Comprehensive tests for the AIFPL bytecode compiler and VM.
 
-This helps identify:
-1. Functional bugs in bytecode
-2. Error message differences
-3. Edge cases
+This test suite validates:
+1. Correct bytecode execution across all language features
+2. Error handling and error messages
+3. Edge cases and corner cases
 """
 
 import pytest
@@ -12,86 +12,86 @@ from aifpl import AIFPL
 from aifpl.aifpl_error import AIFPLEvalError
 
 
-@pytest.fixture(params=[False, True], ids=["interpreter", "bytecode"])
-def aifpl_both(request):
-    """Fixture that provides both interpreter and bytecode versions."""
+@pytest.fixture
+def aifpl():
+    """Fixture that provides an AIFPL instance."""
     return AIFPL()
 
 
 class TestBasicArithmetic:
-    """Test basic arithmetic with both backends."""
+    """Test basic arithmetic operations."""
 
-    def test_simple_addition(self, aifpl_both):
-        assert aifpl_both.evaluate("(+ 1 2)") == 3
+    def test_simple_addition(self, aifpl):
+        assert aifpl.evaluate("(+ 1 2)") == 3
 
-    def test_multiple_addition(self, aifpl_both):
-        assert aifpl_both.evaluate("(+ 1 2 3 4 5)") == 15
+    def test_multiple_addition(self, aifpl):
+        assert aifpl.evaluate("(+ 1 2 3 4 5)") == 15
 
-    def test_subtraction(self, aifpl_both):
-        assert aifpl_both.evaluate("(- 10 3)") == 7
+    def test_subtraction(self, aifpl):
+        assert aifpl.evaluate("(- 10 3)") == 7
 
-    def test_multiplication(self, aifpl_both):
-        assert aifpl_both.evaluate("(* 2 3 4)") == 24
+    def test_multiplication(self, aifpl):
+        assert aifpl.evaluate("(* 2 3 4)") == 24
 
-    def test_division(self, aifpl_both):
-        assert aifpl_both.evaluate("(/ 12 3)") == 4.0
+    def test_division(self, aifpl):
+        assert aifpl.evaluate("(/ 12 3)") == 4.0
 
-    def test_nested_arithmetic(self, aifpl_both):
-        assert aifpl_both.evaluate("(+ (* 2 3) (- 10 5))") == 11
+    def test_nested_arithmetic(self, aifpl):
+        assert aifpl.evaluate("(+ (* 2 3) (- 10 5))") == 11
 
 
 class TestConditionals:
-    """Test conditionals with both backends."""
+    """Test conditional operations."""
 
-    def test_if_true(self, aifpl_both):
-        assert aifpl_both.evaluate("(if #t 42 99)") == 42
+    def test_if_true(self, aifpl):
+        assert aifpl.evaluate("(if #t 42 99)") == 42
 
-    def test_if_false(self, aifpl_both):
-        assert aifpl_both.evaluate("(if #f 42 99)") == 99
+    def test_if_false(self, aifpl):
+        assert aifpl.evaluate("(if #f 42 99)") == 99
 
-    def test_if_with_condition(self, aifpl_both):
-        assert aifpl_both.evaluate("(if (> 10 5) 1 0)") == 1
+    def test_if_with_condition(self, aifpl):
+        assert aifpl.evaluate("(if (> 10 5) 1 0)") == 1
 
-    def test_nested_if(self, aifpl_both):
-        assert aifpl_both.evaluate("(if (> 5 3) (if (< 2 4) 1 2) 3)") == 1
+    def test_nested_if(self, aifpl):
+        assert aifpl.evaluate("(if (> 5 3) (if (< 2 4) 1 2) 3)") == 1
 
 
 class TestLet:
-    """Test let bindings with both backends."""
+    """Test let binding operations."""
 
-    def test_simple_let(self, aifpl_both):
-        assert aifpl_both.evaluate("(let ((x 5)) x)") == 5
+    def test_simple_let(self, aifpl):
+        assert aifpl.evaluate("(let ((x 5)) x)") == 5
 
-    def test_let_with_operation(self, aifpl_both):
-        assert aifpl_both.evaluate("(let ((x 5) (y 10)) (+ x y))") == 15
+    def test_let_with_operation(self, aifpl):
+        assert aifpl.evaluate("(let ((x 5) (y 10)) (+ x y))") == 15
 
-    def test_let_with_expression(self, aifpl_both):
-        assert aifpl_both.evaluate("(let ((x (+ 2 3))) (* x 2))") == 10
+    def test_let_with_expression(self, aifpl):
+        assert aifpl.evaluate("(let ((x (+ 2 3))) (* x 2))") == 10
 
-    def test_nested_let(self, aifpl_both):
-        result = aifpl_both.evaluate("(let ((x 5)) (let ((y 10)) (+ x y)))")
+    def test_nested_let(self, aifpl):
+        result = aifpl.evaluate("(let ((x 5)) (let ((y 10)) (+ x y)))")
         assert result == 15
 
 
 class TestLambda:
-    """Test lambda functions with both backends."""
+    """Test lambda function operations."""
 
-    def test_simple_lambda(self, aifpl_both):
-        assert aifpl_both.evaluate("((lambda (x) (* x x)) 5)") == 25
+    def test_simple_lambda(self, aifpl):
+        assert aifpl.evaluate("((lambda (x) (* x x)) 5)") == 25
 
-    def test_lambda_with_multiple_params(self, aifpl_both):
-        assert aifpl_both.evaluate("((lambda (x y) (+ x y)) 3 4)") == 7
+    def test_lambda_with_multiple_params(self, aifpl):
+        assert aifpl.evaluate("((lambda (x y) (+ x y)) 3 4)") == 7
 
-    def test_lambda_in_let(self, aifpl_both):
-        result = aifpl_both.evaluate("""
+    def test_lambda_in_let(self, aifpl):
+        result = aifpl.evaluate("""
             (let ((square (lambda (x) (* x x))))
               (square 6))
         """)
         assert result == 36
 
-    def test_recursive_lambda(self, aifpl_both):
+    def test_recursive_lambda(self, aifpl):
         """Test recursive functions (critical test!)"""
-        result = aifpl_both.evaluate("""
+        result = aifpl.evaluate("""
             (letrec ((factorial (lambda (n)
                 (if (= n 0)
                     1
@@ -102,94 +102,94 @@ class TestLambda:
 
 
 class TestLists:
-    """Test list operations with both backends."""
+    """Test list operations."""
 
-    def test_list_creation(self, aifpl_both):
-        assert aifpl_both.evaluate("(list 1 2 3)") == [1, 2, 3]
+    def test_list_creation(self, aifpl):
+        assert aifpl.evaluate("(list 1 2 3)") == [1, 2, 3]
 
-    def test_first(self, aifpl_both):
-        assert aifpl_both.evaluate("(first (list 1 2 3))") == 1
+    def test_first(self, aifpl):
+        assert aifpl.evaluate("(first (list 1 2 3))") == 1
 
-    def test_rest(self, aifpl_both):
-        assert aifpl_both.evaluate("(rest (list 1 2 3))") == [2, 3]
+    def test_rest(self, aifpl):
+        assert aifpl.evaluate("(rest (list 1 2 3))") == [2, 3]
 
-    def test_cons(self, aifpl_both):
-        assert aifpl_both.evaluate("(cons 1 (list 2 3))") == [1, 2, 3]
+    def test_cons(self, aifpl):
+        assert aifpl.evaluate("(cons 1 (list 2 3))") == [1, 2, 3]
 
-    def test_append(self, aifpl_both):
-        assert aifpl_both.evaluate("(append (list 1 2) (list 3 4))") == [1, 2, 3, 4]
+    def test_append(self, aifpl):
+        assert aifpl.evaluate("(append (list 1 2) (list 3 4))") == [1, 2, 3, 4]
 
-    def test_length(self, aifpl_both):
-        assert aifpl_both.evaluate("(length (list 1 2 3))") == 3
+    def test_length(self, aifpl):
+        assert aifpl.evaluate("(length (list 1 2 3))") == 3
 
 
 class TestHigherOrder:
-    """Test higher-order functions with both backends."""
+    """Test higher-order function operations."""
 
-    def test_map(self, aifpl_both):
-        result = aifpl_both.evaluate("(map (lambda (x) (* x 2)) (list 1 2 3))")
+    def test_map(self, aifpl):
+        result = aifpl.evaluate("(map (lambda (x) (* x 2)) (list 1 2 3))")
         assert result == [2, 4, 6]
 
-    def test_filter(self, aifpl_both):
-        result = aifpl_both.evaluate("(filter (lambda (x) (> x 2)) (list 1 2 3 4))")
+    def test_filter(self, aifpl):
+        result = aifpl.evaluate("(filter (lambda (x) (> x 2)) (list 1 2 3 4))")
         assert result == [3, 4]
 
-    def test_fold(self, aifpl_both):
-        result = aifpl_both.evaluate("(fold + 0 (list 1 2 3 4))")
+    def test_fold(self, aifpl):
+        result = aifpl.evaluate("(fold + 0 (list 1 2 3 4))")
         assert result == 10
 
 
 class TestStrings:
-    """Test string operations with both backends."""
+    """Test string operations."""
 
-    def test_string_append(self, aifpl_both):
-        assert aifpl_both.evaluate('(string-append "hello" " " "world")') == "hello world"
+    def test_string_append(self, aifpl):
+        assert aifpl.evaluate('(string-append "hello" " " "world")') == "hello world"
 
-    def test_string_length(self, aifpl_both):
-        assert aifpl_both.evaluate('(string-length "hello")') == 5
+    def test_string_length(self, aifpl):
+        assert aifpl.evaluate('(string-length "hello")') == 5
 
-    def test_string_upcase(self, aifpl_both):
-        assert aifpl_both.evaluate('(string-upcase "hello")') == "HELLO"
+    def test_string_upcase(self, aifpl):
+        assert aifpl.evaluate('(string-upcase "hello")') == "HELLO"
 
 
 class TestALists:
-    """Test alist operations with both backends."""
+    """Test alist operations."""
 
-    def test_alist_creation(self, aifpl_both):
-        result = aifpl_both.evaluate('(alist (list "name" "Alice") (list "age" 30))')
+    def test_alist_creation(self, aifpl):
+        result = aifpl.evaluate('(alist (list "name" "Alice") (list "age" 30))')
         # Result is an alist, check it's dict-like
         assert isinstance(result, dict)
         assert result["name"] == "Alice"
         assert result["age"] == 30
 
-    def test_alist_get(self, aifpl_both):
-        result = aifpl_both.evaluate('(alist-get (alist (list "name" "Alice")) "name")')
+    def test_alist_get(self, aifpl):
+        result = aifpl.evaluate('(alist-get (alist (list "name" "Alice")) "name")')
         assert result == "Alice"
 
 
 class TestErrors:
-    """Test error handling with both backends - this is critical!"""
+    """Test error handling - this is critical!"""
 
-    def test_division_by_zero(self, aifpl_both):
+    def test_division_by_zero(self, aifpl):
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl_both.evaluate("(/ 1 0)")
+            aifpl.evaluate("(/ 1 0)")
         assert "zero" in str(exc_info.value).lower()
 
-    def test_undefined_variable(self, aifpl_both):
+    def test_undefined_variable(self, aifpl):
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl_both.evaluate("undefined_var")
+            aifpl.evaluate("undefined_var")
         assert "undefined" in str(exc_info.value).lower()
 
-    def test_wrong_arity(self, aifpl_both):
+    def test_wrong_arity(self, aifpl):
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl_both.evaluate("((lambda (x) x) 1 2)")
+            aifpl.evaluate("((lambda (x) x) 1 2)")
         # Should mention arity/argument mismatch
         error_msg = str(exc_info.value).lower()
         assert "expect" in error_msg or "argument" in error_msg
 
-    def test_type_error(self, aifpl_both):
+    def test_type_error(self, aifpl):
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl_both.evaluate('(+ 1 "string")')
+            aifpl.evaluate('(+ 1 "string")')
         # Should mention type error
         error_msg = str(exc_info.value).lower()
         assert "number" in error_msg or "numeric" in error_msg or "type" in error_msg

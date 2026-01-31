@@ -1,7 +1,7 @@
 """Unified builtin function registry for AIFPL.
 
 This module provides a single source of truth for all builtin function implementations,
-used by both the tree-walking evaluator and the bytecode VM.
+used by the bytecode VM.
 """
 
 from typing import List, Dict, Callable

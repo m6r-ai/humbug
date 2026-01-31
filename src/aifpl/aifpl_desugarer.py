@@ -360,7 +360,7 @@ class AIFPLDesugarer:
         """
         Build an expression that raises a no-match error.
 
-        We need to match the error message from the interpreter:
+        We need to produce the standard error message:
         "No patterns matched in match expression"
 
         We'll generate a call to a special form that the compiler recognizes,
