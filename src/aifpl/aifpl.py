@@ -3,11 +3,8 @@
 import math
 from typing import Union, Dict
 
-from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean, AIFPLValue
-from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_lexer import AIFPLLexer
-from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
 from aifpl.aifpl_compiler import AIFPLCompiler
+from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean, AIFPLValue
 from aifpl.aifpl_vm import AIFPLVM
 
 
@@ -25,7 +22,7 @@ class AIFPL:
     Designed specifically to help LLMs understand and self-correct errors.
 
     Execution Model:
-    - Uses bytecode compiler and VM for all evaluation
+    - Uses bytecode ir_builder and VM for all evaluation
     - Tail-call optimized for recursive functions
     - High performance through bytecode compilation and optimized VM
     """
@@ -83,14 +80,7 @@ class AIFPL:
 
         bytecode_prelude: dict[str, AIFPLFunction] = {}
         for name, source_code in cls._PRELUDE_SOURCE.items():
-            lexer = AIFPLLexer()
-            tokens = lexer.lex(source_code)
-            parser = AIFPLParser(tokens, source_code)
-            expr = parser.parse()
-            # Analyze semantics before compilation
-            analyzer = AIFPLSemanticAnalyzer()
-            expr = analyzer.analyze(expr)
-            bytecode = compiler.compile(expr, name=f"<prelude:{name}>")
+            bytecode = compiler.compile(source_code, name=f"<prelude:{name}>")
             func = vm.execute(bytecode, cls.CONSTANTS, {})
             if isinstance(func, AIFPLFunction):
                 bytecode_prelude[name] = func
@@ -108,8 +98,7 @@ class AIFPL:
         """
         self.max_depth = max_depth
 
-        # VM components (always used)
-        self.analyzer = AIFPLSemanticAnalyzer()
+        # Compiler and VM
         self.compiler = AIFPLCompiler()
         self.vm = AIFPLVM()
 
@@ -126,19 +115,8 @@ class AIFPL:
         Returns:
             The result of evaluating the expression as AIFPLValue
         """
-        # Lex
-        lexer = AIFPLLexer()
-        tokens = lexer.lex(expression)
-
-        # Parse
-        parser = AIFPLParser(tokens, expression)
-        parsed_expr = parser.parse()
-
-        # Semantic analysis
-        parsed_expr = self.analyzer.analyze(parsed_expr)
-
-        # Compile
-        code = self.compiler.compile(parsed_expr)
+        # Compile (lexing, parsing, semantic analysis, IR building, code generation)
+        code = self.compiler.compile(expression)
 
         # Execute
         result = self.vm.execute(code, self.CONSTANTS, self._prelude)

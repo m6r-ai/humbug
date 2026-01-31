@@ -18,10 +18,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 from aifpl import AIFPL
-from aifpl.aifpl_lexer import AIFPLLexer
-from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
-from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
 
@@ -89,9 +85,6 @@ def profile_runtime_only(expression: str, duration_seconds: float = 3.0, dump_bc
     print("=" * 100)
     
     # Setup - compile once
-    lexer = AIFPLLexer()
-    analyzer = AIFPLSemanticAnalyzer()
-    desugarer = AIFPLDesugarer()
     compiler = AIFPLCompiler()
     vm = AIFPLVM()
     
@@ -102,11 +95,7 @@ def profile_runtime_only(expression: str, duration_seconds: float = 3.0, dump_bc
     
     # Compile the expression once
     print("\nCompiling expression...")
-    tokens = lexer.lex(expression)
-    ast = AIFPLParser(tokens, expression).parse()
-    ast = analyzer.analyze(ast)
-    ast = desugarer.desugar(ast)
-    code = compiler.compile(ast)
+    code = compiler.compile(expression)
     print(f"Compiled to {len(code.instructions)} bytecode instructions")
     print(f"Constants: {len(code.constants)}, Names: {len(code.names)}, Code objects: {len(code.code_objects)}")
     

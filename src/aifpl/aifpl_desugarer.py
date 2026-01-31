@@ -363,7 +363,7 @@ class AIFPLDesugarer:
         We need to produce the standard error message:
         "No patterns matched in match expression"
 
-        We'll generate a call to a special form that the compiler recognizes,
+        We'll generate a call to a special form that the IR builder recognizes,
         or generate code that will produce the right error message.
         """
         # Generate: (error "No patterns matched in match expression")

@@ -32,6 +32,28 @@ class AIFPLBuiltinRegistry:
     a unified interface for both the evaluator and VM to access them.
     """
 
+    # Map builtin names to indices (for CALL_BUILTIN)
+    BUILTIN_TABLE = [
+        '+', '-', '*', '/', '//', '%', '**',
+        '=', '!=', '<', '>', '<=', '>=',
+        'and', 'or', 'not',
+        'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
+        'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
+        'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
+        'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
+        'range',
+        'string-append', 'string-length', 'string-upcase', 'string-downcase',
+        'string-trim', 'string-replace', 'string-split', 'string-join',
+        'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
+        'substring', 'string->number', 'number->string', 'string=?', 'string->list', 'list->string',
+        'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
+        'alist-keys', 'alist-values', 'alist-merge', 'alist?',
+        'sqrt', 'abs', 'min', 'max', 'pow',
+        'sin', 'cos', 'tan', 'log', 'log10', 'exp',
+        'round', 'floor', 'ceil',
+        'bin', 'hex', 'oct', 'real', 'imag', 'complex',
+    ]
+
     def __init__(self) -> None:
         """
         Initialize the builtin registry.

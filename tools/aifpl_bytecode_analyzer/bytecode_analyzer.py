@@ -27,10 +27,6 @@ from collections import Counter
 # Add parent directory to path to import aifpl
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from aifpl.aifpl_lexer import AIFPLLexer
-from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
-from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_bytecode import CodeObject, Opcode
 
@@ -164,26 +160,10 @@ class ComparisonResult:
 class BytecodeAnalyzer:
     """Analyzes and compares AIFPL bytecode."""
     
-    def __init__(self):
-        self.lexer = AIFPLLexer()
-        self.analyzer = AIFPLSemanticAnalyzer()
-        self.desugarer = AIFPLDesugarer()
-    
     def compile_code(self, source: str, optimize: bool = False) -> CodeObject:
         """Compile AIFPL source code to bytecode."""
-        # Lex and parse
-        tokens = self.lexer.lex(source)
-        parser = AIFPLParser(tokens, source)
-        ast = parser.parse()
-        
-        # Semantic analysis
-        ast = self.analyzer.analyze(ast)
-        
-        # Desugar
-        ast = self.desugarer.desugar(ast)
-        
         compiler = AIFPLCompiler(optimize=optimize)
-        return compiler.compile(ast)
+        return compiler.compile(source)
     
     def analyze_code_object(self, code: CodeObject) -> BytecodeStats:
         """Analyze a code object and extract statistics."""

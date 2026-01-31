@@ -1,15 +1,12 @@
-"""AIFPL code generator - generates bytecode from compilation plans.
-
-This is Phase 2 of the two-phase compiler. It takes a compilation plan
-(produced by the analyzer) and generates bytecode. It does NOT perform
-any analysis - all necessary information is in the plan.
+"""
+AIFPL code generator - generates bytecode from IR.
 """
 
 from dataclasses import dataclass, field
 from typing import List, Dict
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
-from aifpl.aifpl_compilation_plan import (
+from aifpl.aifpl_ir import (
     ExprPlan, ConstantPlan, VariablePlan, IfPlan, AndPlan, OrPlan,
     QuotePlan, ErrorPlan, LetPlan, LetrecPlan, LambdaPlan, CallPlan,
     EmptyListPlan, ReturnPlan

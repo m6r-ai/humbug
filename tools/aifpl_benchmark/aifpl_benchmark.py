@@ -40,10 +40,6 @@ from typing import List, Dict, Any
 #sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from aifpl import AIFPL
-from aifpl.aifpl_lexer import AIFPLLexer
-from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
-from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_vm import AIFPLVM
 
@@ -125,9 +121,6 @@ class Benchmark:
             iterations_multiplier: Multiply iteration counts by this factor for better statistics
         """
         # Setup - parse and compile once for execution-only benchmarks
-        lexer = AIFPLLexer()
-        analyzer = AIFPLSemanticAnalyzer()
-        desugarer = AIFPLDesugarer()
         compiler = AIFPLCompiler()
         vm = AIFPLVM()
 
@@ -137,11 +130,7 @@ class Benchmark:
         constants = AIFPL.CONSTANTS
 
         # Pre-compile for execution-only benchmark
-        tokens = lexer.lex(self.expression)
-        ast = AIFPLParser(tokens, self.expression).parse()
-        ast = analyzer.analyze(ast)
-        ast = desugarer.desugar(ast)
-        code = compiler.compile(ast)
+        code = compiler.compile(self.expression)
 
         # Apply multiplier to iterations
         actual_iterations = int(self.iterations * iterations_multiplier)
@@ -163,11 +152,7 @@ class Benchmark:
         compile_times = []
         for _ in range(actual_iterations):
             start = time.perf_counter()
-            tokens = lexer.lex(self.expression)
-            ast = AIFPLParser(tokens, self.expression).parse()
-            ast = analyzer.analyze(ast)
-            ast = desugarer.desugar(ast)
-            compiler.compile(ast)
+            compiler.compile(self.expression)
             elapsed = time.perf_counter() - start
             compile_times.append(elapsed)
 
