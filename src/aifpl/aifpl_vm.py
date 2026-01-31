@@ -299,13 +299,16 @@ class AIFPLVM:
         for _ in range(depth - 1):
             if parent_frame is None:
                 raise AIFPLEvalError(f"LOAD_PARENT_VAR: no parent frame at depth {depth}")
+
             parent_frame = parent_frame.parent_frame
 
         if parent_frame is None:
             raise AIFPLEvalError(f"LOAD_PARENT_VAR: no parent frame at depth {depth}")
 
         if index >= len(parent_frame.locals):
-            raise AIFPLEvalError(f"LOAD_PARENT_VAR: variable index {index} out of range (parent frame has {len(parent_frame.locals)} locals)")
+            raise AIFPLEvalError(
+                f"LOAD_PARENT_VAR: variable index {index} out of range (parent frame has {len(parent_frame.locals)} locals)"
+            )
 
         value = parent_frame.locals[index]
         if value is None:
@@ -316,7 +319,7 @@ class AIFPLVM:
 
     def _op_load_name(  # pylint: disable=useless-return
         self,
-        frame: Frame,
+        _frame: Frame,
         code: CodeObject,
         arg1: int,
         _arg2: int
