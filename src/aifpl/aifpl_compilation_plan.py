@@ -106,7 +106,6 @@ class CallPlan:
 @dataclass
 class EmptyListPlan:
     """Plan for compiling an empty list literal."""
-    pass
 
 
 # Union type for all expression plans
