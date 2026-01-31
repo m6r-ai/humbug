@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 
 from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer, AIFPLBindingGroup
-from aifpl.aifpl_compiler import AIFPLCompiler
+from aifpl.aifpl_builtins import BUILTIN_TABLE, SPECIAL_FORMS
 
 
 @dataclass
@@ -77,9 +77,7 @@ class AIFPLAnalyzer:
 
         # Build set of builtin names that should not be treated as free variables
         # These are globally available and don't need to be captured
-        self.builtins = set(AIFPLCompiler.BUILTIN_TABLE)
-        # Add special forms that are also not variables
-        self.builtins.update({'if', 'let', 'letrec', 'lambda', 'quote', 'and', 'or', 'match', 'error'})
+        self.builtins = set(BUILTIN_TABLE) | SPECIAL_FORMS
 
     def analyze(self, expr: AIFPLValue) -> AnalysisResult:
         """
