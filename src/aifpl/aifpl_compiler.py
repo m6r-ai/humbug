@@ -62,6 +62,7 @@ class CompilationContext:
     in_tail_position: bool = False  # Whether we're compiling in tail position
     current_function_name: str | None = None  # Name of the function being compiled (for tail recursion detection)
     current_letrec_binding: str | None = None  # Name of the letrec binding being compiled (for nested lambdas)
+    current_binding_group_id: int | None = None  # Binding group ID for mutual recursion TCO
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -613,6 +614,14 @@ class AIFPLCompiler:
             # Get all binding names in this group for mutual recursion detection
             group_names = list(group.names)
 
+            # Assign binding group ID for recursive groups
+            # Use id(group) to get a unique identifier for this group
+            group_id = id(group) if group.is_recursive else None
+
+            # Set the binding group ID in context so lambdas can pick it up
+            old_binding_group_id = ctx.current_binding_group_id
+            ctx.current_binding_group_id = group_id
+
             # Compile each binding in the group
             for name, value_expr in group.bindings:
                 # Compile this binding
@@ -624,6 +633,9 @@ class AIFPLCompiler:
                     group_names=group_names,
                     mutual_recursion_patches=mutual_recursion_patches
                 )
+
+            # Restore previous binding group ID
+            ctx.current_binding_group_id = old_binding_group_id
 
         # Third pass: Patch all mutual recursion references
         # Now all lambdas have been stored, so we can safely reference them
@@ -862,7 +874,8 @@ class AIFPLCompiler:
             free_vars=captured_vars,  # List of captured variable names
             param_count=len(param_names),
             local_count=lambda_ctx.max_locals,
-            name="<lambda>"
+            name="<lambda>",
+            binding_group_id=ctx.current_binding_group_id
         )
 
         # Add to parent's code objects
@@ -1050,4 +1063,9 @@ class AIFPLCompiler:
         ctx.in_tail_position = old_tail
 
         # Emit call
-        ctx.emit(Opcode.CALL_FUNCTION, len(arg_exprs))
+        # Use TAIL_CALL_FUNCTION if in tail position, otherwise CALL_FUNCTION
+        if ctx.in_tail_position:
+            ctx.emit(Opcode.TAIL_CALL_FUNCTION, len(arg_exprs))
+
+        else:
+            ctx.emit(Opcode.CALL_FUNCTION, len(arg_exprs))

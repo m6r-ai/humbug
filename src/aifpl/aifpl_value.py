@@ -468,6 +468,7 @@ class AIFPLFunction(AIFPLValue):
     captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
     native_impl: Callable | None = None  # Python function for builtins
     is_variadic: bool = False  # True if function accepts variable number of args
+    binding_group_id: int | None = None  # Binding group ID for mutual recursion TCO
 
     def to_python(self) -> 'AIFPLFunction | str':
         """Functions return themselves (or their name for builtins as string)."""

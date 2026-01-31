@@ -33,6 +33,7 @@ class Opcode(IntEnum):
     # Functions
     MAKE_CLOSURE = auto()    # Create closure: MAKE_CLOSURE code_index capture_count
     CALL_FUNCTION = auto()   # Call function: CALL_FUNCTION arity
+    TAIL_CALL_FUNCTION = auto()  # Tail call function: TAIL_CALL_FUNCTION arity
     CALL_BUILTIN = auto()    # Call builtin: CALL_BUILTIN builtin_index arity
     PATCH_CLOSURE_SELF = auto()  # Patch closure to reference itself: PATCH_CLOSURE_SELF depth index
     PATCH_CLOSURE_SIBLING = auto()  # Patch closure to add sibling reference: PATCH_CLOSURE_SIBLING closure_idx sibling_idx name_idx
@@ -105,6 +106,7 @@ class CodeObject:
     param_count: int = 0  # Number of parameters (for functions)
     local_count: int = 0  # Number of local variables
     name: str = "<module>"  # Name for debugging
+    binding_group_id: int | None = None  # Binding group ID for mutual recursion TCO
 
     def __repr__(self) -> str:
         """Human-readable representation."""

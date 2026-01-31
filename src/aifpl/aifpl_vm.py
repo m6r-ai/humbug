@@ -26,6 +26,7 @@ class Frame:
     locals: List[AIFPLValue | None] = field(init=False)  # Local variables
     closure_env: Any = None  # Closure environment for this frame
     local_names: Dict[str, int] = field(default_factory=dict)  # Map variable names to local indices
+    binding_group_id: int | None = None  # Binding group ID for mutual recursion TCO
 
     def __post_init__(self) -> None:
         """Initialize locals array based on code object."""
@@ -79,6 +80,7 @@ class AIFPLVM:
         table[Opcode.MAKE_CLOSURE] = self._op_make_closure
         table[Opcode.CALL_FUNCTION] = self._op_call_function
         table[Opcode.CALL_BUILTIN] = self._op_call_builtin
+        table[Opcode.TAIL_CALL_FUNCTION] = self._op_tail_call_function
         table[Opcode.RETURN] = self._op_return
         table[Opcode.PATCH_CLOSURE_SELF] = self._op_patch_closure_self
         table[Opcode.PATCH_CLOSURE_SIBLING] = self._op_patch_closure_sibling
@@ -121,13 +123,17 @@ class AIFPLVM:
             Result value when frame returns
         """
         frame = self.frames[-1]
-        code = frame.code
-        instructions = code.instructions
 
         # Cache dispatch table in local variable for faster access
         dispatch = self._dispatch_table
 
-        while frame.ip < len(instructions):
+        while True:
+            # Re-fetch code and instructions each iteration in case frame.code changes (mutual recursion TCO)
+            code = frame.code
+            instructions = code.instructions
+            if frame.ip >= len(instructions):
+                break
+
             instr = instructions[frame.ip]
             opcode = instr.opcode
 
@@ -388,7 +394,8 @@ class AIFPLVM:
             closure_environment=AIFPLEnvironment(bindings=captured_dict, parent=parent_env),
             name=closure_code.name,
             bytecode=closure_code,
-            captured_values=tuple(captured_values)
+            captured_values=tuple(captured_values),
+            binding_group_id=closure_code.binding_group_id
         )
         self.stack.append(closure)
         return None
@@ -440,32 +447,96 @@ class AIFPLVM:
                 suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
             )
 
-        # Check for tail call optimization
-        current_frame = self.frames[-1] if self.frames else None
-        is_tail_call = False
-
-        if current_frame:
-            next_ip = current_frame.ip
-            if next_ip < len(current_frame.code.instructions):
-                next_instr = current_frame.code.instructions[next_ip]
-                is_tail_call = next_instr.opcode == Opcode.RETURN
-
-        # Check if it's a self-recursive tail call
-        is_self_recursive = (
-            current_frame and
-            func.bytecode == current_frame.code
-        )
-
         # Remove function from stack
         del self.stack[-(arity + 1)]
+        result = self._call_bytecode_function(func)
+        self.stack.append(result)
+        return None
 
-        # Tail call optimization
-        if is_tail_call and is_self_recursive:
-            assert current_frame is not None
-            current_frame.ip = 0
-            return None  # Continue in same frame
+    def _op_tail_call_function(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """TAIL_CALL_FUNCTION: Tail call with optimization."""
+        arity = arg1
 
-        # Normal call: create new frame
+        if len(self.stack) < arity + 1:
+            raise AIFPLEvalError(
+                message="Stack underflow in TAIL_CALL_FUNCTION",
+                received=f"Stack has {len(self.stack)} items, need {arity + 1}",
+                suggestion="This is likely a compiler bug"
+            )
+
+        # Get function from under the arguments
+        func = self.stack[-(arity + 1)]
+
+        if not isinstance(func, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="Cannot call non-function value",
+                received=f"Attempted to call: {func.describe()} ({func.type_name()})",
+                expected="Function (lambda or builtin)",
+                suggestion="Only functions can be called"
+            )
+
+        # Handle builtin functions (no TCO for builtins)
+        if func.is_native:
+            args = [self.stack.pop() for _ in range(arity)]
+            args.reverse()
+            self.stack.pop()  # Pop function
+            assert func.native_impl is not None, f"Function {func.name} has no native implementation"
+            result = func.native_impl(args)
+            self.stack.append(result)
+            return None
+
+        # Check arity for bytecode functions
+        expected_arity = func.bytecode.param_count
+        if arity != expected_arity:
+            func_name = func.name or "<lambda>"
+            raise AIFPLEvalError(
+                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
+                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+            )
+
+        current_frame = self.frames[-1]
+
+        # Check for self-recursion (same bytecode)
+        if func.bytecode == current_frame.code:
+            # Self-recursive tail call - reuse frame
+            del self.stack[-(arity + 1)]  # Remove function
+            current_frame.ip = 0  # Reset to start
+            return None
+
+        # Check for mutual recursion (same binding group)
+        if (func.binding_group_id is not None and
+            current_frame.binding_group_id is not None and
+            func.binding_group_id == current_frame.binding_group_id):
+
+            # Mutual recursion - reuse frame with different code
+            del self.stack[-(arity + 1)]  # Remove function
+            current_frame.code = func.bytecode  # Switch to new function's code
+            current_frame.ip = 0  # Reset to start
+
+            # DON'T reset locals - let the prologue overwrite parameters
+            current_frame.locals = [None] * func.bytecode.local_count
+
+            # Clear local_names since we're switching to a different function
+            current_frame.local_names = {}
+
+            # Update closure environment for new function
+            current_frame.closure_env = func.closure_environment
+
+            # Store captured values in locals (after parameters)
+            if func.captured_values:
+                for i, captured_val in enumerate(func.captured_values):
+                    current_frame.locals[func.bytecode.param_count + i] = captured_val
+
+            return None
+
+        # Not recursive - normal call (still creates frame)
+        del self.stack[-(arity + 1)]
         result = self._call_bytecode_function(func)
         self.stack.append(result)
         return None
@@ -539,7 +610,8 @@ class AIFPLVM:
             closure_environment=new_env,
             name=target_closure.name,
             bytecode=target_closure.bytecode,
-            captured_values=target_closure.captured_values
+            captured_values=target_closure.captured_values,
+            binding_group_id=target_closure.binding_group_id
         )
 
         # Add self-reference
@@ -608,6 +680,7 @@ class AIFPLVM:
         # Create new frame
         new_frame = Frame(code)
         new_frame.closure_env = func.closure_environment
+        new_frame.binding_group_id = func.binding_group_id
 
         # Store captured values in locals (after parameters)
         # The lambda compiler puts captured vars after parameters in the local space

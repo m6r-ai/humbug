@@ -79,6 +79,7 @@ Create, call, and manage functions and closures.
 |--------|------|-------------|---------|
 | `MAKE_CLOSURE` | code_index, capture_count | Create closure from code object | `MAKE_CLOSURE 2 3` → create closure from code_objects[2], capturing 3 values from stack |
 | `CALL_FUNCTION` | arity | Call function with N arguments | `CALL_FUNCTION 2` → pop 2 args and function, call it |
+| `TAIL_CALL_FUNCTION` | arity | Tail call function with N arguments | `TAIL_CALL_FUNCTION 2` → pop 2 args and function, call it |
 | `CALL_BUILTIN` | builtin_index, arity | Call builtin function | `CALL_BUILTIN 5 2` → call builtin #5 with 2 args |
 | `PATCH_CLOSURE_SELF` | name_index, var_index | Patch closure for self-reference | `PATCH_CLOSURE_SELF 1 0` → add self-reference for recursion |
 | `PATCH_CLOSURE_SIBLING` | closure_idx, const_index | Patch closure for mutual recursion | `PATCH_CLOSURE_SIBLING 0 1` → add sibling reference |
