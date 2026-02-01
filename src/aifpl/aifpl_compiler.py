@@ -6,6 +6,7 @@ It chains together all compilation passes in the correct order.
 
 from typing import List, Optional
 
+from aifpl.aifpl_value import AIFPLValue
 from aifpl.aifpl_bytecode import CodeObject
 from aifpl.aifpl_codegen import AIFPLCodeGen
 from aifpl.aifpl_constant_folding_pass import AIFPLConstantFoldingPass
@@ -55,6 +56,31 @@ class AIFPLCompiler:
         # Future: self.ir_passes = [...]
         self.codegen = AIFPLCodeGen()
 
+    def compile_to_resolved_ast(self, source: str) -> AIFPLValue:
+        """
+        Compile source to fully resolved AST.
+        
+        This runs the front-end compilation stages:
+        - Lexing
+        - Parsing
+        - Semantic analysis
+        - Module resolution (including recursive module compilation)
+        
+        The result is a fully resolved AST ready for desugaring and backend compilation.
+        This method is used by the module system to compile imported modules.
+        
+        Args:
+            source: AIFPL source code as a string
+            
+        Returns:
+            Fully resolved AST (all imports replaced with module ASTs)
+        """
+        tokens = self.lexer.lex(source)
+        ast = self.parser.parse(tokens, source)
+        checked_ast = self.semantic_analyzer.analyze(ast)
+        resolved_ast = self.module_resolver.resolve(checked_ast)
+        return resolved_ast
+
     def compile(self, source: str, name: str = "<module>") -> CodeObject:
         """
         Compile AIFPL source code to bytecode.
@@ -68,10 +94,8 @@ class AIFPLCompiler:
         Returns:
             Compiled bytecode ready for execution
         """
-        tokens = self.lexer.lex(source)
-        ast = self.parser.parse(tokens, source)
-        checked_ast = self.semantic_analyzer.analyze(ast)
-        resolved_ast = self.module_resolver.resolve(checked_ast)
+        # Use the partial compilation to get resolved AST
+        resolved_ast = self.compile_to_resolved_ast(source)
         desugared_ast = self.desugarer.desugar(resolved_ast)
 
         for ast_pass in self.ast_passes:

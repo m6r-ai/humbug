@@ -16,13 +16,18 @@ class ModuleLoader(Protocol):
 
     def load_module(self, module_name: str) -> AIFPLValue:
         """
-        Load and return a module's alist.
+        Load and compile a module to a fully resolved AST.
+        
+        This should compile the module through the full front-end pipeline:
+        - Lexing, parsing, semantic analysis, and module resolution
+        
+        The returned AST should have all imports already resolved.
 
         Args:
             module_name: Name of module (e.g., "calendar", "lib/validation")
 
         Returns:
-            The alist value returned by evaluating the module
+            Fully resolved AST of the module (ready for inlining into parent AST)
 
         Raises:
             AIFPLModuleError: If module not found or fails to load
@@ -118,15 +123,19 @@ class AIFPLModuleResolver:
                 cycle = self.module_loader.loading_stack + [module_name]
                 raise AIFPLCircularImportError(import_chain=cycle)
 
-        # Load the module (this may recursively compile if the module has imports)
-        module_value = self.module_loader.load_module(module_name)
-
         # Mark as currently resolving (for circular dependency detection)
+        # Must be done BEFORE loading to catch circular imports during compilation
         if hasattr(self.module_loader, 'loading_stack'):
             self.module_loader.loading_stack.append(module_name)
 
         try:
+            # Load the module (this will recursively compile if the module has imports)
+            # The module is compiled through the full front-end pipeline
+            module_value = self.module_loader.load_module(module_name)
+            
             # Recursively resolve any imports in the loaded module's AST
+            # NOTE: If load_module properly compiles the module, this should be a no-op
+            # (all imports already resolved). But we keep it for safety.
             resolved_module = self.resolve(module_value)
 
             # Cache the resolved module

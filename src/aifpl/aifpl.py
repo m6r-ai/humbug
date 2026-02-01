@@ -194,47 +194,40 @@ class AIFPL:
 
     def load_module(self, module_name: str) -> AIFPLValue:
         """
-        Load and evaluate a module, with caching and circular dependency detection.
+        Load and compile a module to a fully resolved AST.
 
-        This implements the ModuleLoader interface for the compiler.
+        This implements the ModuleLoader interface. It compiles the module through
+        the full front-end pipeline (lex, parse, semantic analysis, module resolution).
+        The result is cached for subsequent imports.
 
         Args:
             module_name: Name of module to load
 
         Returns:
-            The AST of the module (not yet evaluated)
+            Fully resolved AST of the module (all imports already resolved)
 
         Raises:
             AIFPLModuleNotFoundError: If module file not found
-            AIFPLCircularImportError: If circular dependency detected
-            AIFPLError: If module evaluation fails
+            AIFPLCircularImportError: If circular dependency detected (by module resolver)
+            AIFPLError: If module compilation fails
         """
         # Check cache
-        # (Only after circular dependency check - we don't want to return cached modules that are currently being loaded)
+        # Cache contains fully resolved ASTs (cached by module resolver after resolution)
         if module_name in self.module_cache:
             return self.module_cache[module_name]
 
         # Resolve to file path
         module_path = self.resolve_module(module_name)
 
-        # Load and parse
+        # Load source code
         with open(module_path, 'r', encoding='utf-8') as f:
             code = f.read()
 
-        # Parse the module to AST
-        from aifpl.aifpl_lexer import AIFPLLexer
-        from aifpl.aifpl_parser import AIFPLParser
+        # Compile through the front-end pipeline (lex, parse, analyze, resolve imports)
+        # This will recursively handle any imports within this module
+        resolved_ast = self.compiler.compile_to_resolved_ast(code)
 
-        lexer = AIFPLLexer()
-        parser = AIFPLParser()
-
-        tokens = lexer.lex(code)
-        ast = parser.parse(tokens, code)
-
-        # Cache the parsed AST
-        self.module_cache[module_name] = ast
-
-        return ast
+        return resolved_ast
 
     def clear_module_cache(self) -> None:
         """Clear the module cache. Useful for development/testing."""
