@@ -165,8 +165,9 @@ class AIFPLCodeGen:
             if plan.is_parent_ref:
                 # Load from parent frame (for recursive bindings)
                 ctx.emit(Opcode.LOAD_PARENT_VAR, plan.depth, plan.index)
+
             else:
-                ctx.emit(Opcode.LOAD_VAR, plan.depth, plan.index)
+                ctx.emit(Opcode.LOAD_VAR, 0, plan.index)
 
         else:  # global
             # For globals, we need to assign the name index during codegen

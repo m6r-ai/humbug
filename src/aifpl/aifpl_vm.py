@@ -55,7 +55,7 @@ class AIFPLVM:
 
         # Create builtin registry and get function array for fast lookup
         builtin_registry = AIFPLBuiltinRegistry()
-        
+
         # Get builtin function array for O(1) direct indexing in CALL_BUILTIN
         self._builtin_function_array = builtin_registry.get_function_array()
 
@@ -234,27 +234,18 @@ class AIFPLVM:
         self,
         _frame: Frame,
         _code: CodeObject,
-        arg1: int,
-        arg2: int
+        _arg1: int,
+        index: int
     ) -> AIFPLValue | None:
-        """LOAD_VAR: Load variable from frame at depth/index."""
-        depth = arg1
-        index = arg2
+        """LOAD_VAR: Load variable from current frame at index."""
+        current_frame = self.frames[-1]
 
-        # Load from frame at depth
-        frame_index = len(self.frames) - 1 - depth
+        if index >= len(current_frame.locals):
+            raise AIFPLEvalError(f"Local variable index {index} out of range (frame has {len(current_frame.locals)} locals)")
 
-        if frame_index < 0 or frame_index >= len(self.frames):
-            raise AIFPLEvalError(f"Frame at depth {depth} doesn't exist (have {len(self.frames)} frames)")
-
-        target_frame = self.frames[frame_index]
-
-        if index >= len(target_frame.locals):
-            raise AIFPLEvalError(f"Local variable index {index} out of range (frame has {len(target_frame.locals)} locals)")
-
-        value = target_frame.locals[index]
+        value = current_frame.locals[index]
         if value is None:
-            raise AIFPLEvalError(f"Uninitialized local variable at depth {depth}, index {index}")
+            raise AIFPLEvalError(f"Uninitialized local variable at index {index}")
 
         self.stack.append(value)
         return None
@@ -263,23 +254,20 @@ class AIFPLVM:
         self,
         _frame: Frame,
         _code: CodeObject,
-        arg1: int,
-        arg2: int
+        _arg1: int,
+        index: int
     ) -> AIFPLValue | None:
-        """STORE_VAR: Store top of stack to variable at depth/index."""
-        depth = arg1
-        index = arg2
+        """STORE_VAR: Store top of stack to variable in current frame at index."""
         value = self.stack.pop()
-        target_frame = self.frames[-(depth + 1)]
-        target_frame.locals[index] = value
+        self.frames[-1].locals[index] = value
         return None
 
     def _op_load_parent_var(  # pylint: disable=useless-return
         self,
         _frame: Frame,
         _code: CodeObject,
-        arg1: int,
-        arg2: int
+        depth: int,
+        index: int
     ) -> AIFPLValue | None:
         """
         LOAD_PARENT_VAR: Load variable from parent frame.
@@ -288,12 +276,9 @@ class AIFPLVM:
         a binding from its parent frame rather than capturing it.
 
         Args:
-            arg1: depth - how many parent frames to walk up
-            arg2: index - variable index in the target parent frame
+            depth - how many parent frames to walk up
+            index - variable index in the target parent frame
         """
-        depth = arg1
-        index = arg2
-
         # Walk up parent frame chain by depth
         current_frame = self.frames[-1]
         parent_frame = current_frame.parent_frame
@@ -357,18 +342,18 @@ class AIFPLVM:
         self,
         frame: Frame,
         _code: CodeObject,
-        arg1: int,
+        target: int,
         _arg2: int
     ) -> AIFPLValue | None:
         """JUMP: Unconditional jump to instruction."""
-        frame.ip = arg1
+        frame.ip = target
         return None
 
     def _op_jump_if_false(  # pylint: disable=useless-return
         self,
         frame: Frame,
         _code: CodeObject,
-        arg1: int,
+        target: int,
         _arg2: int
     ) -> AIFPLValue | None:
         """JUMP_IF_FALSE: Pop stack, jump if false."""
@@ -377,7 +362,7 @@ class AIFPLVM:
             raise AIFPLEvalError("If condition must be boolean")
 
         if not condition.value:
-            frame.ip = arg1
+            frame.ip = target
 
         return None
 
@@ -385,7 +370,7 @@ class AIFPLVM:
         self,
         frame: Frame,
         _code: CodeObject,
-        arg1: int,
+        target: int,
         _arg2: int
     ) -> AIFPLValue | None:
         """JUMP_IF_TRUE: Pop stack, jump if true."""
@@ -394,7 +379,7 @@ class AIFPLVM:
             raise AIFPLEvalError("If condition must be boolean")
 
         if condition.value:
-            frame.ip = arg1
+            frame.ip = target
 
         return None
 
@@ -417,11 +402,10 @@ class AIFPLVM:
         _frame: Frame,
         code: CodeObject,
         arg1: int,
-        arg2: int
+        capture_count: int
     ) -> AIFPLValue | None:
         """MAKE_CLOSURE: Create closure from code object and captured values."""
         closure_code = code.code_objects[arg1]
-        capture_count = arg2
 
         # Pop captured values from stack (in reverse order)
         captured_values = []
@@ -448,12 +432,10 @@ class AIFPLVM:
         self,
         _frame: Frame,
         _code: CodeObject,
-        arg1: int,
+        arity: int,
         _arg2: int
     ) -> AIFPLValue | None:
         """CALL_FUNCTION: Call function with arguments from stack."""
-        arity = arg1
-
         if len(self.stack) < arity + 1:
             raise AIFPLEvalError(
                 message="Stack underflow in CALL_FUNCTION",
@@ -504,7 +486,7 @@ class AIFPLVM:
         self,
         _frame: Frame,
         _code: CodeObject,
-        arg1: int,
+        arity: int,
         _arg2: int
     ) -> TailCall | None:
         """
@@ -514,8 +496,6 @@ class AIFPLVM:
         replacing the current frame with the target frame, achieving true
         tail call optimization with constant stack space for all tail calls.
         """
-        arity = arg1
-
         if len(self.stack) < arity + 1:
             raise AIFPLEvalError(
                 message="Stack underflow in TAIL_CALL_FUNCTION",
@@ -563,13 +543,10 @@ class AIFPLVM:
         self,
         _frame: Frame,
         _code: CodeObject,
-        arg1: int,
-        arg2: int
+        builtin_index: int,
+        arity: int
     ) -> AIFPLValue | None:
         """CALL_BUILTIN: Call builtin function by index."""
-        builtin_index = arg1
-        arity = arg2
-
         # Get arguments from stack
         if arity == 0:
             args = []
