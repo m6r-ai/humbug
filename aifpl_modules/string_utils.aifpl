@@ -1,0 +1,25 @@
+; String utility functions module
+; Provides common string operations
+
+(let ((words (lambda (s)
+               (string-split s " ")))
+      (lines (lambda (s)
+               (string-split s "\n")))
+      (capitalize (lambda (s)
+                    (if (= (string-length s) 0)
+                        s
+                        (string-append
+                          (string-upcase (substring s 0 1))
+                          (string-downcase (substring s 1 (string-length s)))))))
+      (reverse-string (lambda (s)
+                        (list->string (reverse (string->list s)))))
+      (count-words (lambda (s)
+                     (length (string-split s " ")))))
+  
+  ; Export public API
+  (alist
+    (list "words" words)
+    (list "lines" lines)
+    (list "capitalize" capitalize)
+    (list "reverse" reverse-string)
+    (list "count-words" count-words)))

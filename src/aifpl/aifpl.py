@@ -1,11 +1,13 @@
 """Main AIFPL (AI Functional Programming Language) class with enhanced error messages."""
 
 import math
-from typing import Union, Dict
+from pathlib import Path
+from typing import Union, Dict, List
 
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean, AIFPLValue
 from aifpl.aifpl_vm import AIFPLVM
+from aifpl.aifpl_error import AIFPLModuleNotFoundError
 
 
 class AIFPL:
@@ -88,18 +90,24 @@ class AIFPL:
         cls._prelude_cache = bytecode_prelude
         return bytecode_prelude
 
-    def __init__(self, max_depth: int = 1000):
+    def __init__(self, max_depth: int = 1000, module_path: List[str] | None = None):
         """
         Initialize AIFPL calculator.
 
         Args:
             max_depth: Maximum recursion depth (kept for compatibility, may be removed in future)
                       Note: VM uses tail-call optimization, so deep recursion is supported
+            module_path: List of directories to search for modules (default: ["."])
         """
         self.max_depth = max_depth
+        self.module_path = module_path or ["."]
+
+        # Module system state
+        self.module_cache: Dict[str, AIFPLValue] = {}  # module_name -> alist
+        self.loading_stack: List[str] = []  # Track currently-loading modules for circular detection
 
         # Compiler and VM
-        self.compiler = AIFPLCompiler()
+        self.compiler = AIFPLCompiler(module_loader=self)
         self.vm = AIFPLVM()
 
         # Load prelude once at initialization
@@ -158,3 +166,76 @@ class AIFPL:
         """
         result = self._evaluate_raw(expression)
         return result.describe()
+
+    # Module System Implementation (ModuleLoader interface)
+
+    def resolve_module(self, module_name: str) -> str:
+        """
+        Find module file in search path.
+
+        Args:
+            module_name: Name like "calendar" or "lib/validation"
+
+        Returns:
+            Full path to module file
+
+        Raises:
+            AIFPLModuleNotFoundError: If module not found in search path
+        """
+        for directory in self.module_path:
+            module_path = Path(directory) / f"{module_name}.aifpl"
+            if module_path.exists():
+                return str(module_path)
+
+        raise AIFPLModuleNotFoundError(
+            module_name=module_name,
+            search_paths=self.module_path
+        )
+
+    def load_module(self, module_name: str) -> AIFPLValue:
+        """
+        Load and evaluate a module, with caching and circular dependency detection.
+
+        This implements the ModuleLoader interface for the compiler.
+
+        Args:
+            module_name: Name of module to load
+
+        Returns:
+            The AST of the module (not yet evaluated)
+
+        Raises:
+            AIFPLModuleNotFoundError: If module file not found
+            AIFPLCircularImportError: If circular dependency detected
+            AIFPLError: If module evaluation fails
+        """
+        # Check cache
+        # (Only after circular dependency check - we don't want to return cached modules that are currently being loaded)
+        if module_name in self.module_cache:
+            return self.module_cache[module_name]
+
+        # Resolve to file path
+        module_path = self.resolve_module(module_name)
+
+        # Load and parse
+        with open(module_path, 'r', encoding='utf-8') as f:
+            code = f.read()
+
+        # Parse the module to AST
+        from aifpl.aifpl_lexer import AIFPLLexer
+        from aifpl.aifpl_parser import AIFPLParser
+
+        lexer = AIFPLLexer()
+        parser = AIFPLParser()
+
+        tokens = lexer.lex(code)
+        ast = parser.parse(tokens, code)
+
+        # Cache the parsed AST
+        self.module_cache[module_name] = ast
+
+        return ast
+
+    def clear_module_cache(self) -> None:
+        """Clear the module cache. Useful for development/testing."""
+        self.module_cache.clear()

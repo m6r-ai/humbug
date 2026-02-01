@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Any, Dict
 
 from aifpl import AIFPL, AIFPLError
@@ -15,10 +16,28 @@ from ai_tool import (
 class AIFPLAITool(AITool):
     """AIFPL calculator tool with LISP-like syntax."""
 
-    def __init__(self) -> None:
-        """Initialize the AIFPL tool."""
-        self._tool = AIFPL()
+    def __init__(self, module_path: list[str] | None = None) -> None:
+        """
+        Initialize the AIFPL tool.
+
+        Args:
+            module_path: List of directories to search for modules.
+                        If None, defaults to [".", "./aifpl_modules"]
+                        Relative paths are resolved from the current working directory.
+        """
+        if module_path is None:
+            # Default module path: current directory and aifpl_modules subdirectory
+            module_path = [".", "./aifpl_modules"]
+
+        # Expand paths and ensure they exist (for directories that should exist)
+        expanded_paths = []
+        for path in module_path:
+            expanded = str(Path(path).expanduser().resolve())
+            expanded_paths.append(expanded)
+
+        self._tool = AIFPL(module_path=expanded_paths)
         self._logger = logging.getLogger("AIFPLAITool")
+        self._module_path = expanded_paths
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -160,6 +179,27 @@ class AIFPLAITool(AITool):
                 "- First match wins: patterns are tested in order, use specific patterns before general ones\n"
                 "- Example: (match data (42 \"answer\") ((number? n) (* n 2)) ((string? s) (string-upcase s)) "
                 "((head . tail) (list head (length tail))) (_ \"unknown\"))\n\n"
+
+                "Module System:\n"
+                "- (import \"module-name\") → load and return a module (compile-time operation)\n"
+                "- Modules are just .aifpl files that return a value (typically an alist of functions)\n"
+                "- Module search path: " + ", ".join(f'"{p}"' for p in self._module_path) + "\n"
+                "- Modules are cached after first load for performance\n"
+                "- Circular imports are detected and prevented with clear error messages\n"
+                "- Example module (math_utils.aifpl):\n"
+                "  (let ((square (lambda (x) (* x x)))\n"
+                "        (cube (lambda (x) (* x x x))))\n"
+                "    (alist\n"
+                "      (list \"square\" square)\n"
+                "      (list \"cube\" cube)))\n"
+                "- Using a module:\n"
+                "  (let ((math (import \"math_utils\")))\n"
+                "    ((alist-get math \"square\") 5))  → 25\n"
+                "- Modules can import other modules (transitive dependencies)\n"
+                "- Private functions: functions not in the exported alist are private to the module\n"
+                "- Module names can include subdirectories: (import \"lib/helpers\")\n"
+                "- Available modules can be found in the module search path directories\n"
+                "- To create a new module, write AIFPL code to a .aifpl file in the module path\n\n"
 
                 "Key Features:\n"
                 "- Pure functional: no side effects, immutable data\n"

@@ -14,7 +14,7 @@ before any transformations occur.
 
 from typing import List, cast
 
-from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList
+from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLString
 from aifpl.aifpl_error import AIFPLEvalError
 
 
@@ -81,6 +81,9 @@ class AIFPLSemanticAnalyzer:
 
             if name == 'or':
                 return self._analyze_or(expr)
+
+            if name == 'import':
+                return self._analyze_import(expr)
 
         # Regular function call - recursively analyze all subexpressions
         return self._analyze_call(expr)
@@ -545,6 +548,38 @@ class AIFPLSemanticAnalyzer:
         # Just recursively analyze all arguments
         for arg in expr.elements[1:]:
             self.analyze(arg)
+
+        return expr
+
+    def _analyze_import(self, expr: AIFPLList) -> AIFPLList:
+        """Validate import expression: (import "module-name")"""
+        if len(expr.elements) != 2:
+            raise AIFPLEvalError(
+                message="Import expression has wrong number of arguments",
+                received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
+                expected="Exactly 1 argument: (import \"module-name\")",
+                example='(import "calendar") or (import "lib/validation")',
+                suggestion="Import needs exactly one module name as a string"
+            )
+
+        _, module_name_expr = expr.elements
+
+        if not isinstance(module_name_expr, AIFPLString):
+            raise AIFPLEvalError(
+                message="Import module name must be a string literal",
+                received=f"Module name: {module_name_expr.type_name()}",
+                expected="String literal with module name",
+                example='(import "calendar") not (import calendar)',
+                suggestion="Module names must be string literals in double quotes"
+            )
+
+        # Validate module name is not empty
+        if not module_name_expr.value:
+            raise AIFPLEvalError(
+                message="Import module name cannot be empty",
+                example='(import "calendar")',
+                suggestion="Provide a valid module name"
+            )
 
         return expr
 

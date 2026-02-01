@@ -175,3 +175,59 @@ class AIFPLParseError(AIFPLError):
 
 class AIFPLEvalError(AIFPLError):
     """Evaluation errors with detailed context."""
+
+
+class AIFPLModuleError(AIFPLError):
+    """Module system errors with detailed context."""
+
+
+class AIFPLModuleNotFoundError(AIFPLModuleError):
+    """Module file not found in search path."""
+
+    def __init__(
+        self,
+        module_name: str,
+        search_paths: list[str],
+        **kwargs
+    ):
+        """
+        Initialize module not found error.
+
+        Args:
+            module_name: Name of module that wasn't found
+            search_paths: List of paths that were searched
+            **kwargs: Additional error context
+        """
+        searched = "\n    - ".join(f"{path}/{module_name}.aifpl" for path in search_paths)
+
+        super().__init__(
+            message=f"Module '{module_name}' not found",
+            context=f"Searched in:\n    - {searched}",
+            suggestion="Check module name spelling or add directory to module_path",
+            **kwargs
+        )
+
+
+class AIFPLCircularImportError(AIFPLModuleError):
+    """Circular dependency detected in module imports."""
+
+    def __init__(
+        self,
+        import_chain: list[str],
+        **kwargs
+    ):
+        """
+        Initialize circular import error.
+
+        Args:
+            import_chain: List of module names showing the circular dependency
+            **kwargs: Additional error context
+        """
+        chain_str = " -> ".join(import_chain)
+
+        super().__init__(
+            message="Circular import detected",
+            context=f"Import chain:\n    {chain_str}",
+            suggestion="Break the cycle by extracting shared code to a third module",
+            **kwargs
+        )
