@@ -18,8 +18,8 @@ class TestParserWithTypedNumbers:
         """Parser should create typed numbers."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("42")
-        parser = AIFPLParser(tokens, "42")
-        result = parser.parse()
+        parser = AIFPLParser()
+        result = parser.parse(tokens, "42")
         
         assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 42
@@ -28,9 +28,9 @@ class TestParserWithTypedNumbers:
         """With flag enabled, parser should create AIFPLInteger."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("42")
-        parser = AIFPLParser(tokens, "42")
+        parser = AIFPLParser()
         parser.use_typed_numbers = True
-        result = parser.parse()
+        result = parser.parse(tokens, "42")
         
         assert isinstance(result, AIFPLInteger)
         assert result.value == 42
@@ -39,9 +39,9 @@ class TestParserWithTypedNumbers:
         """With flag enabled, parser should create AIFPLFloat."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("3.14")
-        parser = AIFPLParser(tokens, "3.14")
+        parser = AIFPLParser()
         parser.use_typed_numbers = True
-        result = parser.parse()
+        result = parser.parse(tokens, "3.14")
         
         assert isinstance(result, AIFPLFloat)
         assert result.value == 3.14
@@ -50,9 +50,9 @@ class TestParserWithTypedNumbers:
         """With flag enabled, parser should create AIFPLComplex."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(+ 3 (* 4 1j))")
-        parser = AIFPLParser(tokens, "(+ 3 (* 4 1j))")
+        parser = AIFPLParser()
         parser.use_typed_numbers = True
-        result = parser.parse()
+        result = parser.parse(tokens, "(+ 3 (* 4 1j))")
         
         # The expression itself is a list, but we can check the numbers in it
         assert result.elements[1].value == 3

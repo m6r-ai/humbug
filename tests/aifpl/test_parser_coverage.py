@@ -11,10 +11,10 @@ class TestUnterminatedLetExpressions:
         """Test EOF immediately after 'let' keyword."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let")
-        parser = AIFPLParser(tokens, "(let")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let")
 
         error = exc_info.value
         assert "Unterminated list" in error.message
@@ -26,10 +26,10 @@ class TestUnterminatedLetExpressions:
         lexer = AIFPLLexer()
         # EOF happens inside the binding, so we get unterminated error
         tokens = lexer.lex("(let ((x 5) (y")
-        parser = AIFPLParser(tokens, "(let ((x 5) (y")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((x 5) (y")
 
         error = exc_info.value
         # This triggers unterminated error, not incomplete bindings
@@ -41,10 +41,10 @@ class TestUnterminatedLetExpressions:
         """Test EOF while parsing a single binding."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let ((x")
-        parser = AIFPLParser(tokens, "(let ((x")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((x")
 
         error = exc_info.value
         # Should trigger the enhanced unterminated error
@@ -55,10 +55,10 @@ class TestUnterminatedLetExpressions:
         """Test unterminated let with multiple bindings showing related_symbol."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let ((x 5) (y 10) (z")
-        parser = AIFPLParser(tokens, "(let ((x 5) (y 10) (z")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((x 5) (y 10) (z")
 
         error = exc_info.value
         # Should show 'z' in the related_symbol field
@@ -72,10 +72,10 @@ class TestInvalidBindingStructures:
         """Test when a binding is not a list structure."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let (x")
-        parser = AIFPLParser(tokens, "(let (x")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let (x")
 
         error = exc_info.value
         # Should show that 'x' is not a proper binding
@@ -86,10 +86,10 @@ class TestInvalidBindingStructures:
         """Test when a binding is a number instead of a list."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let (42")
-        parser = AIFPLParser(tokens, "(let (42")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let (42")
 
         error = exc_info.value
         assert "Incomplete let/letrec bindings" in error.message
@@ -99,10 +99,10 @@ class TestInvalidBindingStructures:
         """Test binding with invalid structure (not starting with symbol)."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let ((42 5)")
-        parser = AIFPLParser(tokens, "(let ((42 5)")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((42 5)")
 
         error = exc_info.value
         # The binding (42 5) is parsed but should show as invalid
@@ -112,10 +112,10 @@ class TestInvalidBindingStructures:
         """Test binding where first element is not a symbol."""
         lexer = AIFPLLexer()
         tokens = lexer.lex('(let (("string" 5)')
-        parser = AIFPLParser(tokens, '(let (("string" 5)')
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, '(let (("string" 5)')
 
         error = exc_info.value
         assert "Incomplete let/letrec bindings" in error.message
@@ -131,10 +131,10 @@ class TestRelatedSymbolDisplay:
         lexer = AIFPLLexer()
         # Create a deeply nested structure where a binding is unterminated
         tokens = lexer.lex("(let ((myvar (+ 1 2")
-        parser = AIFPLParser(tokens, "(let ((myvar (+ 1 2")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((myvar (+ 1 2")
 
         error = exc_info.value
         # Should show 'myvar' in the stack trace
@@ -145,10 +145,10 @@ class TestRelatedSymbolDisplay:
         lexer = AIFPLLexer()
         # EOF after complete binding but before closing bindings list
         tokens = lexer.lex("(let ((alpha 1) (beta 2")
-        parser = AIFPLParser(tokens, "(let ((alpha 1) (beta 2")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((alpha 1) (beta 2")
 
         error = exc_info.value
         # This should show 'beta' in the error context (unterminated binding)
@@ -160,10 +160,10 @@ class TestRelatedSymbolDisplay:
         # This creates a situation where we have a complete binding with a symbol,
         # then an incomplete binding list (EOF in bindings list, not inside a binding)
         tokens = lexer.lex("(let ((x 5")
-        parser = AIFPLParser(tokens, "(let ((x 5")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((x 5")
 
         error = exc_info.value
         # This should show 'x' in the context
@@ -178,10 +178,10 @@ class TestComplexNestedStructures:
         lexer = AIFPLLexer()
         code = "(let ((x 5) (y (let ((z 10"
         tokens = lexer.lex(code)
-        parser = AIFPLParser(tokens, code)
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, code)
 
         error = exc_info.value
         # Should show nested structure in error
@@ -191,10 +191,10 @@ class TestComplexNestedStructures:
         """Test let with empty binding followed by EOF."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let (")
-        parser = AIFPLParser(tokens, "(let (")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let (")
 
         error = exc_info.value
         assert "Incomplete let/letrec bindings" in error.message
@@ -205,10 +205,10 @@ class TestComplexNestedStructures:
         lexer = AIFPLLexer()
         # Complete the bindings but EOF before body
         tokens = lexer.lex("(let (x 42")
-        parser = AIFPLParser(tokens, "(let (x 42")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let (x 42")
 
         error = exc_info.value
         # Should show invalid bindings
@@ -223,10 +223,10 @@ class TestEdgeCases:
         """Test EOF right after variable name in binding."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let ((x")
-        parser = AIFPLParser(tokens, "(let ((x")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((x")
 
         error = exc_info.value
         # Should trigger unterminated error for the binding
@@ -236,10 +236,10 @@ class TestEdgeCases:
         """Test binding with only variable, no value, then EOF."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let ((myvar")
-        parser = AIFPLParser(tokens, "(let ((myvar")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((myvar")
 
         error = exc_info.value
         assert "'myvar'" in error.context
@@ -248,10 +248,10 @@ class TestEdgeCases:
         """Test EOF immediately after 'let' with no space."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let")
-        parser = AIFPLParser(tokens, "(let")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let")
 
         error = exc_info.value
         assert "Unterminated list" in error.message
@@ -265,10 +265,10 @@ class TestBindingSummaryFormatting:
         """Test binding summary shows both valid and invalid bindings."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let ((x 5) (y 10) z")
-        parser = AIFPLParser(tokens, "(let ((x 5) (y 10) z")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((x 5) (y 10) z")
 
         error = exc_info.value
         # Should show x and y as valid (✓), z as invalid
@@ -280,10 +280,10 @@ class TestBindingSummaryFormatting:
         """Test binding with wrong number of elements."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let ((x 5 6 7)")
-        parser = AIFPLParser(tokens, "(let ((x 5 6 7)")
+        parser = AIFPLParser()
 
         with pytest.raises(AIFPLParseError) as exc_info:
-            parser.parse()
+            parser.parse(tokens, "(let ((x 5 6 7)")
 
         error = exc_info.value
         # Should show binding as invalid due to wrong count

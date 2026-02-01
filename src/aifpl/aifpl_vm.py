@@ -1,15 +1,15 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
 import difflib
-from typing import List, Dict, Any
 from dataclasses import dataclass, field
+from typing import List, Dict, Any, cast
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
 from aifpl.aifpl_bytecode_validator import validate_bytecode
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction,
+    AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLFunction,
 )
 
 
@@ -60,9 +60,6 @@ class AIFPLVM:
 
         # Get builtin function array for O(1) direct indexing in CALL_BUILTIN
         self._builtin_function_array = builtin_registry.get_function_array()
-
-        # Build set of builtin symbols for quick lookup
-        self.builtin_symbols = set(AIFPLBuiltinRegistry.BUILTIN_TABLE)
 
         # Create builtin function objects for first-class function support (e.g., passed to map)
         self._builtin_functions = builtin_registry.create_builtin_function_objects()
@@ -202,8 +199,6 @@ class AIFPLVM:
         """LOAD_CONST: Push constant from pool onto stack."""
         # Validator guarantees arg1 is in bounds
         # No bounds check needed - direct access for maximum performance
-        # Old code: self.stack.append(code.constants[arg1])
-        # New code: same, but we know it's safe
         self.stack.append(code.constants[arg1])
         return None
 
@@ -248,16 +243,10 @@ class AIFPLVM:
         index: int
     ) -> AIFPLValue | None:
         """LOAD_VAR: Load variable from current frame at index."""
-        # Validator guarantees index is in bounds
+        # Validator guarantees index is in bounds AND variable is initialized
         current_frame = self.frames[-1]
         value = current_frame.locals[index]
-
-        # Must keep: uninitialized check (runtime-dependent)
-        # This can happen if code tries to use a variable before it's set
-        if value is None:
-            raise AIFPLEvalError(f"Uninitialized local variable at index {index}")
-
-        self.stack.append(value)
+        self.stack.append(cast(AIFPLValue, value))
         return None
 
     def _op_store_var(  # pylint: disable=useless-return
@@ -302,14 +291,9 @@ class AIFPLVM:
 
         assert parent_frame is not None  # Validator guarantees
 
-        # Validator guarantees index is in bounds
+        # Validator guarantees index is in bounds AND variable is initialized
         value = parent_frame.locals[index]
-
-        # Must keep: uninitialized check (runtime-dependent)
-        if value is None:
-            raise AIFPLEvalError(f"LOAD_PARENT_VAR: uninitialized variable at index {index}")
-
-        self.stack.append(value)
+        self.stack.append(cast(AIFPLValue, value))
         return None
 
     def _op_load_name(  # pylint: disable=useless-return

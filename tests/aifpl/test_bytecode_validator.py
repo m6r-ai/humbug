@@ -28,7 +28,7 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         # Should not raise
         validate_bytecode(code)
 
@@ -44,10 +44,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
         assert "Constant index" in exc_info.value.message
 
@@ -63,10 +63,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
         assert "Name index" in exc_info.value.message
 
@@ -81,10 +81,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.INVALID_JUMP_TARGET
         assert "Jump target" in exc_info.value.message
 
@@ -100,10 +100,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=2
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
         assert "Variable index" in exc_info.value.message
 
@@ -119,10 +119,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.STACK_UNDERFLOW
 
     def test_stack_underflow_in_call(self):
@@ -139,10 +139,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.STACK_UNDERFLOW
 
     def test_inconsistent_stack_depth(self):
@@ -164,7 +164,7 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         # This should actually pass - the stack is consistent
         validate_bytecode(code)
 
@@ -188,10 +188,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         # Could be STACK_INCONSISTENT or STACK_UNDERFLOW depending on which path is analyzed first
         assert exc_info.value.error_type in (ValidationErrorType.STACK_INCONSISTENT, ValidationErrorType.STACK_UNDERFLOW)
 
@@ -212,7 +212,7 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         # Should not raise
         validate_bytecode(code)
 
@@ -233,7 +233,7 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         # Should not raise
         validate_bytecode(code)
 
@@ -252,7 +252,7 @@ class TestBytecodeValidator:
             param_count=1,
             local_count=1
         )
-        
+
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, 0),       # Push captured value
@@ -264,7 +264,7 @@ class TestBytecodeValidator:
             code_objects=[lambda_code],
             local_count=0
         )
-        
+
         # Should not raise
         validate_bytecode(code)
 
@@ -280,10 +280,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
         assert "Builtin index" in exc_info.value.message
 
@@ -301,7 +301,7 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         # Should not raise
         validate_bytecode(code)
 
@@ -314,10 +314,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.INVALID_OPCODE
         assert "no instructions" in exc_info.value.message
 
@@ -334,10 +334,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.MISSING_RETURN
 
     def test_tail_call_is_terminal(self):
@@ -356,7 +356,7 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         # Should not raise
         validate_bytecode(code)
 
@@ -372,10 +372,10 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
         assert "depth must be >= 1" in exc_info.value.message
 
@@ -392,7 +392,7 @@ class TestBytecodeValidator:
             code_objects=[],
             local_count=0
         )
-        
+
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, 0, 0),
@@ -403,12 +403,145 @@ class TestBytecodeValidator:
             code_objects=[invalid_lambda],
             local_count=0
         )
-        
+
         # Should catch error in nested code
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
-        
+
         assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
+
+    def test_uninitialized_variable_simple(self):
+        """Test that using uninitialized variable is caught."""
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_VAR, 0, 0),  # Load var 0 without storing first
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[],
+            names=[],
+            code_objects=[],
+            local_count=1
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+
+        assert exc_info.value.error_type == ValidationErrorType.UNINITIALIZED_VARIABLE
+
+    def test_initialized_variable_ok(self):
+        """Test that initialized variable passes validation."""
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_CONST, 0),   # Push value
+                Instruction(Opcode.STORE_VAR, 0, 0), # Store to var 0
+                Instruction(Opcode.LOAD_VAR, 0, 0),  # Load var 0 - OK
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[AIFPLInteger(42)],
+            names=[],
+            code_objects=[],
+            local_count=1
+        )
+
+        # Should not raise
+        validate_bytecode(code)
+
+    def test_function_parameters_initialized(self):
+        """Test that function parameters are treated as initialized."""
+        # Function with 1 parameter
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.STORE_VAR, 0, 0), # Store parameter (from stack)
+                Instruction(Opcode.LOAD_VAR, 0, 0),  # Load parameter - OK
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[],
+            names=[],
+            code_objects=[],
+            param_count=1,
+            local_count=1
+        )
+
+        # Should not raise
+        validate_bytecode(code)
+
+    def test_conditional_both_branches_initialize(self):
+        """Test that variable initialized in both branches is OK."""
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_TRUE),           # 0: condition
+                Instruction(Opcode.JUMP_IF_FALSE, 5),    # 1: jump to else
+                # Then branch
+                Instruction(Opcode.LOAD_CONST, 0),       # 2: push value
+                Instruction(Opcode.STORE_VAR, 0, 0),     # 3: store to var 0
+                Instruction(Opcode.JUMP, 7),             # 4: jump to merge
+                # Else branch
+                Instruction(Opcode.LOAD_CONST, 0),       # 5: push value
+                Instruction(Opcode.STORE_VAR, 0, 0),     # 6: store to var 0
+                # Merge point
+                Instruction(Opcode.LOAD_VAR, 0, 0),      # 7: load var 0 - OK (both branches stored)
+                Instruction(Opcode.RETURN),              # 8
+            ],
+            constants=[AIFPLInteger(42)],
+            names=[],
+            code_objects=[],
+            local_count=1
+        )
+
+        # Should not raise
+        validate_bytecode(code)
+
+    def test_conditional_one_branch_initializes(self):
+        """Test that variable initialized in only one branch is caught."""
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_TRUE),           # 0: condition
+                Instruction(Opcode.JUMP_IF_FALSE, 5),    # 1: jump to else
+                # Then branch
+                Instruction(Opcode.LOAD_CONST, 0),       # 2: push value
+                Instruction(Opcode.STORE_VAR, 0, 0),     # 3: store to var 0
+                Instruction(Opcode.JUMP, 6),             # 4: jump to merge
+                # Else branch - doesn't initialize!
+                Instruction(Opcode.JUMP, 6),             # 5: jump to merge
+                # Merge point
+                Instruction(Opcode.LOAD_VAR, 0, 0),      # 6: load var 0 - ERROR (not initialized on else path)
+                Instruction(Opcode.RETURN),              # 7
+            ],
+            constants=[AIFPLInteger(42)],
+            names=[],
+            code_objects=[],
+            local_count=1
+        )
+
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+
+        assert exc_info.value.error_type == ValidationErrorType.UNINITIALIZED_VARIABLE
+
+    def test_loop_with_initialization(self):
+        """Test that variable initialized before loop is OK."""
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_CONST, 0),       # 0: push value
+                Instruction(Opcode.STORE_VAR, 0, 0),     # 1: store to var 0
+                # Loop start
+                Instruction(Opcode.LOAD_TRUE),           # 2: condition
+                Instruction(Opcode.JUMP_IF_FALSE, 6),    # 3: exit loop
+                # Loop body
+                Instruction(Opcode.LOAD_VAR, 0, 0),      # 4: load var 0 - OK
+                Instruction(Opcode.RETURN),              # 5: return (pop from stack)
+                # After loop
+                Instruction(Opcode.LOAD_CONST, 1),       # 6: push value
+                Instruction(Opcode.RETURN),              # 7: return
+            ],
+            constants=[AIFPLInteger(42), AIFPLInteger(99)],
+            names=[],
+            code_objects=[],
+            local_count=1
+        )
+
+        # Should not raise
+        validate_bytecode(code)
 
 
 if __name__ == "__main__":

@@ -33,6 +33,7 @@ class AIFPLCompiler:
 
         # Initialize all passes
         self.lexer = AIFPLLexer()
+        self.parser = AIFPLParser()
         self.semantic_analyzer = AIFPLSemanticAnalyzer()
         self.desugarer = AIFPLDesugarer()
 
@@ -45,6 +46,7 @@ class AIFPLCompiler:
             ]
 
         self.ir_builder = AIFPLIRBuilder()
+
         # Future: self.ir_optimizer = AIFPLIROptimizer() if optimize else None
         # Future: self.ir_passes = [...]
         self.codegen = AIFPLCodeGen()
@@ -57,22 +59,20 @@ class AIFPLCompiler:
 
         Args:
             source: AIFPL source code as a string
+            name: Optional name for the code object (e.g. filename)
 
         Returns:
             Compiled bytecode ready for execution
         """
         tokens = self.lexer.lex(source)
-        parser = AIFPLParser(tokens, source)
-        ast = parser.parse()
-
-        ast = self.semantic_analyzer.analyze(ast)
-
-        ast = self.desugarer.desugar(ast)
+        ast = self.parser.parse(tokens, source)
+        checked_ast = self.semantic_analyzer.analyze(ast)
+        desugared_ast = self.desugarer.desugar(checked_ast)
 
         for ast_pass in self.ast_passes:
-            ast = ast_pass.optimize(ast)
+            desugared_ast = ast_pass.optimize(desugared_ast)
 
-        ir = self.ir_builder.build(ast)
+        ir = self.ir_builder.build(desugared_ast)
 
         bytecode = self.codegen.generate(ir, name)
 

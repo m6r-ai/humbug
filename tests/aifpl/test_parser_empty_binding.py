@@ -12,10 +12,10 @@ def test_empty_binding_in_let():
     """
     lexer = AIFPLLexer()
     tokens = lexer.lex("(let (() 5))")
-    parser = AIFPLParser(tokens, "(let (() 5))")
+    parser = AIFPLParser()
 
     # Should parse successfully (evaluator will complain about invalid binding)
-    result = parser.parse()
+    result = parser.parse(tokens, "(let (() 5))")
 
     # Verify structure: (let (() 5))
     assert result.length() == 2
@@ -31,9 +31,9 @@ def test_multiple_bindings_with_empty():
     """Test multiple bindings including an empty one."""
     lexer = AIFPLLexer()
     tokens = lexer.lex("(let ((x 5) () (y 10)) 42)")
-    parser = AIFPLParser(tokens, "(let ((x 5) () (y 10)) 42)")
+    parser = AIFPLParser()
 
-    result = parser.parse()
+    result = parser.parse(tokens, "(let ((x 5) () (y 10)) 42)")
 
     # Verify structure
     bindings = result.get(1)

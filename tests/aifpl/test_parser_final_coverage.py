@@ -15,10 +15,10 @@ def test_nested_let_with_related_symbol_in_incomplete_bindings_stack():
     # Outer let with binding 'x', inner let with binding 'y' that's incomplete
     code = "(let ((x (let ((y 5"
     tokens = lexer.lex(code)
-    parser = AIFPLParser(tokens, code)
+    parser = AIFPLParser()
 
     with pytest.raises(AIFPLParseError) as exc_info:
-        parser.parse()
+        parser.parse(tokens, code)
 
     error = exc_info.value
     # Should show both 'x' and 'y' in the context

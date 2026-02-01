@@ -20,8 +20,8 @@ def parse_and_analyze_expression(expr_str: str) -> AIFPLValue:
     """Helper to parse and semantically analyze an expression string into AST."""
     lexer = AIFPLLexer()
     tokens = lexer.lex(expr_str)
-    parser = AIFPLParser(tokens, expr_str)
-    ast = parser.parse()
+    parser = AIFPLParser()
+    ast = parser.parse(tokens, expr_str)
     # Run semantic analysis before desugaring
     analyzer = AIFPLSemanticAnalyzer()
     return analyzer.analyze(ast)
@@ -494,8 +494,8 @@ class TestDesugarerMatchErrors:
         # Errors should be caught by semantic analyzer, not desugarer
         analyzer = AIFPLSemanticAnalyzer()
         lexer = AIFPLLexer()
-        parser = AIFPLParser(lexer.lex('(match x)'), '(match x)')
-        expr = parser.parse()
+        parser = AIFPLParser()
+        expr = parser.parse(lexer.lex('(match x)'), '(match x)')
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             analyzer.analyze(expr)
@@ -504,8 +504,8 @@ class TestDesugarerMatchErrors:
         """Test error when match clause is invalid."""
         analyzer = AIFPLSemanticAnalyzer()
         lexer = AIFPLLexer()
-        parser = AIFPLParser(lexer.lex('(match x (42))'), '(match x (42))')
-        expr = parser.parse()
+        parser = AIFPLParser()
+        expr = parser.parse(lexer.lex('(match x (42))'), '(match x (42))')
 
         with pytest.raises(AIFPLEvalError, match="wrong number of elements"):
             analyzer.analyze(expr)
@@ -515,8 +515,8 @@ class TestDesugarerMatchErrors:
         analyzer = AIFPLSemanticAnalyzer()
         lexer = AIFPLLexer()
         code = '(match x ((. tail) "bad") (_ "other"))'
-        parser = AIFPLParser(lexer.lex(code), code)
-        expr = parser.parse()
+        parser = AIFPLParser()
+        expr = parser.parse(lexer.lex(code), code)
 
         with pytest.raises(AIFPLEvalError, match="dot at beginning"):
             analyzer.analyze(expr)
@@ -526,8 +526,8 @@ class TestDesugarerMatchErrors:
         analyzer = AIFPLSemanticAnalyzer()
         lexer = AIFPLLexer()
         code = '(match x ((head .) "bad") (_ "other"))'
-        parser = AIFPLParser(lexer.lex(code), code)
-        expr = parser.parse()
+        parser = AIFPLParser()
+        expr = parser.parse(lexer.lex(code), code)
 
         with pytest.raises(AIFPLEvalError, match="dot at end"):
             analyzer.analyze(expr)
@@ -537,8 +537,8 @@ class TestDesugarerMatchErrors:
         analyzer = AIFPLSemanticAnalyzer()
         lexer = AIFPLLexer()
         code = '(match x ((head . a b) "bad") (_ "other"))'
-        parser = AIFPLParser(lexer.lex(code), code)
-        expr = parser.parse()
+        parser = AIFPLParser()
+        expr = parser.parse(lexer.lex(code), code)
 
         with pytest.raises(AIFPLEvalError, match="multiple elements after dot"):
             analyzer.analyze(expr)

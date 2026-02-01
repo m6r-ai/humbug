@@ -14,7 +14,7 @@ The validator checks:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict, Optional, Tuple, Set
 from enum import Enum
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
@@ -31,6 +31,7 @@ class ValidationErrorType(Enum):
     INVALID_OPCODE = "invalid_opcode"
     UNREACHABLE_CODE = "unreachable_code"
     INVALID_VARIABLE_ACCESS = "invalid_variable_access"
+    UNINITIALIZED_VARIABLE = "uninitialized_variable"
 
 
 @dataclass
@@ -146,6 +147,7 @@ class BytecodeValidator:
         self._validate_indices(code)
         self._validate_control_flow(code)
         self._validate_stack_depth(code)
+        self._validate_initialization(code)
 
     def _validate_structure(self, code: CodeObject) -> None:
         """Validate basic structural properties."""
@@ -353,6 +355,75 @@ class BytecodeValidator:
                 else:
                     # First time visiting - record depth and add to worklist
                     stack_depths[succ_idx] = new_depth
+                    worklist.append(succ_idx)
+
+    def _validate_initialization(self, code: CodeObject) -> None:
+        """
+        Validate that all variables are initialized before use.
+
+        This performs definite assignment analysis to track which variables
+        are guaranteed to be initialized at each program point.
+        """
+        # Track which variables are definitely initialized at each instruction
+        # Maps instruction index -> set of initialized variable indices
+        initialized_at: Dict[int, Set[int]] = {}
+
+        # Initial state: for functions, parameters are initialized by caller
+        # For closures, captured variables (free_vars) are initialized during closure creation
+        # Captured variables are stored after parameters: indices [param_count, param_count + len(free_vars))
+        initial_initialized = set(range(code.param_count))
+        if code.free_vars:
+            initial_initialized.update(range(code.param_count, code.param_count + len(code.free_vars)))
+
+        # Worklist algorithm
+        worklist: List[int] = [0]
+        initialized_at[0] = initial_initialized.copy()
+
+        while worklist:
+            instr_idx = worklist.pop(0)
+
+            if instr_idx not in initialized_at:
+                # Unreachable
+                continue
+
+            current_initialized = initialized_at[instr_idx]
+            instr = code.instructions[instr_idx]
+            opcode = instr.opcode
+
+            # Check LOAD_VAR - must be initialized
+            if opcode == Opcode.LOAD_VAR:
+                var_index = instr.arg2
+                if var_index not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"Variable at index {var_index} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
+            # Calculate new initialized set after this instruction
+            new_initialized = current_initialized.copy()
+
+            # STORE_VAR marks variable as initialized
+            if opcode == Opcode.STORE_VAR:
+                var_index = instr.arg2
+                new_initialized.add(var_index)
+
+            # Get successors
+            successors = self._get_successors(instr_idx, instr, code)
+
+            # Propagate to successors
+            for succ_idx in successors:
+                if succ_idx in initialized_at:
+                    # Merge: only keep variables initialized on ALL paths
+                    merged = initialized_at[succ_idx] & new_initialized
+                    if merged != initialized_at[succ_idx]:
+                        initialized_at[succ_idx] = merged
+                        worklist.append(succ_idx)
+                else:
+                    # First time visiting
+                    initialized_at[succ_idx] = new_initialized.copy()
                     worklist.append(succ_idx)
 
     def _get_stack_effect(self, instr: Instruction) -> Tuple[int, int]:

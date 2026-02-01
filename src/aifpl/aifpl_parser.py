@@ -43,7 +43,7 @@ class ParenStackFrame:
 class AIFPLParser:
     """Parses tokens into an Abstract Syntax Tree using pure list representation with detailed error messages."""
 
-    def __init__(self, tokens: List[AIFPLToken], expression: str = ""):
+    def __init__(self):
         """
         Initialize parser with tokens and original expression.
 
@@ -51,10 +51,10 @@ class AIFPLParser:
             tokens: List of tokens to parse
             expression: Original expression string for error context
         """
-        self.tokens = tokens
+        self.tokens: List[AIFPLToken] | None = None
         self.pos = 0
-        self.current_token: AIFPLToken | None = tokens[0] if tokens else None
-        self.expression = expression
+        self.current_token: AIFPLToken | None = None
+        self.expression = ""
 
         # Paren stack for tracking unclosed expressions
         self.paren_stack: List[ParenStackFrame] = []
@@ -63,7 +63,7 @@ class AIFPLParser:
         self.last_token_end_line: int = 1
         self.last_token_end_column: int = 1
 
-    def parse(self) -> AIFPLValue:
+    def parse(self, tokens: List[AIFPLToken], expression: str = "") -> AIFPLValue:
         """
         Parse tokens into AST with detailed error reporting.
 
@@ -73,6 +73,11 @@ class AIFPLParser:
         Raises:
             AIFPLParseError: If parsing fails with detailed context
         """
+        self.tokens = tokens
+        self.pos = 0
+        self.current_token = self.tokens[0] if self.tokens else None
+        self.expression = expression
+
         if self.current_token is None:
             raise AIFPLParseError(
                 message="Empty expression",
@@ -721,8 +726,9 @@ class AIFPLParser:
         self.last_token_end_column = self.current_token.column + self.current_token.length
 
         self.pos += 1
-        if self.pos < len(self.tokens):
-            self.current_token = self.tokens[self.pos]
+        tokens = cast(List[AIFPLToken], self.tokens)
+        if self.pos < len(tokens):
+            self.current_token = tokens[self.pos]
 
         else:
             self.current_token = None
