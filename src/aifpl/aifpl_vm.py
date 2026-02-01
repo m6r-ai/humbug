@@ -570,10 +570,16 @@ class AIFPLVM:
         builtin_index = arg1
         arity = arg2
 
-        # Pop arguments
-        args = [self.stack.pop() for _ in range(arity)]
-        args.reverse()
+        # Get arguments from stack
+        if arity == 0:
+            args = []
 
+        else:
+            # Slice gets args in correct order, then delete them from stack
+            args = self.stack[-arity:]
+            del self.stack[-arity:]
+
+        # Direct array indexing - O(1) lookup
         func = self._builtin_function_array[builtin_index]
         result = func(args)
         self.stack.append(result)
