@@ -198,14 +198,12 @@ class TestTailCallOptimizationWithLet:
         # Collatz sequence starting from 100 takes 25 steps
         helpers.assert_evaluates_to(aifpl, conditional_in_let, '25')
 
-    def test_comparison_direct_vs_let_tail_calls(self, aifpl_custom):
+    def test_comparison_direct_vs_let_tail_calls(self, aifpl):
         """
         Both direct and let-based tail calls work for deep recursion.
 
         This test verifies that both forms of tail calls are properly optimized.
         """
-        aifpl = aifpl_custom()
-
         # Direct tail call - works
         direct = '''
         (letrec ((f (lambda (n) (if (<= n 0) "done" (f (- n 1))))))
@@ -220,15 +218,13 @@ class TestTailCallOptimizationWithLet:
         '''
         assert aifpl.evaluate_and_format(with_let) == '"done"'
 
-    def test_deep_recursion_with_let_bindings(self, aifpl_custom):
+    def test_deep_recursion_with_let_bindings(self, aifpl):
         """
         Deep recursion with let bindings works with TCO.
 
         This test verifies that let-based recursion can handle hundreds
         of iterations without hitting depth limits.
         """
-        aifpl = aifpl_custom()
-
         # This now works with proper TCO
         test_depth = '''
         (letrec ((f (lambda (n) (if (<= n 0) n (let ((x (- n 1))) (f x))))))
@@ -379,12 +375,10 @@ class TestTailCallOptimizationVerification:
         assert isinstance(result, int)
         assert result > 0
 
-    def test_all_tail_positions_optimized(self, aifpl_custom):
+    def test_all_tail_positions_optimized(self, aifpl):
         """
         Comprehensive test that all tail positions are properly optimized.
         """
-        aifpl = aifpl_custom()
-
         comprehensive = '''
         (letrec ((process (lambda (n mode acc)
                            (if (<= n 0)
@@ -410,12 +404,10 @@ class TestTailCallOptimizationVerification:
 class TestTailCallOptimizationPerformance:
     """Tests that verify TCO provides good performance for deep recursion."""
 
-    def test_very_deep_recursion_with_let(self, aifpl_custom):
+    def test_very_deep_recursion_with_let(self, aifpl):
         """
         Test that very deep recursion (1000+ iterations) works with let-based TCO.
         """
-        aifpl = aifpl_custom()
-
         deep = '''
         (letrec ((countdown (lambda (n)
                              (if (<= n 0)

@@ -52,17 +52,14 @@ class TestFormatting:
         """Test complex number formatting in LISP output."""
         assert aifpl.evaluate_and_format(expression) == expected_format
 
-    def test_complex_number_simplification(self, aifpl_custom):
+    def test_complex_number_simplification(self, aifpl):
         """Test that complex numbers with negligible imaginary parts are simplified."""
-        # Test with default tolerance
-        aifpl_default = aifpl_custom()
-
         # Very small imaginary part should be simplified
-        result = aifpl_default.evaluate_and_format("(+ 5 (* 1e-15 1j))")
+        result = aifpl.evaluate_and_format("(+ 5 (* 1e-15 1j))")
         assert result == "5+1e-15j"  # Should be simplified to float (real part of complex)
 
         # Larger imaginary part should be preserved
-        result = aifpl_default.evaluate_and_format("(+ 5 (* 1e-5 1j))")
+        result = aifpl.evaluate_and_format("(+ 5 (* 1e-5 1j))")
         assert "5+1" in result and "j" in result  # Should remain complex
 
     @pytest.mark.parametrize("expression,expected_format", [

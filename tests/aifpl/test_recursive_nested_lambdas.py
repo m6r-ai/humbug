@@ -348,10 +348,10 @@ class TestRecursiveNestedLambdas:
 class TestRecursiveNestedLambdasBytecode:
     """Test recursive nested lambdas specifically in bytecode mode."""
 
-    def test_bytecode_simple_recursion_in_map(self, aifpl_bytecode, helpers):
+    def test_bytecode_simple_recursion_in_map(self, aifpl, helpers):
         """Test bytecode compilation of recursive calls in map."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '''(letrec ((visit (lambda (n)
                              (if (<= n 1)
                                  (list n)
@@ -363,10 +363,10 @@ class TestRecursiveNestedLambdasBytecode:
             '(4 3 2 1)'
         )
 
-    def test_bytecode_nested_lambda_factory(self, aifpl_bytecode, helpers):
+    def test_bytecode_nested_lambda_factory(self, aifpl, helpers):
         """Test bytecode compilation of nested lambda factory pattern."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '''(letrec ((make-counter
                        (lambda (start)
                          (lambda (n)
@@ -377,20 +377,20 @@ class TestRecursiveNestedLambdasBytecode:
             '0'  # Returns start value after 5 recursive calls
         )
 
-    def test_bytecode_mutual_recursion_in_map(self, aifpl_bytecode, helpers):
+    def test_bytecode_mutual_recursion_in_map(self, aifpl, helpers):
         """Test bytecode compilation of mutual recursion in map."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '''(letrec ((ping (lambda (n) (if (<= n 0) 0 (+ 1 (pong (- n 1))))))
                   (pong (lambda (n) (if (<= n 0) 0 (+ 1 (ping (- n 1)))))))
               (map (lambda (x) (ping x)) (list 1 2 3)))''',
             '(1 2 3)'
         )
 
-    def test_bytecode_environment_chain_lookup(self, aifpl_bytecode, helpers):
+    def test_bytecode_environment_chain_lookup(self, aifpl, helpers):
         """Test that bytecode properly traverses environment chain for recursive bindings."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '''(letrec ((outer 100)
                   (recurse (lambda (n)
                             (if (<= n 0)
@@ -602,60 +602,60 @@ class TestLetrecLambdasInDataStructures:
 class TestLetrecLambdasInDataStructuresBytecode:
     """Test lambdas in data structures specifically in bytecode mode."""
 
-    def test_bytecode_lambda_in_list_simple(self, aifpl_bytecode, helpers):
+    def test_bytecode_lambda_in_list_simple(self, aifpl, helpers):
         """Test bytecode compilation of lambda in list."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '(letrec ((x (list (lambda () x)))) x)',
             '(<lambda ()>)'
         )
 
-    def test_bytecode_lambda_in_list_called(self, aifpl_bytecode, helpers):
+    def test_bytecode_lambda_in_list_called(self, aifpl, helpers):
         """Test bytecode execution of calling lambda from list."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '(letrec ((x (list (lambda () x)))) ((first x)))',
             '(<lambda ()>)'
         )
 
-    def test_bytecode_deep_recursion(self, aifpl_bytecode, helpers):
+    def test_bytecode_deep_recursion(self, aifpl, helpers):
         """Test bytecode handles deep recursive calls."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '(letrec ((x (list (lambda () x)))) ((first ((first ((first ((first x)))))))))',
             '(<lambda ()>)'
         )
 
-    def test_bytecode_lambda_from_if(self, aifpl_bytecode, helpers):
+    def test_bytecode_lambda_from_if(self, aifpl, helpers):
         """Test bytecode compilation of lambda from if expression."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '(letrec ((x (if #t (lambda () x) (lambda () 42)))) (x))',
             '<lambda ()>'
         )
 
-    def test_bytecode_multiple_lambdas(self, aifpl_bytecode, helpers):
+    def test_bytecode_multiple_lambdas(self, aifpl, helpers):
         """Test bytecode handles multiple lambdas in data structure."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '(letrec ((x (list (lambda () x) (lambda () x)))) (length ((first x))))',
             '2'
         )
 
-    def test_bytecode_mutual_recursion_in_lists(self, aifpl_bytecode, helpers):
+    def test_bytecode_mutual_recursion_in_lists(self, aifpl, helpers):
         """Test bytecode compilation of mutual recursion in lists."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '''(letrec ((x (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first y) (- n 1)))))))
                         (y (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first x) (- n 1))))))))
                   ((first x) 4))''',
             '4'
         )
 
-    def test_bytecode_lambda_in_alist(self, aifpl_bytecode, helpers):
+    def test_bytecode_lambda_in_alist(self, aifpl, helpers):
         """Test bytecode compilation of lambda in alist."""
         helpers.assert_evaluates_to(
-            aifpl_bytecode,
+            aifpl,
             '(letrec ((x (alist (list "func" (lambda () x))))) ((alist-get x "func")))',
             '(alist (list "func" <lambda ()>))'
         )

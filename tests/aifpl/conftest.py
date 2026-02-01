@@ -12,26 +12,6 @@ def aifpl():
     return AIFPL()
 
 
-@pytest.fixture
-def aifpl_bytecode():
-    """
-    Create a fresh AIFPL instance for each test.
-    
-    Note: This fixture is kept for backward compatibility.
-    All AIFPL instances now use bytecode/VM execution.
-    """
-    return AIFPL()
-
-
-@pytest.fixture
-def aifpl_custom():
-    """Factory for AIFPL instances with custom configuration."""
-    def _create_aifpl() -> AIFPL:
-        return AIFPL()
-
-    return _create_aifpl
-
-
 class AIFPLTestHelpers:
     """Helper utilities for AIFPL testing."""
 

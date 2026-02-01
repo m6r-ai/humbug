@@ -53,14 +53,17 @@ class AIFPLVM:
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
 
-        # Create builtin registry
-        self._builtin_registry = AIFPLBuiltinRegistry()
+        # Create builtin registry and get function array for fast lookup
+        builtin_registry = AIFPLBuiltinRegistry()
+        
+        # Get builtin function array for O(1) direct indexing in CALL_BUILTIN
+        self._builtin_function_array = builtin_registry.get_function_array()
 
         # Build set of builtin symbols for quick lookup
         self.builtin_symbols = set(AIFPLBuiltinRegistry.BUILTIN_TABLE)
 
         # Create builtin function objects for first-class function support (e.g., passed to map)
-        self._builtin_functions = self._builtin_registry.create_builtin_function_objects()
+        self._builtin_functions = builtin_registry.create_builtin_function_objects()
 
         # Build dispatch table for fast opcode execution
         # This is a critical optimization: jump table dispatch is 2-3x faster than if/elif chains
@@ -571,18 +574,7 @@ class AIFPLVM:
         args = [self.stack.pop() for _ in range(arity)]
         args.reverse()
 
-        builtin_name = AIFPLBuiltinRegistry.BUILTIN_TABLE[builtin_index]
-
-        # Check if this builtin is in the registry
-        if not self._builtin_registry.has_function(builtin_name):
-            # Unknown builtin
-            raise AIFPLEvalError(
-                message=f"Unknown builtin function: {builtin_name}",
-                suggestion="This may be an internal error - please report this issue"
-            )
-
-        # Call through the registry
-        func = self._builtin_registry.get_function(builtin_name)
+        func = self._builtin_function_array[builtin_index]
         result = func(args)
         self.stack.append(result)
         return None

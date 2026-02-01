@@ -244,10 +244,8 @@ class TestEvaluatorMissingCoverage:
 
     # ========== Complex Integration Tests ==========
 
-    def test_deeply_nested_tail_calls(self, aifpl_custom):
+    def test_deeply_nested_tail_calls(self, aifpl):
         """Test deeply nested expressions that use tail call optimization."""
-        aifpl_deep = aifpl_custom()
-
         # Create a tail-recursive countdown function
         countdown_code = """
         (letrec ((countdown (lambda (n acc)
@@ -256,7 +254,7 @@ class TestEvaluatorMissingCoverage:
                                  (countdown (- n 1) (+ acc n))))))
           (countdown 10 0))
         """
-        result = aifpl_deep.evaluate(countdown_code)
+        result = aifpl.evaluate(countdown_code)
         # Sum of 1+2+3+...+10 = 55
         assert result == 55
 

@@ -29,25 +29,27 @@ class AIFPLBuiltinRegistry:
     Central registry for all builtin functions.
 
     This class aggregates builtin implementations from various modules and provides
-    a unified interface for both the evaluator and VM to access them.
+    a unified array-based interface for fast VM access.
     """
 
-    # Map builtin names to indices (for CALL_BUILTIN)
+    # Authoritative list of builtin names mapped to indices (for CALL_BUILTIN)
+    # This defines the canonical ordering - all other structures follow this order
     BUILTIN_TABLE = [
         '+', '-', '*', '/', '//', '%', '**',
         '=', '!=', '<', '>', '<=', '>=',
-        'and', 'or', 'not',
+        'not',
         'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
         'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
         'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
         'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
+        'integer', 'float',
         'range',
         'string-append', 'string-length', 'string-upcase', 'string-downcase',
         'string-trim', 'string-replace', 'string-split', 'string-join',
         'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
         'substring', 'string->number', 'number->string', 'string=?', 'string->list', 'list->string',
         'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
-        'alist-keys', 'alist-values', 'alist-merge', 'alist?',
+        'alist-keys', 'alist-values', 'alist-merge', 'alist?', 'alist-length',
         'sqrt', 'abs', 'min', 'max', 'pow',
         'sin', 'cos', 'tan', 'log', 'log10', 'exp',
         'round', 'floor', 'ceil',
@@ -63,59 +65,45 @@ class AIFPLBuiltinRegistry:
         self.math_functions = AIFPLMathFunctions()
         self.collections_functions = AIFPLCollectionsFunctions()
 
-        # Build the registry
-        self._registry: Dict[str, Callable] = {}
-        self._build_registry()
+        # Build function array in BUILTIN_TABLE order for fast VM access
+        self._function_array: List[Callable] = self._build_function_array()
 
-    def _build_registry(self) -> None:
-        """Build the complete registry of builtin functions."""
-        # Add math functions
-        self._registry.update(self.math_functions.get_functions())
-
-        # Add collections functions
-        self._registry.update(self.collections_functions.get_functions())
-
-    def get_function(self, name: str) -> Callable:
+    def _build_function_array(self) -> List[Callable]:
         """
-        Get a builtin function implementation by name.
-
-        Args:
-            name: Function name
+        Build array of builtin functions in BUILTIN_TABLE order.
 
         Returns:
-            Function implementation callable
-
-        Raises:
-            KeyError: If function name is not found
+            List of function implementations indexed by BUILTIN_TABLE position
         """
-        return self._registry[name]
+        # First build a temporary dict from all function modules
+        functions_dict: Dict[str, Callable] = {}
+        functions_dict.update(self.math_functions.get_functions())
+        functions_dict.update(self.collections_functions.get_functions())
 
-    def has_function(self, name: str) -> bool:
+        # Now build array in BUILTIN_TABLE order
+        function_array = []
+        for name in self.BUILTIN_TABLE:
+            if name not in functions_dict:
+                raise RuntimeError(f"Builtin function '{name}' in BUILTIN_TABLE but not implemented")
+
+            function_array.append(functions_dict[name])
+
+        return function_array
+
+    def get_function_array(self) -> List[Callable]:
         """
-        Check if a builtin function exists.
-
-        Args:
-            name: Function name
+        Get the builtin function array for VM use.
 
         Returns:
-            True if function exists, False otherwise
+            List of function implementations indexed by BUILTIN_TABLE position
         """
-        return name in self._registry
-
-    def get_all_names(self) -> List[str]:
-        """
-        Get list of all builtin function names.
-
-        Returns:
-            List of function names
-        """
-        return list(self._registry.keys())
+        return self._function_array
 
     def create_builtin_function_objects(self) -> Dict[str, AIFPLFunction]:
         """
         Create AIFPLFunction objects for all builtins.
 
-        This is used by the evaluator to populate the global environment.
+        This is used to populate the global environment with first-class function objects.
 
         Builtins are represented as AIFPLFunction objects with:
         - native_impl set to the Python implementation
@@ -126,11 +114,10 @@ class AIFPLBuiltinRegistry:
             Dictionary mapping function names to AIFPLFunction objects
         """
         builtins = {}
-        for name, impl in self._registry.items():
+        for i, name in enumerate(self.BUILTIN_TABLE):
+            impl = self._function_array[i]
+
             # Determine if function is variadic and its parameters
-            # For now, we'll use introspection or a simple heuristic
-            # Most builtins are variadic (like +, *, list, etc.)
-            # We'll mark specific ones as non-variadic based on their names
             is_variadic = self._is_variadic_builtin(name)
             parameters = self._get_builtin_parameters(name, is_variadic)
 

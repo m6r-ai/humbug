@@ -354,14 +354,12 @@ class TestMutualRecursionPracticalExamples:
 class TestMutualRecursionPerformance:
     """Performance tests to verify TCO eliminates stack overflow."""
 
-    def test_very_deep_mutual_recursion(self, aifpl_custom):
+    def test_very_deep_mutual_recursion(self, aifpl):
         """
         Very deep mutual recursion (100000+ iterations) works.
 
         This is the ultimate test - the value from the issue documentation.
         """
-        aifpl = aifpl_custom()
-
         deep = '''
         (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
                  (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
@@ -370,14 +368,12 @@ class TestMutualRecursionPerformance:
 
         assert aifpl.evaluate_and_format(deep) == '#t'
 
-    def test_comparison_self_vs_mutual_recursion(self, aifpl_custom):
+    def test_comparison_self_vs_mutual_recursion(self, aifpl):
         """
         Compare performance of self-recursion vs mutual recursion.
 
         Both should handle the same depth without stack overflow.
         """
-        aifpl = aifpl_custom()
-
         # Self-recursion (already works)
         self_rec = '''
         (letrec ((countdown (lambda (n) (if (<= n 0) "done" (countdown (- n 1))))))
