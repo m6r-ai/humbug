@@ -200,6 +200,10 @@ class AIFPLVM:
         _arg2: int
     ) -> AIFPLValue | None:
         """LOAD_CONST: Push constant from pool onto stack."""
+        # Validator guarantees arg1 is in bounds
+        # No bounds check needed - direct access for maximum performance
+        # Old code: self.stack.append(code.constants[arg1])
+        # New code: same, but we know it's safe
         self.stack.append(code.constants[arg1])
         return None
 
@@ -244,12 +248,12 @@ class AIFPLVM:
         index: int
     ) -> AIFPLValue | None:
         """LOAD_VAR: Load variable from current frame at index."""
+        # Validator guarantees index is in bounds
         current_frame = self.frames[-1]
-
-        if index >= len(current_frame.locals):
-            raise AIFPLEvalError(f"Local variable index {index} out of range (frame has {len(current_frame.locals)} locals)")
-
         value = current_frame.locals[index]
+
+        # Must keep: uninitialized check (runtime-dependent)
+        # This can happen if code tries to use a variable before it's set
         if value is None:
             raise AIFPLEvalError(f"Uninitialized local variable at index {index}")
 
@@ -264,6 +268,7 @@ class AIFPLVM:
         index: int
     ) -> AIFPLValue | None:
         """STORE_VAR: Store top of stack to variable in current frame at index."""
+        # Validator guarantees index is in bounds and stack has value
         value = self.stack.pop()
         self.frames[-1].locals[index] = value
         return None
@@ -285,25 +290,22 @@ class AIFPLVM:
             depth - how many parent frames to walk up
             index - variable index in the target parent frame
         """
+        # Validator guarantees depth >= 1
         # Walk up parent frame chain by depth
         current_frame = self.frames[-1]
         parent_frame = current_frame.parent_frame
 
+        # Walk up the chain (validator guarantees this won't be None)
         for _ in range(depth - 1):
-            if parent_frame is None:
-                raise AIFPLEvalError(f"LOAD_PARENT_VAR: no parent frame at depth {depth}")
-
+            assert parent_frame is not None  # Validator guarantees
             parent_frame = parent_frame.parent_frame
 
-        if parent_frame is None:
-            raise AIFPLEvalError(f"LOAD_PARENT_VAR: no parent frame at depth {depth}")
+        assert parent_frame is not None  # Validator guarantees
 
-        if index >= len(parent_frame.locals):
-            raise AIFPLEvalError(
-                f"LOAD_PARENT_VAR: variable index {index} out of range (parent frame has {len(parent_frame.locals)} locals)"
-            )
-
+        # Validator guarantees index is in bounds
         value = parent_frame.locals[index]
+
+        # Must keep: uninitialized check (runtime-dependent)
         if value is None:
             raise AIFPLEvalError(f"LOAD_PARENT_VAR: uninitialized variable at index {index}")
 
@@ -363,6 +365,8 @@ class AIFPLVM:
         _arg2: int
     ) -> AIFPLValue | None:
         """JUMP_IF_FALSE: Pop stack, jump if false."""
+        # Validator guarantees target is valid and stack has value
+        # Must keep type check (runtime-dependent)
         condition = self.stack.pop()
         if not isinstance(condition, AIFPLBoolean):
             raise AIFPLEvalError("If condition must be boolean")
@@ -380,6 +384,8 @@ class AIFPLVM:
         _arg2: int
     ) -> AIFPLValue | None:
         """JUMP_IF_TRUE: Pop stack, jump if true."""
+        # Validator guarantees target is valid and stack has value
+        # Must keep type check (runtime-dependent)
         condition = self.stack.pop()
         if not isinstance(condition, AIFPLBoolean):
             raise AIFPLEvalError("If condition must be boolean")
@@ -397,6 +403,8 @@ class AIFPLVM:
         _arg2: int
     ) -> AIFPLValue | None:
         """RAISE_ERROR: Raise error with message from constant pool."""
+        # Validator guarantees arg1 is in bounds
+        # Type check could be removed if we validate constant types, but keep for now
         error_msg = code.constants[arg1]
         if not isinstance(error_msg, AIFPLString):
             raise AIFPLEvalError("RAISE_ERROR requires a string constant")
@@ -411,6 +419,8 @@ class AIFPLVM:
         capture_count: int
     ) -> AIFPLValue | None:
         """MAKE_CLOSURE: Create closure from code object and captured values."""
+        # Validator guarantees arg1 is in bounds and stack has enough values
+        # Direct access without bounds checking
         closure_code = code.code_objects[arg1]
 
         # Pop captured values from stack (in reverse order)
@@ -442,14 +452,10 @@ class AIFPLVM:
         _arg2: int
     ) -> AIFPLValue | None:
         """CALL_FUNCTION: Call function with arguments from stack."""
-        if len(self.stack) < arity + 1:
-            raise AIFPLEvalError(
-                message="Stack underflow in CALL_FUNCTION",
-                received=f"Stack has {len(self.stack)} items, need {arity + 1}",
-                suggestion="This is likely a compiler bug"
-            )
+        # Validator guarantees stack has enough values (arity + 1)
 
         # Get function from under the arguments
+        # Must keep type check (runtime-dependent - could be any value)
         func = self.stack[-(arity + 1)]
 
         if not isinstance(func, AIFPLFunction):
@@ -471,6 +477,7 @@ class AIFPLVM:
             return None
 
         # Check arity for bytecode functions
+        # Must keep: arity check (runtime-dependent - depends on what function is called)
         expected_arity = func.bytecode.param_count
         if arity != expected_arity:
             func_name = func.name or "<lambda>"
@@ -502,14 +509,10 @@ class AIFPLVM:
         replacing the current frame with the target frame, achieving true
         tail call optimization with constant stack space for all tail calls.
         """
-        if len(self.stack) < arity + 1:
-            raise AIFPLEvalError(
-                message="Stack underflow in TAIL_CALL_FUNCTION",
-                received=f"Stack has {len(self.stack)} items, need {arity + 1}",
-                suggestion="This is likely a compiler bug"
-            )
+        # Validator guarantees stack has enough values (arity + 1)
 
         # Get function from stack (below arguments)
+        # Must keep type check (runtime-dependent)
         func = self.stack[-(arity + 1)]
 
         if not isinstance(func, AIFPLFunction):
@@ -531,6 +534,7 @@ class AIFPLVM:
             return result  # Return directly (we're in tail position)
 
         # Check arity for bytecode functions
+        # Must keep: arity check (runtime-dependent)
         expected_arity = func.bytecode.param_count
         if arity != expected_arity:
             func_name = func.name or "<lambda>"
@@ -553,6 +557,8 @@ class AIFPLVM:
         arity: int
     ) -> AIFPLValue | None:
         """CALL_BUILTIN: Call builtin function by index."""
+        # Validator guarantees builtin_index is valid and stack has enough values
+        # Direct array access without bounds checking
         # Get arguments from stack
         if arity == 0:
             args = []
@@ -562,7 +568,7 @@ class AIFPLVM:
             args = self.stack[-arity:]
             del self.stack[-arity:]
 
-        # Direct array indexing - O(1) lookup
+        # Direct array indexing - O(1) lookup, no bounds check needed
         func = self._builtin_function_array[builtin_index]
         result = func(args)
         self.stack.append(result)
@@ -576,10 +582,8 @@ class AIFPLVM:
         _arg2: int
     ) -> AIFPLValue | None:
         """RETURN: Pop frame and return value from stack."""
+        # Validator guarantees stack has a value to return
         self.frames.pop()
-        if not self.stack:
-            raise AIFPLEvalError("RETURN with empty stack")
-
         return self.stack.pop()
 
     def _setup_call_frame(self, func: AIFPLFunction) -> None:
