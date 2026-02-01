@@ -490,7 +490,10 @@ class AIFPLVM:
 
         # Remove function from stack
         del self.stack[-(arity + 1)]
-        result = self._call_bytecode_function(func)
+
+        self._setup_call_frame(func)
+
+        result = self._execute_frame()
         self.stack.append(result)
         return None
 
@@ -568,7 +571,19 @@ class AIFPLVM:
         args = [self.stack.pop() for _ in range(arity)]
         args.reverse()
 
-        result = self._call_builtin(builtin_index, args)
+        builtin_name = AIFPLBuiltinRegistry.BUILTIN_TABLE[builtin_index]
+
+        # Check if this builtin is in the registry
+        if not self._builtin_registry.has_function(builtin_name):
+            # Unknown builtin
+            raise AIFPLEvalError(
+                message=f"Unknown builtin function: {builtin_name}",
+                suggestion="This may be an internal error - please report this issue"
+            )
+
+        # Call through the registry
+        func = self._builtin_registry.get_function(builtin_name)
+        result = func(args)
         self.stack.append(result)
         return None
 
@@ -613,37 +628,3 @@ class AIFPLVM:
 
         # Push frame onto stack
         self.frames.append(new_frame)
-
-    def _call_bytecode_function(self, func: AIFPLFunction) -> AIFPLValue:
-        """
-        Call a bytecode function.
-
-        Arguments are already on the stack. The function prologue will pop them
-        and store them in locals.
-        """
-        # Setup frame using helper
-        self._setup_call_frame(func)
-
-        # Execute until return
-        return self._execute_frame()
-
-    def _call_builtin(self, builtin_index: int, args: List[AIFPLValue]) -> AIFPLValue:
-        """
-        Call a builtin function by index.
-
-        This method delegates to the unified builtin registry for regular builtins,
-        and handles special forms (and, or, map, filter, fold, etc.) separately
-        because they require special evaluation semantics.
-        """
-        builtin_name = AIFPLBuiltinRegistry.BUILTIN_TABLE[builtin_index]
-
-        # Check if this builtin is in the registry
-        if not self._builtin_registry.has_function(builtin_name):
-            # Unknown builtin
-            raise AIFPLEvalError(
-                message=f"Unknown builtin function: {builtin_name}",
-                suggestion="This may be an internal error - please report this issue"
-            )
-
-        # Call through the registry
-        return self._builtin_registry.call_builtin(builtin_name, args)

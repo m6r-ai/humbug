@@ -143,22 +143,6 @@ class AIFPLBuiltinRegistry:
 
         return builtins
 
-    def call_builtin(self, name: str, args: List[AIFPLValue]) -> AIFPLValue:
-        """Call a builtin function by name.
-
-        Args:
-            name: Function name
-            args: Already-evaluated arguments
-
-        Returns:
-            Function result
-
-        Raises:
-            KeyError: If function name is not found
-        """
-        func = self.get_function(name)
-        return func(args)
-
     def _is_variadic_builtin(self, name: str) -> bool:
         """
         Determine if a builtin function is variadic.

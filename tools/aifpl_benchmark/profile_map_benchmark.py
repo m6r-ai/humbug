@@ -221,9 +221,9 @@ def main():
         help='AIFPL expression to profile (default: map square over range 1-100)'
     )
     parser.add_argument(
-        '--no-save',
+        '--save',
         action='store_true',
-        help='Do not save detailed stats to file'
+        help='Save detailed stats to file'
     )
 
     args = parser.parse_args()
@@ -231,7 +231,7 @@ def main():
     profiler = profile_runtime_only(args.expression, args.duration, args.dump_bytecode)
 
     # Save detailed stats to file if profiling was run
-    if profiler and not args.no_save:
+    if profiler and args.save:
         output_file = "profile_stats.txt"
         print(f"\nSaving detailed stats to {output_file}...")
         with open(output_file, 'w') as f:
