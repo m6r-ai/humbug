@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
+from aifpl.aifpl_bytecode_validator import validate_bytecode
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLString, AIFPLBoolean, AIFPLList, AIFPLFunction,
@@ -48,10 +49,11 @@ class AIFPLVM:
     Uses a stack-based architecture with lexically-scoped frames.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, validate: bool = True) -> None:
         self.stack: List[AIFPLValue] = []
         self.frames: List[Frame] = []
         self.globals: Dict[str, AIFPLValue] = {}
+        self.validate_bytecode = validate  # Whether to validate bytecode before execution
 
         # Create builtin registry and get function array for fast lookup
         builtin_registry = AIFPLBuiltinRegistry()
@@ -113,6 +115,10 @@ class AIFPLVM:
         Returns:
             Result value
         """
+        # Validate bytecode before execution (if enabled)
+        if self.validate_bytecode:
+            validate_bytecode(code)
+
         self.globals = constants.copy()
         self.globals.update(self._builtin_functions)
         if prelude_functions:
