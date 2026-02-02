@@ -22,7 +22,7 @@ class AIFPLAITool(AITool):
         """
         self._tool = AIFPL()
         self._logger = logging.getLogger("AIFPLAITool")
-        self._module_path = expanded_paths
+        self._relative_module_path = []
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -168,7 +168,7 @@ class AIFPLAITool(AITool):
                 "Module System:\n"
                 "- (import \"module-name\") → load and return a module (compile-time operation)\n"
                 "- Modules are just .aifpl files that return a value (typically an alist of functions)\n"
-                "- Module search path: " + ", ".join(f'"{p}"' for p in self._module_path) + "\n"
+                "- Module search path: " + ", ".join(f'"{p}"' for p in self._relative_module_path) + "\n"
                 "- Modules are cached after first load for performance\n"
                 "- Circular imports are detected and prevented with clear error messages\n"
                 "- Example module (math_utils.aifpl):\n"
@@ -238,7 +238,7 @@ class AIFPLAITool(AITool):
             )
         }
 
-    def set_module_path(self, module_path: list[str]) -> None:
+    def set_module_path(self, module_path: list[str], relative_module_path: list[str]) -> None:
         """
         Update the module search path.
 
@@ -249,18 +249,19 @@ class AIFPLAITool(AITool):
         Args:
             module_path: List of directories to search for modules.
                         Paths will be expanded and resolved.
+            relative_module_path: List of directories relative to the base directory.
         """
-        # Expand paths
-        expanded_paths = []
+        # Expand path
+        expanded_path = []
         for path in module_path:
             expanded = str(Path(path).expanduser().resolve())
-            expanded_paths.append(expanded)
+            expanded_path.append(expanded)
 
         # Update the underlying AIFPL instance (this also clears the cache)
-        self._tool.set_module_path(expanded_paths)
+        self._tool.set_module_path(expanded_path)
 
         # Update our own reference
-        self._module_path = expanded_paths
+        self._relative_module_path = relative_module_path
 
     def _evaluate_expression_sync(self, expression: str) -> str:
         """

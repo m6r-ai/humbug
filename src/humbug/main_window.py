@@ -782,11 +782,6 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # Update AIFPL module path to use the new mindspace's aifpl_modules directory
-        mindspace_path = self._mindspace_manager.mindspace_path()
-        aifpl_modules_path = os.path.join(mindspace_path, "aifpl_modules")
-        self._aifpl_tool.set_module_path([aifpl_modules_path])
-
         # Restore the state of the newly opened mindspace
         self._restore_mindspace_state()
 
@@ -802,7 +797,7 @@ class MainWindow(QMainWindow):
         self._mindspace_view.set_mindspace("")
 
         # Clear AIFPL module path and cache when closing mindspace
-        self._aifpl_tool.set_module_path([])
+        self._aifpl_tool.set_module_path([], [])
         self._mindspace_manager.close_mindspace()
 
     def _save_mindspace_state(self) -> None:
@@ -844,6 +839,11 @@ class MainWindow(QMainWindow):
                 strings.mindspace_error_title,
                 strings.error_restoring_mindspace.format(str(e))
             )
+
+        # Update AIFPL module path to use the new mindspace's aifpl_modules directory
+        mindspace_path = self._mindspace_manager.mindspace_path()
+        aifpl_modules_path = os.path.join(mindspace_path, "aifpl_modules")
+        self._aifpl_tool.set_module_path([aifpl_modules_path], ["aifpl_modules"])
 
     def _close_all_tabs(self) -> bool:
         return self._column_manager.close_all_tabs()
