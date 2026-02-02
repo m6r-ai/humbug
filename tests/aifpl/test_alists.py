@@ -392,17 +392,17 @@ class TestAListFormatting:
     def test_alist_format_simple(self, tool):
         """Test formatting a simple alist."""
         result = tool.evaluate_and_format('(alist (list "name" "Alice") (list "age" 30))')
-        assert result == '(alist (list "name" "Alice") (list "age" 30))'
+        assert result == '{("name" "Alice") ("age" 30)}'
 
     def test_alist_format_empty(self, tool):
         """Test formatting an empty alist."""
         result = tool.evaluate_and_format('(alist)')
-        assert result == '(alist)'
+        assert result == '{}'
 
     def test_alist_format_nested(self, tool):
         """Test formatting alist with nested values."""
         result = tool.evaluate_and_format('(alist (list "items" (list 1 2 3)))')
-        assert result == '(alist (list "items" (1 2 3)))'
+        assert result == '{("items" (1 2 3))}'
 
 
 class TestAListWithFunctionalOperations:

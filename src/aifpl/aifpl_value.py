@@ -322,18 +322,18 @@ class AIFPLAList(AIFPLValue):
         return "alist"
 
     def describe(self) -> str:
-        # Format alist in notation: (alist (list key1 val1) (list key2 val2) ...)
+        # Format alist with curly braces: {(key1 val1) (key2 val2) ...}
         if self.is_empty():
-            return "(alist)"
+            return "{}"
 
         formatted_pairs = []
         for key, value in self.pairs:
             formatted_key = key.describe()
             formatted_value = value.describe()
-            formatted_pairs.append(f"(list {formatted_key} {formatted_value})")
+            formatted_pairs.append(f"({formatted_key} {formatted_value})")
 
         pairs_str = ' '.join(formatted_pairs)
-        return f"(alist {pairs_str})"
+        return f"{{{pairs_str}}}"
 
     def get(self, key: AIFPLValue) -> AIFPLValue | None:
         """Get value by key, returns None if not found."""

@@ -27,6 +27,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Constants**: `pi`, `e`, `true`, `false`
 - **Type promotion**: Automatic promotion from int → float → complex
 - **Comments**: `;` introduces comments
+- **Module system**: Organize code into reusable modules with `import` (see [MODULE_SYSTEM.md](MODULE_SYSTEM.md))
 
 ## Implementation
 

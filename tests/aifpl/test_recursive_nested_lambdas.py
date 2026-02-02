@@ -577,7 +577,7 @@ class TestLetrecLambdasInDataStructures:
         helpers.assert_evaluates_to(
             aifpl,
             '(letrec ((x (alist (list "func" (lambda () x))))) ((alist-get x "func")))',
-            '(alist (list "func" <lambda ()>))'  # Calling lambda returns x (the alist)
+            '{("func" <lambda ()>)}'  # Calling lambda returns x (the alist)
         )
 
     def test_non_self_referential_lambda_in_list(self, aifpl, helpers):
@@ -657,5 +657,5 @@ class TestLetrecLambdasInDataStructuresBytecode:
         helpers.assert_evaluates_to(
             aifpl,
             '(letrec ((x (alist (list "func" (lambda () x))))) ((alist-get x "func")))',
-            '(alist (list "func" <lambda ()>))'
+            '{("func" <lambda ()>)}'
         )
