@@ -2,12 +2,13 @@
 
 import math
 from pathlib import Path
+import os
 from typing import Union, Dict, List
 
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean, AIFPLValue
 from aifpl.aifpl_vm import AIFPLVM
-from aifpl.aifpl_error import AIFPLModuleNotFoundError
+from aifpl.aifpl_error import AIFPLModuleNotFoundError, AIFPLModuleError
 
 
 class AIFPL:
@@ -173,6 +174,10 @@ class AIFPL:
         """
         Find module file in search path.
 
+        Security: Module names must not use absolute or relative path navigation.
+        Only simple names (e.g., "calendar") or subdirectory paths (e.g., "lib/validation")
+        are allowed. This prevents escaping the configured module directories.
+
         Args:
             module_name: Name like "calendar" or "lib/validation"
 
@@ -181,7 +186,25 @@ class AIFPL:
 
         Raises:
             AIFPLModuleNotFoundError: If module not found in search path
+            AIFPLModuleError: If module name contains invalid path components
         """
+        # Reject absolute paths
+        if module_name.startswith('/') or (os.sep != '/' and module_name.startswith(os.sep)):
+            raise AIFPLModuleError(
+                message=f"Absolute module paths are not allowed: '{module_name}'",
+                context="Module names must be relative to the module search path",
+                suggestion="Use a simple module name like 'calendar' or 'lib/validation'"
+            )
+
+        # Reject relative path navigation (. or ..)
+        if module_name.startswith('./') or module_name.startswith('../') or '/./' in module_name or '/../' in module_name:
+            raise AIFPLModuleError(
+                message=f"Relative path navigation is not allowed in module names: '{module_name}'",
+                context="Module names must not contain './' or '../' path components",
+                suggestion="Use a simple module name like 'calendar' or 'lib/validation'"
+            )
+
+        # Search for module in configured paths
         for directory in self.module_path:
             module_path = Path(directory) / f"{module_name}.aifpl"
             if module_path.exists():
@@ -232,3 +255,20 @@ class AIFPL:
     def clear_module_cache(self) -> None:
         """Clear the module cache. Useful for development/testing."""
         self.module_cache.clear()
+
+    def set_module_path(self, module_path: List[str]) -> None:
+        """
+        Set the module search path and clear the module cache.
+
+        This should be called when the base directory changes (e.g., when switching
+        mindspaces in Humbug) to ensure modules are loaded from the correct location
+        and old cached modules are discarded.
+
+        Args:
+            module_path: List of directories to search for modules
+        """
+        self.module_path = module_path
+        # Clear the cache since modules from the old path are no longer valid
+        self.clear_module_cache()
+        # Also clear the loading stack to ensure clean state
+        self.loading_stack.clear()

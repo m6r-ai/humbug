@@ -17,10 +17,10 @@ class ModuleLoader(Protocol):
     def load_module(self, module_name: str) -> AIFPLValue:
         """
         Load and compile a module to a fully resolved AST.
-        
+
         This should compile the module through the full front-end pipeline:
         - Lexing, parsing, semantic analysis, and module resolution
-        
+
         The returned AST should have all imports already resolved.
 
         Args:
@@ -132,7 +132,7 @@ class AIFPLModuleResolver:
             # Load the module (this will recursively compile if the module has imports)
             # The module is compiled through the full front-end pipeline
             module_value = self.module_loader.load_module(module_name)
-            
+
             # Recursively resolve any imports in the loaded module's AST
             # NOTE: If load_module properly compiles the module, this should be a no-op
             # (all imports already resolved). But we keep it for safety.

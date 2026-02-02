@@ -16,26 +16,11 @@ from ai_tool import (
 class AIFPLAITool(AITool):
     """AIFPL calculator tool with LISP-like syntax."""
 
-    def __init__(self, module_path: list[str] | None = None) -> None:
+    def __init__(self) -> None:
         """
         Initialize the AIFPL tool.
-
-        Args:
-            module_path: List of directories to search for modules.
-                        If None, defaults to [".", "./aifpl_modules"]
-                        Relative paths are resolved from the current working directory.
         """
-        if module_path is None:
-            # Default module path: current directory and aifpl_modules subdirectory
-            module_path = [".", "./aifpl_modules"]
-
-        # Expand paths and ensure they exist (for directories that should exist)
-        expanded_paths = []
-        for path in module_path:
-            expanded = str(Path(path).expanduser().resolve())
-            expanded_paths.append(expanded)
-
-        self._tool = AIFPL(module_path=expanded_paths)
+        self._tool = AIFPL()
         self._logger = logging.getLogger("AIFPLAITool")
         self._module_path = expanded_paths
 
@@ -252,6 +237,30 @@ class AIFPLAITool(AITool):
                 description="Evaluate an AIFPL expression"
             )
         }
+
+    def set_module_path(self, module_path: list[str]) -> None:
+        """
+        Update the module search path.
+
+        This should be called when the base directory changes (e.g., when switching
+        mindspaces in Humbug) to ensure modules are loaded from the correct location.
+        The module cache will be automatically cleared.
+
+        Args:
+            module_path: List of directories to search for modules.
+                        Paths will be expanded and resolved.
+        """
+        # Expand paths
+        expanded_paths = []
+        for path in module_path:
+            expanded = str(Path(path).expanduser().resolve())
+            expanded_paths.append(expanded)
+
+        # Update the underlying AIFPL instance (this also clears the cache)
+        self._tool.set_module_path(expanded_paths)
+
+        # Update our own reference
+        self._module_path = expanded_paths
 
     def _evaluate_expression_sync(self, expression: str) -> str:
         """

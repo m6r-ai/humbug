@@ -926,3 +926,87 @@ class TestAIFPLAIToolEmptyList:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             assert result.content == expected
+
+
+class TestAIFPLAIToolModulePath:
+    """Test module path management in AIFPLAITool."""
+
+    def test_default_module_path_is_empty(self):
+        """Test that default module path is empty list when not specified."""
+        tool = AIFPLAITool(module_path=[])
+        assert tool._module_path == []
+
+    def test_custom_module_path_is_expanded(self, tmp_path):
+        """Test that custom module paths are expanded and resolved."""
+        tool = AIFPLAITool(module_path=[str(tmp_path)])
+
+        # Path should be expanded to absolute path
+        assert len(tool._module_path) == 1
+        assert str(tmp_path) in tool._module_path[0]
+
+    def test_set_module_path_updates_path(self, tmp_path):
+        """Test that set_module_path updates the module path."""
+        tool = AIFPLAITool(module_path=["/old/path"])
+
+        new_path = str(tmp_path)
+        tool.set_module_path([new_path])
+
+        # Should have updated path
+        assert len(tool._module_path) == 1
+        assert str(tmp_path) in tool._module_path[0]
+
+    def test_set_module_path_expands_paths(self):
+        """Test that set_module_path expands and resolves paths."""
+        tool = AIFPLAITool()
+
+        # Use home directory expansion
+        tool.set_module_path(["~/test"])
+
+        # Should be expanded (not contain ~)
+        assert "~" not in tool._module_path[0]
+
+    def test_set_module_path_clears_cache(self, tmp_path):
+        """Test that set_module_path clears the module cache."""
+        # Create a module
+        module_file = tmp_path / "test.aifpl"
+        module_file.write_text("(alist (list \"value\" 42))")
+
+        tool = AIFPLAITool(module_path=[str(tmp_path)])
+
+        # Load module to populate cache
+        tool._tool.evaluate('(import "test")')
+        assert "test" in tool._tool.module_cache
+
+        # Change module path
+        tool.set_module_path(["/new/path"])
+
+        # Cache should be cleared
+        assert len(tool._tool.module_cache) == 0
+
+    def test_set_module_path_with_multiple_directories(self, tmp_path):
+        """Test that set_module_path works with multiple directories."""
+        dir1 = tmp_path / "dir1"
+        dir2 = tmp_path / "dir2"
+        dir1.mkdir()
+        dir2.mkdir()
+
+        tool = AIFPLAITool()
+        tool.set_module_path([str(dir1), str(dir2)])
+
+        assert len(tool._module_path) == 2
+        assert any(str(dir1) in path for path in tool._module_path)
+        assert any(str(dir2) in path for path in tool._module_path)
+
+    def test_module_path_persists_after_evaluation(self, tmp_path):
+        """Test that module path persists after evaluations."""
+        module_file = tmp_path / "test.aifpl"
+        module_file.write_text("(alist (list \"value\" 42))")
+
+        tool = AIFPLAITool(module_path=[str(tmp_path)])
+        original_path = tool._module_path.copy()
+
+        # Evaluate something
+        tool._tool.evaluate('(import "test")')
+
+        # Path should be unchanged
+        assert tool._module_path == original_path

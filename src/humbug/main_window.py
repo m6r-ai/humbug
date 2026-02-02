@@ -407,8 +407,10 @@ class MainWindow(QMainWindow):
         self._command_registry.register_command(ShellCommandHelp(self._command_registry))
 
         self._ai_tool_manager = AIToolManager()
+        # Store AIFPL tool instance so we can update its module path when mindspace changes
+        self._aifpl_tool = AIFPLAITool()
         self._ai_tool_manager.register_tool(
-            AIFPLAITool(), "AIFPL: evaluates expressions using AI Functional Programming Language syntax"
+            self._aifpl_tool, "AIFPL: evaluates expressions using AI Functional Programming Language syntax"
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
@@ -780,6 +782,11 @@ class MainWindow(QMainWindow):
             )
             return
 
+        # Update AIFPL module path to use the new mindspace's aifpl_modules directory
+        mindspace_path = self._mindspace_manager.mindspace_path()
+        aifpl_modules_path = os.path.join(mindspace_path, "aifpl_modules")
+        self._aifpl_tool.set_module_path([aifpl_modules_path])
+
         # Restore the state of the newly opened mindspace
         self._restore_mindspace_state()
 
@@ -793,6 +800,9 @@ class MainWindow(QMainWindow):
             return
 
         self._mindspace_view.set_mindspace("")
+
+        # Clear AIFPL module path and cache when closing mindspace
+        self._aifpl_tool.set_module_path([])
         self._mindspace_manager.close_mindspace()
 
     def _save_mindspace_state(self) -> None:

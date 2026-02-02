@@ -55,19 +55,19 @@ class AIFPLCompiler:
     def compile_to_resolved_ast(self, source: str) -> AIFPLValue:
         """
         Compile source to fully resolved AST.
-        
+
         This runs the front-end compilation stages:
         - Lexing
         - Parsing
         - Semantic analysis
         - Module resolution (including recursive module compilation)
-        
+
         The result is a fully resolved AST ready for desugaring and backend compilation.
         This method is used by the module system to compile imported modules.
-        
+
         Args:
             source: AIFPL source code as a string
-            
+
         Returns:
             Fully resolved AST (all imports replaced with module ASTs)
         """
