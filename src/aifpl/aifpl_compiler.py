@@ -9,7 +9,7 @@ from typing import List, Optional
 from aifpl.aifpl_value import AIFPLValue
 from aifpl.aifpl_bytecode import CodeObject
 from aifpl.aifpl_codegen import AIFPLCodeGen
-from aifpl.aifpl_constant_folding_pass import AIFPLConstantFoldingPass
+from aifpl.aifpl_constant_folder import AIFPLConstantFolder
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_ir_builder import AIFPLIRBuilder
 from aifpl.aifpl_lexer import AIFPLLexer
@@ -46,14 +46,10 @@ class AIFPLCompiler:
         self.ast_passes: List[AIFPLOptimizationPass] = []
         if optimize:
             self.ast_passes = [
-                AIFPLConstantFoldingPass(),
-                # Future: DeadCodeEliminationPass(),
+                AIFPLConstantFolder(),
             ]
 
         self.ir_builder = AIFPLIRBuilder()
-
-        # Future: self.ir_optimizer = AIFPLIROptimizer() if optimize else None
-        # Future: self.ir_passes = [...]
         self.codegen = AIFPLCodeGen()
 
     def compile_to_resolved_ast(self, source: str) -> AIFPLValue:

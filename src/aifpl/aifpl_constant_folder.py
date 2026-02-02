@@ -17,7 +17,7 @@ from aifpl.aifpl_value import (
 )
 
 
-class AIFPLConstantFoldingPass(AIFPLOptimizationPass):
+class AIFPLConstantFolding(AIFPLOptimizationPass):
     """
     Fold constant expressions at compile time.
 
