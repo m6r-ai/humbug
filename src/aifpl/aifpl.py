@@ -1,5 +1,6 @@
 """Main AIFPL (AI Functional Programming Language) class with enhanced error messages."""
 
+import hashlib
 import math
 from pathlib import Path
 import os
@@ -105,6 +106,7 @@ class AIFPL:
 
         # Module system state
         self.module_cache: Dict[str, AIFPLValue] = {}  # module_name -> alist
+        self.module_hashes: Dict[str, str] = {}  # module_name -> sha256 hex digest
         self.loading_stack: List[str] = []  # Track currently-loading modules for circular detection
 
         # Compiler and VM
@@ -170,6 +172,24 @@ class AIFPL:
 
     # Module System Implementation (ModuleLoader interface)
 
+    def _compute_file_hash(self, file_path: str) -> str:
+        """
+        Compute SHA256 hash of file content.
+
+        Uses chunked reading for memory efficiency with large files.
+
+        Args:
+            file_path: Path to file to hash
+
+        Returns:
+            SHA256 hash as hex string
+        """
+        hasher = hashlib.sha256()
+        with open(file_path, 'rb') as f:
+            while chunk := f.read(8192):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+
     def resolve_module(self, module_name: str) -> str:
         """
         Find module file in search path.
@@ -221,7 +241,8 @@ class AIFPL:
 
         This implements the ModuleLoader interface. It compiles the module through
         the full front-end pipeline (lex, parse, semantic analysis, module resolution).
-        The result is cached for subsequent imports.
+        The result is cached for subsequent imports. Cache is automatically invalidated
+        when the module file content changes (detected via SHA256 hash).
 
         Args:
             module_name: Name of module to load
@@ -234,13 +255,36 @@ class AIFPL:
             AIFPLCircularImportError: If circular dependency detected (by module resolver)
             AIFPLError: If module compilation fails
         """
-        # Check cache
-        # Cache contains fully resolved ASTs (cached by module resolver after resolution)
-        if module_name in self.module_cache:
-            return self.module_cache[module_name]
-
         # Resolve to file path
-        module_path = self.resolve_module(module_name)
+        try:
+            module_path = self.resolve_module(module_name)
+
+        except AIFPLModuleNotFoundError:
+            # File doesn't exist - clean up any stale cache entries
+            self.module_cache.pop(module_name, None)
+            self.module_hashes.pop(module_name, None)
+            raise
+
+        # Compute current file hash for cache invalidation
+        try:
+            current_hash = self._compute_file_hash(module_path)
+
+        except OSError:
+            # File disappeared after resolve - clean up cache and raise
+            self.module_cache.pop(module_name, None)
+            self.module_hashes.pop(module_name, None)
+            raise AIFPLModuleNotFoundError(
+                module_name=module_name,
+                search_paths=self.module_path
+            )
+
+        # Check cache validity using content hash
+        if module_name in self.module_cache:
+            cached_hash = self.module_hashes.get(module_name)
+            if cached_hash == current_hash:
+                # Cache is valid - return cached AST
+                return self.module_cache[module_name]
+            # Cache is stale - will reload below
 
         # Load source code
         with open(module_path, 'r', encoding='utf-8') as f:
@@ -250,11 +294,39 @@ class AIFPL:
         # This will recursively handle any imports within this module
         resolved_ast = self.compiler.compile_to_resolved_ast(code)
 
+        # Update hash after successful compilation
+        # Note: module_cache is updated by module_resolver after resolution
+        self.module_hashes[module_name] = current_hash
+
         return resolved_ast
 
     def clear_module_cache(self) -> None:
-        """Clear the module cache. Useful for development/testing."""
+        """Clear the module cache and hashes. Useful for development/testing."""
         self.module_cache.clear()
+        self.module_hashes.clear()
+
+    def invalidate_module(self, module_name: str) -> None:
+        """
+        Invalidate a specific module in the cache, forcing reload on next import.
+
+        Args:
+            module_name: Name of module to invalidate (e.g., "calendar" or "lib/validation")
+        """
+        self.module_cache.pop(module_name, None)
+        self.module_hashes.pop(module_name, None)
+
+    def reload_module(self, module_name: str) -> AIFPLValue:
+        """
+        Force reload a module, bypassing cache.
+
+        Args:
+            module_name: Name of module to reload
+
+        Returns:
+            Fully resolved AST of the reloaded module
+        """
+        self.invalidate_module(module_name)
+        return self.load_module(module_name)
 
     def set_module_path(self, module_path: List[str]) -> None:
         """
