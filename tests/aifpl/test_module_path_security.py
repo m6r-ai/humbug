@@ -219,7 +219,7 @@ class TestModulePathUpdate:
 
         aifpl.set_module_path(["/new/path"])
 
-        assert aifpl.module_path == ["/new/path"]
+        assert aifpl.module_path() == ["/new/path"]
 
     def test_set_module_path_clears_cache(self, tmp_path):
         """Test that set_module_path clears the module cache."""
@@ -295,9 +295,9 @@ class TestModulePathUpdate:
 
         aifpl.set_module_path([str(dir1), str(dir2)])
 
-        assert len(aifpl.module_path) == 2
-        assert str(dir1) in aifpl.module_path
-        assert str(dir2) in aifpl.module_path
+        assert len(aifpl.module_path()) == 2
+        assert str(dir1) in aifpl.module_path()
+        assert str(dir2) in aifpl.module_path()
 
     def test_set_module_path_with_empty_list(self):
         """Test that set_module_path works with empty list."""
@@ -306,7 +306,7 @@ class TestModulePathUpdate:
         # Should not raise
         aifpl.set_module_path([])
 
-        assert aifpl.module_path == []
+        assert aifpl.module_path() == []
 
 
 class TestCacheClearingBehavior:

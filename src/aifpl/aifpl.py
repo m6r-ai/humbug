@@ -92,17 +92,14 @@ class AIFPL:
         cls._prelude_cache = bytecode_prelude
         return bytecode_prelude
 
-    def __init__(self, max_depth: int = 1000, module_path: List[str] | None = None):
+    def __init__(self, module_path: List[str] | None = None):
         """
         Initialize AIFPL calculator.
 
         Args:
-            max_depth: Maximum recursion depth (kept for compatibility, may be removed in future)
-                      Note: VM uses tail-call optimization, so deep recursion is supported
             module_path: List of directories to search for modules (default: ["."])
         """
-        self.max_depth = max_depth
-        self.module_path = module_path or ["."]
+        self._module_path = module_path or ["."]
 
         # Module system state
         self.module_cache: Dict[str, AIFPLValue] = {}  # module_name -> alist
@@ -225,14 +222,14 @@ class AIFPL:
             )
 
         # Search for module in configured paths
-        for directory in self.module_path:
+        for directory in self._module_path:
             module_path = Path(directory) / f"{module_name}.aifpl"
             if module_path.exists():
                 return str(module_path)
 
         raise AIFPLModuleNotFoundError(
             module_name=module_name,
-            search_paths=self.module_path
+            search_paths=self._module_path
         )
 
     def load_module(self, module_name: str) -> AIFPLValue:
@@ -269,14 +266,14 @@ class AIFPL:
         try:
             current_hash = self._compute_file_hash(module_path)
 
-        except OSError:
+        except OSError as e:
             # File disappeared after resolve - clean up cache and raise
             self.module_cache.pop(module_name, None)
             self.module_hashes.pop(module_name, None)
             raise AIFPLModuleNotFoundError(
                 module_name=module_name,
-                search_paths=self.module_path
-            )
+                search_paths=self._module_path
+            ) from e
 
         # Check cache validity using content hash
         if module_name in self.module_cache:
@@ -339,8 +336,17 @@ class AIFPL:
         Args:
             module_path: List of directories to search for modules
         """
-        self.module_path = module_path
+        self._module_path = module_path
         # Clear the cache since modules from the old path are no longer valid
         self.clear_module_cache()
         # Also clear the loading stack to ensure clean state
         self.loading_stack.clear()
+
+    def module_path(self) -> List[str]:
+        """
+        Get the current module search path.
+
+        Returns:
+            List of directories in the module search path
+        """
+        return self._module_path

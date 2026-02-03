@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from aifpl import AIFPL, AIFPLError
 from ai_tool import (
@@ -22,7 +22,7 @@ class AIFPLAITool(AITool):
         """
         self._tool = AIFPL()
         self._logger = logging.getLogger("AIFPLAITool")
-        self._relative_module_path = []
+        self._module_path: List[str] = []
 
     def get_definition(self) -> AIToolDefinition:
         """
@@ -168,7 +168,6 @@ class AIFPLAITool(AITool):
                 "Module System:\n"
                 "- (import \"module-name\") → load and return a module (compile-time operation)\n"
                 "- Modules are just .aifpl files that return a value (typically an alist of functions)\n"
-                "- Module search path: " + ", ".join(f'"{p}"' for p in self._relative_module_path) + "\n"
                 "- Modules are cached after first load for performance\n"
                 "- Circular imports are detected and prevented with clear error messages\n"
                 "- Example module (math_utils.aifpl):\n"
@@ -182,9 +181,8 @@ class AIFPLAITool(AITool):
                 "    ((alist-get math \"square\") 5))  → 25\n"
                 "- Modules can import other modules (transitive dependencies)\n"
                 "- Private functions: functions not in the exported alist are private to the module\n"
-                "- Module names can include subdirectories: (import \"lib/helpers\")\n"
-                "- Available modules can be found in the module search path directories\n"
-                "- To create a new module, write AIFPL code to a .aifpl file in the module path\n\n"
+                "- Module names can include subdirectories: (e.g. import \"lib/helpers\")\n"
+                "- Available modules can be found in the module search path directories\n\n"
 
                 "Key Features:\n"
                 "- Pure functional: no side effects, immutable data\n"
@@ -238,7 +236,7 @@ class AIFPLAITool(AITool):
             )
         }
 
-    def set_module_path(self, module_path: list[str], relative_module_path: list[str]) -> None:
+    def set_module_path(self, module_path: list[str]) -> None:
         """
         Update the module search path.
 
@@ -249,7 +247,6 @@ class AIFPLAITool(AITool):
         Args:
             module_path: List of directories to search for modules.
                         Paths will be expanded and resolved.
-            relative_module_path: List of directories relative to the base directory.
         """
         # Expand path
         expanded_path = []
@@ -261,7 +258,16 @@ class AIFPLAITool(AITool):
         self._tool.set_module_path(expanded_path)
 
         # Update our own reference
-        self._relative_module_path = relative_module_path
+        self._module_path = module_path
+
+    def module_path(self) -> List[str]:
+        """
+        Get the current module search path.
+
+        Returns:
+            List of directories in the module search path
+        """
+        return self._module_path
 
     def _evaluate_expression_sync(self, expression: str) -> str:
         """

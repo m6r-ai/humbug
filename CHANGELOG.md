@@ -10,6 +10,7 @@ New features:
 - Introduced `integer`, `float`, and `complex` types into AIFPL and removed `number`, allowing optimizations.
 - Added support for complex number literals.
 - Signficantly improved the error reporting for AIFPL tokenization and parsing errors.
+- Added an `import` special form to AIFPL to support composing software into modules.
 
 Bug fixes:
 
