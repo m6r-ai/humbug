@@ -2,7 +2,7 @@
 
 import difflib
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, cast
+from typing import List, Dict, Any, cast, Optional, Protocol
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
@@ -12,6 +12,17 @@ from aifpl.aifpl_value import (
     AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLFunction,
 )
 
+
+class AIFPLTraceWatcher(Protocol):
+    """Protocol for AIFPL trace watchers."""
+    def on_trace(self, message: str) -> None:
+        """
+        Called when a trace message is emitted.
+        
+        Args:
+            message: The trace message as a string (AIFPL formatted)
+        """
+        ...
 
 @dataclass
 class TailCall:
@@ -55,6 +66,9 @@ class AIFPLVM:
         self.globals: Dict[str, AIFPLValue] = {}
         self.validate_bytecode = validate  # Whether to validate bytecode before execution
 
+        # Trace watcher for debugging support
+        self.trace_watcher: Optional[AIFPLTraceWatcher] = None
+
         # Create builtin registry and get function array for fast lookup
         builtin_registry = AIFPLBuiltinRegistry()
 
@@ -67,6 +81,29 @@ class AIFPLVM:
         # Build dispatch table for fast opcode execution
         # This is a critical optimization: jump table dispatch is 2-3x faster than if/elif chains
         self._dispatch_table = self._build_dispatch_table()
+
+    def set_trace_watcher(self, watcher: Optional[AIFPLTraceWatcher]) -> None:
+        """
+        Set the trace watcher (replaces any existing watcher).
+        
+        Args:
+            watcher: AIFPLTraceWatcher instance or None to disable tracing
+        """
+        self.trace_watcher = watcher
+
+    def _emit_trace(self, message: AIFPLValue) -> None:
+        """
+        Emit a trace event to the watcher.
+        
+        Args:
+            message: The AIFPL value to trace
+        """
+        if self.trace_watcher is None:
+            return  # Fast path: no watcher, no work
+
+        # Convert message to string using describe() and notify watcher
+        message_str = message.describe()
+        self.trace_watcher.on_trace(message_str)
 
     def _build_dispatch_table(self) -> List[Any]:
         """
@@ -93,6 +130,7 @@ class AIFPLVM:
         table[Opcode.CALL_BUILTIN] = self._op_call_builtin
         table[Opcode.TAIL_CALL_FUNCTION] = self._op_tail_call_function
         table[Opcode.RETURN] = self._op_return
+        table[Opcode.TRACE_EMIT] = self._op_trace_emit
         return table
 
     def execute(
@@ -569,6 +607,24 @@ class AIFPLVM:
         # Validator guarantees stack has a value to return
         self.frames.pop()
         return self.stack.pop()
+
+    def _op_trace_emit(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """TRACE_EMIT: Pop value from stack and emit to trace watcher."""
+        # Pop the message from stack
+        message = self.stack.pop()
+
+        # Emit trace if watcher is available
+        if self.trace_watcher:
+            self._emit_trace(message)
+
+        # Continue execution (no return value)
+        return None
 
     def _setup_call_frame(self, func: AIFPLFunction) -> None:
         """

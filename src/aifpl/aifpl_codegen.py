@@ -9,7 +9,7 @@ from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
 from aifpl.aifpl_ir import (
     AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRAnd, AIFPLIROr,
     AIFPLIRQuote, AIFPLIRError, AIFPLIRLet, AIFPLIRLetrec, AIFPLIRLambda, AIFPLIRCall,
-    AIFPLIREmptyList, AIFPLIRReturn
+    AIFPLIREmptyList, AIFPLIRReturn, AIFPLIRTrace
 )
 from aifpl.aifpl_value import AIFPLValue
 
@@ -150,6 +150,9 @@ class AIFPLCodeGen:
 
         elif isinstance(plan, AIFPLIRReturn):
             self._generate_return(plan, ctx)
+
+        elif isinstance(plan, AIFPLIRTrace):
+            self._generate_trace(plan, ctx)
 
         else:
             raise ValueError(f"Unknown plan type: {type(plan)}")
@@ -402,3 +405,20 @@ class AIFPLCodeGen:
         self._generate_expr(plan.value_plan, ctx)
         # Emit RETURN instruction
         ctx.emit(Opcode.RETURN)
+
+    def _generate_trace(self, plan: AIFPLIRTrace, ctx: AIFPLCodeGenContext) -> None:
+        """
+        Generate code for a trace expression.
+
+        Emits each message via TRACE_EMIT, then generates code for the value expression.
+        The value expression's result is left on the stack.
+        """
+        # Generate and emit each message
+        for message_plan in plan.message_plans:
+            # Generate code to evaluate the message
+            self._generate_expr(message_plan, ctx)
+            # Emit TRACE_EMIT (pops value, emits to watcher)
+            ctx.emit(Opcode.TRACE_EMIT)
+
+        # Generate code for the return value (leaves result on stack)
+        self._generate_expr(plan.value_plan, ctx)

@@ -64,6 +64,10 @@ class AIFPLDesugarer:
                 # Quote: don't desugar the quoted expression
                 return expr
 
+            if name == 'trace':
+                # Trace is a special form - handle it
+                return self._desugar_trace(expr)
+
         # Regular function call - desugar all elements
         return self._desugar_call(expr)
 
@@ -127,6 +131,28 @@ class AIFPLDesugarer:
         desugared_body = self.desugar(body)
 
         return AIFPLList((lambda_symbol, params_list, desugared_body))
+
+    def _desugar_trace(self, expr: AIFPLList) -> AIFPLValue:
+        """
+        Desugar trace special form.
+
+        (trace msg1 msg2 ... msgN expr)
+
+        Trace is kept as-is but with desugared subexpressions.
+        The IR builder will handle creating the trace IR node.
+        """
+        if expr.length() < 3:  # (trace msg expr) minimum
+            raise AIFPLEvalError(
+                message="trace requires at least 2 arguments (message, expr)",
+                suggestion="Usage: (trace \"message\" expression)"
+            )
+
+        # Desugar all subexpressions
+        desugared_elements: List[AIFPLValue] = [AIFPLSymbol('trace')]
+        for elem in expr.elements[1:]:  # Skip 'trace' symbol
+            desugared_elements.append(self.desugar(elem))
+
+        return AIFPLList(tuple(desugared_elements))
 
     def _desugar_call(self, expr: AIFPLList) -> AIFPLValue:
         """Desugar function call by desugaring all elements."""

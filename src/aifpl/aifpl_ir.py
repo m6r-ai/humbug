@@ -117,6 +117,13 @@ class AIFPLIRReturn:
     value_plan: 'AIFPLIRExpr'
 
 
+@dataclass
+class AIFPLIRTrace:
+    """Plan for compiling a trace expression."""
+    message_plans: List['AIFPLIRExpr']  # Messages to emit
+    value_plan: 'AIFPLIRExpr'           # Expression to evaluate and return
+
+
 # Union type for all expression plans
 AIFPLIRExpr = Union[
     AIFPLIRConstant,
@@ -132,4 +139,5 @@ AIFPLIRExpr = Union[
     AIFPLIRCall,
     AIFPLIREmptyList,
     AIFPLIRReturn,
+    AIFPLIRTrace,
 ]

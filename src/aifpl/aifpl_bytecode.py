@@ -38,6 +38,9 @@ class Opcode(IntEnum):
     CALL_BUILTIN = auto()    # Call builtin: CALL_BUILTIN builtin_index arity
     RETURN = auto()          # Return from function
 
+    # Debugging
+    TRACE_EMIT = auto()      # Emit trace: TRACE_EMIT (pops value, emits to watcher)
+
 
 @dataclass
 class Instruction:
@@ -58,7 +61,7 @@ class Instruction:
 
         # Opcodes with no arguments
         no_arg_opcodes = {
-            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN
+            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.TRACE_EMIT
         }
 
         # Opcodes with two arguments

@@ -8,7 +8,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_ir import (
     AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRLet, AIFPLIRLetrec,
     AIFPLIRLambda, AIFPLIRCall, AIFPLIRQuote, AIFPLIRError, AIFPLIREmptyList,
-    AIFPLIRAnd, AIFPLIROr, AIFPLIRReturn
+    AIFPLIRAnd, AIFPLIROr, AIFPLIRReturn, AIFPLIRTrace
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_value import (
@@ -237,6 +237,9 @@ class AIFPLIRBuilder:
             if name == 'error':
                 return self._analyze_error(expr)
 
+            if name == 'trace':
+                return self._analyze_trace(expr, ctx, in_tail_position)
+
         # Regular function call
         return self._analyze_function_call(expr, ctx, in_tail_position)
 
@@ -251,6 +254,24 @@ class AIFPLIRBuilder:
         assert len(expr.elements) == 2, "Error expression should have exactly 2 elements"
         message = expr.elements[1]
         return AIFPLIRError(message=message)
+
+    def _analyze_trace(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRTrace:
+        """
+        Analyze a trace expression.
+
+        (trace msg1 msg2 ... msgN expr)
+        """
+        assert len(expr.elements) >= 3, "Trace expression should have at least 3 elements (trace msg expr)"
+
+        # All elements except first (trace) and last (return expr) are messages
+        messages = expr.elements[1:-1]
+        return_expr = expr.elements[-1]
+
+        # Analyze message expressions and return expression
+        message_plans = [self._analyze_expression(msg, ctx, in_tail_position=False) for msg in messages]
+        value_plan = self._analyze_expression(return_expr, ctx, in_tail_position)
+
+        return AIFPLIRTrace(message_plans=message_plans, value_plan=value_plan)
 
     def _analyze_if(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRIf:
         """Analyze an if expression."""

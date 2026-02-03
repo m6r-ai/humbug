@@ -8,7 +8,6 @@ import pytest
 from aifpl import AIFPLInteger, AIFPLFloat, AIFPLComplex
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_parser import AIFPLParser
-from aifpl.aifpl_builtins import is_numeric_type
 
 
 class TestParserWithTypedNumbers:
@@ -57,37 +56,6 @@ class TestParserWithTypedNumbers:
         # The expression itself is a list, but we can check the numbers in it
         assert result.elements[1].value == 3
         assert isinstance(result.elements[1], AIFPLInteger)
-
-
-class TestNumericHelpers:
-    """Test helper functions for numeric type compatibility."""
-    
-    def test_is_numeric_type_old(self):
-        """is_numeric_type should recognize typed numbers."""
-        val = AIFPLInteger(42)
-        assert is_numeric_type(val)
-    
-    def test_is_numeric_type_integer(self):
-        """is_numeric_type should recognize AIFPLInteger."""
-        val = AIFPLInteger(42)
-        assert is_numeric_type(val)
-    
-    def test_is_numeric_type_float(self):
-        """is_numeric_type should recognize AIFPLFloat."""
-        val = AIFPLFloat(3.14)
-        assert is_numeric_type(val)
-    
-    def test_is_numeric_type_complex(self):
-        """is_numeric_type should recognize AIFPLComplex."""
-        val = AIFPLComplex(3+4j)
-        assert is_numeric_type(val)
-    
-    def test_is_numeric_type_non_numeric(self):
-        """is_numeric_type should return False for non-numeric types."""
-        from aifpl import AIFPLString
-        val = AIFPLString("hello")
-        assert not is_numeric_type(val)
-
 
 
 class TestTypePredicatesWithNewTypes:

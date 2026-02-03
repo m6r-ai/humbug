@@ -43,7 +43,7 @@ class ParenStackFrame:
 class AIFPLParser:
     """Parses tokens into an Abstract Syntax Tree using pure list representation with detailed error messages."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize parser with tokens and original expression.
 

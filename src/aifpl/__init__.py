@@ -17,6 +17,11 @@ from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_parser import AIFPLParser
 
+# Trace watchers (for debugging)
+from aifpl.aifpl_vm import AIFPLTraceWatcher
+from aifpl.aifpl_trace import (
+    AIFPLStdoutTraceWatcher, AIFPLFileTraceWatcher, AIFPLBufferingTraceWatcher
+)
 
 __all__ = [
     # Main API
@@ -30,5 +35,9 @@ __all__ = [
     "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList", "AIFPLAList", "AIFPLFunction",
 
     # Lower-level components
-    "AIFPLToken", "AIFPLTokenType", "AIFPLLexer", "AIFPLParser"
+    "AIFPLToken", "AIFPLTokenType", "AIFPLLexer", "AIFPLParser",
+
+    # Trace watchers
+    "AIFPLTraceWatcher", "AIFPLStdoutTraceWatcher",
+    "AIFPLFileTraceWatcher", "AIFPLBufferingTraceWatcher",
 ]

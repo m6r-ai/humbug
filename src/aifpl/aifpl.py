@@ -4,12 +4,13 @@ import hashlib
 import math
 from pathlib import Path
 import os
-from typing import Union, Dict, List
+from typing import Union, Dict, List, Iterator
+from contextlib import contextmanager
 
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean, AIFPLValue
-from aifpl.aifpl_vm import AIFPLVM
-from aifpl.aifpl_error import AIFPLModuleNotFoundError, AIFPLModuleError
+from aifpl.aifpl_vm import AIFPLVM, AIFPLTraceWatcher
+from aifpl.aifpl_error import AIFPLModuleNotFoundError, AIFPLModuleError, AIFPLCircularImportError
 
 
 class AIFPL:
@@ -128,7 +129,6 @@ class AIFPL:
 
         # Execute
         result = self.vm.execute(code, self.CONSTANTS, self._prelude)
-
         return result
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, AIFPLFunction]:
@@ -169,6 +169,37 @@ class AIFPL:
 
     # Module System Implementation (ModuleLoader interface)
 
+    @contextmanager
+    def begin_loading(self, module_name: str) -> Iterator[None]:
+        """
+        Begin loading a module with circular import detection.
+
+        This context manager tracks the module in the loading stack and
+        automatically cleans up when exiting (even on exception).
+
+        Args:
+            module_name: Name of module being loaded
+
+        Yields:
+            None
+
+        Raises:
+            AIFPLCircularImportError: If this module is already being loaded
+        """
+        # Check for circular dependency BEFORE adding to stack
+        if module_name in self.loading_stack:
+            cycle = self.loading_stack + [module_name]
+            raise AIFPLCircularImportError(import_chain=cycle)
+
+        # Add to loading stack
+        self.loading_stack.append(module_name)
+        try:
+            yield
+
+        finally:
+            # Always remove from stack, even if loading fails
+            self.loading_stack.pop()
+
     def _compute_file_hash(self, file_path: str) -> str:
         """
         Compute SHA256 hash of file content.
@@ -185,6 +216,7 @@ class AIFPL:
         with open(file_path, 'rb') as f:
             while chunk := f.read(8192):
                 hasher.update(chunk)
+
         return hasher.hexdigest()
 
     def resolve_module(self, module_name: str) -> str:
@@ -241,6 +273,9 @@ class AIFPL:
         The result is cached for subsequent imports. Cache is automatically invalidated
         when the module file content changes (detected via SHA256 hash).
 
+        Note: Callers should use begin_loading() before calling this method to enable
+        circular import detection. The module resolver handles this automatically.
+
         Args:
             module_name: Name of module to load
 
@@ -249,7 +284,7 @@ class AIFPL:
 
         Raises:
             AIFPLModuleNotFoundError: If module file not found
-            AIFPLCircularImportError: If circular dependency detected (by module resolver)
+            AIFPLCircularImportError: If circular dependency detected (via begin_loading)
             AIFPLError: If module compilation fails
         """
         # Resolve to file path
@@ -288,11 +323,13 @@ class AIFPL:
             code = f.read()
 
         # Compile through the front-end pipeline (lex, parse, analyze, resolve imports)
-        # This will recursively handle any imports within this module
+        # This will recursively handle any imports within this module.
+        # The module resolver will call begin_loading() for each nested import,
+        # which provides circular import detection.
         resolved_ast = self.compiler.compile_to_resolved_ast(code)
 
-        # Update hash after successful compilation
-        # Note: module_cache is updated by module_resolver after resolution
+        # Cache the resolved module and update hash after successful compilation
+        self.module_cache[module_name] = resolved_ast
         self.module_hashes[module_name] = current_hash
 
         return resolved_ast
@@ -350,3 +387,14 @@ class AIFPL:
             List of directories in the module search path
         """
         return self._module_path
+
+    def set_trace_watcher(self, watcher: AIFPLTraceWatcher | None) -> None:
+        """
+        Set the trace watcher for this AIFPL instance.
+
+        The trace watcher receives messages from (trace ...) calls during evaluation.
+
+        Args:
+            watcher: AIFPLTraceWatcher instance or None to disable tracing
+        """
+        self.vm.set_trace_watcher(watcher)

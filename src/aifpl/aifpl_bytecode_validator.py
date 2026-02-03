@@ -127,6 +127,9 @@ class BytecodeValidator:
             Opcode.TAIL_CALL_FUNCTION: (-1, 0),  # Special: pops arity+1, doesn't push (tail position)
             Opcode.CALL_BUILTIN: (-1, 1),  # Special: pops arity, pushes 1
             Opcode.RETURN: (1, 0),  # Pops 1, exits function
+
+            # Trace debug
+            Opcode.TRACE_EMIT: (1, 0),  # Pops 1 (message), pushes 0
         }
 
     def validate(self, code: CodeObject) -> None:

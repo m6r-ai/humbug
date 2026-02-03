@@ -5,14 +5,40 @@ replaces them with the loaded module's alist value. It uses a ModuleLoader
 interface to delegate the actual module loading logic.
 """
 
-from typing import Protocol
+from typing import Protocol, ContextManager
 
-from aifpl.aifpl_error import AIFPLCircularImportError, AIFPLModuleError
+from aifpl.aifpl_error import AIFPLModuleError
 from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLString
 
 
 class ModuleLoader(Protocol):
-    """Interface for loading AIFPL modules at compile-time."""
+    """Interface for loading AIFPL modules at compile-time.
+
+    The module loader is responsible for:
+    - Locating module files in the search path
+    - Reading and compiling module source code
+    - Caching compiled modules
+    - Detecting and preventing circular import dependencies
+    """
+
+    def begin_loading(self, module_name: str) -> ContextManager[None]:
+        """
+        Begin loading a module and return a context manager for tracking.
+
+        This method is called before load_module() to enable circular import detection.
+        The context manager should track the module in a loading stack and automatically
+        clean up when exiting (even on exception).
+
+        Args:
+            module_name: Name of module being loaded
+
+        Returns:
+            Context manager that tracks the loading state
+
+        Raises:
+            AIFPLCircularImportError: If this module is already being loaded (circular dependency)
+        """
+        ...
 
     def load_module(self, module_name: str) -> AIFPLValue:
         """
@@ -23,6 +49,9 @@ class ModuleLoader(Protocol):
 
         The returned AST should have all imports already resolved.
 
+        Note: Callers should use begin_loading() before calling this method
+        to enable circular import detection.
+
         Args:
             module_name: Name of module (e.g., "calendar", "lib/validation")
 
@@ -31,6 +60,7 @@ class ModuleLoader(Protocol):
 
         Raises:
             AIFPLModuleError: If module not found or fails to load
+            AIFPLCircularImportError: If circular dependency detected
         """
         ...
 
@@ -116,35 +146,9 @@ class AIFPLModuleResolver:
                 suggestion="Module loader must be provided to compiler to use import"
             )
 
-        # Check for circular dependency BEFORE loading
-        # The module loader should have a loading_stack attribute for tracking
-        if hasattr(self.module_loader, 'loading_stack'):
-            if module_name in self.module_loader.loading_stack:
-                cycle = self.module_loader.loading_stack + [module_name]
-                raise AIFPLCircularImportError(import_chain=cycle)
-
-        # Mark as currently resolving (for circular dependency detection)
-        # Must be done BEFORE loading to catch circular imports during compilation
-        if hasattr(self.module_loader, 'loading_stack'):
-            self.module_loader.loading_stack.append(module_name)
-
-        try:
+        # Use the module loader's context manager for circular import detection
+        with self.module_loader.begin_loading(module_name):
             # Load the module (this will recursively compile if the module has imports)
-            # The module is compiled through the full front-end pipeline
-            module_value = self.module_loader.load_module(module_name)
-
-            # Recursively resolve any imports in the loaded module's AST
-            # NOTE: If load_module properly compiles the module, this should be a no-op
-            # (all imports already resolved). But we keep it for safety.
-            resolved_module = self.resolve(module_value)
-
-            # Cache the resolved module
-            if hasattr(self.module_loader, 'module_cache'):
-                self.module_loader.module_cache[module_name] = resolved_module
-
-            return resolved_module
-
-        finally:
-            # Always pop from stack, even if resolution fails
-            if hasattr(self.module_loader, 'loading_stack'):
-                self.module_loader.loading_stack.pop()
+            # The module loader handles circular detection and will raise AIFPLCircularImportError if needed
+            # The returned AST has all imports already resolved
+            return self.module_loader.load_module(module_name)

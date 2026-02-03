@@ -1,5 +1,7 @@
 """Enhanced exception classes for AIFPL (AI Functional Programming Language) with detailed context."""
 
+from typing import Any
+
 
 class AIFPLError(Exception):
     """Base exception for AIFPL errors with detailed context information."""
@@ -188,8 +190,8 @@ class AIFPLModuleNotFoundError(AIFPLModuleError):
         self,
         module_name: str,
         search_paths: list[str],
-        **kwargs
-    ):
+        **kwargs: Any
+    ) -> None:
         """
         Initialize module not found error.
 
@@ -214,7 +216,7 @@ class AIFPLCircularImportError(AIFPLModuleError):
     def __init__(
         self,
         import_chain: list[str],
-        **kwargs
+        **kwargs: Any
     ):
         """
         Initialize circular import error.

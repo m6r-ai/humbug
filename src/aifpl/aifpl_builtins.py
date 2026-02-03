@@ -8,21 +8,8 @@ from typing import List, Dict, Callable
 
 from aifpl.aifpl_collections import AIFPLCollectionsFunctions
 from aifpl.aifpl_math import AIFPLMathFunctions
-from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLFunction,
-    AIFPLInteger, AIFPLFloat, AIFPLComplex
-)
+from aifpl.aifpl_value import AIFPLFunction
 
-
-# Helper functions for numeric type compatibility during Phase 1 migration
-
-def is_numeric_type(value: AIFPLValue) -> bool:
-    """
-    Check if value is any numeric type (old or new).
-
-    Returns True for AIFPLInteger, AIFPLFloat, or AIFPLComplex.
-    """
-    return isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
 
 class AIFPLBuiltinRegistry:
     """
