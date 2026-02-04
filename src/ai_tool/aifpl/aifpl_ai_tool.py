@@ -136,10 +136,13 @@ class AIFPLAITool(AITool):
                 "- Tail recursion automatically optimized\n\n"
 
                 "Local bindings:\n"
-                "- (let ((var1 val1) (var2 val2) ...) body) → sequential binding\n"
-                "- (let ((x 5) (y (* x 2))) (+ x y)) → 15 (y can reference x)\n"
-                "- (let ((x 1)) (let ((x (+ x 10))) x)) → 11 (shadowing works)\n"
-                "- Use for normal sequential bindings, no recursion support\n\n"
+                "- (let ((var1 val1) (var2 val2) ...) body) → parallel binding (bindings independent)\n"
+                "- (let ((x 5) (y 10)) (+ x y)) → 15 (x and y don't reference each other)\n"
+                "- Bindings in let cannot reference each other; use let* for sequential bindings\n"
+                "- (let* ((var1 val1) (var2 val2) ...) body) → sequential binding\n"
+                "- (let* ((x 5) (y (* x 2))) (+ x y)) → 15 (y can reference x)\n"
+                "- (let* ((x 1) (x (+ x 10))) x) → 11 (shadowing works in let*)\n"
+                "- Use let for independent bindings, let* for sequential dependencies\n\n"
 
                 "Recursive bindings:\n"
                 "- (letrec ((var1 val1) (var2 val2) ...) body) → recursive binding\n"

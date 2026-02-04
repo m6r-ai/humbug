@@ -17,7 +17,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Conditional evaluation**: `if` expressions with lazy evaluation of branches
 - **Lazy evaluation**: `and` and `or` perform lazy evaluation of operands
 - **Lambda expressions**: Anonymous functions with lexical scoping and closures
-- **Local bindings**: `let` for sequential binding, `letrec` for recursive binding
+- **Local bindings**: `let` for parallel binding, `let*` for sequential binding, `letrec` for recursive binding
 - **Higher-order functions**: `map`, `filter`, `fold`, `range`, and more for functional programming
 - **Tail call optimization**: Automatic optimization for recursive and mutually recursive functions
 - **Type predicates**: Built-in functions to check value types
@@ -392,9 +392,9 @@ Lambda expressions create anonymous functions with lexical scoping and closure s
 
 ### Local variable binding with let
 
-Let expressions create local variable bindings with sequential evaluation and lexical scoping:
+Let expressions create local variable bindings with **parallel binding semantics** and lexical scoping. For sequential bindings where later variables can reference earlier ones, use `let*`.
 
-#### Basic let syntax
+#### Basic let syntax (parallel bindings)
 ```aifpl
 (let ((var1 val1) (var2 val2) ...) body)
 ```
@@ -404,7 +404,7 @@ Let expressions create local variable bindings with sequential evaluation and le
 ; Basic binding
 (let ((x 5)) (+ x 10))                      ; → 15
 
-; Multiple bindings
+; Multiple independent bindings
 (let ((x 3) (y 4)) (+ (* x x) (* y y)))     ; → 25
 
 ; String operations
@@ -412,27 +412,107 @@ Let expressions create local variable bindings with sequential evaluation and le
   (string-append name " is " (number->string age)))  ; → "Alice is 30"
 ```
 
-#### Sequential binding
+#### Important: Parallel binding semantics
 ```aifpl
-; Later variables can reference earlier ones
-(let ((x 5) (y (* x 2))) (+ x y))           ; → 15
+; ✗ ERROR - bindings cannot reference each other in let
+(let ((x 5) (y (* x 2))) (+ x y))           ; Error: Undefined variable: 'x'
 
-; Building complex expressions
+; ✓ CORRECT - all bindings are independent
+(let ((x 5) (y 10)) (+ x y))                ; → 15
+
+; ✗ ERROR - later bindings can't see earlier ones
 (let ((base 10)
       (squared (* base base))
       (cubed (* squared base)))
+  (list base squared cubed))                ; Error: Undefined variable: 'base'
+
+; ✓ CORRECT - use let* for sequential bindings (see next section)
+(let* ((base 10)
+       (squared (* base base))
+       (cubed (* squared base)))
   (list base squared cubed))                ; → (10 100 1000)
+```
+
+#### Parallel bindings see outer scope
+```aifpl
+; All bindings see the same outer scope
+(let ((x 10))
+  (let ((x 1) (y x))  ; y sees outer x (10), not inner x (1)
+    (+ x y)))                               ; → 11  (1 + 10)
+
+; This is different from sequential binding (let*)
+(let ((x 10))
+  (let* ((x 1) (y x))  ; y sees inner x (1)
+    (+ x y)))                               ; → 2   (1 + 1)
+```
+
+### Sequential variable binding with let*
+
+Let* expressions create local variable bindings with **sequential binding semantics**, where each binding can reference previous bindings:
+
+#### Basic let* syntax
+```aifpl
+(let* ((var1 val1) (var2 val2) ...) body)
+```
+
+#### Simple let* examples
+```aifpl
+; Sequential binding - y can reference x
+(let* ((x 5) (y (* x 2))) (+ x y))          ; → 15
+
+; Multiple sequential dependencies
+(let* ((a 1) (b (+ a 1)) (c (+ b 1))) (+ a b c))  ; → 6
 
 ; String processing chain
-(let ((text "Hello World")
-      (lower (string-downcase text))
-      (words (string-split lower " ")))
+(let* ((text "Hello World")
+       (lower (string-downcase text))
+       (words (string-split lower " ")))
   (string-join (reverse words) "-"))        ; → "world-hello"
 ```
 
-#### Binding functions
+#### Building complex expressions with let*
 ```aifpl
-; Bind lambda functions to names
+; Each binding can use previous ones
+(let* ((base 10)
+       (squared (* base base))
+       (cubed (* squared base)))
+  (list base squared cubed))                ; → (10 100 1000)
+
+; Data processing pipeline
+(let* ((numbers (list 1 2 3 4 5))
+       (doubled (map (lambda (x) (* x 2)) numbers))
+       (sum (fold + 0 doubled)))
+  sum)                                      ; → 30
+```
+
+#### Shadowing in let*
+```aifpl
+; let* allows shadowing (same variable name multiple times)
+(let* ((x 1) (x (+ x 10))) x)               ; → 11
+
+; Build up transformations
+(let* ((text "hello")
+       (text (string-upcase text))
+       (text (string-append text "!")))
+  text)                                     ; → "HELLO!"
+```
+
+### When to use let vs let*
+
+- **Use `let`** when bindings are independent and don't reference each other
+- **Use `let*`** when later bindings need to reference earlier ones
+- **Use `letrec`** when you need recursive or mutually recursive functions
+
+```aifpl
+; let - independent bindings (parallel)
+(let ((x 5) (y 10)) (+ x y))                ; → 15
+
+; let* - sequential dependencies
+(let* ((x 5) (y (* x 2))) (+ x y))          ; → 15
+
+#### Binding functions with let
+```aifpl
+; Bind independent lambda functions
 (let ((double (lambda (x) (* x 2)))
       (triple (lambda (x) (* x 3))))
   (+ (double 4) (triple 5)))                ; → 23
@@ -452,20 +532,13 @@ Let expressions create local variable bindings with sequential evaluation and le
   (countdown 5))                            ; → (5 4 3 2 1)
 ```
 
-#### Nested let expressions
-```aifpl
-; Nested scoping
-(let ((x 10))
-  (let ((x 20) (y x))  ; inner x shadows outer, y gets outer x value
-    (+ x y)))                               ; → 30
-
-; Complex nested computation
-(let ((data (list 1 2 3 4 5)))
-  (let ((squared (map (lambda (x) (* x x)) data))
-        (sum-fn (lambda (lst) (fold + 0 lst))))
-    (let ((total (sum-fn squared))
-          (average (/ total (length squared))))
-      (list "sum" total "average" average))))  ; → ("sum" 55 "average" 11)
+; Complex nested computation with let*
+(let* ((data (list 1 2 3 4 5))
+       (squared (map (lambda (x) (* x x)) data))
+       (sum-fn (lambda (lst) (fold + 0 lst)))
+       (total (sum-fn squared))
+       (average (/ total (length squared))))
+  (list "sum" total "average" average))     ; → ("sum" 55 "average" 11)
 ```
 
 ### Recursive binding with letrec
