@@ -64,19 +64,41 @@ class AIFPLFileTraceWatcher:
 
 
 class AIFPLBufferingTraceWatcher:
-    """Watcher that buffers trace messages for programmatic access."""
+    """
+    Watcher that buffers trace messages for programmatic access.
 
-    def __init__(self) -> None:
-        """Initialize buffering trace watcher."""
+    Includes a configurable limit to prevent unbounded memory growth
+    in case of infinite loops or excessive tracing.
+    """
+
+    def __init__(self, max_traces: int = 10000) -> None:
+        """
+        Initialize buffering trace watcher.
+
+        Args:
+            max_traces: Maximum number of traces to buffer (default: 10000).
+                       When limit is reached, oldest traces are discarded.
+        """
         self.traces: List[str] = []
+        self.max_traces = max_traces
+        self.total_traces = 0  # Total number of traces received (including discarded)
+        self.clipped = False  # Whether traces have been clipped
 
     def on_trace(self, message: str) -> None:
         """
         Buffer trace message.
 
+        If the buffer is full, the oldest trace is removed before adding the new one.
+
         Args:
             message: The trace message as a string (AIFPL formatted)
         """
+        self.total_traces += 1
+
+        if len(self.traces) >= self.max_traces:
+            self.traces.pop(0)  # Remove oldest trace
+            self.clipped = True
+
         self.traces.append(message)
 
     def get_traces(self) -> List[str]:
@@ -91,3 +113,23 @@ class AIFPLBufferingTraceWatcher:
     def clear(self) -> None:
         """Clear all buffered traces."""
         self.traces.clear()
+        self.total_traces = 0
+        self.clipped = False
+
+    def is_clipped(self) -> bool:
+        """
+        Check if traces have been clipped due to buffer limit.
+
+        Returns:
+            True if some traces were discarded, False otherwise
+        """
+        return self.clipped
+
+    def get_total_count(self) -> int:
+        """
+        Get total number of traces received (including discarded).
+
+        Returns:
+            Total trace count
+        """
+        return self.total_traces

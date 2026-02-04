@@ -281,7 +281,7 @@ class AIFPLAITool(AITool):
         """
         return self._module_path
 
-    def _evaluate_expression_sync(self, expression: str) -> tuple[str, List[str]]:
+    def _evaluate_expression_sync(self, expression: str) -> tuple[str, List[str], bool]:
         """
         Synchronous helper for expression evaluation.
 
@@ -291,19 +291,20 @@ class AIFPLAITool(AITool):
             expression: AIFPL expression to evaluate
 
         Returns:
-            Tuple of (result_string, traces_list)
+            Tuple of (result_string, traces_list, was_clipped)
 
         Raises:
             Various AIFPL-related exceptions
         """
         # Set up trace watcher to collect any trace output
-        watcher = AIFPLBufferingTraceWatcher()
+        watcher = AIFPLBufferingTraceWatcher(max_traces=200)
         self._tool.set_trace_watcher(watcher)
 
         try:
             result = self._tool.evaluate_and_format(expression)
             traces = watcher.get_traces()
-            return result, traces
+            was_clipped = watcher.is_clipped()
+            return result, traces, was_clipped
 
         finally:
             # Clean up watcher
@@ -355,7 +356,7 @@ class AIFPLAITool(AITool):
 
             # Run calculation with timeout protection
             try:
-                result, traces = await asyncio.wait_for(
+                result, traces, watcher_clipped = await asyncio.wait_for(
                     asyncio.to_thread(self._evaluate_expression_sync, expression),
                     timeout=10.0  # Increased timeout for complex functional programming
                 )
@@ -368,19 +369,14 @@ class AIFPLAITool(AITool):
 
             # Build context only if traces exist
             trace_str = ""
-            total_traces = 0
-            if traces:
-                total_traces = len(traces)
-                if total_traces > 200:
-                    # Clip to last 200 traces
-                    traces = traces[-200:]
 
+            if traces:
                 trace_str = "\n".join(traces)
 
             result_object = {
                 "result": result,
                 "trace_data": trace_str,
-                "trace_data_clipped": "yes" if total_traces > 200 else "no"
+                "trace_data_clipped": "yes" if watcher_clipped else "no"
             }
 
             return AIToolResult(
