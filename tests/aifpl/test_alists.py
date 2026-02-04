@@ -142,7 +142,7 @@ class TestAListSet:
         """Test that alist-set doesn't modify original."""
         result = tool.evaluate('''
             (let* ((original (alist (list "name" "Alice") (list "age" 30)))
-                  v(updated (alist-set original "age" 31)))
+                  (updated (alist-set original "age" 31)))
               (list (alist-get original "age") (alist-get updated "age")))
         ''')
         assert result == [30, 31]
