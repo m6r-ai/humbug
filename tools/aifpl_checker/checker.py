@@ -431,7 +431,7 @@ class ParenChecker:
             else:
                 line_num_str = f"{line_num:4d}"
 
-            line_display = f"{line_num_str} | {info.depth:5d} | {code}{annotation}{error_marker}"
+            line_display = f"{line_num_str} | {info.start_depth:5d} | {code}{annotation}{error_marker}"
             lines.append(line_display)
 
         return "\n".join(lines)
