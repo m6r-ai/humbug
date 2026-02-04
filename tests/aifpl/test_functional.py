@@ -66,16 +66,16 @@ class TestFunctional:
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_let_sequential_binding(self, aifpl, helpers):
-        """Test that let bindings are sequential (later can reference earlier)."""
+        """Test that let* bindings are sequential (later can reference earlier)."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(let ((x 5) (y (* x 2))) (+ x y))',
+            '(let* ((x 5) (y (* x 2))) (+ x y))',
             '15'  # x=5, y=10, sum=15
         )
 
         helpers.assert_evaluates_to(
             aifpl,
-            '(let ((a 3) (b (+ a 2)) (c (* b 2))) c)',
+            '(let* ((a 3) (b (+ a 2)) (c (* b 2))) c)',
             '10'  # a=3, b=5, c=10
         )
 
@@ -434,18 +434,18 @@ class TestFunctional:
         """Test functions that take and return functions."""
         # Function composition
         compose_expr = '''
-        (let ((compose (lambda (f g) (lambda (x) (f (g x)))))
-              (double (lambda (x) (* x 2)))
-              (square (lambda (x) (* x x)))
-              (double-then-square (compose square double)))
+        (let* ((compose (lambda (f g) (lambda (x) (f (g x)))))
+               (double (lambda (x) (* x 2)))
+               (square (lambda (x) (* x x)))
+               (double-then-square (compose square double)))
           (double-then-square 3))
         '''
         helpers.assert_evaluates_to(aifpl, compose_expr, '36')  # (3*2)² = 36
 
         # Curried functions
         curry_expr = '''
-        (let ((add (lambda (x) (lambda (y) (+ x y))))
-              (add5 (add 5)))
+        (let* ((add (lambda (x) (lambda (y) (+ x y))))
+               (add5 (add 5)))
           (add5 10))
         '''
         helpers.assert_evaluates_to(aifpl, curry_expr, '15')
@@ -558,16 +558,16 @@ class TestFunctional:
 
         # Pass functions as arguments
         apply_twice = '''
-        (let ((apply-twice (lambda (f x) (f (f x))))
-              (increment (lambda (x) (+ x 1))))
+        (let* ((apply-twice (lambda (f x) (f (f x))))
+               (increment (lambda (x) (+ x 1))))
           (apply-twice increment 5))
         '''
         helpers.assert_evaluates_to(aifpl, apply_twice, '7')
 
         # Return functions from functions
         make_multiplier = '''
-        (let ((make-multiplier (lambda (n) (lambda (x) (* x n))))
-              (times3 (make-multiplier 3)))
+        (let* ((make-multiplier (lambda (n) (lambda (x) (* x n))))
+               (times3 (make-multiplier 3)))
           (times3 7))
         '''
         helpers.assert_evaluates_to(aifpl, make_multiplier, '21')
@@ -619,13 +619,13 @@ class TestFunctional:
         # More complex case: conditional nested lambdas in map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(let ((process-list (lambda (lst)
-                                    (map (lambda (x) 
-                                           (if (> x 0)
-                                               ((lambda (y) (* y y)) x)
-                                               ((lambda (z) (- z)) x)))
-                                         lst))))
-                 (process-list (list -2 3 -1 4)))''',
+            '''(let* ((process-list (lambda (lst)
+                                     (map (lambda (x) 
+                                            (if (> x 0)
+                                                ((lambda (y) (* y y)) x)
+                                                ((lambda (z) (- z)) x)))
+                                          lst))))
+                  (process-list (list -2 3 -1 4)))''',
             '(2 9 1 16)'
         )
 

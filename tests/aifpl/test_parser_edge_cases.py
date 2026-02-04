@@ -324,7 +324,7 @@ class TestAIFPLParserEdgeCases:
         assert result == 8
 
         # Sequential dependency
-        result = aifpl.evaluate("(let ((x 5) (y (* x 2))) (+ x y))")
+        result = aifpl.evaluate("(let* ((x 5) (y (* x 2))) (+ x y))")
         assert result == 15
 
         # Complex expressions in bindings

@@ -141,8 +141,8 @@ class TestAListSet:
     def test_alist_set_immutable(self, tool):
         """Test that alist-set doesn't modify original."""
         result = tool.evaluate('''
-            (let ((original (alist (list "name" "Alice") (list "age" 30)))
-                  (updated (alist-set original "age" 31)))
+            (let* ((original (alist (list "name" "Alice") (list "age" 30)))
+                  v(updated (alist-set original "age" 31)))
               (list (alist-get original "age") (alist-get updated "age")))
         ''')
         assert result == [30, 31]
@@ -283,8 +283,8 @@ class TestAListRemove:
     def test_alist_remove_immutable(self, tool):
         """Test that alist-remove doesn't modify original."""
         result = tool.evaluate('''
-            (let ((original (alist (list "name" "Alice") (list "age" 30)))
-                  (removed (alist-remove original "age")))
+            (let* ((original (alist (list "name" "Alice") (list "age" 30)))
+                   (removed (alist-remove original "age")))
               (list (alist-has? original "age") (alist-has? removed "age")))
         ''')
         assert result == [True, False]
@@ -419,7 +419,7 @@ class TestAListWithFunctionalOperations:
     def test_filter_alist_values(self, tool):
         """Test filtering alist values."""
         result = tool.evaluate('''
-            (let ((data (alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4))))
+            (let* ((data (alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4))))
               (filter (lambda (v) (> v 2)) (alist-values data)))
         ''')
         assert result == [3, 4]
@@ -435,7 +435,7 @@ class TestAListWithFunctionalOperations:
     def test_process_list_of_alists(self, tool):
         """Test processing a list of alists."""
         result = tool.evaluate('''
-            (let ((people (list 
+            (let* ((people (list 
                            (alist (list "name" "Alice") (list "age" 30))
                            (alist (list "name" "Bob") (list "age" 25))
                            (alist (list "name" "Carol") (list "age" 35)))))
@@ -501,9 +501,9 @@ class TestAListComplexScenarios:
         """Test transforming alist through multiple operations."""
         result = tool.evaluate('''
             (let ((data (alist (list "a" 1) (list "b" 2) (list "c" 3))))
-              (let ((with-d (alist-set data "d" 4))
-                    (without-b (alist-remove with-d "b"))
-                    (updated-c (alist-set without-b "c" 30)))
+              (let* ((with-d (alist-set data "d" 4))
+                     (without-b (alist-remove with-d "b"))
+                     (updated-c (alist-set without-b "c" 30)))
                 updated-c))
         ''')
         assert result == {"a": 1, "c": 30, "d": 4}
@@ -511,7 +511,7 @@ class TestAListComplexScenarios:
     def test_merge_multiple_alists(self, tool):
         """Test merging multiple alists."""
         result = tool.evaluate('''
-            (let ((defaults (alist (list "port" 8080) (list "host" "localhost")))
+            (let* ((defaults (alist (list "port" 8080) (list "host" "localhost")))
                   (config (alist (list "port" 3000)))
                   (overrides (alist (list "debug" #t))))
               (alist-merge (alist-merge defaults config) overrides))
@@ -521,7 +521,7 @@ class TestAListComplexScenarios:
     def test_convert_list_to_alist(self, tool):
         """Test building alist from list data."""
         result = tool.evaluate('''
-            (let ((pairs (list (list "name" "Alice") (list "age" 30) (list "city" "NYC"))))
+            (let* ((pairs (list (list "name" "Alice") (list "age" 30) (list "city" "NYC"))))
               (fold (lambda (acc pair)
                       (alist-set acc (first pair) (first (rest pair))))
                     (alist)

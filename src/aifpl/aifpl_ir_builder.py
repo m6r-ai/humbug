@@ -313,7 +313,13 @@ class AIFPLIRBuilder:
         return AIFPLIROr(arg_plans=arg_plans)
 
     def _analyze_let(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRLet:
-        """Analyze a let expression."""
+        """
+        Analyze a let expression with parallel binding semantics.
+
+        In parallel let, all binding values are evaluated BEFORE any bindings
+        are added to the scope. This means bindings cannot reference each other.
+        For sequential binding semantics, use let*.
+        """
         assert len(expr.elements) == 3, "Let expression should have exactly 3 elements"
 
         _, bindings_list, body = expr.elements
@@ -322,24 +328,27 @@ class AIFPLIRBuilder:
         # Push new scope
         ctx.push_scope()
 
-        # Parse and analyze bindings
-        binding_plans = []
+        # PHASE 1: Analyze all binding values BEFORE adding any bindings to scope
+        # This implements parallel binding semantics (bindings can't reference each other)
+        analyzed_bindings = []
         for binding in bindings_list.elements:
             assert isinstance(binding, AIFPLList) and len(binding.elements) == 2
             name_expr, value_expr = binding.elements
             assert isinstance(name_expr, AIFPLSymbol)
 
             name = name_expr.name
-
-            # Analyze value BEFORE adding binding to scope (for shadowing)
+            # Analyze value in current scope (BEFORE adding this binding)
             value_plan = self._analyze_expression(value_expr, ctx, in_tail_position=False)
+            analyzed_bindings.append((name, value_plan))
 
-            # NOW allocate index and add to scope
+        # PHASE 2: Now allocate indices and add all bindings to scope
+        binding_plans = []
+        for name, value_plan in analyzed_bindings:
             var_index = ctx.allocate_local_index()
             ctx.current_scope().add_binding(name, var_index)
-            ctx.update_max_locals()
-
             binding_plans.append((name, value_plan, var_index))
+
+        ctx.update_max_locals()
 
         # Analyze body
         body_plan = self._analyze_expression(body, ctx, in_tail_position=in_tail_position)

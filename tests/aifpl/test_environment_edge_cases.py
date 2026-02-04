@@ -97,8 +97,8 @@ class TestAIFPLEnvironmentEdgeCases:
 
         # Sequential let bindings
         result = aifpl.evaluate("""
-        (let ((x 5)
-              (y (+ x 3)))
+        (let* ((x 5)
+               (y (+ x 3)))
           y)
         """)
         assert result == 8  # x is available when defining y

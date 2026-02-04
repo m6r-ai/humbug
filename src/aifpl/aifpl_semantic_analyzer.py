@@ -64,6 +64,9 @@ class AIFPLSemanticAnalyzer:
             if name == 'let':
                 return self._analyze_let(expr)
 
+            if name == 'let*':
+                return self._analyze_let_star(expr)
+
             if name == 'letrec':
                 return self._analyze_letrec(expr)
 
@@ -188,6 +191,86 @@ class AIFPLSemanticAnalyzer:
                 example='Correct: (let ((x 1) (y 2)) ...)\nIncorrect: (let ((x 1) (x 2)) ...)',
                 suggestion="Use different names for each variable"
             )
+
+        # Analyze body
+        self.analyze(body)
+
+        return expr
+
+    def _analyze_let_star(self, expr: AIFPLList) -> AIFPLList:
+        """Validate let* expression: (let* ((var val) ...) body)"""
+        if len(expr.elements) < 3:
+            raise AIFPLEvalError(
+                message="Let* expression structure is incorrect",
+                received=f"Got {len(expr.elements)} elements",
+                expected="Exactly 3 elements: (let* ((bindings...)) body)",
+                example="(let* ((x 5) (y (* x 2))) (+ x y))",
+                suggestion="Let* needs binding list and body: (let* ((var1 val1) (var2 val2) ...) body)"
+            )
+
+        if len(expr.elements) > 3:
+            raise AIFPLEvalError(
+                message="Let* expression has too many elements",
+                received=f"Got {len(expr.elements)} elements",
+                expected="Exactly 3 elements: (let* ((bindings...)) body)",
+                example="(let* ((x 5) (y (* x 2))) (+ x y))",
+                suggestion="Let* takes only bindings and one body expression. "
+                    "Use (let* (...) (begin expr1 expr2)) for multiple expressions"
+            )
+
+        _, bindings_list, body = expr.elements
+
+        if not isinstance(bindings_list, AIFPLList):
+            raise AIFPLEvalError(
+                message="Let* binding list must be a list",
+                received=f"Binding list: {bindings_list.type_name()}",
+                expected="List of bindings: ((var1 val1) (var2 val2) ...)",
+                example="(let* ((x 5) (y (* x 2))) (+ x y))",
+                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
+            )
+
+        # Validate each binding
+        var_names: List[str] = []
+        for i, binding in enumerate(bindings_list.elements):
+            if not isinstance(binding, AIFPLList):
+                raise AIFPLEvalError(
+                    message=f"Let* binding {i+1} must be a list",
+                    received=f"Binding {i+1}: {binding.type_name()}",
+                    expected="Each binding: (variable value-expression)",
+                    example='(x 5)',
+                    suggestion="Wrap each binding in parentheses: (variable-name value-expression)"
+                )
+
+            if len(binding.elements) != 2:
+                binding_str = f"{len(binding.elements)} elements"
+                raise AIFPLEvalError(
+                    message=f"Let* binding {i+1} has wrong number of elements",
+                    received=f"Binding {i+1}: {binding_str}",
+                    expected="Each binding: (variable value-expression)",
+                    example='Correct: (x 5)\nIncorrect: (x) or (x 1 2)',
+                    suggestion="Each binding needs exactly variable name and value: (var value)"
+                )
+
+            name_expr, value_expr = binding.elements
+
+            if not isinstance(name_expr, AIFPLSymbol):
+                raise AIFPLEvalError(
+                    message=f"Let* binding {i+1} variable must be a symbol",
+                    received=f"Variable: {name_expr.type_name()}",
+                    expected="Unquoted symbol (variable name)",
+                    example='Correct: (x 5)\nIncorrect: ("x" 5)',
+                    suggestion="Use unquoted variable names in bindings"
+                )
+
+            var_names.append(name_expr.name)
+
+            # Recursively analyze the value expression
+            self.analyze(value_expr)
+
+        # Note: Unlike 'let', we allow duplicate binding names (shadowing) in let*.
+        # This is because let* has sequential semantics where later bindings
+        # can shadow earlier ones, and we also don't check if later bindings reference earlier ones.
+        # That's the whole point of let* - sequential bindings are allowed and expected.
 
         # Analyze body
         self.analyze(body)

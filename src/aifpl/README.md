@@ -28,6 +28,7 @@ AIFPL is a mathematical expression language with LISP-like S-expression syntax d
 - **Type promotion**: Automatic promotion from int → float → complex
 - **Comments**: `;` introduces comments
 - **Module system**: Organize code into reusable modules with `import` (see [MODULE_SYSTEM.md](MODULE_SYSTEM.md))
+- **Trace debugging**: `trace` special form for debugging and understanding program execution
 
 ## Implementation
 
@@ -998,6 +999,146 @@ AIFPL provides powerful higher-order functions for functional programming patter
 ; Combine with other operations
 (take 3 (filter (lambda (x) (> x 0)) (list -1 2 -3 4 5 6)))  ; → (2 4 5)
 ```
+
+### Debugging with trace
+
+AIFPL provides a `trace` special form for debugging and understanding program execution. Traces are emitted **before** the expression is evaluated, making them perfect for understanding execution order and debugging complex algorithms.
+
+#### Basic trace usage
+
+The `trace` special form takes one or more messages followed by an expression to evaluate:
+
+```aifpl
+; Basic trace
+(trace "Computing sum" (+ 1 2 3))
+; Emits: "Computing sum"
+; Returns: 6
+
+; Multiple messages
+(let ((x 10) (y 20))
+  (trace "Computing sum of" x "and" y
+    (+ x y)))
+; Emits: "Computing sum of"
+;        10
+;        "and"
+;        20
+; Returns: 30
+```
+
+#### Tracing recursive functions
+
+Trace is especially useful for understanding recursive function execution:
+
+```aifpl
+; Factorial with trace
+(letrec ((fact (lambda (n)
+  (trace (string-append "fact(" (number->string n) ")")
+    (if (<= n 1)
+        1
+        (* n (fact (- n 1))))))))
+  (fact 5))
+
+; Emits (in order):
+; "fact(5)"
+; "fact(4)"
+; "fact(3)"
+; "fact(2)"
+; "fact(1)"
+; Returns: 120
+```
+
+Notice how traces appear in the order functions are called (5, 4, 3, 2, 1), not in reverse. This is because `trace` is a **special form** that emits messages before evaluating the expression.
+
+#### Debugging complex algorithms
+
+Use trace to understand algorithm behavior:
+
+```aifpl
+; Binary search with trace
+(letrec ((binary-search
+  (lambda (lst target low high)
+    (if (> low high)
+        (trace "Not found" #f)
+        (let ((mid (// (+ low high) 2)))
+          (trace (string-append "Checking index " (number->string mid)
+                               " value " (number->string (list-ref lst mid)))
+            (let ((mid-val (list-ref lst mid)))
+              (if (= mid-val target)
+                  (trace "Found!" mid)
+                  (if (< mid-val target)
+                      (binary-search lst target (+ mid 1) high)
+                      (binary-search lst target low (- mid 1)))))))))))
+  (binary-search (list 1 3 5 7 9 11 13 15) 7 0 7))
+
+; Emits execution trace showing search progress
+```
+
+#### Tracing data transformations
+
+Track data through transformation pipelines:
+
+```aifpl
+; Process with trace at each step
+(let ((numbers (list 1 2 3 4 5)))
+  (let ((doubled (map (lambda (x)
+                        (trace (string-append "Doubling " (number->string x))
+                          (* x 2)))
+                      numbers)))
+    (trace "After doubling:" doubled
+      (filter (lambda (x) (> x 5)) doubled))))
+
+; Shows each transformation step
+```
+
+#### Conditional tracing
+
+Add traces only when certain conditions are met:
+
+```aifpl
+; Trace only when condition is true
+(letrec ((process (lambda (n)
+  (if (= (% n 10) 0)
+      (trace (string-append "Milestone: " (number->string n))
+        (+ n 1))
+      (+ n 1)))))
+  (map process (range 1 25)))
+
+; Only emits traces for multiples of 10
+```
+
+#### Trace output format
+
+- Messages are converted to AIFPL string format using `describe()`
+- Strings appear with quotes: `"hello"`
+- Numbers appear without quotes: `42`
+- Lists appear with parens: `(1 2 3)`
+- Each message appears on its own line
+
+#### Trace limitations
+
+When using the AIFPL AI tool:
+- Traces are limited to the last 200 messages to prevent overwhelming output
+- If more than 200 traces are generated, the oldest are discarded
+- The tool result will indicate if traces were clipped: `"trace_data_clipped": "yes"`
+
+#### Best practices
+
+1. **Use descriptive messages**: Include context about what's being traced
+   ```aifpl
+   (trace "Processing task" task-id "with" (length predecessors) "predecessors" ...)
+   ```
+
+2. **Trace key decision points**: Show why certain branches are taken
+   ```aifpl
+   (if (ready? task)
+       (trace "Task ready, scheduling" (schedule task))
+       (trace "Task not ready, skipping" task))
+   ```
+
+3. **Include relevant values**: Show variable values at trace points
+   ```aifpl
+   (trace "State:" remaining-count "remaining," scheduled-count "scheduled" ...)
+   ```
 
 ### Functional programming patterns
 

@@ -57,6 +57,10 @@ class AIFPLDesugarer:
             if name == 'let':
                 return self._desugar_let(expr)
 
+            if name == 'let*':
+                # Let* desugars to nested lets
+                return self._desugar_let_star(expr)
+
             if name == 'lambda':
                 return self._desugar_lambda(expr)
 
@@ -119,6 +123,50 @@ class AIFPLDesugarer:
             AIFPLList(tuple(desugared_bindings)),
             desugared_body
         ))
+
+    def _desugar_let_star(self, expr: AIFPLList) -> AIFPLValue:
+        """
+        Desugar let* expression to nested let expressions.
+
+        (let* ((x 1) (y (+ x 1)) (z (* y 2))) body)
+        =>
+        (let ((x 1))
+          (let ((y (+ x 1)))
+            (let ((z (* y 2)))
+              body)))
+        """
+        # Validation already done by semantic analyzer
+        assert len(expr.elements) == 3, "Let* expression should have exactly 3 elements (validated by semantic analyzer)"
+
+        _, bindings_list, body = expr.elements
+        assert isinstance(bindings_list, AIFPLList), "Binding list should be a list (validated by semantic analyzer)"
+
+        # If no bindings, just return the body
+        if len(bindings_list.elements) == 0:
+            return self.desugar(body)
+
+        # Build nested lets from the inside out
+        # Start with the body
+        result = self.desugar(body)
+
+        # Wrap in nested lets, processing bindings in reverse order
+        for binding in reversed(bindings_list.elements):
+            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2, \
+                "Binding should be a list with 2 elements (validated by semantic analyzer)"
+
+            var_name, value_expr = binding.elements
+
+            # Desugar the value expression
+            desugared_value = self.desugar(value_expr)
+
+            # Wrap result in a let with this binding
+            result = AIFPLList((
+                AIFPLSymbol('let'),
+                AIFPLList((AIFPLList((var_name, desugared_value)),)),
+                result
+            ))
+
+        return result
 
     def _desugar_lambda(self, expr: AIFPLList) -> AIFPLValue:
         """Desugar lambda expression by desugaring its body."""
@@ -195,14 +243,15 @@ class AIFPLDesugarer:
         # Wrap in let to bind the temp variable
         # (let ((temp value)) match-logic)
         result = AIFPLList((
-            AIFPLSymbol('let'),
+            AIFPLSymbol('let*'),
             AIFPLList((
                 AIFPLList((AIFPLSymbol(temp_var), desugared_value)),
             )),
             match_logic
         ))
 
-        return result
+        # Recursively desugar the result to handle let* -> nested let transformation
+        return self.desugar(result)
 
     def _build_match_clauses(self, temp_var: str, clauses: List[AIFPLValue]) -> AIFPLValue:
         """
@@ -351,7 +400,7 @@ class AIFPLDesugarer:
             binding_list.extend([AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings])
 
             then_expr: AIFPLValue = AIFPLList((
-                AIFPLSymbol('let'),
+                AIFPLSymbol('let*'),
                 AIFPLList(tuple(binding_list)),
                 result_expr
             ))
@@ -375,7 +424,7 @@ class AIFPLDesugarer:
                 binding_list.append(AIFPLList((AIFPLSymbol(var_name), value_expr)))
 
             return AIFPLList((
-                AIFPLSymbol('let'),
+                AIFPLSymbol('let*'),
                 AIFPLList(tuple(binding_list)),
                 if_expr
             ))
@@ -731,7 +780,7 @@ class AIFPLDesugarer:
             if pattern_bindings:
                 binding_list = [AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings]
                 pattern_let: AIFPLValue = AIFPLList((
-                    AIFPLSymbol('let'),
+                    AIFPLSymbol('let*'),
                     AIFPLList(tuple(binding_list)),
                     result_expr
                 ))
@@ -752,7 +801,7 @@ class AIFPLDesugarer:
             if pattern_bindings:
                 binding_list = [AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings]
                 inner_if = AIFPLList((
-                    AIFPLSymbol('let'),
+                    AIFPLSymbol('let*'),
                     AIFPLList(tuple(binding_list)),
                     result_expr
                 ))
@@ -763,7 +812,7 @@ class AIFPLDesugarer:
         # Wrap in element extraction let
         extraction_binding_list = [AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in extraction_bindings]
         extraction_let = AIFPLList((
-            AIFPLSymbol('let'),
+            AIFPLSymbol('let*'),
             AIFPLList(tuple(extraction_binding_list)),
             inner_if
         ))

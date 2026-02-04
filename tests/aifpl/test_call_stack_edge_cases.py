@@ -67,8 +67,8 @@ class TestAIFPLCallStackEdgeCases:
 
         # Let with sequential dependencies
         result = aifpl.evaluate("""
-        (let ((x 5)
-              (y (* x 2)))
+        (let* ((x 5)
+               (y (* x 2)))
           (+ x y))
         """)
         assert result == 15
