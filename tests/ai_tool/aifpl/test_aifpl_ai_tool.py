@@ -2,6 +2,7 @@
 Tests for the AIFPL (AI Functional Programming Language) tool
 """
 import asyncio
+import json
 import math
 from unittest.mock import patch
 
@@ -10,6 +11,15 @@ import pytest
 from ai_tool import AITool, AIToolDefinition, AIToolParameter, AIToolExecutionError, AIToolTimeoutError
 from ai_tool.aifpl.aifpl_ai_tool import AIFPLAITool
 from aifpl import AIFPLError
+
+
+def get_result(content):
+    """Extract result from JSON response."""
+    try:
+        data = json.loads(content)
+        return data.get('result', content)
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        return content
 
 
 @pytest.fixture
@@ -120,7 +130,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_mathematical_functions(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with mathematical functions."""
@@ -138,7 +148,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_trigonometric_functions(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with trigonometric functions."""
@@ -151,19 +161,19 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_constants(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with mathematical constants."""
         tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "pi"})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
         # Should be approximately pi
-        assert abs(float(result.content) - math.pi) < 0.0001
+        assert abs(float(get_result(result.content)) - math.pi) < 0.0001
 
         tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": "e"})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
         # Should be approximately e
-        assert abs(float(result.content) - math.e) < 0.0001
+        assert abs(float(get_result(result.content)) - math.e) < 0.0001
 
     def test_execute_complex_numbers(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with complex numbers."""
@@ -178,7 +188,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_comparison_operations(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with comparison operations."""
@@ -196,7 +206,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_boolean_operations(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with boolean operations."""
@@ -212,7 +222,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_conditional_expressions(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with conditional expressions."""
@@ -226,7 +236,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_string_operations(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with string operations."""
@@ -244,7 +254,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_string_predicates(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with string predicates."""
@@ -260,7 +270,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_string_conversion(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with string conversion operations."""
@@ -274,7 +284,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_string_split_join(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with string split and join operations."""
@@ -286,7 +296,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_list_operations(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with list operations."""
@@ -304,7 +314,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_list_access(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with list access operations."""
@@ -317,7 +327,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_list_predicates(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with list predicates."""
@@ -331,7 +341,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_list_utilities(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with list utility operations."""
@@ -346,7 +356,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_type_predicates(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with type predicates."""
@@ -365,7 +375,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_lambda_functions(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with lambda functions."""
@@ -378,20 +388,20 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_let_bindings(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with let bindings."""
         test_cases = [
             ("(let ((x 5)) x)", "5"),
             ("(let ((x 5) (y 3)) (+ x y))", "8"),
-            ("(let ((x 5) (y (* x 2))) (+ x y))", "15"),
+            ("(let* ((x 5) (y (* x 2))) (+ x y))", "15"),
         ]
 
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_higher_order_functions(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with higher-order functions."""
@@ -405,7 +415,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_higher_order_predicates(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with higher-order predicate functions."""
@@ -420,7 +430,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_bitwise_operations(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with bitwise operations."""
@@ -436,7 +446,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_base_conversion(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with base conversion functions."""
@@ -452,7 +462,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
     def test_execute_quote_operations(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test execution with quote operations."""
@@ -466,7 +476,7 @@ class TestAIFPLAIToolExecution:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
 
 class TestAIFPLAIToolErrorHandling:
@@ -620,7 +630,7 @@ class TestAIFPLAIToolParametrized:
         """Test various AIFPL expressions."""
         tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-        assert result.content == expected
+        assert get_result(result.content) == expected
 
     @pytest.mark.parametrize("invalid_expression", [
         "",
@@ -693,7 +703,7 @@ class TestAIFPLAIToolIntegration:
         # Even numbers: 2, 4, 6, 8, 10
         # Squares: 4, 16, 36, 64, 100
         # Sum: 220
-        assert result.content == "220"
+        assert get_result(result.content) == "220"
 
     def test_recursive_function_example(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test recursive function using let bindings."""
@@ -710,7 +720,7 @@ class TestAIFPLAIToolIntegration:
         try:
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
             # If recursion is supported, should return 120 (5!)
-            assert result.content == "120"
+            assert get_result(result.content) == "120"
         except AIToolExecutionError:
             # If recursion isn't supported, that's also acceptable
             pass
@@ -728,7 +738,7 @@ class TestAIFPLAIToolIntegration:
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # Should filter strings with length > 2, uppercase them, and join
-        assert result.content == '"HELLO WORLD TEST"'
+        assert get_result(result.content) == '"HELLO WORLD TEST"'
 
     def test_mathematical_computation_pipeline(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test mathematical computation pipeline."""
@@ -744,8 +754,8 @@ class TestAIFPLAIToolIntegration:
 
         # Should compute sum, average, and root sum of squares
         # Sum: 55, Average: 5.5, Root sum of squares: sqrt(385) ≈ 19.62
-        assert "55" in result.content
-        assert "5.5" in result.content
+        assert "55" in get_result(result.content)
+        assert "5.5" in get_result(result.content)
 
     def test_mixed_data_types_handling(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test handling of mixed data types."""
@@ -761,7 +771,7 @@ class TestAIFPLAIToolIntegration:
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # All predicates should return true
-        assert result.content == "(#t #t #t #t #t)"
+        assert get_result(result.content) == "(#t #t #t #t #t)"
 
     def test_lazy_evaluation_conditional(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test lazy evaluation in conditionals."""
@@ -770,7 +780,7 @@ class TestAIFPLAIToolIntegration:
         tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
-        assert result.content == "42"
+        assert get_result(result.content) == "42"
 
     def test_homoiconicity_code_as_data(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test homoiconicity - code as data."""
@@ -785,7 +795,7 @@ class TestAIFPLAIToolIntegration:
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # Should extract parts of the quoted expression
-        assert "(+ (1 2 3) 4)" in result.content or "(+ (1 2 3) 4)" == result.content.replace(" ", "")
+        assert "(+ (1 2 3) 4)" in get_result(result.content) or "(+ (1 2 3) 4)" == get_result(result.content).replace(" ", "")
 
     def test_multiple_evaluations_independent(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test that multiple evaluations are independent."""
@@ -800,7 +810,7 @@ class TestAIFPLAIToolIntegration:
         for expr in expressions:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expr})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            results.append(result.content)
+            results.append(get_result(result.content))
 
         # Verify all results are correct and independent
         assert results[0] == "3"
@@ -897,7 +907,7 @@ class TestAIFPLAIToolSecurity:
 
         # Fixed: Check for the actual result format without spaces
         # Original list should appear unchanged
-        result_no_spaces = result.content.replace(" ", "")
+        result_no_spaces = get_result(result.content).replace(" ", "")
         expected_no_spaces = "((123)(1234)(123))"
         assert expected_no_spaces in result_no_spaces
 
@@ -911,7 +921,7 @@ class TestAIFPLAIToolEmptyList:
         result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
 
         # () should return an empty list representation
-        assert result.content == "()"
+        assert get_result(result.content) == "()"
 
     def test_empty_list_operations(self, aifpl_tool, mock_authorization, make_tool_call):
         """Test operations on empty lists."""
@@ -925,7 +935,7 @@ class TestAIFPLAIToolEmptyList:
         for expression, expected in test_cases:
             tool_call = make_tool_call("AIFPL", {"operation": "evaluate", "expression": expression})
             result = asyncio.run(aifpl_tool.execute(tool_call, "", mock_authorization))
-            assert result.content == expected
+            assert get_result(result.content) == expected
 
 
 class TestAIFPLAIToolModulePath:
