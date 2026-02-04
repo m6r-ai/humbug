@@ -67,12 +67,22 @@ class AnalysisContext:
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
         self.scopes.append(CompilationScope())
-        total_locals = sum(len(scope.bindings) for scope in self.scopes)
-        self.max_locals = max(self.max_locals, total_locals)
+        # next_local_index continues from parent scope
 
     def pop_scope(self) -> CompilationScope:
-        """Exit current lexical scope."""
-        return self.scopes.pop()
+        """Exit current lexical scope and reclaim local variable slots."""
+        popped = self.scopes.pop()
+
+        # Reset next_local_index to reclaim slots from the popped scope
+        # Find the highest index still in use across remaining scopes
+        if self.scopes:
+            max_used = max((max(scope.bindings.values()) for scope in self.scopes if scope.bindings), default=-1)
+            self.next_local_index = max_used + 1
+
+        else:
+            self.next_local_index = 0
+
+        return popped
 
     def update_max_locals(self) -> None:
         """Update max locals based on current scope depth."""
@@ -328,8 +338,13 @@ class AIFPLIRBuilder:
         # Push new scope
         ctx.push_scope()
 
-        # PHASE 1: Analyze all binding values BEFORE adding any bindings to scope
-        # This implements parallel binding semantics (bindings can't reference each other)
+        # PHASE 1: Analyze all binding values WITHOUT allocating indices
+        # This implements parallel binding semantics - values see outer scope
+        # Track the maximum next_local_index after analyzing each binding value
+        # Sibling expressions can reuse indices, so we need the MAX, not the sum
+        binding_start_index = ctx.next_local_index
+        max_locals_after_values = ctx.max_locals
+
         analyzed_bindings = []
         for binding in bindings_list.elements:
             assert isinstance(binding, AIFPLList) and len(binding.elements) == 2
@@ -337,17 +352,33 @@ class AIFPLIRBuilder:
             assert isinstance(name_expr, AIFPLSymbol)
 
             name = name_expr.name
-            # Analyze value in current scope (BEFORE adding this binding)
+
+            # Reset next_local_index to binding_start_index before each sibling
+            # This allows siblings to reuse the same index range
+            ctx.next_local_index = binding_start_index
+            # Also reset max_locals to allow nested expressions to allocate from binding_start_index
+            ctx.max_locals = binding_start_index
+
             value_plan = self._analyze_expression(value_expr, ctx, in_tail_position=False)
             analyzed_bindings.append((name, value_plan))
 
-        # PHASE 2: Now allocate indices and add all bindings to scope
-        binding_plans = []
-        for name, value_plan in analyzed_bindings:
-            var_index = ctx.allocate_local_index()
-            ctx.current_scope().add_binding(name, var_index)
-            binding_plans.append((name, value_plan, var_index))
+            # Track the maximum max_locals reached by any sibling
+            max_locals_after_values = max(max_locals_after_values, ctx.max_locals)
 
+        # PHASE 2: NOW allocate indices and add bindings to scope
+        # Start allocating after the maximum index used by any binding value
+        binding_start_index = max_locals_after_values
+
+        # Restore max_locals to reflect the maximum across all siblings
+        ctx.max_locals = max_locals_after_values
+        binding_plans = []
+        for i, (name, value_plan) in enumerate(analyzed_bindings):
+            var_index = binding_start_index + i
+            binding_plans.append((name, value_plan, var_index))
+            ctx.current_scope().add_binding(name, var_index)
+
+        # Update next_local_index to reflect the indices we just used
+        ctx.next_local_index = binding_start_index + len(analyzed_bindings)
         ctx.update_max_locals()
 
         # Analyze body
