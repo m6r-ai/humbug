@@ -38,7 +38,7 @@ class ModuleLoader(Protocol):
         Raises:
             AIFPLCircularImportError: If this module is already being loaded (circular dependency)
         """
-        ...
+        ...  # pylint: disable=unnecessary-ellipsis
 
     def load_module(self, module_name: str) -> AIFPLValue:
         """
@@ -62,7 +62,7 @@ class ModuleLoader(Protocol):
             AIFPLModuleError: If module not found or fails to load
             AIFPLCircularImportError: If circular dependency detected
         """
-        ...
+        ...  # pylint: disable=unnecessary-ellipsis
 
 
 class AIFPLModuleResolver:

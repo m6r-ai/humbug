@@ -1,11 +1,13 @@
 """AIFPL (AI Functional Programming Language) tool with LISP-like syntax."""
 
 import asyncio
+import json
 import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
 from aifpl import AIFPL, AIFPLError
+from aifpl import AIFPLBufferingTraceWatcher
 from ai_tool import (
     AITool, AIToolCall, AIToolDefinition, AIToolParameter, AIToolResult,
     AIToolExecutionError, AIToolTimeoutError, AIToolAuthorizationCallback,
@@ -44,7 +46,7 @@ class AIFPLAITool(AITool):
 
                 "Syntax: (operator arg1 arg2 ...)\n\n"
 
-                "Quote - Data Literals and Code as Data:\n"
+                "Quote - data literals and code as data:\n"
                 "- (quote expr) → returns expr without evaluation\n"
                 "- 'expr → shortcut for (quote expr)\n"
                 "- '(+ 1 2 3) → (+ 1 2 3) (as data, not evaluated)\n"
@@ -52,7 +54,7 @@ class AIFPLAITool(AITool):
                 "- Enables symbolic programming: (first '(+ 1 2)) → +\n"
                 "- Code and data have identical representation (homoiconicity)\n\n"
 
-                "Arithmetic and Math:\n"
+                "Arithmetic and math:\n"
                 "- Basic: (+ 1 2 3), (- 10 3), (* 2 3 4), (/ 12 3), (// 7 3), (% 7 3), (** 2 3)\n"
                 "- Division (/) always returns float: (/ 10 2) → 5.0, (/ 10 3) → 3.333...; use (//) for integer division\n"
                 "- Trig: (sin (* pi 0.5)), (cos 0), (tan (* pi 0.25))\n"
@@ -64,7 +66,7 @@ class AIFPLAITool(AITool):
                 "- Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)\n"
                 "- Base conversion: (bin 255), (hex 255), (oct 255)\n\n"
 
-                "Complex Numbers:\n"
+                "Complex numbers:\n"
                 "- Literals: 3+4j, 5j, 1j\n"
                 "- Pure imaginary: 4j, -5j, 1.5e2j → 4j, -5j, 150j\n"
                 "- Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)\n"
@@ -73,18 +75,18 @@ class AIFPLAITool(AITool):
                 "- (real 3+4j) → 3, (imag 3+4j) → 4, (abs 3+4j) → 5.0\n"
                 "- (real 42) → 42, (imag 42) → 0 (works on all numbers)\n\n"
 
-                "Type Construction and Conversion:\n"
+                "Type construction and conversion:\n"
                 "- (integer x) → convert to integer (truncates toward zero): (integer 3.7) → 3, (integer -2.9) → -2\n"
                 "- (float x) → convert to float: (float 42) → 42.0, (float 3) → 3.0\n"
                 "- (complex real imag) → construct complex: (complex 3 4) → (3+4j)\n"
                 "- Use for explicit type control and conversions between numeric types\n\n"
 
-                "Comparison and Boolean:\n"
+                "Comparison and boolean:\n"
                 "- (= 1 1), (!= 1 2), (< 1 2), (> 3 2), (<= 1 1), (>= 2 1)\n"
                 "- (and #t #f), (or #t #f), (not #t)\n"
                 "- (if (> 5 3) \"yes\" \"no\"), lazy evaluation: (if #t 42 (/ 1 0))\n\n"
 
-                "String Operations:\n"
+                "String operations:\n"
                 "- Basic: (string-append \"hello\" \" \" \"world\"), (string-length \"hello\")\n"
                 "- Access: (string-ref \"hello\" 1) → \"e\" (character at 0-based index)\n"
                 "- Manipulation: (substring \"hello\" 1 4), (string-upcase \"hello\"), (string-downcase \"HELLO\")\n"
@@ -96,7 +98,7 @@ class AIFPLAITool(AITool):
                 "- Split/join: (string-split \"a,b,c\" \",\") → (\"a\" \"b\" \"c\"), "
                 "(string-join (list \"hello\" \"world\") \" \") → \"hello world\"\n\n"
 
-                "List Operations:\n"
+                "List operations:\n"
                 "- Uses proper lists only, not cons cells, and the cons operator requires that the second argument is a list\n"
                 "- Construction: (list 1 2 3), (cons 1 (list 2 3)), (append (list 1 2) (list 3 4))\n"
                 "- Access: (first (list 1 2 3)), (rest (list 1 2 3)), (last (list 1 2 3))\n"
@@ -105,7 +107,7 @@ class AIFPLAITool(AITool):
                 "- Utilities: (reverse (list 1 2 3)), (remove 2 (list 1 2 3 2 4)), (position 2 (list 1 2 3)) → 1 or #f\n"
                 "- Slicing: (take 3 (list 1 2 3 4 5)), (drop 2 (list 1 2 3 4 5))\n\n"
 
-                "Association Lists (ALists):\n"
+                "Association lists (alists):\n"
                 "- Immutable key-value mappings with O(1) lookup performance\n"
                 "- Construction: (alist (list \"name\" \"Alice\") (list \"age\" 30))\n"
                 "- Access: (alist-get my-alist \"key\"), (alist-get my-alist \"key\" \"default\")\n"
@@ -119,7 +121,7 @@ class AIFPLAITool(AITool):
                 "- Pattern matching: (match data ((alist? a) ...) (_ ...))\n"
                 "- Maintains insertion order, optimized for data processing workflows\n\n"
 
-                "Type Predicates:\n"
+                "Type predicates:\n"
                 "- (number? 42) → #t, excludes booleans: (number? #t) → #f\n"
                 "- (integer? 42) → #t, (integer? 3.14) → #f, (integer? (round 3.7)) → #t\n"
                 "- (float? 3.14) → #t, (float? 42) → #f, (float? (/ 1 2)) → #t\n"
@@ -127,32 +129,32 @@ class AIFPLAITool(AITool):
                 "- (string? \"hello\") → #t, (boolean? #t) → #t, (list? (list 1 2)) → #t, (alist? (alist ...)) → #t\n"
                 "- (function? (lambda (x) x)) → #t\n\n"
 
-                "Lambda Functions:\n"
+                "Lambda functions:\n"
                 "- (lambda (param1 param2 ...) body) → creates anonymous function\n"
                 "- ((lambda (x) (* x x)) 5) → 25\n"
                 "- Functions are first-class values with lexical scoping and closures\n"
                 "- Tail recursion automatically optimized\n\n"
 
-                "Local Bindings:\n"
+                "Local bindings:\n"
                 "- (let ((var1 val1) (var2 val2) ...) body) → sequential binding\n"
                 "- (let ((x 5) (y (* x 2))) (+ x y)) → 15 (y can reference x)\n"
                 "- (let ((x 1)) (let ((x (+ x 10))) x)) → 11 (shadowing works)\n"
                 "- Use for normal sequential bindings, no recursion support\n\n"
 
-                "Recursive Bindings:\n"
+                "Recursive bindings:\n"
                 "- (letrec ((var1 val1) (var2 val2) ...) body) → recursive binding\n"
                 "- (letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5)) → 120\n"
                 "- Supports self-recursion and mutual recursion\n"
                 "- Use only when you need functions that reference themselves\n\n"
 
-                "Higher-Order Functions:\n"
+                "Higher-order functions:\n"
                 "- (map func list) → (map (lambda (x) (* x 2)) (list 1 2 3)) → (2 4 6)\n"
                 "- (filter predicate list) → (filter (lambda (x) (> x 0)) (list -1 2 -3 4)) → (2 4)\n"
                 "- (fold func init list) → (fold + 0 (list 1 2 3 4)) → 10\n"
                 "- (range start end [step]) → (range 1 5) → (1 2 3 4)\n"
                 "- (find predicate list), (any? predicate list), (all? predicate list)\n\n"
 
-                "Pattern Matching:\n"
+                "Pattern matching:\n"
                 "- (match expression (pattern1 result1) (pattern2 result2) (_ default)) → powerful declarative dispatch\n"
                 "- Literal patterns: (match x (42 \"found\") (\"hello\" \"greeting\") (_ \"other\"))\n"
                 "- Variable binding: (match x ((number? n) (* n 2)) ((string? s) (string-upcase s)))\n"
@@ -165,7 +167,7 @@ class AIFPLAITool(AITool):
                 "- Example: (match data (42 \"answer\") ((number? n) (* n 2)) ((string? s) (string-upcase s)) "
                 "((head . tail) (list head (length tail))) (_ \"unknown\"))\n\n"
 
-                "Module System:\n"
+                "Module system:\n"
                 "- (import \"module-name\") → load and return a module (compile-time operation)\n"
                 "- Modules are just .aifpl files that return a value (typically an alist of functions)\n"
                 "- Modules are cached after first load for performance\n"
@@ -184,7 +186,17 @@ class AIFPLAITool(AITool):
                 "- Module names can include subdirectories: (e.g. import \"lib/helpers\")\n"
                 "- Available modules can be found in the module search path directories\n\n"
 
-                "Key Features:\n"
+                "Debugging with trace:\n"
+                "- (trace message1 message2 ... messageN expr) → special form for debugging\n"
+                "- Emits messages BEFORE evaluating expr, then returns expr's value\n"
+                "- Messages are evaluated and converted to strings for output\n"
+                "- Traces appear in the tool result context for inspection\n"
+                "- Example: (trace \"Computing factorial\" (factorial 5))\n"
+                "- Multiple messages: (trace \"x=\" x \"y=\" y (+ x y))\n"
+                "- Useful for debugging recursive functions and complex algorithms\n"
+                "- Trace output shows execution order, helping identify logic issues\n\n"
+
+                "Key features:\n"
                 "- Pure functional: no side effects, immutable data\n"
                 "- Homoiconic: code and data use same representation\n"
                 "- Tail call optimization prevents stack overflow\n"
@@ -198,7 +210,7 @@ class AIFPLAITool(AITool):
                 "#t/#f (boolean), () (empty list)\n"
                 "- Constants: pi, e, true, false\n\n"
 
-                "Important Notes:\n"
+                "Important notes:\n"
                 "- Prefix notation: (+ 1 2) not (1 + 2)\n"
                 "- cons behavior is not the same as traditional LISP: second arg must be a list\n"
                 "- Strict typing: string ops need strings, boolean ops need booleans\n"
@@ -269,21 +281,33 @@ class AIFPLAITool(AITool):
         """
         return self._module_path
 
-    def _evaluate_expression_sync(self, expression: str) -> str:
+    def _evaluate_expression_sync(self, expression: str) -> tuple[str, List[str]]:
         """
         Synchronous helper for expression evaluation.
+
+        Sets up trace collection and returns both result and traces.
 
         Args:
             expression: AIFPL expression to evaluate
 
         Returns:
-            String representation of the result
+            Tuple of (result_string, traces_list)
 
         Raises:
             Various AIFPL-related exceptions
         """
-        # Use the new evaluate_and_format method for proper LISP formatting
-        return self._tool.evaluate_and_format(expression)
+        # Set up trace watcher to collect any trace output
+        watcher = AIFPLBufferingTraceWatcher()
+        self._tool.set_trace_watcher(watcher)
+
+        try:
+            result = self._tool.evaluate_and_format(expression)
+            traces = watcher.get_traces()
+            return result, traces
+
+        finally:
+            # Clean up watcher
+            self._tool.set_trace_watcher(None)
 
     def _extract_evaluate_context(self, arguments: Dict[str, Any]) -> str | None:
         """
@@ -331,7 +355,7 @@ class AIFPLAITool(AITool):
 
             # Run calculation with timeout protection
             try:
-                result = await asyncio.wait_for(
+                result, traces = await asyncio.wait_for(
                     asyncio.to_thread(self._evaluate_expression_sync, expression),
                     timeout=10.0  # Increased timeout for complex functional programming
                 )
@@ -342,11 +366,28 @@ class AIFPLAITool(AITool):
 
             self._logger.debug("AIFPL evaluation successful: %s = %s", expression, result)
 
+            # Build context only if traces exist
+            trace_str = ""
+            total_traces = 0
+            if traces:
+                total_traces = len(traces)
+                if total_traces > 200:
+                    # Clip to last 200 traces
+                    traces = traces[-200:]
+
+                trace_str = "\n".join(traces)
+
+            result_object = {
+                "result": result,
+                "trace_data": trace_str,
+                "trace_data_clipped": "yes" if total_traces > 200 else "no"
+            }
+
             return AIToolResult(
                 id=tool_call.id,
                 name="AIFPL",
-                content=result,
-                context="aifpl"
+                content=json.dumps(result_object, indent=2),
+                context="json"
             )
 
         except AIToolTimeoutError:

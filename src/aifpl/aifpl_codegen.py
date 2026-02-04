@@ -410,15 +410,15 @@ class AIFPLCodeGen:
         """
         Generate code for a trace expression.
 
-        Emits each message via TRACE_EMIT, then generates code for the value expression.
+        Emits each message via EMIT_TRACE, then generates code for the value expression.
         The value expression's result is left on the stack.
         """
         # Generate and emit each message
         for message_plan in plan.message_plans:
             # Generate code to evaluate the message
             self._generate_expr(message_plan, ctx)
-            # Emit TRACE_EMIT (pops value, emits to watcher)
-            ctx.emit(Opcode.TRACE_EMIT)
+            # Emit EMIT_TRACE (pops value, emits to watcher)
+            ctx.emit(Opcode.EMIT_TRACE)
 
         # Generate code for the return value (leaves result on stack)
         self._generate_expr(plan.value_plan, ctx)

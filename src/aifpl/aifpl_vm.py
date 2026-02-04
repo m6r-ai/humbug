@@ -18,11 +18,11 @@ class AIFPLTraceWatcher(Protocol):
     def on_trace(self, message: str) -> None:
         """
         Called when a trace message is emitted.
-        
+
         Args:
             message: The trace message as a string (AIFPL formatted)
         """
-        ...
+
 
 @dataclass
 class TailCall:
@@ -85,7 +85,7 @@ class AIFPLVM:
     def set_trace_watcher(self, watcher: Optional[AIFPLTraceWatcher]) -> None:
         """
         Set the trace watcher (replaces any existing watcher).
-        
+
         Args:
             watcher: AIFPLTraceWatcher instance or None to disable tracing
         """
@@ -94,7 +94,7 @@ class AIFPLVM:
     def _emit_trace(self, message: AIFPLValue) -> None:
         """
         Emit a trace event to the watcher.
-        
+
         Args:
             message: The AIFPL value to trace
         """
@@ -130,7 +130,7 @@ class AIFPLVM:
         table[Opcode.CALL_BUILTIN] = self._op_call_builtin
         table[Opcode.TAIL_CALL_FUNCTION] = self._op_tail_call_function
         table[Opcode.RETURN] = self._op_return
-        table[Opcode.TRACE_EMIT] = self._op_trace_emit
+        table[Opcode.EMIT_TRACE] = self._op_emit_trace
         return table
 
     def execute(
@@ -608,14 +608,14 @@ class AIFPLVM:
         self.frames.pop()
         return self.stack.pop()
 
-    def _op_trace_emit(  # pylint: disable=useless-return
+    def _op_emit_trace(  # pylint: disable=useless-return
         self,
         _frame: Frame,
         _code: CodeObject,
         _arg1: int,
         _arg2: int
     ) -> AIFPLValue | None:
-        """TRACE_EMIT: Pop value from stack and emit to trace watcher."""
+        """EMIT_TRACE: Pop value from stack and emit to trace watcher."""
         # Pop the message from stack
         message = self.stack.pop()
 

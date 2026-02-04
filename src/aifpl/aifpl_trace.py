@@ -31,7 +31,7 @@ class AIFPLFileTraceWatcher:
             filepath: Path to the file to write traces to
         """
         try:
-            self.file = open(filepath, 'w', encoding='utf-8')
+            self.file = open(filepath, 'w', encoding='utf-8')  # pylint: disable=consider-using-with
 
         except IOError as e:
             raise RuntimeError(f"Failed to open trace file '{filepath}': {e}") from e

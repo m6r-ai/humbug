@@ -39,7 +39,7 @@ class Opcode(IntEnum):
     RETURN = auto()          # Return from function
 
     # Debugging
-    TRACE_EMIT = auto()      # Emit trace: TRACE_EMIT (pops value, emits to watcher)
+    EMIT_TRACE = auto()      # Emit trace: EMIT_TRACE (pops value, emits to watcher)
 
 
 @dataclass
@@ -61,7 +61,7 @@ class Instruction:
 
         # Opcodes with no arguments
         no_arg_opcodes = {
-            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.TRACE_EMIT
+            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.EMIT_TRACE
         }
 
         # Opcodes with two arguments

@@ -129,7 +129,7 @@ class BytecodeValidator:
             Opcode.RETURN: (1, 0),  # Pops 1, exits function
 
             # Trace debug
-            Opcode.TRACE_EMIT: (1, 0),  # Pops 1 (message), pushes 0
+            Opcode.EMIT_TRACE: (1, 0),  # Pops 1 (message), pushes 0
         }
 
     def validate(self, code: CodeObject) -> None:
