@@ -73,6 +73,20 @@ class AITool(ABC):
             # Ignore errors during context extraction
             return None
 
+    def cancel(self) -> None:
+        """
+        Request cancellation of any ongoing operations.
+
+        This is an optional method that tools can override if they support
+        cancellation. The default implementation does nothing.
+
+        This method may be called from a different thread/task than the one
+        executing the tool, so implementations must be thread-safe.
+
+        Note: Cancellation is best-effort. Tools should respond to cancellation
+        as quickly as possible, but there are no guarantees about timing.
+        """
+
     async def execute(
         self,
         tool_call: AIToolCall,

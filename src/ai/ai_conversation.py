@@ -995,6 +995,16 @@ class AIConversation:
             if not task.done():
                 task.cancel()
 
+        # Cancel any active tool operations
+        for tool_name in self._tool_manager.get_tool_names():
+            tool = self._tool_manager.get_tool(tool_name)
+            if tool:
+                try:
+                    tool.cancel()
+
+                except Exception:
+                    self._logger.exception("Error cancelling tool %s", tool_name)
+
         self._pending_user_messages.clear()
 
         self._state = ConversationState.IDLE

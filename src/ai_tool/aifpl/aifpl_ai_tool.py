@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List
 
-from aifpl import AIFPL, AIFPLError
+from aifpl import AIFPL, AIFPLError, AIFPLCancelledException
 from aifpl import AIFPLBufferingTraceWatcher
 from ai_tool import (
     AITool, AIToolCall, AIToolDefinition, AIToolParameter, AIToolResult,
@@ -284,6 +284,18 @@ class AIFPLAITool(AITool):
         """
         return self._module_path
 
+    def cancel(self) -> None:
+        """
+        Cancel any ongoing AIFPL evaluation.
+
+        This signals the VM to stop execution at the next cancellation check point
+        (typically within 1ms for CPU-intensive computations).
+
+        This method is thread-safe and can be called while an evaluation is running
+        in a thread pool.
+        """
+        self._tool.vm.cancel()
+
     def _evaluate_expression_sync(self, expression: str) -> tuple[str, List[str], bool]:
         """
         Synchronous helper for expression evaluation.
@@ -357,16 +369,42 @@ class AIFPLAITool(AITool):
         try:
             self._logger.debug("Evaluating AIFPL expression: %s", expression)
 
-            # Run calculation with timeout protection
+            # Run calculation with timeout protection and cancellation support
+            # We use a Task so we can cancel the thread execution via the VM's cancel() method
+            # Create a task for the thread execution
+            task = asyncio.create_task(
+                asyncio.to_thread(self._evaluate_expression_sync, expression)
+            )
+
             try:
+                # Wait for the task with timeout
                 result, traces, watcher_clipped = await asyncio.wait_for(
-                    asyncio.to_thread(self._evaluate_expression_sync, expression),
+                    task,
                     timeout=10.0  # Increased timeout for complex functional programming
                 )
 
-            except asyncio.TimeoutError as e:
-                self._logger.warning("AIFPL expression evaluation timed out: %s", expression)
-                raise AIToolTimeoutError("AIFPL calculation timed out", 10.0) from e
+            except asyncio.TimeoutError:
+                # On timeout, signal the VM to cancel execution
+                # This will cause the VM to raise AIFPLCancelledException at the next check point
+                self._logger.warning("AIFPL expression evaluation timed out, requesting cancellation: %s", expression)
+                self._tool.vm.cancel()
+
+                # The task is already cancelled by wait_for, so we don't need to wait for it again
+                # Just signal the VM to cancel and let the thread finish on its own
+                # If the VM responds to cancellation, the thread will complete soon
+                # If not, the thread will be orphaned but won't block the event loop
+                if not task.done():
+                    # Task is still running - give it a moment to respond to cancellation
+                    try:
+                        await asyncio.wait_for(task, timeout=1.0)
+
+                    except (asyncio.TimeoutError, asyncio.CancelledError, AIFPLCancelledException):
+                        pass  # Expected - task still running, cancelled, or VM responded to cancellation
+
+                    except Exception as e:
+                        self._logger.debug("Unexpected exception during cancellation grace period: %s", e)
+
+                raise AIToolTimeoutError("AIFPL calculation timed out", 10.0)  # pylint: disable=raise-missing-from
 
             self._logger.debug("AIFPL evaluation successful: %s = %s", expression, result)
 
@@ -393,6 +431,11 @@ class AIFPLAITool(AITool):
             # Re-raise timeout errors
             raise
 
+        except AIFPLCancelledException as e:
+            # Treat cancellation as a timeout (which is what triggered it)
+            self._logger.info("AIFPL expression was cancelled: %s", expression)
+            raise AIToolTimeoutError("AIFPL calculation timed out", 10.0) from e
+
         except AIFPLError as e:
             self._logger.warning("AIFPL error in expression '%s': %s", expression, str(e), exc_info=True)
             # Check if this is a division by zero error specifically
@@ -401,11 +444,6 @@ class AIFPLAITool(AITool):
                 raise AIToolExecutionError("Division by zero") from e
 
             raise AIToolExecutionError(str(e)) from e
-
-        except ZeroDivisionError as e:
-            # Handle the unlikely case where Python's ZeroDivisionError still gets through
-            self._logger.warning("Division by zero in AIFPL expression '%s'", expression, exc_info=True)
-            raise AIToolExecutionError("Division by zero") from e
 
         except Exception as e:
             self._logger.error("Unexpected error evaluating AIFPL expression '%s': %s", expression, str(e), exc_info=True)

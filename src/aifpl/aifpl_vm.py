@@ -7,7 +7,7 @@ from typing import List, Dict, Any, cast, Optional, Protocol
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
 from aifpl.aifpl_bytecode_validator import validate_bytecode
-from aifpl.aifpl_error import AIFPLEvalError
+from aifpl.aifpl_error import AIFPLEvalError, AIFPLCancelledException
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLFunction,
 )
@@ -69,6 +69,13 @@ class AIFPLVM:
         # Trace watcher for debugging support
         self.trace_watcher: Optional[AIFPLTraceWatcher] = None
 
+        # Cancellation support for non-blocking execution
+        self._cancelled: bool = False
+        self._instruction_count: int = 0
+
+        # Check cancellation every N instructions (balance between responsiveness and performance)
+        self._cancellation_check_interval: int = 1000
+
         # Create builtin registry and get function array for fast lookup
         builtin_registry = AIFPLBuiltinRegistry()
 
@@ -104,6 +111,43 @@ class AIFPLVM:
         # Convert message to string using describe() and notify watcher
         message_str = message.describe()
         self.trace_watcher.on_trace(message_str)
+
+    def cancel(self) -> None:
+        """
+        Request cancellation of the currently executing code.
+
+        This sets a flag that will be checked periodically during execution.
+        The cancellation is not immediate - it will be honored at the next
+        cancellation check point (every ~1000 instructions by default).
+
+        This method is thread-safe and can be called from a different thread
+        than the one executing the VM.
+        """
+        self._cancelled = True
+
+    def reset_cancellation(self) -> None:
+        """
+        Reset the cancellation flag.
+
+        This should be called before starting a new execution to ensure
+        the cancellation state from a previous execution doesn't affect
+        the new one.
+        """
+        self._cancelled = False
+        self._instruction_count = 0
+
+    def _check_cancellation(self) -> None:
+        """
+        Check if execution has been cancelled and raise exception if so.
+
+        This is called periodically during execution (every N instructions)
+        to allow long-running computations to be interrupted.
+
+        Raises:
+            AIFPLCancelledException: If execution has been cancelled
+        """
+        if self._cancelled:
+            raise AIFPLCancelledException()
 
     def _build_dispatch_table(self) -> List[Any]:
         """
@@ -160,6 +204,9 @@ class AIFPLVM:
             self.globals.update(prelude_functions)
 
         # Reset state
+        self.reset_cancellation()
+
+        # Reset execution state
         self.stack = []
         self.frames = [Frame(code)]
 
@@ -183,12 +230,26 @@ class AIFPLVM:
         # Cache dispatch table in local variable for faster access
         dispatch = self._dispatch_table
 
+        # Cache cancellation check interval for performance
+        check_interval = self._cancellation_check_interval
+
+        # Local instruction counter for cancellation checking
+        # Using a local variable is faster than accessing self._instruction_count
+        instruction_count = 0
+
         while True:
             # Re-fetch code and instructions each iteration in case frame.code changes (mutual recursion TCO)
             code = frame.code
             instructions = code.instructions
             if frame.ip >= len(instructions):
                 break
+
+            # Periodically check for cancellation
+            # This adds minimal overhead while allowing timely cancellation
+            instruction_count += 1
+            if instruction_count >= check_interval:
+                self._check_cancellation()
+                instruction_count = 0
 
             instr = instructions[frame.ip]
             opcode = instr.opcode

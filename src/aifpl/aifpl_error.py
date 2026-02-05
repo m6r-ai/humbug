@@ -233,3 +233,20 @@ class AIFPLCircularImportError(AIFPLModuleError):
             suggestion="Break the cycle by extracting shared code to a third module",
             **kwargs
         )
+
+
+class AIFPLCancelledException(AIFPLEvalError):
+    """Execution was cancelled (typically due to timeout)."""
+
+    def __init__(self, **kwargs: Any):
+        """
+        Initialize cancellation error.
+
+        Args:
+            **kwargs: Additional error context
+        """
+        super().__init__(
+            message="Execution was cancelled",
+            suggestion="The operation exceeded the allowed time limit or was explicitly cancelled",
+            **kwargs
+        )
