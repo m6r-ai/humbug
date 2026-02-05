@@ -16,6 +16,7 @@ class AIFPLLexer:
         self._position = 0
         self._line = 1
         self._column = 1
+        self._preserve_comments = False
 
         # Build jump table for ASCII characters (0-127)
         # This provides O(1) lookup instead of O(n) if/elif chain
@@ -58,12 +59,13 @@ class AIFPLLexer:
         for char in '*/%<>=!&|^~_':
             self._jump_table[ord(char)] = self._handle_symbol
 
-    def lex(self, expression: str) -> List[AIFPLToken]:
+    def lex(self, expression: str, preserve_comments: bool = False) -> List[AIFPLToken]:
         """
         Lex an AIFPL expression with detailed error reporting.
 
         Args:
             expression: The expression string to lex
+            preserve_comments: If True, emit COMMENT tokens instead of skipping them
 
         Returns:
             List of tokens
@@ -76,6 +78,7 @@ class AIFPLLexer:
         self._position = 0
         self._line = 1
         self._column = 1
+        self._preserve_comments = preserve_comments
 
         while self._position < len(self._expression):
             char = self._expression[self._position]
@@ -158,10 +161,28 @@ class AIFPLLexer:
         self._position += 1
 
     def _handle_comment(self) -> None:
-        """Handle comment - skip from ';' to end of line."""
+        """Handle comment - skip or preserve based on mode."""
+        if not self._preserve_comments:
+            # Skip comment
+            while self._position < len(self._expression) and self._expression[self._position] != '\n':
+                self._column += 1
+                self._position += 1
+
+            return
+
+        # Preserve the comment as a token
+        start_line = self._line
+        start_col = self._column
+        start_pos = self._position
+
+        # Read until end of line
         while self._position < len(self._expression) and self._expression[self._position] != '\n':
             self._column += 1
             self._position += 1
+
+        comment_text = self._expression[start_pos:self._position]
+        length = self._position - start_pos
+        self._tokens.append(AIFPLToken(AIFPLTokenType.COMMENT, comment_text, length, start_line, start_col))
 
     def _handle_lparen(self) -> None:
         """Handle left parenthesis."""

@@ -16,6 +16,7 @@ class AIFPLTokenType(Enum):
     COMPLEX = "COMPLEX"
     STRING = "STRING"
     BOOLEAN = "BOOLEAN"
+    COMMENT = "COMMENT"
 
 
 @dataclass
