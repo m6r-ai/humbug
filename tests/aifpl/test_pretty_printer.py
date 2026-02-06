@@ -11,7 +11,7 @@ class TestPrettyPrinterBasic:
     def test_simple_atoms(self):
         """Test formatting of simple atomic values."""
         printer = AIFPLPrettyPrinter()
-        
+
         assert printer.format("42") == "42\n"
         assert printer.format("3.14") == "3.14\n"
         assert printer.format("#t") == "#t\n"
@@ -27,22 +27,47 @@ class TestPrettyPrinterBasic:
     def test_compact_list(self):
         """Test that short lists stay compact."""
         printer = AIFPLPrettyPrinter()
-        
+
         # Simple arithmetic
         assert printer.format("(+ 1 2 3)") == "(+ 1 2 3)\n"
-        
+
         # Short nested lists
         assert printer.format("(* n (factorial (- n 1)))") == "(* n (factorial (- n 1)))\n"
 
     def test_multiline_list(self):
         """Test that long lists are formatted multi-line."""
         printer = AIFPLPrettyPrinter()
-        
+
         # Very long list should be multi-line
         code = "(very-long-function-name-that-exceeds-threshold arg1 arg2 arg3 arg4 arg5)"
         result = printer.format(code)
         assert "\n" in result
         assert result.count("\n") > 1  # More than just trailing newline
+
+
+class TestPrettyPrinterAlignment:
+    """Test traditional Lisp-style alignment."""
+
+    def test_multiline_list_alignment(self):
+        """Test that multi-line lists use traditional Lisp alignment."""
+        # Force multi-line with low threshold
+        options = FormatOptions(compact_threshold=20)
+        printer = AIFPLPrettyPrinter(options)
+        code = "(+ 1 2 3 4 5 6 7 8 9 10)"
+        result = printer.format(code)
+
+        # Should have first argument on same line as function
+        lines = result.split("\n")
+        assert lines[0] == "(+ 1"
+
+        # Subsequent arguments should align under first argument
+        # First argument starts at position 3 (after "(+ ")
+        assert lines[1] == "   2"
+        assert lines[2] == "   3"
+
+        # All argument lines should have same indentation
+        for i in range(1, 10):
+            assert lines[i].startswith("   ")
 
 
 class TestPrettyPrinterLetForms:
@@ -53,7 +78,7 @@ class TestPrettyPrinterLetForms:
         printer = AIFPLPrettyPrinter()
         code = "(let ((x 5)(y 10)) (+ x y))"
         result = printer.format(code)
-        
+
         expected = "(let ((x 5)\n      (y 10))\n  (+ x y))\n"
         assert result == expected
 
@@ -62,7 +87,7 @@ class TestPrettyPrinterLetForms:
         printer = AIFPLPrettyPrinter()
         code = "(let* ((x 5)(y (* x 2))) (+ x y))"
         result = printer.format(code)
-        
+
         expected = "(let* ((x 5)\n       (y (* x 2)))\n  (+ x y))\n"
         assert result == expected
 
@@ -71,7 +96,7 @@ class TestPrettyPrinterLetForms:
         printer = AIFPLPrettyPrinter()
         code = "(letrec ((factorial (lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1))))))) (factorial 5))"
         result = printer.format(code)
-        
+
         # Should have proper indentation
         assert "letrec" in result
         assert "lambda" in result
@@ -82,7 +107,7 @@ class TestPrettyPrinterLetForms:
         printer = AIFPLPrettyPrinter()
         code = "(letrec ((f (lambda (x) x))(g (lambda (y) y))) (f 5))"
         result = printer.format(code)
-        
+
         # Should have blank line between function definitions
         lines = result.split("\n")
         # Find the line with first function's closing paren
@@ -98,7 +123,7 @@ class TestPrettyPrinterLambda:
         printer = AIFPLPrettyPrinter()
         code = "(lambda (x y) (* x y))"
         result = printer.format(code)
-        
+
         expected = "(lambda (x y)\n  (* x y))\n"
         assert result == expected
 
@@ -107,7 +132,7 @@ class TestPrettyPrinterLambda:
         printer = AIFPLPrettyPrinter()
         code = "(lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1)))))"
         result = printer.format(code)
-        
+
         # Should have proper indentation
         assert "lambda" in result
         assert "if" in result
@@ -122,7 +147,7 @@ class TestPrettyPrinterConditionals:
         printer = AIFPLPrettyPrinter()
         code = "(if (> x 5) (+ x 10) (- x 5))"
         result = printer.format(code)
-        
+
         expected = "(if (> x 5)\n  (+ x 10)\n  (- x 5))\n"
         assert result == expected
 
@@ -131,7 +156,7 @@ class TestPrettyPrinterConditionals:
         printer = AIFPLPrettyPrinter()
         code = "(if (> x 0) (if (< x 10) 1 2) 3)"
         result = printer.format(code)
-        
+
         # Should have proper indentation for nested if
         assert "if" in result
         assert result.count("\n") > 3
@@ -145,7 +170,7 @@ class TestPrettyPrinterComments:
         printer = AIFPLPrettyPrinter()
         code = "(let ((x 5)  ; initial value\n      (y 10))  ; second value\n  (+ x y))"
         result = printer.format(code)
-        
+
         assert "; initial value" in result
         assert "; second value" in result
 
@@ -154,7 +179,7 @@ class TestPrettyPrinterComments:
         printer = AIFPLPrettyPrinter()
         code = "; This is a comment\n(+ 1 2)"
         result = printer.format(code)
-        
+
         assert "; This is a comment" in result
         assert result.startswith("; This is a comment")
 
@@ -163,7 +188,7 @@ class TestPrettyPrinterComments:
         printer = AIFPLPrettyPrinter()
         code = "; Comment 1\n; Comment 2\n; Comment 3\n(+ 1 2)"
         result = printer.format(code)
-        
+
         lines = result.split("\n")
         # First three lines should be comments with no blank lines between
         assert lines[0] == "; Comment 1"
@@ -175,7 +200,7 @@ class TestPrettyPrinterComments:
         printer = AIFPLPrettyPrinter()
         code = "; First comment\n\n; Second comment\n(+ 1 2)"
         result = printer.format(code)
-        
+
         lines = result.split("\n")
         # Should have blank line between comments
         assert lines[0] == "; First comment"
@@ -187,7 +212,7 @@ class TestPrettyPrinterComments:
         printer = AIFPLPrettyPrinter()
         code = "(+ 1 2)\n; Comment after code\n(+ 3 4)"
         result = printer.format(code)
-        
+
         lines = result.split("\n")
         # Should have blank line before comment
         assert "(+ 1 2)" in lines[0]
@@ -203,7 +228,7 @@ class TestPrettyPrinterIndentation:
         printer = AIFPLPrettyPrinter()
         code = "(let ((x 5)(y 10)) (+ x y))"
         result = printer.format(code)
-        
+
         lines = result.split("\n")
         # Check that bindings are properly indented
         assert "(let ((x 5)" in lines[0]
@@ -214,7 +239,7 @@ class TestPrettyPrinterIndentation:
         printer = AIFPLPrettyPrinter()
         code = "(letrec ((factorial (lambda (n) (if (= n 0) 1 (* n (factorial (- n 1))))))) (factorial 5))"
         result = printer.format(code)
-        
+
         # Lambda body should be indented relative to lambda keyword
         # not relative to the start of the line
         lines = result.split("\n")
@@ -228,7 +253,7 @@ class TestPrettyPrinterIndentation:
         printer = AIFPLPrettyPrinter()
         code = "(let ((x (let ((y 5)) (+ y 1)))) (+ x 10))"
         result = printer.format(code)
-        
+
         # Inner let should be indented
         assert "let" in result
         lines = result.split("\n")
@@ -246,7 +271,7 @@ class TestPrettyPrinterOptions:
         printer = AIFPLPrettyPrinter(options)
         code = "(let ((x 5)) (+ x 10))"
         result = printer.format(code)
-        
+
         lines = result.split("\n")
         # Body should be indented by 4 spaces
         body_line = [line for line in lines if "(+ x 10)" in line][0]
@@ -258,7 +283,7 @@ class TestPrettyPrinterOptions:
         printer = AIFPLPrettyPrinter(options)
         code = "(let ((x 5)  ; comment\n      (y 10))\n  (+ x y))"
         result = printer.format(code)
-        
+
         # Comment should have 4 spaces before it
         assert "    ; comment" in result
 
@@ -268,7 +293,7 @@ class TestPrettyPrinterOptions:
         printer = AIFPLPrettyPrinter(options)
         code = "(+ 1 2 3 4 5 6 7 8 9 10)"
         result = printer.format(code)
-        
+
         # Should be multi-line due to low threshold
         assert result.count("\n") > 1
 
@@ -281,7 +306,7 @@ class TestPrettyPrinterEdgeCases:
         printer = AIFPLPrettyPrinter()
         code = "'(a b c)"
         result = printer.format(code)
-        
+
         assert result == "'(a b c)\n"
 
     def test_deeply_nested_lists(self):
@@ -289,7 +314,7 @@ class TestPrettyPrinterEdgeCases:
         printer = AIFPLPrettyPrinter()
         code = "(+ 1 (+ 2 (+ 3 (+ 4 5))))"
         result = printer.format(code)
-        
+
         # Should stay compact since it's under threshold
         assert "(+ 1 (+ 2 (+ 3 (+ 4 5))))" in result
 
@@ -298,7 +323,7 @@ class TestPrettyPrinterEdgeCases:
         printer = AIFPLPrettyPrinter()
         code = "(let () 42)"
         result = printer.format(code)
-        
+
         assert "let" in result
         assert "42" in result
 
@@ -307,7 +332,7 @@ class TestPrettyPrinterEdgeCases:
         printer = AIFPLPrettyPrinter()
         code = "(match x (1 'one) (2 'two) (_ 'other))"
         result = printer.format(code)
-        
+
         # Match clauses should be indented
         assert "match" in result
         assert result.count("\n") > 2
@@ -316,13 +341,13 @@ class TestPrettyPrinterEdgeCases:
         """Test that formatting is idempotent."""
         printer = AIFPLPrettyPrinter()
         code = "(let ((x 5)(y 10)) (+ x y))"
-        
+
         # Format once
         result1 = printer.format(code)
-        
+
         # Format the result again
         result2 = printer.format(result1)
-        
+
         # Should be identical
         assert result1 == result2
 
@@ -331,7 +356,7 @@ class TestPrettyPrinterEdgeCases:
         printer = AIFPLPrettyPrinter()
         code = '"hello\\nworld"'
         result = printer.format(code)
-        
+
         assert '"hello\\nworld"' in result
 
     def test_complex_numbers(self):
@@ -339,7 +364,7 @@ class TestPrettyPrinterEdgeCases:
         printer = AIFPLPrettyPrinter()
         code = "(+ 3+4j 5j)"
         result = printer.format(code)
-        
+
         assert "3+4j" in result or "(3+4j)" in result
         assert "5j" in result
 
@@ -352,7 +377,7 @@ class TestPrettyPrinterRealWorldExamples:
         printer = AIFPLPrettyPrinter()
         code = """(letrec ((factorial (lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1))))))) (factorial 5))"""
         result = printer.format(code)
-        
+
         # Should be properly formatted
         assert "letrec" in result
         assert "factorial" in result
@@ -364,7 +389,7 @@ class TestPrettyPrinterRealWorldExamples:
         printer = AIFPLPrettyPrinter()
         code = """(letrec ((even? (lambda (n) (or (= n 0) (odd? (- n 1))))) (odd? (lambda (n) (and (!= n 0) (even? (- n 1)))))) (even? 10))"""
         result = printer.format(code)
-        
+
         # Should have blank line between function definitions
         assert "even?" in result
         assert "odd?" in result
@@ -378,6 +403,6 @@ class TestPrettyPrinterRealWorldExamples:
         printer = AIFPLPrettyPrinter()
         code = "(map (lambda (x) (* x 2)) (list 1 2 3 4 5))"
         result = printer.format(code)
-        
+
         # Should stay compact
         assert "(map (lambda (x) (* x 2)) (list 1 2 3 4 5))" in result
