@@ -57,9 +57,16 @@ class AIFPLPrettyPrinter:
 
         output_parts = []
         prev_was_comment = False
+        prev_token_line = 0  # Track line number of previous token
 
         # Format all top-level expressions
         while self.current_token is not None:
+            current_line = self.current_token.line
+
+            # Check if there's a blank line in the original source
+            # (more than 1 line gap between tokens)
+            has_blank_line_before = (current_line - prev_token_line) > 1
+
             if self.current_token.type == AIFPLTokenType.COMMENT:
                 # Check if this is an end-of-line comment
                 is_eol = self._is_end_of_line_comment()
@@ -72,19 +79,29 @@ class AIFPLPrettyPrinter:
 
                 else:
                     # Standalone comment
-                    if output_parts and not prev_was_comment:
+                    # Add blank line before comment if:
+                    # 1. There was a blank line in the original source, OR
+                    # 2. Previous was not a comment (separating code from comments)
+                    if output_parts and (has_blank_line_before or not prev_was_comment):
                         output_parts.append('\n')
                     output_parts.append(self.current_token.value)
                     output_parts.append('\n')
 
                 prev_was_comment = True
+                prev_token_line = current_line
                 self._advance()
 
             else:
+                # Code expression
+                # Add blank line before code if there was one in the original
+                if output_parts and has_blank_line_before:
+                    output_parts.append('\\n')
+
                 result = self._format_expression(0)
                 output_parts.append(result)
                 output_parts.append('\n')
                 prev_was_comment = False
+                prev_token_line = current_line
 
         # Join and clean up
         result = ''.join(output_parts)
