@@ -234,7 +234,7 @@ class AIFPLLexer:
                     column=self._column,
                     received=f"String starting with: {self._expression[start_pos:start_pos+10]}...",
                     expected="Closing quote \" at end of string",
-                    example='Correct: "hello world"\\nIncorrect: "hello world',
+                    example='Correct: "hello world"\nIncorrect: "hello world',
                     suggestion="Add closing quote \" at the end of the string",
                     context="String literals must be enclosed in double quotes"
                 ) from e
@@ -319,7 +319,7 @@ class AIFPLLexer:
                 column=self._column,
                 received=f"Boolean literal: {invalid_literal}",
                 expected="Valid boolean: #t or #f",
-                example="Correct: #t, #f\\nIncorrect: #true, #false, #T, #F",
+                example="Correct: #t, #f\nIncorrect: #true, #false, #T, #F",
                 suggestion="Use #t for true or #f for false",
                 context="AIFPL uses #t and #f for boolean values"
             )
@@ -347,7 +347,7 @@ class AIFPLLexer:
             column=self._column,
             received=f"Found: #{invalid_char}",
             expected="Valid # literal: #t, #f, #xFF, #b1010, #o755",
-            example="Correct: #t, #f, #xFF, #b1010, #o755\\nIncorrect: #true, #1, 0xFF",
+            example="Correct: #t, #f, #xFF, #b1010, #o755\nIncorrect: #true, #1, 0xFF",
             suggestion=suggestion,
             context="# must be followed by: 't'/'f' (boolean), 'x'/'X' (hex), 'b'/'B' (binary), or 'o'/'O' (octal)"
         )
@@ -392,7 +392,7 @@ class AIFPLLexer:
                         column=start_col,
                         received=f"Control character: {char_display} (code {char_code})",
                         expected="Valid AIFPL characters or escape sequences in strings",
-                        example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
+                        example='Valid: "hello\\nworld" (newline in string)\nInvalid: hello<ctrl-char>world',
                         suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
                         context="Control characters are not allowed in source code. Use escape "
                             "sequences like \\n, \\t, or \\uXXXX in strings."
@@ -427,7 +427,7 @@ class AIFPLLexer:
                 column=self._column,
                 received=f"Control character: {char_display} (code {char_code})",
                 expected="Valid AIFPL characters or escape sequences in strings",
-                example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
+                example='Valid: "hello\\nworld" (newline in string)\nInvalid: hello<ctrl-char>world',
                 suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
                 context="Control characters are not allowed in source code. Use escape "
                     "sequences like \\n, \\t, or \\uXXXX in strings."
@@ -454,7 +454,7 @@ class AIFPLLexer:
             column=self._column,
             received=f"Character: {char} (code {char_code})",
             expected="Valid AIFPL characters: letters, digits, +, -, *, /, etc.",
-            example="Valid: (+ 1 2), my-var, func?\\nInvalid: @var, $value, [list]",
+            example="Valid: (+ 1 2), my-var, func?\nInvalid: @var, $value, [list]",
             suggestion=suggestion,
             context=context
         )
@@ -683,7 +683,7 @@ class AIFPLLexer:
                     column=curr_col,
                     received=f"Control character: {char_display} (code {char_code})",
                     expected="Valid AIFPL characters or escape sequences in strings",
-                    example='Valid: "hello\\nworld" (newline in string)\\nInvalid: hello<ctrl-char>world',
+                    example='Valid: "hello\\nworld" (newline in string)\nInvalid: hello<ctrl-char>world',
                     suggestion="Remove the control character or use escape sequences like \\n, \\t, or \\uXXXX in strings",
                     context="Control characters are not allowed in source code. Use escape "
                         "sequences like \\n, \\t, or \\uXXXX in strings."
