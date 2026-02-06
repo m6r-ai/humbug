@@ -95,7 +95,7 @@ class AIFPLPrettyPrinter:
                 # Code expression
                 # Add blank line before code if there was one in the original
                 if output_parts and has_blank_line_before:
-                    output_parts.append('\\n')
+                    output_parts.append('\n')
 
                 result = self._format_expression(0)
                 output_parts.append(result)
@@ -218,9 +218,15 @@ class AIFPLPrettyPrinter:
 
         if not has_comments:
             # Try compact format
+            saved_pos = self.pos
+            saved_token = self.current_token
             compact = self._try_compact_list(indent)
             if compact and len(compact) <= self.options.compact_threshold:
                 return compact
+
+            # Compact format was too long or failed, restore position
+            self.pos = saved_pos
+            self.current_token = saved_token
 
         # Use multi-line format
         return self._format_multiline_list(indent)
@@ -284,11 +290,17 @@ class AIFPLPrettyPrinter:
         """Format a list across multiple lines."""
         parts = ['(']
         first = True
-        elem_indent = indent + self.options.indent_size
+        element_count = 0
+        # Start with default indent
+        elem_indent = indent + 1  # After opening paren
         prev_was_comment = False
+        first_elem_str = None
 
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             if self.current_token.type == AIFPLTokenType.COMMENT:
+                if first:
+                    parts.append(' ')
+                    
                 is_eol = self._is_end_of_line_comment()
 
                 if is_eol:
@@ -309,11 +321,29 @@ class AIFPLPrettyPrinter:
                 prev_was_comment = True
                 continue
 
-            if not first:
+            # Add newline before element if it's not first or second
+            if element_count >= 2:
                 parts.append('\n')
                 parts.append(' ' * elem_indent)
-
-            parts.append(self._format_expression(elem_indent))
+            
+            elem_str = self._format_expression(elem_indent)
+            
+            if element_count == 0:
+                # First element (function name) - no space before it
+                parts.append(elem_str)
+                first_elem_str = elem_str
+            elif element_count == 1:
+                # Second element (first argument) - space before it, on same line
+                parts.append(' ')
+                parts.append(elem_str)
+                # Calculate indent for remaining elements: align under second element
+                # Position is: indent + 1 (for '(') + len(first_elem) + 1 (space)
+                elem_indent = indent + 1 + len(first_elem_str) + 1
+            else:
+                # Third+ elements - already have newline and indent from above
+                parts.append(elem_str)
+            
+            element_count += 1
             first = False
             prev_was_comment = False
 
