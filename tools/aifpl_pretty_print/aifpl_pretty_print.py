@@ -9,7 +9,7 @@ import traceback
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
-from aifpl.aifpl_pretty_printer import pretty_print, FormatOptions
+from aifpl.aifpl_pretty_printer import AIFPLPrettyPrinter, FormatOptions
 
 
 def main():
@@ -114,7 +114,8 @@ Examples:
 
     # Format the code
     try:
-        formatted_code = pretty_print(source_code, options)
+        printer = AIFPLPrettyPrinter(options)
+        formatted_code = printer.format(source_code)
 
     except Exception as e:
         print(f"Error formatting code: {e}", file=sys.stderr)

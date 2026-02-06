@@ -16,7 +16,7 @@ class FormatOptions:
     comment_spacing: int = 2  # Spaces before end-of-line comments
 
 
-class PrettyPrinter:
+class AIFPLPrettyPrinter:
     """
     Pretty-prints AIFPL code while preserving comments.
 
@@ -217,6 +217,13 @@ class PrettyPrinter:
         first = True
 
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
+            # Early bailout: if we've already exceeded threshold, stop trying
+            current_length = len(''.join(parts))
+            if current_length > self.options.compact_threshold:
+                self.pos = saved_pos
+                self.current_token = saved_token
+                return None
+
             if self.current_token.type == AIFPLTokenType.COMMENT:
                 # Can't do compact with comments
                 self.pos = saved_pos
@@ -228,6 +235,9 @@ class PrettyPrinter:
                 if not first:
                     parts.append(' ')
 
+                # Save position before trying nested list
+                nested_saved_pos = self.pos
+                nested_saved_token = self.current_token
                 self._advance()  # consume '(' for nested list
                 nested = self._try_compact_list(indent)
                 if nested is None:
@@ -357,6 +367,11 @@ class PrettyPrinter:
 
             # Format binding
             binding_str = self._format_binding(binding_indent)
+            if not binding_str:
+                # _format_binding returned empty (token wasn't an LPAREN)
+                # This means we've reached the end of bindings
+                break
+
             parts.append(binding_str)
 
             prev_binding_was_complex = 'lambda' in binding_str or '\n' in binding_str
@@ -598,25 +613,3 @@ class PrettyPrinter:
 
         else:
             self.current_token = None
-
-
-def pretty_print(source_code: str, options: Optional[FormatOptions] = None) -> str:
-    """
-    Pretty-print AIFPL source code.
-
-    Args:
-        source_code: The AIFPL source code to format
-        options: Optional formatting options
-
-    Returns:
-        Formatted source code with preserved comments
-
-    Example:
-        >>> code = "(let ((x 5)(y 10)) (+ x y))"
-        >>> print(pretty_print(code))
-        (let ((x 5)
-              (y 10))
-          (+ x y))
-    """
-    printer = PrettyPrinter(options)
-    return printer.format(source_code)
