@@ -215,7 +215,7 @@ class AIFPLPrettyPrinter:
         # Check if comment is on the same line as the last non-comment token
         return self.current_token.line == self.last_token_line
 
-    def _format_comments_before_expression(self, indent: int, out: OutputBuilder) -> None:
+    def _format_comments_before_expression(self, indent: int, out: OutputBuilder, add_leading_newline: bool = True) -> bool:
         """
         Handle comments that appear before an expression.
         Consumes and formats all standalone (non-EOL) comments at current position.
@@ -223,13 +223,28 @@ class AIFPLPrettyPrinter:
         Args:
             indent: Indentation level for standalone comments
             out: OutputBuilder to append formatted comments to
+            add_leading_newline: If True, adds a newline before comments (if there isn't one already)
+
+        Returns:
+            True if any comments were processed, False otherwise
         """
+        # Early exit if no comments
+        if not (self.current_token and self.current_token.type == AIFPLTokenType.COMMENT):
+            return False
+
+        # Add leading newline if requested and we don't already have one
+        if add_leading_newline:
+            if not out.ends_with_newline():
+                out.add_newline()
+
         while self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
             if self._is_end_of_line_comment():
                 break
 
             out.add_standalone_comment(self.current_token.value, indent)
             self._advance()
+
+        return True
 
     def _append_eol_comment_if_present(self, out: OutputBuilder, prefix: str = '') -> bool:
         """
@@ -277,11 +292,7 @@ class AIFPLPrettyPrinter:
             pass
 
         # Handle standalone comments
-        if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-            if not out.ends_with_newline():
-                out.add_newline()
-
-            self._format_comments_before_expression(indent, out)
+        self._format_comments_before_expression(indent, out)
 
         # Format the branch expression
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
@@ -457,10 +468,9 @@ class AIFPLPrettyPrinter:
                 continue
 
             # Handle standalone comments
-            if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-                if not first and not prev_was_comment:
-                    out.add_newline()
-                self._format_comments_before_expression(elem_indent, out)
+            # Add newline before comment only if not first and not after another comment
+            add_newline = not first and not prev_was_comment
+            if self._format_comments_before_expression(elem_indent, out, add_leading_newline=add_newline):
                 prev_was_comment = True
                 continue
 
@@ -529,11 +539,9 @@ class AIFPLPrettyPrinter:
                 continue
 
             # Handle standalone comments
-            if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-                if not first_binding and not prev_was_comment:
-                    out.add_newline()
-
-                self._format_comments_before_expression(binding_indent, out)
+            # Add newline before comment only if not first binding and not after another comment
+            add_newline = not first_binding and not prev_was_comment
+            if self._format_comments_before_expression(binding_indent, out, add_leading_newline=add_newline):
                 prev_was_comment = True
                 first_binding = False
                 continue
