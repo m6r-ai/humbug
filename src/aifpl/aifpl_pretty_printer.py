@@ -461,7 +461,8 @@ class AIFPLPrettyPrinter:
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle EOL comments
             handled, prev_was_comment = self._handle_loop_comments(
-                out, elem_indent, first, prev_was_comment, eol_prefix=' ' if first else '')
+                out, elem_indent, first, prev_was_comment, eol_prefix=' ' if first else ''
+            )
             if handled:
                 continue
 
@@ -481,6 +482,7 @@ class AIFPLPrettyPrinter:
                 # Second element (first argument) - space before it, on same line
                 out.add_space()
                 out.add(elem_str)
+
                 # Calculate indent for remaining elements: align under second element
                 # Position is: indent + 1 (for '(') + len(first_elem) + 1 (space)
                 elem_indent = indent + 1 + len(cast(str, first_elem_str)) + 1
