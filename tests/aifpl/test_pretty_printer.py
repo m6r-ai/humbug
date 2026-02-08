@@ -406,3 +406,288 @@ class TestPrettyPrinterRealWorldExamples:
 
         # Should stay compact
         assert "(map (lambda (x) (* x 2)) (list 1 2 3 4 5))" in result
+
+
+
+class TestPrettyPrinterCommentsInSpecialForms:
+    """Test comment handling in special forms (lambda, if, let, match)."""
+
+    def test_lambda_with_comment_before_body(self):
+        """Test lambda with comment before body expression."""
+        printer = AIFPLPrettyPrinter()
+        code = """(lambda (x)
+  ; This is the body
+  (* x 2))"""
+        result = printer.format(code)
+
+        # Comment should be preserved and body should follow
+        assert "; This is the body" in result
+        assert "(* x 2)" in result
+        lines = result.split("\n")
+        # Find comment line and body line
+        comment_idx = next(i for i, line in enumerate(lines) if "; This is the body" in line)
+        body_idx = next(i for i, line in enumerate(lines) if "(* x 2)" in line)
+        # Body should come after comment
+        assert body_idx > comment_idx
+
+    def test_lambda_with_multiple_comments_before_body(self):
+        """Test lambda with multiple comments before body."""
+        printer = AIFPLPrettyPrinter()
+        code = """(lambda (x)
+  ; Comment 1
+  ; Comment 2
+  (* x 2))"""
+        result = printer.format(code)
+
+        assert "; Comment 1" in result
+        assert "; Comment 2" in result
+        assert "(* x 2)" in result
+
+    def test_if_with_comment_before_then_branch(self):
+        """Test if with comment before then branch."""
+        printer = AIFPLPrettyPrinter()
+        code = """(if (> x 0)
+  ; Positive case
+  (+ x 1)
+  (- x 1))"""
+        result = printer.format(code)
+
+        assert "; Positive case" in result
+        assert "(+ x 1)" in result
+        assert "(- x 1)" in result
+
+    def test_if_with_comment_before_else_branch(self):
+        """Test if with comment before else branch."""
+        printer = AIFPLPrettyPrinter()
+        code = """(if (> x 0)
+  (+ x 1)
+  ; Negative case
+  (- x 1))"""
+        result = printer.format(code)
+
+        assert "(+ x 1)" in result
+        assert "; Negative case" in result
+        assert "(- x 1)" in result
+        lines = result.split("\n")
+        # Find indices
+        then_idx = next(i for i, line in enumerate(lines) if "(+ x 1)" in line)
+        comment_idx = next(i for i, line in enumerate(lines) if "; Negative case" in line)
+        else_idx = next(i for i, line in enumerate(lines) if "(- x 1)" in line)
+        # Order should be: then, comment, else
+        assert then_idx < comment_idx < else_idx
+
+    def test_if_with_comments_before_both_branches(self):
+        """Test if with comments before both then and else branches."""
+        printer = AIFPLPrettyPrinter()
+        code = """(if (> x 0)
+  ; Positive case
+  (+ x 1)
+  ; Negative case
+  (- x 1))"""
+        result = printer.format(code)
+
+        assert "; Positive case" in result
+        assert "; Negative case" in result
+        assert "(+ x 1)" in result
+        assert "(- x 1)" in result
+
+    def test_nested_if_with_comments(self):
+        """Test nested if expressions with comments."""
+        printer = AIFPLPrettyPrinter()
+        code = """(if (> x 0)
+  ; Check if we've seen this task in current path (cycle!)
+  (if (member? task-id visited-in-path)
+    ; Found a cycle - extract the cycle from path
+    (let ((cycle-start-pos (position task-id path)))
+      (if (!= cycle-start-pos #f)
+        (list (drop cycle-start-pos (append path (list task-id))))
+        (list)))
+    ; Not a cycle yet, continue DFS
+    (let* ((successors (get-successors task-id dependencies))
+           (new-path (append path (list task-id)))
+           (new-visited (cons task-id visited-in-path)))
+      (fold append (list)
+            (map (lambda (succ) (dfs-visit succ new-path new-visited))
+                 successors))))
+  ; Else branch
+  42)"""
+        result = printer.format(code)
+
+        # All comments should be preserved
+        assert "; Check if we've seen this task in current path (cycle!)" in result
+        assert "; Found a cycle - extract the cycle from path" in result
+        assert "; Not a cycle yet, continue DFS" in result
+        assert "; Else branch" in result
+
+        # All code should be present
+        assert "member?" in result
+        assert "get-successors" in result
+        assert "dfs-visit" in result
+
+    def test_let_with_comment_before_body(self):
+        """Test let with comment before body."""
+        printer = AIFPLPrettyPrinter()
+        code = """(let ((x 5)
+      (y 10))
+  ; Calculate sum
+  (+ x y))"""
+        result = printer.format(code)
+
+        assert "; Calculate sum" in result
+        assert "(+ x y)" in result
+
+    def test_let_with_multiple_comments_before_body(self):
+        """Test let with multiple comments before body."""
+        printer = AIFPLPrettyPrinter()
+        code = """(let ((x 5))
+  ; Comment 1
+  ; Comment 2
+  (+ x 1))"""
+        result = printer.format(code)
+
+        assert "; Comment 1" in result
+        assert "; Comment 2" in result
+        assert "(+ x 1)" in result
+
+    def test_match_with_comments_between_clauses(self):
+        """Test match with comments between clauses."""
+        printer = AIFPLPrettyPrinter()
+        code = """(match x
+  ; First case
+  (1 "one")
+  ; Second case
+  (2 "two")
+  ; Default case
+  (_ "other"))"""
+        result = printer.format(code)
+
+        assert "; First case" in result
+        assert "; Second case" in result
+        assert "; Default case" in result
+        assert '(1 "one")' in result
+        assert '(2 "two")' in result
+        assert '(_ "other")' in result
+
+    def test_match_with_end_of_line_comments(self):
+        """Test match with end-of-line comments."""
+        printer = AIFPLPrettyPrinter()
+        code = """(match x
+  (1 "one")  ; First
+  (2 "two")  ; Second
+  (_ "other"))  ; Default"""
+        result = printer.format(code)
+
+        assert "; First" in result
+        assert "; Second" in result
+        assert "; Default" in result
+
+    def test_letrec_with_comments_in_lambda_body(self):
+        """Test letrec with comments inside lambda bodies."""
+        printer = AIFPLPrettyPrinter()
+        code = """(letrec ((factorial (lambda (n)
+                      ; Base case
+                      (if (<= n 1)
+                        1
+                        ; Recursive case
+                        (* n (factorial (- n 1)))))))
+  (factorial 5))"""
+        result = printer.format(code)
+
+        assert "; Base case" in result
+        assert "; Recursive case" in result
+        assert "factorial" in result
+        assert "(* n (factorial (- n 1)))" in result
+
+    def test_complex_nested_comments(self):
+        """Test complex nesting with comments at multiple levels."""
+        printer = AIFPLPrettyPrinter()
+        code = """(let ((x 5))
+  ; Start of computation
+  (let ((y 10))
+    ; Inner let
+    (if (> x 0)
+      ; Positive branch
+      (+ x y)
+      ; Negative branch
+      (- x y))))"""
+        result = printer.format(code)
+
+        assert "; Start of computation" in result
+        assert "; Inner let" in result
+        assert "; Positive branch" in result
+        assert "; Negative branch" in result
+        assert "(+ x y)" in result
+        assert "(- x y)" in result
+
+    def test_comment_indentation_in_nested_structures(self):
+        """Test that comments are properly indented in nested structures."""
+        printer = AIFPLPrettyPrinter()
+        code = """(lambda (x)
+  ; Outer comment
+  (if (> x 0)
+    ; Inner comment
+    (+ x 1)
+    (- x 1)))"""
+        result = printer.format(code)
+
+        lines = result.split("\n")
+        outer_comment_line = next(line for line in lines if "; Outer comment" in line)
+        inner_comment_line = next(line for line in lines if "; Inner comment" in line)
+
+        # Inner comment should be more indented than outer
+        outer_indent = len(outer_comment_line) - len(outer_comment_line.lstrip())
+        inner_indent = len(inner_comment_line) - len(inner_comment_line.lstrip())
+        assert inner_indent > outer_indent
+
+    def test_end_of_line_comment_after_closing_paren(self):
+        """Test end-of-line comment after closing paren."""
+        printer = AIFPLPrettyPrinter()
+        code = """(let ((x 5)
+      (y 10))  ; End of bindings
+  (+ x y))"""
+        result = printer.format(code)
+
+        assert "; End of bindings" in result
+        # Comment should be on same line as closing paren
+        assert "))  ; End of bindings" in result
+
+    def test_validation_aifpl_style_comments(self):
+        """Test the style of comments found in validation.aifpl."""
+        printer = AIFPLPrettyPrinter()
+        # Simplified version of the detect-cycles function structure
+        code = """(lambda (task-id path visited-in-path)
+  ; Check if we've seen this task in current path (cycle!)
+  (if (member? task-id visited-in-path)
+    ; Found a cycle - extract the cycle from path
+    (let ((cycle-start-pos (position task-id path)))
+      (if (!= cycle-start-pos #f)
+        (list (drop cycle-start-pos (append path (list task-id))))
+        (list)))
+    ; Not a cycle yet, continue DFS
+    (let* ((successors (get-successors task-id dependencies))
+           (new-path (append path (list task-id)))
+           (new-visited (cons task-id visited-in-path)))
+      (fold append (list)
+            (map (lambda (succ) (dfs-visit succ new-path new-visited))
+                 successors)))))"""
+        result = printer.format(code)
+
+        # All three major comments should be present
+        assert "; Check if we've seen this task in current path (cycle!)" in result
+        assert "; Found a cycle - extract the cycle from path" in result
+        assert "; Not a cycle yet, continue DFS" in result
+
+        # The if expression should have both branches
+        assert "member?" in result
+        assert "get-successors" in result
+        assert "dfs-visit" in result
+
+        # Structure should be maintained
+        lines = result.split("\n")
+        # Find key lines to verify structure
+        member_idx = next(i for i, line in enumerate(lines) if "member?" in line)
+        cycle_comment_idx = next(i for i, line in enumerate(lines) if "; Found a cycle" in line)
+        dfs_comment_idx = next(i for i, line in enumerate(lines) if "; Not a cycle yet" in line)
+
+        # Comments should be in the right order
+        assert member_idx < cycle_comment_idx < dfs_comment_idx
