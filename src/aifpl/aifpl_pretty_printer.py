@@ -289,7 +289,7 @@ class AIFPLPrettyPrinter:
             if not first:
                 parts.append(' ')
 
-            parts.append(self._format_atom())
+            parts.append(self._format_expression(indent))
             first = False
 
         parts.append(')')
