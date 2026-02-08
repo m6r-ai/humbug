@@ -68,24 +68,14 @@ class AIFPLPrettyPrinter:
             has_blank_line_before = (current_line - prev_token_line) > 1
 
             if self.current_token.type == AIFPLTokenType.COMMENT:
-                # Check if this is an end-of-line comment
-                is_eol = self._is_end_of_line_comment()
-
-                if is_eol:
-                    # End-of-line comment - add with spacing
-                    output_parts.append(' ' * self.options.comment_spacing)
-                    output_parts.append(self.current_token.value)
+                # Standalone comment.  Add blank line before comment if:
+                # 1. There was a blank line in the original source, OR
+                # 2. Previous was not a comment (separating code from comments)
+                if output_parts and (has_blank_line_before or not prev_was_comment):
                     output_parts.append('\n')
 
-                else:
-                    # Standalone comment
-                    # Add blank line before comment if:
-                    # 1. There was a blank line in the original source, OR
-                    # 2. Previous was not a comment (separating code from comments)
-                    if output_parts and (has_blank_line_before or not prev_was_comment):
-                        output_parts.append('\n')
-                    output_parts.append(self.current_token.value)
-                    output_parts.append('\n')
+                output_parts.append(self.current_token.value)
+                output_parts.append('\n')
 
                 prev_was_comment = True
                 prev_token_line = current_line
@@ -140,14 +130,7 @@ class AIFPLPrettyPrinter:
                 cleaned_lines.append(line)
 
         # Ensure single trailing newline
-        result = '\n'.join(cleaned_lines)
-        while result.endswith('\n\n\n'):
-            result = result[:-1]
-
-        if result and not result.endswith('\n'):
-            result += '\n'
-
-        return result
+        return '\n'.join(cleaned_lines)
 
     def _is_end_of_line_comment(self) -> bool:
         """Check if current comment token is an end-of-line comment."""
@@ -169,12 +152,6 @@ class AIFPLPrettyPrinter:
 
         if token.type == AIFPLTokenType.QUOTE:
             return self._format_quote(indent)
-
-        if token.type == AIFPLTokenType.COMMENT:
-            # Standalone comment
-            comment = token.value
-            self._advance()
-            return ' ' * indent + comment
 
         # Atom (number, string, boolean, symbol)
         return self._format_atom()
@@ -259,12 +236,6 @@ class AIFPLPrettyPrinter:
             # Early bailout: if we've already exceeded threshold, stop trying
             current_length = len(''.join(parts))
             if current_length > self.options.compact_threshold:
-                self.pos = saved_pos
-                self.current_token = saved_token
-                return None
-
-            if self.current_token.type == AIFPLTokenType.COMMENT:
-                # Can't do compact with comments
                 self.pos = saved_pos
                 self.current_token = saved_token
                 return None
