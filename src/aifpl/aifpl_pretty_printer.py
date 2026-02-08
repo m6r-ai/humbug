@@ -206,6 +206,54 @@ class AIFPLPrettyPrinter:
         if comment_lines:
             parts.extend(comment_lines)
 
+    def _append_eol_comment_if_present(self, parts: List[str], add_newline: bool = False, prefix: str = '') -> bool:
+        """
+        Append an EOL comment to parts if one is present at current position.
+
+        Args:
+            parts: Output list to append to
+            add_newline: If True, append a newline after the comment
+            prefix: Optional prefix to add before the comment spacing (e.g., ' ' for first element)
+
+        Returns:
+            True if a comment was appended, False otherwise
+        """
+        eol_comment = self._consume_eol_comment()
+        if eol_comment:
+            if prefix:
+                parts.append(prefix)
+
+            parts.append(' ' * self.options.comment_spacing)
+            parts.append(eol_comment)
+            if add_newline:
+                parts.append('\n')
+
+            return True
+
+        return False
+
+    def _handle_comments_before_branch(self, indent: int, parts: List[str]) -> None:
+        """
+        Handle comments that appear before a branch (in if/lambda/let/match).
+        This handles both EOL comments (with newline) and standalone comments.
+
+        Args:
+            indent: Indentation level for standalone comments
+            parts: Output list to append to
+        """
+        # Handle EOL comments first
+        if self._append_eol_comment_if_present(parts, add_newline=True):
+            # EOL comment consumed, now check for standalone comments
+            pass
+
+        # Handle standalone comments
+        if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
+            # Only add leading newline if we didn't just add one from EOL comment
+            if not (parts and parts[-1].endswith('\n')):
+                parts.append('\n')
+
+            self._format_comments_before_expression(indent, parts)
+
     def _format_expression(self, indent: int) -> str:
         """Format a single expression at the given indentation level."""
         if self.current_token is None:
@@ -348,12 +396,7 @@ class AIFPLPrettyPrinter:
 
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle EOL comments
-            eol_comment = self._consume_eol_comment()
-            if eol_comment:
-                if first:
-                    parts.append(' ')
-                parts.append(' ' * self.options.comment_spacing)
-                parts.append(eol_comment)
+            if self._append_eol_comment_if_present(parts, prefix=' ' if first else ''):
                 continue
 
             # Handle standalone comments
@@ -427,16 +470,14 @@ class AIFPLPrettyPrinter:
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle comments
             # Handle EOL comments
-            eol_comment = self._consume_eol_comment()
-            if eol_comment:
-                parts.append(' ' * self.options.comment_spacing)
-                parts.append(eol_comment)
+            if self._append_eol_comment_if_present(parts):
                 continue
 
             # Handle standalone comments
             if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
                 if not first_binding and not prev_was_comment:
                     parts.append('\n')
+
                 self._format_comments_before_expression(binding_indent, parts)
                 prev_was_comment = True
                 first_binding = False
@@ -471,17 +512,10 @@ class AIFPLPrettyPrinter:
 
         # Format body
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            # Handle EOL comments before body
-            eol_comment = self._consume_eol_comment()
-            if eol_comment:
-                parts.append(' ' * self.options.comment_spacing)
-                parts.append(eol_comment)
-
-            # Handle standalone comments before body
             body_indent = indent + self.options.indent_size
-            if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-                parts.append('\n')
-                self._format_comments_before_expression(body_indent, parts)
+
+            # Handle comments before body
+            self._handle_comments_before_branch(body_indent, parts)
 
             # Format body expression
             if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
@@ -490,10 +524,7 @@ class AIFPLPrettyPrinter:
                 parts.append(self._format_expression(body_indent))
 
         # Handle comments after body but before closing paren
-        eol_comment = self._consume_eol_comment()
-        if eol_comment:
-            parts.append(' ' * self.options.comment_spacing)
-            parts.append(eol_comment)
+        self._append_eol_comment_if_present(parts)
 
         # Closing paren
         parts.append(')')
@@ -566,17 +597,8 @@ class AIFPLPrettyPrinter:
         # Format body
         body_indent = indent + self.options.indent_size
 
-        # Handle EOL comments before body
-        eol_comment = self._consume_eol_comment()
-        if eol_comment:
-            parts.append(' ' * self.options.comment_spacing)
-            parts.append(eol_comment)
-            parts.append('\n')
-
-        # Handle standalone comments before body
-        if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-            parts.append('\n')
-            self._format_comments_before_expression(body_indent, parts)
+        # Handle comments before body
+        self._handle_comments_before_branch(body_indent, parts)
 
         # Format the actual body expression
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
@@ -586,11 +608,7 @@ class AIFPLPrettyPrinter:
             parts.append(self._format_expression(body_indent))
 
         # Handle comments after body but before closing paren
-        eol_comment = self._consume_eol_comment()
-        if eol_comment:
-            parts.append(' ' * self.options.comment_spacing)
-            parts.append(eol_comment)
-            parts.append('\n')
+        if self._append_eol_comment_if_present(parts, add_newline=True):
             parts.append(' ' * indent)
 
         # Closing paren
@@ -616,15 +634,7 @@ class AIFPLPrettyPrinter:
             parts.append(self._format_expression(branch_indent))
 
         # Then branch
-        eol_comment = self._consume_eol_comment()
-        if eol_comment:
-            parts.append(' ' * self.options.comment_spacing)
-            parts.append(eol_comment)
-            parts.append('\n')
-
-        if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-            parts.append('\n')
-            self._format_comments_before_expression(branch_indent, parts)
+        self._handle_comments_before_branch(branch_indent, parts)
 
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             if not (parts and parts[-1].endswith('\n')):
@@ -633,15 +643,7 @@ class AIFPLPrettyPrinter:
             parts.append(self._format_expression(branch_indent))
 
         # Else branch
-        eol_comment = self._consume_eol_comment()
-        if eol_comment:
-            parts.append(' ' * self.options.comment_spacing)
-            parts.append(eol_comment)
-            parts.append('\n')
-
-        if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-            parts.append('\n')
-            self._format_comments_before_expression(branch_indent, parts)
+        self._handle_comments_before_branch(branch_indent, parts)
 
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             if not (parts and parts[-1].endswith('\n')):
@@ -650,11 +652,7 @@ class AIFPLPrettyPrinter:
             parts.append(self._format_expression(branch_indent))
 
         # Handle comments after else branch but before closing paren
-        eol_comment = self._consume_eol_comment()
-        if eol_comment:
-            parts.append(' ' * self.options.comment_spacing)
-            parts.append(eol_comment)
-            parts.append('\n')
+        if self._append_eol_comment_if_present(parts, add_newline=True):
             parts.append(' ' * indent)
 
         # Closing paren
@@ -681,12 +679,8 @@ class AIFPLPrettyPrinter:
         clause_indent = indent + self.options.indent_size
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle EOL comments
-            eol_comment = self._consume_eol_comment()
-            if eol_comment:
-                parts.append(' ' * self.options.comment_spacing)
-                parts.append(eol_comment)
-                parts.append('\n')
-            # Handle standalone comments
+            if self._append_eol_comment_if_present(parts, add_newline=True):
+                pass  # Comment handled
             elif self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
                 parts.append('\n')
                 self._format_comments_before_expression(clause_indent, parts)
@@ -697,11 +691,7 @@ class AIFPLPrettyPrinter:
                 parts.append(self._format_expression(clause_indent))
 
         # Handle comments after last clause but before closing paren
-        eol_comment = self._consume_eol_comment()
-        if eol_comment:
-            parts.append(' ' * self.options.comment_spacing)
-            parts.append(eol_comment)
-            parts.append('\n')
+        if self._append_eol_comment_if_present(parts, add_newline=True):
             parts.append(' ' * indent)
 
         # Closing paren
