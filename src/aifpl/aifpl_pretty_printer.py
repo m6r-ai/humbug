@@ -521,7 +521,8 @@ class AIFPLPrettyPrinter:
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle comments
             handled, prev_was_comment = self._handle_loop_comments(
-                out, binding_indent, first_binding, prev_was_comment)
+                out, binding_indent, first_binding, prev_was_comment
+            )
             if handled:
                 continue
 
