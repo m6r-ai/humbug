@@ -256,26 +256,6 @@ class AIFPLPrettyPrinter:
         out.add_eol_comment(comment_text, prefix)
         return True
 
-    def _handle_comments_before_branch(self, indent: int, out: OutputBuilder) -> None:
-        """
-        Handle comments that appear before a branch (in if/lambda/let/match).
-        This handles both EOL comments (with newline) and standalone comments.
-
-        Args:
-            indent: Indentation level for standalone comments
-            out: OutputBuilder to append to
-        """
-        # Handle EOL comments first
-        if self._append_eol_comment_if_present(out):
-            # EOL comment consumed, now check for standalone comments
-            pass
-
-        # Handle standalone comments
-        if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-            if not out.ends_with_newline():
-                out.add_newline()
-            self._format_comments_before_expression(indent, out)
-
     def _consume_rparen(self) -> None:
         """Consume a right paren token if present."""
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
@@ -290,8 +270,16 @@ class AIFPLPrettyPrinter:
             indent: Indentation level for the branch
             out: Output builder to append to
         """
-        # Handle comments before branch
-        self._handle_comments_before_branch(indent, out)
+        # Handle EOL comments first
+        if self._append_eol_comment_if_present(out):
+            # EOL comment consumed, now check for standalone comments
+            pass
+
+        # Handle standalone comments
+        if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
+            if not out.ends_with_newline():
+                out.add_newline()
+            self._format_comments_before_expression(indent, out)
 
         # Format the branch expression
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
