@@ -127,7 +127,6 @@ class EditorTab(TabBase):
     def _on_file_saved(self, path: str) -> None:
         """Handle file being saved."""
         self.set_path(path)
-        self.update_status()
 
     def _on_language_changed(self) -> None:
         """Update language-specific elements."""
@@ -206,9 +205,12 @@ class EditorTab(TabBase):
         Args:
             path: Path to file
         """
+        # If the path is the same as current, do nothing
+        if self._path == path:
+            return
+
         # Stop watching old path
-        if self._path != path:
-            self._stop_file_watching()
+        self._stop_file_watching()
 
         self._path = path
         self._editor_widget.set_path(path)
