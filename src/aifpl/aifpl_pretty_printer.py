@@ -197,11 +197,15 @@ class AIFPLPrettyPrinter:
         # Ensure single trailing newline
         return '\n'.join(cleaned_lines)
 
-    def _handle_comments(self, out: OutputBuilder, indent: int,
-                        handle_eol: bool = True,
-                        handle_standalone: bool = True,
-                        add_leading_newline: bool = True,
-                        eol_prefix: str = '') -> bool:
+    def _handle_comments(
+        self,
+        out: OutputBuilder,
+        indent: int,
+        handle_eol: bool = True,
+        handle_standalone: bool = True,
+        add_leading_newline: bool = True,
+        eol_prefix: str = ''
+    ) -> bool:
         """
         Handle both EOL and standalone comments at current position.
 
@@ -247,9 +251,10 @@ class AIFPLPrettyPrinter:
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-    def _format_branch_with_comments(self, indent: int, out: OutputBuilder) -> None:
-        """Format a branch with comments, then the expression."""
+    def _format_branch(self, indent: int, out: OutputBuilder) -> None:
+        """Format a branch."""
         self._handle_comments(out, indent)
+
         # Format the branch expression
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             out.add_line(self._format_expression(indent), indent)
@@ -514,7 +519,7 @@ class AIFPLPrettyPrinter:
         # Format body
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             body_indent = indent + self.options.indent_size
-            self._format_branch_with_comments(body_indent, out)
+            self._format_branch(body_indent, out)
 
         # Handle comments after body but before closing paren
         self._handle_comments(out, indent, handle_standalone=False)
@@ -585,7 +590,7 @@ class AIFPLPrettyPrinter:
 
         # Format body
         body_indent = indent + self.options.indent_size
-        self._format_branch_with_comments(body_indent, out)
+        self._format_branch(body_indent, out)
 
         return self._finish_form(indent, out)
 
@@ -602,10 +607,10 @@ class AIFPLPrettyPrinter:
             out.add(self._format_expression(branch_indent))
 
         # Then branch
-        self._format_branch_with_comments(branch_indent, out)
+        self._format_branch(branch_indent, out)
 
         # Else branch
-        self._format_branch_with_comments(branch_indent, out)
+        self._format_branch(branch_indent, out)
 
         return self._finish_form(indent, out)
 
@@ -623,7 +628,7 @@ class AIFPLPrettyPrinter:
         clause_indent = indent + self.options.indent_size
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Format each clause with comment handling
-            self._format_branch_with_comments(clause_indent, out)
+            self._format_branch(clause_indent, out)
 
         return self._finish_form(indent, out)
 
