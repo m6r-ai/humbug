@@ -316,6 +316,7 @@ class AIFPLPrettyPrinter:
         """Finish a special form: trailing comment, closing paren, consume RPAREN."""
         if self._handle_comments(out, indent, handle_standalone=False):
             out.add_indent(indent)
+
         out.add_closing_paren_with_indent(indent)
 
         # Consume the RPAREN token
@@ -556,14 +557,7 @@ class AIFPLPrettyPrinter:
             body_indent = self._get_body_indent(indent)
             self._format_branch(body_indent, out)
 
-        # Handle comments after body but before closing paren
-        self._handle_comments(out, indent, handle_standalone=False)
-
-        # Closing paren
-        out.add(')')
-        self._consume_rparen()
-
-        return out.get_output()
+        return self._finish_form(indent, out)
 
     def _format_binding(self, indent: int) -> str:
         """Format a single binding (name value)."""
