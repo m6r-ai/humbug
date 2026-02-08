@@ -1,6 +1,6 @@
 """Pretty-printer for AIFPL code with comment preservation."""
 
-from typing import List, Optional, cast
+from typing import List, Optional, Union, cast
 from dataclasses import dataclass
 
 from aifpl.aifpl_lexer import AIFPLLexer
@@ -14,6 +14,81 @@ class FormatOptions:
     indent_size: int = 2
     compact_threshold: int = 60  # Keep on one line if total length < this
     comment_spacing: int = 2  # Spaces before end-of-line comments
+
+
+class OutputBuilder:
+    """
+    Helper class for building formatted output with automatic spacing/indentation.
+    Tracks state to avoid duplicate newlines and handle indentation consistently.
+    """
+
+    def __init__(self, options: FormatOptions):
+        """Initialize the output builder."""
+        self.options = options
+        self.parts: List[str] = []
+
+    def add(self, text: str) -> None:
+        """Add text to output without any automatic spacing."""
+        self.parts.append(text)
+
+    def add_space(self) -> None:
+        """Add a single space."""
+        self.parts.append(' ')
+
+    def add_newline(self) -> None:
+        """Add a newline."""
+        self.parts.append('\n')
+
+    def ensure_newline(self) -> None:
+        """Add a newline only if the last character isn't already a newline."""
+        if not (self.parts and self.parts[-1].endswith('\n')):
+            self.parts.append('\n')
+
+    def add_indent(self, indent: int) -> None:
+        """Add indentation (spaces)."""
+        self.parts.append(' ' * indent)
+
+    def add_line(self, text: str, indent: int) -> None:
+        """Add text on a new line with indentation."""
+        self.ensure_newline()
+        self.add_indent(indent)
+        self.add(text)
+
+    def add_inline(self, text: str) -> None:
+        """Add text inline (same line, no spacing)."""
+        self.add(text)
+
+    def add_eol_comment(self, comment_text: str, prefix: str = '') -> None:
+        """Add an end-of-line comment with proper spacing and newline."""
+        if prefix:
+            self.add(prefix)
+        self.add(' ' * self.options.comment_spacing)
+        self.add(comment_text)
+        self.add_newline()
+
+    def add_standalone_comment(self, comment_text: str, indent: int) -> None:
+        """Add a standalone comment on its own line with indentation."""
+        self.add_indent(indent)
+        self.add(comment_text)
+        self.add_newline()
+
+    def ends_with_newline(self) -> bool:
+        """Check if output currently ends with a newline."""
+        return bool(self.parts and self.parts[-1].endswith('\n'))
+
+    def add_closing_paren_with_indent(self, indent: int) -> None:
+        """Add closing paren, with indent if last char is newline."""
+        if self.ends_with_newline():
+            self.add_indent(indent)
+        self.add(')')
+
+    def get_output(self) -> str:
+        """Get the final output string."""
+        return ''.join(self.parts)
+
+    def get_parts(self) -> List[str]:
+        """Get the parts list (for compatibility with existing code)."""
+        return self.parts
 
 
 class AIFPLPrettyPrinter:
@@ -140,15 +215,25 @@ class AIFPLPrettyPrinter:
         # Check if comment is on the same line as the last non-comment token
         return self.current_token.line == self.last_token_line
 
-    def _format_comments_before_expression(self, indent: int, parts: List[str]) -> None:
+    def _format_comments_before_expression(self, indent: int, parts: Union[List[str], OutputBuilder]) -> None:
         """
         Handle comments that appear before an expression.
         Consumes and formats all standalone (non-EOL) comments at current position.
 
         Args:
             indent: Indentation level for standalone comments
-            parts: Output list to append formatted comments to
+            parts: Output list or OutputBuilder to append formatted comments to
         """
+        # Handle OutputBuilder
+        if isinstance(parts, OutputBuilder):
+            while self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
+                if self._is_end_of_line_comment():
+                    break
+                parts.add_standalone_comment(self.current_token.value, indent)
+                self._advance()
+            return
+
+        # Handle List[str] (legacy)
         while self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
             # Only consume standalone comments, not EOL comments
             if self._is_end_of_line_comment():
@@ -160,13 +245,13 @@ class AIFPLPrettyPrinter:
             parts.append('\n')
             self._advance()
 
-    def _append_eol_comment_if_present(self, parts: List[str], prefix: str = '') -> bool:
+    def _append_eol_comment_if_present(self, parts: Union[List[str], OutputBuilder], prefix: str = '') -> bool:
         """
         Append an EOL comment to parts if one is present at current position.
         Always adds a newline after the comment (since comments consume the rest of the line).
 
         Args:
-            parts: Output list to append to
+            parts: Output list or OutputBuilder to append to
             prefix: Optional prefix to add before the comment spacing (e.g., ' ' for first element)
 
         Returns:
@@ -183,6 +268,12 @@ class AIFPLPrettyPrinter:
         comment_text = self.current_token.value
         self._advance()
 
+        # Handle OutputBuilder
+        if isinstance(parts, OutputBuilder):
+            parts.add_eol_comment(comment_text, prefix)
+            return True
+
+        # Handle List[str] (legacy)
         if prefix:
             parts.append(prefix)
 
@@ -193,14 +284,14 @@ class AIFPLPrettyPrinter:
 
         return True
 
-    def _handle_comments_before_branch(self, indent: int, parts: List[str]) -> None:
+    def _handle_comments_before_branch(self, indent: int, parts: Union[List[str], OutputBuilder]) -> None:
         """
         Handle comments that appear before a branch (in if/lambda/let/match).
         This handles both EOL comments (with newline) and standalone comments.
 
         Args:
             indent: Indentation level for standalone comments
-            parts: Output list to append to
+            parts: Output list or OutputBuilder to append to
         """
         # Handle EOL comments first
         if self._append_eol_comment_if_present(parts):
@@ -210,8 +301,17 @@ class AIFPLPrettyPrinter:
         # Handle standalone comments
         if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
             # Add leading newline if we didn't just add one from EOL comment
-            if not (parts and parts[-1].endswith('\n')):
-                parts.append('\n')
+            needs_newline = False
+            if isinstance(parts, OutputBuilder):
+                needs_newline = not parts.ends_with_newline()
+            else:
+                needs_newline = not (parts and parts[-1].endswith('\\n'))
+
+            if needs_newline:
+                if isinstance(parts, OutputBuilder):
+                    parts.add_newline()
+                else:
+                    parts.append('\n')
 
             self._format_comments_before_expression(indent, parts)
 
@@ -304,12 +404,13 @@ class AIFPLPrettyPrinter:
         saved_pos = self.pos
         saved_token = self.current_token
 
-        parts = ['(']
+        out = OutputBuilder(self.options)
+        out.add('(')
         first = True
 
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Early bailout: if we've already exceeded threshold, stop trying
-            current_length = len(''.join(parts))
+            current_length = len(out.get_output())
             if current_length > self.options.compact_threshold:
                 self.pos = saved_pos
                 self.current_token = saved_token
@@ -318,7 +419,7 @@ class AIFPLPrettyPrinter:
             if self.current_token.type == AIFPLTokenType.LPAREN:
                 # Try to format nested list compactly
                 if not first:
-                    parts.append(' ')
+                    out.add_space()
 
                 self._advance()  # consume '(' for nested list
                 nested = self._try_compact_list(indent)
@@ -328,26 +429,27 @@ class AIFPLPrettyPrinter:
                     self.current_token = saved_token
                     return None
 
-                parts.append(nested)
+                out.add(nested)
                 first = False
                 continue
 
             if not first:
-                parts.append(' ')
+                out.add_space()
 
-            parts.append(self._format_expression(indent))
+            out.add(self._format_expression(indent))
             first = False
 
-        parts.append(')')
+        out.add(')')
 
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-        return ''.join(parts)
+        return out.get_output()
 
     def _format_multiline_list(self, indent: int) -> str:
         """Format a list across multiple lines."""
-        parts = ['(']
+        out = OutputBuilder(self.options)
+        out.add('(')
         first = True
         element_count = 0
         # Start with default indent
@@ -357,68 +459,69 @@ class AIFPLPrettyPrinter:
 
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle EOL comments
-            if self._append_eol_comment_if_present(parts, prefix=' ' if first else ''):
+            if self._append_eol_comment_if_present(out, prefix=' ' if first else ''):
                 continue
 
             # Handle standalone comments
             if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
                 if not first and not prev_was_comment:
-                    parts.append('\n')
-                self._format_comments_before_expression(elem_indent, parts)
+                    out.add_newline()
+                self._format_comments_before_expression(elem_indent, out)
                 prev_was_comment = True
                 continue
 
             # Add newline before element if it's not first or second
             if element_count >= 2:
-                parts.append('\n')
-                parts.append(' ' * elem_indent)
+                out.add_newline()
+                out.add_indent(elem_indent)
 
             elem_str = self._format_expression(elem_indent)
 
             if element_count == 0:
                 # First element (function name) - no space before it
-                parts.append(elem_str)
+                out.add(elem_str)
                 first_elem_str = elem_str
 
             elif element_count == 1:
                 # Second element (first argument) - space before it, on same line
-                parts.append(' ')
-                parts.append(elem_str)
+                out.add_space()
+                out.add(elem_str)
                 # Calculate indent for remaining elements: align under second element
                 # Position is: indent + 1 (for '(') + len(first_elem) + 1 (space)
                 elem_indent = indent + 1 + len(cast(str, first_elem_str)) + 1
 
             else:
                 # Third+ elements - already have newline and indent from above
-                parts.append(elem_str)
+                out.add(elem_str)
 
             element_count += 1
             first = False
             prev_was_comment = False
 
-        parts.append(')')
+        out.add(')')
 
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-        return ''.join(parts)
+        return out.get_output()
 
     def _format_let_form(self, form_type: str, indent: int) -> str:
         """Format let/let*/letrec expressions."""
-        parts = [f'({form_type} (']
+        out = OutputBuilder(self.options)
+        out.add(f'({form_type} (')
         self._advance()  # consume let/let*/letrec symbol
 
         # Expect bindings list
         if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
             # Malformed
             if self.current_token is not None:
-                parts.append(self._format_expression(indent))
+                out.add(self._format_expression(indent))
 
-            parts.append(')')
+            out.add(')')
             if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
                 self._advance()
 
-            return ''.join(parts)
+            return out.get_output()
 
         self._advance()  # consume '(' for bindings
 
@@ -431,15 +534,15 @@ class AIFPLPrettyPrinter:
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle comments
             # Handle EOL comments
-            if self._append_eol_comment_if_present(parts):
+            if self._append_eol_comment_if_present(out):
                 continue
 
             # Handle standalone comments
             if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
                 if not first_binding and not prev_was_comment:
-                    parts.append('\n')
+                    out.add_newline()
 
-                self._format_comments_before_expression(binding_indent, parts)
+                self._format_comments_before_expression(binding_indent, out)
                 prev_was_comment = True
                 first_binding = False
                 continue
@@ -448,10 +551,10 @@ class AIFPLPrettyPrinter:
             if not first_binding:
                 # For letrec, add extra blank line between complex bindings
                 if form_type == 'letrec' and prev_binding_was_complex:
-                    parts.append('\n')
+                    out.add_newline()
 
-                parts.append('\n')
-                parts.append(' ' * binding_indent)
+                out.add_newline()
+                out.add_indent(binding_indent)
 
             # Format binding
             binding_str = self._format_binding(binding_indent)
@@ -460,7 +563,7 @@ class AIFPLPrettyPrinter:
                 # This means we've reached the end of bindings
                 break
 
-            parts.append(binding_str)
+            out.add(binding_str)
 
             prev_binding_was_complex = 'lambda' in binding_str or '\n' in binding_str
             first_binding = False
@@ -469,30 +572,28 @@ class AIFPLPrettyPrinter:
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()  # consume ')' for bindings
 
-        parts.append(')')
+        out.add(')')
 
         # Format body
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             body_indent = indent + self.options.indent_size
 
             # Handle comments before body
-            self._handle_comments_before_branch(body_indent, parts)
+            self._handle_comments_before_branch(body_indent, out)
 
             # Format body expression
             if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-                parts.append('\n')
-                parts.append(' ' * body_indent)
-                parts.append(self._format_expression(body_indent))
+                out.add_line(self._format_expression(body_indent), body_indent)
 
         # Handle comments after body but before closing paren
-        self._append_eol_comment_if_present(parts)
+        self._append_eol_comment_if_present(out)
 
         # Closing paren
-        parts.append(')')
+        out.add(')')
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-        return ''.join(parts)
+        return out.get_output()
 
     def _format_binding(self, indent: int) -> str:
         """Format a single binding (name value)."""
@@ -501,43 +602,45 @@ class AIFPLPrettyPrinter:
 
         self._advance()  # consume '('
 
-        parts = ['(']
+        out = OutputBuilder(self.options)
+        out.add('(')
 
         # Binding name
         if self.current_token:
             name = self._format_atom()
-            parts.append(name)
+            out.add(name)
 
             # Binding value
             if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-                parts.append(' ')
+                out.add_space()
 
                 # Calculate indent for the value (after "(name ")
                 # indent is where the binding starts, +1 for '(', +len(name), +1 for ' '
                 value_indent = indent + 1 + len(name) + 1
-                parts.append(self._format_expression(value_indent))
+                out.add(self._format_expression(value_indent))
 
-        parts.append(')')
+        out.add(')')
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-        return ''.join(parts)
+        return out.get_output()
 
     def _format_lambda(self, indent: int) -> str:
         """Format lambda expressions."""
-        parts = ['(lambda (']
+        out = OutputBuilder(self.options)
+        out.add('(lambda (')
         self._advance()  # consume 'lambda' symbol
 
         # Expect parameter list
         if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
             if self.current_token is not None:
-                parts.append(self._format_expression(indent))
+                out.add(self._format_expression(indent))
 
-            parts.append(')')
+            out.add(')')
             if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
                 self._advance()
 
-            return ''.join(parts)
+            return out.get_output()
 
         self._advance()  # consume '(' for parameters
 
@@ -545,137 +648,113 @@ class AIFPLPrettyPrinter:
         first_param = True
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             if not first_param:
-                parts.append(' ')
+                out.add_space()
 
-            parts.append(self._format_atom())
+            out.add(self._format_atom())
             first_param = False
 
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()  # consume ')' for parameters
 
-        parts.append(')')
+        out.add(')')
 
         # Format body
         body_indent = indent + self.options.indent_size
 
         # Handle comments before body
-        self._handle_comments_before_branch(body_indent, parts)
+        self._handle_comments_before_branch(body_indent, out)
 
         # Format the actual body expression
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            if not (parts and parts[-1].endswith('\n')):
-                parts.append('\n')
-
-            parts.append(' ' * body_indent)
-            parts.append(self._format_expression(body_indent))
+            out.add_line(self._format_expression(body_indent), body_indent)
 
         # Handle comments after body but before closing paren
-        if self._append_eol_comment_if_present(parts):
-            parts.append(' ' * indent)
+        if self._append_eol_comment_if_present(out):
+            out.add_indent(indent)
 
-        # Closing paren
-        # Add indent if the last character is a newline
-        if parts and parts[-1].endswith('\n'):
-            parts.append(' ' * indent)
-
-        parts.append(')')
+        out.add_closing_paren_with_indent(indent)
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-        return ''.join(parts)
+        return out.get_output()
 
     def _format_if(self, indent: int) -> str:
         """Format if expressions."""
-        parts = ['(if ']
+        out = OutputBuilder(self.options)
+        out.add('(if ')
         self._advance()  # consume 'if' symbol
 
         branch_indent = indent + self.options.indent_size
 
         # Condition
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            parts.append(self._format_expression(branch_indent))
+            out.add(self._format_expression(branch_indent))
 
         # Then branch
-        self._handle_comments_before_branch(branch_indent, parts)
+        self._handle_comments_before_branch(branch_indent, out)
 
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            if not (parts and parts[-1].endswith('\n')):
-                parts.append('\n')
-            parts.append(' ' * branch_indent)
-            parts.append(self._format_expression(branch_indent))
+            out.add_line(self._format_expression(branch_indent), branch_indent)
 
         # Else branch
-        self._handle_comments_before_branch(branch_indent, parts)
+        self._handle_comments_before_branch(branch_indent, out)
 
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            if not (parts and parts[-1].endswith('\n')):
-                parts.append('\n')
-            parts.append(' ' * branch_indent)
-            parts.append(self._format_expression(branch_indent))
+            out.add_line(self._format_expression(branch_indent), branch_indent)
 
         # Handle comments after else branch but before closing paren
-        if self._append_eol_comment_if_present(parts):
-            parts.append(' ' * indent)
+        if self._append_eol_comment_if_present(out):
+            out.add_indent(indent)
 
-        # Closing paren
-        # Add indent if the last character is a newline
-        if parts and parts[-1].endswith('\n'):
-            parts.append(' ' * indent)
-
-        parts.append(')')
+        out.add_closing_paren_with_indent(indent)
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-        return ''.join(parts)
+        return out.get_output()
 
     def _format_match(self, indent: int) -> str:
         """Format match expressions."""
-        parts = ['(match ']
+        out = OutputBuilder(self.options)
+        out.add('(match ')
         self._advance()  # consume 'match' symbol
 
         # Value to match
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            parts.append(self._format_expression(indent + self.options.indent_size))
+            out.add(self._format_expression(indent + self.options.indent_size))
 
         # Match clauses
         clause_indent = indent + self.options.indent_size
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle EOL comments
-            if self._append_eol_comment_if_present(parts):
+            if self._append_eol_comment_if_present(out):
                 pass  # Comment handled
             elif self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-                parts.append('\n')
-                self._format_comments_before_expression(clause_indent, parts)
+                out.add_newline()
+                self._format_comments_before_expression(clause_indent, out)
             else:
                 # Regular clause
-                parts.append('\n')
-                parts.append(' ' * clause_indent)
-                parts.append(self._format_expression(clause_indent))
+                out.add_line(self._format_expression(clause_indent), clause_indent)
 
         # Handle comments after last clause but before closing paren
-        if self._append_eol_comment_if_present(parts):
-            parts.append(' ' * indent)
+        if self._append_eol_comment_if_present(out):
+            out.add_indent(indent)
 
-        # Closing paren
-        # Add indent if the last character is a newline
-        if parts and parts[-1].endswith('\n'):
-            parts.append(' ' * indent)
-
-        parts.append(')')
+        out.add_closing_paren_with_indent(indent)
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-        return ''.join(parts)
+        return out.get_output()
 
     def _format_quote(self, indent: int) -> str:
         """Format quoted expressions."""
-        parts = ["'"]
+        out = OutputBuilder(self.options)
+        out.add("'")
         self._advance()  # consume quote
 
         if self.current_token:
-            parts.append(self._format_expression(indent))
+            out.add(self._format_expression(indent))
 
-        return ''.join(parts)
+        return out.get_output()
 
     def _format_atom(self) -> str:
         """Format an atomic value (number, string, boolean, symbol)."""
