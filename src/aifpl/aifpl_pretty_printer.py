@@ -315,6 +315,51 @@ class AIFPLPrettyPrinter:
 
             self._format_comments_before_expression(indent, parts)
 
+    def _consume_rparen(self) -> None:
+        """Consume a right paren token if present."""
+        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
+            self._advance()
+
+    def _format_branch_with_comments(self, indent: int, out: OutputBuilder) -> None:
+        """
+        Format a branch (body/then/else) with comment handling.
+        Common pattern: handle comments, then format expression on new line.
+
+        Args:
+            indent: Indentation level for the branch
+            out: Output builder to append to
+        """
+        # Handle comments before branch
+        self._handle_comments_before_branch(indent, out)
+
+        # Format the branch expression
+        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            out.add_line(self._format_expression(indent), indent)
+
+    def _finish_form(self, indent: int, out: OutputBuilder) -> str:
+        """
+        Finish a special form: handle trailing comments, closing paren, consume RPAREN.
+        Common ending pattern for lambda/if/match/let.
+
+        Args:
+            indent: Indentation level for the form
+            out: Output builder with the form content
+
+        Returns:
+            Formatted output string
+        """
+        # Handle comments after last element but before closing paren
+        if self._append_eol_comment_if_present(out):
+            out.add_indent(indent)
+
+        # Add closing paren with proper indentation
+        out.add_closing_paren_with_indent(indent)
+
+        # Consume the RPAREN token
+        self._consume_rparen()
+
+        return out.get_output()
+
     def _format_expression(self, indent: int) -> str:
         """Format a single expression at the given indentation level."""
         if self.current_token is None:
@@ -441,9 +486,7 @@ class AIFPLPrettyPrinter:
 
         out.add(')')
 
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()
-
+        self._consume_rparen()
         return out.get_output()
 
     def _format_multiline_list(self, indent: int) -> str:
@@ -500,9 +543,7 @@ class AIFPLPrettyPrinter:
 
         out.add(')')
 
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()
-
+        self._consume_rparen()
         return out.get_output()
 
     def _format_let_form(self, form_type: str, indent: int) -> str:
@@ -518,8 +559,7 @@ class AIFPLPrettyPrinter:
                 out.add(self._format_expression(indent))
 
             out.add(')')
-            if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-                self._advance()
+            self._consume_rparen()
 
             return out.get_output()
 
@@ -569,29 +609,20 @@ class AIFPLPrettyPrinter:
             first_binding = False
             prev_was_comment = False
 
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()  # consume ')' for bindings
-
+        self._consume_rparen()  # consume ')' for bindings
         out.add(')')
 
         # Format body
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             body_indent = indent + self.options.indent_size
-
-            # Handle comments before body
-            self._handle_comments_before_branch(body_indent, out)
-
-            # Format body expression
-            if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-                out.add_line(self._format_expression(body_indent), body_indent)
+            self._format_branch_with_comments(body_indent, out)
 
         # Handle comments after body but before closing paren
         self._append_eol_comment_if_present(out)
 
         # Closing paren
         out.add(')')
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()
+        self._consume_rparen()
 
         return out.get_output()
 
@@ -620,8 +651,7 @@ class AIFPLPrettyPrinter:
                 out.add(self._format_expression(value_indent))
 
         out.add(')')
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()
+        self._consume_rparen()
 
         return out.get_output()
 
@@ -637,9 +667,7 @@ class AIFPLPrettyPrinter:
                 out.add(self._format_expression(indent))
 
             out.add(')')
-            if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-                self._advance()
-
+            self._consume_rparen()
             return out.get_output()
 
         self._advance()  # consume '(' for parameters
@@ -653,30 +681,14 @@ class AIFPLPrettyPrinter:
             out.add(self._format_atom())
             first_param = False
 
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()  # consume ')' for parameters
-
+        self._consume_rparen()  # consume ')' for parameters
         out.add(')')
 
         # Format body
         body_indent = indent + self.options.indent_size
+        self._format_branch_with_comments(body_indent, out)
 
-        # Handle comments before body
-        self._handle_comments_before_branch(body_indent, out)
-
-        # Format the actual body expression
-        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            out.add_line(self._format_expression(body_indent), body_indent)
-
-        # Handle comments after body but before closing paren
-        if self._append_eol_comment_if_present(out):
-            out.add_indent(indent)
-
-        out.add_closing_paren_with_indent(indent)
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()
-
-        return out.get_output()
+        return self._finish_form(indent, out)
 
     def _format_if(self, indent: int) -> str:
         """Format if expressions."""
@@ -691,26 +703,12 @@ class AIFPLPrettyPrinter:
             out.add(self._format_expression(branch_indent))
 
         # Then branch
-        self._handle_comments_before_branch(branch_indent, out)
-
-        if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            out.add_line(self._format_expression(branch_indent), branch_indent)
+        self._format_branch_with_comments(branch_indent, out)
 
         # Else branch
-        self._handle_comments_before_branch(branch_indent, out)
+        self._format_branch_with_comments(branch_indent, out)
 
-        if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            out.add_line(self._format_expression(branch_indent), branch_indent)
-
-        # Handle comments after else branch but before closing paren
-        if self._append_eol_comment_if_present(out):
-            out.add_indent(indent)
-
-        out.add_closing_paren_with_indent(indent)
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()
-
-        return out.get_output()
+        return self._finish_form(indent, out)
 
     def _format_match(self, indent: int) -> str:
         """Format match expressions."""
@@ -728,22 +726,16 @@ class AIFPLPrettyPrinter:
             # Handle EOL comments
             if self._append_eol_comment_if_present(out):
                 pass  # Comment handled
+
             elif self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
                 out.add_newline()
                 self._format_comments_before_expression(clause_indent, out)
+
             else:
                 # Regular clause
                 out.add_line(self._format_expression(clause_indent), clause_indent)
 
-        # Handle comments after last clause but before closing paren
-        if self._append_eol_comment_if_present(out):
-            out.add_indent(indent)
-
-        out.add_closing_paren_with_indent(indent)
-        if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
-            self._advance()
-
-        return out.get_output()
+        return self._finish_form(indent, out)
 
     def _format_quote(self, indent: int) -> str:
         """Format quoted expressions."""
