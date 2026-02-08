@@ -3,7 +3,7 @@
 This file targets the remaining uncovered lines and branches to reach 100% coverage.
 """
 
-from aifpl.aifpl_pretty_printer import AIFPLPrettyPrinter, FormatOptions
+from aifpl.aifpl_pretty_printer import AIFPLPrettyPrinter, FormatOptions, OutputBuilder
 
 
 class TestEolCommentsAfterSpecialForms:
@@ -84,17 +84,6 @@ class TestExcessiveBlankLines:
 
 class TestNoneTokenGuards:
     """Test None token guards (lines 154-155, 162-163)."""
-
-    def test_is_end_of_line_comment_with_none_token(self):
-        """Test line 155: _is_end_of_line_comment with None token."""
-        printer = AIFPLPrettyPrinter()
-        # Format empty string to get None token
-        printer.format("")
-        # Now current_token should be None
-        assert printer.current_token is None
-        # Call _is_end_of_line_comment
-        result = printer._is_end_of_line_comment()
-        assert result is False
 
     def test_format_expression_with_none_token(self):
         """Test line 163: _format_expression with None token."""

@@ -10,62 +10,6 @@ from aifpl.aifpl_pretty_printer import AIFPLPrettyPrinter, FormatOptions
 class TestDirectlyManipulateTokens:
     """Test by directly manipulating tokens to hit hard-to-reach lines."""
 
-    def test_top_level_eol_comment_lines_76_78(self):
-        """Test lines 76-78: Top-level EOL comment by manipulating tokens."""
-        printer = AIFPLPrettyPrinter()
-
-        # Create tokens manually to ensure EOL comment at top level
-        # The trick is that the comment must have the same line number as the previous token
-        lexer = AIFPLLexer()
-        tokens = lexer.lex("42", preserve_comments=True)
-
-        # Add a comment token with the same line number
-        comment_token = AIFPLToken(AIFPLTokenType.COMMENT, "; eol comment", line=1, column=5)
-        tokens.append(comment_token)
-
-        # Manually set tokens
-        printer.tokens = tokens
-        printer.pos = 0
-        printer.current_token = tokens[0] if tokens else None
-        printer.last_token_line = 0
-
-        # Format using the internal method
-        output_parts = []
-        prev_was_comment = False
-
-        while printer.current_token is not None:
-            current_line = printer.current_token.line
-            has_blank_line_before = False
-
-            if printer.current_token.type == AIFPLTokenType.COMMENT:
-                is_eol = printer._is_end_of_line_comment()
-
-                if is_eol:
-                    # This should hit lines 76-78
-                    output_parts.append(' ' * printer.options.comment_spacing)
-                    output_parts.append(printer.current_token.value)
-                    output_parts.append('\n')
-                    prev_was_comment = True
-                    printer._advance()
-                else:
-                    if output_parts and (has_blank_line_before or not prev_was_comment):
-                        output_parts.append('\n')
-                    output_parts.append(printer.current_token.value)
-                    output_parts.append('\n')
-                    prev_was_comment = True
-                    printer._advance()
-            else:
-                if output_parts and has_blank_line_before:
-                    output_parts.append('\n')
-
-                result = printer._format_expression(0)
-                output_parts.append(result)
-                output_parts.append('\n')
-                prev_was_comment = False
-
-        result = ''.join(output_parts)
-        assert "; eol comment" in result
-
     def test_excessive_blank_lines_line_135(self):
         """Test line 135: More than 2 consecutive blank lines."""
         printer = AIFPLPrettyPrinter()

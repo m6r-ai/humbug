@@ -165,18 +165,8 @@ class AIFPLPrettyPrinter:
                 result = self._format_expression(0)
                 out.add(result)
 
-                had_eol_comment = False
                 # Check for end-of-line comment after the expression
-                if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-                    is_eol = self._is_end_of_line_comment()
-                    if is_eol:
-                        # Add EOL comment on same line
-                        out.add(' ' * self.options.comment_spacing)
-                        out.add(self.current_token.value)
-                        self._advance()
-                        had_eol_comment = True
-
-                    # If not EOL, it will be handled in next iteration
+                had_eol_comment = self._handle_comments(out, 0, handle_standalone=False)
 
                 out.add_newline()
 
@@ -207,70 +197,50 @@ class AIFPLPrettyPrinter:
         # Ensure single trailing newline
         return '\n'.join(cleaned_lines)
 
-    def _is_end_of_line_comment(self) -> bool:
-        """Check if current comment token is an end-of-line comment."""
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.COMMENT:
-            return False
-
-        # Check if comment is on the same line as the last non-comment token
-        return self.current_token.line == self.last_token_line
-
-    def _format_comments_before_expression(self, indent: int, out: OutputBuilder, add_leading_newline: bool = True) -> bool:
+    def _handle_comments(self, out: OutputBuilder, indent: int,
+                        handle_eol: bool = True,
+                        handle_standalone: bool = True,
+                        add_leading_newline: bool = True,
+                        eol_prefix: str = '') -> bool:
         """
-        Handle comments that appear before an expression.
-        Consumes and formats all standalone (non-EOL) comments at current position.
+        Handle both EOL and standalone comments at current position.
 
         Args:
-            indent: Indentation level for standalone comments
             out: OutputBuilder to append formatted comments to
-            add_leading_newline: If True, adds a newline before comments (if there isn't one already)
+            indent: Indentation level for standalone comments
+            handle_eol: If True, check for and format EOL comments
+            handle_standalone: If True, check for and format standalone comments
+            add_leading_newline: If True, adds newline before standalone comments
+            eol_prefix: Optional prefix before EOL comment spacing
 
         Returns:
             True if any comments were processed, False otherwise
         """
-        # Early exit if no comments
-        if not (self.current_token and self.current_token.type == AIFPLTokenType.COMMENT):
-            return False
-
-        # Add leading newline if requested and we don't already have one
-        if add_leading_newline:
-            if not out.ends_with_newline():
-                out.add_newline()
-
-        while self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-            if self._is_end_of_line_comment():
-                break
-
-            out.add_standalone_comment(self.current_token.value, indent)
-            self._advance()
-
-        return True
-
-    def _append_eol_comment_if_present(self, out: OutputBuilder, prefix: str = '') -> bool:
-        """
-        Append an EOL comment to parts if one is present at current position.
-        Always adds a newline after the comment (since comments consume the rest of the line).
-
-        Args:
-            out: OutputBuilder to append to
-            prefix: Optional prefix to add before the comment spacing (e.g., ' ' for first element)
-
-        Returns:
-            True if a comment was appended, False otherwise
-        """
-        # Check if we have an EOL comment
         if self.current_token is None or self.current_token.type != AIFPLTokenType.COMMENT:
             return False
 
-        if not self._is_end_of_line_comment():
-            return False
+        found_any = False
 
-        # Consume and format the EOL comment
-        comment_text = self.current_token.value
-        self._advance()
+        # Handle EOL comment first (same line as last token)
+        if handle_eol and self.current_token.line == self.last_token_line:
+            out.add_eol_comment(self.current_token.value, eol_prefix)
+            self._advance()
+            found_any = True
 
-        out.add_eol_comment(comment_text, prefix)
-        return True
+        # Handle standalone comments (different line from last token)
+        if handle_standalone:
+            # Add leading newline if requested
+            if add_leading_newline and not out.ends_with_newline():
+                out.add_newline()
+
+            while (self.current_token and
+                   self.current_token.type == AIFPLTokenType.COMMENT and
+                   self.current_token.line != self.last_token_line):
+                out.add_standalone_comment(self.current_token.value, indent)
+                self._advance()
+                found_any = True
+
+        return found_any
 
     def _consume_rparen(self) -> None:
         """Consume a right paren token if present."""
@@ -278,43 +248,16 @@ class AIFPLPrettyPrinter:
             self._advance()
 
     def _format_branch_with_comments(self, indent: int, out: OutputBuilder) -> None:
-        """
-        Format a branch (body/then/else) with comment handling.
-        Common pattern: handle comments, then format expression on new line.
-
-        Args:
-            indent: Indentation level for the branch
-            out: Output builder to append to
-        """
-        # Handle EOL comments first
-        if self._append_eol_comment_if_present(out):
-            # EOL comment consumed, now check for standalone comments
-            pass
-
-        # Handle standalone comments
-        self._format_comments_before_expression(indent, out)
-
+        """Format a branch with comments, then the expression."""
+        self._handle_comments(out, indent)
         # Format the branch expression
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             out.add_line(self._format_expression(indent), indent)
 
     def _finish_form(self, indent: int, out: OutputBuilder) -> str:
-        """
-        Finish a special form: handle trailing comments, closing paren, consume RPAREN.
-        Common ending pattern for lambda/if/match/let.
-
-        Args:
-            indent: Indentation level for the form
-            out: Output builder with the form content
-
-        Returns:
-            Formatted output string
-        """
-        # Handle comments after last element but before closing paren
-        if self._append_eol_comment_if_present(out):
+        """Finish a special form: trailing comment, closing paren, consume RPAREN."""
+        if self._handle_comments(out, indent, handle_standalone=False):
             out.add_indent(indent)
-
-        # Add closing paren with proper indentation
         out.add_closing_paren_with_indent(indent)
 
         # Consume the RPAREN token
@@ -464,13 +407,12 @@ class AIFPLPrettyPrinter:
 
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle EOL comments
-            if self._append_eol_comment_if_present(out, prefix=' ' if first else ''):
+            if self._handle_comments(out, elem_indent, handle_standalone=False, eol_prefix=' ' if first else ''):
                 continue
 
             # Handle standalone comments
-            # Add newline before comment only if not first and not after another comment
             add_newline = not first and not prev_was_comment
-            if self._format_comments_before_expression(elem_indent, out, add_leading_newline=add_newline):
+            if self._handle_comments(out, elem_indent, handle_eol=False, add_leading_newline=add_newline):
                 prev_was_comment = True
                 continue
 
@@ -534,14 +476,12 @@ class AIFPLPrettyPrinter:
 
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle comments
-            # Handle EOL comments
-            if self._append_eol_comment_if_present(out):
+            if self._handle_comments(out, binding_indent, handle_standalone=False):
                 continue
 
             # Handle standalone comments
-            # Add newline before comment only if not first binding and not after another comment
             add_newline = not first_binding and not prev_was_comment
-            if self._format_comments_before_expression(binding_indent, out, add_leading_newline=add_newline):
+            if self._handle_comments(out, binding_indent, handle_eol=False, add_leading_newline=add_newline):
                 prev_was_comment = True
                 first_binding = False
                 continue
@@ -577,7 +517,7 @@ class AIFPLPrettyPrinter:
             self._format_branch_with_comments(body_indent, out)
 
         # Handle comments after body but before closing paren
-        self._append_eol_comment_if_present(out)
+        self._handle_comments(out, indent, handle_standalone=False)
 
         # Closing paren
         out.add(')')
