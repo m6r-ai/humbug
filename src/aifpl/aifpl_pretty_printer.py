@@ -535,6 +535,9 @@ class AIFPLPrettyPrinter:
 
                 out.add_newline()
                 out.add_indent(binding_indent)
+            elif out.ends_with_newline():
+                # First binding, but output already has newline (e.g., after EOL comment)
+                out.add_indent(binding_indent)
 
             # Format binding
             binding_str = self._format_binding(binding_indent)

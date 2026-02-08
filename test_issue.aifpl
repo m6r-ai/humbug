@@ -1,0 +1,3 @@
+(letrec (  ; Comment after opening paren
+  (foo (lambda (x) x)))
+  (foo 5))
