@@ -227,6 +227,7 @@ class AIFPLPrettyPrinter:
         while self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
             if self._is_end_of_line_comment():
                 break
+
             out.add_standalone_comment(self.current_token.value, indent)
             self._advance()
 
@@ -279,6 +280,7 @@ class AIFPLPrettyPrinter:
         if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
             if not out.ends_with_newline():
                 out.add_newline()
+
             self._format_comments_before_expression(indent, out)
 
         # Format the branch expression
@@ -672,17 +674,8 @@ class AIFPLPrettyPrinter:
         # Match clauses
         clause_indent = indent + self.options.indent_size
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            # Handle EOL comments
-            if self._append_eol_comment_if_present(out):
-                pass  # Comment handled
-
-            elif self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-                out.add_newline()
-                self._format_comments_before_expression(clause_indent, out)
-
-            else:
-                # Regular clause
-                out.add_line(self._format_expression(clause_indent), clause_indent)
+            # Format each clause with comment handling
+            self._format_branch_with_comments(clause_indent, out)
 
         return self._finish_form(indent, out)
 
