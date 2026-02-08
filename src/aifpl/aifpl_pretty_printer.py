@@ -140,71 +140,25 @@ class AIFPLPrettyPrinter:
         # Check if comment is on the same line as the last non-comment token
         return self.current_token.line == self.last_token_line
 
-    def _consume_eol_comment(self) -> Optional[str]:
+    def _format_comments_before_expression(self, indent: int, parts: List[str]) -> None:
         """
-        Consume and return an end-of-line comment if present.
-
-        Returns:
-            The comment text if an EOL comment is present, None otherwise.
-            Advances past the comment token if consumed.
-        """
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.COMMENT:
-            return None
-
-        if not self._is_end_of_line_comment():
-            return None
-
-        comment_text = self.current_token.value
-        self._advance()
-        return comment_text
-
-    def _consume_standalone_comments(self, indent: int) -> List[str]:
-        """
-        Consume and format all standalone comments at current position.
+        Handle comments that appear before an expression.
+        Consumes and formats all standalone (non-EOL) comments at current position.
 
         Args:
-            indent: The indentation level for the comments
-
-        Returns:
-            List of formatted comment lines (with indentation and newlines).
-            Advances past all consumed comment tokens.
+            indent: Indentation level for standalone comments
+            parts: Output list to append formatted comments to
         """
-        result = []
-
         while self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
             # Only consume standalone comments, not EOL comments
             if self._is_end_of_line_comment():
                 break
 
             # Format the comment with proper indentation
-            result.append(' ' * indent)
-            result.append(self.current_token.value)
-            result.append('\n')
+            parts.append(' ' * indent)
+            parts.append(self.current_token.value)
+            parts.append('\n')
             self._advance()
-
-        return result
-
-    def _skip_comments(self) -> None:
-        """
-        Skip past all comments at current position without formatting them.
-        Useful when you need to look ahead past comments.
-        """
-        while self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-            self._advance()
-
-    def _format_comments_before_expression(self, indent: int, parts: List[str]) -> None:
-        """
-        Handle comments that appear before an expression.
-        Adds standalone comments with proper spacing, handles EOL comments inline.
-
-        Args:
-            indent: Indentation level for standalone comments
-            parts: Output list to append formatted comments to
-        """
-        # Consume any standalone comments
-        comment_lines = self._consume_standalone_comments(indent)
-        if comment_lines:
-            parts.extend(comment_lines)
 
     def _append_eol_comment_if_present(self, parts: List[str], add_newline: bool = False, prefix: str = '') -> bool:
         """
@@ -218,19 +172,26 @@ class AIFPLPrettyPrinter:
         Returns:
             True if a comment was appended, False otherwise
         """
-        eol_comment = self._consume_eol_comment()
-        if eol_comment:
-            if prefix:
-                parts.append(prefix)
+        # Check if we have an EOL comment
+        if self.current_token is None or self.current_token.type != AIFPLTokenType.COMMENT:
+            return False
 
-            parts.append(' ' * self.options.comment_spacing)
-            parts.append(eol_comment)
-            if add_newline:
-                parts.append('\n')
+        if not self._is_end_of_line_comment():
+            return False
 
-            return True
+        # Consume and format the EOL comment
+        comment_text = self.current_token.value
+        self._advance()
 
-        return False
+        if prefix:
+            parts.append(prefix)
+
+        parts.append(' ' * self.options.comment_spacing)
+        parts.append(comment_text)
+        if add_newline:
+            parts.append('\n')
+
+        return True
 
     def _handle_comments_before_branch(self, indent: int, parts: List[str]) -> None:
         """
@@ -248,7 +209,7 @@ class AIFPLPrettyPrinter:
 
         # Handle standalone comments
         if self.current_token and self.current_token.type == AIFPLTokenType.COMMENT:
-            # Only add leading newline if we didn't just add one from EOL comment
+            # Add leading newline if we didn't just add one from EOL comment
             if not (parts and parts[-1].endswith('\n')):
                 parts.append('\n')
 
