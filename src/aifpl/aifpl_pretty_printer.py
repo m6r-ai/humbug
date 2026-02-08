@@ -1,6 +1,6 @@
 """Pretty-printer for AIFPL code with comment preservation."""
 
-from typing import List, Optional, cast
+from typing import List, Optional, cast, Tuple
 from dataclasses import dataclass
 
 from aifpl.aifpl_lexer import AIFPLLexer
@@ -246,6 +246,37 @@ class AIFPLPrettyPrinter:
 
         return found_any
 
+    def _handle_loop_comments(
+        self,
+        out: OutputBuilder,
+        indent: int,
+        is_first: bool,
+        prev_was_comment: bool,
+        eol_prefix: str = ''
+    ) -> Tuple[bool, bool]:
+        """
+        Handle comments in a loop context (both EOL and standalone).
+        Returns (handled_comment, new_prev_was_comment).
+        """
+        # Handle EOL comments
+        if self._handle_comments(out, indent, handle_standalone=False, eol_prefix=eol_prefix):
+            return (True, prev_was_comment)
+
+        # Handle standalone comments
+        add_newline = not is_first and not prev_was_comment
+        if self._handle_comments(out, indent, handle_eol=False, add_leading_newline=add_newline):
+            return (True, True)
+
+        return (False, False)
+
+    def _save_position(self) -> tuple[int, Optional[AIFPLToken]]:
+        """Save current parsing position."""
+        return (self.pos, self.current_token)
+
+    def _restore_position(self, saved: tuple[int, Optional[AIFPLToken]]) -> None:
+        """Restore parsing position."""
+        self.pos, self.current_token = saved
+
     def _consume_rparen(self) -> None:
         """Consume a right paren token if present."""
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
@@ -258,6 +289,28 @@ class AIFPLPrettyPrinter:
         # Format the branch expression
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             out.add_line(self._format_expression(indent), indent)
+
+    def _get_body_indent(self, indent: int) -> int:
+        """Calculate standard body indentation."""
+        return indent + self.options.indent_size
+
+    def _get_aligned_indent(self, base_indent: int, prefix_text: str, extra: int = 0) -> int:
+        """Calculate indentation aligned after prefix text."""
+        return base_indent + len(prefix_text) + extra
+
+    def _start_special_form(self, form_name: str, out: OutputBuilder, suffix: str = ' ') -> None:
+        """Start a special form: output '(name' with suffix and advance past symbol."""
+        out.add(f'({form_name}{suffix}')
+        self._advance()
+
+    def _handle_malformed_special_form(self, indent: int, out: OutputBuilder) -> str:
+        """Handle malformed special form: format remaining token and close."""
+        if self.current_token is not None:
+            out.add(self._format_expression(indent))
+
+        out.add(')')
+        self._consume_rparen()
+        return out.get_output()
 
     def _finish_form(self, indent: int, out: OutputBuilder) -> str:
         """Finish a special form: trailing comment, closing paren, consume RPAREN."""
@@ -341,23 +394,20 @@ class AIFPLPrettyPrinter:
 
         if not has_comments:
             # Try compact format
-            saved_pos = self.pos
-            saved_token = self.current_token
+            saved = self._save_position()
             compact = self._try_compact_list(indent)
             if compact and len(compact) <= self.options.compact_threshold:
                 return compact
 
             # Compact format was too long or failed, restore position
-            self.pos = saved_pos
-            self.current_token = saved_token
+            self._restore_position(saved)
 
         # Use multi-line format
         return self._format_multiline_list(indent)
 
     def _try_compact_list(self, indent: int) -> Optional[str]:
         """Try to format the list compactly. Returns None if not possible."""
-        saved_pos = self.pos
-        saved_token = self.current_token
+        saved = self._save_position()
 
         out = OutputBuilder(self.options)
         out.add('(')
@@ -367,8 +417,7 @@ class AIFPLPrettyPrinter:
             # Early bailout: if we've already exceeded threshold, stop trying
             current_length = len(out.get_output())
             if current_length > self.options.compact_threshold:
-                self.pos = saved_pos
-                self.current_token = saved_token
+                self._restore_position(saved)
                 return None
 
             if self.current_token.type == AIFPLTokenType.LPAREN:
@@ -380,8 +429,7 @@ class AIFPLPrettyPrinter:
                 nested = self._try_compact_list(indent)
                 if nested is None:
                     # Nested list can't be compact, so parent can't either
-                    self.pos = saved_pos
-                    self.current_token = saved_token
+                    self._restore_position(saved)
                     return None
 
                 out.add(nested)
@@ -412,13 +460,9 @@ class AIFPLPrettyPrinter:
 
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle EOL comments
-            if self._handle_comments(out, elem_indent, handle_standalone=False, eol_prefix=' ' if first else ''):
-                continue
-
-            # Handle standalone comments
-            add_newline = not first and not prev_was_comment
-            if self._handle_comments(out, elem_indent, handle_eol=False, add_leading_newline=add_newline):
-                prev_was_comment = True
+            handled, prev_was_comment = self._handle_loop_comments(
+                out, elem_indent, first, prev_was_comment, eol_prefix=' ' if first else '')
+            if handled:
                 continue
 
             # Add newline before element if it's not first or second
@@ -457,38 +501,26 @@ class AIFPLPrettyPrinter:
     def _format_let_form(self, form_type: str, indent: int) -> str:
         """Format let/let*/letrec expressions."""
         out = OutputBuilder(self.options)
-        out.add(f'({form_type} (')
-        self._advance()  # consume let/let*/letrec symbol
+        self._start_special_form(form_type, out, suffix=' (')
 
         # Expect bindings list
         if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
-            # Malformed
-            if self.current_token is not None:
-                out.add(self._format_expression(indent))
-
-            out.add(')')
-            self._consume_rparen()
-
-            return out.get_output()
+            # Malformed let form
+            return self._handle_malformed_special_form(indent, out)
 
         self._advance()  # consume '(' for bindings
 
         # Format bindings
-        binding_indent = indent + len(form_type) + 3  # Align with first binding
+        binding_indent = self._get_aligned_indent(indent, f'({form_type} (')
         first_binding = True
         prev_was_comment = False
         prev_binding_was_complex = False
 
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle comments
-            if self._handle_comments(out, binding_indent, handle_standalone=False):
-                continue
-
-            # Handle standalone comments
-            add_newline = not first_binding and not prev_was_comment
-            if self._handle_comments(out, binding_indent, handle_eol=False, add_leading_newline=add_newline):
-                prev_was_comment = True
-                first_binding = False
+            handled, prev_was_comment = self._handle_loop_comments(
+                out, binding_indent, first_binding, prev_was_comment)
+            if handled:
                 continue
 
             # Add spacing before binding
@@ -518,7 +550,7 @@ class AIFPLPrettyPrinter:
 
         # Format body
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            body_indent = indent + self.options.indent_size
+            body_indent = self._get_body_indent(indent)
             self._format_branch(body_indent, out)
 
         # Handle comments after body but before closing paren
@@ -549,9 +581,7 @@ class AIFPLPrettyPrinter:
             if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
                 out.add_space()
 
-                # Calculate indent for the value (after "(name ")
-                # indent is where the binding starts, +1 for '(', +len(name), +1 for ' '
-                value_indent = indent + 1 + len(name) + 1
+                value_indent = self._get_aligned_indent(indent, f'({name} ')
                 out.add(self._format_expression(value_indent))
 
         out.add(')')
@@ -562,17 +592,12 @@ class AIFPLPrettyPrinter:
     def _format_lambda(self, indent: int) -> str:
         """Format lambda expressions."""
         out = OutputBuilder(self.options)
-        out.add('(lambda (')
-        self._advance()  # consume 'lambda' symbol
+        self._start_special_form('lambda', out, suffix=' (')
 
         # Expect parameter list
         if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
-            if self.current_token is not None:
-                out.add(self._format_expression(indent))
-
-            out.add(')')
-            self._consume_rparen()
-            return out.get_output()
+            # Malformed lambda
+            return self._handle_malformed_special_form(indent, out)
 
         self._advance()  # consume '(' for parameters
 
@@ -589,7 +614,7 @@ class AIFPLPrettyPrinter:
         out.add(')')
 
         # Format body
-        body_indent = indent + self.options.indent_size
+        body_indent = self._get_body_indent(indent)
         self._format_branch(body_indent, out)
 
         return self._finish_form(indent, out)
@@ -597,10 +622,9 @@ class AIFPLPrettyPrinter:
     def _format_if(self, indent: int) -> str:
         """Format if expressions."""
         out = OutputBuilder(self.options)
-        out.add('(if ')
-        self._advance()  # consume 'if' symbol
+        self._start_special_form('if', out)
 
-        branch_indent = indent + self.options.indent_size
+        branch_indent = self._get_body_indent(indent)
 
         # Condition
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
@@ -617,15 +641,14 @@ class AIFPLPrettyPrinter:
     def _format_match(self, indent: int) -> str:
         """Format match expressions."""
         out = OutputBuilder(self.options)
-        out.add('(match ')
-        self._advance()  # consume 'match' symbol
+        self._start_special_form('match', out)
 
         # Value to match
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            out.add(self._format_expression(indent + self.options.indent_size))
+            out.add(self._format_expression(self._get_body_indent(indent)))
 
         # Match clauses
-        clause_indent = indent + self.options.indent_size
+        clause_indent = self._get_body_indent(indent)
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Format each clause with comment handling
             self._format_branch(clause_indent, out)
