@@ -523,6 +523,7 @@ class AIFPLPrettyPrinter:
             if is_eol:
                 parts.append(' ' * self.options.comment_spacing)
                 parts.append(self.current_token.value)
+                parts.append('\n')
                 self._advance()
 
             else:
@@ -548,6 +549,8 @@ class AIFPLPrettyPrinter:
             parts.append(' ' * self.options.comment_spacing)
             parts.append(self.current_token.value)
             self._advance()
+            parts.append('\n')
+            parts.append(' ' * indent)
 
         # Closing paren
         parts.append(')')
@@ -572,6 +575,7 @@ class AIFPLPrettyPrinter:
             if is_eol:
                 parts.append(' ' * self.options.comment_spacing)
                 parts.append(self.current_token.value)
+                parts.append('\n')
                 self._advance()
 
             else:
@@ -592,6 +596,7 @@ class AIFPLPrettyPrinter:
             if is_eol:
                 parts.append(' ' * self.options.comment_spacing)
                 parts.append(self.current_token.value)
+                parts.append('\n')
                 self._advance()
 
             else:
@@ -615,8 +620,14 @@ class AIFPLPrettyPrinter:
             parts.append(' ' * self.options.comment_spacing)
             parts.append(self.current_token.value)
             self._advance()
+            parts.append('\n')
+            parts.append(' ' * indent)
 
         # Closing paren
+        # Add indent if the last character is a newline
+        if parts and parts[-1].endswith('\n'):
+            parts.append(' ' * indent)
+
         parts.append(')')
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
@@ -641,6 +652,7 @@ class AIFPLPrettyPrinter:
                 if is_eol:
                     parts.append(' ' * self.options.comment_spacing)
                     parts.append(self.current_token.value)
+                    parts.append('\n')
                     self._advance()
                 else:
                     parts.append('\n')
@@ -663,8 +675,14 @@ class AIFPLPrettyPrinter:
             parts.append(' ' * self.options.comment_spacing)
             parts.append(self.current_token.value)
             self._advance()
+            parts.append('\n')
+            parts.append(' ' * indent)
 
         # Closing paren
+        # Add indent if the last character is a newline
+        if parts and parts[-1].endswith('\n'):
+            parts.append(' ' * indent)
+
         parts.append(')')
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
