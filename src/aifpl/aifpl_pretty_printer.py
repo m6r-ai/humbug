@@ -55,7 +55,7 @@ class AIFPLPrettyPrinter:
         self.current_token = self.tokens[self.pos] if self.tokens else None
         self.last_token_line = 0
 
-        output_parts = []
+        output_parts: List[str] = []
         prev_was_comment = False
         prev_token_line = 0  # Track line number of previous token
 
