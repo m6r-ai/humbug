@@ -326,3 +326,31 @@ class TestCommentBlankLinesInIf:
         # Should have blank line between EOL and standalone comment
         assert standalone_idx - eol_idx == 2, "Should have blank line between EOL and standalone comment"
         assert lines[eol_idx + 1].strip() == '', "Should have blank line after EOL comment"
+
+
+class TestCommentIndentationInMatchClauses:
+    """Test that comments inside match clauses are indented correctly."""
+
+    def test_match_comment_between_pattern_and_result(self):
+        """Test comment between pattern and result in match clause has correct indentation."""
+        printer = AIFPLPrettyPrinter()
+        code = """(match x
+  ((number? n)
+   ; This is a number
+   (* n 2))
+  (_ 'unknown))"""
+        result = printer.format(code)
+
+        lines = result.split('\n')
+        comment_idx = next(i for i, line in enumerate(lines) if '; This is a number' in line)
+        result_idx = next(i for i, line in enumerate(lines) if '(* n 2)' in line)
+
+        # Comment and result should have same indentation
+        comment_indent = len(lines[comment_idx]) - len(lines[comment_idx].lstrip())
+        result_indent = len(lines[result_idx]) - len(lines[result_idx].lstrip())
+
+        assert comment_indent == result_indent, \
+            f"Comment and result should have same indentation, got {comment_indent} and {result_indent}"
+
+        # Should be properly indented (not just 1 space)
+        assert comment_indent > 2, f"Should be properly indented, got {comment_indent} spaces"

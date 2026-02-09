@@ -512,7 +512,13 @@ class AIFPLPrettyPrinter:
 
             elif element_count == 1:
                 # Second element (first argument) - space before it, on same line
-                out.add_space()
+                # Unless we're already on a new line (e.g., due to a comment)
+                if out.ends_with_newline():
+                    out.add_indent(elem_indent)
+
+                else:
+                    out.add_space()
+
                 out.add(elem_str)
 
                 # Calculate indent for remaining elements: align under second element
@@ -668,9 +674,11 @@ class AIFPLPrettyPrinter:
 
         # Else branch (second - blank line before comments)
         # Check if there are standalone comments before else branch
-        has_blank = (self.current_token and
-                     self.current_token.type == AIFPLTokenType.COMMENT and
-                     self.current_token.line != self.last_token_line)
+        has_blank = bool(
+            self.current_token and
+            self.current_token.type == AIFPLTokenType.COMMENT and
+            self.current_token.line != self.last_token_line
+        )
         self._handle_comments(out, branch_indent, has_blank_line_before=has_blank)
         if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             expr = self._format_expression(branch_indent)
