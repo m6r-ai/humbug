@@ -64,9 +64,6 @@ class OutputBuilder:
 
     def add_standalone_comment(self, comment_text: str, indent: int) -> None:
         """Add a standalone comment on its own line with indentation."""
-        if not self.ends_with_newline():
-            self.add_newline()
-
         self.add_indent(indent)
         self.add(comment_text)
         self.add_newline()
@@ -165,7 +162,7 @@ class AIFPLPrettyPrinter:
                 out.add(result)
 
                 # Check for end-of-line comment after the expression
-                had_eol_comment = self._handle_comments(out, 0, handle_standalone=False)
+                had_eol_comment = self._handle_eol_comment(out)
 
                 out.add_newline()
 
@@ -196,109 +193,71 @@ class AIFPLPrettyPrinter:
         # Ensure single trailing newline
         return '\n'.join(cleaned_lines)
 
-    def _handle_comments(
+    def _handle_eol_comment(
         self,
         out: OutputBuilder,
-        indent: int,
-        handle_eol: bool = True,
-        handle_standalone: bool = True,
-        add_leading_newline: bool = True,
-        eol_prefix: str = '',
-        has_blank_line_before: bool = False
+        eol_prefix: str = ''
     ) -> bool:
         """
-        Handle both EOL and standalone comments at current position.
-
-        Args:
-            out: OutputBuilder to append formatted comments to
-            indent: Indentation level for standalone comments
-            handle_eol: If True, check for and format EOL comments
-            handle_standalone: If True, check for and format standalone comments
-            add_leading_newline: If True, adds newline before standalone comments
-            eol_prefix: Optional prefix before EOL comment spacing
-            has_blank_line_before: If True, add blank line before first standalone comment
-
-        Returns:
-            True if any comments were processed, False otherwise
+        Handle end-of-line comment (same line as last token).
+        Returns True if a comment was processed.
         """
         if self.current_token is None or self.current_token.type != AIFPLTokenType.COMMENT:
             return False
 
-        found_any = False
-
-        # Handle EOL comment first (same line as last token)
-        if handle_eol and self.current_token.line == self.last_token_line:
+        if self.current_token.line == self.last_token_line:
             out.add_eol_comment(self.current_token.value, eol_prefix)
             self.last_token_line = self.current_token.line
             self._advance()
-            found_any = True
+            return True
 
-        # Handle standalone comments (different line from last token)
-        if handle_standalone:
-            # Add leading newline if requested
-            if add_leading_newline and not out.ends_with_newline():
-                out.add_newline()
+        return False
 
-            # Add blank line before first comment if requested
-            if has_blank_line_before:
-                out.add_newline()
-
-            prev_comment_line = None
-            while (self.current_token and
-                   self.current_token.type == AIFPLTokenType.COMMENT and
-                   self.current_token.line != self.last_token_line):
-                # Check if there's a blank line between this comment and previous comment
-                if prev_comment_line is not None:
-                    line_gap = self.current_token.line - prev_comment_line
-                    # If there's more than 1 line gap, add a blank line
-                    if line_gap > 1:
-                        out.add_newline()
-
-                out.add_standalone_comment(self.current_token.value, indent)
-                prev_comment_line = self.current_token.line
-                self._advance()
-                found_any = True
-
-        return found_any
-
-    def _handle_loop_comments(
+    def _handle_standalone_comments(
         self,
         out: OutputBuilder,
         indent: int,
-        is_first: bool,
-        prev_was_comment: bool,
-        eol_prefix: str = ''
-    ) -> Tuple[bool, bool]:
+        add_blank_line_before: bool
+    ) -> bool:
         """
-        Handle comments in a loop context (both EOL and standalone).
-        Returns (handled_comment, new_prev_was_comment).
+        Handle standalone comments (not on same line as code).
+        Returns True if any comments were processed.
         """
-        # Handle EOL comments
-        if self._handle_comments(out, indent, handle_standalone=False, eol_prefix=eol_prefix):
-            return (True, prev_was_comment)
+        if self.current_token is None or self.current_token.type != AIFPLTokenType.COMMENT:
+            return False
 
-        # Handle standalone comments
-        add_newline = not is_first and not prev_was_comment
+        if self.current_token.line == self.last_token_line:
+            # This is an EOL comment, not standalone
+            return False
 
-        # Add blank line before standalone comment if not first item
-        has_blank_line_before = False
-        if (
-            self.current_token and
-            self.current_token.type == AIFPLTokenType.COMMENT and
-            self.current_token.line != self.last_token_line and
-            not is_first
-        ):
-            has_blank_line_before = True
+        # Add blank line before first comment if requested
+        # Ensure we're on a new line first
+        if not out.ends_with_newline():
+            out.add_newline()
 
-        if self._handle_comments(
-            out,
-            indent, handle_eol=False,
-            add_leading_newline=add_newline,
-            has_blank_line_before=has_blank_line_before
-        ):
-            return (True, True)
+        # Then add another newline for the blank line
+        if add_blank_line_before:
+            out.add_newline()
 
-        return (False, False)
+        found_any = False
+        prev_comment_line = None
+
+        while (self.current_token and
+               self.current_token.type == AIFPLTokenType.COMMENT and
+               self.current_token.line != self.last_token_line):
+            # Check if there's a blank line between this comment and previous comment
+            if prev_comment_line is not None:
+                line_gap = self.current_token.line - prev_comment_line
+                # If there's more than 1 line gap, add a blank line
+                if line_gap > 1:
+                    out.add_newline()
+
+            out.add_standalone_comment(self.current_token.value, indent)
+            prev_comment_line = self.current_token.line
+            self._advance()
+            found_any = True
+
+        return found_any
 
     def _save_position(self) -> tuple[int, Optional[AIFPLToken]]:
         """Save current parsing position."""
@@ -423,67 +382,50 @@ class AIFPLPrettyPrinter:
         return out.get_output()
 
     def _format_multiline_list(self, indent: int) -> str:
-        """Format a list across multiple lines."""
+        """Format a list across multiple lines - one element per line."""
         out = OutputBuilder(self.options)
         out.add('(')
-        first = True
         element_count = 0
-        # Start with default indent
-        elem_indent = indent + 1  # After opening paren
+        # All elements indented by indent_size from the opening paren
+        elem_indent = indent + self.options.indent_size
         prev_was_comment = False
-        first_elem_str: str | None = None
+        first = True
 
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            # Handle EOL comments
-            handled, prev_was_comment = self._handle_loop_comments(
-                out, elem_indent, first, prev_was_comment, eol_prefix=' ' if first else ''
-            )
+            # Handle comments (EOL and standalone)
+            handled = False
+
+            # Try EOL comment first
+            if self._handle_eol_comment(out):
+                handled = True
+                # prev_was_comment stays as it was (EOL comments don't affect it)
+
+            # Try standalone comments
+            elif self._handle_standalone_comments(
+                out,
+                elem_indent,
+                add_blank_line_before=(not first and not prev_was_comment)
+            ):
+                handled = True
+                prev_was_comment = True
+
             if handled:
+                first = False
                 continue
 
-            # Add newline before element if it's not first or second
-            if element_count >= 2:
-                # Only add newline if we're not already on a new line (e.g., after EOL comment)
-                if not out.ends_with_newline():
+            # Add newline and indent before each element (except first)
+            if not first:
+                if not prev_was_comment:
                     out.add_newline()
 
                 out.add_indent(elem_indent)
 
-            # For element 1, calculate where it will actually be positioned
-            # (on same line after element 0), not where subsequent elements align
-            if element_count == 1 and first_elem_str is not None:
-                # Element 1 will be at: indent + '(' + first_elem + ' '
-                actual_indent = indent + 1 + len(first_elem_str) + 1
-                elem_str = self._format_expression(actual_indent)
-            else:
-                elem_str = self._format_expression(elem_indent)
-
-            if element_count == 0:
-                # First element (function name) - no space before it
-                out.add(elem_str)
-                first_elem_str = elem_str
-
-            elif element_count == 1:
-                # Second element (first argument) - space before it, on same line
-                # Unless we're already on a new line (e.g., due to a comment)
-                if out.ends_with_newline():
-                    out.add_indent(elem_indent)
-
-                else:
-                    out.add_space()
-
-                out.add(elem_str)
-
-                # Calculate indent for remaining elements: align under second element
-                # Position is: indent + 1 (for '(') + len(first_elem) + 1 (space)
-                elem_indent = indent + 1 + len(cast(str, first_elem_str)) + 1
-
-            else:
-                # Third+ elements - already have newline and indent from above
-                out.add(elem_str)
+            # Format the element
+            elem_str = self._format_expression(elem_indent)
+            out.add(elem_str)
 
             # Handle any EOL comments immediately after this element
-            self._handle_comments(out, elem_indent, handle_standalone=False)
+            self._handle_eol_comment(out)
 
             element_count += 1
             first = False
