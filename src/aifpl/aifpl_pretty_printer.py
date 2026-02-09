@@ -1,4 +1,4 @@
-"""Pretty-printer for AIFPL code with comment preservation."""
+"""Simplified pretty-printer for AIFPL code with comment preservation."""
 
 from typing import List, Optional, cast, Tuple
 from dataclasses import dataclass
@@ -96,9 +96,9 @@ class AIFPLPrettyPrinter:
 
     Formatting rules:
     - 2-space indentation by default
-    - Compact format for short expressions
+    - Compact format for short expressions (fits on one line)
     - Multi-line format for complex expressions
-    - Special handling for let/letrec/lambda/if/match
+    - Uniform formatting for all list forms (no special cases)
     - Comments preserved with smart spacing
     - Blank line before comment blocks (unless first in scope)
     - End-of-line comments stay inline with 2-space padding
@@ -313,48 +313,6 @@ class AIFPLPrettyPrinter:
         if self.current_token and self.current_token.type == AIFPLTokenType.RPAREN:
             self._advance()
 
-    def _format_branch(self, indent: int, out: OutputBuilder) -> None:
-        """Format a branch."""
-        self._handle_comments(out, indent)
-
-        # Format the branch expression
-        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            out.add_line(self._format_expression(indent), indent)
-
-    def _get_body_indent(self, indent: int) -> int:
-        """Calculate standard body indentation."""
-        return indent + self.options.indent_size
-
-    def _get_aligned_indent(self, base_indent: int, prefix_text: str, extra: int = 0) -> int:
-        """Calculate indentation aligned after prefix text."""
-        return base_indent + len(prefix_text) + extra
-
-    def _start_special_form(self, form_name: str, out: OutputBuilder, suffix: str = ' ') -> None:
-        """Start a special form: output '(name' with suffix and advance past symbol."""
-        out.add(f'({form_name}{suffix}')
-        self._advance()
-
-    def _handle_malformed_special_form(self, indent: int, out: OutputBuilder) -> str:
-        """Handle malformed special form: format remaining token and close."""
-        if self.current_token is not None:
-            out.add(self._format_expression(indent))
-
-        out.add(')')
-        self._consume_rparen()
-        return out.get_output()
-
-    def _finish_special_form(self, indent: int, out: OutputBuilder) -> str:
-        """Finish a special form: trailing comment, closing paren, consume RPAREN."""
-        if self._handle_comments(out, indent, handle_standalone=False):
-            out.add_indent(indent)
-
-        out.add_closing_paren_with_indent(indent)
-
-        # Consume the RPAREN token
-        self._consume_rparen()
-
-        return out.get_output()
-
     def _format_expression(self, indent: int) -> str:
         """Format a single expression at the given indentation level."""
         if self.current_token is None:
@@ -405,7 +363,7 @@ class AIFPLPrettyPrinter:
             self._advance()  # consume ')'
             return '()'
 
-        # Check if we should use compact format (try this first, even for special forms)
+        # Check if we should use compact format
         has_comments = self._peek_ahead_for_comments(lparen_pos, rparen_pos)
 
         # Try compact format if no comments
@@ -419,23 +377,7 @@ class AIFPLPrettyPrinter:
             # Compact format was too long or failed, restore position
             self._restore_position(saved)
 
-        # Use special form formatting if applicable
-        if self.current_token.type == AIFPLTokenType.SYMBOL:
-            symbol = self.current_token.value
-
-            if symbol in ('let', 'let*', 'letrec'):
-                return self._format_let_form(symbol, indent)
-
-            if symbol == 'lambda':
-                return self._format_lambda(indent)
-
-            if symbol == 'if':
-                return self._format_if(indent)
-
-            if symbol == 'match':
-                return self._format_match(indent)
-
-        # Use multi-line format
+        # Use multi-line format for everything
         return self._format_multiline_list(indent)
 
     def _try_compact_list(self, indent: int) -> Optional[str]:
@@ -551,292 +493,6 @@ class AIFPLPrettyPrinter:
 
         self._consume_rparen()
         return out.get_output()
-
-    def _count_let_bindings(self) -> int:
-        """
-        Count the number of bindings in a let form.
-        Assumes current token is the LPAREN starting the bindings list.
-        Does not advance position.
-        """
-        saved = self._save_position()
-
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
-            self._restore_position(saved)
-            return 0
-
-        self._advance()  # consume '(' for bindings
-
-        count = 0
-        depth = 0
-
-        while self.current_token is not None:
-            if self.current_token.type == AIFPLTokenType.LPAREN:
-                if depth == 0:
-                    count += 1
-
-                depth += 1
-
-            elif self.current_token.type == AIFPLTokenType.RPAREN:
-                depth -= 1
-                if depth < 0:
-                    # End of bindings list
-                    break
-
-            self._advance()
-
-        self._restore_position(saved)
-        return count
-
-    def _is_simple_binding(self) -> bool:
-        """
-        Check if the first binding is simple (not a lambda or deeply nested).
-        Assumes current token is the LPAREN starting the bindings list.
-        Does not advance position.
-        """
-        saved = self._save_position()
-
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
-            self._restore_position(saved)
-            return False
-
-        self._advance()  # consume '(' for bindings
-
-        # Find first binding
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
-            self._restore_position(saved)
-            return False
-
-        self._advance()  # consume '(' for first binding
-
-        # Skip binding name
-        if self.current_token:
-            self._advance()
-
-        # Check if value is a lambda or complex structure
-        is_simple = True
-        if self.current_token:
-            if self.current_token.type == AIFPLTokenType.LPAREN:
-                # Check if it's a lambda
-                self._advance()
-                if self.current_token and self.current_token.type == AIFPLTokenType.SYMBOL:
-                    if self.current_token.value == 'lambda':
-                        is_simple = False
-
-        self._restore_position(saved)
-        return is_simple
-
-    def _format_let_form(self, form_type: str, indent: int) -> str:
-        """Format let/let*/letrec expressions."""
-        out = OutputBuilder(self.options)
-
-        # Decide on formatting style
-        # Count bindings to determine if we should use same-line or next-line formatting
-        # First advance past the form name to get to the bindings LPAREN
-        self._advance()  # consume 'let'/'let*'/'letrec' symbol
-
-        binding_count = self._count_let_bindings()
-        use_same_line = (binding_count == 1 and self._is_simple_binding())
-
-        if use_same_line:
-            # Style 1: Single simple binding on same line
-            out.add(f'({form_type} (')
-
-        else:
-            # Style 3: Multiple bindings or complex binding on next line
-            out.add(f'({form_type}')
-            out.add_newline()
-            out.add_indent(indent + self.options.indent_size)
-            out.add('(')
-
-        # Expect bindings list
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
-            # Malformed let form
-            return self._handle_malformed_special_form(indent, out)
-
-        self._advance()  # consume '(' for bindings
-
-        # Format bindings
-        # Calculate binding indentation based on style
-        if use_same_line:
-            # Align under opening paren of bindings
-            binding_indent = self._get_aligned_indent(indent, f'({form_type} (')
-
-        else:
-            # Indent one level from the bindings opening paren
-            binding_indent = indent + self.options.indent_size + 1
-
-        first_binding = True
-        prev_was_comment = False
-
-        while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            # Handle comments
-            handled, new_prev_was_comment = self._handle_loop_comments(
-                out, binding_indent, first_binding, prev_was_comment
-            )
-            if handled:
-                # Mark that we're no longer at the first position and remember we handled a comment
-                first_binding = False
-                prev_was_comment = new_prev_was_comment
-                continue
-
-            # Add spacing before binding
-            if not first_binding:
-                # Add newline and indent before binding (if not already on a new line)
-                if not prev_was_comment and not out.ends_with_newline():
-                    out.add_newline()
-
-                out.add_indent(binding_indent)
-
-            # Format binding
-            binding_str = self._format_binding(binding_indent)
-            if not binding_str:
-                # _format_binding returned empty (token wasn't an LPAREN)
-                # This means we've reached the end of bindings
-                break
-
-            out.add(binding_str)
-
-            first_binding = False
-            prev_was_comment = False
-
-        self._consume_rparen()  # consume ')' for bindings
-        out.add(')')
-
-        # Format body
-        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            body_indent = self._get_body_indent(indent)
-            self._format_branch(body_indent, out)
-
-        return self._finish_special_form(indent, out)
-
-    def _format_binding(self, indent: int) -> str:
-        """Format a single binding (name value)."""
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
-            return ''
-
-        self._advance()  # consume '('
-
-        out = OutputBuilder(self.options)
-        out.add('(')
-
-        # Binding name
-        if self.current_token:
-            name = self._format_atom()
-            out.add(name)
-
-            # Binding value
-            if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-                out.add_space()
-
-                value_indent = self._get_aligned_indent(indent, f'({name} ')
-                out.add(self._format_expression(value_indent))
-
-        out.add(')')
-        self._consume_rparen()
-
-        return out.get_output()
-
-    def _format_lambda(self, indent: int) -> str:
-        """Format lambda expressions."""
-        out = OutputBuilder(self.options)
-        self._start_special_form('lambda', out, suffix=' (')
-
-        # Expect parameter list
-        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
-            # Malformed lambda
-            return self._handle_malformed_special_form(indent, out)
-
-        self._advance()  # consume '(' for parameters
-
-        # Format parameters
-        first_param = True
-        while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            if not first_param:
-                out.add_space()
-
-            out.add(self._format_atom())
-            first_param = False
-
-        self._consume_rparen()  # consume ')' for parameters
-        out.add(')')
-
-        # Format body
-        body_indent = self._get_body_indent(indent)
-        self._format_branch(body_indent, out)
-
-        return self._finish_special_form(indent, out)
-
-    def _format_if(self, indent: int) -> str:
-        """Format if expressions."""
-        out = OutputBuilder(self.options)
-        self._start_special_form('if', out)
-
-        branch_indent = self._get_body_indent(indent)
-
-        # Condition
-        if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            out.add(self._format_expression(branch_indent))
-
-        # Then branch (first - no blank line before standalone comments)
-        self._handle_comments(out, branch_indent, has_blank_line_before=False)
-        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            expr = self._format_expression(branch_indent)
-            out.add_line(expr, branch_indent)
-            # Handle any EOL comments after the then expression
-            self._handle_comments(out, branch_indent, handle_standalone=False)
-
-        # Else branch (second - blank line before comments)
-        # Check if there are standalone comments before else branch
-        has_blank = bool(
-            self.current_token and
-            self.current_token.type == AIFPLTokenType.COMMENT and
-            self.current_token.line != self.last_token_line
-        )
-        self._handle_comments(out, branch_indent, has_blank_line_before=has_blank)
-        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-            expr = self._format_expression(branch_indent)
-            out.add_line(expr, branch_indent)
-            # Handle any EOL comments after the else expression
-            self._handle_comments(out, branch_indent, handle_standalone=False)
-
-        return self._finish_special_form(indent, out)
-
-    def _format_match(self, indent: int) -> str:
-        """Format match expressions."""
-        out = OutputBuilder(self.options)
-        self._start_special_form('match', out)
-
-        # Value to match
-        if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            out.add(self._format_expression(self._get_body_indent(indent)))
-
-        # Match clauses
-        clause_indent = self._get_body_indent(indent)
-        first_clause = True
-        prev_was_comment = False
-
-        while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            # Handle comments
-            handled, new_prev_was_comment = self._handle_loop_comments(
-                out, clause_indent, first_clause, prev_was_comment
-            )
-            if handled:
-                first_clause = False
-                prev_was_comment = new_prev_was_comment
-                continue
-
-            # Add spacing before clause
-            if not first_clause and not prev_was_comment and not out.ends_with_newline():
-                out.add_newline()
-
-            # Format clause
-            if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
-                out.add_line(self._format_expression(clause_indent), clause_indent)
-
-            first_clause = False
-            prev_was_comment = False
-
-        return self._finish_special_form(indent, out)
 
     def _format_quote(self, indent: int) -> str:
         """Format quoted expressions."""
