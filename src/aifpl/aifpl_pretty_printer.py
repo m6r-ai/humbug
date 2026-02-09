@@ -507,7 +507,14 @@ class AIFPLPrettyPrinter:
 
                 out.add_indent(elem_indent)
 
-            elem_str = self._format_expression(elem_indent)
+            # For element 1, calculate where it will actually be positioned
+            # (on same line after element 0), not where subsequent elements align
+            if element_count == 1 and first_elem_str is not None:
+                # Element 1 will be at: indent + '(' + first_elem + ' '
+                actual_indent = indent + 1 + len(first_elem_str) + 1
+                elem_str = self._format_expression(actual_indent)
+            else:
+                elem_str = self._format_expression(elem_indent)
 
             if element_count == 0:
                 # First element (function name) - no space before it

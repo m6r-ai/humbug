@@ -380,6 +380,46 @@ class TestPrettyPrinterRealWorldExamples:
 
 
 
+class TestPrettyPrinterNestedLambdaIndentation:
+    """Test proper indentation of nested lambdas in multiline lists."""
+
+    def test_nested_lambda_body_indentation(self):
+        """Test that nested lambda bodies are indented correctly relative to their position."""
+        # Use a low compact threshold to force multiline formatting
+        options = FormatOptions(compact_threshold=40)
+        printer = AIFPLPrettyPrinter(options)
+
+        # This pattern from validation.aifpl exposed a bug where the inner lambda
+        # body was indented relative to the wrong base position
+        code = '(map (lambda (dep) (alist-get dep "to-task")) (filter (lambda (dep) (string=? (alist-get dep "from-task") task-id)) dependencies))'
+        result = printer.format(code)
+
+        lines = result.split('\n')
+
+        # Find the line with the inner lambda (inside filter)
+        filter_lambda_line = None
+        string_eq_line = None
+        for i, line in enumerate(lines):
+            if 'filter (lambda' in line:
+                filter_lambda_line = i
+            if '(string=?' in line and string_eq_line is None:
+                string_eq_line = i
+
+        assert filter_lambda_line is not None, "Should find filter lambda line"
+        assert string_eq_line is not None, "Should find string=? line"
+
+        # The string=? should be indented 2 spaces from where (lambda starts
+        lambda_pos = lines[filter_lambda_line].index('(lambda')
+        string_eq_indent = len(lines[string_eq_line]) - len(lines[string_eq_line].lstrip())
+        expected_indent = lambda_pos + 2
+
+        assert string_eq_indent == expected_indent, \
+            f"Lambda body at line {string_eq_line} should be indented {expected_indent} spaces " \
+            f"(lambda at column {lambda_pos} + 2), but got {string_eq_indent} spaces.\\n" \
+            f"Filter lambda line: {repr(lines[filter_lambda_line])}\\n" \
+            f"String=? line: {repr(lines[string_eq_line])}"
+
+
 class TestPrettyPrinterCommentsInSpecialForms:
     """Test comment handling in special forms (lambda, if, let, match)."""
 
