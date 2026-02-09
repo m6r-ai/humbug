@@ -54,10 +54,6 @@ class OutputBuilder:
         self.add_indent(indent)
         self.add(text)
 
-    def add_inline(self, text: str) -> None:
-        """Add text inline (same line, no spacing)."""
-        self.add(text)
-
     def add_eol_comment(self, comment_text: str, prefix: str = '') -> None:
         """Add an end-of-line comment with proper spacing and newline."""
         if prefix:
@@ -294,7 +290,7 @@ class AIFPLPrettyPrinter:
 
         if self._handle_comments(
             out,
-            indent, handle_eol=False, 
+            indent, handle_eol=False,
             add_leading_newline=add_newline,
             has_blank_line_before=has_blank_line_before
         ):
@@ -579,10 +575,6 @@ class AIFPLPrettyPrinter:
                     if not out.ends_with_newline() or needs_blank_line:
                         out.add_newline()
 
-                out.add_indent(binding_indent)
-
-            elif out.ends_with_newline():
-                # First binding, but output already has newline (e.g., after EOL comment)
                 out.add_indent(binding_indent)
 
             # Format binding
