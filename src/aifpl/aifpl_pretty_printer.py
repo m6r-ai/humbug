@@ -658,11 +658,25 @@ class AIFPLPrettyPrinter:
         if self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             out.add(self._format_expression(branch_indent))
 
-        # Then branch
-        self._format_branch(branch_indent, out)
+        # Then branch (first - no blank line before standalone comments)
+        self._handle_comments(out, branch_indent, has_blank_line_before=False)
+        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            expr = self._format_expression(branch_indent)
+            out.add_line(expr, branch_indent)
+            # Handle any EOL comments after the then expression
+            self._handle_comments(out, branch_indent, handle_standalone=False)
 
-        # Else branch
-        self._format_branch(branch_indent, out)
+        # Else branch (second - blank line before comments)
+        # Check if there are standalone comments before else branch
+        has_blank = (self.current_token and
+                     self.current_token.type == AIFPLTokenType.COMMENT and
+                     self.current_token.line != self.last_token_line)
+        self._handle_comments(out, branch_indent, has_blank_line_before=has_blank)
+        if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+            expr = self._format_expression(branch_indent)
+            out.add_line(expr, branch_indent)
+            # Handle any EOL comments after the else expression
+            self._handle_comments(out, branch_indent, handle_standalone=False)
 
         return self._finish_special_form(indent, out)
 

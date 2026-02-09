@@ -274,3 +274,55 @@ class TestCanonicalFormatting:
         result2 = printer.format(result1)
 
         assert result1 == result2, "Formatting should be idempotent"
+
+
+class TestCommentBlankLinesInIf:
+    """Test blank line behavior with comments in if expressions."""
+
+    def test_if_comment_before_then_no_blank_line(self):
+        """Test that comment before then branch (first) gets no blank line."""
+        printer = AIFPLPrettyPrinter()
+        code = """(if (> x 0)
+  ; Then comment
+  'positive
+  'negative)"""
+        result = printer.format(code)
+
+        lines = result.split('\n')
+        comment_idx = next(i for i, line in enumerate(lines) if '; Then comment' in line)
+
+        # Should NOT have blank line before first comment
+        assert comment_idx > 0
+        assert lines[comment_idx - 1].strip() != '', "Should not have blank line before then comment"
+
+    def test_if_comment_before_else_has_blank_line(self):
+        """Test that comment before else branch (second) gets blank line."""
+        printer = AIFPLPrettyPrinter()
+        code = """(if (> x 0)
+  'positive
+  ; Else comment
+  'negative)"""
+        result = printer.format(code)
+
+        lines = result.split('\n')
+        comment_idx = next(i for i, line in enumerate(lines) if '; Else comment' in line)
+
+        # Should have blank line before else comment
+        assert lines[comment_idx - 1].strip() == '', "Should have blank line before else comment"
+
+    def test_if_eol_comment_then_standalone_comment(self):
+        """Test EOL comment in then branch, then standalone comment before else."""
+        printer = AIFPLPrettyPrinter()
+        code = """(if (> x 0)
+  1  ; EOL comment
+  ; Standalone comment
+  2)"""
+        result = printer.format(code)
+
+        lines = result.split('\n')
+        eol_idx = next(i for i, line in enumerate(lines) if '; EOL comment' in line)
+        standalone_idx = next(i for i, line in enumerate(lines) if '; Standalone comment' in line)
+
+        # Should have blank line between EOL and standalone comment
+        assert standalone_idx - eol_idx == 2, "Should have blank line between EOL and standalone comment"
+        assert lines[eol_idx + 1].strip() == '', "Should have blank line after EOL comment"
