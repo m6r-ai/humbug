@@ -102,18 +102,6 @@ class TestPrettyPrinterLetForms:
         assert "lambda" in result
         assert "(* n (factorial (- n 1)))" in result  # Should be compact
 
-    def test_letrec_multiple_functions(self):
-        """Test formatting of letrec with multiple function definitions."""
-        printer = AIFPLPrettyPrinter()
-        code = "(letrec ((f (lambda (x) x))(g (lambda (y) y))) (f 5))"
-        result = printer.format(code)
-
-        # Should have blank line between function definitions
-        lines = result.split("\n")
-        # Find the line with first function's closing paren
-        # and check there's a blank line before the second function
-        assert any(line.strip() == "" for line in lines)
-
 
 class TestPrettyPrinterLambda:
     """Test formatting of lambda expressions."""
@@ -385,20 +373,6 @@ class TestPrettyPrinterRealWorldExamples:
         assert "(* n (factorial (- n 1)))" in result  # Should be compact
 
     def test_mutual_recursion(self):
-        """Test formatting of mutually recursive functions."""
-        printer = AIFPLPrettyPrinter()
-        code = """(letrec ((even? (lambda (n) (or (= n 0) (odd? (- n 1))))) (odd? (lambda (n) (and (!= n 0) (even? (- n 1)))))) (even? 10))"""
-        result = printer.format(code)
-
-        # Should have blank line between function definitions
-        assert "even?" in result
-        assert "odd?" in result
-        # Check for blank line between definitions
-        lines = result.split("\n")
-        blank_lines = [i for i, line in enumerate(lines) if line.strip() == ""]
-        assert len(blank_lines) > 0
-
-    def test_map_with_lambda(self):
         """Test formatting of map with lambda."""
         printer = AIFPLPrettyPrinter()
         code = "(map (lambda (x) (* x 2)) (list 1 2 3 4 5))"

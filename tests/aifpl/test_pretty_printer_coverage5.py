@@ -13,13 +13,13 @@ def test_preserve_blank_line_between_code_and_comment():
   (bar (lambda (y) y)))
   (foo 5))"""
     result = printer.format(code)
-    
+
     lines = result.split('\n')
-    
+
     # Find the end of first binding (the line with closing parens)
     foo_end_idx = next(i for i, line in enumerate(lines) if 'x))' in line)
     comment_idx = next(i for i, line in enumerate(lines) if '; Comment after blank line' in line)
-    
+
     # Should have a blank line between them
     assert comment_idx - foo_end_idx == 2, f"Expected 1 blank line between code and comment, got {comment_idx - foo_end_idx - 1}"
     assert lines[foo_end_idx + 1] == '', "Expected blank line after first binding"
@@ -30,12 +30,12 @@ def test_no_extra_blank_after_eol_comment():
     printer = AIFPLPrettyPrinter()
     code = "(letrec (  ; Comment after opening paren\n  (foo (lambda (x) x)))\n  (foo 5))"
     result = printer.format(code)
-    
+
     lines = result.split('\n')
-    
+
     # EOL comment should be on first line
     assert '; Comment after opening paren' in lines[0]
-    
+
     # First binding should be on next line (no blank line in between)
     assert '(foo' in lines[1], f"Expected binding on line 1, got: {repr(lines[1])}"
     assert lines[1].startswith('         '), "Binding should be indented"
@@ -50,15 +50,15 @@ def test_blank_line_between_binding_and_comment_then_binding():
             (y 2))
   (+ x y))"""
     result = printer.format(code)
-    
+
     lines = result.split('\n')
-    
+
     # Find the comment
     comment_idx = next(i for i, line in enumerate(lines) if '; Middle comment' in line)
-    
+
     # Should have blank line before comment
     assert lines[comment_idx - 1] == '', "Expected blank line before comment"
-    
+
     # Should NOT have blank line after comment (binding should be next)
     assert '(y' in lines[comment_idx + 1], "Expected binding right after comment"
 
@@ -74,20 +74,20 @@ def test_multiple_blank_lines_reduced_to_one_between_code_and_comment():
   (bar (lambda (y) y)))
   (foo 5))"""
     result = printer.format(code)
-    
+
     lines = result.split('\n')
-    
+
     # Find the end of first binding and the comment
     foo_end_idx = next(i for i, line in enumerate(lines) if 'x))' in line)
     comment_idx = next(i for i, line in enumerate(lines) if '; Comment after multiple blank lines' in line)
-    
+
     # Should have exactly one blank line between them (not multiple)
     assert comment_idx - foo_end_idx == 2, f"Expected 1 blank line, got {comment_idx - foo_end_idx - 1}"
     assert lines[foo_end_idx + 1] == '', "Expected blank line after first binding"
 
 
-def test_no_blank_line_when_comment_immediately_after_code():
-    """Test that no blank line is added when comment is immediately after code."""
+def test_blank_line_always_added_before_comment():
+    """Test that blank line is always added before comment (canonical formatting)."""
     printer = AIFPLPrettyPrinter()
     code = """(letrec (
   (foo (lambda (x) x))
@@ -95,12 +95,13 @@ def test_no_blank_line_when_comment_immediately_after_code():
   (bar (lambda (y) y)))
   (foo 5))"""
     result = printer.format(code)
-    
+
     lines = result.split('\n')
-    
+
     # Find the end of first binding and the comment
     foo_end_idx = next(i for i, line in enumerate(lines) if 'x))' in line)
     comment_idx = next(i for i, line in enumerate(lines) if '; Comment immediately after' in line)
-    
-    # Should be adjacent (no blank line)
-    assert comment_idx - foo_end_idx == 1, f"Expected no blank line, got {comment_idx - foo_end_idx - 1} blank lines"
+
+    # Canonical formatting: always add blank line before comment (except first)
+    assert comment_idx - foo_end_idx == 2, f"Expected 1 blank line, got {comment_idx - foo_end_idx - 1} blank lines"
+    assert lines[foo_end_idx + 1] == '', "Expected blank line before comment"

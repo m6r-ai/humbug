@@ -280,13 +280,15 @@ class AIFPLPrettyPrinter:
         # Handle standalone comments
         add_newline = not is_first and not prev_was_comment
 
-        # Check if there's a blank line between last token and first comment
+        # Add blank line before standalone comment if not first item
         has_blank_line_before = False
-        if (self.current_token and
+        if (
+            self.current_token and
             self.current_token.type == AIFPLTokenType.COMMENT and
-            self.current_token.line != self.last_token_line):
-            line_gap = self.current_token.line - self.last_token_line
-            has_blank_line_before = line_gap > 1
+            self.current_token.line != self.last_token_line and
+            not is_first
+        ):
+            has_blank_line_before = True
 
         if self._handle_comments(
             out,
@@ -546,7 +548,6 @@ class AIFPLPrettyPrinter:
         binding_indent = self._get_aligned_indent(indent, f'({form_type} (')
         first_binding = True
         prev_was_comment = False
-        prev_binding_was_complex = False
 
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle comments
@@ -561,19 +562,9 @@ class AIFPLPrettyPrinter:
 
             # Add spacing before binding
             if not first_binding:
-                # For letrec, add extra blank line between complex bindings
-                # But don't add if previous was a comment (comment handler already added spacing)
-                needs_blank_line = form_type == 'letrec' and prev_binding_was_complex and not prev_was_comment
-                if needs_blank_line:
+                # Add newline and indent before binding (if not already on a new line)
+                if not prev_was_comment and not out.ends_with_newline():
                     out.add_newline()
-
-                # Add newline and indent before binding
-                # But if previous was a comment, we're already on a new line
-                # Also, if we just added a blank line, we still need to add the newline to move to next line
-                if not prev_was_comment:
-                    # Always add newline unless we're already on a new line (and didn't just add blank line)
-                    if not out.ends_with_newline() or needs_blank_line:
-                        out.add_newline()
 
                 out.add_indent(binding_indent)
 
@@ -586,7 +577,6 @@ class AIFPLPrettyPrinter:
 
             out.add(binding_str)
 
-            prev_binding_was_complex = 'lambda' in binding_str or '\n' in binding_str
             first_binding = False
             prev_was_comment = False
 
@@ -687,9 +677,29 @@ class AIFPLPrettyPrinter:
 
         # Match clauses
         clause_indent = self._get_body_indent(indent)
+        first_clause = True
+        prev_was_comment = False
+
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
-            # Format each clause with comment handling
-            self._format_branch(clause_indent, out)
+            # Handle comments
+            handled, new_prev_was_comment = self._handle_loop_comments(
+                out, clause_indent, first_clause, prev_was_comment
+            )
+            if handled:
+                first_clause = False
+                prev_was_comment = new_prev_was_comment
+                continue
+
+            # Add spacing before clause
+            if not first_clause and not prev_was_comment and not out.ends_with_newline():
+                out.add_newline()
+
+            # Format clause
+            if self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
+                out.add_line(self._format_expression(clause_indent), clause_indent)
+
+            first_clause = False
+            prev_was_comment = False
 
         return self._finish_special_form(indent, out)
 
