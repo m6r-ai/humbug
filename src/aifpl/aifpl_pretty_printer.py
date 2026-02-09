@@ -109,6 +109,7 @@ class AIFPLPrettyPrinter:
         self.pos = 0
         self.current_token: Optional[AIFPLToken] = None
         self.last_token_line: int = 0  # Track line of last non-comment token
+        self.indent_stack: List[int] = [0]  # Stack of indent levels
 
     def format(self, source_code: str) -> str:
         """
@@ -125,6 +126,7 @@ class AIFPLPrettyPrinter:
         self.pos = 0
         self.current_token = self.tokens[self.pos] if self.tokens else None
         self.last_token_line = 0
+        self.indent_stack = [0]  # Reset stack for each format call
 
         out = OutputBuilder(self.options)
         prev_was_comment = False
@@ -313,6 +315,9 @@ class AIFPLPrettyPrinter:
     def _format_list(self, indent: int) -> str:
         """Format a list expression."""
         lparen_pos = self.pos
+
+        # Check if this ( is on the same line as the previous token
+        lparen_on_same_line = (self.current_token.line == self.last_token_line)
         rparen_pos = self._find_matching_rparen(lparen_pos)
 
         self._advance()  # consume '('
@@ -337,7 +342,7 @@ class AIFPLPrettyPrinter:
             self._restore_position(saved)
 
         # Use multi-line format for everything
-        return self._format_multiline_list(indent)
+        return self._format_multiline_list(indent, lparen_on_same_line)
 
     def _try_compact_list(self, indent: int) -> Optional[str]:
         """Try to format the list compactly. Returns None if not possible."""
@@ -381,16 +386,31 @@ class AIFPLPrettyPrinter:
         self._consume_rparen()
         return out.get_output()
 
-    def _format_multiline_list(self, indent: int) -> str:
+    def _format_multiline_list(self, indent: int, lparen_on_same_line: bool) -> str:
         """Format a list across multiple lines - one element per line."""
+        # Calculate element indent based on whether ( is on same line as previous token
+        # If (( on same line: elements at indent + 1 (align after second ()
+        #   Example: ((x) (y)) both at same column
+        # If ( on new line: elements at indent + indent_size (standard indent)
+        #   Example:
+        #   (outer
+        #     (inner ...))  <- inner indented by 2 from outer
+        if lparen_on_same_line:
+            elem_indent = indent + 1
+
+        else:
+            elem_indent = indent + self.options.indent_size
+
+        # Push this indent level onto the stack for nested lists
+        self.indent_stack.append(elem_indent)
+
         out = OutputBuilder(self.options)
         out.add('(')
         element_count = 0
-        # All elements indented by indent_size from the opening paren
-        elem_indent = indent + self.options.indent_size
         prev_was_comment = False
         first = True
 
+        # All elements will be formatted at elem_indent (top of stack)
         while self.current_token and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle comments (EOL and standalone)
             handled = False
@@ -421,6 +441,7 @@ class AIFPLPrettyPrinter:
                 out.add_indent(elem_indent)
 
             # Format the element
+            # When we recursively format nested lists, they will push/pop their own indent
             elem_str = self._format_expression(elem_indent)
             out.add(elem_str)
 
@@ -432,6 +453,9 @@ class AIFPLPrettyPrinter:
             prev_was_comment = False
 
         out.add_closing_paren_with_indent(indent)
+
+        # Pop this indent level from the stack
+        self.indent_stack.pop()
 
         self._consume_rparen()
         return out.get_output()
