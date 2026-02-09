@@ -1,6 +1,6 @@
 """Simplified pretty-printer for AIFPL code with comment preservation."""
 
-from typing import List, Optional, cast, Tuple
+from typing import List, Optional, cast
 from dataclasses import dataclass
 
 from aifpl.aifpl_lexer import AIFPLLexer
@@ -10,7 +10,6 @@ from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 @dataclass
 class FormatOptions:
     """Options for controlling pretty-printer behavior."""
-    max_line_width: int = 80
     indent_size: int = 2
     compact_threshold: int = 60  # Keep on one line if total length < this
     comment_spacing: int = 2  # Spaces before end-of-line comments
@@ -39,25 +38,12 @@ class OutputBuilder:
         """Add a newline."""
         self.parts.append('\n')
 
-    def ensure_newline(self) -> None:
-        """Add a newline only if the last character isn't already a newline."""
-        if not (self.parts and self.parts[-1].endswith('\n')):
-            self.parts.append('\n')
-
     def add_indent(self, indent: int) -> None:
         """Add indentation (spaces)."""
         self.parts.append(' ' * indent)
 
-    def add_line(self, text: str, indent: int) -> None:
-        """Add text on a new line with indentation."""
-        self.ensure_newline()
-        self.add_indent(indent)
-        self.add(text)
-
-    def add_eol_comment(self, comment_text: str, prefix: str = '') -> None:
+    def add_eol_comment(self, comment_text: str) -> None:
         """Add an end-of-line comment with proper spacing and newline."""
-        if prefix:
-            self.add(prefix)
         self.add(' ' * self.options.comment_spacing)
         self.add(comment_text)
         self.add_newline()
@@ -76,6 +62,7 @@ class OutputBuilder:
         """Add closing paren, with indent if last char is newline."""
         if self.ends_with_newline():
             self.add_indent(indent)
+
         self.add(')')
 
     def get_output(self) -> str:
@@ -198,17 +185,17 @@ class AIFPLPrettyPrinter:
     def _handle_eol_comment(
         self,
         out: OutputBuilder,
-        eol_prefix: str = ''
     ) -> bool:
         """
         Handle end-of-line comment (same line as last token).
+
         Returns True if a comment was processed.
         """
         if self.current_token is None or self.current_token.type != AIFPLTokenType.COMMENT:
             return False
 
         if self.current_token.line == self.last_token_line:
-            out.add_eol_comment(self.current_token.value, eol_prefix)
+            out.add_eol_comment(self.current_token.value)
             self.last_token_line = self.current_token.line
             self._advance()
             return True
@@ -226,10 +213,6 @@ class AIFPLPrettyPrinter:
         Returns True if any comments were processed.
         """
         if self.current_token is None or self.current_token.type != AIFPLTokenType.COMMENT:
-            return False
-
-        if self.current_token.line == self.last_token_line:
-            # This is an EOL comment, not standalone
             return False
 
         # Add blank line before first comment if requested
@@ -317,7 +300,7 @@ class AIFPLPrettyPrinter:
         lparen_pos = self.pos
 
         # Check if this ( is on the same line as the previous token
-        lparen_on_same_line = (self.current_token.line == self.last_token_line)
+        lparen_on_same_line = bool(cast(AIFPLToken, self.current_token).line == self.last_token_line)
         rparen_pos = self._find_matching_rparen(lparen_pos)
 
         self._advance()  # consume '('
@@ -489,7 +472,8 @@ class AIFPLPrettyPrinter:
         elif token.type == AIFPLTokenType.SYMBOL:
             result = str(token.value)
 
-        elif token.type in (AIFPLTokenType.INTEGER, AIFPLTokenType.FLOAT, AIFPLTokenType.COMPLEX):
+        else:
+            assert token.type in (AIFPLTokenType.INTEGER, AIFPLTokenType.FLOAT, AIFPLTokenType.COMPLEX)
             result = str(token.value)
 
         # Track the line of this token before advancing
