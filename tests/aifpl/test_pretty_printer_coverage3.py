@@ -338,7 +338,8 @@ class TestClosingParenIndentation:
         result = printer.format(code)
 
         # The closing paren should be on its own line, indented
-        assert "(+ x 1)  ; increment\n         )))" in result
+        # With new formatting, closing parens align with lambda (6 spaces, not 9)
+        assert "(+ x 1)  ; increment\n      )))" in result
 
     def test_deeply_nested_with_eol_comments_proper_indentation(self):
         """Test deeply nested structures with EOL comments have proper indentation."""

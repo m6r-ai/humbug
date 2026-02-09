@@ -359,7 +359,8 @@ class TestStandaloneCommentsIndentation:
         result = printer.format(code)
 
         # The closing paren should be indented to match the opening (lambda
-        assert "; comment but no body\n         )))" in result
+        # With new formatting, closing parens align with lambda (6 spaces, not 9)
+        assert "; comment but no body\n      )))" in result
 
     def test_if_standalone_comment_indented_closing_paren(self):
         """Test if closing paren is indented after standalone comment."""

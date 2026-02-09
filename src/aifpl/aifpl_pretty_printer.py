@@ -405,7 +405,21 @@ class AIFPLPrettyPrinter:
             self._advance()  # consume ')'
             return '()'
 
-        # Check for special forms
+        # Check if we should use compact format (try this first, even for special forms)
+        has_comments = self._peek_ahead_for_comments(lparen_pos, rparen_pos)
+
+        # Try compact format if no comments
+        if not has_comments:
+            # Try compact format
+            saved = self._save_position()
+            compact = self._try_compact_list(indent)
+            if compact and len(compact) <= self.options.compact_threshold:
+                return compact
+
+            # Compact format was too long or failed, restore position
+            self._restore_position(saved)
+
+        # Use special form formatting if applicable
         if self.current_token.type == AIFPLTokenType.SYMBOL:
             symbol = self.current_token.value
 
@@ -420,19 +434,6 @@ class AIFPLPrettyPrinter:
 
             if symbol == 'match':
                 return self._format_match(indent)
-
-        # Check if we should use compact format
-        has_comments = self._peek_ahead_for_comments(lparen_pos, rparen_pos)
-
-        if not has_comments:
-            # Try compact format
-            saved = self._save_position()
-            compact = self._try_compact_list(indent)
-            if compact and len(compact) <= self.options.compact_threshold:
-                return compact
-
-            # Compact format was too long or failed, restore position
-            self._restore_position(saved)
 
         # Use multi-line format
         return self._format_multiline_list(indent)
@@ -500,7 +501,10 @@ class AIFPLPrettyPrinter:
 
             # Add newline before element if it's not first or second
             if element_count >= 2:
-                out.add_newline()
+                # Only add newline if we're not already on a new line (e.g., after EOL comment)
+                if not out.ends_with_newline():
+                    out.add_newline()
+
                 out.add_indent(elem_indent)
 
             elem_str = self._format_expression(elem_indent)
@@ -529,19 +533,113 @@ class AIFPLPrettyPrinter:
                 # Third+ elements - already have newline and indent from above
                 out.add(elem_str)
 
+            # Handle any EOL comments immediately after this element
+            self._handle_comments(out, elem_indent, handle_standalone=False)
+
             element_count += 1
             first = False
             prev_was_comment = False
 
-        out.add(')')
+        out.add_closing_paren_with_indent(indent)
 
         self._consume_rparen()
         return out.get_output()
 
+    def _count_let_bindings(self) -> int:
+        """
+        Count the number of bindings in a let form.
+        Assumes current token is the LPAREN starting the bindings list.
+        Does not advance position.
+        """
+        saved = self._save_position()
+
+        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
+            self._restore_position(saved)
+            return 0
+
+        self._advance()  # consume '(' for bindings
+
+        count = 0
+        depth = 0
+
+        while self.current_token is not None:
+            if self.current_token.type == AIFPLTokenType.LPAREN:
+                if depth == 0:
+                    count += 1
+
+                depth += 1
+
+            elif self.current_token.type == AIFPLTokenType.RPAREN:
+                depth -= 1
+                if depth < 0:
+                    # End of bindings list
+                    break
+
+            self._advance()
+
+        self._restore_position(saved)
+        return count
+
+    def _is_simple_binding(self) -> bool:
+        """
+        Check if the first binding is simple (not a lambda or deeply nested).
+        Assumes current token is the LPAREN starting the bindings list.
+        Does not advance position.
+        """
+        saved = self._save_position()
+
+        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
+            self._restore_position(saved)
+            return False
+
+        self._advance()  # consume '(' for bindings
+
+        # Find first binding
+        if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
+            self._restore_position(saved)
+            return False
+
+        self._advance()  # consume '(' for first binding
+
+        # Skip binding name
+        if self.current_token:
+            self._advance()
+
+        # Check if value is a lambda or complex structure
+        is_simple = True
+        if self.current_token:
+            if self.current_token.type == AIFPLTokenType.LPAREN:
+                # Check if it's a lambda
+                self._advance()
+                if self.current_token and self.current_token.type == AIFPLTokenType.SYMBOL:
+                    if self.current_token.value == 'lambda':
+                        is_simple = False
+
+        self._restore_position(saved)
+        return is_simple
+
     def _format_let_form(self, form_type: str, indent: int) -> str:
         """Format let/let*/letrec expressions."""
         out = OutputBuilder(self.options)
-        self._start_special_form(form_type, out, suffix=' (')
+
+        # Decide on formatting style
+        # Count bindings to determine if we should use same-line or next-line formatting
+        # First advance past the form name to get to the bindings LPAREN
+        self._advance()  # consume 'let'/'let*'/'letrec' symbol
+
+        binding_count = self._count_let_bindings()
+        use_same_line = (binding_count == 1 and self._is_simple_binding())
+
+        if use_same_line:
+            # Style 1: Single simple binding on same line
+            out.add(f'({form_type} (')
+
+        else:
+            # Style 3: Multiple bindings or complex binding on next line
+            out.add(f'({form_type}')
+            out.add_newline()
+            out.add_indent(indent + self.options.indent_size)
+            out.add('(')
 
         # Expect bindings list
         if self.current_token is None or self.current_token.type != AIFPLTokenType.LPAREN:
@@ -551,7 +649,15 @@ class AIFPLPrettyPrinter:
         self._advance()  # consume '(' for bindings
 
         # Format bindings
-        binding_indent = self._get_aligned_indent(indent, f'({form_type} (')
+        # Calculate binding indentation based on style
+        if use_same_line:
+            # Align under opening paren of bindings
+            binding_indent = self._get_aligned_indent(indent, f'({form_type} (')
+
+        else:
+            # Indent one level from the bindings opening paren
+            binding_indent = indent + self.options.indent_size + 1
+
         first_binding = True
         prev_was_comment = False
 

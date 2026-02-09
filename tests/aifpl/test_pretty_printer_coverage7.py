@@ -14,16 +14,17 @@ def test_standalone_comment_after_binding_list_open_paren():
     
     lines = result.split('\n')
     
-    # First line should be just the letrec opening
-    assert lines[0] == '(letrec ('
+    # With new formatting, letrec is on line 0, bindings opening paren on line 1
+    assert lines[0] == '(letrec'
+    assert lines[1] == '  ('
     
-    # Comment should be on its own line (line 1), indented to binding position
-    assert '; This is a comment' in lines[1]
-    assert lines[1].startswith('         '), f"Comment should be indented 9 spaces, got: {repr(lines[1])}"
+    # Comment should be on its own line (line 2), indented to binding position
+    assert '; This is a comment' in lines[2]
+    assert lines[2].startswith('   '), f"Comment should be indented 3 spaces, got: {repr(lines[2])}"
     
     # Binding should follow on next line
-    assert '(foo' in lines[2]
-    assert lines[2].startswith('         ')
+    assert '(foo' in lines[3]
+    assert lines[3].startswith('   ')
 
 
 def test_multiple_standalone_comments_before_bindings():
@@ -38,17 +39,18 @@ def test_multiple_standalone_comments_before_bindings():
     
     lines = result.split('\n')
     
-    # First line should be just the let opening
-    assert lines[0] == '(let ('
+    # With new formatting, let is on line 0, bindings opening paren on line 1
+    assert lines[0] == '(let'
+    assert lines[1] == '  ('
     
     # Both comments should be on their own lines, indented
-    assert '; Comment 1' in lines[1]
-    assert lines[1].startswith('      ')  # 6 spaces for 'let'
-    assert '; Comment 2' in lines[2]
-    assert lines[2].startswith('      ')
+    assert '; Comment 1' in lines[2]
+    assert lines[2].startswith('   ')  # 3 spaces (indent after bindings paren)
+    assert '; Comment 2' in lines[3]
+    assert lines[3].startswith('   ')
     
     # Binding should follow
-    assert '(x 1)' in lines[3]
+    assert '(x 1)' in lines[4]
 
 
 def test_standalone_comment_not_moved_to_previous_line():
@@ -64,8 +66,9 @@ def test_standalone_comment_not_moved_to_previous_line():
     
     lines = result.split('\n')
     
-    # First line should NOT have a comment on it
-    assert lines[0] == '(letrec ('
+    # With new formatting, first line is just letrec, second line is bindings paren
+    assert lines[0] == '(letrec'
+    assert lines[1] == '  ('
     assert ';' not in lines[0]
     
     # All three comment lines should be standalone

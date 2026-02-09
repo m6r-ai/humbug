@@ -11,12 +11,13 @@ def test_let_eol_comment_after_open_paren():
 
     lines = result.split('\n')
 
-    # EOL comment should be on first line
-    assert '; Comment after opening paren' in lines[0]
+    # With new formatting, letrec is on line 0, bindings paren with comment on line 1
+    assert lines[0] == '(letrec'
+    assert '; Comment after opening paren' in lines[1]
 
-    # First binding should be on next line and indented
-    assert lines[1].startswith('         '), f"Expected 9 spaces, got: {repr(lines[1])}"
-    assert '(foo' in lines[1]
+    # First binding should be on line 2 and indented (3 spaces)
+    assert lines[2].startswith('   '), f"Expected 3 spaces, got: {repr(lines[2])}"
+    assert '(foo' in lines[2]
 
     # Should not have blank line between comment and binding
-    assert lines[1] != ''
+    assert lines[2] != ''

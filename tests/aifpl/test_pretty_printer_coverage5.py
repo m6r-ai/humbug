@@ -33,12 +33,13 @@ def test_no_extra_blank_after_eol_comment():
 
     lines = result.split('\n')
 
-    # EOL comment should be on first line
-    assert '; Comment after opening paren' in lines[0]
+    # With new formatting, letrec is on line 0, bindings opening paren with comment on line 1
+    assert lines[0] == '(letrec'
+    assert '; Comment after opening paren' in lines[1]
 
     # First binding should be on next line (no blank line in between)
-    assert '(foo' in lines[1], f"Expected binding on line 1, got: {repr(lines[1])}"
-    assert lines[1].startswith('         '), "Binding should be indented"
+    assert '(foo' in lines[2], f"Expected binding on line 2, got: {repr(lines[2])}"
+    assert lines[2].startswith('   '), "Binding should be indented (3 spaces)"
 
 
 def test_blank_line_between_binding_and_comment_then_binding():
