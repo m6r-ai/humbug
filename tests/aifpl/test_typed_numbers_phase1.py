@@ -12,17 +12,17 @@ from aifpl.aifpl_parser import AIFPLParser
 
 class TestParserWithTypedNumbers:
     """Test parser with use_typed_numbers flag."""
-    
+
     def test_parser_creates_old_types_by_default(self):
         """Parser should create typed numbers."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("42")
         parser = AIFPLParser()
         result = parser.parse(tokens, "42")
-        
+
         assert isinstance(result, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
         assert result.value == 42
-    
+
     def test_parser_creates_integer_with_flag(self):
         """With flag enabled, parser should create AIFPLInteger."""
         lexer = AIFPLLexer()
@@ -30,10 +30,10 @@ class TestParserWithTypedNumbers:
         parser = AIFPLParser()
         parser.use_typed_numbers = True
         result = parser.parse(tokens, "42")
-        
+
         assert isinstance(result, AIFPLInteger)
         assert result.value == 42
-    
+
     def test_parser_creates_float_with_flag(self):
         """With flag enabled, parser should create AIFPLFloat."""
         lexer = AIFPLLexer()
@@ -41,10 +41,10 @@ class TestParserWithTypedNumbers:
         parser = AIFPLParser()
         parser.use_typed_numbers = True
         result = parser.parse(tokens, "3.14")
-        
+
         assert isinstance(result, AIFPLFloat)
         assert result.value == 3.14
-    
+
     def test_parser_creates_complex_with_flag(self):
         """With flag enabled, parser should create AIFPLComplex."""
         lexer = AIFPLLexer()
@@ -52,7 +52,7 @@ class TestParserWithTypedNumbers:
         parser = AIFPLParser()
         parser.use_typed_numbers = True
         result = parser.parse(tokens, "(+ 3 (* 4 1j))")
-        
+
         # The expression itself is a list, but we can check the numbers in it
         assert result.elements[1].value == 3
         assert isinstance(result.elements[1], AIFPLInteger)
@@ -60,7 +60,7 @@ class TestParserWithTypedNumbers:
 
 class TestTypePredicatesWithNewTypes:
     """Test that type predicates work with typed numbers."""
-    
+
     def test_number_predicate_with_old_type(self):
         """number? should recognize typed numbers."""
         from aifpl import AIFPL
@@ -69,7 +69,7 @@ class TestTypePredicatesWithNewTypes:
         assert aifpl.evaluate("(number? 3.14)") == True
         assert aifpl.evaluate("(number? (+ 1 (* 2 1j)))") == True
         assert aifpl.evaluate('(number? "hello")') == False
-    
+
     def test_integer_predicate_with_old_type(self):
         """integer? should work with typed numbers."""
         from aifpl import AIFPL
@@ -77,7 +77,7 @@ class TestTypePredicatesWithNewTypes:
         assert aifpl.evaluate("(integer? 42)") == True
         assert aifpl.evaluate("(integer? 3.14)") == False
         assert aifpl.evaluate("(integer? (+ 1 (* 2 1j)))") == False
-    
+
     def test_float_predicate_with_old_type(self):
         """float? should work with typed numbers."""
         from aifpl import AIFPL
@@ -85,7 +85,7 @@ class TestTypePredicatesWithNewTypes:
         assert aifpl.evaluate("(float? 3.14)") == True
         assert aifpl.evaluate("(float? 42)") == False
         assert aifpl.evaluate("(float? (+ 1 (* 2 1j)))") == False
-    
+
     def test_complex_predicate_with_old_type(self):
         """complex? should work with typed numbers."""
         from aifpl import AIFPL
@@ -93,84 +93,84 @@ class TestTypePredicatesWithNewTypes:
         assert aifpl.evaluate("(complex? (+ 1 (* 2 1j)))") == True
         assert aifpl.evaluate("(complex? 42)") == False
         assert aifpl.evaluate("(complex? 3.14)") == False
-    
+
     def test_number_predicate_with_new_integer(self):
         """number? should recognize AIFPLInteger."""
         from aifpl import AIFPLInteger
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_number_p([AIFPLInteger(42)])
         assert result.value == True
-    
+
     def test_number_predicate_with_new_float(self):
         """number? should recognize AIFPLFloat."""
         from aifpl import AIFPLFloat
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_number_p([AIFPLFloat(3.14)])
         assert result.value == True
-    
+
     def test_number_predicate_with_new_complex(self):
         """number? should recognize AIFPLComplex."""
         from aifpl import AIFPLComplex
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_number_p([AIFPLComplex(3+4j)])
         assert result.value == True
-    
+
     def test_integer_predicate_with_new_integer(self):
         """integer? should recognize AIFPLInteger."""
         from aifpl import AIFPLInteger
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_integer_p([AIFPLInteger(42)])
         assert result.value == True
-    
+
     def test_integer_predicate_with_new_float(self):
         """integer? should return False for AIFPLFloat."""
         from aifpl import AIFPLFloat
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_integer_p([AIFPLFloat(3.14)])
         assert result.value == False
-    
+
     def test_float_predicate_with_new_float(self):
         """float? should recognize AIFPLFloat."""
         from aifpl import AIFPLFloat
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_float_p([AIFPLFloat(3.14)])
         assert result.value == True
-    
+
     def test_float_predicate_with_new_integer(self):
         """float? should return False for AIFPLInteger."""
         from aifpl import AIFPLInteger
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_float_p([AIFPLInteger(42)])
         assert result.value == False
-    
+
     def test_complex_predicate_with_new_complex(self):
         """complex? should recognize AIFPLComplex."""
         from aifpl import AIFPLComplex
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_complex_p([AIFPLComplex(3+4j)])
         assert result.value == True
-    
+
     def test_complex_predicate_with_new_integer(self):
         """complex? should return False for AIFPLInteger."""
         from aifpl import AIFPLInteger
         from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-        
+
         funcs = AIFPLCollectionsFunctions()
         result = funcs._builtin_complex_p([AIFPLInteger(42)])
         assert result.value == False

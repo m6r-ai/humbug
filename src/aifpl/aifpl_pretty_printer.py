@@ -68,6 +68,9 @@ class OutputBuilder:
 
     def add_standalone_comment(self, comment_text: str, indent: int) -> None:
         """Add a standalone comment on its own line with indentation."""
+        if not self.ends_with_newline():
+            self.add_newline()
+
         self.add_indent(indent)
         self.add(comment_text)
         self.add_newline()
@@ -204,7 +207,8 @@ class AIFPLPrettyPrinter:
         handle_eol: bool = True,
         handle_standalone: bool = True,
         add_leading_newline: bool = True,
-        eol_prefix: str = ''
+        eol_prefix: str = '',
+        has_blank_line_before: bool = False
     ) -> bool:
         """
         Handle both EOL and standalone comments at current position.
@@ -216,6 +220,7 @@ class AIFPLPrettyPrinter:
             handle_standalone: If True, check for and format standalone comments
             add_leading_newline: If True, adds newline before standalone comments
             eol_prefix: Optional prefix before EOL comment spacing
+            has_blank_line_before: If True, add blank line before first standalone comment
 
         Returns:
             True if any comments were processed, False otherwise
@@ -228,6 +233,7 @@ class AIFPLPrettyPrinter:
         # Handle EOL comment first (same line as last token)
         if handle_eol and self.current_token.line == self.last_token_line:
             out.add_eol_comment(self.current_token.value, eol_prefix)
+            self.last_token_line = self.current_token.line
             self._advance()
             found_any = True
 
@@ -237,10 +243,23 @@ class AIFPLPrettyPrinter:
             if add_leading_newline and not out.ends_with_newline():
                 out.add_newline()
 
+            # Add blank line before first comment if requested
+            if has_blank_line_before:
+                out.add_newline()
+
+            prev_comment_line = None
             while (self.current_token and
                    self.current_token.type == AIFPLTokenType.COMMENT and
                    self.current_token.line != self.last_token_line):
+                # Check if there's a blank line between this comment and previous comment
+                if prev_comment_line is not None:
+                    line_gap = self.current_token.line - prev_comment_line
+                    # If there's more than 1 line gap, add a blank line
+                    if line_gap > 1:
+                        out.add_newline()
+
                 out.add_standalone_comment(self.current_token.value, indent)
+                prev_comment_line = self.current_token.line
                 self._advance()
                 found_any = True
 
@@ -264,7 +283,21 @@ class AIFPLPrettyPrinter:
 
         # Handle standalone comments
         add_newline = not is_first and not prev_was_comment
-        if self._handle_comments(out, indent, handle_eol=False, add_leading_newline=add_newline):
+
+        # Check if there's a blank line between last token and first comment
+        has_blank_line_before = False
+        if (self.current_token and
+            self.current_token.type == AIFPLTokenType.COMMENT and
+            self.current_token.line != self.last_token_line):
+            line_gap = self.current_token.line - self.last_token_line
+            has_blank_line_before = line_gap > 1
+
+        if self._handle_comments(
+            out,
+            indent, handle_eol=False, 
+            add_leading_newline=add_newline,
+            has_blank_line_before=has_blank_line_before
+        ):
             return (True, True)
 
         return (False, False)
@@ -312,7 +345,7 @@ class AIFPLPrettyPrinter:
         self._consume_rparen()
         return out.get_output()
 
-    def _finish_form(self, indent: int, out: OutputBuilder) -> str:
+    def _finish_special_form(self, indent: int, out: OutputBuilder) -> str:
         """Finish a special form: trailing comment, closing paren, consume RPAREN."""
         if self._handle_comments(out, indent, handle_standalone=False):
             out.add_indent(indent)
@@ -521,20 +554,33 @@ class AIFPLPrettyPrinter:
 
         while self.current_token is not None and self.current_token.type != AIFPLTokenType.RPAREN:
             # Handle comments
-            handled, prev_was_comment = self._handle_loop_comments(
+            handled, new_prev_was_comment = self._handle_loop_comments(
                 out, binding_indent, first_binding, prev_was_comment
             )
             if handled:
+                # Mark that we're no longer at the first position and remember we handled a comment
+                first_binding = False
+                prev_was_comment = new_prev_was_comment
                 continue
 
             # Add spacing before binding
             if not first_binding:
                 # For letrec, add extra blank line between complex bindings
-                if form_type == 'letrec' and prev_binding_was_complex:
+                # But don't add if previous was a comment (comment handler already added spacing)
+                needs_blank_line = form_type == 'letrec' and prev_binding_was_complex and not prev_was_comment
+                if needs_blank_line:
                     out.add_newline()
 
-                out.add_newline()
+                # Add newline and indent before binding
+                # But if previous was a comment, we're already on a new line
+                # Also, if we just added a blank line, we still need to add the newline to move to next line
+                if not prev_was_comment:
+                    # Always add newline unless we're already on a new line (and didn't just add blank line)
+                    if not out.ends_with_newline() or needs_blank_line:
+                        out.add_newline()
+
                 out.add_indent(binding_indent)
+
             elif out.ends_with_newline():
                 # First binding, but output already has newline (e.g., after EOL comment)
                 out.add_indent(binding_indent)
@@ -560,7 +606,7 @@ class AIFPLPrettyPrinter:
             body_indent = self._get_body_indent(indent)
             self._format_branch(body_indent, out)
 
-        return self._finish_form(indent, out)
+        return self._finish_special_form(indent, out)
 
     def _format_binding(self, indent: int) -> str:
         """Format a single binding (name value)."""
@@ -617,7 +663,7 @@ class AIFPLPrettyPrinter:
         body_indent = self._get_body_indent(indent)
         self._format_branch(body_indent, out)
 
-        return self._finish_form(indent, out)
+        return self._finish_special_form(indent, out)
 
     def _format_if(self, indent: int) -> str:
         """Format if expressions."""
@@ -636,7 +682,7 @@ class AIFPLPrettyPrinter:
         # Else branch
         self._format_branch(branch_indent, out)
 
-        return self._finish_form(indent, out)
+        return self._finish_special_form(indent, out)
 
     def _format_match(self, indent: int) -> str:
         """Format match expressions."""
@@ -653,7 +699,7 @@ class AIFPLPrettyPrinter:
             # Format each clause with comment handling
             self._format_branch(clause_indent, out)
 
-        return self._finish_form(indent, out)
+        return self._finish_special_form(indent, out)
 
     def _format_quote(self, indent: int) -> str:
         """Format quoted expressions."""
