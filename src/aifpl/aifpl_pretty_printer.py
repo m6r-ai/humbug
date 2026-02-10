@@ -62,6 +62,16 @@ class ASTList(ASTNode):
         self.elements = elements
         self.source_line = source_line
 
+
+# === Special Form Rules ===
+
+# Maps special form names to number of elements that should stay on first line
+SPECIAL_FORM_RULES = {
+    'lambda': 2,
+    'if': 2,
+    'match': 2,
+}
+
 # === PASS 2: Formatting Decisions ===
 
 class FormatStyle(Enum):
@@ -75,6 +85,7 @@ class FormatDecision:
     """Formatting decision for a list."""
     style: FormatStyle
     column: int  # Column where '(' appears
+    elements_on_first_line: int = 1  # How many elements stay on first line
 
 
 class TreeBuilder:
@@ -224,24 +235,36 @@ class FormatPlanner:
 
         else:
             # Use multiline
-            self.decisions[id(lst)] = FormatDecision(FormatStyle.MULTILINE, column)
+
+            # Check if this is a special form
+            elements_on_first_line = 1  # Default
+            if lst.elements:
+                first_elem = lst.elements[0]
+                if isinstance(first_elem, ASTAtom):
+                    form_name = first_elem.value
+                    elements_on_first_line = SPECIAL_FORM_RULES.get(form_name, 1)
+
+            self.decisions[id(lst)] = FormatDecision(FormatStyle.MULTILINE, column, elements_on_first_line)
 
             # Plan children - they'll be indented
             child_atom_col = column + 1  # After the '('
             subsequent_col = column + self.options.indent_size  # Subsequent elements get +2 indent
-            first = True
+            elements_on_current_line = 0
 
             for elem in lst.elements:
                 if isinstance(elem, ASTComment):
                     continue  # Comments handled during render
 
-                if first:
-                    # First element right after '('
+                if elements_on_current_line < elements_on_first_line:
+                    # This element stays on the first line
                     self._plan_node(elem, child_atom_col)
-                    first = False
+                    elements_on_current_line += 1
                 else:
-                    # All subsequent elements get +indent_size
+                    # Subsequent elements get indented
                     self._plan_node(elem, subsequent_col)
+
+            # Note: We don't track exact column positions for elements on first line,
+            # just plan them at child_atom_col. Renderer will space them properly.
 
     def _try_compact(self, lst: ASTList) -> Optional[str]:
         """Try to render list compactly, return None if not possible."""
@@ -378,7 +401,7 @@ class Renderer:
         if decision.style == FormatStyle.COMPACT:
             return self._render_compact(lst)
 
-        return self._render_multiline(lst, decision.column)
+        return self._render_multiline(lst, decision)
 
     def _render_compact(self, lst: ASTList) -> str:
         """Render list compactly."""
@@ -394,12 +417,14 @@ class Renderer:
         parts.append(')')
         return ''.join(parts)
 
-    def _render_multiline(self, lst: ASTList, lparen_col: int) -> str:
+    def _render_multiline(self, lst: ASTList, decision: FormatDecision) -> str:
         """Render list in multiline format."""
+        lparen_col = decision.column
+        elements_on_first_line = decision.elements_on_first_line
         indent = lparen_col + 1
         subsequent_col = lparen_col + self.options.indent_size
         parts = ['(']
-        first = True
+        elements_on_current_line = 0
         prev_comment_line = None
         prev_code_indent = None
         just_output_newline = False
@@ -440,24 +465,31 @@ class Renderer:
                     prev_comment_line = elem.source_line
                     just_output_newline = True
                     prev_was_standalone_comment = True
-                    first = False
 
                 continue
 
             # Code element
-            if not first:
-                # Only add newline if we didn't just output one
+            if elements_on_current_line < elements_on_first_line:
+                # This element stays on the first line
+                if elements_on_current_line > 0:
+                    # Add space before this element (not before the very first)
+                    parts.append(' ')
+
+                prev_code_indent = indent
+                parts.append(self._render_node(elem, indent))
+                elements_on_current_line += 1
+
+            else:
+                # This element goes on a new line with indent
                 if not just_output_newline:
                     parts.append('\n')
 
-                # All subsequent elements use the same indent
                 indent = subsequent_col
                 parts.append(' ' * indent)
 
-            # Track the indent of this code element
-            prev_code_indent = indent
-            parts.append(self._render_node(elem, indent))
-            first = False
+                prev_code_indent = indent
+                parts.append(self._render_node(elem, indent))
+
             just_output_newline = False
             prev_was_standalone_comment = False
 
