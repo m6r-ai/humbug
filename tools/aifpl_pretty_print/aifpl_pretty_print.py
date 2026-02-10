@@ -31,9 +31,6 @@ Examples:
   # Format in-place (overwrites original file)
   aifpl_pretty_print myfile.aifpl --in-place
   
-  # Format with custom options
-  aifpl_pretty_print myfile.aifpl --indent 4 --width 100
-  
   # Check if file is already formatted
   aifpl_pretty_print myfile.aifpl --check
 """
@@ -56,12 +53,6 @@ Examples:
         type=int,
         default=2,
         help='Number of spaces per indentation level (default: 2)'
-    )
-    parser.add_argument(
-        '--width',
-        type=int,
-        default=80,
-        help='Maximum line width hint (default: 80)'
     )
     parser.add_argument(
         '--compact-threshold',
@@ -106,7 +97,6 @@ Examples:
 
     # Create format options
     options = FormatOptions(
-        max_line_width=args.width,
         indent_size=args.indent,
         compact_threshold=args.compact_threshold,
         comment_spacing=args.comment_spacing
