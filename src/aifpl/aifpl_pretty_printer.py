@@ -18,36 +18,49 @@ class FormatOptions:
 
 class ASTNode:
     """Base class for AST nodes."""
+    source_line: int
 
 
 @dataclass
 class ASTAtom(ASTNode):
     """An atomic value (symbol, number, string, boolean)."""
     value: str
-    source_line: int
+
+    def __init__(self, source_value: str, source_line: int):
+        self.value = source_value
+        self.source_line = source_line
 
 
 @dataclass
 class ASTQuote(ASTNode):
     """A quoted expression."""
     expr: ASTNode
-    source_line: int
+
+    def __init__(self, expr: ASTNode, source_line: int):
+        self.expr = expr
+        self.source_line = source_line
 
 
 @dataclass
 class ASTComment(ASTNode):
     """A comment."""
     text: str
-    source_line: int
     is_eol: bool  # True if end-of-line comment, False if standalone
+
+    def __init__(self, text: str, source_line: int, is_eol: bool):
+        self.text = text
+        self.source_line = source_line
+        self.is_eol = is_eol
 
 
 @dataclass
 class ASTList(ASTNode):
     """A list with elements and associated comments."""
     elements: List[Union[ASTNode, 'ASTComment']]  # Mix of nodes and comments
-    source_line: int
 
+    def __init__(self, elements: List[Union[ASTNode, 'ASTComment']], source_line: int):
+        self.elements = elements
+        self.source_line = source_line
 
 # === PASS 2: Formatting Decisions ===
 
@@ -145,12 +158,12 @@ class TreeBuilder:
 
         return ''.join(result)
 
-    def _parse_list(self) -> List:
+    def _parse_list(self) -> ASTList:
         """Parse a list."""
         source_line = self.tokens[self.pos].line
         self.pos += 1  # consume '('
 
-        elements = []
+        elements: List[Union[ASTNode, ASTComment]] = []
         last_code_line = source_line
 
         while self.pos < len(self.tokens) and self.tokens[self.pos].type != AIFPLTokenType.RPAREN:
@@ -158,10 +171,11 @@ class TreeBuilder:
 
             if token.type == AIFPLTokenType.COMMENT:
                 # Determine if EOL or standalone
-                is_eol = (token.line == last_code_line)
+                is_eol = bool(token.line == last_code_line)
                 comment = ASTComment(token.value, token.line, is_eol)
                 elements.append(comment)
                 self.pos += 1
+
             else:
                 expr = self._parse_expr()
                 if expr:
@@ -180,14 +194,14 @@ class FormatPlanner:
 
     def __init__(self, options: FormatOptions):
         self.options = options
-        self.decisions = {}  # Map from List node id to FormatDecision
+        self.decisions: dict[int, FormatDecision] = {}  # Map from ASTList node id to FormatDecision
 
-    def plan(self, nodes: List[ASTNode], start_column: int = 0):
+    def plan(self, nodes: List[ASTNode], start_column: int = 0) -> None:
         """Plan formatting for all nodes."""
         for node in nodes:
             self._plan_node(node, start_column)
 
-    def _plan_node(self, node: ASTNode, column: int):
+    def _plan_node(self, node: ASTNode, column: int) -> None:
         """Plan formatting for a single node."""
         if isinstance(node, ASTList):
             self._plan_list(node, column)
@@ -196,7 +210,7 @@ class FormatPlanner:
             if node.expr:
                 self._plan_node(node.expr, column + 1)  # +1 for the '
 
-    def _plan_list(self, lst: List, column: int):
+    def _plan_list(self, lst: ASTList, column: int) -> None:
         """Plan formatting for a list."""
         # Try compact first
         compact_str = self._try_compact(lst)
@@ -229,7 +243,7 @@ class FormatPlanner:
                     # All subsequent elements get +indent_size
                     self._plan_node(elem, subsequent_col)
 
-    def _try_compact(self, lst: List) -> Optional[str]:
+    def _try_compact(self, lst: ASTList) -> Optional[str]:
         """Try to render list compactly, return None if not possible."""
         # Can't be compact if it has comments
         if any(isinstance(elem, ASTComment) for elem in lst.elements):
@@ -284,11 +298,11 @@ class Renderer:
 
     def __init__(self, options: FormatOptions, decisions: dict):
         self.options = options
-        self.decisions = decisions
+        self.decisions: dict[int, FormatDecision] = decisions
 
     def render(self, nodes: List[ASTNode]) -> str:
         """Render all top-level nodes."""
-        parts = []
+        parts: list[str] = []
         prev_was_comment = False
         prev_line = 0
 
@@ -313,7 +327,7 @@ class Renderer:
                 parts.append(rendered)
                 parts.append('\n')
                 prev_was_comment = False
-                prev_line = node.source_line if hasattr(node, 'source_line') else prev_line
+                prev_line = node.source_line
 
         result = ''.join(parts)
 
@@ -354,7 +368,7 @@ class Renderer:
 
         return ""
 
-    def _render_list(self, lst: List, column: int) -> str:
+    def _render_list(self, lst: ASTList, column: int) -> str:
         """Render a list."""
         decision = self.decisions.get(id(lst))
         if not decision:
@@ -366,7 +380,7 @@ class Renderer:
 
         return self._render_multiline(lst, decision.column)
 
-    def _render_compact(self, lst: List) -> str:
+    def _render_compact(self, lst: ASTList) -> str:
         """Render list compactly."""
         parts = ['(']
         for i, elem in enumerate(lst.elements):
@@ -380,16 +394,15 @@ class Renderer:
         parts.append(')')
         return ''.join(parts)
 
-    def _render_multiline(self, lst: List, lparen_col: int) -> str:
+    def _render_multiline(self, lst: ASTList, lparen_col: int) -> str:
         """Render list in multiline format."""
-        child_atom_col = lparen_col + 1
+        indent = lparen_col + 1
         subsequent_col = lparen_col + self.options.indent_size
         parts = ['(']
         first = True
         prev_comment_line = None
         prev_code_indent = None
         just_output_newline = False
-        prev_code_line = None
         prev_was_standalone_comment = False
 
         for elem in lst.elements:
@@ -442,10 +455,8 @@ class Renderer:
                 parts.append(' ' * indent)
 
             # Track the indent of this code element
-            prev_code_indent = child_atom_col if first else indent
-            prev_code_line = elem.source_line
-
-            parts.append(self._render_node(elem, child_atom_col if first else indent))
+            prev_code_indent = indent
+            parts.append(self._render_node(elem, indent))
             first = False
             just_output_newline = False
             prev_was_standalone_comment = False
