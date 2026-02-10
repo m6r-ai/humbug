@@ -214,6 +214,7 @@ class FormatPlanner:
 
             # Plan children - they'll be indented
             child_atom_col = column + 1  # After the '('
+            subsequent_col = column + self.options.indent_size  # Subsequent elements get +2 indent
             first = True
 
             for elem in lst.elements:
@@ -224,15 +225,9 @@ class FormatPlanner:
                     # First element right after '('
                     self._plan_node(elem, child_atom_col)
                     first = False
-
                 else:
-                    # Subsequent elements
-                    if isinstance(elem, ASTList):
-                        # Lists get +1 extra indent
-                        self._plan_node(elem, child_atom_col + 1)
-
-                    else:
-                        self._plan_node(elem, child_atom_col)
+                    # All subsequent elements get +indent_size
+                    self._plan_node(elem, subsequent_col)
 
     def _try_compact(self, lst: List) -> Optional[str]:
         """Try to render list compactly, return None if not possible."""
@@ -388,10 +383,14 @@ class Renderer:
     def _render_multiline(self, lst: List, lparen_col: int) -> str:
         """Render list in multiline format."""
         child_atom_col = lparen_col + 1
+        subsequent_col = lparen_col + self.options.indent_size
         parts = ['(']
         first = True
         prev_comment_line = None
+        prev_code_indent = None
         just_output_newline = False
+        prev_code_line = None
+        prev_was_standalone_comment = False
 
         for elem in lst.elements:
             if isinstance(elem, ASTComment):
@@ -406,23 +405,28 @@ class Renderer:
                     if not parts[-1].endswith('\n'):
                         parts.append('\n')
 
+                    blank_line_added = False
+
                     # Check for blank line from source
                     if prev_comment_line and elem.source_line - prev_comment_line > 1:
                         parts.append('\n')
+                        blank_line_added = True
 
-                    # Look ahead to determine indent
-                    next_elem = self._find_next_code_element(lst.elements, lst.elements.index(elem))
-                    if next_elem and isinstance(next_elem, ASTList):
-                        comment_indent = child_atom_col + 1
+                    # Comments align with subsequent elements
+                    comment_indent = subsequent_col
 
-                    else:
-                        comment_indent = child_atom_col
+                    # Add blank line if comment is at same or lower indent than previous code
+                    # But not if previous element was also a standalone comment
+                    if not blank_line_added and not prev_was_standalone_comment and \
+                       prev_code_indent is not None and comment_indent <= prev_code_indent:
+                        parts.append('\n')
 
                     parts.append(' ' * comment_indent)
                     parts.append(elem.text)
                     parts.append('\n')
                     prev_comment_line = elem.source_line
                     just_output_newline = True
+                    prev_was_standalone_comment = True
                     first = False
 
                 continue
@@ -433,17 +437,18 @@ class Renderer:
                 if not just_output_newline:
                     parts.append('\n')
 
-                if isinstance(elem, ASTList):
-                    indent = child_atom_col + 1
-
-                else:
-                    indent = child_atom_col
-
+                # All subsequent elements use the same indent
+                indent = subsequent_col
                 parts.append(' ' * indent)
+
+            # Track the indent of this code element
+            prev_code_indent = child_atom_col if first else indent
+            prev_code_line = elem.source_line
 
             parts.append(self._render_node(elem, child_atom_col if first else indent))
             first = False
             just_output_newline = False
+            prev_was_standalone_comment = False
 
         parts.append(')')
         return ''.join(parts)
