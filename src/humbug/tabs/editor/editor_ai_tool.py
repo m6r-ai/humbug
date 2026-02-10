@@ -208,8 +208,9 @@ class EditorAITool(AITool):
                     "line movements. The diff should be in standard unified diff format, though the file headers "
                     "(--- and +++) are optional. Where possible the diff should have at least 3 lines of context "
                     "before and after each hunk. Diff line numbers are best computed using the read_lines or search "
-                    "operations. You must call save_file to persist changes as this operation does not do this" \
-                    "automatically. Do not add escape characters to the diff content"
+                    "operations. You must use the save_file operation to persist changes as this operation does not do "
+                    "this automatically. Write diffs as they should appear in the editor text and do not add extra "
+                    "escape characters to the diff content"
             ),
             "save_file": AIToolOperationDefinition(
                 name="save_file",
