@@ -377,11 +377,9 @@ class Renderer:
                         # Next node is EOL comment, append it on same line
                         parts.append(' ' * self.options.comment_spacing)
                         parts.append(comment.text)
-                        parts.append('\n')
                         i += 1  # Skip the comment node since we just rendered it
 
-                else:
-                    parts.append('\n')
+                parts.append('\n')
 
                 prev_was_comment = False
                 prev_line = node.end_line
