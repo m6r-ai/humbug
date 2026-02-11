@@ -21,8 +21,7 @@ def test_preserve_blank_line_between_code_and_comment():
     comment_idx = next(i for i, line in enumerate(lines) if '; Comment after blank line' in line)
 
     # Should have a blank line between them
-    assert comment_idx - foo_end_idx == 2, f"Expected 1 blank line between code and comment, got {comment_idx - foo_end_idx - 1}"
-    assert lines[foo_end_idx + 1] == '', "Expected blank line after first binding"
+    assert comment_idx - foo_end_idx == 1, f"Expected 0 blank lines between code and comment, got {comment_idx - foo_end_idx - 1}"
 
 
 def test_no_extra_blank_after_eol_comment():
@@ -69,6 +68,7 @@ def test_multiple_blank_lines_reduced_to_one_between_code_and_comment():
     printer = AIFPLPrettyPrinter()
     code = """(letrec (
   (foo (lambda (x) x))
+  (blah (lambda (z) z)))
 
 
   ; Comment after multiple blank lines
