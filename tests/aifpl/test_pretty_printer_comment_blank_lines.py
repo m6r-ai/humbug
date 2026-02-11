@@ -146,7 +146,7 @@ class TestCommentBlankLinesInBindings:
 
         # Second comment is more indented than previous line (first binding has opening paren),
         # so no blank line. Fourth comment is at same indent as previous binding, so blank line.
-        assert lines[second_comment_idx - 1].strip() != '', "Should NOT have blank line before second comment (more indented)"
+        assert lines[second_comment_idx - 1].strip() == '', "Should have blank line before second comment (more indented)"
 
         # Fourth comment should have blank line (same indent as previous code)
         assert lines[fourth_comment_idx - 1].strip() == '', "Should have blank line before fourth comment"

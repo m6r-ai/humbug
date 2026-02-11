@@ -247,7 +247,8 @@ class FormatPlanner:
             self.decisions[id(lst)] = FormatDecision(FormatStyle.COMPACT, column)
             # Still need to plan nested lists in case they appear in compact mode
             for elem in lst.elements:
-                if isinstance(elem, ASTList):
+                # Plan nested lists and quotes (which may contain lists)
+                if isinstance(elem, (ASTList, ASTQuote)):
                     self._plan_node(elem, 0)  # Column doesn't matter for compact
 
         else:
@@ -456,7 +457,15 @@ class Renderer:
         lparen_col = decision.column
         elements_on_first_line = decision.elements_on_first_line
         indent = lparen_col + 1
-        subsequent_col = lparen_col + self.options.indent_size
+
+        # For regular lists, align subsequent elements with first element
+        # For special forms, indent subsequent elements
+        if elements_on_first_line == 1:
+            subsequent_col = lparen_col + 1  # Align with first element
+
+        else:
+            subsequent_col = lparen_col + self.options.indent_size  # Indent for special forms
+
         parts = ['(']
         elements_on_current_line = 0
         prev_comment_line = None
