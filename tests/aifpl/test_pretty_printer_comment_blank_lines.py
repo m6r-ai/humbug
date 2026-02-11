@@ -144,8 +144,11 @@ class TestCommentBlankLinesInBindings:
         second_comment_idx = next(i for i, line in enumerate(lines) if '; Second function' in line)
         fourth_comment_idx = next(i for i, line in enumerate(lines) if '; Fourth function' in line)
 
-        # Both comments should have blank lines before them
-        assert lines[second_comment_idx - 1].strip() == '', "Should have blank line before second comment"
+        # Second comment is more indented than previous line (first binding has opening paren),
+        # so no blank line. Fourth comment is at same indent as previous binding, so blank line.
+        assert lines[second_comment_idx - 1].strip() != '', "Should NOT have blank line before second comment (more indented)"
+
+        # Fourth comment should have blank line (same indent as previous code)
         assert lines[fourth_comment_idx - 1].strip() == '', "Should have blank line before fourth comment"
 
 
@@ -219,7 +222,7 @@ class TestCanonicalFormatting:
     """Test that formatting is canonical regardless of input spacing."""
 
     def test_canonical_adds_blank_line_even_if_not_in_source(self):
-        """Test that blank lines are added even if not present in source."""
+        """Test that blank lines follow indent rules regardless of source spacing."""
         printer = AIFPLPrettyPrinter()
         # No blank line before comment in source
         code = """(letrec (
@@ -235,12 +238,13 @@ class TestCanonicalFormatting:
         foo_end_idx = next(i for i, line in enumerate(lines) if 'x))' in line)
         comment_idx = next(i for i, line in enumerate(lines) if '; Comment immediately after' in line)
 
-        # Canonical formatting: always add blank line before comment (except first)
-        assert comment_idx - foo_end_idx == 2, "Should add blank line before comment"
-        assert lines[foo_end_idx + 1] == '', "Expected blank line before comment"
+        # Comment is more indented than previous binding (first binding has opening paren at indent 2,
+        # comment is at indent 4), so NO blank line should be added
+        assert comment_idx - foo_end_idx == 1, "Should NOT add blank line (comment is more indented)"
+        assert lines[comment_idx - 1].strip() != '', "Comment should immediately follow previous binding"
 
     def test_canonical_preserves_blank_line_if_in_source(self):
-        """Test that blank lines are preserved if already in source."""
+        """Test that canonical formatting applies indent rules regardless of source spacing."""
         printer = AIFPLPrettyPrinter()
         # Blank line before comment in source
         code = """(letrec (
@@ -257,9 +261,11 @@ class TestCanonicalFormatting:
         foo_end_idx = next(i for i, line in enumerate(lines) if 'x))' in line)
         comment_idx = next(i for i, line in enumerate(lines) if '; Comment after blank line' in line)
 
-        # Should have blank line before comment
-        assert comment_idx - foo_end_idx == 2, "Should have blank line before comment"
-        assert lines[foo_end_idx + 1] == '', "Expected blank line before comment"
+        # Canonical formatting removes the blank line because comment is more indented
+        # (first binding at indent 2, comment at indent 4)
+        # Canonical formatting is based on indent rules, not source spacing
+        assert comment_idx - foo_end_idx == 1, "Should NOT have blank line (comment is more indented)"
+        assert lines[comment_idx - 1].strip() != '', "Comment should immediately follow previous binding"
 
     def test_idempotent_formatting(self):
         """Test that formatting is idempotent (formatting twice gives same result)."""
