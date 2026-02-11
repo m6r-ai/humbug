@@ -533,6 +533,11 @@ class Renderer:
             just_output_newline = False
             prev_was_standalone_comment = False
 
+        # Add closing paren with proper indentation
+        if just_output_newline:
+            # Last element ended with newline, indent closing paren to match opening
+            parts.append(' ' * lparen_col)
+
         parts.append(')')
         return ''.join(parts)
 
