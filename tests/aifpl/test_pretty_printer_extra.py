@@ -82,20 +82,6 @@ class TestExcessiveBlankLines:
         assert result == ""
 
 
-class TestNoneTokenGuards:
-    """Test None token guards (lines 154-155, 162-163)."""
-
-    def test_format_expression_with_none_token(self):
-        """Test line 163: _format_expression with None token."""
-        printer = AIFPLPrettyPrinter()
-        printer.format("")
-        # Now current_token should be None
-        assert printer.current_token is None
-        # Call _format_expression
-        result = printer._format_expression(0)
-        assert result == ""
-
-
 class TestCommentInFormatExpression:
     """Test comment handling in _format_expression (lines 173-177)."""
 

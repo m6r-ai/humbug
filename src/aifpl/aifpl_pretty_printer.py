@@ -73,6 +73,9 @@ class ASTList(ASTNode):
 # Maps special form names to number of elements that should stay on first line
 SPECIAL_FORM_RULES = {
     'lambda': 2,
+    'let': 1,
+    'let*': 1,
+    'letrec': 1,
     'if': 2,
     'match': 2,
 }
@@ -256,17 +259,27 @@ class FormatPlanner:
 
             # Check if this is a special form
             elements_on_first_line = 1  # Default
+            is_special_form = False
             if lst.elements:
                 first_elem = lst.elements[0]
                 if isinstance(first_elem, ASTAtom):
                     form_name = first_elem.value
                     elements_on_first_line = SPECIAL_FORM_RULES.get(form_name, 1)
+                    is_special_form = form_name in SPECIAL_FORM_RULES
 
             self.decisions[id(lst)] = FormatDecision(FormatStyle.MULTILINE, column, elements_on_first_line)
 
             # Plan children - they'll be indented
             child_atom_col = column + 1  # After the '('
-            subsequent_col = column + self.options.indent_size  # Subsequent elements get +2 indent
+
+            # For special forms, indent subsequent elements by indent_size
+            # For regular lists, align subsequent elements with first element position
+            if is_special_form:
+                subsequent_col = column + self.options.indent_size
+
+            else:
+                subsequent_col = column + 1  # Align with first element
+
             elements_on_current_line = 0
 
             for elem in lst.elements:
@@ -277,6 +290,7 @@ class FormatPlanner:
                     # This element stays on the first line
                     self._plan_node(elem, child_atom_col)
                     elements_on_current_line += 1
+
                 else:
                     # Subsequent elements get indented
                     self._plan_node(elem, subsequent_col)
@@ -458,13 +472,20 @@ class Renderer:
         elements_on_first_line = decision.elements_on_first_line
         indent = lparen_col + 1
 
-        # For regular lists, align subsequent elements with first element
-        # For special forms, indent subsequent elements
-        if elements_on_first_line == 1:
-            subsequent_col = lparen_col + 1  # Align with first element
+        # Check if this is a special form
+        is_special_form = False
+        if lst.elements:
+            first_elem = lst.elements[0]
+            if isinstance(first_elem, ASTAtom):
+                is_special_form = first_elem.value in SPECIAL_FORM_RULES
+
+        # For special forms, indent subsequent elements by indent_size
+        # For regular lists, align subsequent elements with first element position
+        if is_special_form:
+            subsequent_col = lparen_col + self.options.indent_size
 
         else:
-            subsequent_col = lparen_col + self.options.indent_size  # Indent for special forms
+            subsequent_col = lparen_col + 1  # Align with first element
 
         parts = ['(']
         elements_on_current_line = 0
