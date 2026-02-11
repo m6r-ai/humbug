@@ -499,17 +499,11 @@ class Renderer:
                 if elem.is_eol:
                     # End-of-line comment
                     parts.append(' ' * self.options.comment_spacing)
-                    parts.append(elem.text)
-                    parts.append('\n')
-                    just_output_newline = True
 
                 else:
                     # Standalone comment
                     if not parts[-1].endswith('\n'):
                         parts.append('\n')
-
-                    # After a standalone comment, we're past the "first line"
-                    elements_on_current_line = elements_on_first_line
 
                     blank_line_added = False
 
@@ -528,11 +522,15 @@ class Renderer:
                         parts.append('\n')
 
                     parts.append(' ' * comment_indent)
-                    parts.append(elem.text)
-                    parts.append('\n')
                     prev_comment_line = elem.start_line
-                    just_output_newline = True
                     prev_was_standalone_comment = True
+
+                parts.append(elem.text)
+                parts.append('\n')
+                just_output_newline = True
+
+                # After a comment, we're past the "first line"
+                elements_on_current_line = elements_on_first_line
 
                 continue
 
