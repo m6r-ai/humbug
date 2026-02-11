@@ -480,6 +480,9 @@ class Renderer:
                     if not parts[-1].endswith('\n'):
                         parts.append('\n')
 
+                    # After a standalone comment, we're past the "first line"
+                    elements_on_current_line = elements_on_first_line
+
                     blank_line_added = False
 
                     # Check for blank line from source
