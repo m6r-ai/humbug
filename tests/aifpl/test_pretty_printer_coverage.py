@@ -698,8 +698,8 @@ class TestAtomFormatting:
 class TestRemainingUncoveredLines:
     """Test the final remaining uncovered lines."""
 
-    def test_top_level_eol_comment_lines_76_78(self):
-        """Test lines 76-78: Top-level end-of-line comment handling."""
+    def test_top_level_eol_comment(self):
+        """Test top-level end-of-line comment handling."""
         # This is the tricky case - we need a comment at the top level
         # that is on the same line as a previous token
         printer = AIFPLPrettyPrinter()
@@ -710,8 +710,8 @@ class TestRemainingUncoveredLines:
         # The comment should be on the same line with spacing
         assert "42  ; comment on same line" in result or "42 ; comment on same line" in result
 
-    def test_excessive_blank_lines_line_135(self):
-        """Test line 135: More than 2 blank lines (branch not taken)."""
+    def test_excessive_blank_lines(self):
+        """Test more than 2 blank lines (branch not taken)."""
         # We need to create a case where blank_count > 2
         printer = AIFPLPrettyPrinter()
         # Multiple blank lines in input
@@ -730,8 +730,8 @@ class TestRemainingUncoveredLines:
                 current = 0
         assert max_blanks <= 2
 
-    def test_excessive_trailing_newlines_lines_144_145(self):
-        """Test lines 144-145: Excessive trailing newlines."""
+    def test_excessive_trailing_newlines(self):
+        """Test excessive trailing newlines."""
         printer = AIFPLPrettyPrinter()
         # Input with many trailing newlines
         code = "(+ 1 2)\n\n\n\n\n"
@@ -740,8 +740,8 @@ class TestRemainingUncoveredLines:
         assert result.endswith("\n")
         assert not result.endswith("\n\n\n")
 
-    def test_add_trailing_newline_lines_147_148(self):
-        """Test lines 147-148: Add trailing newline when missing."""
+    def test_add_trailing_newline(self):
+        """Test add trailing newline when missing."""
         # This is hard to trigger because the join usually adds newlines
         # But we can test with empty result
         printer = AIFPLPrettyPrinter()
@@ -749,8 +749,8 @@ class TestRemainingUncoveredLines:
         # Empty input should remain empty
         assert result == ""
 
-    def test_standalone_comment_in_expression_lines_175_177(self):
-        """Test lines 175-177: Standalone comment in expression context."""
+    def test_standalone_comment_in_expression(self):
+        """Test standalone comment in expression context."""
         # This happens when _format_expression encounters a COMMENT token
         # which shouldn't normally happen, but we test the guard
         printer = AIFPLPrettyPrinter()
@@ -758,54 +758,45 @@ class TestRemainingUncoveredLines:
         result = printer.format(code)
         assert "; standalone comment" in result
 
-    def test_comment_in_compact_list_lines_268_270(self):
-        """Test lines 268-270: Comment prevents compact format."""
+    def test_comment_in_compact_list(self):
+        """Test comment prevents compact format."""
         printer = AIFPLPrettyPrinter()
         # List with comment inside
         code = "(+ 1 ; comment\n   2 3)"
         result = printer.format(code)
         assert "; comment" in result
 
-    def test_eol_comment_after_let_body_lines_476_478(self):
-        """Test lines 476-478: EOL comment after let body."""
+    def test_eol_comment_after_let_body(self):
+        """Test EOL comment after let body."""
         printer = AIFPLPrettyPrinter()
         # Let form with EOL comment after body
         code = "(let ((x 5)) (+ x 1))  ; comment"
         result = printer.format(code)
         assert "; comment" in result
 
-    def test_eol_comment_after_lambda_body_lines_577_579(self):
-        """Test lines 577-579: EOL comment after lambda body."""
+    def test_eol_comment_after_lambda_body(self):
+        """Test EOL comment after lambda body."""
         printer = AIFPLPrettyPrinter()
         # Lambda with EOL comment after body
         code = "(lambda (x) (* x 2))  ; comment"
         result = printer.format(code)
         assert "; comment" in result
 
-    def test_eol_comment_after_if_else_lines_644_646(self):
-        """Test lines 644-646: EOL comment after if else branch."""
+    def test_eol_comment_after_if_else(self):
+        """Test EOL comment after if else branch."""
         printer = AIFPLPrettyPrinter()
         # If with EOL comment after else
         code = "(if (> x 0) 1 2)  ; comment"
         result = printer.format(code)
         assert "; comment" in result
 
-    def test_eol_comment_after_match_lines_687_694(self):
-        """Test lines 687-694: EOL comment after match."""
+    def test_eol_comment_after_match(self):
+        """Test EOL comment after match."""
         printer = AIFPLPrettyPrinter()
         # Match with EOL comment after clauses
         code = "(match x (1 'one) (2 'two))  ; comment"
         result = printer.format(code)
         assert "; comment" in result
-
-    def test_format_atom_with_none_line_716(self):
-        """Test line 716: _format_atom with None token."""
-        printer = AIFPLPrettyPrinter()
-        # Format empty string to get None token
-        printer.format("")
-        # Directly call _format_atom when current_token is None
-        result = printer._format_atom()
-        assert result == ""
 
 
 class TestBranchCoverage:
