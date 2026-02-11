@@ -18,7 +18,8 @@ class FormatOptions:
 
 class ASTNode:
     """Base class for AST nodes."""
-    source_line: int
+    start_line: int   # Line where node starts
+    end_line: int     # Line where node ends (for tracking EOL comments)
 
 
 @dataclass
@@ -26,9 +27,10 @@ class ASTAtom(ASTNode):
     """An atomic value (symbol, number, string, boolean)."""
     value: str
 
-    def __init__(self, source_value: str, source_line: int):
+    def __init__(self, source_value: str, start_line: int):
         self.value = source_value
-        self.source_line = source_line
+        self.start_line = start_line
+        self.end_line = start_line
 
 
 @dataclass
@@ -36,9 +38,10 @@ class ASTQuote(ASTNode):
     """A quoted expression."""
     expr: ASTNode
 
-    def __init__(self, expr: ASTNode, source_line: int):
+    def __init__(self, expr: ASTNode, start_line: int):
         self.expr = expr
-        self.source_line = source_line
+        self.start_line = start_line
+        self.end_line = expr.end_line if expr else start_line
 
 
 @dataclass
@@ -47,9 +50,10 @@ class ASTComment(ASTNode):
     text: str
     is_eol: bool  # True if end-of-line comment, False if standalone
 
-    def __init__(self, text: str, source_line: int, is_eol: bool):
+    def __init__(self, text: str, start_line: int, is_eol: bool):
         self.text = text
-        self.source_line = source_line
+        self.start_line = start_line
+        self.end_line = start_line
         self.is_eol = is_eol
 
 
@@ -58,9 +62,10 @@ class ASTList(ASTNode):
     """A list with elements and associated comments."""
     elements: List[Union[ASTNode, 'ASTComment']]  # Mix of nodes and comments
 
-    def __init__(self, elements: List[Union[ASTNode, 'ASTComment']], source_line: int):
+    def __init__(self, elements: List[Union[ASTNode, 'ASTComment']], start_line: int):
         self.elements = elements
-        self.source_line = source_line
+        self.start_line = start_line
+        self.end_line = start_line  # Will be updated when we know the closing paren line
 
 
 # === Special Form Rules ===
@@ -98,10 +103,23 @@ class TreeBuilder:
     def build(self) -> List[ASTNode]:
         """Build list of top-level expressions."""
         result = []
+        last_code_line = -1  # Track the line of the last code element
+
         while self.pos < len(self.tokens):
-            node = self._parse_expr()
-            if node:
+            token = self.tokens[self.pos]
+
+            if token.type == AIFPLTokenType.COMMENT:
+                # Check if this is an EOL comment at top level
+                is_eol = bool(token.line == last_code_line)
+                node = ASTComment(token.value, token.line, is_eol)
+                self.pos += 1
                 result.append(node)
+
+            else:
+                node = self._parse_expr()
+                if node:
+                    result.append(node)
+                    last_code_line = node.end_line
 
         return result
 
@@ -112,20 +130,14 @@ class TreeBuilder:
 
         token = self.tokens[self.pos]
 
-        if token.type == AIFPLTokenType.COMMENT:
-            # Comments at top level
-            comment = ASTComment(token.value, token.line, False)
-            self.pos += 1
-            return comment
-
         if token.type == AIFPLTokenType.LPAREN:
             return self._parse_list()
 
         if token.type == AIFPLTokenType.QUOTE:
-            source_line = token.line
+            start_line = token.line
             self.pos += 1
             expr = self._parse_expr()
-            return ASTQuote(expr, source_line) if expr else None
+            return ASTQuote(expr, start_line) if expr else None
 
         # Atom
         atom = ASTAtom(self._format_atom_value(token), token.line)
@@ -171,11 +183,12 @@ class TreeBuilder:
 
     def _parse_list(self) -> ASTList:
         """Parse a list."""
-        source_line = self.tokens[self.pos].line
+        start_line = self.tokens[self.pos].line
         self.pos += 1  # consume '('
+        end_line = start_line  # Track where the list ends
 
         elements: List[Union[ASTNode, ASTComment]] = []
-        last_code_line = source_line
+        last_code_line = start_line
 
         while self.pos < len(self.tokens) and self.tokens[self.pos].type != AIFPLTokenType.RPAREN:
             token = self.tokens[self.pos]
@@ -192,12 +205,16 @@ class TreeBuilder:
                 if expr:
                     elements.append(expr)
                     if isinstance(expr, (ASTAtom, ASTList, ASTQuote)):
-                        last_code_line = expr.source_line
+                        last_code_line = expr.end_line
 
         if self.pos < len(self.tokens):
+            # Track the line where the closing ')' appears
+            end_line = self.tokens[self.pos].line
             self.pos += 1  # consume ')'
 
-        return ASTList(elements, source_line)
+        result = ASTList(elements, start_line)
+        result.end_line = end_line
+        return result
 
 
 class FormatPlanner:
@@ -329,12 +346,16 @@ class Renderer:
         prev_was_comment = False
         prev_line = 0
 
-        for node in nodes:
+        i = 0
+        while i < len(nodes):
+            node = nodes[i]
+
             if isinstance(node, ASTComment):
                 # Top-level comment
-                current_line = node.source_line
+                current_line = node.start_line
                 if parts and (current_line - prev_line > 1 or not prev_was_comment):
                     parts.append('\n')
+
                 parts.append(node.text)
                 parts.append('\n')
                 prev_was_comment = True
@@ -342,15 +363,30 @@ class Renderer:
 
             else:
                 # Code
-                if parts and isinstance(nodes[nodes.index(node) - 1] if nodes.index(node) > 0 else None, ASTComment):
+                if parts and i > 0 and isinstance(nodes[i - 1], ASTComment):
                     # Previous was comment, check for blank line in source
                     pass  # Already handled above
 
                 rendered = self._render_node(node, 0)
                 parts.append(rendered)
-                parts.append('\n')
+
+                # Check if next node is an EOL comment
+                if i + 1 < len(nodes):
+                    comment = nodes[i + 1]
+                    if isinstance(comment, ASTComment) and comment.is_eol:
+                        # Next node is EOL comment, append it on same line
+                        parts.append(' ' * self.options.comment_spacing)
+                        parts.append(comment.text)
+                        parts.append('\n')
+                        i += 1  # Skip the comment node since we just rendered it
+
+                else:
+                    parts.append('\n')
+
                 prev_was_comment = False
-                prev_line = node.source_line
+                prev_line = node.end_line
+
+            i += 1
 
         result = ''.join(parts)
 
@@ -436,7 +472,8 @@ class Renderer:
                     # End-of-line comment
                     parts.append(' ' * self.options.comment_spacing)
                     parts.append(elem.text)
-                    just_output_newline = False
+                    parts.append('\n')
+                    just_output_newline = True
 
                 else:
                     # Standalone comment
@@ -446,7 +483,7 @@ class Renderer:
                     blank_line_added = False
 
                     # Check for blank line from source
-                    if prev_comment_line and elem.source_line - prev_comment_line > 1:
+                    if prev_comment_line and elem.start_line - prev_comment_line > 1:
                         parts.append('\n')
                         blank_line_added = True
 
@@ -462,7 +499,7 @@ class Renderer:
                     parts.append(' ' * comment_indent)
                     parts.append(elem.text)
                     parts.append('\n')
-                    prev_comment_line = elem.source_line
+                    prev_comment_line = elem.start_line
                     just_output_newline = True
                     prev_was_standalone_comment = True
 

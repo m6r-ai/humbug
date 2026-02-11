@@ -3,7 +3,7 @@
 This file targets the remaining uncovered lines and branches to reach 100% coverage.
 """
 
-from aifpl.aifpl_pretty_printer import AIFPLPrettyPrinter, FormatOptions, OutputBuilder
+from aifpl.aifpl_pretty_printer import AIFPLPrettyPrinter, FormatOptions
 
 
 class TestEolCommentsAfterSpecialForms:

@@ -12,8 +12,8 @@ from aifpl.aifpl_pretty_printer import AIFPLPrettyPrinter
 class TestEOLCommentsAfterBodies:
     """Test EOL comments that appear after expression bodies but before closing parens."""
 
-    def test_lambda_with_eol_comment_after_body_lines_548_550(self):
-        """Test lines 548-550: EOL comment after lambda body, before closing paren."""
+    def test_lambda_with_eol_comment_after_body(self):
+        """Test EOL comment after lambda body, before closing paren."""
         printer = AIFPLPrettyPrinter()
 
         # Lambda with EOL comment after the body expression
@@ -39,8 +39,8 @@ class TestEOLCommentsAfterBodies:
 
         assert "; multiply" in result
 
-    def test_if_with_eol_comment_after_else_lines_615_617(self):
-        """Test lines 615-617: EOL comment after if else branch, before closing paren."""
+    def test_if_with_eol_comment_after_else(self):
+        """Test EOL comment after if else branch, before closing paren."""
         printer = AIFPLPrettyPrinter()
 
         # If with EOL comment after the else branch
@@ -68,8 +68,8 @@ class TestEOLCommentsAfterBodies:
 
         assert "; first" in result
 
-    def test_match_with_eol_comment_after_clause_lines_658_665(self):
-        """Test lines 658-665: EOL comment after match clause, before closing paren."""
+    def test_match_with_eol_comment_after_clause(self):
+        """Test EOL comment after match clause, before closing paren."""
         printer = AIFPLPrettyPrinter()
 
         # Match with EOL comment after the last clause
@@ -113,7 +113,7 @@ class TestEOLCommentsAfterBodies:
         assert "; sum" in result
         assert "; inner lambda" in result
 
-    def test_let_with_eol_comment_after_body_lines_441(self):
+    def test_let_with_eol_comment_after_body(self):
         """Test EOL comment after let body."""
         printer = AIFPLPrettyPrinter()
 
@@ -149,10 +149,10 @@ class TestEOLCommentsAfterBodies:
         assert "; end match" in result
 
 
-class TestOtherUncoveredLines:
-    """Test other uncovered lines from the coverage report."""
+class TestOther:
+    """Test othert."""
 
-    def test_excessive_blank_lines_line_125(self):
+    def test_excessive_blank_lines(self):
         """Test line 125: blank_count <= 2 branch."""
         printer = AIFPLPrettyPrinter()
 
@@ -167,8 +167,8 @@ class TestOtherUncoveredLines:
         # Should limit to max 2 consecutive blank lines
         assert "\n\n\n\n" not in result
 
-    def test_malformed_let_without_bindings_list_lines_351_354(self):
-        """Test lines 351-354: Malformed let without bindings list."""
+    def test_malformed_let_without_bindings_list(self):
+        """Test malformed let without bindings list."""
         printer = AIFPLPrettyPrinter()
 
         # Let with non-list bindings
@@ -178,8 +178,8 @@ class TestOtherUncoveredLines:
         # Should still format (even if malformed)
         assert "let" in result
 
-    def test_malformed_lambda_without_params_list_lines_494_497(self):
-        """Test lines 494-497: Malformed lambda without params list."""
+    def test_malformed_lambda_without_params_list(self):
+        """Test malformed lambda without params list."""
         printer = AIFPLPrettyPrinter()
 
         # Lambda with non-list params
@@ -189,8 +189,8 @@ class TestOtherUncoveredLines:
         # Should still format (even if malformed)
         assert "lambda" in result
 
-    def test_empty_binding_lines_468_481(self):
-        """Test lines 468-481: Binding without name or value."""
+    def test_empty_binding(self):
+        """Test binding without name or value."""
         printer = AIFPLPrettyPrinter()
 
         # Let with empty binding
@@ -200,8 +200,8 @@ class TestOtherUncoveredLines:
         # Should format the empty binding
         assert "()" in result
 
-    def test_if_without_condition_lines_565_570(self):
-        """Test lines 565-570: If form edge cases."""
+    def test_if_without_condition(self):
+        """Test `if` form edge cases."""
         printer = AIFPLPrettyPrinter()
 
         # If with just condition
@@ -210,8 +210,8 @@ class TestOtherUncoveredLines:
 
         assert "if" in result
 
-    def test_match_without_value_lines_632_636(self):
-        """Test lines 632-636: Match without value expression."""
+    def test_match_without_value(self):
+        """Test `match` without value expression."""
         printer = AIFPLPrettyPrinter()
 
         # Match with no value
@@ -220,8 +220,8 @@ class TestOtherUncoveredLines:
 
         assert "match" in result
 
-    def test_quote_without_expression_lines_679_682(self):
-        """Test lines 679-682: Quote without expression."""
+    def test_quote_without_expression(self):
+        """Test `quote` without expression."""
         printer = AIFPLPrettyPrinter()
 
         # Just a quote symbol (edge case)
@@ -234,8 +234,8 @@ class TestOtherUncoveredLines:
             # Lexer might reject this, which is OK
             pass
 
-    def test_multiline_list_closing_paren_lines_338_341(self):
-        """Test lines 338-341: Multiline list with closing paren."""
+    def test_multiline_list_closing_paren(self):
+        """Test multiline list with closing paren."""
         printer = AIFPLPrettyPrinter()
 
         # Long list that will be multiline
@@ -245,8 +245,8 @@ class TestOtherUncoveredLines:
         # Should have closing paren
         assert ")" in result
 
-    def test_binding_closing_paren_lines_482_485(self):
-        """Test lines 482-485: Binding with closing paren."""
+    def test_binding_closing_paren(self):
+        """Test binding with closing paren."""
         printer = AIFPLPrettyPrinter()
 
         code = "(let ((x 5) (y 10)) (+ x y))"
@@ -256,8 +256,8 @@ class TestOtherUncoveredLines:
         assert "(x 5)" in result
         assert "(y 10)" in result
 
-    def test_lambda_params_closing_paren_lines_514_517(self):
-        """Test lines 514-517: Lambda params closing paren."""
+    def test_lambda_params_closing_paren(self):
+        """Test `lambda` params closing paren."""
         printer = AIFPLPrettyPrinter()
 
         code = "(lambda (x y z) (+ x y z))"
@@ -266,8 +266,8 @@ class TestOtherUncoveredLines:
         # Should have params
         assert "(x y z)" in result
 
-    def test_lambda_body_exists_lines_536_542(self):
-        """Test lines 536-542: Lambda with body."""
+    def test_lambda_body_exists(self):
+        """Test `lambda` with body."""
         printer = AIFPLPrettyPrinter()
 
         code = "(lambda (x) (+ x 1))"
@@ -275,8 +275,8 @@ class TestOtherUncoveredLines:
 
         assert "(+ x 1)" in result
 
-    def test_let_body_after_comments_lines_435_441(self):
-        """Test lines 435-441: Let body after comments."""
+    def test_let_body_after_comments(self):
+        """Test `let` body after comments."""
         printer = AIFPLPrettyPrinter()
 
         code = """(let ((x 5))
@@ -287,8 +287,8 @@ class TestOtherUncoveredLines:
         assert "; comment before body" in result
         assert "(+ x 1)" in result
 
-    def test_let_body_exists_lines_420_441(self):
-        """Test lines 420-441: Let with body expression."""
+    def test_let_body_exists(self):
+        """Test `let` with body expression."""
         printer = AIFPLPrettyPrinter()
 
         code = "(let ((x 5)) (+ x 1))"
