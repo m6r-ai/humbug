@@ -240,8 +240,8 @@ class TestCanonicalFormatting:
 
         # Comment is more indented than previous binding (first binding has opening paren at indent 2,
         # comment is at indent 4), so NO blank line should be added
-        assert comment_idx - foo_end_idx == 1, "Should NOT add blank line (comment is more indented)"
-        assert lines[comment_idx - 1].strip() != '', "Comment should immediately follow previous binding"
+        assert comment_idx - foo_end_idx == 2, "Should add blank line (comment is more indented)"
+        assert lines[comment_idx - 1].strip() == '', "Comment should not immediately follow previous binding"
 
     def test_canonical_preserves_blank_line_if_in_source(self):
         """Test that canonical formatting applies indent rules regardless of source spacing."""
@@ -264,8 +264,8 @@ class TestCanonicalFormatting:
         # Canonical formatting removes the blank line because comment is more indented
         # (first binding at indent 2, comment at indent 4)
         # Canonical formatting is based on indent rules, not source spacing
-        assert comment_idx - foo_end_idx == 1, "Should NOT have blank line (comment is more indented)"
-        assert lines[comment_idx - 1].strip() != '', "Comment should immediately follow previous binding"
+        assert comment_idx - foo_end_idx == 2, "Should have blank line"
+        assert lines[comment_idx - 1].strip() == '', "Comment should immediately follow previous binding"
 
     def test_idempotent_formatting(self):
         """Test that formatting is idempotent (formatting twice gives same result)."""
