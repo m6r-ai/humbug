@@ -119,27 +119,27 @@ class AIFPLParser:
 
         if token.type == AIFPLTokenType.SYMBOL:
             self._advance()
-            return AIFPLSymbol(token.value)
+            return AIFPLSymbol(token.value, line=token.line, column=token.column)
 
         if token.type == AIFPLTokenType.BOOLEAN:
             self._advance()
-            return AIFPLBoolean(token.value)
+            return AIFPLBoolean(token.value, line=token.line, column=token.column)
 
         if token.type == AIFPLTokenType.INTEGER:
             self._advance()
-            return AIFPLInteger(token.value)
+            return AIFPLInteger(token.value, line=token.line, column=token.column)
 
         if token.type == AIFPLTokenType.STRING:
             self._advance()
-            return AIFPLString(token.value)
+            return AIFPLString(token.value, line=token.line, column=token.column)
 
         if token.type == AIFPLTokenType.FLOAT:
             self._advance()
-            return AIFPLFloat(token.value)
+            return AIFPLFloat(token.value, line=token.line, column=token.column)
 
         if token.type == AIFPLTokenType.COMPLEX:
             self._advance()
-            return AIFPLComplex(token.value)
+            return AIFPLComplex(token.value, line=token.line, column=token.column)
 
         if token.type == AIFPLTokenType.QUOTE:
             return self._parse_quoted_expression()
@@ -421,7 +421,7 @@ class AIFPLParser:
 
         self._advance()  # consume ')'
 
-        return AIFPLList(tuple(elements))
+        return AIFPLList(tuple(elements), line=start_line, column=start_col)
 
     def _parse_let_with_tracking(
         self,
@@ -456,7 +456,7 @@ class AIFPLParser:
         if self.current_token.type == AIFPLTokenType.RPAREN:
             self._pop_paren_frame()
             self._advance()  # consume ')'
-            return AIFPLList(tuple(elements))
+            return AIFPLList(tuple(elements), line=start_line, column=start_col)
 
         # Parse bindings with special tracking
         self._mark_element_start()
@@ -488,7 +488,7 @@ class AIFPLParser:
 
         self._advance()  # consume ')'
 
-        return AIFPLList(tuple(elements))
+        return AIFPLList(tuple(elements), line=start_line, column=start_col)
 
     def _parse_let_bindings(self) -> AIFPLList:
         """
@@ -534,7 +534,7 @@ class AIFPLParser:
 
         self._advance()  # consume ')'
 
-        return AIFPLList(tuple(bindings))
+        return AIFPLList(tuple(bindings), line=bindings_start_line, column=bindings_start_col)
 
     def _parse_single_binding(self, binding_index: int) -> AIFPLList:
         """
@@ -594,7 +594,7 @@ class AIFPLParser:
 
         self._advance()  # consume ')'
 
-        return AIFPLList(tuple(elements))
+        return AIFPLList(tuple(elements), line=binding_start_line, column=binding_start_col)
 
     def _create_incomplete_bindings_error(
         self,
@@ -713,8 +713,8 @@ class AIFPLParser:
         quoted_expr = self._parse_expression()
 
         # Transform 'expr into (quote expr)
-        quote_symbol = AIFPLSymbol("quote")
-        return AIFPLList((quote_symbol, quoted_expr))
+        quote_symbol = AIFPLSymbol("quote", line=quote_line, column=quote_col)
+        return AIFPLList((quote_symbol, quoted_expr), line=quote_line, column=quote_col)
 
     def _advance(self) -> None:
         """Move to the next token."""

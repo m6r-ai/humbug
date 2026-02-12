@@ -26,12 +26,17 @@ class AIFPLSemanticAnalyzer:
     are well-formed before any transformations (desugaring, compilation).
     """
 
-    def analyze(self, expr: AIFPLValue) -> AIFPLValue:
+    def __init__(self) -> None:
+        """Initialize the semantic analyzer."""
+        self.source = ""
+
+    def analyze(self, expr: AIFPLValue, source: str = "") -> AIFPLValue:
         """
         Analyze an expression recursively, validating all special forms.
 
         Args:
             expr: AST to analyze
+            source: Original source code (for error reporting with line/column)
 
         Returns:
             The same AST (unmodified) if validation passes
@@ -39,6 +44,9 @@ class AIFPLSemanticAnalyzer:
         Raises:
             AIFPLEvalError: If validation fails with detailed error message
         """
+        # Store source for error reporting
+        self.source = source
+
         # Lists need inspection
         if isinstance(expr, AIFPLList):
             return self._analyze_list(expr)
@@ -99,15 +107,18 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
                 expected="Exactly 3 arguments: (if condition then else)",
                 example="(if (> x 0) \"positive\" \"negative\")",
-                suggestion="If needs condition, then-branch, and else-branch"
+                suggestion="If needs condition, then-branch, and else-branch",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         _, condition, then_expr, else_expr = expr.elements
 
         # Recursively analyze subexpressions
-        self.analyze(condition)
-        self.analyze(then_expr)
-        self.analyze(else_expr)
+        self.analyze(condition, self.source)
+        self.analyze(then_expr, self.source)
+        self.analyze(else_expr, self.source)
 
         return expr
 
@@ -119,7 +130,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements)} elements",
                 expected="Exactly 3 elements: (let ((bindings...)) body)",
                 example="(let ((x 5) (y 10)) (+ x y))",
-                suggestion="Let needs binding list and body: (let ((var1 val1) (var2 val2) ...) body)"
+                suggestion="Let needs binding list and body: (let ((var1 val1) (var2 val2) ...) body)",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         if len(expr.elements) > 3:
@@ -129,7 +143,10 @@ class AIFPLSemanticAnalyzer:
                 expected="Exactly 3 elements: (let ((bindings...)) body)",
                 example="(let ((x 5) (y 10)) (+ x y))",
                 suggestion="Let takes only bindings and one body expression. "
-                    "Use (let (...) (begin expr1 expr2)) for multiple expressions"
+                    "Use (let (...) (begin expr1 expr2)) for multiple expressions",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         _, bindings_list, body = expr.elements
@@ -140,7 +157,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Binding list: {bindings_list.type_name()}",
                 expected="List of bindings: ((var1 val1) (var2 val2) ...)",
                 example="(let ((x 5) (y (* x 2))) (+ x y))",
-                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
+                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         # Validate each binding
@@ -152,7 +172,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Binding {i+1}: {binding.type_name()}",
                     expected="Each binding: (variable value-expression)",
                     example='(x 5)',
-                    suggestion="Wrap each binding in parentheses: (variable-name value-expression)"
+                    suggestion="Wrap each binding in parentheses: (variable-name value-expression)",
+                    line=binding.line,
+                    column=binding.column,
+                    source=self.source
                 )
 
             if len(binding.elements) != 2:
@@ -162,7 +185,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Binding {i+1}: {binding_str}",
                     expected="Each binding: (variable value-expression)",
                     example='Correct: (x 5)\nIncorrect: (x) or (x 1 2)',
-                    suggestion="Each binding needs exactly variable name and value: (var value)"
+                    suggestion="Each binding needs exactly variable name and value: (var value)",
+                    line=binding.line,
+                    column=binding.column,
+                    source=self.source
                 )
 
             name_expr, value_expr = binding.elements
@@ -173,13 +199,16 @@ class AIFPLSemanticAnalyzer:
                     received=f"Variable: {name_expr.type_name()}",
                     expected="Unquoted symbol (variable name)",
                     example='Correct: (x 5)\nIncorrect: ("x" 5)',
-                    suggestion="Use unquoted variable names in bindings"
+                    suggestion="Use unquoted variable names in bindings",
+                    line=name_expr.line,
+                    column=name_expr.column,
+                    source=self.source
                 )
 
             var_names.append(name_expr.name)
 
             # Recursively analyze the value expression
-            self.analyze(value_expr)
+            self.analyze(value_expr, self.source)
 
         # Check for duplicate binding names
         if len(var_names) != len(set(var_names)):
@@ -189,11 +218,14 @@ class AIFPLSemanticAnalyzer:
                 received=f"Duplicate variables: {duplicates}",
                 expected="All variable names should be different",
                 example='Correct: (let ((x 1) (y 2)) ...)\nIncorrect: (let ((x 1) (x 2)) ...)',
-                suggestion="Use different names for each variable"
+                suggestion="Use different names for each variable",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         # Analyze body
-        self.analyze(body)
+        self.analyze(body, self.source)
 
         return expr
 
@@ -205,7 +237,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements)} elements",
                 expected="Exactly 3 elements: (let* ((bindings...)) body)",
                 example="(let* ((x 5) (y (* x 2))) (+ x y))",
-                suggestion="Let* needs binding list and body: (let* ((var1 val1) (var2 val2) ...) body)"
+                suggestion="Let* needs binding list and body: (let* ((var1 val1) (var2 val2) ...) body)",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         if len(expr.elements) > 3:
@@ -215,7 +250,10 @@ class AIFPLSemanticAnalyzer:
                 expected="Exactly 3 elements: (let* ((bindings...)) body)",
                 example="(let* ((x 5) (y (* x 2))) (+ x y))",
                 suggestion="Let* takes only bindings and one body expression. "
-                    "Use (let* (...) (begin expr1 expr2)) for multiple expressions"
+                    "Use (let* (...) (begin expr1 expr2)) for multiple expressions",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         _, bindings_list, body = expr.elements
@@ -226,7 +264,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Binding list: {bindings_list.type_name()}",
                 expected="List of bindings: ((var1 val1) (var2 val2) ...)",
                 example="(let* ((x 5) (y (* x 2))) (+ x y))",
-                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
+                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         # Validate each binding
@@ -238,7 +279,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Binding {i+1}: {binding.type_name()}",
                     expected="Each binding: (variable value-expression)",
                     example='(x 5)',
-                    suggestion="Wrap each binding in parentheses: (variable-name value-expression)"
+                    suggestion="Wrap each binding in parentheses: (variable-name value-expression)",
+                    line=binding.line,
+                    column=binding.column,
+                    source=self.source
                 )
 
             if len(binding.elements) != 2:
@@ -248,7 +292,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Binding {i+1}: {binding_str}",
                     expected="Each binding: (variable value-expression)",
                     example='Correct: (x 5)\nIncorrect: (x) or (x 1 2)',
-                    suggestion="Each binding needs exactly variable name and value: (var value)"
+                    suggestion="Each binding needs exactly variable name and value: (var value)",
+                    line=binding.line,
+                    column=binding.column,
+                    source=self.source
                 )
 
             name_expr, value_expr = binding.elements
@@ -259,13 +306,16 @@ class AIFPLSemanticAnalyzer:
                     received=f"Variable: {name_expr.type_name()}",
                     expected="Unquoted symbol (variable name)",
                     example='Correct: (x 5)\nIncorrect: ("x" 5)',
-                    suggestion="Use unquoted variable names in bindings"
+                    suggestion="Use unquoted variable names in bindings",
+                    line=name_expr.line,
+                    column=name_expr.column,
+                    source=self.source
                 )
 
             var_names.append(name_expr.name)
 
             # Recursively analyze the value expression
-            self.analyze(value_expr)
+            self.analyze(value_expr, self.source)
 
         # Note: Unlike 'let', we allow duplicate binding names (shadowing) in let*.
         # This is because let* has sequential semantics where later bindings
@@ -273,7 +323,7 @@ class AIFPLSemanticAnalyzer:
         # That's the whole point of let* - sequential bindings are allowed and expected.
 
         # Analyze body
-        self.analyze(body)
+        self.analyze(body, self.source)
 
         return expr
 
@@ -285,7 +335,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements)} elements",
                 expected="Exactly 3 elements: (letrec ((bindings...)) body)",
                 example="(letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5))",
-                suggestion="Letrec needs binding list and body: (letrec ((var1 val1) (var2 val2) ...) body)"
+                suggestion="Letrec needs binding list and body: (letrec ((var1 val1) (var2 val2) ...) body)",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         if len(expr.elements) > 3:
@@ -294,7 +347,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements)} elements",
                 expected="Exactly 3 elements: (letrec ((bindings...)) body)",
                 example="(letrec ((fact (lambda (n) ...))) (fact 5))",
-                suggestion="Letrec takes only bindings and one body expression"
+                suggestion="Letrec takes only bindings and one body expression",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         _, bindings_list, body = expr.elements
@@ -305,7 +361,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Binding list: {bindings_list.type_name()}",
                 expected="List of bindings: ((var1 val1) (var2 val2) ...)",
                 example="(letrec ((f (lambda (n) (if (= n 0) 1 (* n (f (- n 1))))))) (f 5))",
-                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)"
+                suggestion="Wrap bindings in parentheses: ((var val) (var val) ...)",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         # Validate each binding
@@ -317,7 +376,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Binding {i+1}: {binding.type_name()}",
                     expected="List with variable and value: (var val)",
                     example='Correct: (x 5)\nIncorrect: x or "x"',
-                    suggestion="Wrap each binding in parentheses: (variable value)"
+                    suggestion="Wrap each binding in parentheses: (variable value)",
+                    line=binding.line,
+                    column=binding.column,
+                    source=self.source
                 )
 
             if len(binding.elements) != 2:
@@ -326,7 +388,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Binding {i+1}: has {len(binding.elements)} elements",
                     expected="Each binding needs exactly 2 elements: (variable value)",
                     example='Correct: (x 5)\nIncorrect: (x) or (x 5 6)',
-                    suggestion="Each binding: (variable-name value-expression)"
+                    suggestion="Each binding: (variable-name value-expression)",
+                    line=binding.line,
+                    column=binding.column,
+                    source=self.source
                 )
 
             name_expr, value_expr = binding.elements
@@ -337,13 +402,16 @@ class AIFPLSemanticAnalyzer:
                     received=f"Variable: {name_expr.type_name()}",
                     expected="Unquoted symbol (variable name)",
                     example='Correct: (x 5)\nIncorrect: ("x" 5) or (1 5)',
-                    suggestion='Use unquoted variable names: x, not "x"'
+                    suggestion='Use unquoted variable names: x, not \"x\"',
+                    line=name_expr.line,
+                    column=name_expr.column,
+                    source=self.source
                 )
 
             var_names.append(name_expr.name)
 
             # Recursively analyze the value expression
-            self.analyze(value_expr)
+            self.analyze(value_expr, self.source)
 
         # Check for duplicate binding names
         if len(var_names) != len(set(var_names)):
@@ -353,11 +421,14 @@ class AIFPLSemanticAnalyzer:
                 received=f"Duplicate variables: {duplicates}",
                 expected="All variable names should be different",
                 example='Correct: (letrec ((x 1) (y 2)) ...)\nIncorrect: (letrec ((x 1) (x 2)) ...)',
-                suggestion="Use different names for each variable"
+                suggestion="Use different names for each variable",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         # Analyze body
-        self.analyze(body)
+        self.analyze(body, self.source)
 
         return expr
 
@@ -369,7 +440,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements)} elements",
                 expected="Exactly 3 elements: (lambda (params...) body)",
                 example="(lambda (x y) (+ x y))",
-                suggestion="Lambda needs parameter list and body: (lambda (param1 param2 ...) body-expression)"
+                suggestion="Lambda needs parameter list and body: (lambda (param1 param2 ...) body-expression)",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         _, params_list, body = expr.elements
@@ -380,7 +454,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Parameter list: {params_list.type_name()}",
                 expected="List of symbols: (param1 param2 ...)",
                 example="(lambda (x y z) (+ x y z))",
-                suggestion="Parameters should be unquoted variable names"
+                suggestion="Parameters should be unquoted variable names",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         # Validate each parameter
@@ -392,7 +469,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Parameter {i+1}: {param.type_name()}",
                     expected="Unquoted symbol (variable name)",
                     example='Correct: (lambda (x y) (+ x y))\nIncorrect: (lambda ("x" 1) ...)',
-                    suggestion='Use unquoted names: x, not "x" or 1'
+                    suggestion='Use unquoted names: x, not \"x\" or 1',
+                    line=param.line,
+                    column=param.column,
+                    source=self.source
                 )
             param_names.append(param.name)
 
@@ -404,11 +484,14 @@ class AIFPLSemanticAnalyzer:
                 received=f"Duplicate parameters: {duplicates}",
                 expected="All parameter names should be different",
                 example='Correct: (lambda (x y z) ...)\nIncorrect: (lambda (x y x) ...)',
-                suggestion="Use different names for each parameter"
+                suggestion="Use different names for each parameter",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         # Analyze body
-        self.analyze(body)
+        self.analyze(body, self.source)
 
         return expr
 
@@ -420,7 +503,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
                 expected="Exactly 1 argument",
                 example="(quote expr) or 'expr",
-                suggestion="Quote requires exactly one expression to quote"
+                suggestion="Quote requires exactly one expression to quote",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         # Note: We don't recursively analyze the quoted expression
@@ -435,14 +521,17 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements) - 1} arguments",
                 expected="At least 2 arguments: (match value (pattern1 result1) ...)",
                 example="(match x ((number? n) (* n 2)) (_ \"not a number\"))",
-                suggestion="Match needs a value and at least one pattern clause"
+                suggestion="Match needs a value and at least one pattern clause",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         value_expr = expr.elements[1]
         clauses = list(expr.elements[2:])
 
         # Analyze the value expression
-        self.analyze(value_expr)
+        self.analyze(value_expr, self.source)
 
         # Validate all clauses
         for i, clause in enumerate(clauses):
@@ -452,7 +541,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Clause {i+1}: {clause.type_name()}",
                     expected="Each clause: (pattern result-expression)",
                     example="((number? n) (* n 2))",
-                    suggestion="Wrap each clause in parentheses: (pattern result)"
+                    suggestion="Wrap each clause in parentheses: (pattern result)",
+                    line=clause.line,
+                    column=clause.column,
+                    source=self.source
                 )
 
             if len(clause.elements) != 2:
@@ -461,7 +553,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Clause {i+1}: {clause}",
                     expected="Each clause needs exactly 2 elements: (pattern result)",
                     example="Correct: ((number? n) (* n 2))\nIncorrect: ((number? n)) or ((number? n) result1 result2)",
-                    suggestion="Each clause: (pattern result-expression)"
+                    suggestion="Each clause: (pattern result-expression)",
+                    line=clause.line,
+                    column=clause.column,
+                    source=self.source
                 )
 
             pattern, result_expr = clause.elements
@@ -470,7 +565,7 @@ class AIFPLSemanticAnalyzer:
             self._analyze_match_pattern(pattern, i + 1)
 
             # Analyze the result expression
-            self.analyze(result_expr)
+            self.analyze(result_expr, self.source)
 
         return expr
 
@@ -511,7 +606,10 @@ class AIFPLSemanticAnalyzer:
                         received=f"Variable in type pattern: {var_pattern}",
                         expected="Symbol (variable name)",
                         example="(number? x) not (number? 42)",
-                        suggestion="Use unquoted variable names in type patterns"
+                        suggestion="Use unquoted variable names in type patterns",
+                        line=var_pattern.line,
+                        column=var_pattern.column,
+                        source=self.source
                     )
                 return
 
@@ -521,7 +619,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Type pattern: ({type_pred} {var_pattern})",
                 expected="Valid type predicate like number?, string?, list?, etc.",
                 example="(number? x) or (string? s)",
-                suggestion="Use a valid type predicate ending with ?"
+                suggestion="Use a valid type predicate ending with ?",
+                line=pattern.line,
+                column=pattern.column,
+                source=self.source
             )
 
         # Check for malformed type patterns (wrong arity)
@@ -543,7 +644,10 @@ class AIFPLSemanticAnalyzer:
                         received=f"Type pattern: ({type_pred}) - missing variable",
                         expected="Type pattern with variable: (type? var)",
                         example="(number? x) not (number?)",
-                        suggestion="Add a variable name after the type predicate"
+                        suggestion="Add a variable name after the type predicate",
+                        line=pattern.line,
+                        column=pattern.column,
+                        source=self.source
                     )
 
                 raise AIFPLEvalError(
@@ -551,7 +655,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Type pattern: {pattern} - too many variables",
                     expected="Type pattern with one variable: (type? var)",
                     example="(number? x) not (number? x y)",
-                    suggestion="Use only one variable in type patterns"
+                    suggestion="Use only one variable in type patterns",
+                    line=pattern.line,
+                    column=pattern.column,
+                    source=self.source
                 )
 
         # Check for cons pattern: (head . tail) or (a b . rest)
@@ -567,7 +674,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Pattern: {pattern} - multiple dots",
                 expected="At most one dot in cons pattern",
                 example="(head . tail) or (a b . rest)",
-                suggestion="Use only one dot to separate head from tail"
+                suggestion="Use only one dot to separate head from tail",
+                line=pattern.line,
+                column=pattern.column,
+                source=self.source
             )
 
         # If we have a dot, validate cons pattern structure
@@ -580,7 +690,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Pattern: {pattern} - dot at beginning",
                     expected="Dot must come after at least one element",
                     example="(head . tail) not (. tail)",
-                    suggestion="Put at least one pattern before the dot"
+                    suggestion="Put at least one pattern before the dot",
+                    line=pattern.line,
+                    column=pattern.column,
+                    source=self.source
                 )
 
             if dot_position == len(pattern.elements) - 1:
@@ -589,7 +702,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Pattern: {pattern} - dot at end",
                     expected="Dot must be followed by tail pattern",
                     example="(head . tail) not (head .)",
-                    suggestion="Add a tail pattern after the dot"
+                    suggestion="Add a tail pattern after the dot",
+                    line=pattern.line,
+                    column=pattern.column,
+                    source=self.source
                 )
 
             if dot_position != len(pattern.elements) - 2:
@@ -598,7 +714,10 @@ class AIFPLSemanticAnalyzer:
                     received=f"Pattern: {pattern} - multiple elements after dot",
                     expected="Exactly one tail pattern after dot",
                     example="(a b . rest) not (a . b c)",
-                    suggestion="Use only one pattern after the dot for the tail"
+                    suggestion="Use only one pattern after the dot for the tail",
+                    line=pattern.line,
+                    column=pattern.column,
+                    source=self.source
                 )
 
             # Recursively validate head patterns
@@ -621,7 +740,7 @@ class AIFPLSemanticAnalyzer:
         # 'and' can have any number of arguments (including zero)
         # Just recursively analyze all arguments
         for arg in expr.elements[1:]:
-            self.analyze(arg)
+            self.analyze(arg, self.source)
 
         return expr
 
@@ -630,7 +749,7 @@ class AIFPLSemanticAnalyzer:
         # 'or' can have any number of arguments (including zero)
         # Just recursively analyze all arguments
         for arg in expr.elements[1:]:
-            self.analyze(arg)
+            self.analyze(arg, self.source)
 
         return expr
 
@@ -642,7 +761,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
                 expected="Exactly 1 argument: (import \"module-name\")",
                 example='(import "calendar") or (import "lib/validation")',
-                suggestion="Import needs exactly one module name as a string"
+                suggestion="Import needs exactly one module name as a string",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
             )
 
         _, module_name_expr = expr.elements
@@ -653,7 +775,10 @@ class AIFPLSemanticAnalyzer:
                 received=f"Module name: {module_name_expr.type_name()}",
                 expected="String literal with module name",
                 example='(import "calendar") not (import calendar)',
-                suggestion="Module names must be string literals in double quotes"
+                suggestion="Module names must be string literals in double quotes",
+                line=module_name_expr.line,
+                column=module_name_expr.column,
+                source=self.source
             )
 
         # Validate module name is not empty
@@ -661,7 +786,10 @@ class AIFPLSemanticAnalyzer:
             raise AIFPLEvalError(
                 message="Import module name cannot be empty",
                 example='(import "calendar")',
-                suggestion="Provide a valid module name"
+                suggestion="Provide a valid module name",
+                line=module_name_expr.line,
+                column=module_name_expr.column,
+                source=self.source
             )
 
         return expr
@@ -670,6 +798,6 @@ class AIFPLSemanticAnalyzer:
         """Validate function call by recursively analyzing all subexpressions."""
         # Recursively analyze all elements (function and arguments)
         for elem in expr.elements:
-            self.analyze(elem)
+            self.analyze(elem, self.source)
 
         return expr

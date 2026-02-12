@@ -7,12 +7,18 @@ from typing import Any, List, Tuple, Callable
 from aifpl.aifpl_error import AIFPLEvalError
 
 
+@dataclass(frozen=True)
 class AIFPLValue(ABC):
     """
     Abstract base class for all AIFPL values.
 
     All AIFPL values are immutable.
+    
+    All values can optionally store source location metadata (line and column).
+    This is used for error reporting to show where in the source code a value originated.
     """
+    line: int | None = field(default=None, kw_only=True)
+    column: int | None = field(default=None, kw_only=True)
 
     @abstractmethod
     def to_python(self) -> Any:

@@ -73,7 +73,7 @@ class AIFPLCompiler:
         """
         tokens = self.lexer.lex(source)
         ast = self.parser.parse(tokens, source)
-        checked_ast = self.semantic_analyzer.analyze(ast)
+        checked_ast = self.semantic_analyzer.analyze(ast, source)
         resolved_ast = self.module_resolver.resolve(checked_ast)
         return resolved_ast
 
