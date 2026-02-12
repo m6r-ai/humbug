@@ -11,6 +11,8 @@ New features:
 - Added support for complex number literals.
 - Signficantly improved the error reporting for AIFPL tokenization and parsing errors.
 - Added an `import` special form to AIFPL to support composing software into modules.
+- Added a pretty printer for AIFPL.
+- Added GLM-5 model, but retired GLM-4.6 models.
 
 Bug fixes:
 

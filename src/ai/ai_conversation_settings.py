@@ -235,6 +235,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "glm-5 (Ollama)": AIModel(
+            name="glm-5:cloud",
+            provider="ollama",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "glm-5 (thinking) (Ollama)": AIModel(
+            name="glm-5:cloud",
+            provider="ollama",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "glm-4.7 (Ollama)": AIModel(
             name="glm-4.7:cloud",
             provider="ollama",
@@ -246,24 +264,6 @@ class AIConversationSettings:
         ),
         "glm-4.7 (thinking) (Ollama)": AIModel(
             name="glm-4.7:cloud",
-            provider="ollama",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.6 (Ollama)": AIModel(
-            name="glm-4.6:cloud",
-            provider="ollama",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.6 (thinking) (Ollama)": AIModel(
-            name="glm-4.6:cloud",
             provider="ollama",
             context_window=200000,
             max_output_tokens=32768,
@@ -594,6 +594,24 @@ class AIConversationSettings:
         ),
 
         # Z.ai models
+        "glm-5 (Z.ai)": AIModel(
+            name="glm-5",
+            provider="zai",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "glm-5 (thinking) (Z.ai)": AIModel(
+            name="glm-5",
+            provider="zai",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "glm-4.7 (Z.ai)": AIModel(
             name="glm-4.7",
             provider="zai",
@@ -605,24 +623,6 @@ class AIConversationSettings:
         ),
         "glm-4.7 (thinking) (Z.ai)": AIModel(
             name="glm-4.7",
-            provider="zai",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.6 (Z.ai)": AIModel(
-            name="glm-4.6",
-            provider="zai",
-            context_window=200000,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.6 (thinking) (Z.ai)": AIModel(
-            name="glm-4.6",
             provider="zai",
             context_window=200000,
             max_output_tokens=32768,
@@ -659,24 +659,6 @@ class AIConversationSettings:
         ),
         "glm-4.5-airx": AIModel(
             name="glm-4.5-airx",
-            provider="zai",
-            context_window=128000,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.5-flash": AIModel(
-            name="glm-4.5-flash",
-            provider="zai",
-            context_window=128000,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.5-flash (thinking)": AIModel(
-            name="glm-4.5-flash",
             provider="zai",
             context_window=128000,
             max_output_tokens=8192,
@@ -880,7 +862,7 @@ class AIConversationSettings:
             return "gemini-2.5-flash"
 
         if "anthropic" in ai_backends:
-            return "claude-3-5-haiku-20241022"
+            return "claude-haiku-4-5-20251001"
 
         if "deepseek" in ai_backends:
             return "deepseek-chat"
@@ -898,7 +880,7 @@ class AIConversationSettings:
             return "grok-4-0709"
 
         if "zai" in ai_backends:
-            return "glm-4.5-flash"
+            return "glm-4.7 (Z.ai)"
 
         # Shouldn't happen as we require at least one backend
         return "gemini-2.5-flash"
