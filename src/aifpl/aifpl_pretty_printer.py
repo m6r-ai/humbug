@@ -260,12 +260,19 @@ class FormatPlanner:
             # Check if this is a special form
             elements_on_first_line = 1  # Default
             is_special_form = False
+
             if lst.elements:
                 first_elem = lst.elements[0]
                 if isinstance(first_elem, ASTAtom):
                     form_name = first_elem.value
-                    elements_on_first_line = SPECIAL_FORM_RULES.get(form_name, 1)
                     is_special_form = form_name in SPECIAL_FORM_RULES
+                    if is_special_form:
+                        elements_on_first_line = SPECIAL_FORM_RULES[form_name]
+
+                    else:
+                        # Regular function calls: use traditional Lisp alignment
+                        # (function name + first argument on same line)
+                        elements_on_first_line = 2
 
             self.decisions[id(lst)] = FormatDecision(FormatStyle.MULTILINE, column, elements_on_first_line)
 
@@ -273,12 +280,19 @@ class FormatPlanner:
             child_atom_col = column + 1  # After the '('
 
             # For special forms, indent subsequent elements by indent_size
-            # For regular lists, align subsequent elements with first element position
+            # For regular lists, align subsequent elements with first argument position
             if is_special_form:
                 subsequent_col = column + self.options.indent_size
-
             else:
-                subsequent_col = column + 1  # Align with first element
+                # For traditional Lisp alignment, subsequent arguments align with first argument
+                # First argument position = column + '(' + function_name + ' '
+                # We need to calculate function name length
+                if lst.elements and isinstance(lst.elements[0], ASTAtom):
+                    func_name_len = len(lst.elements[0].value)
+                    subsequent_col = column + 1 + func_name_len + 1
+
+                else:
+                    subsequent_col = column + 1
 
             elements_on_current_line = 0
 
@@ -288,7 +302,15 @@ class FormatPlanner:
 
                 if elements_on_current_line < elements_on_first_line:
                     # This element stays on the first line
-                    self._plan_node(elem, child_atom_col)
+                    # For the first element, use child_atom_col
+                    # For subsequent elements on the first line, use subsequent_col
+                    # This better approximates where they'll actually be rendered
+                    if elements_on_current_line == 0:
+                        self._plan_node(elem, child_atom_col)
+
+                    else:
+                        self._plan_node(elem, subsequent_col)
+
                     elements_on_current_line += 1
 
                 else:
@@ -480,12 +502,19 @@ class Renderer:
                 is_special_form = first_elem.value in SPECIAL_FORM_RULES
 
         # For special forms, indent subsequent elements by indent_size
-        # For regular lists, align subsequent elements with first element position
+        # For regular lists, align subsequent elements with first argument position
         if is_special_form:
             subsequent_col = lparen_col + self.options.indent_size
-
         else:
-            subsequent_col = lparen_col + 1  # Align with first element
+            # For traditional Lisp alignment, subsequent arguments align with first argument
+            # First argument position = column + '(' + function_name + ' '
+            # We need to calculate function name length
+            if lst.elements and isinstance(lst.elements[0], ASTAtom):
+                func_name_len = len(lst.elements[0].value)
+                subsequent_col = lparen_col + 1 + func_name_len + 1
+            else:
+                subsequent_col = lparen_col + 1
+
 
         parts = ['(']
         elements_on_current_line = 0
