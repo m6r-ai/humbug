@@ -1,6 +1,6 @@
 """Multi-pass AIFPL pretty printer with clean separation of concerns."""
 
-from typing import List, Optional, Union
+from typing import List, Union
 from dataclasses import dataclass
 from enum import Enum
 
@@ -105,7 +105,7 @@ class TreeBuilder:
 
     def build(self) -> List[ASTNode]:
         """Build list of top-level expressions."""
-        result = []
+        result: List[ASTNode] = []
         last_code_line = -1  # Track the line of the last code element
 
         while self.pos < len(self.tokens):
@@ -114,9 +114,9 @@ class TreeBuilder:
             if token.type == AIFPLTokenType.COMMENT:
                 # Check if this is an EOL comment at top level
                 is_eol = bool(token.line == last_code_line)
-                node = ASTComment(token.value, token.line, is_eol)
+                comment_node = ASTComment(token.value, token.line, is_eol)
                 self.pos += 1
-                result.append(node)
+                result.append(comment_node)
 
             else:
                 node = self._parse_expr()
@@ -126,7 +126,7 @@ class TreeBuilder:
 
         return result
 
-    def _parse_expr(self) -> Optional[ASTNode]:
+    def _parse_expr(self) -> ASTNode | None:
         """Parse a single expression."""
         if self.pos >= len(self.tokens):
             return None
@@ -241,86 +241,97 @@ class FormatPlanner:
             if node.expr:
                 self._plan_node(node.expr, column + 1)  # +1 for the '
 
+    def _get_first_line_element_count(self, lst: ASTList) -> tuple[int, bool]:
+        """
+        Determine how many elements should stay on the first line.
+
+        Returns:
+            (elements_on_first_line, is_special_form)
+        """
+        if not lst.elements:
+            return (1, False)
+
+        first_elem = lst.elements[0]
+        if not isinstance(first_elem, ASTAtom):
+            return (1, False)
+
+        form_name = first_elem.value
+        is_special_form = form_name in SPECIAL_FORM_RULES
+
+        if is_special_form:
+            return (SPECIAL_FORM_RULES[form_name], True)
+
+        # Regular function calls: use traditional Lisp alignment
+        # (function name + first argument on same line)
+        return (2, False)
+
+    def _calculate_subsequent_column(self, lst: ASTList, column: int, is_special_form: bool) -> int:
+        """
+        Calculate the column for elements after the first line.
+
+        For special forms: column + indent_size
+        For regular lists: align with first argument position
+        """
+        if is_special_form:
+            return column + self.options.indent_size
+
+        # For traditional Lisp alignment, subsequent arguments align with first argument
+        # First argument position = column + '(' + function_name + ' '
+        if lst.elements and isinstance(lst.elements[0], ASTAtom):
+            func_name_len = len(lst.elements[0].value)
+            return column + 1 + func_name_len + 1
+
+        return column + 1
+
+    def _plan_compact_list(self, lst: ASTList, column: int) -> None:
+        """Plan a list that will be rendered compactly."""
+        self.decisions[id(lst)] = FormatDecision(FormatStyle.COMPACT, column)
+
+        # Still need to plan nested lists in case they appear in compact mode
+        for elem in lst.elements:
+            if isinstance(elem, (ASTList, ASTQuote)):
+                self._plan_node(elem, 0)  # Column doesn't matter for compact
+
+    def _plan_multiline_list(self, lst: ASTList, column: int) -> None:
+        """Plan a list that will be rendered in multiline format."""
+        # Determine formatting parameters
+        elements_on_first_line, is_special_form = self._get_first_line_element_count(lst)
+        subsequent_col = self._calculate_subsequent_column(lst, column, is_special_form)
+
+        self.decisions[id(lst)] = FormatDecision(FormatStyle.MULTILINE, column, elements_on_first_line)
+
+        # Plan children
+        child_atom_col = column + 1  # After the '('
+        elements_on_current_line = 0
+
+        for elem in lst.elements:
+            if isinstance(elem, ASTComment):
+                continue  # Comments handled during render
+
+            if elements_on_current_line < elements_on_first_line:
+                # This element stays on the first line
+                # For the first element, use child_atom_col
+                # For subsequent elements on the first line, use subsequent_col
+                # This better approximates where they'll actually be rendered
+                plan_col = child_atom_col if elements_on_current_line == 0 else subsequent_col
+                self._plan_node(elem, plan_col)
+                elements_on_current_line += 1
+
+            else:
+                # Subsequent elements get indented
+                self._plan_node(elem, subsequent_col)
+
     def _plan_list(self, lst: ASTList, column: int) -> None:
         """Plan formatting for a list."""
-        # Try compact first
+        # Try a compact format first
         compact_str = self._try_compact(lst)
         if compact_str and len(compact_str) <= self.options.compact_threshold:
-            # Use compact
-            self.decisions[id(lst)] = FormatDecision(FormatStyle.COMPACT, column)
-            # Still need to plan nested lists in case they appear in compact mode
-            for elem in lst.elements:
-                # Plan nested lists and quotes (which may contain lists)
-                if isinstance(elem, (ASTList, ASTQuote)):
-                    self._plan_node(elem, 0)  # Column doesn't matter for compact
+            self._plan_compact_list(lst, column)
+            return
 
-        else:
-            # Use multiline
+        self._plan_multiline_list(lst, column)
 
-            # Check if this is a special form
-            elements_on_first_line = 1  # Default
-            is_special_form = False
-
-            if lst.elements:
-                first_elem = lst.elements[0]
-                if isinstance(first_elem, ASTAtom):
-                    form_name = first_elem.value
-                    is_special_form = form_name in SPECIAL_FORM_RULES
-                    if is_special_form:
-                        elements_on_first_line = SPECIAL_FORM_RULES[form_name]
-
-                    else:
-                        # Regular function calls: use traditional Lisp alignment
-                        # (function name + first argument on same line)
-                        elements_on_first_line = 2
-
-            self.decisions[id(lst)] = FormatDecision(FormatStyle.MULTILINE, column, elements_on_first_line)
-
-            # Plan children - they'll be indented
-            child_atom_col = column + 1  # After the '('
-
-            # For special forms, indent subsequent elements by indent_size
-            # For regular lists, align subsequent elements with first argument position
-            if is_special_form:
-                subsequent_col = column + self.options.indent_size
-            else:
-                # For traditional Lisp alignment, subsequent arguments align with first argument
-                # First argument position = column + '(' + function_name + ' '
-                # We need to calculate function name length
-                if lst.elements and isinstance(lst.elements[0], ASTAtom):
-                    func_name_len = len(lst.elements[0].value)
-                    subsequent_col = column + 1 + func_name_len + 1
-
-                else:
-                    subsequent_col = column + 1
-
-            elements_on_current_line = 0
-
-            for elem in lst.elements:
-                if isinstance(elem, ASTComment):
-                    continue  # Comments handled during render
-
-                if elements_on_current_line < elements_on_first_line:
-                    # This element stays on the first line
-                    # For the first element, use child_atom_col
-                    # For subsequent elements on the first line, use subsequent_col
-                    # This better approximates where they'll actually be rendered
-                    if elements_on_current_line == 0:
-                        self._plan_node(elem, child_atom_col)
-
-                    else:
-                        self._plan_node(elem, subsequent_col)
-
-                    elements_on_current_line += 1
-
-                else:
-                    # Subsequent elements get indented
-                    self._plan_node(elem, subsequent_col)
-
-            # Note: We don't track exact column positions for elements on first line,
-            # just plan them at child_atom_col. Renderer will space them properly.
-
-    def _try_compact(self, lst: ASTList) -> Optional[str]:
+    def _try_compact(self, lst: ASTList) -> str | None:
         """Try to render list compactly, return None if not possible."""
         # Can't be compact if it has comments
         if any(isinstance(elem, ASTComment) for elem in lst.elements):
@@ -352,7 +363,7 @@ class FormatPlanner:
         parts.append(')')
         return ''.join(parts)
 
-    def _try_compact_expr(self, node: ASTNode) -> Optional[str]:
+    def _try_compact_expr(self, node: ASTNode) -> str | None:
         """Try to render any expression compactly."""
         if isinstance(node, ASTAtom):
             return node.value
@@ -608,7 +619,7 @@ class Renderer:
 class AIFPLPrettyPrinter:
     """Main pretty printer using multi-pass approach."""
 
-    def __init__(self, options: Optional[FormatOptions] = None):
+    def __init__(self, options: FormatOptions | None = None):
         self.options = options or FormatOptions()
 
     def format(self, source_code: str) -> str:
