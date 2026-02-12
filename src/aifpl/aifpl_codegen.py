@@ -3,7 +3,7 @@ AIFPL code generator - generates bytecode from IR.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List, Dict, Any
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
 from aifpl.aifpl_ir import (
@@ -11,7 +11,7 @@ from aifpl.aifpl_ir import (
     AIFPLIRQuote, AIFPLIRError, AIFPLIRLet, AIFPLIRLetrec, AIFPLIRLambda, AIFPLIRCall,
     AIFPLIREmptyList, AIFPLIRReturn, AIFPLIRTrace
 )
-from aifpl.aifpl_value import AIFPLValue
+from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLBoolean, AIFPLString
 
 
 @dataclass
@@ -25,19 +25,34 @@ class AIFPLCodeGenContext:
     instructions: List[Instruction] = field(default_factory=list)
     constants: List[AIFPLValue] = field(default_factory=list)
     names: List[str] = field(default_factory=list)
-    constant_map: Dict[AIFPLValue, int] = field(default_factory=dict)
+    constant_map: Dict[tuple, int] = field(default_factory=dict)  # Key is (type, value)
     name_map: Dict[str, int] = field(default_factory=dict)
     code_objects: List[CodeObject] = field(default_factory=list)
     max_locals: int = 0
 
     def add_constant(self, value: AIFPLValue) -> int:
-        """Add constant to pool and return its index."""
-        if value in self.constant_map:
-            return self.constant_map[value]
+        """
+        Add constant to pool and return its index.
+
+        Uses (type_name, python_value) as key to ensure 1 and 1.0 are treated as different constants,
+        since AIFPLInteger(1) == AIFPLFloat(1.0) due to cross-type numeric equality.
+        """
+        # For numeric types, booleans, and strings that have cross-type equality,
+        # use (type, value) as key to prevent incorrect deduplication
+        if isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLBoolean, AIFPLString)):
+            key: Any = (type(value).__name__, value.value)
+
+        else:
+            # For other types (lists, alists, functions, symbols), use the value itself as key
+            # These types don't have problematic cross-type equality
+            key = value
+
+        if key in self.constant_map:
+            return self.constant_map[key]
 
         index = len(self.constants)
         self.constants.append(value)
-        self.constant_map[value] = index
+        self.constant_map[key] = index
         return index
 
     def add_name(self, name: str) -> int:

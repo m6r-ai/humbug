@@ -153,6 +153,16 @@ class AIFPLString(AIFPLValue):
         escaped_content = self._escape_string(self.value)
         return f'"{escaped_content}"'
 
+    def __eq__(self, other: Any) -> bool:
+        """Compare string values, ignoring metadata (line, column)."""
+        if isinstance(other, AIFPLString):
+            return self.value == other.value
+        return False
+
+    def __hash__(self) -> int:
+        """Hash based on value for use in sets/dicts."""
+        return hash(self.value)
+
 
 @dataclass(frozen=True)
 class AIFPLBoolean(AIFPLValue):
@@ -167,6 +177,16 @@ class AIFPLBoolean(AIFPLValue):
 
     def describe(self) -> str:
         return "#t" if self.value else "#f"
+
+    def __eq__(self, other: Any) -> bool:
+        """Compare boolean values, ignoring metadata (line, column)."""
+        if isinstance(other, AIFPLBoolean):
+            return self.value == other.value
+        return False
+
+    def __hash__(self) -> int:
+        """Hash based on value for use in sets/dicts."""
+        return hash(self.value)
 
 
 @dataclass(frozen=True)

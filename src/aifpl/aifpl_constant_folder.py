@@ -13,7 +13,7 @@ import cmath
 from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLBoolean, AIFPLSymbol, AIFPLList
+    AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLString, AIFPLAList
 )
 
 
@@ -43,7 +43,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'round', 'floor', 'ceil',
         'real', 'imag', 'complex',
         'bit-or', 'bit-and', 'bit-xor', 'bit-not',
-        'bit-shift-left', 'bit-shift-right'
+        'bit-shift-left', 'bit-shift-right',
+        'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'string=?', 'list=?', 'alist=?'
     }
 
     def __init__(self) -> None:
@@ -102,6 +103,16 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'bit-not': self._fold_bit_not,
             'bit-shift-left': self._fold_bit_shift_left,
             'bit-shift-right': self._fold_bit_shift_right,
+
+            # Strict type-specific equality predicates
+            'number=?': self._fold_number_eq,
+            'integer=?': self._fold_integer_eq,
+            'float=?': self._fold_float_eq,
+            'complex=?': self._fold_complex_eq,
+            'boolean=?': self._fold_boolean_eq,
+            'string=?': self._fold_string_eq,
+            'list=?': self._fold_list_eq,
+            'alist=?': self._fold_alist_eq,
         }
 
         # Build jump table for special form optimization.  Note we don't include match here because it
@@ -934,6 +945,104 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         assert isinstance(arg0, AIFPLInteger) and isinstance(arg1, AIFPLInteger)
         result = arg0.value >> arg1.value
         return AIFPLInteger(result)
+
+    # Strict type-specific equality predicates
+    def _fold_number_eq(self, args: List[AIFPLValue]) -> AIFPLValue | None:
+        """Fold number=?: all args must be numbers, allows cross-type comparison."""
+        if len(args) < 2:
+            return None
+
+        # Check all are numbers
+        if not all(isinstance(arg, (AIFPLInteger, AIFPLFloat, AIFPLComplex)) for arg in args):
+            return None  # Not all numbers, can't fold (will error at runtime)
+
+        # Compare using Python equality (which allows cross-type)
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_integer_eq(self, args: List[AIFPLValue]) -> AIFPLValue | None:
+        """Fold integer=?: all args must be integers."""
+        if len(args) < 2:
+            return None
+
+        # Check all are integers - if not, can't fold (will error at runtime)
+        if not all(isinstance(arg, AIFPLInteger) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_float_eq(self, args: List[AIFPLValue]) -> AIFPLValue | None:
+        """Fold float=?: all args must be floats."""
+        if len(args) < 2:
+            return None
+
+        # Check all are floats - if not, can't fold (will error at runtime)
+        if not all(isinstance(arg, AIFPLFloat) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_complex_eq(self, args: List[AIFPLValue]) -> AIFPLValue | None:
+        """Fold complex=?: all args must be complex."""
+        if len(args) < 2:
+            return None
+
+        # Check all are complex - if not, can't fold (will error at runtime)
+        if not all(isinstance(arg, AIFPLComplex) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_boolean_eq(self, args: List[AIFPLValue]) -> AIFPLValue | None:
+        """Fold boolean=?: all args must be booleans."""
+        if len(args) < 2:
+            return None
+
+        # Check all are booleans - if not, can't fold (will error at runtime)
+        if not all(isinstance(arg, AIFPLBoolean) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_string_eq(self, args: List[AIFPLValue]) -> AIFPLValue | None:
+        """Fold string=?: all args must be strings."""
+        if len(args) < 2:
+            return None
+
+        # Check all are strings - if not, can't fold (will error at runtime)
+        if not all(isinstance(arg, AIFPLString) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_list_eq(self, args: List[AIFPLValue]) -> AIFPLValue | None:
+        """Fold list=?: all args must be lists."""
+        if len(args) < 2:
+            return None
+
+        # Check all are lists - if not, can't fold (will error at runtime)
+        if not all(isinstance(arg, AIFPLList) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_alist_eq(self, args: List[AIFPLValue]) -> AIFPLValue | None:
+        """Fold alist=?: all args must be alists."""
+        if len(args) < 2:
+            return None
+
+        # Check all are alists - if not, can't fold (will error at runtime)
+        if not all(isinstance(arg, AIFPLAList) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
 
     def _to_python_number(self, value: AIFPLValue) -> int | float | complex:
         """Convert AIFPL numeric value to Python number."""

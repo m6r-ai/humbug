@@ -33,6 +33,15 @@ class AIFPLCollectionsFunctions:
             'string-suffix?': self._builtin_string_suffix_p,
             'string=?': self._builtin_string_eq_p,
 
+            # Strict type-specific equality predicates
+            'number=?': self._builtin_number_eq_p,
+            'integer=?': self._builtin_integer_eq_p,
+            'float=?': self._builtin_float_eq_p,
+            'complex=?': self._builtin_complex_eq_p,
+            'boolean=?': self._builtin_boolean_eq_p,
+            'list=?': self._builtin_list_eq_p,
+            'alist=?': self._builtin_alist_eq_p,
+
             # List construction and manipulation functions
             'list': self._builtin_list,
             'cons': self._builtin_cons,
@@ -253,6 +262,113 @@ class AIFPLCollectionsFunctions:
         string_args = [self._ensure_string(arg, "string=?") for arg in args]
         first_val = string_args[0].value
         return AIFPLBoolean(all(arg.value == first_val for arg in string_args[1:]))
+
+    # Strict type-specific equality predicates
+    def _builtin_number_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement number=? function - strict numeric equality allowing cross-type comparison."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"number=? requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are numbers (any numeric type)
+        for i, arg in enumerate(args):
+            if not isinstance(arg, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+                raise AIFPLEvalError(
+                    f"Function 'number=?' requires numeric arguments, got {arg.type_name()} at position {i+1}"
+                )
+
+        # Use the same equality logic as =, but with type checking
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _builtin_integer_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement integer=? function - strict integer-only equality."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"integer=? requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are integers
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLInteger):
+                raise AIFPLEvalError(
+                    f"Function 'integer=?' requires integer arguments, got {arg.type_name()} at position {i+1}"
+                )
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _builtin_float_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement float=? function - strict float-only equality."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"float=? requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are floats
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLFloat):
+                raise AIFPLEvalError(
+                    f"Function 'float=?' requires float arguments, got {arg.type_name()} at position {i+1}"
+                )
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _builtin_complex_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement complex=? function - strict complex-only equality."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"complex=? requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are complex
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLComplex):
+                raise AIFPLEvalError(
+                    f"Function 'complex=?' requires complex arguments, got {arg.type_name()} at position {i+1}"
+                )
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _builtin_boolean_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement boolean=? function - strict boolean-only equality."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"boolean=? requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are booleans
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLBoolean):
+                raise AIFPLEvalError(
+                    f"Function 'boolean=?' requires boolean arguments, got {arg.type_name()} at position {i+1}"
+                )
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _builtin_list_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement list=? function - strict list-only equality."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"list=? requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are lists
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLList):
+                raise AIFPLEvalError(
+                    f"Function 'list=?' requires list arguments, got {arg.type_name()} at position {i+1}"
+                )
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
+
+    def _builtin_alist_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
+        """Implement alist=? function - strict alist-only equality."""
+        if len(args) < 2:
+            raise AIFPLEvalError(f"alist=? requires at least 2 arguments, got {len(args)}")
+
+        # Ensure all arguments are alists
+        for i, arg in enumerate(args):
+            if not isinstance(arg, AIFPLAList):
+                raise AIFPLEvalError(
+                    f"Function 'alist=?' requires alist arguments, got {arg.type_name()} at position {i+1}"
+                )
+
+        first = args[0]
+        return AIFPLBoolean(all(first == arg for arg in args[1:]))
 
     # List functions
     def _builtin_list(self, args: List[AIFPLValue]) -> AIFPLValue:
