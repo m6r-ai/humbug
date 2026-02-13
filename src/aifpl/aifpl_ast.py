@@ -20,7 +20,7 @@ from typing import Any, List, Tuple
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLString, AIFPLBoolean, AIFPLList, AIFPLAList
+    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLAList
 )
 
 
@@ -31,7 +31,7 @@ class AIFPLASTNode(ABC):
 
     All AST nodes are immutable and carry source location metadata
     for error reporting and debugging.
-    
+
     Source location fields are keyword-only to preserve positional argument
     compatibility with existing code.
     """
@@ -39,11 +39,11 @@ class AIFPLASTNode(ABC):
     line: int | None = field(default=None, kw_only=True)
     column: int | None = field(default=None, kw_only=True)
     source_file: str = field(default="", kw_only=True)
-    
+
     @abstractmethod
     def to_runtime_value(self) -> AIFPLValue:
         """Convert AST node to runtime value (strips metadata)."""
-    
+
     @abstractmethod
     def to_python(self) -> Any:
         """Convert to Python value for operations."""
@@ -165,16 +165,22 @@ class AIFPLASTString(AIFPLASTNode):
         for char in s:
             if char == '"':
                 result.append('\\"')
+
             elif char == '\\':
                 result.append('\\\\')
+
             elif char == '\n':
                 result.append('\\n')
+
             elif char == '\t':
                 result.append('\\t')
+
             elif char == '\r':
                 result.append('\\r')
+
             elif ord(char) < 32:  # Other control characters
                 result.append(f'\\u{ord(char):04x}')
+
             else:
                 result.append(char)  # Keep Unicode as-is
         return ''.join(result)
@@ -229,8 +235,13 @@ class AIFPLASTSymbol(AIFPLASTNode):
     name: str
 
     def to_runtime_value(self) -> AIFPLValue:
-        """Symbols don't have a direct runtime representation - they're resolved at compile time."""
-        raise NotImplementedError("Symbols should be resolved during compilation, not converted to runtime values")
+        """
+        Convert to runtime symbol (for quoted data).
+
+        Note: This should only be called in quoted contexts where symbols are data.
+        In normal code, symbols are resolved to variables at compile time.
+        """
+        return AIFPLSymbol(self.name)
 
     def to_python(self) -> str:
         """Symbols convert to their name string."""
@@ -270,9 +281,11 @@ class AIFPLASTList(AIFPLASTNode):
         # Format list: (element1 element2 ...)
         if self.is_empty():
             return "()"
+
         formatted_elements = []
         for element in self.elements:
             formatted_elements.append(element.describe())
+
         return f"({' '.join(formatted_elements)})"
 
     def length(self) -> int:
@@ -287,18 +300,21 @@ class AIFPLASTList(AIFPLASTNode):
         """Get the first element (raises IndexError if empty)."""
         if not self.elements:
             raise IndexError("Cannot get first element of empty list")
+
         return self.elements[0]
 
     def rest(self) -> 'AIFPLASTList':
         """Get all elements except the first (raises IndexError if empty)."""
         if not self.elements:
             raise IndexError("Cannot get rest of empty list")
+
         return AIFPLASTList(self.elements[1:])
 
     def last(self) -> AIFPLASTNode:
         """Get the last element (raises IndexError if empty)."""
         if not self.elements:
             raise IndexError("Cannot get last element of empty list")
+
         return self.elements[-1]
 
     def cons(self, element: AIFPLASTNode) -> 'AIFPLASTList':
@@ -331,6 +347,7 @@ class AIFPLASTList(AIFPLASTNode):
         for i, elem in enumerate(self.elements):
             if elem == value:
                 return i
+
         return None
 
     def take(self, n: int) -> 'AIFPLASTList':
@@ -360,6 +377,7 @@ class AIFPLASTAList(AIFPLASTNode):
         for key, value in self.pairs:
             hashable_key = self._to_hashable_key(key)
             lookup[hashable_key] = (key, value)
+
         object.__setattr__(self, '_lookup', lookup)
 
     def to_runtime_value(self) -> AIFPLAList:
@@ -377,11 +395,15 @@ class AIFPLASTAList(AIFPLASTNode):
             # Use string representation for Python dict keys
             if isinstance(key, AIFPLASTString):
                 py_key = key.value
+
             elif isinstance(key, AIFPLASTSymbol):
                 py_key = key.name
+
             else:
                 py_key = str(key.to_python())
+
             result[py_key] = value.to_python()
+
         return result
 
     def type_name(self) -> str:
@@ -397,6 +419,7 @@ class AIFPLASTAList(AIFPLASTNode):
             formatted_key = key.describe()
             formatted_value = value.describe()
             formatted_pairs.append(f"({formatted_key} {formatted_value})")
+
         pairs_str = ' '.join(formatted_pairs)
         return f"{{{pairs_str}}}"
 
@@ -406,6 +429,7 @@ class AIFPLASTAList(AIFPLASTNode):
         if hashable_key in self._lookup:
             _, value = self._lookup[hashable_key]
             return value
+
         return None
 
     def has_key(self, key: AIFPLASTNode) -> bool:
@@ -425,8 +449,10 @@ class AIFPLASTAList(AIFPLASTNode):
                 found = True
             else:
                 new_pairs.append((k, v))
+
         if not found:
             new_pairs.append((key, value))  # Append new pair
+
         return AIFPLASTAList(tuple(new_pairs))
 
     def remove(self, key: AIFPLASTNode) -> 'AIFPLASTAList':
@@ -453,10 +479,12 @@ class AIFPLASTAList(AIFPLASTNode):
         for k, v in self.pairs:
             hashable_key = self._to_hashable_key(k)
             result_dict[hashable_key] = (k, v)
+
         # Override/add from other
         for k, v in other.pairs:
             hashable_key = self._to_hashable_key(k)
             result_dict[hashable_key] = (k, v)
+
         # Preserve insertion order: self's keys first, then other's new keys
         new_pairs = []
         seen = set()
@@ -465,11 +493,13 @@ class AIFPLASTAList(AIFPLASTNode):
             hashable_key = self._to_hashable_key(k)
             new_pairs.append(result_dict[hashable_key])
             seen.add(hashable_key)
+
         # Add other's keys that weren't in self
         for k, v in other.pairs:
             hashable_key = self._to_hashable_key(k)
             if hashable_key not in seen:
                 new_pairs.append((k, v))
+
         return AIFPLASTAList(tuple(new_pairs))
 
     def length(self) -> int:
@@ -485,12 +515,16 @@ class AIFPLASTAList(AIFPLASTNode):
         """Convert AIFPL key to hashable Python value."""
         if isinstance(key, AIFPLASTString):
             return ('str', key.value)
+
         if isinstance(key, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
             return ('num', key.value)
+
         if isinstance(key, AIFPLASTBoolean):
             return ('bool', key.value)
+
         if isinstance(key, AIFPLASTSymbol):
             return ('sym', key.name)
+
         raise AIFPLEvalError(
             message="AList keys must be strings, numbers, booleans, or symbols",
             received=f"Key type: {key.type_name()}",
