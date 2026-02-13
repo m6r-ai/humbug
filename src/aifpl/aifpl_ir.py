@@ -93,6 +93,7 @@ class AIFPLIRLambda:
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
     parent_refs: List[str] = field(default_factory=list)  # Names of parent frame references (recursive bindings)
     parent_ref_plans: List['AIFPLIRVariable'] = field(default_factory=list)  # Plans for loading parent references
+    source_line: int = 0  # Line number in source where this lambda is defined
 
 
 @dataclass

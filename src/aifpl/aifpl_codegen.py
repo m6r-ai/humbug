@@ -95,6 +95,9 @@ class AIFPLCodeGen:
     without performing any analysis.
     """
 
+    def __init__(self):
+        self.lambda_counter = 0  # Counter for anonymous lambdas
+
     def generate(self, plan: AIFPLIRExpr, name: str = "<module>") -> CodeObject:
         """
         Generate bytecode from a compilation plan.
@@ -354,6 +357,19 @@ class AIFPLCodeGen:
 
         # No automatic RETURN - the body_plan must explicitly include AIFPLIRReturn
 
+        # Generate a descriptive name for the lambda
+        if plan.binding_name:
+            # Use the binding name if available (from let/letrec)
+            lambda_name = plan.binding_name
+
+        else:
+            # Generate a unique name for anonymous lambdas
+            lambda_name = f"<lambda-{self.lambda_counter}>"
+            self.lambda_counter += 1
+
+        # Add parameter info to the name for better debugging
+        lambda_name = f"{lambda_name}({len(plan.params)} params)"
+
         # Create code object for lambda
         lambda_code = CodeObject(
             instructions=lambda_ctx.instructions,
@@ -363,7 +379,9 @@ class AIFPLCodeGen:
             free_vars=plan.free_vars,
             param_count=plan.param_count,
             local_count=lambda_ctx.max_locals,
-            name="<lambda>"
+            name=lambda_name,
+            source_line=plan.source_line,
+            source_file=""  # TODO: pass source file name through if available
         )
 
         # Add to parent's code objects

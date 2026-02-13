@@ -107,6 +107,8 @@ class CodeObject:
     param_count: int = 0  # Number of parameters (for functions)
     local_count: int = 0  # Number of local variables
     name: str = "<module>"  # Name for debugging
+    source_line: int = 0  # Line number in source code where this function is defined
+    source_file: str = ""  # Source file name (if available)
 
     def __repr__(self) -> str:
         """Human-readable representation."""

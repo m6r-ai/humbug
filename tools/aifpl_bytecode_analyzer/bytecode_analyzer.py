@@ -15,10 +15,9 @@ Usage:
 """
 
 import sys
-import os
 import re
 from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple
 from dataclasses import dataclass, field
 import argparse
 import json
@@ -27,8 +26,9 @@ from collections import Counter
 # Add parent directory to path to import aifpl
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+from aifpl import AIFPL
 from aifpl.aifpl_compiler import AIFPLCompiler
-from aifpl.aifpl_bytecode import CodeObject, Opcode
+from aifpl.aifpl_bytecode import CodeObject
 
 
 def split_test_file(content: str) -> List[Tuple[str, str]]:
@@ -160,9 +160,25 @@ class ComparisonResult:
 class BytecodeAnalyzer:
     """Analyzes and compares AIFPL bytecode."""
 
+    def __init__(self, module_path: List[str] | None = None):
+        """
+        Initialize the analyzer with module support.
+        
+        Args:
+            module_path: List of directories to search for modules (default: ["."])
+        """
+        # Create AIFPL instance for module loading
+        if module_path is None:
+            module_path = ["."]
+
+        self.aifpl = AIFPL(module_path=module_path)
+
     def compile_code(self, source: str, optimize: bool = False) -> CodeObject:
         """Compile AIFPL source code to bytecode."""
-        compiler = AIFPLCompiler(optimize=optimize)
+        compiler = AIFPLCompiler(
+            optimize=optimize,
+            module_loader=self.aifpl
+        )
         return compiler.compile(source)
 
     def analyze_code_object(self, code: CodeObject) -> BytecodeStats:
@@ -218,7 +234,7 @@ class BytecodeAnalyzer:
             lines.append(f"{label:^60}")
             lines.append(f"{'='*60}")
 
-        lines.append(f"\nOverall Statistics:")
+        lines.append("\nOverall Statistics:")
         lines.append(f"  Total Instructions:      {stats.total_instructions:>6}")
         lines.append(f"  Constants:               {stats.constant_count:>6}")
         lines.append(f"  Names:                   {stats.name_count:>6}")
@@ -226,7 +242,7 @@ class BytecodeAnalyzer:
         lines.append(f"  Max Locals:              {stats.max_locals:>6}")
         lines.append(f"  Cyclomatic Complexity:   {stats.cyclomatic_complexity:>6}")
 
-        lines.append(f"\nInstruction Breakdown:")
+        lines.append("\nInstruction Breakdown:")
         lines.append(f"  Load Operations:         {stats.load_ops:>6}")
         lines.append(f"  Store Operations:        {stats.store_ops:>6}")
         lines.append(f"  Arithmetic Operations:   {stats.arithmetic_ops:>6}")
@@ -234,7 +250,7 @@ class BytecodeAnalyzer:
         lines.append(f"  Function Operations:     {stats.function_ops:>6}")
 
         if stats.instruction_counts:
-            lines.append(f"\nInstruction Frequency:")
+            lines.append("\nInstruction Frequency:")
             for opcode, count in sorted(stats.instruction_counts.items(), key=lambda x: -x[1]):
                 lines.append(f"  {opcode:<24} {count:>6}")
 
@@ -267,7 +283,7 @@ class BytecodeAnalyzer:
         if result.instruction_reduction > 0:
             lines.append(f"  ✓ Reduced instruction count by {result.instruction_reduction_pct:.1f}%")
         else:
-            lines.append(f"  ✗ No instruction reduction")
+            lines.append("  ✗ No instruction reduction")
 
         if result.constant_reduction > 0:
             lines.append(f"  ✓ Eliminated {result.constant_reduction} constants")
@@ -340,7 +356,13 @@ def main():
 
     args = parser.parse_args()
 
-    analyzer = BytecodeAnalyzer()
+    # Determine module path based on file location
+    module_path = ["."]
+    if args.file:
+        file_dir = str(Path(args.file).parent.absolute())
+        module_path = [file_dir]
+
+    analyzer = BytecodeAnalyzer(module_path=module_path)
 
     # Single expression
     if args.expr:
@@ -363,11 +385,13 @@ def main():
 
     # Single file
     elif args.file:
-        with open(args.file, 'r') as f:
+        with open(args.file, 'r', encoding='utf-8') as f:
             source = f.read()
+
         result = analyzer.compare(source)
         if args.json:
             print(analyzer.generate_json_report(result))
+
         else:
             print(f"\nAnalyzing: {args.file}")
             print(analyzer.format_comparison(result))
@@ -385,7 +409,7 @@ def main():
 
     # Test suite (multiple expressions)
     elif args.test_suite:
-        with open(args.test_suite, 'r') as f:
+        with open(args.test_suite, 'r', encoding='utf-8') as f:
             content = f.read()
 
         sections = split_test_file(content)
@@ -429,10 +453,12 @@ def main():
         results = []
         for file_path in args.batch:
             try:
-                with open(file_path, 'r') as f:
+                with open(file_path, 'r', encoding='utf-8') as f:
                     source = f.read()
+
                 result = analyzer.compare(source)
                 results.append((file_path, result))
+
             except Exception as e:
                 print(f"Error analyzing {file_path}: {e}", file=sys.stderr)
 

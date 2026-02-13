@@ -92,7 +92,7 @@ class AIFPLDesugarer:
             desugared_condition,
             desugared_then,
             desugared_else
-        ))
+        ), line=expr.line, column=expr.column)
 
     def _desugar_let(self, expr: AIFPLList) -> AIFPLValue:
         """Desugar let expression by desugaring its subexpressions."""
@@ -122,7 +122,7 @@ class AIFPLDesugarer:
             let_symbol,
             AIFPLList(tuple(desugared_bindings)),
             desugared_body
-        ))
+        ), line=expr.line, column=expr.column)
 
     def _desugar_let_star(self, expr: AIFPLList) -> AIFPLValue:
         """
@@ -178,7 +178,7 @@ class AIFPLDesugarer:
         # Desugar body
         desugared_body = self.desugar(body)
 
-        return AIFPLList((lambda_symbol, params_list, desugared_body))
+        return AIFPLList((lambda_symbol, params_list, desugared_body), line=expr.line, column=expr.column)
 
     def _desugar_trace(self, expr: AIFPLList) -> AIFPLValue:
         """
@@ -200,7 +200,7 @@ class AIFPLDesugarer:
         for elem in expr.elements[1:]:  # Skip 'trace' symbol
             desugared_elements.append(self.desugar(elem))
 
-        return AIFPLList(tuple(desugared_elements))
+        return AIFPLList(tuple(desugared_elements), line=expr.line, column=expr.column)
 
     def _desugar_call(self, expr: AIFPLList) -> AIFPLValue:
         """Desugar function call by desugaring all elements."""
@@ -208,7 +208,7 @@ class AIFPLDesugarer:
         for elem in expr.elements:
             desugared_elements.append(self.desugar(elem))
 
-        return AIFPLList(tuple(desugared_elements))
+        return AIFPLList(tuple(desugared_elements), line=expr.line, column=expr.column)
 
     def _desugar_match(self, expr: AIFPLList) -> AIFPLValue:
         """

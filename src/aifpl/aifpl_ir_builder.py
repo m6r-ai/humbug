@@ -570,7 +570,8 @@ class AIFPLIRBuilder:
             param_count=len(param_names),
             binding_name=ctx.current_letrec_binding,
             sibling_bindings=ctx.sibling_bindings,
-            max_locals=lambda_ctx.max_locals
+            max_locals=lambda_ctx.max_locals,
+            source_line=expr.line if (hasattr(expr, 'line') and expr.line is not None) else 0
         )
 
     def _analyze_function_call(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRCall:

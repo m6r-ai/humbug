@@ -115,7 +115,7 @@ class AIFPLModuleResolver:
 
         # Recursively resolve imports in all subexpressions
         resolved_elements = tuple(self.resolve(elem) for elem in expr.elements)
-        return AIFPLList(resolved_elements)
+        return AIFPLList(resolved_elements, line=expr.line, column=expr.column)
 
     def _resolve_import(self, expr: AIFPLList) -> AIFPLValue:
         """
