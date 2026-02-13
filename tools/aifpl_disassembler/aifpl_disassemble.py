@@ -131,6 +131,34 @@ def annotate_instruction(instr: Instruction, code: CodeObject, builtin_names: Li
     return annotation
 
 
+def format_instruction(instr: Instruction, index: int) -> str:
+    """Format instruction with appropriate arguments based on opcode."""
+    """Format instruction with natural spacing, pad to align annotations."""
+    # Define which opcodes take 0, 1, or 2 arguments
+    no_arg_opcodes = {
+        Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST,
+        Opcode.RETURN, Opcode.EMIT_TRACE
+    }
+
+    two_arg_opcodes = {
+        Opcode.LOAD_VAR, Opcode.STORE_VAR, Opcode.MAKE_CLOSURE,
+        Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR
+    }
+
+    # Format based on argument count
+    if instr.opcode in no_arg_opcodes:
+        instr_str = f"{index:4}: {instr.opcode.name}"
+
+    elif instr.opcode in two_arg_opcodes:
+        instr_str = f"{index:4}: {instr.opcode.name} {instr.arg1} {instr.arg2}"
+
+    else:  # One-argument opcodes
+        instr_str = f"{index:4}: {instr.opcode.name} {instr.arg1}"
+
+    # Pad to fixed width so annotations align
+    return instr_str.ljust(40)
+
+
 def disassemble_with_nested(code: CodeObject, builtin_names: List[str], depth: int = 0, name: str | None = None) -> List[str]:
     """Recursively disassemble code object and all nested code objects."""
     indent = "  " * depth
@@ -165,7 +193,7 @@ def disassemble_with_nested(code: CodeObject, builtin_names: List[str], depth: i
     output.append(f"{indent}{'-'*70}")
     for i, instr in enumerate(code.instructions):
         annotation = annotate_instruction(instr, code, builtin_names)
-        instr_str = f"{i:6}: {instr.opcode.name:20} {instr.arg1:3} {instr.arg2:3}"
+        instr_str = format_instruction(instr, i)
         if annotation:
             output.append(f"{indent}{instr_str}{annotation}")
         else:
