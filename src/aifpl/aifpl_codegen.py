@@ -185,10 +185,10 @@ class AIFPLCodeGen:
         if plan.var_type == 'local':
             if plan.is_parent_ref:
                 # Load from parent frame (for recursive bindings)
-                ctx.emit(Opcode.LOAD_PARENT_VAR, plan.depth, plan.index)
+                ctx.emit(Opcode.LOAD_PARENT_VAR, plan.index, plan.depth)
 
             else:
-                ctx.emit(Opcode.LOAD_VAR, 0, plan.index)
+                ctx.emit(Opcode.LOAD_VAR, plan.index)
 
         else:  # global
             # For globals, we need to assign the name index during codegen
@@ -311,7 +311,7 @@ class AIFPLCodeGen:
             self._generate_expr(value_plan, ctx)
 
             # Store in local variable
-            ctx.emit(Opcode.STORE_VAR, 0, var_index)
+            ctx.emit(Opcode.STORE_VAR, var_index)
 
             # Update max locals
             ctx.max_locals = max(ctx.max_locals, var_index + 1)
@@ -327,7 +327,7 @@ class AIFPLCodeGen:
             self._generate_expr(value_plan, ctx)
 
             # Store in local variable
-            ctx.emit(Opcode.STORE_VAR, 0, var_index)
+            ctx.emit(Opcode.STORE_VAR, var_index)
 
             # Update max locals
             ctx.max_locals = max(ctx.max_locals, var_index + 1)
@@ -347,7 +347,7 @@ class AIFPLCodeGen:
 
         # Generate function prologue: pop arguments from stack into locals
         for i in range(len(plan.params) - 1, -1, -1):
-            lambda_ctx.emit(Opcode.STORE_VAR, 0, i)
+            lambda_ctx.emit(Opcode.STORE_VAR, i)
 
         # Set max locals from plan
         lambda_ctx.max_locals = plan.max_locals

@@ -338,8 +338,8 @@ class AIFPLVM:
         self,
         _frame: Frame,
         _code: CodeObject,
-        _arg1: int,
-        index: int
+        index: int,
+        _arg2: int  # Unused - LOAD_VAR is logically 1-arg but dispatcher passes 2
     ) -> AIFPLValue | None:
         """LOAD_VAR: Load variable from current frame at index."""
         # Validator guarantees index is in bounds AND variable is initialized
@@ -352,8 +352,8 @@ class AIFPLVM:
         self,
         _frame: Frame,
         _code: CodeObject,
-        _arg1: int,
-        index: int
+        index: int,
+        _arg2: int  # Unused - STORE_VAR is logically 1-arg but dispatcher passes 2
     ) -> AIFPLValue | None:
         """STORE_VAR: Store top of stack to variable in current frame at index."""
         # Validator guarantees index is in bounds and stack has value
@@ -365,8 +365,8 @@ class AIFPLVM:
         self,
         _frame: Frame,
         _code: CodeObject,
-        depth: int,
-        index: int
+        index: int,
+        depth: int
     ) -> AIFPLValue | None:
         """
         LOAD_PARENT_VAR: Load variable from parent frame.
@@ -375,8 +375,8 @@ class AIFPLVM:
         a binding from its parent frame rather than capturing it.
 
         Args:
-            depth - how many parent frames to walk up
             index - variable index in the target parent frame
+            depth - how many parent frames to walk up
         """
         # Validator guarantees depth >= 1
         # Walk up parent frame chain by depth

@@ -210,7 +210,7 @@ class BytecodeValidator:
 
             # Validate variable indices (must be < local_count)
             if opcode in (Opcode.LOAD_VAR, Opcode.STORE_VAR):
-                var_index = instr.arg2
+                var_index = instr.arg1
                 if var_index < 0 or var_index >= code.local_count:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
@@ -221,8 +221,8 @@ class BytecodeValidator:
 
             # Validate LOAD_PARENT_VAR indices
             if opcode == Opcode.LOAD_PARENT_VAR:
-                depth = instr.arg1
-                var_index = instr.arg2
+                var_index = instr.arg1
+                depth = instr.arg2
                 # Depth must be at least 1 (parent frame)
                 if depth < 1:
                     raise ValidationError(
@@ -395,7 +395,7 @@ class BytecodeValidator:
 
             # Check LOAD_VAR - must be initialized
             if opcode == Opcode.LOAD_VAR:
-                var_index = instr.arg2
+                var_index = instr.arg1
                 if var_index not in current_initialized:
                     raise ValidationError(
                         ValidationErrorType.UNINITIALIZED_VARIABLE,
@@ -410,7 +410,7 @@ class BytecodeValidator:
 
             # STORE_VAR marks variable as initialized
             if opcode == Opcode.STORE_VAR:
-                var_index = instr.arg2
+                var_index = instr.arg1
                 new_initialized.add(var_index)
 
             # Get successors

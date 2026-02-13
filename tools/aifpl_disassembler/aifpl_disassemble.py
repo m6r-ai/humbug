@@ -67,10 +67,10 @@ def annotate_instruction(instr: Instruction, code: CodeObject, builtin_names: Li
             annotation = f"  ; Load constant: {const_str}"
 
     elif opcode == Opcode.LOAD_VAR:
-        annotation = f"  ; Load var[{arg2}]"
+        annotation = f"  ; Load var[{arg1}]"
 
     elif opcode == Opcode.STORE_VAR:
-        annotation = f"  ; Store to var[{arg2}]"
+        annotation = f"  ; Store to var[{arg1}]"
 
     elif opcode == Opcode.MAKE_CLOSURE:
         if arg1 < len(code.code_objects):
@@ -121,7 +121,7 @@ def annotate_instruction(instr: Instruction, code: CodeObject, builtin_names: Li
             annotation = f"  ; Load name: {name}"
 
     elif opcode == Opcode.LOAD_PARENT_VAR:
-        annotation = f"  ; Load parent var[{arg2}] from frame {arg1} levels up"
+        annotation = f"  ; Load parent var[{arg1}] from frame {arg2} levels up"
 
     elif opcode == Opcode.RAISE_ERROR:
         if arg1 < len(code.constants):
@@ -141,7 +141,7 @@ def format_instruction(instr: Instruction, index: int) -> str:
     }
 
     two_arg_opcodes = {
-        Opcode.LOAD_VAR, Opcode.STORE_VAR, Opcode.MAKE_CLOSURE,
+        Opcode.MAKE_CLOSURE,
         Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR
     }
 

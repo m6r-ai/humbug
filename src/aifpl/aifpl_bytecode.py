@@ -20,9 +20,9 @@ class Opcode(IntEnum):
     LOAD_EMPTY_LIST = auto() # Push empty list
 
     # Variables (lexically addressed)
-    LOAD_VAR = auto()        # Load variable by position: LOAD_VAR depth index
-    STORE_VAR = auto()       # Store variable by position: STORE_VAR depth index
-    LOAD_PARENT_VAR = auto() # Load variable from parent frame: LOAD_PARENT_VAR depth index
+    LOAD_VAR = auto()        # Load variable by position: LOAD_VAR index
+    STORE_VAR = auto()       # Store variable by position: STORE_VAR index
+    LOAD_PARENT_VAR = auto() # Load variable from parent frame: LOAD_PARENT_VAR index depth
     LOAD_NAME = auto()       # Load by name lookup: LOAD_NAME name_index
 
     # Control flow
@@ -66,7 +66,7 @@ class Instruction:
 
         # Opcodes with two arguments
         two_arg_opcodes = {
-            Opcode.LOAD_VAR, Opcode.STORE_VAR, Opcode.MAKE_CLOSURE,
+            Opcode.MAKE_CLOSURE,
             Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR
         }
 

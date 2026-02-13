@@ -92,7 +92,7 @@ class TestBytecodeValidator:
         """Test that invalid variable index is caught."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_VAR, 0, 5),  # Index 5 but local_count is 2
+                Instruction(Opcode.LOAD_VAR, 5, 0),  # Index 5 but local_count is 2
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -242,8 +242,8 @@ class TestBytecodeValidator:
         # Create a simple lambda
         lambda_code = CodeObject(
             instructions=[
-                Instruction(Opcode.STORE_VAR, 0, 0),     # Store parameter
-                Instruction(Opcode.LOAD_VAR, 0, 0),      # Load parameter
+                Instruction(Opcode.STORE_VAR, 0),     # Store parameter
+                Instruction(Opcode.LOAD_VAR, 0),      # Load parameter
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -414,7 +414,7 @@ class TestBytecodeValidator:
         """Test that using uninitialized variable is caught."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_VAR, 0, 0),  # Load var 0 without storing first
+                Instruction(Opcode.LOAD_VAR, 0),  # Load var 0 without storing first
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -433,8 +433,8 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, 0),   # Push value
-                Instruction(Opcode.STORE_VAR, 0, 0), # Store to var 0
-                Instruction(Opcode.LOAD_VAR, 0, 0),  # Load var 0 - OK
+                Instruction(Opcode.STORE_VAR, 0), # Store to var 0
+                Instruction(Opcode.LOAD_VAR, 0),  # Load var 0 - OK
                 Instruction(Opcode.RETURN),
             ],
             constants=[AIFPLInteger(42)],
@@ -451,8 +451,8 @@ class TestBytecodeValidator:
         # Function with 1 parameter
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.STORE_VAR, 0, 0), # Store parameter (from stack)
-                Instruction(Opcode.LOAD_VAR, 0, 0),  # Load parameter - OK
+                Instruction(Opcode.STORE_VAR, 0), # Store parameter (from stack)
+                Instruction(Opcode.LOAD_VAR, 0),  # Load parameter - OK
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -473,13 +473,13 @@ class TestBytecodeValidator:
                 Instruction(Opcode.JUMP_IF_FALSE, 5),    # 1: jump to else
                 # Then branch
                 Instruction(Opcode.LOAD_CONST, 0),       # 2: push value
-                Instruction(Opcode.STORE_VAR, 0, 0),     # 3: store to var 0
+                Instruction(Opcode.STORE_VAR, 0),     # 3: store to var 0
                 Instruction(Opcode.JUMP, 7),             # 4: jump to merge
                 # Else branch
                 Instruction(Opcode.LOAD_CONST, 0),       # 5: push value
-                Instruction(Opcode.STORE_VAR, 0, 0),     # 6: store to var 0
+                Instruction(Opcode.STORE_VAR, 0),     # 6: store to var 0
                 # Merge point
-                Instruction(Opcode.LOAD_VAR, 0, 0),      # 7: load var 0 - OK (both branches stored)
+                Instruction(Opcode.LOAD_VAR, 0),      # 7: load var 0 - OK (both branches stored)
                 Instruction(Opcode.RETURN),              # 8
             ],
             constants=[AIFPLInteger(42)],
@@ -499,12 +499,12 @@ class TestBytecodeValidator:
                 Instruction(Opcode.JUMP_IF_FALSE, 5),    # 1: jump to else
                 # Then branch
                 Instruction(Opcode.LOAD_CONST, 0),       # 2: push value
-                Instruction(Opcode.STORE_VAR, 0, 0),     # 3: store to var 0
+                Instruction(Opcode.STORE_VAR, 0),     # 3: store to var 0
                 Instruction(Opcode.JUMP, 6),             # 4: jump to merge
                 # Else branch - doesn't initialize!
                 Instruction(Opcode.JUMP, 6),             # 5: jump to merge
                 # Merge point
-                Instruction(Opcode.LOAD_VAR, 0, 0),      # 6: load var 0 - ERROR (not initialized on else path)
+                Instruction(Opcode.LOAD_VAR, 0),      # 6: load var 0 - ERROR (not initialized on else path)
                 Instruction(Opcode.RETURN),              # 7
             ],
             constants=[AIFPLInteger(42)],
@@ -523,12 +523,12 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, 0),       # 0: push value
-                Instruction(Opcode.STORE_VAR, 0, 0),     # 1: store to var 0
+                Instruction(Opcode.STORE_VAR, 0),     # 1: store to var 0
                 # Loop start
                 Instruction(Opcode.LOAD_TRUE),           # 2: condition
                 Instruction(Opcode.JUMP_IF_FALSE, 6),    # 3: exit loop
                 # Loop body
-                Instruction(Opcode.LOAD_VAR, 0, 0),      # 4: load var 0 - OK
+                Instruction(Opcode.LOAD_VAR, 0),      # 4: load var 0 - OK
                 Instruction(Opcode.RETURN),              # 5: return (pop from stack)
                 # After loop
                 Instruction(Opcode.LOAD_CONST, 1),       # 6: push value
