@@ -76,16 +76,20 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             nested = code.code_objects[arg1]
             name = nested.name or f"<lambda-{arg1}>"
             line_info = f" at line {nested.source_line}" if (nested.source_line and nested.source_line > 0) else ""
-            annotation = f"  ; Create closure for {name}{line_info} with {arg2} captures"
+            capture_word = "capture" if arg2 == 1 else "captures"
+            annotation = f"  ; Create closure for {name}{line_info} with {arg2} {capture_word}"
 
     elif opcode == Opcode.CALL_FUNCTION:
-        annotation = f"  ; Call function with {arg1} args (function on stack)"
+        arg_word = "arg" if arg1 == 1 else "args"
+        annotation = f"  ; Call function with {arg1} {arg_word} (function on stack)"
 
     elif opcode == Opcode.TAIL_CALL_FUNCTION:
-        annotation = f"  ; Tail call function with {arg1} args"
+        arg_word = "arg" if arg1 == 1 else "args"
+        annotation = f"  ; Tail call function with {arg1} {arg_word}"
 
     elif opcode == Opcode.CALL_BUILTIN:
-        annotation = f"  ; Call builtin #{arg1} with {arg2} args"
+        arg_word = "arg" if arg2 == 1 else "args"
+        annotation = f"  ; Call builtin #{arg1} with {arg2} {arg_word}"
 
     elif opcode == Opcode.JUMP:
         annotation = f"  ; Jump to instruction {arg1}"

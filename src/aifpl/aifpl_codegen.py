@@ -368,7 +368,8 @@ class AIFPLCodeGen:
             self.lambda_counter += 1
 
         # Add parameter info to the name for better debugging
-        lambda_name = f"{lambda_name}({len(plan.params)} params)"
+        param_word = "param" if len(plan.params) == 1 else "params"
+        lambda_name = f"{lambda_name}({len(plan.params)} {param_word})"
 
         # Create code object for lambda
         lambda_code = CodeObject(

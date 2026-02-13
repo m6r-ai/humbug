@@ -57,7 +57,7 @@ class AnalysisContext:
     next_local_index: int = 0
     max_locals: int = 0
     current_function_name: str | None = None
-    current_letrec_binding: str | None = None
+    current_binding_name: str | None = None  # Name of the binding being analyzed (for lambda naming)
     sibling_bindings: List[str] = field(default_factory=list)
     # Track names for global resolution (we need to know what's a global vs local)
     # But we don't assign indices - that's for codegen
@@ -359,7 +359,12 @@ class AIFPLIRBuilder:
             # Also reset max_locals to allow nested expressions to allocate from binding_start_index
             ctx.max_locals = binding_start_index
 
+            # Set binding name for better debugging/disassembly
+            old_binding_name = ctx.current_binding_name
+            ctx.current_binding_name = name
             value_plan = self._analyze_expression(value_expr, ctx, in_tail_position=False)
+            ctx.current_binding_name = old_binding_name
+
             analyzed_bindings.append((name, value_plan))
 
             # Track the maximum max_locals reached by any sibling
@@ -444,17 +449,18 @@ class AIFPLIRBuilder:
                 value_expr, var_index = binding_map[name]
 
                 # Set context for recursive bindings
-                old_letrec_binding = ctx.current_letrec_binding
+                # Always set binding name for better debugging/disassembly
+                old_binding_name = ctx.current_binding_name
                 old_sibling_bindings = ctx.sibling_bindings
 
+                ctx.current_binding_name = name
                 if name in recursive_bindings:
-                    ctx.current_letrec_binding = name
                     ctx.sibling_bindings = list(group.names)
 
                 value_plan = self._analyze_expression(value_expr, ctx, in_tail_position=False)
 
                 # Restore context
-                ctx.current_letrec_binding = old_letrec_binding
+                ctx.current_binding_name = old_binding_name
                 ctx.sibling_bindings = old_sibling_bindings
 
                 binding_plans.append((name, value_plan, var_index))
@@ -496,7 +502,7 @@ class AIFPLIRBuilder:
         parent_refs = []
         parent_ref_plans = []
 
-        current_binding = ctx.current_letrec_binding
+        current_binding = ctx.current_binding_name
         current_siblings = ctx.sibling_bindings
 
         for free_var in free_vars:
@@ -544,7 +550,7 @@ class AIFPLIRBuilder:
             lambda_ctx.current_scope().add_binding(free_var, free_var_index)
 
         # Set function name for tail recursion detection
-        lambda_ctx.current_function_name = ctx.current_letrec_binding
+        lambda_ctx.current_function_name = ctx.current_binding_name
 
         # Mark parent refs so they can be identified during body analysis
         lambda_ctx.parent_ref_names = set(parent_refs)
@@ -568,7 +574,7 @@ class AIFPLIRBuilder:
             parent_refs=parent_refs,
             parent_ref_plans=parent_ref_plans,
             param_count=len(param_names),
-            binding_name=ctx.current_letrec_binding,
+            binding_name=ctx.current_binding_name,
             sibling_bindings=ctx.sibling_bindings,
             max_locals=lambda_ctx.max_locals,
             source_line=expr.line if (hasattr(expr, 'line') and expr.line is not None) else 0
