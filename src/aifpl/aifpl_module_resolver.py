@@ -8,7 +8,7 @@ interface to delegate the actual module loading logic.
 from typing import Protocol, ContextManager
 
 from aifpl.aifpl_error import AIFPLModuleError
-from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLString
+from aifpl.aifpl_ast import AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList, AIFPLASTString
 
 
 class ModuleLoader(Protocol):
@@ -40,7 +40,7 @@ class ModuleLoader(Protocol):
         """
         ...  # pylint: disable=unnecessary-ellipsis
 
-    def load_module(self, module_name: str) -> AIFPLValue:
+    def load_module(self, module_name: str) -> AIFPLASTNode:
         """
         Load and compile a module to a fully resolved AST.
 
@@ -86,7 +86,7 @@ class AIFPLModuleResolver:
         """
         self.module_loader = module_loader
 
-    def resolve(self, expr: AIFPLValue) -> AIFPLValue:
+    def resolve(self, expr: AIFPLASTNode) -> AIFPLASTNode:
         """
         Resolve imports in an expression recursively.
 
@@ -97,7 +97,7 @@ class AIFPLModuleResolver:
             AST with all imports replaced by loaded module values
         """
         # Only lists need inspection
-        if not isinstance(expr, AIFPLList):
+        if not isinstance(expr, AIFPLASTList):
             return expr
 
         if expr.is_empty():
@@ -106,18 +106,18 @@ class AIFPLModuleResolver:
         first = expr.first()
 
         # Check for import special form
-        if isinstance(first, AIFPLSymbol) and first.name == 'import':
+        if isinstance(first, AIFPLASTSymbol) and first.name == 'import':
             return self._resolve_import(expr)
 
         # Check for quote - don't resolve imports inside quoted expressions
-        if isinstance(first, AIFPLSymbol) and first.name == 'quote':
+        if isinstance(first, AIFPLASTSymbol) and first.name == 'quote':
             return expr
 
         # Recursively resolve imports in all subexpressions
         resolved_elements = tuple(self.resolve(elem) for elem in expr.elements)
-        return AIFPLList(resolved_elements, line=expr.line, column=expr.column)
+        return AIFPLASTList(resolved_elements, line=expr.line, column=expr.column)
 
-    def _resolve_import(self, expr: AIFPLList) -> AIFPLValue:
+    def _resolve_import(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """
         Resolve an import expression by loading the module.
 
@@ -134,7 +134,7 @@ class AIFPLModuleResolver:
         assert len(expr.elements) == 2, "Import should have exactly 2 elements (validated by semantic analyzer)"
 
         _, module_name_expr = expr.elements
-        assert isinstance(module_name_expr, AIFPLString), "Module name should be a string (validated by semantic analyzer)"
+        assert isinstance(module_name_expr, AIFPLASTString), "Module name should be a string (validated by semantic analyzer)"
 
         module_name = module_name_expr.value
 

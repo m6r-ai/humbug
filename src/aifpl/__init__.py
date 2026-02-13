@@ -9,6 +9,12 @@ from aifpl.aifpl_error import (
     AIFPLCancelledException
 )
 
+# AST types
+from aifpl.aifpl_ast import (
+    AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex,
+    AIFPLASTString, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList, AIFPLASTAList
+)
+
 # Value types
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
@@ -32,6 +38,10 @@ __all__ = [
 
     # Exceptions (enhanced with detailed context)
     "AIFPLError", "AIFPLTokenError", "AIFPLParseError", "AIFPLEvalError", "AIFPLCancelledException",
+
+    # AST node types
+    "AIFPLASTNode", "AIFPLASTInteger", "AIFPLASTFloat", "AIFPLASTComplex",
+    "AIFPLASTString", "AIFPLASTBoolean", "AIFPLASTSymbol", "AIFPLASTList", "AIFPLASTAList",
 
     # Value types
     "AIFPLValue", "AIFPLInteger", "AIFPLFloat", "AIFPLComplex",

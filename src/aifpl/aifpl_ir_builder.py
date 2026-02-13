@@ -11,9 +11,9 @@ from aifpl.aifpl_ir import (
     AIFPLIRAnd, AIFPLIROr, AIFPLIRReturn, AIFPLIRTrace
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
-from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
+from aifpl.aifpl_ast import (
+    AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex,
+    AIFPLASTString, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList
 )
 
 
@@ -151,7 +151,7 @@ class AIFPLIRBuilder:
         """
         self.builtin_indices = {name: i for i, name in enumerate(AIFPLBuiltinRegistry.BUILTIN_TABLE)}
 
-    def build(self, expr: AIFPLValue) -> AIFPLIRExpr:
+    def build(self, expr: AIFPLASTNode) -> AIFPLIRExpr:
         """
         Build IR from an AST expression.
 
@@ -171,26 +171,26 @@ class AIFPLIRBuilder:
 
         return plan
 
-    def _analyze_expression(self, expr: AIFPLValue, ctx: AnalysisContext, in_tail_position: bool = False) -> AIFPLIRExpr:
+    def _analyze_expression(self, expr: AIFPLASTNode, ctx: AnalysisContext, in_tail_position: bool = False) -> AIFPLIRExpr:
         """Analyze an expression and return a compilation plan (Phase 1)."""
 
         # Cache the type - check once instead of multiple isinstance() calls
         expr_type = type(expr)
 
         # Self-evaluating values (constants)
-        if expr_type in (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString):
-            return AIFPLIRConstant(value=expr)
+        if expr_type in (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString):
+            return AIFPLIRConstant(value=expr.to_runtime_value())
 
-        if expr_type is AIFPLBoolean:
-            return AIFPLIRConstant(value=expr)
+        if expr_type is AIFPLASTBoolean:
+            return AIFPLIRConstant(value=expr.to_runtime_value())
 
         # Symbol (variable reference)
-        if expr_type is AIFPLSymbol:
-            return self._analyze_variable(cast(AIFPLSymbol, expr).name, ctx)
+        if expr_type is AIFPLASTSymbol:
+            return self._analyze_variable(cast(AIFPLASTSymbol, expr).name, ctx)
 
         # List (function call or special form)
-        if expr_type is AIFPLList:
-            return self._analyze_list(cast(AIFPLList, expr), ctx, in_tail_position)
+        if expr_type is AIFPLASTList:
+            return self._analyze_list(cast(AIFPLASTList, expr), ctx, in_tail_position)
 
         raise AIFPLEvalError(
             message=f"Cannot analyze expression of type {type(expr).__name__}",
@@ -211,7 +211,7 @@ class AIFPLIRBuilder:
             is_parent_ref=is_parent_ref
         )
 
-    def _analyze_list(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRExpr:
+    def _analyze_list(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRExpr:
         """Analyze a list expression (function call or special form)."""
         if expr.is_empty():
             return AIFPLIREmptyList()
@@ -220,8 +220,8 @@ class AIFPLIRBuilder:
         first_type = type(first)
 
         # Check for special forms
-        if first_type is AIFPLSymbol:
-            name = cast(AIFPLSymbol, first).name
+        if first_type is AIFPLASTSymbol:
+            name = cast(AIFPLASTSymbol, first).name
 
             if name == 'if':
                 return self._analyze_if(expr, ctx, in_tail_position)
@@ -253,19 +253,19 @@ class AIFPLIRBuilder:
         # Regular function call
         return self._analyze_function_call(expr, ctx, in_tail_position)
 
-    def _analyze_quote(self, expr: AIFPLList) -> AIFPLIRQuote:
+    def _analyze_quote(self, expr: AIFPLASTList) -> AIFPLIRQuote:
         """Analyze a quote expression."""
         assert len(expr.elements) == 2, "Quote expression should have exactly 2 elements"
-        quoted = expr.elements[1]
+        quoted = expr.elements[1].to_runtime_value()
         return AIFPLIRQuote(quoted_value=quoted)
 
-    def _analyze_error(self, expr: AIFPLList) -> AIFPLIRError:
+    def _analyze_error(self, expr: AIFPLASTList) -> AIFPLIRError:
         """Analyze an error expression."""
         assert len(expr.elements) == 2, "Error expression should have exactly 2 elements"
-        message = expr.elements[1]
+        message = expr.elements[1].to_runtime_value()
         return AIFPLIRError(message=message)
 
-    def _analyze_trace(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRTrace:
+    def _analyze_trace(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRTrace:
         """
         Analyze a trace expression.
 
@@ -283,7 +283,7 @@ class AIFPLIRBuilder:
 
         return AIFPLIRTrace(message_plans=message_plans, value_plan=value_plan)
 
-    def _analyze_if(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRIf:
+    def _analyze_if(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRIf:
         """Analyze an if expression."""
         assert len(expr.elements) == 4, "If expression should have exactly 4 elements"
 
@@ -310,19 +310,19 @@ class AIFPLIRBuilder:
             in_tail_position=in_tail_position
         )
 
-    def _analyze_and(self, expr: AIFPLList, ctx: AnalysisContext) -> AIFPLIRAnd:
+    def _analyze_and(self, expr: AIFPLASTList, ctx: AnalysisContext) -> AIFPLIRAnd:
         """Analyze an and expression."""
         args = list(expr.elements[1:])
         arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in args]
         return AIFPLIRAnd(arg_plans=arg_plans)
 
-    def _analyze_or(self, expr: AIFPLList, ctx: AnalysisContext) -> AIFPLIROr:
+    def _analyze_or(self, expr: AIFPLASTList, ctx: AnalysisContext) -> AIFPLIROr:
         """Analyze an or expression."""
         args = list(expr.elements[1:])
         arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in args]
         return AIFPLIROr(arg_plans=arg_plans)
 
-    def _analyze_let(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRLet:
+    def _analyze_let(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRLet:
         """
         Analyze a let expression with parallel binding semantics.
 
@@ -333,7 +333,7 @@ class AIFPLIRBuilder:
         assert len(expr.elements) == 3, "Let expression should have exactly 3 elements"
 
         _, bindings_list, body = expr.elements
-        assert isinstance(bindings_list, AIFPLList), "Binding list should be a list"
+        assert isinstance(bindings_list, AIFPLASTList), "Binding list should be a list"
 
         # Push new scope
         ctx.push_scope()
@@ -347,9 +347,9 @@ class AIFPLIRBuilder:
 
         analyzed_bindings = []
         for binding in bindings_list.elements:
-            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2
+            assert isinstance(binding, AIFPLASTList) and len(binding.elements) == 2
             name_expr, value_expr = binding.elements
-            assert isinstance(name_expr, AIFPLSymbol)
+            assert isinstance(name_expr, AIFPLASTSymbol)
 
             name = name_expr.name
 
@@ -393,12 +393,12 @@ class AIFPLIRBuilder:
             in_tail_position=in_tail_position
         )
 
-    def _analyze_letrec(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRLetrec:
+    def _analyze_letrec(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRLetrec:
         """Analyze a letrec expression."""
         assert len(expr.elements) == 3, "Letrec expression should have exactly 3 elements"
 
         _, bindings_list, body = expr.elements
-        assert isinstance(bindings_list, AIFPLList), "Binding list should be a list"
+        assert isinstance(bindings_list, AIFPLASTList), "Binding list should be a list"
 
         # Push new scope
         ctx.push_scope()
@@ -406,9 +406,9 @@ class AIFPLIRBuilder:
         # First pass: Add all binding names to scope (for recursive references)
         binding_pairs = []
         for binding in bindings_list.elements:
-            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2
+            assert isinstance(binding, AIFPLASTList) and len(binding.elements) == 2
             name_expr, value_expr = binding.elements
-            assert isinstance(name_expr, AIFPLSymbol)
+            assert isinstance(name_expr, AIFPLASTSymbol)
 
             name = name_expr.name
             var_index = ctx.allocate_local_index()
@@ -473,17 +473,17 @@ class AIFPLIRBuilder:
             in_tail_position=in_tail_position
         )
 
-    def _analyze_lambda(self, expr: AIFPLList, ctx: AnalysisContext) -> AIFPLIRLambda:
+    def _analyze_lambda(self, expr: AIFPLASTList, ctx: AnalysisContext) -> AIFPLIRLambda:
         """Analyze a lambda expression."""
         assert len(expr.elements) == 3, "Lambda expression should have exactly 3 elements"
 
         _, params_list, body = expr.elements
-        assert isinstance(params_list, AIFPLList), "Parameter list should be a list"
+        assert isinstance(params_list, AIFPLASTList), "Parameter list should be a list"
 
         # Extract parameter names
         param_names = []
         for param in params_list.elements:
-            assert isinstance(param, AIFPLSymbol)
+            assert isinstance(param, AIFPLASTSymbol)
             param_names.append(param.name)
 
         # Find free variables
@@ -574,7 +574,7 @@ class AIFPLIRBuilder:
             source_line=expr.line if (hasattr(expr, 'line') and expr.line is not None) else 0
         )
 
-    def _analyze_function_call(self, expr: AIFPLList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRCall:
+    def _analyze_function_call(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRCall:
         """Analyze a function call."""
         func_expr = expr.first()
         arg_exprs = list(expr.elements[1:])
@@ -582,8 +582,8 @@ class AIFPLIRBuilder:
         func_type = type(func_expr)
 
         # Check if calling a known builtin
-        if func_type is AIFPLSymbol and cast(AIFPLSymbol, func_expr).name in self.builtin_indices:
-            builtin_name = cast(AIFPLSymbol, func_expr).name
+        if func_type is AIFPLASTSymbol and cast(AIFPLASTSymbol, func_expr).name in self.builtin_indices:
+            builtin_name = cast(AIFPLASTSymbol, func_expr).name
             builtin_index = self.builtin_indices[builtin_name]
 
             # Analyze arguments
@@ -602,8 +602,8 @@ class AIFPLIRBuilder:
         is_tail_recursive = (
             in_tail_position and
             ctx.current_function_name is not None and
-            func_type is AIFPLSymbol and
-            cast(AIFPLSymbol, func_expr).name == ctx.current_function_name
+            func_type is AIFPLASTSymbol and
+            cast(AIFPLASTSymbol, func_expr).name == ctx.current_function_name
         )
 
         # Analyze function and arguments
@@ -625,7 +625,7 @@ class AIFPLIRBuilder:
             builtin_index=None
         )
 
-    def _find_free_variables(self, expr: AIFPLValue, bound_vars: Set[str], parent_ctx: AnalysisContext) -> List[str]:
+    def _find_free_variables(self, expr: AIFPLASTNode, bound_vars: Set[str], parent_ctx: AnalysisContext) -> List[str]:
         """
         Find free variables in an expression.
 
@@ -641,7 +641,7 @@ class AIFPLIRBuilder:
 
     def _collect_free_vars(
         self,
-        expr: AIFPLValue,
+        expr: AIFPLASTNode,
         bound_vars: Set[str],
         parent_ctx: AnalysisContext,
         free: List[str],
@@ -650,8 +650,8 @@ class AIFPLIRBuilder:
         """Recursively collect free variables."""
         expr_type = type(expr)
 
-        if expr_type is AIFPLSymbol:
-            name = cast(AIFPLSymbol, expr).name
+        if expr_type is AIFPLASTSymbol:
+            name = cast(AIFPLASTSymbol, expr).name
             if name in seen or name in bound_vars:
                 return
 
@@ -661,28 +661,28 @@ class AIFPLIRBuilder:
                 free.append(name)
                 seen.add(name)
 
-        elif expr_type is AIFPLList:
-            if cast(AIFPLList, expr).is_empty():
+        elif expr_type is AIFPLASTList:
+            if cast(AIFPLASTList, expr).is_empty():
                 return
 
-            first = cast(AIFPLList, expr).first()
+            first = cast(AIFPLASTList, expr).first()
             first_type = type(first)
 
             # Handle special forms that bind variables
-            if first_type is AIFPLSymbol:
-                if cast(AIFPLSymbol, first).name == 'lambda':
+            if first_type is AIFPLASTSymbol:
+                if cast(AIFPLASTSymbol, first).name == 'lambda':
                     # Nested lambda: we need to find what free variables it uses
                     # that come from outer scopes, so the parent lambda can capture them.
                     # The nested lambda will then capture them from the parent.
-                    if len(cast(AIFPLList, expr).elements) >= 3:
-                        nested_params = cast(AIFPLList, expr).elements[1]
-                        nested_body = cast(AIFPLList, expr).elements[2]
+                    if len(cast(AIFPLASTList, expr).elements) >= 3:
+                        nested_params = cast(AIFPLASTList, expr).elements[1]
+                        nested_body = cast(AIFPLASTList, expr).elements[2]
 
                         # Get parameter names from nested lambda
                         nested_bound = bound_vars.copy()
-                        if isinstance(nested_params, AIFPLList):
+                        if isinstance(nested_params, AIFPLASTList):
                             for param in nested_params.elements:
-                                if isinstance(param, AIFPLSymbol):
+                                if isinstance(param, AIFPLASTSymbol):
                                     nested_bound.add(param.name)
 
                         # Find free variables in nested lambda's body
@@ -693,26 +693,26 @@ class AIFPLIRBuilder:
                     # Don't recurse into the lambda's parameters or other parts
                     return
 
-                if cast(AIFPLSymbol, first).name == 'let':
+                if cast(AIFPLASTSymbol, first).name == 'let':
                     # Let bindings create new bound variables
                     # Extract binding names and recurse with updated bound_vars
-                    if len(cast(AIFPLList, expr).elements) >= 3:
-                        bindings_list = cast(AIFPLList, expr).elements[1]
-                        body = cast(AIFPLList, expr).elements[2]
+                    if len(cast(AIFPLASTList, expr).elements) >= 3:
+                        bindings_list = cast(AIFPLASTList, expr).elements[1]
+                        body = cast(AIFPLASTList, expr).elements[2]
 
                         # Collect let binding names
                         new_bound = bound_vars.copy()
-                        if isinstance(bindings_list, AIFPLList):
+                        if isinstance(bindings_list, AIFPLASTList):
                             for binding in bindings_list.elements:
-                                if isinstance(binding, AIFPLList) and len(binding.elements) >= 2:
+                                if isinstance(binding, AIFPLASTList) and len(binding.elements) >= 2:
                                     name_expr = binding.elements[0]
-                                    if isinstance(name_expr, AIFPLSymbol):
+                                    if isinstance(name_expr, AIFPLASTSymbol):
                                         new_bound.add(name_expr.name)
 
                         # Recurse into binding values first (to find free vars in lambda definitions)
-                        if isinstance(bindings_list, AIFPLList):
+                        if isinstance(bindings_list, AIFPLASTList):
                             for binding in bindings_list.elements:
-                                if isinstance(binding, AIFPLList) and len(binding.elements) >= 2:
+                                if isinstance(binding, AIFPLASTList) and len(binding.elements) >= 2:
                                     value_expr = binding.elements[1]
                                     # Use original bound_vars, not new_bound, because bindings can't reference each other yet
                                     self._collect_free_vars(value_expr, bound_vars, parent_ctx, free, seen)
@@ -729,5 +729,5 @@ class AIFPLIRBuilder:
                 # added to the free variables list.
 
             # Recursively check all elements
-            for elem in cast(AIFPLList, expr).elements:
+            for elem in cast(AIFPLASTList, expr).elements:
                 self._collect_free_vars(elem, bound_vars, parent_ctx, free, seen)

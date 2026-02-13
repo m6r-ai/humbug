@@ -10,13 +10,13 @@ from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
-from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLInteger, AIFPLString, AIFPLBoolean
+from aifpl.aifpl_ast import (
+    AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList, AIFPLASTInteger, AIFPLASTString, AIFPLASTBoolean
 )
 from aifpl.aifpl_error import AIFPLEvalError
 
 
-def parse_and_analyze_expression(expr_str: str) -> AIFPLValue:
+def parse_and_analyze_expression(expr_str: str) -> AIFPLASTNode:
     """Helper to parse and semantically analyze an expression string into AST."""
     lexer = AIFPLLexer()
     tokens = lexer.lex(expr_str)
@@ -35,29 +35,29 @@ class TestDesugarerBasic:
         desugarer = AIFPLDesugarer()
 
         # Numbers
-        num = AIFPLInteger(42)
+        num = AIFPLASTInteger(42)
         assert desugarer.desugar(num) == num
 
         # Strings
-        string = AIFPLString("hello")
+        string = AIFPLASTString("hello")
         assert desugarer.desugar(string) == string
 
         # Booleans
-        bool_true = AIFPLBoolean(True)
+        bool_true = AIFPLASTBoolean(True)
         assert desugarer.desugar(bool_true) == bool_true
 
     def test_symbols_pass_through(self):
         """Test that symbols pass through unchanged."""
         desugarer = AIFPLDesugarer()
 
-        symbol = AIFPLSymbol('x')
+        symbol = AIFPLASTSymbol('x')
         assert desugarer.desugar(symbol) == symbol
 
     def test_empty_list_passes_through(self):
         """Test that empty lists pass through unchanged."""
         desugarer = AIFPLDesugarer()
 
-        empty = AIFPLList(())
+        empty = AIFPLASTList(())
         assert desugarer.desugar(empty) == empty
 
     def test_quote_not_desugared(self):
@@ -69,7 +69,7 @@ class TestDesugarerBasic:
         result = desugarer.desugar(expr)
 
         # Should remain unchanged
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'quote'
 
 
@@ -86,12 +86,12 @@ class TestDesugarerCoreConstructs:
         result = desugarer.desugar(expr)
 
         # Result should be an if
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'if'
 
         # Condition should be desugared (should be a let, not match)
         condition = result.elements[1]
-        assert isinstance(condition, AIFPLList)
+        assert isinstance(condition, AIFPLASTList)
         assert condition.first().name == 'let'
 
     def test_let_desugars_children(self):
@@ -103,14 +103,14 @@ class TestDesugarerCoreConstructs:
         result = desugarer.desugar(expr)
 
         # Result should be a let
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         # Binding value should be desugared
         bindings = result.elements[1]
         binding = bindings.elements[0]
         value = binding.elements[1]
-        assert isinstance(value, AIFPLList)
+        assert isinstance(value, AIFPLASTList)
         assert value.first().name == 'let'  # Match desugared to let
 
     def test_lambda_desugars_body(self):
@@ -122,12 +122,12 @@ class TestDesugarerCoreConstructs:
         result = desugarer.desugar(expr)
 
         # Result should be a lambda
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'lambda'
 
         # Body should be desugared
         body = result.elements[2]
-        assert isinstance(body, AIFPLList)
+        assert isinstance(body, AIFPLASTList)
         assert body.first().name == 'let'  # Match desugared to let
 
     def test_function_call_desugars_all_elements(self):
@@ -139,15 +139,15 @@ class TestDesugarerCoreConstructs:
         result = desugarer.desugar(expr)
 
         # Result should be a call to +
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == '+'
 
         # Both arguments should be desugared
         arg1 = result.elements[1]
         arg2 = result.elements[2]
-        assert isinstance(arg1, AIFPLList)
+        assert isinstance(arg1, AIFPLASTList)
         assert arg1.first().name == 'let'
-        assert isinstance(arg2, AIFPLList)
+        assert isinstance(arg2, AIFPLASTList)
         assert arg2.first().name == 'let'
 
 
@@ -163,23 +163,23 @@ class TestDesugarerMatchLiteral:
         result = desugarer.desugar(expr)
 
         # Should be a let binding a temp variable
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         # Should have bindings and body
         bindings = result.elements[1]
-        assert isinstance(bindings, AIFPLList)
+        assert isinstance(bindings, AIFPLASTList)
         assert len(bindings.elements) == 1
 
         # Binding should be (#:match-tmp-1 x)
         binding = bindings.elements[0]
         temp_var = binding.elements[0]
-        assert isinstance(temp_var, AIFPLSymbol)
+        assert isinstance(temp_var, AIFPLASTSymbol)
         assert temp_var.name.startswith('#:match-tmp-')
 
         # Body should be nested if expressions
         body = result.elements[2]
-        assert isinstance(body, AIFPLList)
+        assert isinstance(body, AIFPLASTList)
         assert body.first().name == 'if'
 
     def test_match_string_literal(self):
@@ -191,11 +191,11 @@ class TestDesugarerMatchLiteral:
         result = desugarer.desugar(expr)
 
         # Should be a let with if
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
-        assert isinstance(body, AIFPLList)
+        assert isinstance(body, AIFPLASTList)
         assert body.first().name == 'if'
 
     def test_match_boolean_literal(self):
@@ -207,7 +207,7 @@ class TestDesugarerMatchLiteral:
         result = desugarer.desugar(expr)
 
         # Should be a let with if
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
 
@@ -223,21 +223,21 @@ class TestDesugarerMatchVariable:
         result = desugarer.desugar(expr)
 
         # Should be: (let ((#:tmp x)) (if #t (let ((n #:tmp)) n) error))
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
-        assert isinstance(body, AIFPLList)
+        assert isinstance(body, AIFPLASTList)
         assert body.first().name == 'if'
 
         # Condition should be #t (variable always matches)
         condition = body.elements[1]
-        assert isinstance(condition, AIFPLBoolean)
+        assert isinstance(condition, AIFPLASTBoolean)
         assert condition.value is True
 
         # Then branch should be a let binding the variable
         then_branch = body.elements[2]
-        assert isinstance(then_branch, AIFPLList)
+        assert isinstance(then_branch, AIFPLASTList)
         assert then_branch.first().name == 'let'
 
     def test_match_wildcard(self):
@@ -249,21 +249,21 @@ class TestDesugarerMatchVariable:
         result = desugarer.desugar(expr)
 
         # Should be: (let ((#:tmp x)) (if #t "anything" error))
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
-        assert isinstance(body, AIFPLList)
+        assert isinstance(body, AIFPLASTList)
         assert body.first().name == 'if'
 
         # Condition should be #t
         condition = body.elements[1]
-        assert isinstance(condition, AIFPLBoolean)
+        assert isinstance(condition, AIFPLASTBoolean)
         assert condition.value is True
 
         # Then branch should be the result directly (no bindings)
         then_branch = body.elements[2]
-        assert isinstance(then_branch, AIFPLString)
+        assert isinstance(then_branch, AIFPLASTString)
         assert then_branch.value == "anything"
 
 
@@ -279,21 +279,21 @@ class TestDesugarerMatchType:
         result = desugarer.desugar(expr)
 
         # Should be: (let ((#:tmp x)) (if (number? #:tmp) (let ((n #:tmp)) n) ...))
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
-        assert isinstance(body, AIFPLList)
+        assert isinstance(body, AIFPLASTList)
         assert body.first().name == 'if'
 
         # Condition should be (number? #:tmp)
         condition = body.elements[1]
-        assert isinstance(condition, AIFPLList)
+        assert isinstance(condition, AIFPLASTList)
         assert condition.first().name == 'number?'
 
         # Then branch should bind the variable
         then_branch = body.elements[2]
-        assert isinstance(then_branch, AIFPLList)
+        assert isinstance(then_branch, AIFPLASTList)
         assert then_branch.first().name == 'let'
 
     def test_match_type_pattern_with_wildcard(self):
@@ -305,17 +305,17 @@ class TestDesugarerMatchType:
         result = desugarer.desugar(expr)
 
         # Should test type but not bind variable
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
         condition = body.elements[1]
-        assert isinstance(condition, AIFPLList)
+        assert isinstance(condition, AIFPLASTList)
         assert condition.first().name == 'string?'
 
         # Then branch should not have a let (no binding)
         then_branch = body.elements[2]
-        assert isinstance(then_branch, AIFPLString)
+        assert isinstance(then_branch, AIFPLASTString)
         assert then_branch.value == "is string"
 
 
@@ -331,12 +331,12 @@ class TestDesugarerMatchList:
         result = desugarer.desugar(expr)
 
         # Should test with null?
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
         condition = body.elements[1]
-        assert isinstance(condition, AIFPLList)
+        assert isinstance(condition, AIFPLASTList)
         assert condition.first().name == 'null?'
 
     def test_match_fixed_list_simple(self):
@@ -348,25 +348,25 @@ class TestDesugarerMatchList:
         result = desugarer.desugar(expr)
 
         # Should test list? and length
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
         condition = body.elements[1]
 
         # Condition should be an and expression
-        assert isinstance(condition, AIFPLList)
+        assert isinstance(condition, AIFPLASTList)
         assert condition.first().name == 'and'
 
         # Should contain list? and length checks
         tests = condition.elements[1:]
         has_list_test = any(
-            isinstance(t, AIFPLList) and t.first().name == 'list?'
+            isinstance(t, AIFPLASTList) and t.first().name == 'list?'
             for t in tests
         )
         has_length_test = any(
-            isinstance(t, AIFPLList) and 
-            isinstance(t.elements[1], AIFPLList) and
+            isinstance(t, AIFPLASTList) and 
+            isinstance(t.elements[1], AIFPLASTList) and
             t.elements[1].first().name == 'length'
             for t in tests
         )
@@ -382,7 +382,7 @@ class TestDesugarerMatchList:
         result = desugarer.desugar(expr)
 
         # Should desugar to nested tests
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
 
@@ -398,14 +398,14 @@ class TestDesugarerMatchCons:
         result = desugarer.desugar(expr)
 
         # Should test list? and length
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
         condition = body.elements[1]
 
         # Condition should be an and expression
-        assert isinstance(condition, AIFPLList)
+        assert isinstance(condition, AIFPLASTList)
         assert condition.first().name == 'and'
 
     def test_match_cons_multiple_heads(self):
@@ -417,7 +417,7 @@ class TestDesugarerMatchCons:
         result = desugarer.desugar(expr)
 
         # Should test list? and length >= 2
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
 
@@ -433,7 +433,7 @@ class TestDesugarerMatchNested:
         result = desugarer.desugar(expr)
 
         # Should desugar to nested tests
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
     def test_match_nested_type(self):
@@ -445,7 +445,7 @@ class TestDesugarerMatchNested:
         result = desugarer.desugar(expr)
 
         # Should desugar to nested tests
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
 
@@ -461,16 +461,16 @@ class TestDesugarerMatchMultipleClauses:
         result = desugarer.desugar(expr)
 
         # Should be nested if expressions
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
-        assert isinstance(body, AIFPLList)
+        assert isinstance(body, AIFPLASTList)
         assert body.first().name == 'if'
 
         # Else branch should also be an if
         else_branch = body.elements[3]
-        assert isinstance(else_branch, AIFPLList)
+        assert isinstance(else_branch, AIFPLASTList)
         assert else_branch.first().name == 'if'
 
     def test_match_multiple_clauses_complex(self):
@@ -482,7 +482,7 @@ class TestDesugarerMatchMultipleClauses:
         result = desugarer.desugar(expr)
 
         # Should be nested if expressions
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
 
@@ -582,7 +582,7 @@ class TestDesugarerTempVariables:
         result = desugarer.desugar(expr)
 
         # Both matches should have different temp variables
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'
 
 
@@ -601,5 +601,5 @@ class TestDesugarerIntegration:
         result = desugarer.desugar(expr)
 
         # The desugared expression should be valid AIFPL code
-        assert isinstance(result, AIFPLList)
+        assert isinstance(result, AIFPLASTList)
         assert result.first().name == 'let'

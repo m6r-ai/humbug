@@ -6,14 +6,14 @@ Note: This is only used for letrec, not for regular let (which uses simple seque
 from typing import Dict, List, Set, Tuple
 from dataclasses import dataclass
 
-from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList
+from aifpl.aifpl_ast import AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList
 
 
 @dataclass
 class AIFPLBindingGroup:
     """Represents a group of bindings that should be evaluated together."""
     names: Set[str]
-    bindings: List[Tuple[str, AIFPLValue]]
+    bindings: List[Tuple[str, AIFPLASTNode]]
     is_recursive: bool
     depends_on: Set[str]  # Other groups this depends on
 
@@ -21,7 +21,7 @@ class AIFPLBindingGroup:
 class AIFPLDependencyAnalyzer:
     """Analyzes dependencies in let bindings to determine evaluation strategy."""
 
-    def analyze_letrec_bindings(self, bindings: List[Tuple[str, AIFPLValue]]) -> List[AIFPLBindingGroup]:
+    def analyze_letrec_bindings(self, bindings: List[Tuple[str, AIFPLASTNode]]) -> List[AIFPLBindingGroup]:
         """
         Analyze letrec bindings and group them by dependencies.
 
@@ -67,19 +67,19 @@ class AIFPLDependencyAnalyzer:
 
         return groups
 
-    def _find_free_variables(self, expr: AIFPLValue) -> Set[str]:
+    def _find_free_variables(self, expr: AIFPLASTNode) -> Set[str]:
         """Find all free variables (symbols) in an expression."""
         free_vars = set()
 
-        if isinstance(expr, AIFPLSymbol):
+        if isinstance(expr, AIFPLASTSymbol):
             free_vars.add(expr.name)
 
-        elif isinstance(expr, AIFPLList):
+        elif isinstance(expr, AIFPLASTList):
             if not expr.is_empty():
                 first_elem = expr.first()
 
                 # Handle special forms
-                if isinstance(first_elem, AIFPLSymbol):
+                if isinstance(first_elem, AIFPLASTSymbol):
                     if first_elem.name == "lambda":
                         # (lambda (params...) body)
                         assert expr.length() == 3, "Lambda expressions must have exactly 3 elements (validated by evaluator)"
@@ -87,12 +87,12 @@ class AIFPLDependencyAnalyzer:
                         param_list = expr.get(1)
                         body = expr.get(2)
 
-                        assert isinstance(param_list, AIFPLList), "Lambda parameter list must be a list (validated by evaluator)"
+                        assert isinstance(param_list, AIFPLASTList), "Lambda parameter list must be a list (validated by evaluator)"
 
                         # Extract parameter names (all validated by evaluator to be symbols)
                         param_names = set()
                         for param in param_list.elements:
-                            assert isinstance(param, AIFPLSymbol), "Lambda parameters must be symbols (validated by evaluator)"
+                            assert isinstance(param, AIFPLASTSymbol), "Lambda parameters must be symbols (validated by evaluator)"
                             param_names.add(param.name)
 
                         # Find free variables in body, excluding parameters
@@ -108,19 +108,19 @@ class AIFPLDependencyAnalyzer:
                         binding_list = expr.get(1)
                         body = expr.get(2)
 
-                        assert isinstance(binding_list, AIFPLList), "Let binding list must be a list (validated by evaluator)"
+                        assert isinstance(binding_list, AIFPLASTList), "Let binding list must be a list (validated by evaluator)"
 
                         binding_names = set()
 
                         # Process bindings (all validated by evaluator)
                         for binding in binding_list.elements:
-                            assert isinstance(binding, AIFPLList), "Let bindings must be lists (validated by evaluator)"
+                            assert isinstance(binding, AIFPLASTList), "Let bindings must be lists (validated by evaluator)"
                             assert binding.length() == 2, "Let bindings must have exactly 2 elements (validated by evaluator)"
 
                             var_name = binding.get(0)
                             var_value = binding.get(1)
 
-                            assert isinstance(var_name, AIFPLSymbol), \
+                            assert isinstance(var_name, AIFPLASTSymbol), \
                                 "Let binding variables must be symbols (validated by evaluator)"
                             binding_names.add(var_name.name)
 

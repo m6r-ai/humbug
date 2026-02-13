@@ -8,7 +8,6 @@ tree-walking interpreter had.
 
 import pytest
 from aifpl.aifpl_error import AIFPLEvalError
-from aifpl.aifpl_value import AIFPLString
 
 
 class TestEvaluatorMissingCoverage:

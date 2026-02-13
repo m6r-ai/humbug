@@ -13,9 +13,7 @@ This simplifies the compiler and enables better optimization.
 """
 
 from typing import List, Tuple, Any, cast
-from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean
-)
+from aifpl.aifpl_ast import (AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean)
 from aifpl.aifpl_error import AIFPLEvalError
 
 
@@ -25,7 +23,7 @@ class AIFPLDesugarer:
     def __init__(self) -> None:
         self.temp_counter = 0  # For generating unique temp variable names
 
-    def desugar(self, expr: AIFPLValue) -> AIFPLValue:
+    def desugar(self, expr: AIFPLASTNode) -> AIFPLASTNode:
         """
         Desugar an expression recursively.
 
@@ -36,14 +34,14 @@ class AIFPLDesugarer:
             Desugared AST (core language only)
         """
         # Lists need inspection - anything else does not
-        if not isinstance(expr, AIFPLList):
+        if not isinstance(expr, AIFPLASTList):
             return expr
 
         if expr.is_empty():
             return expr
 
         first = expr.first()
-        if isinstance(first, AIFPLSymbol):
+        if isinstance(first, AIFPLASTSymbol):
             name = first.name
 
             # Match expression - desugar it!
@@ -75,7 +73,7 @@ class AIFPLDesugarer:
         # Regular function call - desugar all elements
         return self._desugar_call(expr)
 
-    def _desugar_if(self, expr: AIFPLList) -> AIFPLValue:
+    def _desugar_if(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """Desugar if expression by desugaring its subexpressions."""
         # Validation already done by semantic analyzer
         assert len(expr.elements) == 4, "If expression should have exactly 4 elements (validated by semantic analyzer)"
@@ -87,14 +85,14 @@ class AIFPLDesugarer:
         desugared_then = self.desugar(then_expr)
         desugared_else = self.desugar(else_expr)
 
-        return AIFPLList((
-            AIFPLSymbol('if'),
+        return AIFPLASTList((
+            AIFPLASTSymbol('if'),
             desugared_condition,
             desugared_then,
             desugared_else
         ), line=expr.line, column=expr.column)
 
-    def _desugar_let(self, expr: AIFPLList) -> AIFPLValue:
+    def _desugar_let(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """Desugar let expression by desugaring its subexpressions."""
         # Validation already done by semantic analyzer
         assert len(expr.elements) == 3, "Let expression should have exactly 3 elements (validated by semantic analyzer)"
@@ -103,28 +101,28 @@ class AIFPLDesugarer:
         bindings_list = expr.elements[1]
         body = expr.elements[2]
 
-        assert isinstance(bindings_list, AIFPLList), "Binding list should be a list (validated by semantic analyzer)"
+        assert isinstance(bindings_list, AIFPLASTList), "Binding list should be a list (validated by semantic analyzer)"
 
         # Desugar each binding value
         desugared_bindings = []
         for i, binding in enumerate(bindings_list.elements):
-            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2, \
+            assert isinstance(binding, AIFPLASTList) and len(binding.elements) == 2, \
                 f"Binding {i+1} should be a list with 2 elements (validated by semantic analyzer)"
 
             var_name, value_expr = binding.elements
             desugared_value = self.desugar(value_expr)
-            desugared_bindings.append(AIFPLList((var_name, desugared_value)))
+            desugared_bindings.append(AIFPLASTList((var_name, desugared_value)))
 
         # Desugar body
         desugared_body = self.desugar(body)
 
-        return AIFPLList((
+        return AIFPLASTList((
             let_symbol,
-            AIFPLList(tuple(desugared_bindings)),
+            AIFPLASTList(tuple(desugared_bindings)),
             desugared_body
         ), line=expr.line, column=expr.column)
 
-    def _desugar_let_star(self, expr: AIFPLList) -> AIFPLValue:
+    def _desugar_let_star(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """
         Desugar let* expression to nested let expressions.
 
@@ -139,7 +137,7 @@ class AIFPLDesugarer:
         assert len(expr.elements) == 3, "Let* expression should have exactly 3 elements (validated by semantic analyzer)"
 
         _, bindings_list, body = expr.elements
-        assert isinstance(bindings_list, AIFPLList), "Binding list should be a list (validated by semantic analyzer)"
+        assert isinstance(bindings_list, AIFPLASTList), "Binding list should be a list (validated by semantic analyzer)"
 
         # If no bindings, just return the body
         if len(bindings_list.elements) == 0:
@@ -151,7 +149,7 @@ class AIFPLDesugarer:
 
         # Wrap in nested lets, processing bindings in reverse order
         for binding in reversed(bindings_list.elements):
-            assert isinstance(binding, AIFPLList) and len(binding.elements) == 2, \
+            assert isinstance(binding, AIFPLASTList) and len(binding.elements) == 2, \
                 "Binding should be a list with 2 elements (validated by semantic analyzer)"
 
             var_name, value_expr = binding.elements
@@ -160,15 +158,15 @@ class AIFPLDesugarer:
             desugared_value = self.desugar(value_expr)
 
             # Wrap result in a let with this binding
-            result = AIFPLList((
-                AIFPLSymbol('let'),
-                AIFPLList((AIFPLList((var_name, desugared_value)),)),
+            result = AIFPLASTList((
+                AIFPLASTSymbol('let'),
+                AIFPLASTList((AIFPLASTList((var_name, desugared_value)),)),
                 result
             ))
 
         return result
 
-    def _desugar_lambda(self, expr: AIFPLList) -> AIFPLValue:
+    def _desugar_lambda(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """Desugar lambda expression by desugaring its body."""
         # Validation already done by semantic analyzer
         assert len(expr.elements) == 3, "Lambda expression should have exactly 3 elements (validated by semantic analyzer)"
@@ -178,9 +176,9 @@ class AIFPLDesugarer:
         # Desugar body
         desugared_body = self.desugar(body)
 
-        return AIFPLList((lambda_symbol, params_list, desugared_body), line=expr.line, column=expr.column)
+        return AIFPLASTList((lambda_symbol, params_list, desugared_body), line=expr.line, column=expr.column)
 
-    def _desugar_trace(self, expr: AIFPLList) -> AIFPLValue:
+    def _desugar_trace(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """
         Desugar trace special form.
 
@@ -196,21 +194,21 @@ class AIFPLDesugarer:
             )
 
         # Desugar all subexpressions
-        desugared_elements: List[AIFPLValue] = [AIFPLSymbol('trace')]
+        desugared_elements: List[AIFPLASTNode] = [AIFPLASTSymbol('trace')]
         for elem in expr.elements[1:]:  # Skip 'trace' symbol
             desugared_elements.append(self.desugar(elem))
 
-        return AIFPLList(tuple(desugared_elements), line=expr.line, column=expr.column)
+        return AIFPLASTList(tuple(desugared_elements), line=expr.line, column=expr.column)
 
-    def _desugar_call(self, expr: AIFPLList) -> AIFPLValue:
+    def _desugar_call(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """Desugar function call by desugaring all elements."""
         desugared_elements = []
         for elem in expr.elements:
             desugared_elements.append(self.desugar(elem))
 
-        return AIFPLList(tuple(desugared_elements), line=expr.line, column=expr.column)
+        return AIFPLASTList(tuple(desugared_elements), line=expr.line, column=expr.column)
 
-    def _desugar_match(self, expr: AIFPLList) -> AIFPLValue:
+    def _desugar_match(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """
         Transform match expression into if/let expressions.
 
@@ -228,7 +226,7 @@ class AIFPLDesugarer:
 
         # All clauses already validated by semantic analyzer
         for i, clause in enumerate(clauses):
-            assert isinstance(clause, AIFPLList) and len(clause.elements) == 2, \
+            assert isinstance(clause, AIFPLASTList) and len(clause.elements) == 2, \
                 f"Clause {i+1} should be a list with 2 elements (validated by semantic analyzer)"
 
         # Generate temp variable for match value
@@ -242,10 +240,10 @@ class AIFPLDesugarer:
 
         # Wrap in let to bind the temp variable
         # (let ((temp value)) match-logic)
-        result = AIFPLList((
-            AIFPLSymbol('let*'),
-            AIFPLList((
-                AIFPLList((AIFPLSymbol(temp_var), desugared_value)),
+        result = AIFPLASTList((
+            AIFPLASTSymbol('let*'),
+            AIFPLASTList((
+                AIFPLASTList((AIFPLASTSymbol(temp_var), desugared_value)),
             )),
             match_logic
         ))
@@ -253,7 +251,7 @@ class AIFPLDesugarer:
         # Recursively desugar the result to handle let* -> nested let transformation
         return self.desugar(result)
 
-    def _build_match_clauses(self, temp_var: str, clauses: List[AIFPLValue]) -> AIFPLValue:
+    def _build_match_clauses(self, temp_var: str, clauses: List[AIFPLASTNode]) -> AIFPLASTNode:
         """
         Build nested if/let structure for match clauses.
 
@@ -271,11 +269,11 @@ class AIFPLDesugarer:
             )
 
         # Process clauses in reverse order to build nested structure
-        result: AIFPLValue | None = None
+        result: AIFPLASTNode | None = None
 
         for i in range(len(clauses) - 1, -1, -1):
             clause = clauses[i]
-            if not isinstance(clause, AIFPLList):
+            if not isinstance(clause, AIFPLASTList):
                 raise AIFPLEvalError("Clause must be a list")
 
             pattern = clause.elements[0]
@@ -323,11 +321,11 @@ class AIFPLDesugarer:
 
     def _build_clause_with_bindings(
         self,
-        test_expr: AIFPLValue,
+        test_expr: AIFPLASTNode,
         bindings: List[Tuple[str, Any]],  # All bindings (temp + pattern vars or special markers)
-        result_expr: AIFPLValue,
-        else_expr: AIFPLValue
-    ) -> AIFPLValue:
+        result_expr: AIFPLASTNode,
+        else_expr: AIFPLASTNode
+    ) -> AIFPLASTNode:
         """
         Build if/let structure for a single clause.
 
@@ -371,16 +369,16 @@ class AIFPLDesugarer:
         # 1. Element extraction bindings (list-ref) - must go inside then branch
         # 2. Other temp bindings - can go outside
         # 3. Pattern bindings - go inside then branch
-        element_extraction_bindings: List[Tuple[str, AIFPLValue]] = []
+        element_extraction_bindings: List[Tuple[str, AIFPLASTNode]] = []
         temp_bindings: List[Tuple[str, Any]] = []
-        pattern_bindings: List[Tuple[str, AIFPLValue]] = []
+        pattern_bindings: List[Tuple[str, AIFPLASTNode]] = []
 
         for var_name, value_expr in bindings:
             if var_name.startswith('#:match-tmp-'):
                 # Check if this is an element extraction (list-ref)
-                if isinstance(value_expr, AIFPLList) and not value_expr.is_empty():
+                if isinstance(value_expr, AIFPLASTList) and not value_expr.is_empty():
                     first = value_expr.first()
-                    if isinstance(first, AIFPLSymbol) and first.name == 'list-ref':
+                    if isinstance(first, AIFPLASTSymbol) and first.name == 'list-ref':
                         element_extraction_bindings.append((var_name, value_expr))
                     else:
                         temp_bindings.append((var_name, value_expr))
@@ -394,14 +392,14 @@ class AIFPLDesugarer:
         if element_extraction_bindings or pattern_bindings:
             binding_list = []
             # Add element extractions first
-            binding_list.extend([AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in element_extraction_bindings])
+            binding_list.extend([AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in element_extraction_bindings])
 
             # Then add pattern bindings
-            binding_list.extend([AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings])
+            binding_list.extend([AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in pattern_bindings])
 
-            then_expr: AIFPLValue = AIFPLList((
-                AIFPLSymbol('let*'),
-                AIFPLList(tuple(binding_list)),
+            then_expr: AIFPLASTNode = AIFPLASTList((
+                AIFPLASTSymbol('let*'),
+                AIFPLASTList(tuple(binding_list)),
                 result_expr
             ))
 
@@ -409,8 +407,8 @@ class AIFPLDesugarer:
             then_expr = result_expr
 
         # Build if expression
-        if_expr = AIFPLList((
-            AIFPLSymbol('if'),
+        if_expr = AIFPLASTList((
+            AIFPLASTSymbol('if'),
             test_expr,
             then_expr,
             else_expr
@@ -421,17 +419,17 @@ class AIFPLDesugarer:
         if temp_bindings:
             binding_list = []
             for var_name, value_expr in temp_bindings:
-                binding_list.append(AIFPLList((AIFPLSymbol(var_name), value_expr)))
+                binding_list.append(AIFPLASTList((AIFPLASTSymbol(var_name), value_expr)))
 
-            return AIFPLList((
-                AIFPLSymbol('let*'),
-                AIFPLList(tuple(binding_list)),
+            return AIFPLASTList((
+                AIFPLASTSymbol('let*'),
+                AIFPLASTList(tuple(binding_list)),
                 if_expr
             ))
 
         return if_expr
 
-    def _build_no_match_error(self) -> AIFPLValue:
+    def _build_no_match_error(self) -> AIFPLASTNode:
         """
         Build an expression that raises a no-match error.
 
@@ -443,16 +441,16 @@ class AIFPLDesugarer:
         """
         # Generate: (error "No patterns matched in match expression")
         # The compiler should recognize this and emit RAISE_ERROR
-        return AIFPLList((
-            AIFPLSymbol('error'),
-            AIFPLString("No patterns matched in match expression")
+        return AIFPLASTList((
+            AIFPLASTSymbol('error'),
+            AIFPLASTString("No patterns matched in match expression")
         ))
 
     def _desugar_pattern(
         self,
-        pattern: AIFPLValue,
+        pattern: AIFPLASTNode,
         temp_var: str
-    ) -> Tuple[AIFPLValue, List[Tuple[str, AIFPLValue]]]:
+    ) -> Tuple[AIFPLASTNode, List[Tuple[str, AIFPLASTNode]]]:
         """
         Desugar a pattern into (test_expr, bindings).
 
@@ -470,29 +468,29 @@ class AIFPLDesugarer:
         """
         # Literal patterns: numbers, strings, booleans
         # Phase 1: Accept both old and new numeric types as literals
-        if isinstance(pattern, (AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLString, AIFPLBoolean)):
+        if isinstance(pattern, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean)):
             # Test: (= temp_var literal)
-            test_expr = AIFPLList((
-                AIFPLSymbol('='),
-                AIFPLSymbol(temp_var),
+            test_expr = AIFPLASTList((
+                AIFPLASTSymbol('='),
+                AIFPLASTSymbol(temp_var),
                 pattern
             ))
             return (test_expr, [])
 
         # Variable pattern: binds the value
-        if isinstance(pattern, AIFPLSymbol):
+        if isinstance(pattern, AIFPLASTSymbol):
             if pattern.name == '_':
                 # Wildcard - always matches, no binding
-                return (AIFPLBoolean(True), [])
+                return (AIFPLASTBoolean(True), [])
 
             # Variable binding - always matches, binds variable
             return (
-                AIFPLBoolean(True),
-                [(pattern.name, AIFPLSymbol(temp_var))]
+                AIFPLASTBoolean(True),
+                [(pattern.name, AIFPLASTSymbol(temp_var))]
             )
 
         # List patterns
-        if isinstance(pattern, AIFPLList):
+        if isinstance(pattern, AIFPLASTList):
             return self._desugar_list_pattern(pattern, temp_var)
 
         # Should never reach here - semantic analyzer validates patterns
@@ -500,9 +498,9 @@ class AIFPLDesugarer:
 
     def _desugar_list_pattern(
         self,
-        pattern: AIFPLList,
+        pattern: AIFPLASTList,
         temp_var: str
-    ) -> Tuple[AIFPLValue, List[Tuple[str, AIFPLValue]]]:
+    ) -> Tuple[AIFPLASTNode, List[Tuple[str, AIFPLASTNode]]]:
         """
         Desugar a list pattern.
 
@@ -516,15 +514,15 @@ class AIFPLDesugarer:
         # Empty list pattern: ()
         if pattern.is_empty():
             # Test: (null? temp_var)
-            test_expr = AIFPLList((
-                AIFPLSymbol('null?'),
-                AIFPLSymbol(temp_var)
+            test_expr = AIFPLASTList((
+                AIFPLASTSymbol('null?'),
+                AIFPLASTSymbol(temp_var)
             ))
             return (test_expr, [])
 
         # Check for type pattern: (type? var)
         if (len(pattern.elements) == 2 and
-            isinstance(pattern.elements[0], AIFPLSymbol) and
+            isinstance(pattern.elements[0], AIFPLASTSymbol) and
             pattern.elements[0].name.endswith('?')):
 
             type_pred = pattern.elements[0].name
@@ -538,19 +536,19 @@ class AIFPLDesugarer:
 
             if type_pred in valid_predicates:
                 # Variable pattern already validated by semantic analyzer
-                assert isinstance(var_pattern, AIFPLSymbol), \
+                assert isinstance(var_pattern, AIFPLASTSymbol), \
                     "Type pattern variable should be a symbol (validated by semantic analyzer)"
 
                 # Test: (type? temp_var)
-                test_expr = AIFPLList((
-                    AIFPLSymbol(type_pred),
-                    AIFPLSymbol(temp_var)
+                test_expr = AIFPLASTList((
+                    AIFPLASTSymbol(type_pred),
+                    AIFPLASTSymbol(temp_var)
                 ))
 
                 # Binding: if var_pattern is a variable, bind it
-                bindings: List[Tuple[str, AIFPLValue]] = []
-                if isinstance(var_pattern, AIFPLSymbol) and var_pattern.name != '_':
-                    bindings.append((var_pattern.name, AIFPLSymbol(temp_var)))
+                bindings: List[Tuple[str, AIFPLASTNode]] = []
+                if isinstance(var_pattern, AIFPLASTSymbol) and var_pattern.name != '_':
+                    bindings.append((var_pattern.name, AIFPLASTSymbol(temp_var)))
 
                 return (test_expr, bindings)
 
@@ -563,7 +561,7 @@ class AIFPLDesugarer:
         # Check for cons pattern: (head . tail) or (a b . rest)
         dot_positions = []
         for i, elem in enumerate(pattern.elements):
-            if isinstance(elem, AIFPLSymbol) and elem.name == '.':
+            if isinstance(elem, AIFPLASTSymbol) and elem.name == '.':
                 dot_positions.append(i)
 
         # Validation already done by semantic analyzer
@@ -579,9 +577,9 @@ class AIFPLDesugarer:
 
     def _desugar_fixed_list_pattern(
         self,
-        pattern: AIFPLList,
+        pattern: AIFPLASTList,
         temp_var: str
-    ) -> Tuple[AIFPLValue, List[Tuple[str, Any]]]:
+    ) -> Tuple[AIFPLASTNode, List[Tuple[str, Any]]]:
         """
         Desugar a fixed-length list pattern like (a b c).
 
@@ -598,24 +596,24 @@ class AIFPLDesugarer:
         # We'll build this as nested ifs for simplicity
 
         # First test: (list? temp_var)
-        list_test = AIFPLList((
-            AIFPLSymbol('list?'),
-            AIFPLSymbol(temp_var)
+        list_test = AIFPLASTList((
+            AIFPLASTSymbol('list?'),
+            AIFPLASTSymbol(temp_var)
         ))
 
         # Second test: (= (length temp_var) num_elements)
-        length_test = AIFPLList((
-            AIFPLSymbol('='),
-            AIFPLList((
-                AIFPLSymbol('length'),
-                AIFPLSymbol(temp_var)
+        length_test = AIFPLASTList((
+            AIFPLASTSymbol('='),
+            AIFPLASTList((
+                AIFPLASTSymbol('length'),
+                AIFPLASTSymbol(temp_var)
             )),
-            AIFPLInteger(num_elements)
+            AIFPLASTInteger(num_elements)
         ))
 
         # Combine with and
-        combined_test = AIFPLList((
-            AIFPLSymbol('and'),
+        combined_test = AIFPLASTList((
+            AIFPLASTSymbol('and'),
             list_test,
             length_test
         ))
@@ -634,17 +632,17 @@ class AIFPLDesugarer:
         # a different building strategy.
 
         # Collect element pattern info
-        element_info: List[Tuple[AIFPLValue, str, AIFPLValue]] = []  # List of (pattern, temp_var, extraction_expr)
+        element_info: List[Tuple[AIFPLASTNode, str, AIFPLASTNode]] = []  # List of (pattern, temp_var, extraction_expr)
 
         for i, elem_pattern in enumerate(pattern.elements):
             # Generate temp var for this element
             elem_temp = self._gen_temp()
 
             # Extract element: (list-ref temp_var i)
-            elem_value = AIFPLList((
-                AIFPLSymbol('list-ref'),
-                AIFPLSymbol(temp_var),
-                AIFPLInteger(i)
+            elem_value = AIFPLASTList((
+                AIFPLASTSymbol('list-ref'),
+                AIFPLASTSymbol(temp_var),
+                AIFPLASTInteger(i)
             ))
 
             element_info.append((elem_pattern, elem_temp, elem_value))
@@ -657,11 +655,11 @@ class AIFPLDesugarer:
 
     def _flatten_nested_pattern(
         self,
-        pattern: AIFPLValue,
+        pattern: AIFPLASTNode,
         temp_var: str,
-        extraction_bindings: List[Tuple[str, AIFPLValue]],
-        element_tests: List[AIFPLValue],
-        pattern_bindings: List[Tuple[str, AIFPLValue]]
+        extraction_bindings: List[Tuple[str, AIFPLASTNode]],
+        element_tests: List[AIFPLASTNode],
+        pattern_bindings: List[Tuple[str, AIFPLASTNode]]
     ) -> None:
         """
         Recursively flatten a nested pattern into the given lists.
@@ -682,10 +680,10 @@ class AIFPLDesugarer:
              bindings[0][0].startswith('__CONS_PATTERN_'))):
             # This is a nested list/cons pattern - flatten it
             # Cast to the expected type for element_info
-            nested_element_info = cast(List[Tuple[AIFPLValue, str, AIFPLValue]], bindings[0][1])
+            nested_element_info = cast(List[Tuple[AIFPLASTNode, str, AIFPLASTNode]], bindings[0][1])
 
             # Add the length/type test
-            if not (isinstance(test, AIFPLBoolean) and test.value):
+            if not (isinstance(test, AIFPLASTBoolean) and test.value):
                 element_tests.append(test)
 
             # Recursively flatten each element
@@ -704,17 +702,17 @@ class AIFPLDesugarer:
 
         else:
             # Regular pattern - add test and bindings
-            if not (isinstance(test, AIFPLBoolean) and test.value):
+            if not (isinstance(test, AIFPLASTBoolean) and test.value):
                 element_tests.append(test)
             pattern_bindings.extend(bindings)
 
     def _build_list_pattern_clause(
         self,
-        length_test: AIFPLValue,
+        length_test: AIFPLASTNode,
         element_info: List,
-        result_expr: AIFPLValue,
-        else_expr: AIFPLValue
-    ) -> AIFPLValue:
+        result_expr: AIFPLASTNode,
+        else_expr: AIFPLASTNode
+    ) -> AIFPLASTNode:
         """
         Build a clause for a list pattern with proper nesting.
 
@@ -736,9 +734,9 @@ class AIFPLDesugarer:
         #          else)
 
         # Extract elements
-        extraction_bindings: List[Tuple[str, AIFPLValue]] = []
-        element_tests: List[AIFPLValue] = []
-        pattern_bindings: List[Tuple[str, AIFPLValue]] = []
+        extraction_bindings: List[Tuple[str, AIFPLASTNode]] = []
+        element_tests: List[AIFPLASTNode] = []
+        pattern_bindings: List[Tuple[str, AIFPLASTNode]] = []
 
         for elem_pattern, elem_temp, elem_value in element_info:
             # Add extraction binding
@@ -763,7 +761,7 @@ class AIFPLDesugarer:
             else:
                 # Regular pattern
                 # Collect element test (unless it's just #t)
-                if not (isinstance(elem_test, AIFPLBoolean) and elem_test.value):
+                if not (isinstance(elem_test, AIFPLASTBoolean) and elem_test.value):
                     element_tests.append(elem_test)
 
                 # Collect pattern bindings
@@ -773,15 +771,15 @@ class AIFPLDesugarer:
         if element_tests:
             # We have element tests - need nested if
             elem_test_combined = (
-                AIFPLList((AIFPLSymbol('and'),) + tuple(element_tests)) if len(element_tests) > 1 else element_tests[0]
+                AIFPLASTList((AIFPLASTSymbol('and'),) + tuple(element_tests)) if len(element_tests) > 1 else element_tests[0]
             )
 
             # Build pattern bindings let
             if pattern_bindings:
-                binding_list = [AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings]
-                pattern_let: AIFPLValue = AIFPLList((
-                    AIFPLSymbol('let*'),
-                    AIFPLList(tuple(binding_list)),
+                binding_list = [AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in pattern_bindings]
+                pattern_let: AIFPLASTNode = AIFPLASTList((
+                    AIFPLASTSymbol('let*'),
+                    AIFPLASTList(tuple(binding_list)),
                     result_expr
                 ))
 
@@ -789,8 +787,8 @@ class AIFPLDesugarer:
                 pattern_let = result_expr
 
             # Build element test if
-            inner_if: AIFPLValue = AIFPLList((
-                AIFPLSymbol('if'),
+            inner_if: AIFPLASTNode = AIFPLASTList((
+                AIFPLASTSymbol('if'),
                 elem_test_combined,
                 pattern_let,
                 else_expr
@@ -799,10 +797,10 @@ class AIFPLDesugarer:
         else:
             # No element tests - just bind pattern vars
             if pattern_bindings:
-                binding_list = [AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in pattern_bindings]
-                inner_if = AIFPLList((
-                    AIFPLSymbol('let*'),
-                    AIFPLList(tuple(binding_list)),
+                binding_list = [AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in pattern_bindings]
+                inner_if = AIFPLASTList((
+                    AIFPLASTSymbol('let*'),
+                    AIFPLASTList(tuple(binding_list)),
                     result_expr
                 ))
 
@@ -810,16 +808,16 @@ class AIFPLDesugarer:
                 inner_if = result_expr
 
         # Wrap in element extraction let
-        extraction_binding_list = [AIFPLList((AIFPLSymbol(vn), ve)) for vn, ve in extraction_bindings]
-        extraction_let = AIFPLList((
-            AIFPLSymbol('let*'),
-            AIFPLList(tuple(extraction_binding_list)),
+        extraction_binding_list = [AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in extraction_bindings]
+        extraction_let = AIFPLASTList((
+            AIFPLASTSymbol('let*'),
+            AIFPLASTList(tuple(extraction_binding_list)),
             inner_if
         ))
 
         # Build outer if with length test
-        return AIFPLList((
-            AIFPLSymbol('if'),
+        return AIFPLASTList((
+            AIFPLASTSymbol('if'),
             length_test,
             extraction_let,
             else_expr
@@ -827,10 +825,10 @@ class AIFPLDesugarer:
 
     def _desugar_cons_pattern(
         self,
-        pattern: AIFPLList,
+        pattern: AIFPLASTList,
         temp_var: str,
         dot_position: int
-    ) -> Tuple[AIFPLValue, List[Tuple[str, Any]]]:
+    ) -> Tuple[AIFPLASTNode, List[Tuple[str, Any]]]:
         """
         Desugar a cons pattern like (head . tail) or (a b . rest).
 
@@ -849,53 +847,53 @@ class AIFPLDesugarer:
             "Should have exactly one element after dot (validated by semantic analyzer)"
 
         # Test: (and (list? temp_var) (>= (length temp_var) dot_position))
-        list_test = AIFPLList((
-            AIFPLSymbol('list?'),
-            AIFPLSymbol(temp_var)
+        list_test = AIFPLASTList((
+            AIFPLASTSymbol('list?'),
+            AIFPLASTSymbol(temp_var)
         ))
 
         if dot_position > 0:
-            length_test = AIFPLList((
-                AIFPLSymbol('>='),
-                AIFPLList((
-                    AIFPLSymbol('length'),
-                    AIFPLSymbol(temp_var)
+            length_test = AIFPLASTList((
+                AIFPLASTSymbol('>='),
+                AIFPLASTList((
+                    AIFPLASTSymbol('length'),
+                    AIFPLASTSymbol(temp_var)
                 )),
-                AIFPLInteger(dot_position)
+                AIFPLASTInteger(dot_position)
             ))
-            combined_test = AIFPLList((
-                AIFPLSymbol('and'),
+            combined_test = AIFPLASTList((
+                AIFPLASTSymbol('and'),
                 list_test,
                 length_test
             ))
 
         else:
             # (. tail) pattern - just need non-empty list
-            non_empty_test = AIFPLList((
-                AIFPLSymbol('not'),
-                AIFPLList((
-                    AIFPLSymbol('null?'),
-                    AIFPLSymbol(temp_var)
+            non_empty_test = AIFPLASTList((
+                AIFPLASTSymbol('not'),
+                AIFPLASTList((
+                    AIFPLASTSymbol('null?'),
+                    AIFPLASTSymbol(temp_var)
                 ))
             ))
-            combined_test = AIFPLList((
-                AIFPLSymbol('and'),
+            combined_test = AIFPLASTList((
+                AIFPLASTSymbol('and'),
                 list_test,
                 non_empty_test
             ))
 
         # Collect head element info
-        head_elements: List[Tuple[AIFPLValue, str, AIFPLValue]] = []
+        head_elements: List[Tuple[AIFPLASTNode, str, AIFPLASTNode]] = []
 
         for i in range(dot_position):
             elem_pattern = pattern.elements[i]
             elem_temp = self._gen_temp()
 
             # Extract element: (list-ref temp_var i)
-            elem_value = AIFPLList((
-                AIFPLSymbol('list-ref'),
-                AIFPLSymbol(temp_var),
-                AIFPLInteger(i)
+            elem_value = AIFPLASTList((
+                AIFPLASTSymbol('list-ref'),
+                AIFPLASTSymbol(temp_var),
+                AIFPLASTInteger(i)
             ))
 
             head_elements.append((elem_pattern, elem_temp, elem_value))
@@ -905,10 +903,10 @@ class AIFPLDesugarer:
         tail_temp = self._gen_temp()
 
         # Extract tail: (drop dot_position temp_var)
-        tail_value = AIFPLList((
-            AIFPLSymbol('drop'),
-            AIFPLInteger(dot_position),
-            AIFPLSymbol(temp_var)
+        tail_value = AIFPLASTList((
+            AIFPLASTSymbol('drop'),
+            AIFPLASTInteger(dot_position),
+            AIFPLASTSymbol(temp_var)
         ))
 
         # Add tail to element info

@@ -2,15 +2,13 @@
 AIFPL AST optimization pass
 """
 
-from aifpl.aifpl_value import (
-    AIFPLValue
-)
+from aifpl.aifpl_ast import (AIFPLASTNode)
 
 
 class AIFPLOptimizationPass:
     """Base class for AST optimization passes."""
 
-    def optimize(self, expr: AIFPLValue) -> AIFPLValue:
+    def optimize(self, expr: AIFPLASTNode) -> AIFPLASTNode:
         """
         Transform AST, returning optimized version.
 

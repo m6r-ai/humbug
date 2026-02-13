@@ -14,7 +14,7 @@ before any transformations occur.
 
 from typing import List, cast
 
-from aifpl.aifpl_value import AIFPLValue, AIFPLSymbol, AIFPLList, AIFPLString
+from aifpl.aifpl_ast import AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList, AIFPLASTString
 from aifpl.aifpl_error import AIFPLEvalError
 
 
@@ -30,7 +30,7 @@ class AIFPLSemanticAnalyzer:
         """Initialize the semantic analyzer."""
         self.source = ""
 
-    def analyze(self, expr: AIFPLValue, source: str = "") -> AIFPLValue:
+    def analyze(self, expr: AIFPLASTNode, source: str = "") -> AIFPLASTNode:
         """
         Analyze an expression recursively, validating all special forms.
 
@@ -48,13 +48,13 @@ class AIFPLSemanticAnalyzer:
         self.source = source
 
         # Lists need inspection
-        if isinstance(expr, AIFPLList):
+        if isinstance(expr, AIFPLASTList):
             return self._analyze_list(expr)
 
         # Self-evaluating values need no validation
         return expr
 
-    def _analyze_list(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_list(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Analyze a list expression (special form or function call)."""
         if expr.is_empty():
             # Empty list is valid (though semantically meaningless)
@@ -63,7 +63,7 @@ class AIFPLSemanticAnalyzer:
         first = expr.first()
 
         # Check for special forms
-        if isinstance(first, AIFPLSymbol):
+        if isinstance(first, AIFPLASTSymbol):
             name = first.name
 
             if name == 'if':
@@ -99,7 +99,7 @@ class AIFPLSemanticAnalyzer:
         # Regular function call - recursively analyze all subexpressions
         return self._analyze_call(expr)
 
-    def _analyze_if(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_if(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate if expression: (if condition then else)"""
         if len(expr.elements) != 4:
             raise AIFPLEvalError(
@@ -122,7 +122,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_let(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_let(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate let expression: (let ((var val) ...) body)"""
         if len(expr.elements) < 3:
             raise AIFPLEvalError(
@@ -151,7 +151,7 @@ class AIFPLSemanticAnalyzer:
 
         _, bindings_list, body = expr.elements
 
-        if not isinstance(bindings_list, AIFPLList):
+        if not isinstance(bindings_list, AIFPLASTList):
             raise AIFPLEvalError(
                 message="Let binding list must be a list",
                 received=f"Binding list: {bindings_list.type_name()}",
@@ -166,7 +166,7 @@ class AIFPLSemanticAnalyzer:
         # Validate each binding
         var_names: List[str] = []
         for i, binding in enumerate(bindings_list.elements):
-            if not isinstance(binding, AIFPLList):
+            if not isinstance(binding, AIFPLASTList):
                 raise AIFPLEvalError(
                     message=f"Let binding {i+1} must be a list",
                     received=f"Binding {i+1}: {binding.type_name()}",
@@ -193,7 +193,7 @@ class AIFPLSemanticAnalyzer:
 
             name_expr, value_expr = binding.elements
 
-            if not isinstance(name_expr, AIFPLSymbol):
+            if not isinstance(name_expr, AIFPLASTSymbol):
                 raise AIFPLEvalError(
                     message=f"Let binding {i+1} variable must be a symbol",
                     received=f"Variable: {name_expr.type_name()}",
@@ -229,7 +229,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_let_star(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_let_star(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate let* expression: (let* ((var val) ...) body)"""
         if len(expr.elements) < 3:
             raise AIFPLEvalError(
@@ -258,7 +258,7 @@ class AIFPLSemanticAnalyzer:
 
         _, bindings_list, body = expr.elements
 
-        if not isinstance(bindings_list, AIFPLList):
+        if not isinstance(bindings_list, AIFPLASTList):
             raise AIFPLEvalError(
                 message="Let* binding list must be a list",
                 received=f"Binding list: {bindings_list.type_name()}",
@@ -273,7 +273,7 @@ class AIFPLSemanticAnalyzer:
         # Validate each binding
         var_names: List[str] = []
         for i, binding in enumerate(bindings_list.elements):
-            if not isinstance(binding, AIFPLList):
+            if not isinstance(binding, AIFPLASTList):
                 raise AIFPLEvalError(
                     message=f"Let* binding {i+1} must be a list",
                     received=f"Binding {i+1}: {binding.type_name()}",
@@ -300,7 +300,7 @@ class AIFPLSemanticAnalyzer:
 
             name_expr, value_expr = binding.elements
 
-            if not isinstance(name_expr, AIFPLSymbol):
+            if not isinstance(name_expr, AIFPLASTSymbol):
                 raise AIFPLEvalError(
                     message=f"Let* binding {i+1} variable must be a symbol",
                     received=f"Variable: {name_expr.type_name()}",
@@ -327,7 +327,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_letrec(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_letrec(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate letrec expression: (letrec ((var val) ...) body)"""
         if len(expr.elements) < 3:
             raise AIFPLEvalError(
@@ -355,7 +355,7 @@ class AIFPLSemanticAnalyzer:
 
         _, bindings_list, body = expr.elements
 
-        if not isinstance(bindings_list, AIFPLList):
+        if not isinstance(bindings_list, AIFPLASTList):
             raise AIFPLEvalError(
                 message="Letrec binding list must be a list",
                 received=f"Binding list: {bindings_list.type_name()}",
@@ -370,7 +370,7 @@ class AIFPLSemanticAnalyzer:
         # Validate each binding
         var_names: List[str] = []
         for i, binding in enumerate(bindings_list.elements):
-            if not isinstance(binding, AIFPLList):
+            if not isinstance(binding, AIFPLASTList):
                 raise AIFPLEvalError(
                     message=f"Letrec binding {i+1} must be a list",
                     received=f"Binding {i+1}: {binding.type_name()}",
@@ -396,7 +396,7 @@ class AIFPLSemanticAnalyzer:
 
             name_expr, value_expr = binding.elements
 
-            if not isinstance(name_expr, AIFPLSymbol):
+            if not isinstance(name_expr, AIFPLASTSymbol):
                 raise AIFPLEvalError(
                     message=f"Letrec binding {i+1} variable must be a symbol",
                     received=f"Variable: {name_expr.type_name()}",
@@ -432,7 +432,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_lambda(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_lambda(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate lambda expression: (lambda (params...) body)"""
         if len(expr.elements) != 3:
             raise AIFPLEvalError(
@@ -448,7 +448,7 @@ class AIFPLSemanticAnalyzer:
 
         _, params_list, body = expr.elements
 
-        if not isinstance(params_list, AIFPLList):
+        if not isinstance(params_list, AIFPLASTList):
             raise AIFPLEvalError(
                 message="Lambda parameters must be a list",
                 received=f"Parameter list: {params_list.type_name()}",
@@ -463,7 +463,7 @@ class AIFPLSemanticAnalyzer:
         # Validate each parameter
         param_names: List[str] = []
         for i, param in enumerate(params_list.elements):
-            if not isinstance(param, AIFPLSymbol):
+            if not isinstance(param, AIFPLASTSymbol):
                 raise AIFPLEvalError(
                     message=f"Lambda parameter {i+1} must be a symbol",
                     received=f"Parameter {i+1}: {param.type_name()}",
@@ -495,7 +495,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_quote(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_quote(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate quote expression: (quote expr)"""
         if len(expr.elements) != 2:
             raise AIFPLEvalError(
@@ -513,7 +513,7 @@ class AIFPLSemanticAnalyzer:
         # because it's data, not code to be evaluated
         return expr
 
-    def _analyze_match(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_match(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate match expression: (match value (pattern result) ...)"""
         if len(expr.elements) < 3:
             raise AIFPLEvalError(
@@ -535,7 +535,7 @@ class AIFPLSemanticAnalyzer:
 
         # Validate all clauses
         for i, clause in enumerate(clauses):
-            if not isinstance(clause, AIFPLList):
+            if not isinstance(clause, AIFPLASTList):
                 raise AIFPLEvalError(
                     message=f"Match clause {i+1} must be a list",
                     received=f"Clause {i+1}: {clause.type_name()}",
@@ -569,7 +569,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_match_pattern(self, pattern: AIFPLValue, clause_num: int) -> None:
+    def _analyze_match_pattern(self, pattern: AIFPLASTNode, clause_num: int) -> None:
         """
         Validate a match pattern.
 
@@ -577,7 +577,7 @@ class AIFPLSemanticAnalyzer:
             pattern: Pattern to validate
             clause_num: Clause number (for error messages)
         """
-        if not isinstance(pattern, AIFPLList):
+        if not isinstance(pattern, AIFPLASTList):
             return
 
         # Empty list pattern is valid
@@ -586,7 +586,7 @@ class AIFPLSemanticAnalyzer:
 
         # Check for type pattern: (type? var)
         if (len(pattern.elements) == 2 and
-            isinstance(pattern.elements[0], AIFPLSymbol) and
+            isinstance(pattern.elements[0], AIFPLASTSymbol) and
             pattern.elements[0].name.endswith('?')):
 
             type_pred = pattern.elements[0].name
@@ -600,7 +600,7 @@ class AIFPLSemanticAnalyzer:
 
             if type_pred in valid_predicates:
                 # Validate variable pattern
-                if not isinstance(var_pattern, AIFPLSymbol):
+                if not isinstance(var_pattern, AIFPLASTSymbol):
                     raise AIFPLEvalError(
                         message=f"Pattern variable must be a symbol in clause {clause_num}",
                         received=f"Variable in type pattern: {var_pattern}",
@@ -627,7 +627,7 @@ class AIFPLSemanticAnalyzer:
 
         # Check for malformed type patterns (wrong arity)
         if (len(pattern.elements) >= 1 and
-            isinstance(pattern.elements[0], AIFPLSymbol) and
+            isinstance(pattern.elements[0], AIFPLASTSymbol) and
             pattern.elements[0].name.endswith('?')):
 
             type_pred = pattern.elements[0].name
@@ -664,7 +664,7 @@ class AIFPLSemanticAnalyzer:
         # Check for cons pattern: (head . tail) or (a b . rest)
         dot_positions = []
         for i, elem in enumerate(pattern.elements):
-            if isinstance(elem, AIFPLSymbol) and elem.name == '.':
+            if isinstance(elem, AIFPLASTSymbol) and elem.name == '.':
                 dot_positions.append(i)
 
         # Validate: at most one dot
@@ -725,7 +725,7 @@ class AIFPLSemanticAnalyzer:
                 self._analyze_match_pattern(pattern.elements[i], clause_num)
 
             # Validate tail pattern
-            tail_pattern = cast(AIFPLValue, pattern.elements[dot_position + 1])
+            tail_pattern = cast(AIFPLASTNode, pattern.elements[dot_position + 1])
             self._analyze_match_pattern(tail_pattern, clause_num)
 
             return
@@ -735,7 +735,7 @@ class AIFPLSemanticAnalyzer:
         for elem_pattern in pattern.elements:
             self._analyze_match_pattern(elem_pattern, clause_num)
 
-    def _analyze_and(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_and(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate and expression: (and arg1 arg2 ...)"""
         # 'and' can have any number of arguments (including zero)
         # Just recursively analyze all arguments
@@ -744,7 +744,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_or(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_or(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate or expression: (or arg1 arg2 ...)"""
         # 'or' can have any number of arguments (including zero)
         # Just recursively analyze all arguments
@@ -753,7 +753,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_import(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_import(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate import expression: (import "module-name")"""
         if len(expr.elements) != 2:
             raise AIFPLEvalError(
@@ -769,7 +769,7 @@ class AIFPLSemanticAnalyzer:
 
         _, module_name_expr = expr.elements
 
-        if not isinstance(module_name_expr, AIFPLString):
+        if not isinstance(module_name_expr, AIFPLASTString):
             raise AIFPLEvalError(
                 message="Import module name must be a string literal",
                 received=f"Module name: {module_name_expr.type_name()}",
@@ -794,7 +794,7 @@ class AIFPLSemanticAnalyzer:
 
         return expr
 
-    def _analyze_call(self, expr: AIFPLList) -> AIFPLList:
+    def _analyze_call(self, expr: AIFPLASTList) -> AIFPLASTList:
         """Validate function call by recursively analyzing all subexpressions."""
         # Recursively analyze all elements (function and arguments)
         for elem in expr.elements:

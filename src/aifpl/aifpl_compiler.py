@@ -6,7 +6,7 @@ It chains together all compilation passes in the correct order.
 
 from typing import List, Optional
 
-from aifpl.aifpl_value import AIFPLValue
+from aifpl.aifpl_ast import AIFPLASTNode
 from aifpl.aifpl_bytecode import CodeObject
 from aifpl.aifpl_codegen import AIFPLCodeGen
 from aifpl.aifpl_constant_folder import AIFPLConstantFolder
@@ -52,7 +52,7 @@ class AIFPLCompiler:
         self.ir_builder = AIFPLIRBuilder()
         self.codegen = AIFPLCodeGen()
 
-    def compile_to_resolved_ast(self, source: str) -> AIFPLValue:
+    def compile_to_resolved_ast(self, source: str) -> AIFPLASTNode:
         """
         Compile source to fully resolved AST.
 
