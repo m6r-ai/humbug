@@ -20,6 +20,7 @@ import argparse
 from pathlib import Path
 import sys
 import traceback
+from typing import List, Dict
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -27,10 +28,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from aifpl import AIFPL
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_value import AIFPLValue
-from aifpl.aifpl_bytecode import Opcode, CodeObject
+from aifpl.aifpl_bytecode import Opcode, CodeObject, Instruction
 
 
-def format_constant(const):
+def format_constant(const: object) -> str:
     """Format a constant for display."""
     if isinstance(const, str):
         if len(const) > 50:
@@ -48,7 +49,7 @@ def format_constant(const):
     return str(const)
 
 
-def annotate_instruction(instr, code):
+def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
     """Add annotation to instruction showing what it does."""
     opcode = instr.opcode
     arg1 = instr.arg1
@@ -65,10 +66,10 @@ def annotate_instruction(instr, code):
             annotation = f"  ; Load constant: {const_str}"
 
     elif opcode == Opcode.LOAD_VAR:
-        annotation = f"  ; Load var[{arg2}] from frame[{arg1}]"
+        annotation = f"  ; Load var[{arg2}]"
 
     elif opcode == Opcode.STORE_VAR:
-        annotation = f"  ; Store to var[{arg2}] in frame[{arg1}]"
+        annotation = f"  ; Store to var[{arg2}]"
 
     elif opcode == Opcode.MAKE_CLOSURE:
         if arg1 < len(code.code_objects):
@@ -123,7 +124,7 @@ def annotate_instruction(instr, code):
     return annotation
 
 
-def disassemble_with_nested(code, depth=0, name=None):
+def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None = None) -> List[str]:
     """Recursively disassemble code object and all nested code objects."""
     indent = "  " * depth
     display_name = name or code.name or "<top-level>"
@@ -175,7 +176,7 @@ def disassemble_with_nested(code, depth=0, name=None):
     return output
 
 
-def analyze_function_flow(code):
+def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
     """Track which functions are stored in which variables."""
     var_map = {}
 
@@ -210,7 +211,7 @@ def analyze_function_flow(code):
     return var_map
 
 
-def trace_calls(code, var_map):
+def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
     """Trace function calls."""
     traces = []
 
@@ -252,7 +253,7 @@ def trace_calls(code, var_map):
     return traces
 
 
-def generate_trace(code, depth=0, name=None):
+def generate_trace(code: CodeObject, depth: int = 0, name: str | None =None) -> List[str]:
     """Generate function call trace."""
     indent = "  " * depth
     display_name = name or code.name or "<top-level>"
@@ -296,7 +297,7 @@ def generate_trace(code, depth=0, name=None):
     return output
 
 
-def main():
+def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description="Disassemble AIFPL bytecode with detailed annotations",
