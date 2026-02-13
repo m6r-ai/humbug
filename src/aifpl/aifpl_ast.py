@@ -15,7 +15,7 @@ building the constants pool for bytecode.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, List, Tuple
+from typing import Any, Tuple
 
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
@@ -45,10 +45,6 @@ class AIFPLASTNode(ABC):
         """Convert AST node to runtime value (strips metadata)."""
 
     @abstractmethod
-    def to_python(self) -> Any:
-        """Convert to Python value for operations."""
-
-    @abstractmethod
     def type_name(self) -> str:
         """Return AIFPL type name for error messages."""
 
@@ -66,9 +62,6 @@ class AIFPLASTInteger(AIFPLASTNode):
         """Convert to runtime integer (no metadata)."""
         return AIFPLInteger(self.value)
 
-    def to_python(self) -> int:
-        return self.value
-
     def type_name(self) -> str:
         return "integer"
 
@@ -79,11 +72,8 @@ class AIFPLASTInteger(AIFPLASTNode):
         """Compare numeric values, allowing cross-type comparison."""
         if isinstance(other, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
             return self.value == other.value
-        return False
 
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
+        return False
 
 
 @dataclass(frozen=True)
@@ -95,9 +85,6 @@ class AIFPLASTFloat(AIFPLASTNode):
         """Convert to runtime float (no metadata)."""
         return AIFPLFloat(self.value)
 
-    def to_python(self) -> float:
-        return self.value
-
     def type_name(self) -> str:
         return "float"
 
@@ -108,11 +95,8 @@ class AIFPLASTFloat(AIFPLASTNode):
         """Compare numeric values, allowing cross-type comparison."""
         if isinstance(other, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
             return self.value == other.value
-        return False
 
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
+        return False
 
 
 @dataclass(frozen=True)
@@ -124,9 +108,6 @@ class AIFPLASTComplex(AIFPLASTNode):
         """Convert to runtime complex (no metadata)."""
         return AIFPLComplex(self.value)
 
-    def to_python(self) -> complex:
-        return self.value
-
     def type_name(self) -> str:
         return "complex"
 
@@ -137,11 +118,8 @@ class AIFPLASTComplex(AIFPLASTNode):
         """Compare numeric values, allowing cross-type comparison."""
         if isinstance(other, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
             return self.value == other.value
-        return False
 
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
+        return False
 
 
 @dataclass(frozen=True)
@@ -152,9 +130,6 @@ class AIFPLASTString(AIFPLASTNode):
     def to_runtime_value(self) -> AIFPLString:
         """Convert to runtime string (no metadata)."""
         return AIFPLString(self.value)
-
-    def to_python(self) -> str:
-        return self.value
 
     def type_name(self) -> str:
         return "string"
@@ -193,11 +168,8 @@ class AIFPLASTString(AIFPLASTNode):
         """Compare string values, ignoring metadata (line, column)."""
         if isinstance(other, AIFPLASTString):
             return self.value == other.value
-        return False
 
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
+        return False
 
 
 @dataclass(frozen=True)
@@ -208,9 +180,6 @@ class AIFPLASTBoolean(AIFPLASTNode):
     def to_runtime_value(self) -> AIFPLBoolean:
         """Convert to runtime boolean (no metadata)."""
         return AIFPLBoolean(self.value)
-
-    def to_python(self) -> bool:
-        return self.value
 
     def type_name(self) -> str:
         return "boolean"
@@ -223,10 +192,6 @@ class AIFPLASTBoolean(AIFPLASTNode):
         if isinstance(other, AIFPLASTBoolean):
             return self.value == other.value
         return False
-
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
 
 
 @dataclass(frozen=True)
@@ -242,10 +207,6 @@ class AIFPLASTSymbol(AIFPLASTNode):
         In normal code, symbols are resolved to variables at compile time.
         """
         return AIFPLSymbol(self.name)
-
-    def to_python(self) -> str:
-        """Symbols convert to their name string."""
-        return self.name
 
     def type_name(self) -> str:
         return "symbol"
@@ -269,10 +230,6 @@ class AIFPLASTList(AIFPLASTNode):
         """Convert to runtime list (recursively converts elements)."""
         runtime_elements = tuple(elem.to_runtime_value() for elem in self.elements)
         return AIFPLList(runtime_elements)
-
-    def to_python(self) -> List[Any]:
-        """Convert to Python list with Python values."""
-        return [elem.to_python() for elem in self.elements]
 
     def type_name(self) -> str:
         return "list"
@@ -303,60 +260,9 @@ class AIFPLASTList(AIFPLASTNode):
 
         return self.elements[0]
 
-    def rest(self) -> 'AIFPLASTList':
-        """Get all elements except the first (raises IndexError if empty)."""
-        if not self.elements:
-            raise IndexError("Cannot get rest of empty list")
-
-        return AIFPLASTList(self.elements[1:])
-
-    def last(self) -> AIFPLASTNode:
-        """Get the last element (raises IndexError if empty)."""
-        if not self.elements:
-            raise IndexError("Cannot get last element of empty list")
-
-        return self.elements[-1]
-
-    def cons(self, element: AIFPLASTNode) -> 'AIFPLASTList':
-        """Prepend an element to the front of the list."""
-        return AIFPLASTList((element,) + self.elements)
-
-    def append_list(self, other: 'AIFPLASTList') -> 'AIFPLASTList':
-        """Append another list to this one."""
-        return AIFPLASTList(self.elements + other.elements)
-
-    def reverse(self) -> 'AIFPLASTList':
-        """Return a reversed copy of the list."""
-        return AIFPLASTList(tuple(reversed(self.elements)))
-
     def get(self, index: int) -> AIFPLASTNode:
         """Get element at index (raises IndexError if out of bounds)."""
         return self.elements[index]
-
-    def contains(self, value: AIFPLASTNode) -> bool:
-        """Check if the list contains a value (using AIFPL equality)."""
-        return value in self.elements
-
-    def remove_all(self, value: AIFPLASTNode) -> 'AIFPLASTList':
-        """Remove all occurrences of a value."""
-        new_elements = tuple(elem for elem in self.elements if elem != value)
-        return AIFPLASTList(new_elements)
-
-    def position(self, value: AIFPLASTNode) -> int | None:
-        """Find the first position of a value, or None if not found."""
-        for i, elem in enumerate(self.elements):
-            if elem == value:
-                return i
-
-        return None
-
-    def take(self, n: int) -> 'AIFPLASTList':
-        """Take the first n elements."""
-        return AIFPLASTList(self.elements[:n])
-
-    def drop(self, n: int) -> 'AIFPLASTList':
-        """Drop the first n elements."""
-        return AIFPLASTList(self.elements[n:])
 
 
 @dataclass(frozen=True)
@@ -388,24 +294,6 @@ class AIFPLASTAList(AIFPLASTNode):
         )
         return AIFPLAList(runtime_pairs)
 
-    def to_python(self) -> dict:
-        """Convert to Python dict."""
-        result = {}
-        for key, value in self.pairs:
-            # Use string representation for Python dict keys
-            if isinstance(key, AIFPLASTString):
-                py_key = key.value
-
-            elif isinstance(key, AIFPLASTSymbol):
-                py_key = key.name
-
-            else:
-                py_key = str(key.to_python())
-
-            result[py_key] = value.to_python()
-
-        return result
-
     def type_name(self) -> str:
         """Return type name for error messages."""
         return "alist"
@@ -422,89 +310,6 @@ class AIFPLASTAList(AIFPLASTNode):
 
         pairs_str = ' '.join(formatted_pairs)
         return f"{{{pairs_str}}}"
-
-    def get(self, key: AIFPLASTNode) -> AIFPLASTNode | None:
-        """Get value by key, returns None if not found."""
-        hashable_key = self._to_hashable_key(key)
-        if hashable_key in self._lookup:
-            _, value = self._lookup[hashable_key]
-            return value
-
-        return None
-
-    def has_key(self, key: AIFPLASTNode) -> bool:
-        """Check if key exists."""
-        hashable_key = self._to_hashable_key(key)
-        return hashable_key in self._lookup
-
-    def set(self, key: AIFPLASTNode, value: AIFPLASTNode) -> 'AIFPLASTAList':
-        """Return new alist with key set (immutable update)."""
-        hashable_key = self._to_hashable_key(key)
-        # Build new pairs list, replacing or appending
-        new_pairs = []
-        found = False
-        for k, v in self.pairs:
-            if self._to_hashable_key(k) == hashable_key:
-                new_pairs.append((key, value))  # Replace with new value
-                found = True
-            else:
-                new_pairs.append((k, v))
-
-        if not found:
-            new_pairs.append((key, value))  # Append new pair
-
-        return AIFPLASTAList(tuple(new_pairs))
-
-    def remove(self, key: AIFPLASTNode) -> 'AIFPLASTAList':
-        """Return new alist without key."""
-        hashable_key = self._to_hashable_key(key)
-        new_pairs = tuple(
-            (k, v) for k, v in self.pairs
-            if self._to_hashable_key(k) != hashable_key
-        )
-        return AIFPLASTAList(new_pairs)
-
-    def keys(self) -> Tuple[AIFPLASTNode, ...]:
-        """Get all keys in insertion order."""
-        return tuple(k for k, _ in self.pairs)
-
-    def values(self) -> Tuple[AIFPLASTNode, ...]:
-        """Get all values in insertion order."""
-        return tuple(v for _, v in self.pairs)
-
-    def merge(self, other: 'AIFPLASTAList') -> 'AIFPLASTAList':
-        """Merge with another alist (other's values win on conflicts)."""
-        # Start with self's pairs
-        result_dict = {}
-        for k, v in self.pairs:
-            hashable_key = self._to_hashable_key(k)
-            result_dict[hashable_key] = (k, v)
-
-        # Override/add from other
-        for k, v in other.pairs:
-            hashable_key = self._to_hashable_key(k)
-            result_dict[hashable_key] = (k, v)
-
-        # Preserve insertion order: self's keys first, then other's new keys
-        new_pairs = []
-        seen = set()
-        # Add all of self's keys (with potentially updated values)
-        for k, _ in self.pairs:
-            hashable_key = self._to_hashable_key(k)
-            new_pairs.append(result_dict[hashable_key])
-            seen.add(hashable_key)
-
-        # Add other's keys that weren't in self
-        for k, v in other.pairs:
-            hashable_key = self._to_hashable_key(k)
-            if hashable_key not in seen:
-                new_pairs.append((k, v))
-
-        return AIFPLASTAList(tuple(new_pairs))
-
-    def length(self) -> int:
-        """Number of key-value pairs."""
-        return len(self.pairs)
 
     def is_empty(self) -> bool:
         """Check if alist is empty."""
