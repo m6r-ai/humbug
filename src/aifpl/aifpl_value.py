@@ -54,10 +54,6 @@ class AIFPLInteger(AIFPLValue):
 
         return False
 
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
-
 
 @dataclass(frozen=True)
 class AIFPLFloat(AIFPLValue):
@@ -80,10 +76,6 @@ class AIFPLFloat(AIFPLValue):
 
         return False
 
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
-
 
 @dataclass(frozen=True)
 class AIFPLComplex(AIFPLValue):
@@ -105,10 +97,6 @@ class AIFPLComplex(AIFPLValue):
             return self.value == other.value
 
         return False
-
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
 
 
 @dataclass(frozen=True)
@@ -159,10 +147,6 @@ class AIFPLString(AIFPLValue):
             return self.value == other.value
         return False
 
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
-
 
 @dataclass(frozen=True)
 class AIFPLBoolean(AIFPLValue):
@@ -183,10 +167,6 @@ class AIFPLBoolean(AIFPLValue):
         if isinstance(other, AIFPLBoolean):
             return self.value == other.value
         return False
-
-    def __hash__(self) -> int:
-        """Hash based on value for use in sets/dicts."""
-        return hash(self.value)
 
 
 @dataclass(frozen=True)
