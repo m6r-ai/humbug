@@ -206,15 +206,16 @@ class AIFPLCodeGen:
         # Generate then branch
         self._generate_expr(plan.then_plan, ctx)
 
-        # Check if then branch ends with RETURN or TAIL_CALL (no need to jump in that case)
-        then_returns = False
+        # Check if then branch terminates (ends with RETURN, TAIL_CALL, or unconditional JUMP)
+        # If it terminates, we don't need to emit a jump past the else branch
+        then_terminates = False
         if ctx.instructions:
             last_op = ctx.instructions[-1].opcode
-            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL_FUNCTION):
-                then_returns = True
+            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL_FUNCTION, Opcode.JUMP, Opcode.RAISE_ERROR):
+                then_terminates = True
 
-        # Only jump past else if then branch doesn't return
-        jump_past_else = None if then_returns else ctx.emit(Opcode.JUMP, 0)
+        # Only emit jump past else if then branch doesn't terminate
+        jump_past_else = None if then_terminates else ctx.emit(Opcode.JUMP, 0)
 
         else_start = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_else, else_start)
@@ -222,10 +223,27 @@ class AIFPLCodeGen:
         # Generate else branch
         self._generate_expr(plan.else_plan, ctx)
 
-        # Patch jump past else (if we emitted one)
+        # Check if else branch also terminates
+        else_terminates = False
+        if ctx.instructions:
+            last_op = ctx.instructions[-1].opcode
+            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL_FUNCTION, Opcode.JUMP, Opcode.RAISE_ERROR):
+                else_terminates = True
+
+        # Patch jump past else (if we emitted one and else doesn't terminate)
+        # If else terminates, the jump will never be taken (both branches terminate),
+        # but we still need to patch it to a valid location to pass bytecode validation.
+        # In this case, point it to the last instruction (which is safe but never reached).
         if jump_past_else is not None:
-            after_else = ctx.current_instruction_index()
-            ctx.patch_jump(jump_past_else, after_else)
+            if else_terminates:
+                # Both branches terminate - patch to last instruction (unreachable but valid)
+                ctx.patch_jump(jump_past_else, len(ctx.instructions) - 1)
+
+            else:
+                # Else doesn't terminate - patch to next instruction
+                after_else = ctx.current_instruction_index()
+                ctx.patch_jump(jump_past_else, after_else)
+
 
     def _generate_and(self, plan: AIFPLIRAnd, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an and expression with short-circuit evaluation."""

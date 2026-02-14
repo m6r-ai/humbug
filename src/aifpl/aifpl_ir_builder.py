@@ -164,9 +164,8 @@ class AIFPLIRBuilder:
         analysis_ctx = AnalysisContext()
         plan = self._analyze_expression(expr, analysis_ctx, in_tail_position=True)
 
-        # Wrap the top-level expression in a AIFPLIRReturn
-        # (unless it's already a tail call that doesn't need a return)
-        if not (isinstance(plan, AIFPLIRCall) and plan.is_tail_call):
+        # Wrap the top-level expression in a AIFPLIRReturn if needed
+        if self._needs_return_wrapper(plan):
             plan = AIFPLIRReturn(value_plan=plan)
 
         return plan
@@ -283,6 +282,23 @@ class AIFPLIRBuilder:
 
         return AIFPLIRTrace(message_plans=message_plans, value_plan=value_plan)
 
+    def _needs_return_wrapper(self, plan: AIFPLIRExpr) -> bool:
+        """
+        Check if a plan needs to be wrapped in AIFPLIRReturn.
+        
+        Returns False if the plan already handles returns (e.g., is a tail call
+        or is an if expression that already wrapped its branches).
+        """
+        # Tail calls don't need return wrappers
+        if isinstance(plan, AIFPLIRCall) and plan.is_tail_call:
+            return False
+
+        # If expressions in tail position already wrap their branches
+        if isinstance(plan, AIFPLIRIf) and plan.in_tail_position:
+            return False
+
+        return True
+
     def _analyze_if(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRIf:
         """Analyze an if expression."""
         assert len(expr.elements) == 4, "If expression should have exactly 4 elements"
@@ -297,10 +313,10 @@ class AIFPLIRBuilder:
         # Wrap branches in AIFPLIRReturn when in tail position
         # (unless they're already tail calls that don't need a return)
         if in_tail_position:
-            if not (isinstance(then_plan, AIFPLIRCall) and then_plan.is_tail_call):
+            if self._needs_return_wrapper(then_plan):
                 then_plan = AIFPLIRReturn(value_plan=then_plan)
 
-            if not (isinstance(else_plan, AIFPLIRCall) and else_plan.is_tail_call):
+            if self._needs_return_wrapper(else_plan):
                 else_plan = AIFPLIRReturn(value_plan=else_plan)
 
         return AIFPLIRIf(
@@ -559,9 +575,8 @@ class AIFPLIRBuilder:
         # Analyze lambda body (in tail position)
         body_plan = self._analyze_expression(body, lambda_ctx, in_tail_position=True)
 
-        # Wrap the lambda body in a AIFPLIRReturn
-        # (unless it's already a tail call that doesn't need a return)
-        if not (isinstance(body_plan, AIFPLIRCall) and body_plan.is_tail_call):
+        # Wrap the lambda body in a AIFPLIRReturn if needed
+        if self._needs_return_wrapper(body_plan):
             body_plan = AIFPLIRReturn(value_plan=body_plan)
 
         lambda_ctx.pop_scope()
