@@ -223,27 +223,11 @@ class AIFPLCodeGen:
         # Generate else branch
         self._generate_expr(plan.else_plan, ctx)
 
-        # Check if else branch also terminates
-        else_terminates = False
-        if ctx.instructions:
-            last_op = ctx.instructions[-1].opcode
-            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL_FUNCTION, Opcode.JUMP, Opcode.RAISE_ERROR):
-                else_terminates = True
-
-        # Patch jump past else (if we emitted one and else doesn't terminate)
-        # If else terminates, the jump will never be taken (both branches terminate),
-        # but we still need to patch it to a valid location to pass bytecode validation.
-        # In this case, point it to the last instruction (which is safe but never reached).
+        # Patch jump past else (if we emitted one)
         if jump_past_else is not None:
-            if else_terminates:
-                # Both branches terminate - patch to last instruction (unreachable but valid)
-                ctx.patch_jump(jump_past_else, len(ctx.instructions) - 1)
-
-            else:
-                # Else doesn't terminate - patch to next instruction
-                after_else = ctx.current_instruction_index()
-                ctx.patch_jump(jump_past_else, after_else)
-
+            # Patch to the next instruction after the else branch
+            after_else = ctx.current_instruction_index()
+            ctx.patch_jump(jump_past_else, after_else)
 
     def _generate_and(self, plan: AIFPLIRAnd, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an and expression with short-circuit evaluation."""
