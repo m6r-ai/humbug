@@ -235,7 +235,8 @@ def get_french_strings() -> LanguageStrings:
         error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
         error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}",
         error_saving_user_settings="Échec de l'enregistrement des paramètres utilisateur : {}",
-        cancel_conversation="Êtes-vous sûr de vouloir arrêter la réponse actuelle de l'IA ? Cela mettra fin à la conversation en cours et peut entraîner des réponses incomplètes.",
+        cancel_conversation="Êtes-vous sûr de vouloir arrêter la réponse actuelle de l'IA ? "
+            "Cela mettra fin à la conversation en cours et peut entraîner des réponses incomplètes.",
 
         # Status bar
         editor_status="Ligne {line}, Colonne {column} | {encoding} | {line_ending} | {type}",

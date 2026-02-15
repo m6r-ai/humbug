@@ -4,7 +4,9 @@ from typing import List, cast
 from dataclasses import dataclass
 from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
-from aifpl.aifpl_ast import (AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList)
+from aifpl.aifpl_ast import (
+    AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList
+)
 
 
 @dataclass

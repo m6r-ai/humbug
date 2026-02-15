@@ -67,7 +67,8 @@ class TerminalAITool(AITool):
                     name="keystrokes",
                     type="string",
                     description="Keystrokes to send to terminal (for write operation). "
-                    "You MUST use `\\u####` format for control characters (e.g., `\\u000a` for newline, `\\u000d` for carriage return)",
+                        "You MUST use `\\u####` format for control characters "
+                        "(e.g., `\\u000a` for newline, `\\u000d` for carriage return)",
                     required=False
                 ),
                 AIToolParameter(

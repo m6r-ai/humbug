@@ -6,12 +6,15 @@ desugaring but before bytecode compilation. Optimizations transform the AST
 while preserving runtime semantics.
 """
 
-from typing import List
-import math
 import cmath
+import math
+from typing import List
 
+from aifpl.aifpl_ast import (
+    AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex,
+    AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList, AIFPLASTString, AIFPLASTAList
+)
 from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
-from aifpl.aifpl_ast import (AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList, AIFPLASTString, AIFPLASTAList)
 
 
 class AIFPLConstantFolder(AIFPLOptimizationPass):
