@@ -348,11 +348,10 @@ Syntax: (operator arg1 arg2 ...)
 - Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment
 - Numeric literals: 42 (integer), 3.14 (float), 3+4j (complex), 5j (pure imaginary), j (1j)
 - Other literals: #xFF (hex), #b1010 (binary), #o755 (octal), \"hello\" (string), #t/#f (boolean), () (empty list)
-- Constants: pi, e, true, false
+- Constants: pi, e
 
 ## Important notes:
 
-- Prefix notation: (+ 1 2) not (1 + 2)
 - cons behavior is not the same as traditional LISP: second arg must be a list
 - Strict typing: string ops need strings, boolean ops need booleans
 - Lists only support = and != comparisons, not < > <= >=

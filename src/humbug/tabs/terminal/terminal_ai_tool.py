@@ -47,34 +47,16 @@ class TerminalAITool(AITool):
         Returns:
             Tool definition with parameters and description
         """
-        operations = self.get_operation_definitions()
-        operation_names = list(operations.keys())
-
-        # Build description from operations
-        operation_list = []
-        for name, op_def in operations.items():
-            operation_list.append(f"- {name}: {op_def.description}")
-
-        description = (
+        return self._build_definition_from_operations(
+            name="terminal",
+            description_prefix=(
             "Operations for interacting with terminal tabs. Use this tool to send commands, "
             "read output, and check terminal status. Write operations require user authorization. "
             "You must have a terminal tab open first (use the system tool to create terminals). "
-            "You must not assume a terminal shell or operating system - if you are unsure, check"
-            "with the get_status operation.\n\n"
-            "Available operations:\n\n" + "\n".join(operation_list)
-        )
-
-        return AIToolDefinition(
-            name="terminal",
-            description=description,
-            parameters=[
-                AIToolParameter(
-                    name="operation",
-                    type="string",
-                    description="Terminal operation to perform",
-                    required=True,
-                    enum=operation_names
-                ),
+            "You must not assume a terminal shell or operating system - if you are unsure, check "
+            "with the get_status operation."
+            ),
+            additional_parameters=[
                 AIToolParameter(
                     name="tab_id",
                     type="string",
@@ -96,6 +78,10 @@ class TerminalAITool(AITool):
                 ),
             ]
         )
+
+    def get_brief_description(self) -> str:
+        """Get brief one-line description for system prompt."""
+        return "Send commands and read output from terminal tabs."
 
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """

@@ -45,36 +45,18 @@ class ConversationAITool(AITool):
         Returns:
             Tool definition with parameters and description
         """
-        operations = self.get_operation_definitions()
-        operation_names = list(operations.keys())
-
         # Get valid message types for parameter description
         valid_message_types = sorted(AIMessage.get_message_types())
         message_types_list = ", ".join(valid_message_types)
 
-        # Build description from operations
-        operation_list = []
-        for name, op_def in operations.items():
-            operation_list.append(f"- {name}: {op_def.description}")
-
-        description = (
+        return self._build_definition_from_operations(
+            name="conversation",
+            description_prefix=(
             "Operations for browsing and searching conversation history. Use this tool to read "
             "messages, search content, and navigate conversations. You must have a conversation tab open first "
-            "(use the system tool to open or create conversations).\n\n"
-            "Available operations:\n\n" + "\n".join(operation_list)
-        )
-
-        return AIToolDefinition(
-            name="conversation",
-            description=description,
-            parameters=[
-                AIToolParameter(
-                    name="operation",
-                    type="string",
-                    description="Conversation operation to perform",
-                    required=True,
-                    enum=operation_names
-                ),
+            "(use the system tool to open or create conversations)."
+            ),
+            additional_parameters=[
                 AIToolParameter(
                     name="tab_id",
                     type="string",
@@ -138,6 +120,10 @@ class ConversationAITool(AITool):
                 ),
             ]
         )
+
+    def get_brief_description(self) -> str:
+        """Get brief one-line description for system prompt."""
+        return "Browse, search, and navigate conversation history in conversation tabs."
 
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """

@@ -162,6 +162,14 @@ class FileSystemAITool(AITool):
             ]
         )
 
+    def get_brief_description(self) -> str:
+        """Get brief one-line description for system prompt."""
+        settings = self._get_access_settings()
+        if settings.allow_external_access:
+            return "File and directory operations (mindspace and external files with approval)."
+
+        return "File and directory operations in mindspace."
+
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.

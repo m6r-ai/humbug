@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict
 import zoneinfo
 
 from ai_tool import (
@@ -19,36 +19,15 @@ class ClockAITool(AITool):
 
     def get_definition(self) -> AIToolDefinition:
         """Get the tool definition."""
-        operations = self.get_operation_definitions()
-        operation_names: List[str] = list(operations.keys())
-
-        # Build description from operations
-        base_description = (
+        return self._build_definition_from_operations(
+            name="clock",
+            description_prefix=(
             "The clock tool lets you (the AI) perform operations related to the current date and/or time. It supports "
             "a number of different date/time formats:\n"
             "- timestamp: Unix timestamps in seconds\n"
             "- iso: Strict ISO format\n"
-        )
-
-        # Generate operations list
-        operation_list = []
-        for name, op_def in operations.items():
-            operation_list.append(f"- {name}: {op_def.description}")
-
-        description = f"{base_description}\nAvailable operations are:\n" + "\n".join(operation_list)
-
-
-        return AIToolDefinition(
-            name="clock",
-            description=description,
-            parameters=[
-                AIToolParameter(
-                    name="operation",
-                    type="string",
-                    description="Clock operation to perform",
-                    required=True,
-                    enum=operation_names
-                ),
+            ),
+            additional_parameters=[
                 AIToolParameter(
                     name="format",
                     type="string",
@@ -76,6 +55,10 @@ class ClockAITool(AITool):
                 )
             ]
         )
+
+    def get_brief_description(self) -> str:
+        """Get brief one-line description for system prompt."""
+        return "Time and date operations (get current time, sleep, set alarms)."
 
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """Get operation definitions for this tool."""

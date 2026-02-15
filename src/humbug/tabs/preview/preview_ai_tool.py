@@ -44,32 +44,14 @@ class PreviewAITool(AITool):
         Returns:
             Tool definition with parameters and description
         """
-        operations = self.get_operation_definitions()
-        operation_names = list(operations.keys())
-
-        # Build description from operations
-        operation_list = []
-        for name, op_def in operations.items():
-            operation_list.append(f"- {name}: {op_def.description}")
-
-        description = (
+        return self._build_definition_from_operations(
+            name="preview",
+            description_prefix=(
             "Operations for browsing and searching preview content. Use this tool to search "
             "and navigate file/directory previews. You must have a preview tab open first "
-            "(use the system tool to open previews).\n\n"
-            "Available operations:\n\n" + "\n".join(operation_list)
-        )
-
-        return AIToolDefinition(
-            name="preview",
-            description=description,
-            parameters=[
-                AIToolParameter(
-                    name="operation",
-                    type="string",
-                    description="Preview operation to perform",
-                    required=True,
-                    enum=operation_names
-                ),
+            "(use the system tool to open previews)."
+            ),
+            additional_parameters=[
                 AIToolParameter(
                     name="tab_id",
                     type="string",
@@ -120,6 +102,10 @@ class PreviewAITool(AITool):
                 ),
             ]
         )
+
+    def get_brief_description(self) -> str:
+        """Get brief one-line description for system prompt."""
+        return "Search and navigate file/directory preview content."
 
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """

@@ -44,32 +44,14 @@ class LogAITool(AITool):
         Returns:
             Tool definition with parameters and description
         """
-        operations = self.get_operation_definitions()
-        operation_names = list(operations.keys())
-
-        # Build description from operations
-        operation_list = []
-        for name, op_def in operations.items():
-            operation_list.append(f"- {name}: {op_def.description}")
-
-        description = (
+        return self._build_definition_from_operations(
+            name="log",
+            description_prefix=(
             "Operations for browsing and searching mindspace log messages. Use this tool to read "
             "log entries, search content, and navigate the log. You must have a log tab open first "
-            "(use the system tool to show the log).\n\n"
-            "Available operations:\n\n" + "\n".join(operation_list)
-        )
-
-        return AIToolDefinition(
-            name="log",
-            description=description,
-            parameters=[
-                AIToolParameter(
-                    name="operation",
-                    type="string",
-                    description="Log operation to perform",
-                    required=True,
-                    enum=operation_names
-                ),
+            "(use the system tool to show the log)."
+            ),
+            additional_parameters=[
                 AIToolParameter(
                     name="tab_id",
                     type="string",
@@ -138,6 +120,10 @@ class LogAITool(AITool):
                 ),
             ]
         )
+
+    def get_brief_description(self) -> str:
+        """Get brief one-line description for system prompt."""
+        return "Browse, search, and filter mindspace log messages."
 
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """

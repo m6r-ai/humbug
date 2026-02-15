@@ -94,6 +94,10 @@ class SystemAITool(AITool):
             ]
         )
 
+    def get_brief_description(self) -> str:
+        """Get brief one-line description for system prompt."""
+        return "Create, open, close, and organize UI tabs (editor, terminal, conversation, etc.)."
+
     def get_operation_definitions(self) -> Dict[str, AIToolOperationDefinition]:
         """
         Get operation definitions for this tool.
