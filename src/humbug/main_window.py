@@ -23,6 +23,7 @@ from ai_tool.aifpl.aifpl_ai_tool import AIFPLAITool
 from ai_tool.clock.clock_ai_tool import ClockAITool
 from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
 from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
+from ai_tool.help.help_ai_tool import HelpAITool
 
 from humbug.about_dialog import AboutDialog
 from humbug.color_role import ColorRole
@@ -440,6 +441,9 @@ class MainWindow(QMainWindow):
         )
         self._ai_tool_manager.register_tool(
             PreviewAITool(self._column_manager), "Preview: operations for interacting with preview tabs"
+        )
+        self._ai_tool_manager.register_tool(
+            HelpAITool(self._ai_tool_manager), "Help: provides detailed documentation for AI tools and operations"
         )
 
         QTimer.singleShot(0, self._restore_last_mindspace)

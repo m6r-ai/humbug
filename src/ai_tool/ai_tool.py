@@ -277,6 +277,226 @@ class AITool(ABC):
 
         return value
 
+    def get_brief_description(self) -> str:
+        """
+        Get brief one-line description for system prompt.
+
+        This should be a concise summary (ideally < 100 chars) that helps
+        the AI understand when to use this tool. By default, extracts the
+        first sentence from the tool's description.
+
+        Tools can override this to provide a more tailored brief description.
+
+        Returns:
+            Brief description string
+
+        Example:
+            "File and directory operations in mindspace"
+        """
+        definition = self.get_definition()
+        description = definition.description
+
+        # Extract first line or first sentence
+        first_line = description.split('\n')[0]
+        first_sentence = first_line.split('.')[0]
+
+        # Return first sentence with period
+        return first_sentence.strip() + '.' if not first_sentence.endswith('.') else first_sentence.strip()
+
+    def get_operation_summary(self) -> Dict[str, str]:
+        """
+        Get brief summary of each operation.
+
+        Returns a dictionary mapping operation names to one-line descriptions.
+        By default, extracts the first sentence from each operation's description.
+
+        Tools can override this to provide more tailored summaries.
+
+        Returns:
+            Dict mapping operation names to brief descriptions
+
+        Example:
+            {
+                "read_file": "Read file contents",
+                "write_file": "Write content to file (create or overwrite)",
+                "list_directory": "List directory contents"
+            }
+        """
+        operations = self.get_operation_definitions()
+        summaries = {}
+
+        for name, op_def in operations.items():
+            # Extract first sentence
+            description = op_def.description
+            first_sentence = description.split('\n')[0].split('.')[0]
+            summaries[name] = first_sentence.strip() + '.' if not first_sentence.endswith('.') else first_sentence.strip()
+
+        return summaries
+
+    def get_detailed_help(self, operation: str | None = None) -> str:
+        """
+        Get detailed documentation for tool or specific operation.
+
+        This generates comprehensive markdown documentation that includes:
+        - For full tool help: All operations with parameters
+        - For operation help: Specific operation with detailed parameters
+
+        Tools with complex documentation (like AIFPL) can override this
+        to provide custom formatting, examples, or additional guidance.
+
+        Args:
+            operation: Optional operation name for operation-specific help.
+                      If None, returns full tool documentation.
+
+        Returns:
+            Formatted markdown documentation string
+
+        Example:
+            # Full tool help
+            help_text = tool.get_detailed_help()
+
+            # Operation-specific help
+            help_text = tool.get_detailed_help("read_file")
+        """
+        if operation is None:
+            return self._get_tool_help()
+
+        return self._get_operation_help(operation)
+
+    def _get_tool_help(self) -> str:
+        """
+        Generate comprehensive tool documentation.
+
+        This is the default implementation that generates markdown documentation
+        from the tool's definition and operation definitions.
+
+        Returns:
+            Markdown-formatted documentation string
+        """
+        definition = self.get_definition()
+        operations = self.get_operation_definitions()
+
+        sections = []
+
+        # Tool header and overview
+        sections.append(f"# {definition.name.upper()} Tool\n")
+        sections.append(definition.description)
+        sections.append("")
+
+        # If no operations, show parameters directly
+        if not operations:
+            sections.append("## Parameters\n")
+            for param in definition.parameters:
+                required = " (required)" if param.required else " (optional)"
+                sections.append(f"### {param.name} ({param.type}){required}")
+                sections.append(param.description)
+                if param.enum:
+                    sections.append(f"Valid values: {', '.join(param.enum)}")
+                sections.append("")
+
+            return "\n".join(sections)
+
+        # Operations-based tool
+        sections.append("## Operations\n")
+
+        for name, op_def in sorted(operations.items()):
+            sections.append(f"### {name}")
+            sections.append(op_def.description)
+            sections.append("")
+
+            # Find parameters for this operation
+            required_params = [
+                param for param in definition.parameters
+                if param.name in op_def.required_parameters
+            ]
+            optional_params = [
+                param for param in definition.parameters
+                if param.name in op_def.allowed_parameters
+                and param.name not in op_def.required_parameters
+            ]
+
+            if required_params:
+                sections.append("**Required Parameters:**")
+                for param in required_params:
+                    sections.append(f"- `{param.name}` ({param.type}): {param.description}")
+                    if param.enum:
+                        sections.append(f"  - Valid values: {', '.join(param.enum)}")
+
+            if optional_params:
+                sections.append("")
+                sections.append("**Optional Parameters:**")
+                for param in optional_params:
+                    sections.append(f"- `{param.name}` ({param.type}): {param.description}")
+                    if param.enum:
+                        sections.append(f"  - Valid values: {', '.join(param.enum)}")
+
+            sections.append("")
+
+        return "\n".join(sections)
+
+    def _get_operation_help(self, operation: str) -> str:
+        """
+        Generate operation-specific documentation.
+
+        This provides focused documentation for a single operation, making it
+        easier to understand the specific parameters and constraints.
+
+        Args:
+            operation: Name of the operation to document
+
+        Returns:
+            Markdown-formatted documentation string
+        """
+        definition = self.get_definition()
+        operations = self.get_operation_definitions()
+
+        # Validate operation exists
+        if operation not in operations:
+            available = ", ".join(sorted(operations.keys()))
+            return f"Unknown operation '{operation}'. Available operations: {available}"
+
+        op_def = operations[operation]
+        sections = []
+
+        sections.append(f"# {definition.name}.{operation}\n")
+        sections.append(op_def.description)
+        sections.append("")
+
+        # Required parameters
+        required_params = [
+            param for param in definition.parameters
+            if param.name in op_def.required_parameters
+        ]
+
+        if required_params:
+            sections.append("## Required Parameters\n")
+            for param in required_params:
+                sections.append(f"### {param.name} ({param.type})")
+                sections.append(param.description)
+                if param.enum:
+                    sections.append(f"\nValid values: {', '.join(param.enum)}")
+
+                sections.append("")
+
+        # Optional parameters
+        optional_params = [
+            param for param in definition.parameters
+            if param.name in op_def.allowed_parameters
+            and param.name not in op_def.required_parameters
+        ]
+
+        if optional_params:
+            sections.append("## Optional Parameters\n")
+            for param in optional_params:
+                sections.append(f"### {param.name} ({param.type})")
+                sections.append(param.description)
+                if param.enum:
+                    sections.append(f"\nValid values: {', '.join(param.enum)}")
+
+                sections.append("")
+
+        return "\n".join(sections)
+
     def _get_optional_str_value(
         self,
         key: str,
