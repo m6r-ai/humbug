@@ -13,6 +13,7 @@ New features:
 - Added an `import` special form to AIFPL to support composing software into modules.
 - Added a pretty printer for AIFPL.
 - Added GLM-5 model, but retired GLM-4.6 models.
+- Added a new "help" tool that can provide more detailed help on other tools to reduce token usage.
 
 Bug fixes:
 
